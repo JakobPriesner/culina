@@ -132,3 +132,7 @@ dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1515.severity = none
 # Fakes and builders are instantiated by tests, not by a container.
 dotnet_diagnostic.CA1812.severity = none
+# ConfigureAwait(false) matters where a synchronization context might exist.
+# The xUnit v3 runner has none, so requiring it in tests adds noise to every
+# await without changing behaviour.
+dotnet_diagnostic.CA2007.severity = none

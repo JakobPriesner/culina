@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Api types are internal by convention (endpoints, middleware, result
+         mappers), so the project that tests them has to see them. -->
+    <InternalsVisibleTo Include="IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
     <ProjectReference Include="../Application/Application.csproj" />
     <ProjectReference Include="../Contracts/Contracts.csproj" />
