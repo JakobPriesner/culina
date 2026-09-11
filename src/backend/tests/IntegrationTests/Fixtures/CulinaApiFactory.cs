@@ -1,7 +1,7 @@
 using System.Globalization;
+using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using System.Net;
 
 namespace IntegrationTests.Fixtures;
 
