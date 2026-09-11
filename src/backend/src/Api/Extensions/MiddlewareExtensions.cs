@@ -21,6 +21,14 @@ internal static class MiddlewareExtensions
         return app.UseMiddleware<RequestContextMiddleware>();
     }
 
+    /// <summary>Every security header, and the per-response CSP nonce.</summary>
+    internal static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<SecurityHeadersMiddleware>();
+    }
+
     /// <summary>Gives framework-generated statuses a problem document body.</summary>
     internal static IApplicationBuilder UseProblemStatusPages(this IApplicationBuilder app)
     {

@@ -27,6 +27,7 @@ var app = builder.Build();
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.UseRequestContext();      // 2. Correlation id first, so every later line carries it.
+app.UseSecurityHeaders();     // 3. Set before any handler can begin writing a body.
 app.UseExceptionHandler();    // 5. Outside everything below, so any defect becomes a problem document.
 app.UseProblemStatusPages();  // 6. Framework-generated statuses get a problem body too.
 
