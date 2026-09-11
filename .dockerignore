@@ -1,0 +1,15 @@
+**/.git
+**/.github
+**/.beads
+**/node_modules
+**/bin
+**/obj
+**/.svelte-kit
+**/build
+**/TestResults
+**/playwright-report
+**/test-results
+**/.DS_Store
+**/.env
+docs
+*.md

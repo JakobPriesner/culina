@@ -1,6 +1,42 @@
+# ── macOS / editors ────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vs/
+*.swp
 
-# Beads / Dolt files (added by bd init)
-.dolt/
-*.db
-.beads-credential-key
-.beads/proxieddb/
+# ── .NET ───────────────────────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+TestResults/
+coverage/
+*.coverage
+*.trx
+
+# ── Node / SvelteKit ───────────────────────────────────────────────
+node_modules/
+.svelte-kit/
+build/
+.vite/
+*.tsbuildinfo
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# ── Secrets and local state ────────────────────────────────────────
+.env
+.env.*
+!.env.example
+src/backend/src/Api/appsettings.*.local.json
+data/
+
+# ── Deliberately NOT ignored ───────────────────────────────────────
+# src/backend/openapi/Api.json  — the API contract is committed on purpose;
+#   the frontend client is generated from this file and CI fails on drift.
+# src/frontend/src/lib/api/generated/  — generated but committed, so a type
+#   error shows up at review time rather than at build time.
