@@ -31,6 +31,15 @@ app.UseSecurityHeaders();     // 3. Set before any handler can begin writing a b
 app.UseExceptionHandler();    // 5. Outside everything below, so any defect becomes a problem document.
 app.UseProblemStatusPages();  // 6. Framework-generated statuses get a problem body too.
 
+app.UseStaticFiles();         // 7. Cheap, and never reaches authentication.
+// Explicit, so the middlewares below can read endpoint metadata. Relying on the
+// implicit UseRouting would leave the position of a security check to a
+// framework detail.
+app.UseRouting();
+app.UseQueryParameterGuard(); // 8. Reject malformed input before binding.
+app.UseSameOriginGuard();     // 9. Unsafe cookie requests must come from us.
+app.UseRateLimiter();         // 10. Before authentication: brute force costs nothing to reject.
+
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 
 await app.RunAsync().ConfigureAwait(false);

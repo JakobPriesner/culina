@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Api.Infrastructure;
 
 namespace Api;
@@ -16,6 +17,7 @@ internal static class DependencyInjection
             // the body itself is written by CustomResults, so the shape stays
             // identical to every other error response.
             .AddProblemDetails()
-            .AddExceptionHandler<GlobalExceptionHandler>();
+            .AddExceptionHandler<GlobalExceptionHandler>()
+            .AddCulinaRateLimiter();
     }
 }

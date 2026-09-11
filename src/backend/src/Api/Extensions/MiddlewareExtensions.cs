@@ -29,6 +29,22 @@ internal static class MiddlewareExtensions
         return app.UseMiddleware<SecurityHeadersMiddleware>();
     }
 
+    /// <summary>Rejects query parameters an endpoint does not declare.</summary>
+    internal static IApplicationBuilder UseQueryParameterGuard(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<QueryParameterGuardMiddleware>();
+    }
+
+    /// <summary>Requires unsafe cookie-authenticated requests to be same-origin.</summary>
+    internal static IApplicationBuilder UseSameOriginGuard(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<SameOriginMiddleware>();
+    }
+
     /// <summary>Gives framework-generated statuses a problem document body.</summary>
     internal static IApplicationBuilder UseProblemStatusPages(this IApplicationBuilder app)
     {
