@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "culina_v2",
+  "project_id": "ca99fde2-0c0a-43a4-a6da-19ca3d5e4f83"
+}
