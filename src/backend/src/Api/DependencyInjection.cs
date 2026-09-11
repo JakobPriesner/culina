@@ -18,6 +18,7 @@ internal static class DependencyInjection
             // identical to every other error response.
             .AddProblemDetails()
             .AddExceptionHandler<GlobalExceptionHandler>()
-            .AddCulinaRateLimiter();
+            .AddCulinaRateLimiter()
+            .AddRequestLogging();
     }
 }

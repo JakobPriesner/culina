@@ -7,9 +7,9 @@ namespace Api.Infrastructure;
 /// </summary>
 /// <remarks>
 /// A 404 from an unmatched route and a 405 from a wrong method are produced by
-/// routing, not by a handler, so they would otherwise be the only responses
+/// routing, not by a handler, so they would otherwise be the only API responses
 /// with an empty body. The frontend parses one error format, so they get one
-/// too.
+/// too. Non-API paths are left alone: the app shell owns those.
 /// </remarks>
 internal static class StatusCodeProblems
 {
@@ -31,6 +31,14 @@ internal static class StatusCodeProblems
     internal static Task WriteAsync(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+
+        if (!ApiPaths.IsApi(context.Request.Path))
+        {
+            // The problem document is the API's error format. A browser asking
+            // for a client route that the app shell should have answered gets
+            // the plain status, not JSON it would render as text.
+            return Task.CompletedTask;
+        }
 
         var error = context.Response.StatusCode switch
         {

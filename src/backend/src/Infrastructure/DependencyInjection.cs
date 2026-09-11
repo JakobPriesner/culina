@@ -48,6 +48,7 @@ public static class DependencyInjection
             .AddScoped<DbSession>()
             .AddScoped<DbExecutor>()
             .AddScoped<IUnitOfWork, UnitOfWork>()
+            .AddScoped<IDatabaseProbe, DatabaseProbe>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.
