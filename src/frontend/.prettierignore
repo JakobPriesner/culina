@@ -1,0 +1,7 @@
+.svelte-kit
+build
+node_modules
+pnpm-lock.yaml
+# Generated from the backend's OpenAPI document; never hand-edited, so never
+# reformatted either.
+src/lib/api/generated
