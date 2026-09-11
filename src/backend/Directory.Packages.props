@@ -5,7 +5,17 @@
         <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     </PropertyGroup>
 
+    <ItemGroup Label="Application">
+        <!-- Abstractions only. Application declares ports and logs; it must not
+             be able to reach a concrete host, configuration provider or DI
+             container implementation. -->
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+    </ItemGroup>
+
     <ItemGroup Label="Infrastructure">
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
         <PackageVersion Include="Npgsql" Version="10.0.3" />
         <PackageVersion Include="Dapper" Version="2.1.79" />
         <!-- Argon2id: memory-hard password hashing, per cookie-auth-and-security. -->
