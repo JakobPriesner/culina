@@ -46,6 +46,30 @@ public readonly struct Result
     /// <param name="error">The failure to wrap.</param>
     public static implicit operator Result(Error error) => Failure(error);
 
+    /// <summary>
+    /// Runs every check and reports all of their failures, so one round trip
+    /// tells the caller everything that is wrong instead of one thing per
+    /// submit.
+    /// </summary>
+    /// <param name="results">The checks to combine.</param>
+    /// <returns>
+    /// Success when every check passed; the single failure when exactly one
+    /// failed; otherwise a <see cref="ValidationError"/> over all of them.
+    /// </returns>
+    public static Result Combine(params IReadOnlyList<Result> results)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+
+        List<Error> failures = [];
+
+        foreach (var result in results)
+        {
+            result.Match(() => { }, failures.Add);
+        }
+
+        return failures.Count == 0 ? Success() : Failure(ErrorAggregate.Of(failures));
+    }
+
     /// <summary>Observes the outcome, producing a value from whichever branch ran.</summary>
     /// <typeparam name="TOut">What both branches produce.</typeparam>
     /// <param name="onSuccess">Runs when the operation succeeded.</param>
