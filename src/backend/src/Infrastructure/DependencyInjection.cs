@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Migrations;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,5 +47,9 @@ public static class DependencyInjection
             // One connection per request, opened lazily.
             .AddScoped<DbSession>()
             .AddScoped<DbExecutor>()
-            .AddScoped<IUnitOfWork, UnitOfWork>();
+            .AddScoped<IUnitOfWork, UnitOfWork>()
+            .AddScoped<MigrationRunner>()
+            // Hosted, so the schema is current before the first request and a
+            // failed migration stops the process instead of serving traffic.
+            .AddHostedService<MigrationHostedService>();
 }
