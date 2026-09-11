@@ -86,6 +86,35 @@ dotnet_naming_rule.private_fields_camel_case.style = camel_case
 dotnet_naming_symbols.private_fields.applicable_kinds = field
 dotnet_naming_symbols.private_fields.applicable_accessibilities = private, private_protected
 
+# ── Analyzer rules that do not apply to an application ─────────────
+# AnalysisMode=All turns on every rule, including a family written for public
+# cross-language NuGet libraries. Culina is a self-contained application: it
+# has no external consumers, no VB or F# callers, and no binary compatibility
+# obligations. Each of these is disabled for that reason, not to silence a real
+# finding.
+#
+# CA1716: type/namespace names that collide with reserved words in other CLR
+#         languages. `Error` and `Shared` are the right names here.
+dotnet_diagnostic.CA1716.severity = none
+# CA2225: demands a named twin for every operator. The implicit conversion from
+#         Error exists so `return UserErrors.NotFound(id);` reads well, and the
+#         named alternative (Result.Failure) already exists.
+dotnet_diagnostic.CA2225.severity = none
+# CA1000: static members on generic types. Result<T>.Success is the intended
+#         construction API; a separate non-generic factory would be worse.
+dotnet_diagnostic.CA1000.severity = none
+# CA1815: value types must implement equality. Comparing two Results, or two
+#         in-flight outcomes, is meaningless; types that *are* compared by
+#         value are records, which get equality for free.
+dotnet_diagnostic.CA1815.severity = none
+# CA1034: nested public types. Used sparingly where a type is meaningless
+#         outside its parent.
+dotnet_diagnostic.CA1034.severity = none
+# CA1062: null-checking public arguments. Every public entry point already uses
+#         ArgumentNullException.ThrowIfNull; the analyzer cannot see through the
+#         helper and reports false positives.
+dotnet_diagnostic.CA1062.severity = none
+
 # ── Analyzer noise that fights this repo's conventions ─────────────
 # CA1812: internal classes are instantiated by the DI container, which the
 #         analyzer cannot see. Registration is explicit and covered by an
