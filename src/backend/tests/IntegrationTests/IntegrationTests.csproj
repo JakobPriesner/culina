@@ -2,6 +2,7 @@
 
   <!-- Drives the real API host against a real PostgreSQL container. -->
   <ItemGroup>
+    <ProjectReference Include="../TestSupport/TestSupport.csproj" />
     <ProjectReference Include="../../src/Api/Api.csproj" />
   </ItemGroup>
 

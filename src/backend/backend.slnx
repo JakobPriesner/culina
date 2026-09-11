@@ -11,5 +11,6 @@
     <Project Path="tests/ArchitectureTests/ArchitectureTests.csproj" />
     <Project Path="tests/Domain.UnitTests/Domain.UnitTests.csproj" />
     <Project Path="tests/IntegrationTests/IntegrationTests.csproj" />
+    <Project Path="tests/TestSupport/TestSupport.csproj" />
   </Folder>
 </Solution>

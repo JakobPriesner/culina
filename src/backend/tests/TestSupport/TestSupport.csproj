@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared helpers for the test projects. Not itself a test project: it holds no
+    facts and must not be run by the test host, so it overrides the two
+    properties tests/Directory.Build.props sets for real suites.
+  -->
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+    <OutputType>Library</OutputType>
+    <UseMicrosoftTestingPlatformRunner>false</UseMicrosoftTestingPlatformRunner>
+    <TestingPlatformDotnetTestSupport>false</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The inherited xunit.v3 reference brings the test host, which requires
+         an executable. This library needs only the assertion types. -->
+    <PackageReference Remove="xunit.v3" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="xunit.v3.assert" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Application/Application.csproj" />
+  </ItemGroup>
+
+</Project>

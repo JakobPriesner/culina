@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="../TestSupport/TestSupport.csproj" />
     <ProjectReference Include="../../src/Domain/Domain.csproj" />
   </ItemGroup>
 
