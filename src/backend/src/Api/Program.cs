@@ -1,6 +1,7 @@
 using Api;
 using Api.Endpoints.Health;
 using Api.Extensions;
+using Application;
 using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,7 @@ if (OpenApiExport.Requested(args))
 builder.AddObservability();
 
 builder.Services
+    .AddApplication()
     .AddInfrastructure(builder.Configuration)
     .AddPresentation()
     .AddEndpoints();

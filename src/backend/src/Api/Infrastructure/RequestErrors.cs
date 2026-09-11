@@ -25,12 +25,12 @@ internal static class RequestErrors
 
     internal static Error UnknownQueryParameter(string name) => new(
         "request.unknown_parameter",
-        $"'{name}' is not a parameter this endpoint accepts.",
+        $"Unknown query parameter '{name}'. Check the spelling against the API documentation.",
         ErrorType.Validation);
 
     internal static Error RepeatedQueryParameter(string name) => new(
         "request.repeated_parameter",
-        $"'{name}' may only be given once.",
+        $"Query parameter '{name}' may only be given once.",
         ErrorType.Validation);
 
     internal static readonly Error ForeignOrigin = new(
