@@ -76,11 +76,13 @@ format: ## Apply formatting to both halves
 
 # ── API contract ─────────────────────────────────────────────────────────────
 
-api: ## Export the OpenAPI document and regenerate the frontend client
-	cd $(BACKEND) && dotnet build
+api: openapi ## Export the OpenAPI document and regenerate the frontend client
 	cd $(FRONTEND) && pnpm generate:api
 	@echo "Regenerated. Commit openapi/Api.json together with the client — CI"
 	@echo "fails if the committed client does not match the document."
+
+openapi: ## Export the OpenAPI document to src/backend/openapi/Api.json
+	cd $(API) && dotnet run -- --export-openapi ../../openapi/Api.json
 
 # ── Container ────────────────────────────────────────────────────────────────
 

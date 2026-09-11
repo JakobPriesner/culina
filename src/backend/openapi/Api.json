@@ -1,0 +1,14 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Culina API",
+    "description": "Culina's HTTP API. Every failure is an RFC 9457 problem document with a machine-readable `code` and a `requestId`; clients branch on `code`, never on a message.",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "paths": { }
+}

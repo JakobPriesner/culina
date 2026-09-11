@@ -19,6 +19,8 @@ internal static class DependencyInjection
             .AddProblemDetails()
             .AddExceptionHandler<GlobalExceptionHandler>()
             .AddCulinaRateLimiter()
-            .AddRequestLogging();
+            .AddRequestLogging()
+            .AddCulinaJson()
+            .AddCulinaOpenApi();
     }
 }
