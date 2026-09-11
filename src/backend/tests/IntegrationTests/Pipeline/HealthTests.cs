@@ -12,8 +12,7 @@ public class HealthTests(PostgresFixture postgres)
     public async Task Live_ShouldAnswer_WithoutTouchingAnyDependency()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -33,8 +32,7 @@ public class HealthTests(PostgresFixture postgres)
     public async Task Ready_ShouldAnswer_WhenTheDatabaseIsReachable()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -52,8 +50,7 @@ public class HealthTests(PostgresFixture postgres)
     public async Task Health_ShouldNotRequireAuthentication_SoAProbeCanReachIt()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var live = await client.GetAsync(
@@ -72,8 +69,7 @@ public class HealthTests(PostgresFixture postgres)
     public async Task NonApiRoute_ShouldFallBackToTheAppShell_RatherThanAProblemDocument()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -91,8 +87,7 @@ public class HealthTests(PostgresFixture postgres)
     public async Task UnmatchedApiRoute_ShouldStillReturnAProblemDocument_NotTheAppShell()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(

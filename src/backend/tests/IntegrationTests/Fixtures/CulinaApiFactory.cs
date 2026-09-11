@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System.Net;
 
 namespace IntegrationTests.Fixtures;
 
@@ -48,6 +49,13 @@ public sealed class CulinaApiFactory(PostgresFixture postgres) : WebApplicationF
         builder.UseSetting("Cookies:Secure", "false");
     }
 
+    /// <summary>
+    /// A client with its own cookie jar, so each test is an independent
+    /// browser session.
+    /// </summary>
+    public ApiClient NewApiClient() =>
+        new(CreateDefaultClient(new CookieHandler()));
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
@@ -56,5 +64,46 @@ public sealed class CulinaApiFactory(PostgresFixture postgres) : WebApplicationF
         {
             Directory.Delete(dataRoot, recursive: true);
         }
+    }
+}
+
+/// <summary>
+/// Keeps cookies across requests, the way a browser does. The in-memory test
+/// server hands out an HttpClient with no cookie handling at all, so without
+/// this a session would be dropped after the response that created it.
+/// </summary>
+internal sealed class CookieHandler : DelegatingHandler
+{
+    private readonly CookieContainer cookies = new();
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var uri = request.RequestUri!;
+        var header = cookies.GetCookieHeader(uri);
+
+        if (header.Length > 0)
+        {
+            request.Headers.Remove("Cookie");
+            request.Headers.TryAddWithoutValidation("Cookie", header);
+        }
+
+        var response = await base.SendAsync(request, cancellationToken);
+
+        if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
+        {
+            foreach (var setCookie in setCookies)
+            {
+                // The __Host- prefix requires Secure, which the test server does
+                // not set, so the container is told about the cookie directly
+                // rather than through SetCookies' prefix validation.
+                cookies.SetCookies(uri, setCookie.Replace("; Secure", string.Empty, StringComparison.Ordinal));
+            }
+        }
+
+        return response;
     }
 }

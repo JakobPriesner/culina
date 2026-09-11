@@ -16,8 +16,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
         string expected)
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -33,8 +32,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     public async Task ApiResponses_ShouldAllowNothingAtAll_WhenTheyAreJson()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -51,8 +49,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     public async Task DocumentResponses_ShouldCarryAPerResponseNonce_WhenNotAnApiPath()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var first = await client.GetAsync(
@@ -74,8 +71,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     public async Task NoPolicy_ShouldEverAllowInlineOrEval_OnAnyPath()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
         string[] paths = ["/health/live", "/api/v1/nothing-here"];
 
         // Act & Assert
@@ -97,8 +93,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     public async Task NoResponse_ShouldCarryHsts_BecauseTheProxyOwnsIt()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(

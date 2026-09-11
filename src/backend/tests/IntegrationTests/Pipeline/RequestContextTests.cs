@@ -12,8 +12,7 @@ public class RequestContextTests(PostgresFixture postgres)
     public async Task EveryResponse_ShouldCarryARequestId_WhenTheRequestIsHandled()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -29,8 +28,7 @@ public class RequestContextTests(PostgresFixture postgres)
     public async Task UnmatchedRoute_ShouldReturnAProblemDocument_RatherThanAnEmptyBody()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
 
         // Act
         using var response = await client.GetAsync(
@@ -53,10 +51,8 @@ public class RequestContextTests(PostgresFixture postgres)
     public async Task Migrations_ShouldHaveRun_WhenTheHostStarted()
     {
         // Arrange
-        using var factory = new CulinaApiFactory(postgres);
-
         // Act
-        using var client = factory.CreateClient();
+        using var client = postgres.Api.CreateClient();
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);

@@ -1,4 +1,6 @@
 using Application.Abstractions.Settings;
+using Infrastructure.Persistence;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace IntegrationTests.Fixtures;
@@ -22,6 +24,9 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithUsername(RoleName)
         .WithPassword(RolePassword)
         .Build();
+
+    private CulinaApiFactory? api;
+    private NpgsqlDataSource? dataSource;
 
     /// <summary>How to reach the container, in the shape the app configures.</summary>
     public DatabaseSettings Settings => new()
@@ -49,7 +54,31 @@ public sealed class PostgresFixture : IAsyncLifetime
             """);
     }
 
-    public async ValueTask DisposeAsync() => await container.DisposeAsync();
+    /// <summary>
+    /// The API host, created once and shared. Starting it runs the migrations,
+    /// so the schema is built once per run rather than once per test class.
+    /// </summary>
+    public CulinaApiFactory Api => api ??= new CulinaApiFactory(this);
+
+    /// <summary>Empties every table, leaving the migrated schema in place.</summary>
+    public async Task ResetAsync(CancellationToken cancellationToken)
+    {
+        dataSource ??= CulinaDataSource.Build(Settings);
+
+        await DatabaseReset.TruncateAllAsync(dataSource, cancellationToken);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        api?.Dispose();
+
+        if (dataSource is not null)
+        {
+            await dataSource.DisposeAsync();
+        }
+
+        await container.DisposeAsync();
+    }
 }
 
 /// <summary>Shares one container across every test class that needs a database.</summary>
