@@ -1,0 +1,43 @@
+# Local development. The app itself runs from `dotnet watch` and `pnpm dev`
+# (see the Makefile); this file provides only what is awkward to run natively.
+#
+# Production uses this file plus compose.prod.yaml, which overrides the parts
+# that must not be true in production — notably publishing the database port.
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: culina-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-culina}
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
+      # Culina stores every user-facing string as-is and compares
+      # case-insensitively in SQL where it matters, so the cluster only needs a
+      # deterministic collation.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+      CULINA_DB: ${POSTGRES_DB:-culina}
+      CULINA_APP_USER: ${Database__Username:-culina_app}
+      CULINA_APP_PASSWORD: ${Database__Password:-culina_dev_password}
+    # Published for local development only. compose.prod.yaml removes this, so
+    # the database is reachable only on the internal network.
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # PostgreSQL 18 expects a single mount at /var/lib/postgresql and places
+      # the cluster in a version-specific subdirectory, which is what makes
+      # `pg_upgrade --link` possible later. Mounting .../data instead is the
+      # pre-18 layout and the image warns and refuses.
+      - culina-db:/var/lib/postgresql
+      - ./scripts/db-init.sh:/docker-entrypoint-initdb.d/10-culina-init.sh:ro
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d ${POSTGRES_DB:-culina}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  culina-db:
