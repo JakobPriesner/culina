@@ -82,8 +82,11 @@ dotnet_diagnostic.CA1812.severity = none
 #         (dotnet-observability); the analyzer also flags the generated code.
 dotnet_diagnostic.CA1848.severity = none
 
-[tests/**/*.cs]
-# Test methods are named Method_ShouldX_WhenY, which is not a valid identifier
-# style for the production naming rules.
+[**/tests/**/*.cs]
+# Test methods are named Method_ShouldX_WhenY, which is deliberately not a
+# valid identifier style for the production naming rules.
 dotnet_diagnostic.CA1707.severity = none
+# Test classes must be public for the runner to discover them.
 dotnet_diagnostic.CA1515.severity = none
+# Fakes and builders are instantiated by tests, not by a container.
+dotnet_diagnostic.CA1812.severity = none

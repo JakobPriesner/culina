@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Sees every assembly: it asserts the rules *between* them. -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Domain/Domain.csproj" />
+    <ProjectReference Include="../../src/Contracts/Contracts.csproj" />
+    <ProjectReference Include="../../src/Application/Application.csproj" />
+    <ProjectReference Include="../../src/Infrastructure/Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Api/Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+</Project>

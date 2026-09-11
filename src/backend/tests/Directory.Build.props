@@ -1,0 +1,30 @@
+<Project>
+
+    <!-- Inherit everything from src/backend/Directory.Build.props, then add the
+         properties that are true only for test projects. -->
+    <Import Project="../Directory.Build.props" />
+
+    <PropertyGroup>
+        <IsTestProject>true</IsTestProject>
+        <!-- xUnit v3 test projects are executables: the test host is compiled
+             into the assembly rather than supplied by a separate runner. -->
+        <OutputType>Exe</OutputType>
+        <!-- Tests document themselves through their names; XML docs on every
+             fact would be noise. -->
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <!-- .NET 10 removed the VSTest path; xUnit v3 ships its own
+             Microsoft.Testing.Platform entry point, which `dotnet test` uses
+             only when this opt-in is set. -->
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+        <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+</Project>
