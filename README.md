@@ -47,6 +47,8 @@ cp .env.example .env
 make dev
 ```
 
+`make` with no target lists every command.
+
 That starts PostgreSQL, the API and the frontend dev server. The app is at
 <http://localhost:5173>; the API is proxied at `/api`, so development is
 same-origin exactly like production.

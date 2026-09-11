@@ -12,7 +12,9 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
-    "generate:api": "openapi-typescript ../backend/openapi/Api.json --output src/lib/api/generated/schema.d.ts"
+    "generate:api": "openapi-typescript ../backend/openapi/Api.json --output src/lib/api/generated/schema.d.ts",
+    "test:unit": "echo \"Frontend test harness lands in bead: Set up the frontend test harness\" && exit 1",
+    "test:e2e": "echo \"Playwright suite lands in bead: Set up the frontend test harness\" && exit 1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
