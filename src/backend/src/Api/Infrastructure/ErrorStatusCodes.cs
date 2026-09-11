@@ -19,6 +19,7 @@ internal static class ErrorStatusCodes
         ErrorType.NotFound => StatusCodes.Status404NotFound,
         ErrorType.Conflict => StatusCodes.Status409Conflict,
         ErrorType.PreconditionFailed => StatusCodes.Status412PreconditionFailed,
+        ErrorType.PreconditionRequired => StatusCodes.Status428PreconditionRequired,
         ErrorType.RateLimited => StatusCodes.Status429TooManyRequests,
         ErrorType.Unavailable => StatusCodes.Status503ServiceUnavailable,
         ErrorType.Failure or ErrorType.Problem => StatusCodes.Status500InternalServerError,

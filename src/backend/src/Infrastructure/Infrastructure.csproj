@@ -2,6 +2,12 @@
 
   <!-- Adapters: persistence, identity, image storage, settings stores. -->
   <ItemGroup>
+    <!-- Infrastructure types are internal by convention (sessions, executors,
+         repositories), so the project that tests them has to see them. -->
+    <InternalsVisibleTo Include="IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Application/Application.csproj" />
   </ItemGroup>
 

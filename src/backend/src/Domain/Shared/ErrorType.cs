@@ -30,6 +30,13 @@ public enum ErrorType
     /// <summary>An <c>If-Match</c> precondition failed. Maps to 412.</summary>
     PreconditionFailed = 7,
 
+    /// <summary>
+    /// The request needs a precondition it did not send. Maps to 428, which is
+    /// what tells a client it must read the resource and retry with
+    /// <c>If-Match</c> rather than that its version was stale.
+    /// </summary>
+    PreconditionRequired = 10,
+
     /// <summary>The caller exceeded a rate limit. Maps to 429.</summary>
     RateLimited = 8,
 

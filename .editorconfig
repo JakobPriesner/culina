@@ -110,6 +110,11 @@ dotnet_diagnostic.CA1815.severity = none
 # CA1034: nested public types. Used sparingly where a type is meaningless
 #         outside its parent.
 dotnet_diagnostic.CA1034.severity = none
+# CA1724: type names that collide with a namespace name. DependencyInjection
+#         is the name the conventions give each layer's registration class, and
+#         a collision with Microsoft.Extensions.DependencyInjection only
+#         inconveniences an external consumer importing both.
+dotnet_diagnostic.CA1724.severity = none
 # CA1062: null-checking public arguments. Every public entry point already uses
 #         ArgumentNullException.ThrowIfNull; the analyzer cannot see through the
 #         helper and reports false positives.
