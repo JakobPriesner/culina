@@ -1,0 +1,48 @@
+<Project>
+
+    <!--
+      Repo-wide MSBuild properties. Every csproj under src/backend inherits
+      these, so none of them is ever repeated in a project file. Each property
+      carries the reason it is set: a property without a reason is a property
+      nobody dares remove later.
+    -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+
+        <!-- Warnings are errors, including in Debug: a clean compile is also a
+             clean lint, so there is no separate linter step to forget. -->
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest</AnalysisLevel>
+        <AnalysisMode>All</AnalysisMode>
+
+        <!-- Applies the .editorconfig style rules during build, not only in the
+             IDE, so formatting is identical on every machine and in CI. -->
+        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <Deterministic>true</Deterministic>
+
+        <!-- Package versions live once, in Directory.Packages.props. A csproj
+             never carries a Version= attribute. -->
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+
+        <!-- A vulnerable transitive package fails the compile rather than a
+             later review. -->
+        <NuGetAudit>true</NuGetAudit>
+        <NuGetAuditMode>all</NuGetAuditMode>
+        <NuGetAuditLevel>low</NuGetAuditLevel>
+
+        <!-- Culina formats user-facing values on the client, where the user's
+             locale actually lives; the server does culture-invariant work only. -->
+        <InvariantGlobalization>true</InvariantGlobalization>
+
+        <IsTestProject>false</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>

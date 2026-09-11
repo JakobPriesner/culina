@@ -1,0 +1,14 @@
+# Normalise to LF in the repository and in every working tree. Without this a
+# Windows checkout reintroduces CRLF and `dotnet format --verify-no-changes`
+# fails in CI for reasons nobody can reproduce locally.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+
+# Generated, but committed so a contract change shows up in review.
+src/frontend/src/lib/api/generated/** linguist-generated=true
+src/backend/openapi/*.json linguist-generated=true

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Leaf. Entities, value objects, policies and the Result primitives.
+    Domain does not know that HTTP, JSON or a database exist, so it has no
+    project or package references at all. An architecture test enforces this.
+  -->
+
+</Project>

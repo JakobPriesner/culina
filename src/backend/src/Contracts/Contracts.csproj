@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Leaf. Request/Response DTOs, one folder per operation.
+    Contracts is a bag of plain data with no behaviour and, deliberately, no
+    dependency on Domain: an Application handler returns the API-shaped
+    response directly, which only works if both sides can see these types
+    without either depending on the other.
+  -->
+
+</Project>
