@@ -18,6 +18,8 @@
     autocomplete?: HTMLInputElement['autocomplete'];
     inputmode?: 'text' | 'numeric' | 'decimal' | 'email' | 'url' | 'search';
     maxlength?: number;
+    /** Bound by a caller that needs to move focus here. */
+    element?: HTMLInputElement;
     oninput?: (value: string) => void;
   }
 
@@ -33,11 +35,13 @@
     autocomplete,
     inputmode,
     maxlength,
+    element = $bindable(),
     oninput
   }: Props = $props();
 </script>
 
 <input
+  bind:this={element}
   class="ds-control"
   {id}
   {type}

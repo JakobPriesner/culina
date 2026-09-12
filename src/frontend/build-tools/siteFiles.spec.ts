@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { robots, securityTxt, sitemap } from './siteFiles';
-import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes';
+import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes.js';
 
 /*
  * Three small public files, each one a thing that is embarrassing to get wrong

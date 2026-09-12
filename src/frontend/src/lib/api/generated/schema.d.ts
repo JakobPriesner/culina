@@ -320,6 +320,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/registration/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read what a new account is allowed to do
+         * @description Public: a sign-up form has to know which fields to ask for before anyone has an account.
+         */
+        get: operations["getRegistrationPolicyV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipes": {
         parameters: {
             query?: never;
@@ -1018,6 +1038,15 @@ export interface components {
             steps: components["schemas"]["RecipesStepContract"][];
             /** @description Its tags. */
             tags: string[];
+        };
+        /** @description What a sign-up form needs to know before it draws itself. */
+        RegistrationGetPolicyResponse: {
+            /** @description Whether anyone may create an account. */
+            openRegistration: boolean;
+            /** @description Whether a new account must present an invitation code. */
+            requireInvitation: boolean;
+            /** @description Whether this instance has been set up yet. */
+            hasAccounts: boolean;
         };
         /** @description The caller's active sessions. */
         SessionsGetAllResponse: {
@@ -2329,6 +2358,26 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRegistrationPolicyV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationGetPolicyResponse"];
                 };
             };
         };

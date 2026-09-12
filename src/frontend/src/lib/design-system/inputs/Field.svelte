@@ -22,6 +22,11 @@
     optionalText?: string;
     /** Turns the label into a group caption, for radios and checkbox sets. */
     group?: boolean;
+    /**
+     * Supplied when the caller needs to know the control's id before it is
+     * rendered — to move focus to it, for instance. Generated otherwise.
+     */
+    id?: string;
   }
 
   let {
@@ -31,12 +36,17 @@
     error,
     required = false,
     optionalText,
-    group = false
+    group = false,
+    id: suppliedId
   }: Props = $props();
 
-  const id = $props.id();
-  const hintId = `${id}-hint`;
-  const errorId = `${id}-error`;
+  // `$props.id()` may only initialise a top-level variable, so the fallback is
+  // made here rather than as a destructuring default.
+  const generatedId = $props.id();
+  const id = $derived(suppliedId ?? generatedId);
+
+  const hintId = $derived(`${id}-hint`);
+  const errorId = $derived(`${id}-error`);
 
   const describedBy = $derived(error ? errorId : hint ? hintId : undefined);
 </script>

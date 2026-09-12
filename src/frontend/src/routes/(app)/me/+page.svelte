@@ -16,7 +16,7 @@
    */
   async function signOut() {
     await session.signOut();
-    await goto(resolve('/login'), { replaceState: true });
+    await goto(resolve('/(auth)/login'), { replaceState: true });
   }
 </script>
 

@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { Plugin } from 'vite';
 
-import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes';
+import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes.js';
 
 /**
  * Writes the three small public files that are easy to forget and awkward to

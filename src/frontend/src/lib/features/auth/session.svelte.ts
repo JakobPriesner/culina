@@ -52,6 +52,17 @@ class SessionStore {
     return this.activeHousehold?.householdId ?? null;
   }
 
+  /**
+   * Reads the session again.
+   *
+   * For the cases where the server now knows something the store does not — a
+   * household just created or joined — rather than patching the store with
+   * values invented on the client.
+   */
+  refresh(): Promise<void> {
+    return this.#load();
+  }
+
   /** Resolves the session, at most once per boot. */
   resolve(): Promise<void> {
     this.#resolving ??= this.#load().finally(() => {

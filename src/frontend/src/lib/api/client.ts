@@ -65,7 +65,7 @@ async function attempt<TData>(call: () => Promise<Call<TData>>): Promise<Result<
     const { data, error, response } = await call();
 
     if (error !== undefined) {
-      return err(toAppError(response.status, error));
+      return err(toAppError(response, error));
     }
 
     // A 204 has no body, and the caller's type says so.
