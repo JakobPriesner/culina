@@ -22,4 +22,6 @@ internal static class Tags
     internal const string Registration = "Registration";
 
     internal const string CookSessions = "CookSessions";
+
+    internal const string Shopping = "Shopping";
 }

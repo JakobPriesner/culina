@@ -6,6 +6,7 @@ using Api.Endpoints.Recipes;
 using Api.Endpoints.Registration;
 using Api.Endpoints.Sessions;
 using Api.Endpoints.Settings;
+using Api.Endpoints.Shopping;
 using Api.Endpoints.Users;
 
 namespace Api.Extensions;
@@ -31,7 +32,8 @@ internal static class EndpointExtensions
             .AddSettingsEndpoints()
             .AddRegistrationEndpoints()
             .AddRecipesEndpoints()
-            .AddCookSessionEndpoints();
+            .AddCookSessionEndpoints()
+            .AddShoppingEndpoints();
     }
 
     /// <summary>Maps everything registered as an <see cref="IEndpoint"/>.</summary>

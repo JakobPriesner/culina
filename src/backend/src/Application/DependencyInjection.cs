@@ -31,6 +31,7 @@ using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
 using Application.Settings.GetRegistration;
 using Application.Settings.UpdateRegistration;
+using Application.Shopping;
 using Application.Users.GetCurrent;
 using Application.Users.GetPreferences;
 using Application.Users.Register;
@@ -113,6 +114,16 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
             .AddScoped<ICommandHandler<UndoCookedCommand>, UndoCookedCommandHandler>()
+            .AddScoped<IQueryHandler<GetShoppingListQuery,
+                Contracts.Shopping.Response>, GetShoppingListQueryHandler>()
+            .AddScoped<ICommandHandler<AddShoppingItemCommand,
+                Contracts.Shopping.Response>, AddShoppingItemCommandHandler>()
+            .AddScoped<ICommandHandler<AddRecipeToListCommand,
+                Contracts.Shopping.Response>, AddRecipeToListCommandHandler>()
+            .AddScoped<ICommandHandler<UpdateShoppingItemCommand,
+                Contracts.Shopping.Response>, UpdateShoppingItemCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveShoppingItemsCommand,
+                Contracts.Shopping.Response>, RemoveShoppingItemsCommandHandler>()
             .AddScoped<ICommandHandler<StartCookSessionCommand,
                 Contracts.CookSessions.Response>, StartCookSessionCommandHandler>()
             .AddScoped<ICommandHandler<UpdateCookSessionCommand,

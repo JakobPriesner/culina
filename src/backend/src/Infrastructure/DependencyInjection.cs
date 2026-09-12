@@ -6,6 +6,7 @@ using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Migrations;
 using Infrastructure.Persistence.Recipes;
+using Infrastructure.Persistence.Shopping;
 using Infrastructure.Persistence.Users;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
@@ -91,6 +92,7 @@ public static class DependencyInjection
             .AddScoped<IPersonalNoteRepository, PersonalNoteRepository>()
             .AddScoped<ICookLogRepository, CookLogRepository>()
             .AddScoped<ICookSessionRepository, CookSessionRepository>()
+            .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.

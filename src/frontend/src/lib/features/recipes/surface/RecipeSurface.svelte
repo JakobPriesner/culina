@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from '$ds';
+  import { Button, Image } from '$ds';
 
   import { m } from '$shell/i18n';
   import { createScaling } from './scaled.svelte';
@@ -7,6 +7,7 @@
   import IngredientRow from './IngredientRow.svelte';
   import ServingsControl from './ServingsControl.svelte';
   import StepText from './StepText.svelte';
+  import { imageSrcset, imageUrl } from '../recipeImage';
   import { metaLineFor } from '../recipeMeta';
   import type { Recipe } from '../types';
 
@@ -90,6 +91,24 @@
 </script>
 
 <article class="surface" class:cooking>
+  <!--
+    The photo comes first while reading and disappears while cooking: it is what
+    makes you choose the recipe, and it is dead weight once you are standing at
+    the hob with your hands full.
+  -->
+  {#if recipe.imageId && !cooking}
+    <div class="hero">
+      <Image
+        src={imageUrl(recipe.id, 1600)}
+        srcset={imageSrcset(recipe.id)}
+        sizes="(min-width: 72rem) 72rem, 100vw"
+        alt=""
+        ratio={16 / 9}
+        loading="eager"
+      />
+    </div>
+  {/if}
+
   <header class="head">
     <h1 class="title">{recipe.title}</h1>
 
@@ -223,6 +242,12 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-8);
+  }
+
+  .hero {
+    max-height: 24rem;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
   }
 
   .title {

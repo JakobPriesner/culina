@@ -137,7 +137,11 @@ internal static class OpenApiContractFixes
         ("RecipesUpdateRequest", "yieldKind", RecipeVocabulary.YieldKinds),
         ("RecipesRecipeDetail", "language", RecipeVocabulary.Languages),
         ("RecipesUpdateRequest", "language", RecipeVocabulary.Languages),
-        ("RecipesStepSegmentContract", "type", RecipeVocabulary.StepSegmentKinds)
+        ("RecipesStepSegmentContract", "type", RecipeVocabulary.StepSegmentKinds),
+        ("ShoppingItemContract", "section", RecipeVocabulary.ShoppingSections),
+        ("ShoppingUpdateItemRequest", "section", RecipeVocabulary.ShoppingSections),
+        ("ShoppingItemContract", "unit", RecipeVocabulary.Units),
+        ("ShoppingAddItemRequest", "unit", RecipeVocabulary.Units)
     ];
 
     private static void Describe(
