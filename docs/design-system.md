@@ -122,10 +122,14 @@ system`; `system` resolves to a concrete value before paint, so
    stacks — 4.5:1 for text, 3:1 for a focus ring, an input border or a status
    colour — in both modes. A palette that reads well in light and turns muddy in
    dark is the normal way a theme fails, and it is invisible in review.
-4. **A raw-colour rule** (`rawColours.ts`, run by the same suite) fails on a hex
+4. **A raw-colour rule** (`lint.ts`, run by `lint.spec.ts`) fails on a hex
    colour, a colour function, a named colour or a `--c-*` primitive appearing in
    any stylesheet, `<style>` block or inline `style` outside
    `design-system/tokens/` and `design-system/themes/`.
+5. **An unknown-token rule**, in the same file. A `var(--space-5)` that nothing
+   declares is not an error in CSS — the declaration is simply dropped — and the
+   scale is sparse on purpose, so reaching for a plausible-sounding step is an
+   easy mistake with a loud result and no warning.
 
 The contract is *derived*, never restated: a token added to `semantic.css`
 tomorrow is required of every theme without anyone editing the test.

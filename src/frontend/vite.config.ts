@@ -1,3 +1,4 @@
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
@@ -9,6 +10,21 @@ const underTest = Boolean(process.env['VITEST']);
 
 export default defineConfig({
   plugins: [
+    // Messages compile to tree-shakeable functions, so there is no runtime
+    // dictionary to ship and a key that does not exist is a compile error
+    // rather than an empty string in production.
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/lib/paraglide',
+      emitTsDeclarations: true,
+      // The locale a signed-in person chose is applied by the preferences
+      // store once the session is known. Before that — and for a visitor who
+      // has never signed in — the last choice on this device wins, then the
+      // browser's own language, then English.
+      strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
+      localStorageKey: 'culina.locale'
+    }),
+
     sveltekit({
       compilerOptions: {
         // Runes everywhere in our own code; libraries keep their own mode.

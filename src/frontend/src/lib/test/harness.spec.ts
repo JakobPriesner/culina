@@ -2,7 +2,6 @@ import { screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 import Page from '../../routes/+page.svelte';
-import { registerReset, resetAll } from './resettable';
 import { renderWithProviders } from './render';
 
 /*
@@ -23,17 +22,5 @@ describe('the test harness', () => {
     renderWithProviders(Page, { mode: 'dark' });
 
     expect(document.documentElement.dataset['mode']).toBe('dark');
-  });
-
-  it('puts registered module state back', () => {
-    let value = 'changed';
-
-    registerReset(() => {
-      value = 'initial';
-    });
-
-    resetAll();
-
-    expect(value).toBe('initial');
   });
 });

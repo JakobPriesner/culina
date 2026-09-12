@@ -7,6 +7,40 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!--
+      Stamps the stored appearance before the first paint. Inline and
+      synchronous on purpose: anything deferred, imported or loaded from a file
+      paints the default theme first, and a white flash on the way into a dark
+      kitchen is the one bug every user notices.
+
+      __CULINA_NONCE__ is replaced per response by the backend, because the
+      Content-Security-Policy names a fresh nonce each time and this script must
+      match it. It stays literal under the dev server, which sets no policy.
+    -->
+    <script nonce="__CULINA_NONCE__">
+      (function () {
+        var root = document.documentElement;
+        var theme = 'warm-paper';
+        var mode = 'system';
+
+        try {
+          var stored = JSON.parse(localStorage.getItem('culina.appearance') || '{}');
+
+          if (typeof stored.theme === 'string') theme = stored.theme;
+          if (typeof stored.mode === 'string') mode = stored.mode;
+        } catch (ignored) {
+          // A blocked or corrupt store is not a reason to fail to render.
+        }
+
+        root.dataset.theme = theme;
+        root.dataset.mode =
+          mode === 'system'
+            ? matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : mode;
+      })();
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

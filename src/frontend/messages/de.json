@@ -1,0 +1,15 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app.name": "Culina",
+  "app.tagline": "Deine Rezepte, so wie du kochst.",
+  "appearance.label": "Darstellung",
+  "appearance.light": "Hell",
+  "appearance.dark": "Dunkel",
+  "appearance.system": "Wie das Gerät",
+  "appearance.current": "Darstellung: {mode}",
+  "appearance.unsynced": "Auf diesem Gerät gespeichert. Wird synchronisiert, sobald du wieder online bist.",
+  "locale.label": "Sprache",
+  "locale.en": "English",
+  "locale.de": "Deutsch",
+  "appearance.switch": "Wechseln zu {mode}"
+}

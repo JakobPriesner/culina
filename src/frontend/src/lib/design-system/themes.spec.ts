@@ -1,10 +1,9 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
-import { contrastRatio, parseColour, type Rgb } from './colour';
-import { declaredProperties, readBlocks, type CssBlock } from './css';
-import { findRawColours, rawColourRemedy } from './rawColours';
-import { themes } from './index';
+import { contrastRatio, parseColour, type Rgb } from './themes/colour';
+import { declaredProperties, readBlocks, type CssBlock } from './themes/css';
+import { themes } from './themes';
 
 /*
  * The promise of a three-layer token system is that adding a theme is one new
@@ -168,11 +167,5 @@ describe('the theme registry', () => {
     for (const theme of themes) {
       expect(theme.label.trim()).not.toBe('');
     }
-  });
-});
-
-describe('the raw-colour rule', () => {
-  it('finds no colour written outside the token system', async () => {
-    expect(await findRawColours('.'), rawColourRemedy).toEqual([]);
   });
 });

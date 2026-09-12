@@ -27,3 +27,6 @@ vite.config.ts.timestamp-*
 /playwright-report/
 /blob-report/
 /.playwright/
+
+# Paraglide's module cache; the compiled output carries its own .gitignore.
+project.inlang/cache

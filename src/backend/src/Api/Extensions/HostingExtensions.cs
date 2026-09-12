@@ -49,6 +49,19 @@ internal static class HostingExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
+        // The shell is never served as a static file: it carries a per-response
+        // CSP nonce, so it has to be rendered. Asking for it by name lands on
+        // the same rendered document as asking for the route.
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.Equals("/index.html", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Request.Path = "/";
+            }
+
+            await next(context).ConfigureAwait(false);
+        });
+
         app.UseStaticFiles(new StaticFileOptions
         {
             OnPrepareResponse = context =>
@@ -70,9 +83,18 @@ internal static class HostingExtensions
     }
 
     /// <summary>Sends any unmatched non-API route to the app shell.</summary>
+    /// <remarks>
+    /// The shell is rendered rather than sent from disk so the inline
+    /// theme-before-paint script can carry this response's CSP nonce, and it is
+    /// <c>no-store</c> for the same reason: a cached copy would carry a nonce
+    /// the next response's policy does not name, and the script would silently
+    /// stop running.
+    /// </remarks>
     internal static WebApplication MapSinglePageAppFallback(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
+
+        var shell = Infrastructure.AppShell.Load(app.Environment.WebRootPath);
 
         app.MapFallback(async context =>
         {
@@ -84,19 +106,21 @@ internal static class HostingExtensions
                 return;
             }
 
-            var shell = Path.Combine(app.Environment.WebRootPath ?? string.Empty, "index.html");
-
-            if (!File.Exists(shell))
+            if (!shell.Exists)
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
 
                 return;
             }
 
-            context.Response.Headers.CacheControl = "no-cache";
+            context.Response.Headers.CacheControl = "no-store";
             context.Response.ContentType = "text/html; charset=utf-8";
 
-            await context.Response.SendFileAsync(shell, context.RequestAborted).ConfigureAwait(false);
+            var nonce = Infrastructure.RequestContext.CspNonce(context) ?? string.Empty;
+
+            await context.Response
+                .WriteAsync(shell.Render(nonce), context.RequestAborted)
+                .ConfigureAwait(false);
         });
 
         return app;
