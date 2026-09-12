@@ -31,6 +31,15 @@
              never carries a Version= attribute. -->
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 
+        <!-- Every restore writes a packages.lock.json, and CI and the image
+             restore in locked mode. A build that silently resolves a different
+             version of a dependency is not a build anyone can reproduce, and
+             the image that ships is then built from exactly what was tested.
+
+             Not applied to the solution file, which has no target framework
+             and makes NuGet refuse the whole restore. -->
+        <RestorePackagesWithLockFile Condition="'$(MSBuildProjectExtension)' != '.slnx'">true</RestorePackagesWithLockFile>
+
         <!-- A vulnerable transitive package fails the compile rather than a
              later review. -->
         <NuGetAudit>true</NuGetAudit>

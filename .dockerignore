@@ -1,3 +1,8 @@
+# What never belongs in the build context.
+#
+# Not only size: `**/bin` and `**/obj` would carry one machine's build outputs
+# into another machine's restore, and `**/node_modules` would silently defeat
+# the frozen lockfile the image is built with.
 **/.git
 **/.github
 **/.beads

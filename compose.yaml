@@ -7,7 +7,9 @@
 services:
   db:
     image: postgres:18-alpine
-    container_name: culina-db
+    # No container_name on purpose: a fixed name makes the file unusable for
+    # more than one project at a time, and checking a production compose
+    # against a running development one is exactly when that matters.
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-culina}

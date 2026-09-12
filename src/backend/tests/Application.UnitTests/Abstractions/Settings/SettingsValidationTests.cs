@@ -109,6 +109,53 @@ public class SettingsValidationTests
     }
 
     [Fact]
+    public void ForwardedHeadersValidate_ShouldAcceptANetworkInCidrForm()
+    {
+        // Arrange
+        // A reverse proxy in a container network has no address anyone can know
+        // in advance, so a deployment that can only name addresses cannot name
+        // its own proxy.
+        var settings = new ForwardedHeadersSettings { KnownNetworks = ["172.18.0.0/16", "fd00::/8"] };
+
+        // Act
+        settings.Validate();
+
+        // Assert
+        Assert.Equal(2, settings.KnownNetworks.Count);
+    }
+
+    [Fact]
+    public void ForwardedHeadersValidate_ShouldThrow_WhenANetworkIsNotCidr()
+    {
+        // Arrange
+        var settings = new ForwardedHeadersSettings { KnownNetworks = ["172.18.0.1"] };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains("CIDR", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ForwardedHeadersValidate_ShouldSayWhereACidrRangeBelongs()
+    {
+        // Arrange
+        // The mistake worth catching kindly: a CIDR range typed into the
+        // addresses list, which is exactly what an operator behind a container
+        // network reaches for first.
+        var settings = new ForwardedHeadersSettings { KnownProxies = ["10.0.0.0/8"] };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains("KnownNetworks", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ForwardedHeadersValidate_ShouldPass_WhenThereAreNoProxies()
     {
         // Arrange
