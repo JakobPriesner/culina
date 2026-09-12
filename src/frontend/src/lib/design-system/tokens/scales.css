@@ -1,0 +1,67 @@
+/*
+ * Spacing, type, radius, shadow and motion.
+ *
+ * Theme-independent: a second theme changes colours, not rhythm. Keeping them
+ * out of the theme files is what stops a new theme quietly resizing the app.
+ */
+
+:root {
+  /* Space — a 4px base. Small steps for dense controls, large ones for
+     separating ideas. Whitespace is the structure; borders are a last resort. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+
+  /* Radius. Photos and cards share one value so nothing looks almost-aligned. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+
+  /* Type — fluid, so a phone and a desktop both read comfortably without a
+     breakpoint for every size. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
+  --text-3xl: clamp(1.875rem, 1.5rem + 1.4vw, 2.75rem);
+
+  /* The one size chosen for a purpose rather than a scale: step text in cook
+     mode, sized to be read at arm's length across a kitchen counter. */
+  --text-cook: clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem);
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* A long-form measure. Ingredient lists and steps are prose, and prose past
+     about 70 characters is hard to track back to the next line. */
+  --measure: 68ch;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif;
+
+  /* Motion. Short, and only where it explains something. */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spatial: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --z-sticky: 10;
+  --z-overlay: 100;
+  --z-toast: 200;
+}

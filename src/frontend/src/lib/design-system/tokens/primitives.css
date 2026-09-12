@@ -1,0 +1,45 @@
+/*
+ * Layer 1 — raw ramps.
+ *
+ * No component may name one of these. They exist only so a theme file has
+ * something to assign to the semantic tokens in layer 2, and the lint rule in
+ * the build enforces that.
+ *
+ * The palette is warm on purpose. A recipe app is mostly photographs of food,
+ * and a cold neutral background makes food look grey and dead — which is why
+ * the dark mode below is warm charcoal and never blue-black.
+ */
+
+:root {
+  /* Paper: the ground everything sits on, warm rather than neutral. */
+  --c-sand-50: #fdfbf7;
+  --c-sand-100: #f8f4ec;
+  --c-sand-200: #ece3d4;
+  --c-sand-300: #dccfb9;
+  --c-sand-400: #a48965;
+  --c-sand-500: #816e56;
+  --c-sand-600: #6b5943;
+  --c-sand-700: #4a3d2f;
+  --c-sand-800: #2e2721;
+  --c-sand-900: #1f1a16;
+  --c-sand-950: #141110;
+
+  /* The single accent. One colour, reserved for the primary action. */
+  --c-terracotta-200: #f3c9b6;
+  --c-terracotta-400: #dd8462;
+  --c-terracotta-500: #c9633f;
+  --c-terracotta-600: #a94c30;
+  --c-terracotta-700: #853a24;
+
+  /* Status. Each is used for one meaning and never for emphasis. */
+  --c-sage-500: #55744f;
+  --c-sage-200: #cfe0c8;
+  --c-amber-500: #b3801f;
+  --c-amber-200: #f5e2b8;
+  --c-rust-500: #b03a2e;
+  --c-rust-600: #8f2d23;
+  --c-rust-200: #f4cdc7;
+
+  --c-white: #ffffff;
+  --c-black: #000000;
+}

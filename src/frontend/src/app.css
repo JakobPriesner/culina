@@ -1,0 +1,93 @@
+@import './lib/design-system/tokens/primitives.css';
+@import './lib/design-system/tokens/scales.css';
+@import './lib/design-system/tokens/semantic.css';
+@import './lib/design-system/themes/warm-paper.css';
+
+/*
+ * Base element styles. Everything else is a component; there is no utility
+ * layer and no global class vocabulary to learn.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* The viewer's chrome — scrollbars, form controls, the caret — follows the
+     chosen mode rather than the operating system's. */
+  color-scheme: light;
+}
+
+html[data-mode='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-semibold);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--text-3xl);
+}
+
+h2 {
+  font-size: var(--text-2xl);
+}
+
+h3 {
+  font-size: var(--text-xl);
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--accent);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* One focus treatment for the whole app, so focus is never invisible and never
+   surprising. :focus-visible rather than :focus, so a mouse click does not
+   leave a ring behind. */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Anyone who asks for less motion gets none, rather than a slower version of
+   the same thing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

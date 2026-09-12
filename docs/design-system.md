@@ -115,9 +115,20 @@ system`; `system` resolves to a concrete value before paint, so
    degrades instead of rendering invisible text.
 2. **A contract test** (`themes.spec.ts`) parses every file in `themes/`,
    extracts the declared custom properties, and fails if any theme is missing
-   a token listed in `semantic.css` — in either mode.
-3. **A lint rule** fails the build on a raw colour (`#hex`, `rgb(`, `hsl(`) or a
-   `--c-*` primitive used anywhere outside `themes/`.
+   a token listed in `semantic.css` — in either mode. It also rejects a token a
+   theme declares that the contract does not, and a `var(--c-…)` pointing at a
+   primitive that does not exist.
+3. **The same test asserts WCAG AA contrast** for the pairs the UI really
+   stacks — 4.5:1 for text, 3:1 for a focus ring, an input border or a status
+   colour — in both modes. A palette that reads well in light and turns muddy in
+   dark is the normal way a theme fails, and it is invisible in review.
+4. **A raw-colour rule** (`rawColours.ts`, run by the same suite) fails on a hex
+   colour, a colour function, a named colour or a `--c-*` primitive appearing in
+   any stylesheet, `<style>` block or inline `style` outside
+   `design-system/tokens/` and `design-system/themes/`.
+
+The contract is *derived*, never restated: a token added to `semantic.css`
+tomorrow is required of every theme without anyone editing the test.
 
 Adding *cool editorial* later is then: one CSS file, one registry line, and the
 tests tell you the moment it is incomplete.
