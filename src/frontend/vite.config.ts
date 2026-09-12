@@ -1,5 +1,6 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
+import { galleryOnly } from './build-tools/gallery.js';
 import { siteFiles } from './build-tools/siteFiles.js';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -10,6 +11,9 @@ import { defineConfig } from 'vitest/config';
 // with "mount(...) is not available on the server".
 const underTest = Boolean(process.env['VITEST']);
 
+// The gallery is built in only when the end-to-end runner asks for it.
+const galleryWanted = process.env['VITE_GALLERY'] === '1';
+
 const apiProxy = {
   '/api': {
     target: process.env['CULINA_API'] ?? 'http://localhost:5000',
@@ -18,7 +22,19 @@ const apiProxy = {
 };
 
 export default defineConfig({
+  // A literal, always. The gallery has to disappear from a release build, and
+  // it can only disappear if the condition guarding it is a constant the
+  // bundler can fold — which `import.meta.env.VITE_GALLERY` is not when the
+  // variable is unset. See src/lib/app/gallery.ts.
+  define: {
+    __CULINA_GALLERY__: JSON.stringify(galleryWanted)
+  },
+
   plugins: [
+    // Before everything: it replaces the gallery's components with empty ones
+    // in a release build, so no specimen markup is ever compiled.
+    galleryOnly(galleryWanted),
+
     // Messages compile to tree-shakeable functions, so there is no runtime
     // dictionary to ship and a key that does not exist is a compile error
     // rather than an empty string in production.

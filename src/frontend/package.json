@@ -16,7 +16,8 @@
     "test:unit": "pnpm messages && vitest run",
     "test:e2e": "playwright test",
     "test:watch": "vitest",
-    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
+    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+    "verify:release": "node --experimental-strip-types build-tools/checkRelease.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -2,16 +2,16 @@
 // for information about these interfaces
 declare global {
   /**
-   * Build-time flags, declared so they can be read with dot notation.
+   * Whether the design-system gallery is built in.
    *
-   * The spelling matters: Vite replaces `import.meta.env.NAME` in the source
-   * text, and only that form. A bracket lookup survives into the bundle as a
-   * runtime read, and nothing that depends on it can be removed by the bundler.
+   * Replaced by Vite's `define` with a literal `true` or `false`, so a release
+   * build can have the whole gallery removed by the bundler. An
+   * `import.meta.env.VITE_*` read cannot do that job: Vite substitutes those
+   * only when the variable has a value, and the release case is precisely the
+   * one where it does not — so the expression survives as a runtime read and
+   * every specimen ships. See src/lib/app/gallery.ts.
    */
-  interface ImportMetaEnv {
-    /** `'1'` builds the design-system gallery in. Set only by the e2e runner. */
-    readonly VITE_GALLERY?: string;
-  }
+  const __CULINA_GALLERY__: boolean;
 
   namespace App {
     // interface Error {}
