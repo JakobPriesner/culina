@@ -9,7 +9,7 @@ namespace ArchitectureTests;
 public class ForbiddenDependencyTests
 {
     [Fact]
-    public void NoAssembly_ShouldUseIOptions_BecauseSettingsAreInjectedDirectly()
+    public void NoCulinaSetting_ShouldBeWrappedInIOptions_BecauseSettingsAreInjectedDirectly()
     {
         // Arrange
         var assemblies = CulinaAssemblies.All;
@@ -17,13 +17,17 @@ public class ForbiddenDependencyTests
         // Act
         var offenders = assemblies
             .SelectMany(CulinaAssemblies.TypesIn)
-            .Where(type => MembersOf(type).Any(MentionsOptions))
+            .Where(type => MembersOf(type).Any(WrapsACulinaTypeInOptions))
             .Select(type => type.FullName!);
 
         // Assert
         // A config value is a record, a record is a singleton, and a singleton
         // is injected directly. IOptions<T> would add a .Value to every
         // consumer and make the dependency read as "the options system".
+        //
+        // The rule is about *our* settings. A framework base class that demands
+        // IOptionsMonitor<AuthenticationSchemeOptions> is not this problem, and
+        // flagging it would only teach people to suppress the rule.
         Assert.Empty(offenders);
     }
 
@@ -97,8 +101,10 @@ public class ForbiddenDependencyTests
             .Concat(type.GetConstructors(Everything).SelectMany(constructor =>
                 constructor.GetParameters().Select(parameter => parameter.ParameterType)));
 
-    private static bool MentionsOptions(Type type) =>
+    private static bool WrapsACulinaTypeInOptions(Type type) =>
         type.IsGenericType
         && type.GetGenericTypeDefinition().FullName is { } name
-        && name.StartsWith("Microsoft.Extensions.Options.IOptions", StringComparison.Ordinal);
+        && name.StartsWith("Microsoft.Extensions.Options.IOptions", StringComparison.Ordinal)
+        && type.GetGenericArguments()[0].Assembly.GetName().Name is { } wrapped
+        && CulinaAssemblies.Contains(wrapped);
 }

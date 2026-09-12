@@ -1,5 +1,8 @@
+using Api.Authentication;
 using Api.Extensions;
 using Api.Infrastructure;
+using Application.Abstractions;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Api;
 
@@ -8,6 +11,21 @@ namespace Api;
 /// </summary>
 internal static class DependencyInjection
 {
+    private static IServiceCollection AddCulinaAuthentication(this IServiceCollection services)
+    {
+        services
+            .AddHttpContextAccessor()
+            .AddScoped<IUserContext, HttpUserContext>();
+
+        services
+            .AddAuthentication(CulinaClaims.Scheme)
+            .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(
+                CulinaClaims.Scheme,
+                configureOptions: null);
+
+        return services.AddAuthorization();
+    }
+
     internal static IServiceCollection AddPresentation(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -21,6 +39,7 @@ internal static class DependencyInjection
             .AddCulinaRateLimiter()
             .AddRequestLogging()
             .AddCulinaJson()
-            .AddCulinaOpenApi();
+            .AddCulinaOpenApi()
+            .AddCulinaAuthentication();
     }
 }

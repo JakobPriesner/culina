@@ -44,7 +44,11 @@ public static class DependencyInjection
 
     private static IServiceCollection AddIdentity(this IServiceCollection services) =>
         // Stateless and thread-safe, so one instance serves every request.
-        services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
+        services
+            .AddSingleton<IPasswordHasher, Argon2PasswordHasher>()
+            .AddSingleton<ISessionTokens, SessionTokens>()
+            .AddScoped<ISessionStore, SessionStore>()
+            .AddHostedService<ExpiredSessionSweeper>();
 
     private static IServiceCollection AddPersistence(this IServiceCollection services) =>
         services

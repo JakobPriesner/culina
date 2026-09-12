@@ -27,6 +27,10 @@ create table user_settings (
 create table sessions (
     id              uuid        not null primary key,
     user_id         uuid        not null references users (id) on delete cascade,
+    -- The cookie carries 256 random bits; only its digest is stored, so a
+    -- database dump cannot be replayed as a live session. A sequential id
+    -- would be guessable, which is why the id is not the credential.
+    token_hash      bytea       not null unique,
     -- The digest, never the token: a database dump must not let someone forge
     -- a CSRF header.
     csrf_token_hash bytea       not null,

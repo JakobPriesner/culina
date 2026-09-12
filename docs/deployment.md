@@ -35,8 +35,15 @@ Two volumes are mandatory, and forgetting either is a silent failure:
 
 | Path | Why |
 | --- | --- |
-| `/data/keys` | ASP.NET data-protection keys. Without persistence every restart invalidates all cookies and signs everyone out. |
 | `/data/images` | Recipe images. Content-addressed; lost on redeploy otherwise. |
+| `/data/keys` | ASP.NET data-protection keys. |
+
+A note on `/data/keys`, because the usual warning does **not** apply here:
+Culina's session cookie carries an opaque reference, not an encrypted payload,
+so the session row is what authenticates a request and a lost key ring does not
+sign anyone out. The volume is still configured — anything the framework
+protects later would otherwise change key on every restart — but the volume that
+genuinely must survive a redeploy is `/data/images`.
 
 ## The image
 

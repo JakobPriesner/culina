@@ -63,13 +63,12 @@ app.UseQueryParameterGuard();     //  8. Reject unknown or repeated input before
 app.UseSameOriginGuard();         //  9. Unsafe cookie-authenticated requests must come from us.
 app.UseRateLimiter();             // 10. Before authentication: brute force costs nothing to reject.
 
-// 11. UseAuthentication  — cookie to principal
-// 12. UseSessionContext  — principal to session record, user id on scope and span
-// 13. UseCsrfGuard       — needs the session to compare the token against
-// 14. UseAuthorization   — policies, after identity is fully established
-//
-// Positions 11-14 are added by the identity beads (see `bd ready`). They belong
-// here, in this order, and nothing above them may move to accommodate them.
+app.UseAuthentication();          // 11. Cookie to principal.
+
+// 12. UseSessionContext — user id on the logging scope and the current span
+// 13. UseCsrfGuard      — needs the session to compare the token against
+
+app.UseAuthorization();           // 14. Policies, after identity is established.
 
 app.MapHealthEndpoints();
 app.MapEndpoints();
