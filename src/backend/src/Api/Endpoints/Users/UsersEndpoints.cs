@@ -1,4 +1,8 @@
+using Api.Endpoints.Users.GetCurrent.V1;
+using Api.Endpoints.Users.GetPreferences.V1;
 using Api.Endpoints.Users.Register.V1;
+using Api.Endpoints.Users.UpdateCurrent.V1;
+using Api.Endpoints.Users.UpdatePreferences.V1;
 
 namespace Api.Endpoints.Users;
 
@@ -13,5 +17,9 @@ internal static class UsersEndpoints
 {
     internal static IServiceCollection AddUsersEndpoints(this IServiceCollection services) =>
         services
-            .AddSingleton<IEndpoint, RegisterUserEndpoint>();
+            .AddSingleton<IEndpoint, RegisterUserEndpoint>()
+            .AddSingleton<IEndpoint, GetCurrentUserEndpoint>()
+            .AddSingleton<IEndpoint, UpdateCurrentUserEndpoint>()
+            .AddSingleton<IEndpoint, GetPreferencesEndpoint>()
+            .AddSingleton<IEndpoint, UpdatePreferencesEndpoint>();
 }

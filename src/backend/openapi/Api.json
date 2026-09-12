@@ -78,6 +78,196 @@
         }
       }
     },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Read your account",
+        "description": "The signed-in user and the households they belong to. The client calls this on boot to resolve the session, so memberships are included rather than requiring a second request on the critical path.",
+        "operationId": "getCurrentUserV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersGetCurrentResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Rename your account",
+        "description": "Requires If-Match with the version you last read.",
+        "operationId": "updateCurrentUserV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersUpdateCurrentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersUpdateCurrentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/settings": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Read your preferences",
+        "description": "Language, theme, appearance and units. Defaults until first changed.",
+        "operationId": "getUserSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersGetPreferencesResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Change your preferences",
+        "description": "Replaces all four values. No If-Match: these are one person's own preferences, edited on one screen, so there is no second writer to conflict with.",
+        "operationId": "updateUserSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersUpdatePreferencesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersUpdatePreferencesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sessions": {
       "post": {
         "tags": [
@@ -383,6 +573,129 @@
         },
         "description": "Who signed in, and the token their requests must echo."
       },
+      "UsersGetCurrentHouseholdMembership": {
+        "required": [
+          "householdId",
+          "name",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "role": {
+            "type": "string",
+            "description": "What this user may do in it."
+          }
+        },
+        "description": "One household the user belongs to."
+      },
+      "UsersGetCurrentResponse": {
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "isAdmin",
+          "createdAt",
+          "households",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The user's id.",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "The address they sign in with."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "What they are called."
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "description": "Whether this account administers the instance."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the account was created.",
+            "format": "date-time"
+          },
+          "households": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsersGetCurrentHouseholdMembership"
+            },
+            "description": "The households they belong to."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "The signed-in user, and where they can cook."
+      },
+      "UsersGetPreferencesResponse": {
+        "required": [
+          "locale",
+          "theme",
+          "mode",
+          "measurementSystem",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "The language they read in."
+          },
+          "theme": {
+            "type": "string",
+            "description": "The theme id."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Light, dark, or follow the device."
+          },
+          "measurementSystem": {
+            "type": "string",
+            "description": "Which units to render."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version.",
+            "format": "int64"
+          }
+        },
+        "description": "How this person wants the app to look and read."
+      },
       "UsersRegisterRequest": {
         "required": [
           "email",
@@ -445,6 +758,122 @@
           }
         },
         "description": "The account that was created."
+      },
+      "UsersUpdateCurrentRequest": {
+        "required": [
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "The new name."
+          }
+        },
+        "description": "What may be changed about your own account."
+      },
+      "UsersUpdateCurrentResponse": {
+        "required": [
+          "userId",
+          "displayName",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The user's id.",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "What they are now called."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The new entity version, so the client needs no follow-up read.",
+            "format": "int64"
+          }
+        },
+        "description": "The account after the change."
+      },
+      "UsersUpdatePreferencesRequest": {
+        "required": [
+          "locale",
+          "theme",
+          "mode",
+          "measurementSystem"
+        ],
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "The language to read in: `en` or `de`."
+          },
+          "theme": {
+            "type": "string",
+            "description": "The theme id."
+          },
+          "mode": {
+            "type": "string",
+            "description": "`light`, `dark` or `system`."
+          },
+          "measurementSystem": {
+            "type": "string",
+            "description": "`metric` or `imperial`."
+          }
+        },
+        "description": "The preferences to store."
+      },
+      "UsersUpdatePreferencesResponse": {
+        "required": [
+          "locale",
+          "theme",
+          "mode",
+          "measurementSystem",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "The language they read in."
+          },
+          "theme": {
+            "type": "string",
+            "description": "The theme id."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Light, dark, or follow the device."
+          },
+          "measurementSystem": {
+            "type": "string",
+            "description": "Which units to render."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version.",
+            "format": "int64"
+          }
+        },
+        "description": "How this person wants the app to look and read."
       }
     }
   },

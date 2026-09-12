@@ -48,6 +48,18 @@ public static class UserErrors
         "This instance has reached the number of accounts it allows.",
         ErrorType.Forbidden);
 
+    /// <summary>A preference value is not one this app recognises.</summary>
+    public static readonly Error InvalidPreference = new(
+        "users.invalid_preference",
+        "That is not a value this setting accepts.",
+        ErrorType.Validation);
+
+    /// <summary>The theme id is blank or too long.</summary>
+    public static readonly Error InvalidTheme = new(
+        "users.invalid_theme",
+        "That is not a theme this app knows.",
+        ErrorType.Validation);
+
     /// <summary>The password does not meet the minimum requirements.</summary>
     public static readonly Error WeakPassword = new(
         "users.weak_password",

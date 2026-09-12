@@ -78,6 +78,7 @@ public static class DependencyInjection
             .AddScoped<IUnitOfWork, UnitOfWork>()
             .AddScoped<IDatabaseProbe, DatabaseProbe>()
             .AddScoped<IUserRepository, UserRepository>()
+            .AddScoped<IUserPreferencesRepository, UserPreferencesRepository>()
             .AddScoped<IHouseholdRepository, HouseholdRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a

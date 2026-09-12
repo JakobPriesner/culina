@@ -2,7 +2,11 @@ using Application.Abstractions.Messaging;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
+using Application.Users.GetCurrent;
+using Application.Users.GetPreferences;
 using Application.Users.Register;
+using Application.Users.UpdateCurrent;
+using Application.Users.UpdatePreferences;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application;
@@ -36,6 +40,14 @@ public static class DependencyInjection
             // Users
             .AddScoped<ICommandHandler<RegisterUserCommand, Contracts.Users.Register.Response>,
                 RegisterUserCommandHandler>()
+            .AddScoped<IQueryHandler<GetCurrentUserQuery, Contracts.Users.GetCurrent.Response>,
+                GetCurrentUserQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateCurrentUserCommand, Contracts.Users.UpdateCurrent.Response>,
+                UpdateCurrentUserCommandHandler>()
+            .AddScoped<IQueryHandler<GetPreferencesQuery, Contracts.Users.GetPreferences.Response>,
+                GetPreferencesQueryHandler>()
+            .AddScoped<ICommandHandler<UpdatePreferencesCommand, Contracts.Users.UpdatePreferences.Response>,
+                UpdatePreferencesCommandHandler>()
 
             // Sessions
             .AddScoped<ICommandHandler<SignInCommand, SignInOutcome>, SignInCommandHandler>()
