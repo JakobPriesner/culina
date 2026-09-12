@@ -226,5 +226,12 @@
   "cooking.timer.dismiss": "Timer schließen",
   "cooking.madeIt.toast": "Zu deiner Kochhistorie hinzugefügt.",
   "cooking.madeIt.undo": "Rückgängig",
-  "cooking.screenOn": "Der Bildschirm bleibt beim Kochen an."
+  "cooking.screenOn": "Der Bildschirm bleibt beim Kochen an.",
+  "notes.title": "Deine Notizen",
+  "notes.hint": "Nur du siehst sie. Das Rezept bleibt, wie es geschrieben wurde.",
+  "notes.overall": "Zu diesem Rezept",
+  "notes.placeholder": "Nächstes Mal weniger Zucker. Der Ofen heizt zu stark.",
+  "notes.saved": "Gespeichert",
+  "notes.madeCount": "Du hast das {count}× gekocht",
+  "notes.lastMade": "Zuletzt am {date}"
 }

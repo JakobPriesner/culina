@@ -23,6 +23,7 @@ using Application.Recipes.RecordCooked;
 using Application.Recipes.RemoveImage;
 using Application.Recipes.SaveNotes;
 using Application.Recipes.SetImage;
+using Application.Recipes.UndoCooked;
 using Application.Recipes.Update;
 using Application.Registration.GetPolicy;
 using Application.Sessions.GetAll;
@@ -111,6 +112,7 @@ public static class DependencyInjection
             // Instance settings
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UndoCookedCommand>, UndoCookedCommandHandler>()
             .AddScoped<ICommandHandler<StartCookSessionCommand,
                 Contracts.CookSessions.Response>, StartCookSessionCommandHandler>()
             .AddScoped<ICommandHandler<UpdateCookSessionCommand,
