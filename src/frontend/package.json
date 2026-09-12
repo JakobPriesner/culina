@@ -13,17 +13,26 @@
     "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "generate:api": "openapi-typescript ../backend/openapi/Api.json --output src/lib/api/generated/schema.d.ts",
-    "test:unit": "echo \"Frontend test harness lands in bead: Set up the frontend test harness\" && exit 1",
-    "test:e2e": "echo \"Playwright suite lands in bead: Set up the frontend test harness\" && exit 1"
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.63.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/svelte": "^5.4.2",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.2",
+    "@vitest/browser": "^5.0.0",
     "eslint": "^10.10.0",
     "eslint-plugin-svelte": "^3.23.0",
     "globals": "^17.12.0",
+    "jsdom": "^30.0.1",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte": "^5.56.1",
@@ -31,6 +40,10 @@
     "svelte-eslint-parser": "^1.8.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
   }
 }

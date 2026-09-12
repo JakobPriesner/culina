@@ -1,0 +1,59 @@
+/*
+ * Layer 2 — the contract.
+ *
+ * This is the entire vocabulary a component may use. Every theme must define
+ * every token declared here, in both modes; `themes.spec.ts` reads this file to
+ * find out what "every" means and fails a theme that is missing one.
+ *
+ * The values below are light-mode defaults, so a partially written theme
+ * degrades to something readable instead of rendering invisible text.
+ */
+
+:root {
+  /* Surfaces, from the page outward. */
+  --surface: var(--c-sand-50);
+  --surface-raised: var(--c-white);
+  --surface-sunken: var(--c-sand-100);
+  --surface-overlay: var(--c-white);
+  --surface-accent-subtle: var(--c-terracotta-200);
+  --surface-hover: var(--c-sand-100);
+  --surface-selected: var(--c-sand-200);
+
+  /* Text, in decreasing emphasis. */
+  --text: var(--c-sand-900);
+  --text-muted: var(--c-sand-600);
+  --text-subtle: var(--c-sand-500);
+  --text-on-accent: var(--c-white);
+  --text-danger: var(--c-rust-600);
+  --text-success: var(--c-sage-500);
+
+  /* Lines. Used sparingly: spacing separates, borders only enclose. */
+  --border: var(--c-sand-200);
+  --border-strong: var(--c-sand-400);
+  --border-focus: var(--c-terracotta-600);
+
+  /* The accent. One colour, for the primary action on a screen. */
+  --accent: var(--c-terracotta-600);
+  --accent-hover: var(--c-terracotta-700);
+  --accent-active: var(--c-terracotta-700);
+  --accent-contrast: var(--c-white);
+
+  /* Status. Colour is never the only carrier of meaning; these support an icon
+     or a word rather than replacing one. */
+  --danger: var(--c-rust-600);
+  --danger-hover: var(--c-rust-500);
+  --danger-subtle: var(--c-rust-200);
+  --success: var(--c-sage-500);
+  --success-subtle: var(--c-sage-200);
+  --warning: var(--c-amber-500);
+  --warning-subtle: var(--c-amber-200);
+
+  /* Effects. */
+  --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
+  --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
+  --scrim: rgb(31 26 22 / 45%);
+
+  /* The shimmer a skeleton animates between. */
+  --skeleton-base: var(--c-sand-200);
+  --skeleton-highlight: var(--c-sand-100);
+}

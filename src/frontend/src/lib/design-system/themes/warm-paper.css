@@ -1,0 +1,98 @@
+/*
+ * Layer 3 — the warm-paper theme.
+ *
+ * Assigns layer 1 to layer 2, once per mode. Both blocks define the complete
+ * token set rather than one overriding a few values of the other: a partial
+ * dark mode is how a single forgotten token ends up as black text on black.
+ *
+ * Adding a second theme is a copy of this file with different assignments, one
+ * line in `themes/index.ts`, and nothing else. The contract test proves it.
+ */
+
+[data-theme='warm-paper'] {
+  --surface: var(--c-sand-50);
+  --surface-raised: var(--c-white);
+  --surface-sunken: var(--c-sand-100);
+  --surface-overlay: var(--c-white);
+  --surface-accent-subtle: var(--c-terracotta-200);
+  --surface-hover: var(--c-sand-100);
+  --surface-selected: var(--c-sand-200);
+
+  --text: var(--c-sand-900);
+  --text-muted: var(--c-sand-600);
+  --text-subtle: var(--c-sand-500);
+  --text-on-accent: var(--c-white);
+  --text-danger: var(--c-rust-600);
+  --text-success: var(--c-sage-500);
+
+  --border: var(--c-sand-200);
+  --border-strong: var(--c-sand-400);
+  --border-focus: var(--c-terracotta-600);
+
+  --accent: var(--c-terracotta-600);
+  --accent-hover: var(--c-terracotta-700);
+  --accent-active: var(--c-terracotta-700);
+  --accent-contrast: var(--c-white);
+
+  --danger: var(--c-rust-600);
+  --danger-hover: var(--c-rust-500);
+  --danger-subtle: var(--c-rust-200);
+  --success: var(--c-sage-500);
+  --success-subtle: var(--c-sage-200);
+  --warning: var(--c-amber-500);
+  --warning-subtle: var(--c-amber-200);
+
+  --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
+  --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
+  --scrim: rgb(31 26 22 / 45%);
+
+  --skeleton-base: var(--c-sand-200);
+  --skeleton-highlight: var(--c-sand-100);
+}
+
+/*
+ * Dark mode is warm charcoal, never blue-black: a cold ground makes food
+ * photography look grey, which is the one thing this app cannot afford.
+ */
+[data-theme='warm-paper'][data-mode='dark'] {
+  --surface: var(--c-sand-950);
+  --surface-raised: var(--c-sand-900);
+  --surface-sunken: var(--c-black);
+  --surface-overlay: var(--c-sand-800);
+  --surface-accent-subtle: var(--c-terracotta-700);
+  --surface-hover: var(--c-sand-800);
+  --surface-selected: var(--c-sand-700);
+
+  --text: var(--c-sand-100);
+  --text-muted: var(--c-sand-300);
+  --text-subtle: var(--c-sand-400);
+  --text-on-accent: var(--c-sand-950);
+  --text-danger: #f2a79c;
+  --text-success: #a9c9a1;
+
+  --border: var(--c-sand-800);
+  --border-strong: var(--c-sand-500);
+  --border-focus: var(--c-terracotta-400);
+
+  /* Lighter than the light-mode accent: the same hue on a dark ground reads as
+     muddy, and contrast has to be earned in both directions. */
+  --accent: var(--c-terracotta-400);
+  --accent-hover: var(--c-terracotta-200);
+  --accent-active: var(--c-terracotta-200);
+  --accent-contrast: var(--c-sand-950);
+
+  --danger: #e8897c;
+  --danger-hover: #f2a79c;
+  --danger-subtle: #5a241d;
+  --success: #a9c9a1;
+  --success-subtle: #2b3a27;
+  --warning: #e3bd6c;
+  --warning-subtle: #4a3a18;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
+  --shadow-overlay: 0 8px 32px rgb(0 0 0 / 55%);
+  --scrim: rgb(0 0 0 / 65%);
+
+  --skeleton-base: var(--c-sand-800);
+  --skeleton-highlight: var(--c-sand-700);
+}

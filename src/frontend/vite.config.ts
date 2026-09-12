@@ -1,6 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [
@@ -36,5 +36,16 @@ export default defineConfig({
         changeOrigin: false
       }
     }
+  },
+
+  test: {
+    // jsdom, not a real browser: these suites cover tokens, stores and
+    // component behaviour. Anything that needs a real layout or a real service
+    // worker is a Playwright test instead.
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/lib/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{js,ts}'],
+    css: true
   }
 });
