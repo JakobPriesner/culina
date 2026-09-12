@@ -2078,15 +2078,7 @@
             "$ref": "#/components/schemas/HouseholdsMember"
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The household's new version.",
             "format": "int64"
           }
@@ -2151,15 +2143,7 @@
             "description": "What it is called."
           },
           "memberCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many people are in it.",
             "format": "int32"
           },
@@ -2168,15 +2152,7 @@
             "description": "What the caller may do in it."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
           }
@@ -2233,15 +2209,7 @@
             "description": "What it is called."
           },
           "memberCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many people are in it.",
             "format": "int32"
           },
@@ -2250,15 +2218,7 @@
             "description": "What the caller may do in it."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
           }
@@ -2349,15 +2309,7 @@
             "description": "What it is called."
           },
           "memberCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many people are in it.",
             "format": "int32"
           },
@@ -2366,15 +2318,7 @@
             "description": "What the caller may do in it."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
           }
@@ -2463,15 +2407,7 @@
             "description": "What it is called."
           },
           "memberCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many people are in it.",
             "format": "int32"
           },
@@ -2480,15 +2416,7 @@
             "description": "What the caller may do in it."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
           }
@@ -2500,6 +2428,9 @@
         "format": "binary"
       },
       "ProblemDetails": {
+        "required": [
+          "code"
+        ],
         "type": "object",
         "properties": {
           "type": {
@@ -2511,21 +2442,7 @@
             "nullable": true
           },
           "status": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "format": "int32",
             "nullable": true
           },
@@ -2536,8 +2453,43 @@
           "instance": {
             "type": "string",
             "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "description": "The stable, machine-readable reason. The only part a client may branch on."
+          },
+          "requestId": {
+            "type": "string",
+            "description": "The correlation id of the request that failed, for support and logs.",
+            "nullable": true
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "required": [
+                "code",
+                "detail"
+              ],
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "The field that was wrong, or null when the failure names none.",
+                  "nullable": true
+                },
+                "code": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "One entry per contributing failure, so a form can mark every wrong field at once.",
+            "nullable": true
           }
-        }
+        },
+        "description": "An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded."
       },
       "RecipesCreateRequest": {
         "required": [
@@ -2567,41 +2519,17 @@
         "type": "object",
         "properties": {
           "matched": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many of the named ingredients this recipe uses.",
             "format": "int32"
           },
           "requested": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many were named.",
             "format": "int32"
           },
           "missing": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many other ingredients it still needs.",
             "format": "int32"
           }
@@ -2636,35 +2564,13 @@
             "nullable": true
           },
           "totalMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "Prep plus cook, or null when neither is known.",
             "format": "int32",
             "nullable": true
           },
           "yieldAmount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "number",
             "description": "How many it makes.",
             "format": "double"
           },
@@ -2680,15 +2586,7 @@
             "description": "Its tags."
           },
           "cookCount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many times the caller has made it.",
             "format": "int32"
           },
@@ -2733,15 +2631,7 @@
             "nullable": true
           },
           "total": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many recipes match, across all pages.",
             "format": "int32"
           }
@@ -2766,21 +2656,7 @@
             "format": "date-time"
           },
           "servings": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "number",
             "description": "How much you made, if you said.",
             "format": "double",
             "nullable": true
@@ -2801,15 +2677,7 @@
         "type": "object",
         "properties": {
           "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many times you have made it.",
             "format": "int32"
           },
@@ -2882,21 +2750,7 @@
             "nullable": true
           },
           "quantity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "number",
             "description": "How much, or null when the recipe does not say.",
             "format": "double",
             "nullable": true
@@ -2987,15 +2841,7 @@
             "description": "The language the title and steps are written in."
           },
           "yieldAmount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "number",
             "description": "How many it makes.",
             "format": "double"
           },
@@ -3004,61 +2850,19 @@
             "description": "`servings` or `pieces`."
           },
           "prepMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "Hands-on time.",
             "format": "int32",
             "nullable": true
           },
           "cookMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "Time in the oven or on the hob.",
             "format": "int32",
             "nullable": true
           },
           "totalMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "Prep plus cook, or null when neither is known.",
             "format": "int32",
             "nullable": true
@@ -3106,15 +2910,7 @@
             "format": "date-time"
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
           }
@@ -3131,21 +2927,7 @@
             "nullable": true
           },
           "servings": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "number",
             "description": "How much you made.",
             "format": "double",
             "nullable": true
@@ -3177,15 +2959,7 @@
             "format": "date-time"
           },
           "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "How many times you have now made it.",
             "format": "int32"
           }
@@ -3233,21 +3007,7 @@
             "description": "Its text, split into words and ingredient references."
           },
           "durationSeconds": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "How long it takes, when it waits. Drives the inline timer.",
             "format": "int32",
             "nullable": true
@@ -3282,21 +3042,7 @@
             "nullable": true
           },
           "quantity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "number",
             "description": "The ingredient's base amount, on a read.",
             "format": "double",
             "nullable": true
@@ -3335,15 +3081,7 @@
             "description": "`en` or `de`."
           },
           "yieldAmount": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "number",
             "description": "How many it makes.",
             "format": "double"
           },
@@ -3352,41 +3090,13 @@
             "description": "`servings` or `pieces`."
           },
           "prepMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "Hands-on time.",
             "format": "int32",
             "nullable": true
           },
           "cookMinutes": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true
-              }
-            ],
+            "type": "integer",
             "description": "Time in the oven or on the hob.",
             "format": "int32",
             "nullable": true
@@ -3541,15 +3251,7 @@
             "description": "Whether a new account must present an invitation code."
           },
           "maxUsers": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The largest number of accounts this instance allows.",
             "format": "int32"
           }
@@ -3573,15 +3275,7 @@
             "description": "Whether a new account must present an invitation code."
           },
           "maxUsers": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The largest number of accounts this instance allows.",
             "format": "int32"
           }
@@ -3605,15 +3299,7 @@
             "description": "Whether a new account must present an invitation code."
           },
           "maxUsers": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The largest number of accounts this instance allows.",
             "format": "int32"
           }
@@ -3686,15 +3372,7 @@
             "description": "The households they belong to."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
           }
@@ -3728,15 +3406,7 @@
             "description": "Which units to render."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version.",
             "format": "int64"
           }
@@ -3842,15 +3512,7 @@
             "description": "What they are now called."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The new entity version, so the client needs no follow-up read.",
             "format": "int64"
           }
@@ -3912,15 +3574,7 @@
             "description": "Which units to render."
           },
           "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "string"
-              }
-            ],
+            "type": "integer",
             "description": "The entity version.",
             "format": "int64"
           }
