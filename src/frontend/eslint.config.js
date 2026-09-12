@@ -53,6 +53,17 @@ export default ts.config(
     }
   },
   {
+    /*
+     * Every route id in Culina goes through `resolve()` where it is written —
+     * `navigation.ts` and `redirectTarget.ts` — so a base path is honoured.
+     * These two files only consume values that are already resolved, and the
+     * rule cannot see that through a variable. It stays on everywhere a literal
+     * route could still be written by hand.
+     */
+    files: ['src/lib/app/Navigation.svelte', 'src/routes/+layout.svelte'],
+    rules: { 'svelte/no-navigation-without-resolve': 'off' }
+  },
+  {
     // A design-system component takes its href as a prop: it cannot know
     // whether the caller is linking to a route or off site, so resolution stays
     // with the page that knows. The rule keeps working everywhere else, which

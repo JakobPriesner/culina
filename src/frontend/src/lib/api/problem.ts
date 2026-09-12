@@ -27,6 +27,7 @@ export interface AppError {
 /** The codes the client itself acts on. Everything else is the UI's business. */
 export const ErrorCodes = {
   notAuthenticated: 'auth.not_authenticated',
+  invalidCredentials: 'auth.invalid_credentials',
   csrfInvalid: 'auth.csrf_invalid',
   versionMismatch: 'request.version_mismatch',
   /** The request never reached a server. */

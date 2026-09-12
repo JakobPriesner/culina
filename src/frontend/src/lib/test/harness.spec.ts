@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
-import Page from '../../routes/+page.svelte';
+import Greeting from './Greeting.svelte';
 import { renderWithProviders } from './render';
 
 /*
@@ -10,8 +10,8 @@ import { renderWithProviders } from './render';
  * class — and module state is put back between tests.
  */
 describe('the test harness', () => {
-  it('renders a route component with a theme applied', () => {
-    renderWithProviders(Page);
+  it('renders a component with a theme applied', () => {
+    renderWithProviders(Greeting);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Culina');
     expect(document.documentElement.dataset['theme']).toBe('warm-paper');
@@ -19,7 +19,7 @@ describe('the test harness', () => {
   });
 
   it('renders in dark mode when asked', () => {
-    renderWithProviders(Page, { mode: 'dark' });
+    renderWithProviders(Greeting, { mode: 'dark' });
 
     expect(document.documentElement.dataset['mode']).toBe('dark');
   });

@@ -8,6 +8,13 @@ import { defineConfig } from 'vitest/config';
 // with "mount(...) is not available on the server".
 const underTest = Boolean(process.env['VITEST']);
 
+const apiProxy = {
+  '/api': {
+    target: process.env['CULINA_API'] ?? 'http://localhost:5000',
+    changeOrigin: false
+  }
+};
+
 export default defineConfig({
   plugins: [
     // Messages compile to tree-shakeable functions, so there is no runtime
@@ -48,18 +55,14 @@ export default defineConfig({
 
   resolve: underTest ? { conditions: ['browser'] } : {},
 
-  server: {
-    port: 5173,
-    proxy: {
-      // Development is same-origin on purpose. Proxying /api means cookies,
-      // SameSite and CSRF behave exactly as they do in production, which is why
-      // Culina has no CORS policy anywhere and no dev-only auth path.
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: false
-      }
-    }
-  },
+  // Development is same-origin on purpose. Proxying /api means cookies,
+  // SameSite and CSRF behave exactly as they do in production, which is why
+  // Culina has no CORS policy anywhere and no dev-only auth path.
+  server: { port: 5173, proxy: apiProxy },
+
+  // The same proxy for `vite preview`, so the end-to-end suite exercises the
+  // built app against a real backend rather than a different arrangement.
+  preview: { proxy: apiProxy },
 
   test: {
     // jsdom, not a real browser: these suites cover tokens, stores and
