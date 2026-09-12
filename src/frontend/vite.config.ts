@@ -1,4 +1,6 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
+
+import { siteFiles } from './build-tools/siteFiles';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
@@ -50,7 +52,12 @@ export default defineConfig({
         $features: 'src/lib/features',
         $shell: 'src/lib/app'
       }
-    })
+    }),
+
+    // robots.txt, sitemap.xml and security.txt, written from the one list of
+    // public routes so they cannot disagree with each other. Last, so it writes
+    // into the directory the adapter has finished producing.
+    siteFiles()
   ],
 
   resolve: underTest ? { conditions: ['browser'] } : {},
@@ -71,7 +78,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/lib/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,ts}'],
+    include: ['src/**/*.{test,spec}.{js,ts}', 'build-tools/**/*.spec.ts'],
     css: true
   }
 });

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Culina">
+  <!--
+    A bowl with steam. Culina is a kitchen app and the mark says so at 16px,
+    which a letterform in a circle does not.
+
+    The terracotta is --c-terracotta-600 and the paper is --c-sand-50; the
+    values are literal here because an icon is rendered by an operating system
+    that has never heard of our token system.
+  -->
+  <rect width="64" height="64" rx="14" fill="#a94c30" />
+
+  <g fill="none" stroke="#fdfbf7" stroke-width="3.2" stroke-linecap="round">
+    <!-- Steam: two wisps, deliberately uneven, because symmetrical steam
+         reads as a logo and uneven steam reads as cooking. -->
+    <path d="M25 24c-3-3.2 3-5.6 0-8.8" />
+    <path d="M36 25.4c-3-3.2 3-5.6 0-8.8" />
+  </g>
+
+  <!-- The rim sits proud of the bowl, so the shape still reads when the icon
+       is scaled down to a browser tab. -->
+  <rect x="9" y="31" width="46" height="5.4" rx="2.7" fill="#fdfbf7" />
+  <path d="M13.5 38.5h37a18.5 18.5 0 0 1-37 0Z" fill="#fdfbf7" />
+</svg>

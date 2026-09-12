@@ -1,0 +1,15 @@
+/* CULINA */
+
+Culina is a self-hosted recipe app: your recipes, on your own server, for the
+people you actually cook with.
+
+/* TECHNOLOGY */
+
+  Backend        C# / .NET, PostgreSQL, Dapper
+  Frontend       SvelteKit, shipped as a progressive web app
+  Delivery       One container holding both
+  Languages      English, Deutsch
+
+/* THANKS */
+
+  To everyone who writes down a recipe so someone else can cook it.
