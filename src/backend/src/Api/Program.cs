@@ -6,6 +6,14 @@ using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Asks the container it is running in whether it is ready, and exits. Before
+// anything else is configured: it makes one HTTP request and never becomes a
+// host of its own.
+if (HealthCheckProbe.Requested(args))
+{
+    return await HealthCheckProbe.RunAsync(builder.Configuration).ConfigureAwait(false);
+}
+
 // The export starts the host, so it needs somewhere to listen — but not the
 // port the app uses, or exporting the contract would be impossible while the
 // app is running, which is exactly when it is usually done. Port 0 is whatever
@@ -73,7 +81,9 @@ if (OpenApiExport.Requested(args))
 {
     await OpenApiExport.WriteAsync(app, args).ConfigureAwait(false);
 
-    return;
+    return 0;
 }
 
 await app.RunAsync().ConfigureAwait(false);
+
+return 0;

@@ -21,6 +21,19 @@ public sealed record ForwardedHeadersSettings
     /// </summary>
     public IReadOnlyList<string> KnownProxies { get; init; } = [];
 
+    /// <summary>
+    /// Proxy <em>networks</em>, in CIDR form, whose headers are honoured.
+    /// </summary>
+    /// <remarks>
+    /// Not a convenience. A reverse proxy in a container network has no address
+    /// anyone can know in advance — it is whatever the bridge hands out this
+    /// time — so a deployment that can only name addresses cannot name its own
+    /// proxy at all. Keep the network as small as it can be: this is a trust
+    /// boundary, and <c>0.0.0.0/0</c> means every client may forge its own
+    /// address.
+    /// </remarks>
+    public IReadOnlyList<string> KnownNetworks { get; init; } = [];
+
     /// <summary>Throws when any value would make the process unable to serve.</summary>
     public void Validate()
     {
@@ -30,7 +43,18 @@ public sealed record ForwardedHeadersSettings
             {
                 throw new InvalidOperationException(
                     $"Configuration {SectionName}__KnownProxies contains '{proxy}', "
-                    + "which is not an IP address. List proxy addresses, comma-separated.");
+                    + "which is not an IP address. List proxy addresses, comma-separated — "
+                    + $"or, for a network, use {SectionName}__KnownNetworks with a CIDR range.");
+            }
+        }
+
+        foreach (var network in KnownNetworks)
+        {
+            if (!System.Net.IPNetwork.TryParse(network, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Configuration {SectionName}__KnownNetworks contains '{network}', "
+                    + "which is not a CIDR range such as 172.18.0.0/16.");
             }
         }
     }

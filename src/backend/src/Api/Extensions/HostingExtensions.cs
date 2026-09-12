@@ -173,6 +173,13 @@ internal static class HostingExtensions
             options.KnownProxies.Add(IPAddress.Parse(proxy));
         }
 
+        foreach (var network in settings.KnownNetworks)
+        {
+            // Fully qualified: `Microsoft.AspNetCore.HttpOverrides` has a type of
+            // the same name, and the one this option wants is the framework's.
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+        }
+
         return (WebApplication)app.UseForwardedHeaders(options);
     }
 }

@@ -1,0 +1,85 @@
+# Production, layered over compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d
+#
+# What this file changes is what must not be true in production — the database
+# is no longer reachable from the host, and the app runs from the published
+# image rather than from a shell on somebody's laptop.
+#
+# TLS terminates at the operator's own reverse proxy. Culina sets no HSTS,
+# performs no HTTPS redirect and compresses nothing: compressing a
+# cookie-authenticated response invites BREACH.
+
+services:
+  db:
+    # Replaces the development mapping rather than adding to it: the database
+    # is reachable only on the internal network. A published PostgreSQL port is
+    # how a self-hosted instance ends up in somebody's botnet.
+    ports: !override []
+
+  app:
+    image: ${CULINA_IMAGE:-ghcr.io/jakobpriesner/culina:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        # Not `started`. A migration that runs against a database still
+        # starting up fails the boot, and the container restarts into the same
+        # race.
+        condition: service_healthy
+    environment:
+      Database__Host: db
+      Database__Port: '5432'
+      Database__Name: ${POSTGRES_DB:-culina}
+      Database__Username: ${Database__Username:-culina_app}
+      Database__Password: ${Database__Password:?set Database__Password in .env}
+      # Both ends are inside the compose network, which no other container
+      # joins. Set this to true the moment the database is anywhere else.
+      Database__RequireSsl: ${Database__RequireSsl:-false}
+      # The proxy in front of this terminates TLS, so the cookie must be marked
+      # Secure even though this process speaks plain HTTP to it.
+      Cookies__Secure: 'true'
+      # One of these is required, and required to be specific: trusting every
+      # proxy lets any client forge its own address, which makes per-IP rate
+      # limiting useless and every security log line a guess.
+      #
+      # A proxy in this compose network has no address anyone can know in
+      # advance, so name the network instead — `docker network inspect` gives
+      # you its subnet. Keep it as small as it can be.
+      ForwardedHeaders__KnownProxies: ${ForwardedHeaders__KnownProxies:-}
+      ForwardedHeaders__KnownNetworks: ${ForwardedHeaders__KnownNetworks:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-culina-api}
+    ports:
+      - '${CULINA_PORT:-8080}:8080'
+    volumes:
+      # ── Both of these are mandatory. ────────────────────────────────────────
+      # Recipe photographs. Not in the database and not rebuildable: without
+      # this volume every photo in the instance is gone on the next deploy, and
+      # nothing will have said so.
+      - culina-images:/data/images
+      # The data-protection key ring. Culina's session cookie carries an opaque
+      # reference rather than an encrypted payload, so a lost key ring does not
+      # sign anyone out — but anything the framework protects later would
+      # change key on every restart.
+      - culina-keys:/data/keys
+    # Nothing but the two volumes is writable, and /tmp is memory that does not
+    # survive the container.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      # The image's own check, stated here too so `docker compose ps` and any
+      # orchestrator agree on what healthy means.
+      test: ['CMD', '/app/Api', '--health-check']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  culina-images:
+  culina-keys:

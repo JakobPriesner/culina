@@ -170,6 +170,11 @@ bead when something needs action.
 
 - **Health**: `/health/live` (process) and `/health/ready` (database). The
   container `HEALTHCHECK` and any orchestrator use `ready`.
+- **`Cannot load library libgssapi_krb5.so.2` at boot is expected.** Npgsql
+  probes for Kerberos when it builds its data source, and a chiseled runtime
+  ships no Kerberos. Culina authenticates to PostgreSQL with a password, so
+  nothing needs it. Two lines on stderr at startup and never again; adding six
+  system libraries to the image to silence them is not a trade worth making.
 - **Observability**: set `OTEL_EXPORTER_OTLP_ENDPOINT` and all three signals
   export. Unset, the app logs JSON to stdout and exports nothing. Culina
   invents no telemetry configuration names of its own.
