@@ -1,0 +1,91 @@
+# The scan that finds what CI could not have.
+#
+# A vulnerability disclosed the day after a release passes every gate that ran
+# before it and is exactly the one nobody notices. So the *published* image is
+# re-scanned on a schedule, against today's advisories rather than the ones
+# that existed when it was built.
+
+name: Nightly
+
+on:
+  schedule:
+    # Early morning UTC: a finding is waiting when somebody starts work, rather
+    # than arriving in the middle of it.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}
+
+jobs:
+  published-image:
+    name: Published image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        # Never fails the run. Nothing is broken — the image that was fine
+        # yesterday is still exactly the image that was fine yesterday — and a
+        # red cross every morning is a red cross everyone stops reading. The
+        # result goes to the security tab, where it stays until it is dealt
+        # with.
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE }}:latest
+          format: sarif
+          output: trivy.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      - uses: github/codeql-action/upload-sarif@977e6ceaea7361825998245d787fa3b4d6b9e5df # codeql-bundle-v2.27.0
+        if: hashFiles('trivy.sarif') != ''
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-published
+
+  dependencies:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      # Today's advisories against the versions the lock files pin. This *does*
+      # fail: a newly disclosed vulnerability in something Culina ships is
+      # work, not information.
+      - name: Vulnerable NuGet packages
+        working-directory: src/backend
+        run: |
+          dotnet restore --locked-mode
+          report=$(dotnet list package --vulnerable --include-transitive)
+          echo "$report"
+          if echo "$report" | grep -q '> '; then
+            echo "::error::A dependency has a known vulnerability."
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: src/frontend
+
+      - run: pnpm audit --audit-level=high
+        working-directory: src/frontend

@@ -1,0 +1,330 @@
+# Every job here is a merge gate. None of them is advisory.
+#
+# Actions are pinned to a commit, never a tag: a tag is a name its owner can
+# move, and an action that moves is an action that runs code nobody reviewed
+# with a token that can write to this repository.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# A superseded run is wasted compute and a confusing status. The newest push to
+# a branch is the only one whose answer anyone acts on.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # One place, so a bump is one edit rather than a hunt through the file.
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22'
+  # Nothing here is an interactive session, and the telemetry notice is noise
+  # in every log.
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: src/backend/**/packages.lock.json
+
+      # Locked: the build that runs here restores exactly what was tested
+      # locally, or it fails saying so.
+      - run: dotnet restore --locked-mode
+        working-directory: src/backend
+
+      - run: dotnet format --verify-no-changes
+        working-directory: src/backend
+
+      # Warnings are already errors in Directory.Build.props, so this is also
+      # the lint step. There is no separate one to forget.
+      - run: dotnet build --no-restore
+        working-directory: src/backend
+
+      - name: Unit and architecture tests
+        working-directory: src/backend
+        run: |
+          dotnet test tests/Domain.UnitTests --no-build
+          dotnet test tests/Application.UnitTests --no-build
+          dotnet test tests/ArchitectureTests --no-build
+
+      # Testcontainers starts a real PostgreSQL. Slower and worth it: the SQL is
+      # hand-written, and a fake would only prove the fake works.
+      - name: Integration tests
+        working-directory: src/backend
+        run: dotnet test tests/IntegrationTests --no-build
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: src/frontend
+
+      - run: pnpm lint
+        working-directory: src/frontend
+
+      # svelte-check plus the service worker's own tsconfig — the app's config
+      # excludes the worker, and an unchecked worker has shipped a bug before.
+      - run: pnpm check
+        working-directory: src/frontend
+
+      - run: pnpm test:unit
+        working-directory: src/frontend
+
+      - run: pnpm build
+        working-directory: src/frontend
+
+  contract:
+    name: Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The job that matters most. The backend and the generated client cannot
+    # drift, because drift fails the build — without this, a renamed field is a
+    # runtime surprise weeks later, in somebody's kitchen.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: culina
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: src/backend/**/packages.lock.json
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: src/frontend
+
+      # The document is produced by enumerating the endpoints of a *started*
+      # host, which is why this job needs a database at all.
+      - name: Export the OpenAPI document
+        working-directory: src/backend
+        env:
+          Database__Host: localhost
+          Database__Port: '5432'
+          Database__Name: culina
+          Database__Username: postgres
+          Database__Password: postgres
+          Database__RequireSsl: 'false'
+        run: dotnet run --project src/Api -- --export-openapi
+
+      - run: pnpm generate:api
+        working-directory: src/frontend
+
+      - name: The contract and the client must agree
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::The OpenAPI document or the generated client is stale. Run 'make api' and commit the result."
+            exit 1
+          fi
+
+  e2e:
+    name: End to end
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: src/frontend
+
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: src/frontend
+
+      # The real image against a real database, so the suite exercises what
+      # ships rather than a development arrangement that resembles it.
+      - name: Start the stack
+        run: |
+          docker build -t culina:ci --build-arg REVISION="${GITHUB_SHA::7}" .
+          CULINA_IMAGE=culina:ci \
+          CULINA_PORT=8080 \
+          ForwardedHeaders__KnownNetworks=172.16.0.0/12 \
+          Database__Password=culina_ci_password \
+          docker compose -f compose.yaml -f compose.prod.yaml up -d --wait
+
+      # The signed-in suites need an account, and the first account on a fresh
+      # instance is always the administrator.
+      - name: Create the first account
+        id: account
+        run: |
+          curl --fail --silent --show-error \
+            -X POST http://localhost:8080/api/v1/users \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: http://localhost:8080' \
+            -d '{"email":"ci@culina.test","displayName":"CI","password":"a sentence nobody else would pick"}'
+
+      - name: Playwright
+        working-directory: src/frontend
+        env:
+          CULINA_API: http://localhost:8080
+          CULINA_E2E_EMAIL: ci@culina.test
+          CULINA_E2E_PASSWORD: a sentence nobody else would pick
+        run: pnpm test:e2e
+
+      # Only on failure: a passing run's trace is never opened, and uploading
+      # it on every run is minutes of everyone's time for nothing.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            src/frontend/playwright-report/
+            src/frontend/test-results/
+          retention-days: 7
+
+      - name: What the container said
+        if: failure()
+        run: docker compose -f compose.yaml -f compose.prod.yaml logs --no-color
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [csharp, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        if: matrix.language == 'csharp'
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - uses: github/codeql-action/init@977e6ceaea7361825998245d787fa3b4d6b9e5df # codeql-bundle-v2.27.0
+        with:
+          languages: ${{ matrix.language }}
+
+      - uses: github/codeql-action/autobuild@977e6ceaea7361825998245d787fa3b4d6b9e5df # codeql-bundle-v2.27.0
+
+      - uses: github/codeql-action/analyze@977e6ceaea7361825998245d787fa3b4d6b9e5df # codeql-bundle-v2.27.0
+
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Gitleaks reads history, and a shallow clone would leave a secret
+          # committed three days ago unfound.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: src/backend/**/packages.lock.json
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      # NuGetAudit already fails the compile on a vulnerable package. This
+      # prints which one, so the failure is actionable without a local build.
+      - name: Vulnerable NuGet packages
+        working-directory: src/backend
+        run: |
+          dotnet restore --locked-mode
+          report=$(dotnet list package --vulnerable --include-transitive)
+          echo "$report"
+          if echo "$report" | grep -q '> '; then
+            echo "::error::A dependency has a known vulnerability."
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: src/frontend
+
+      - run: pnpm audit --audit-level=high
+        working-directory: src/frontend
+
+      - name: Build the image to scan
+        run: docker build -t culina:scan --build-arg REVISION="${GITHUB_SHA::7}" .
+
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: culina:scan
+          format: sarif
+          output: trivy.sarif
+          severity: HIGH,CRITICAL
+          # Only what can actually be acted on. A finding with no fix available
+          # is a finding that teaches everyone to ignore the report.
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - uses: github/codeql-action/upload-sarif@977e6ceaea7361825998245d787fa3b4d6b9e5df # codeql-bundle-v2.27.0
+        # Uploaded even when Trivy failed, which is when it is worth reading.
+        if: always() && hashFiles('trivy.sarif') != ''
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
