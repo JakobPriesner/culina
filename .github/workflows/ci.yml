@@ -101,6 +101,12 @@ jobs:
       - run: pnpm build
         working-directory: src/frontend
 
+      # A plain build, with no gallery flag — which is what a release is. The
+      # gallery has shipped twice, both times invisibly, so what ships is
+      # searched for text that exists nowhere else.
+      - run: pnpm verify:release
+        working-directory: src/frontend
+
   contract:
     name: Contract
     runs-on: ubuntu-latest
