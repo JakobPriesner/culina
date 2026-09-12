@@ -36,7 +36,11 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `pnpm build && pnpm preview --port ${port} --strictPort`,
+    // The gallery is built in for these tests only: focus trapping, the top
+    // layer and light dismiss are browser behaviour, and the components that
+    // rely on them have nowhere else to be exercised until the features that
+    // use them exist.
+    command: `VITE_GALLERY=1 pnpm build && pnpm preview --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000

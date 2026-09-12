@@ -85,8 +85,15 @@ export const rawColourRemedy =
   'Colours belong to the token system: add or reuse a semantic token in ' +
   'src/lib/design-system/tokens/semantic.css and give every theme a value for it.';
 
-/** A custom property being given a value, rather than being read. */
+/** A custom property being given a value in CSS, rather than being read. */
 const declaration = /(^|[;{])\s*(--[\w-]+)\s*:/g;
+
+/**
+ * Svelte's `style:--name={...}` directive, which sets a custom property on the
+ * element without ever appearing in a stylesheet. It is a declaration; a
+ * scanner that only reads CSS would call every use of it undeclared.
+ */
+const styleDirective = /\bstyle:(--[\w-]+)/g;
 
 /** Where the vocabulary of tokens is defined. */
 const tokenDirectories = ['src/lib/design-system/tokens/', 'src/lib/design-system/themes/'];
@@ -103,12 +110,18 @@ const tokenDirectories = ['src/lib/design-system/tokens/', 'src/lib/design-syste
 export async function findUnknownTokens(root: string): Promise<string[]> {
   const declared = new Set<string>();
   const files: { path: string; css: string }[] = [];
+  const markup = new Map<string, string[]>();
 
   for await (const entry of glob('src/**/*.{css,svelte}', { cwd: root })) {
     const path = entry.replaceAll('\\', '/');
-    const css = withoutComments(styleSource(path, await readFile(`${root}/${path}`, 'utf8')));
+    const contents = await readFile(`${root}/${path}`, 'utf8');
+    const css = withoutComments(styleSource(path, contents));
 
     files.push({ path, css });
+    markup.set(
+      path,
+      [...contents.matchAll(styleDirective)].map(([, name]) => name!)
+    );
 
     if (tokenDirectories.some((directory) => path.startsWith(directory))) {
       for (const [, , name] of css.matchAll(declaration)) {
@@ -122,7 +135,10 @@ export async function findUnknownTokens(root: string): Promise<string[]> {
   for (const { path, css } of files) {
     // A component may declare a property of its own and use it in the same
     // file; that is local plumbing, not a missing token.
-    const local = new Set([...css.matchAll(declaration)].map(([, , name]) => name!));
+    const local = new Set([
+      ...[...css.matchAll(declaration)].map(([, , name]) => name!),
+      ...(markup.get(path) ?? [])
+    ]);
 
     for (const match of css.matchAll(/var\(\s*(--[\w-]+)/g)) {
       const name = match[1]!;
