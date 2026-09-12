@@ -1,4 +1,5 @@
 import { forgetCachedResponses, http, request, type AppError } from '$api';
+import { forgetCachedReads } from '$shell/connection.svelte';
 import { registerStore, resetAllStores } from '$shell/stores';
 import { preferences } from '$shell/preferences.svelte';
 
@@ -81,6 +82,11 @@ class SessionStore {
       return result.error;
     }
 
+    // Whatever this device read for the last person is not this person's to
+    // see. On the way in as well as on the way out, because a browser closed
+    // without signing out never reached the way out.
+    forgetCachedReads();
+
     // A fresh read rather than trusting the sign-in response: it carries who
     // signed in, but not the households, and the shell needs both.
     await this.#load();
@@ -111,6 +117,7 @@ class SessionStore {
   end(): void {
     resetAllStores();
     forgetCachedResponses();
+    forgetCachedReads();
     this.#status = 'anonymous';
   }
 

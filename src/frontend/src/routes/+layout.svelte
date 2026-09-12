@@ -10,6 +10,7 @@
   import { loginUrlFor } from '$features/auth/redirectTarget';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
+  import { connection } from '$shell/connection.svelte';
   import { preferences } from '$shell/preferences.svelte';
   import { watchForUpdates } from '$shell/updates.svelte';
 
@@ -26,6 +27,7 @@
 
     const stopFollowingTheDevice = preferences.start();
     const stopWatchingForUpdates = watchForUpdates();
+    const stopFollowingTheNetwork = connection.start();
 
     // The API layer decides *when* a session has ended; what happens next is
     // the app's business, and keeping that here is what stops the client from
@@ -38,6 +40,7 @@
     return () => {
       stopFollowingTheDevice();
       stopWatchingForUpdates();
+      stopFollowingTheNetwork();
     };
   });
 </script>

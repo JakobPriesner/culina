@@ -46,6 +46,16 @@ export default defineConfig({
       // every client route.
       adapter: adapter({ fallback: 'index.html', strict: false }),
 
+      // Absolute asset URLs, not relative ones.
+      //
+      // Culina is always served from the root of its own origin, so relative
+      // paths buy nothing — and they cost: a document generated for `/` and
+      // served for `/recipes/<id>` resolves `./_app/…` against `/recipes/`,
+      // and the app boots to a blank page. That is exactly what the service
+      // worker does with the shell, and it is what the host does for a deep
+      // link. Absolute paths make every document interchangeable.
+      paths: { relative: false },
+
       // Registered by the app, not by the framework: Culina asks before it
       // swaps a running build out from under someone mid-recipe, and that
       // conversation needs the registration object. See lib/app/updates.

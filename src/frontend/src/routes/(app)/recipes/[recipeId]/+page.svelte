@@ -10,6 +10,7 @@
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { toaster } from '$shell/toaster.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
+  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
 
@@ -53,7 +54,7 @@
     const failure = await shopping.addRecipe(householdId, recipeId, servings);
 
     toaster.show({
-      message: failure ? failure.detail : m['shopping.added'](),
+      message: failure ? explain(failure) : m['shopping.added'](),
       tone: failure ? 'danger' : 'success'
     });
   }
