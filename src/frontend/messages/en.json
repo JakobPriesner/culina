@@ -226,5 +226,12 @@
   "cooking.timer.dismiss": "Dismiss the timer",
   "cooking.madeIt.toast": "Added to your cooking history.",
   "cooking.madeIt.undo": "Undo",
-  "cooking.screenOn": "Screen stays on while you cook."
+  "cooking.screenOn": "Screen stays on while you cook.",
+  "notes.title": "Your notes",
+  "notes.hint": "Only you can see these. The recipe stays as it was written.",
+  "notes.overall": "About this recipe",
+  "notes.placeholder": "Less sugar next time. The oven runs hot.",
+  "notes.saved": "Saved",
+  "notes.madeCount": "You have made this {count}×",
+  "notes.lastMade": "Last on {date}"
 }

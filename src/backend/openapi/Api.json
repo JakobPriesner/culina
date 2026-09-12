@@ -1957,6 +1957,52 @@
         }
       }
     },
+    "/api/v1/recipes/{recipeId}/cook-log/{entryId}": {
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Take back a “made it”",
+        "description": "The undo behind the confirmation toast. Culina does not ask \"are you sure?\" before a one-tap action that was never dangerous; it does the thing and offers this instead.",
+        "operationId": "undoRecipeCookedV1",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipes/{recipeId}/image": {
       "put": {
         "tags": [

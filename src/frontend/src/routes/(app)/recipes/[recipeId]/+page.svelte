@@ -3,6 +3,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, ErrorState, Skeleton } from '$ds';
+  import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
@@ -69,6 +70,8 @@
       onservings={scale}
       onstartcooking={startCooking}
     />
+
+    <PersonalNotePanel {recipeId} />
   {:else}
     <div class="loading" aria-busy="true" aria-label={m['recipes.list.loading']()}>
       <Skeleton width="60%" height="2.5em" />

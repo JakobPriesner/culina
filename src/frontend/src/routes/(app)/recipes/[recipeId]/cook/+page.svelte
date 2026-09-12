@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, Skeleton } from '$ds';
+  import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import StepTimer from '$features/cooking/StepTimer.svelte';
   import { createTimers } from '$features/cooking/timers.svelte';
@@ -80,7 +81,21 @@
     timers.clear();
 
     if (completed) {
-      toaster.show({ message: m['cooking.madeIt.toast'](), tone: 'success' });
+      const recorded = await cookLog.record(recipeId, servings);
+
+      // Done first, undo offered after: asking "are you sure?" before a one-tap
+      // action that was never dangerous costs everyone a decision to protect
+      // against a mistake that was already cheap to fix.
+      toaster.show({
+        message: m['cooking.madeIt.toast'](),
+        tone: 'success',
+        action: recorded
+          ? {
+              label: m['cooking.madeIt.undo'](),
+              run: () => void cookLog.undo(recipeId, recorded.entryId)
+            }
+          : undefined
+      });
     }
 
     await goto(
