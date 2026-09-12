@@ -12,12 +12,12 @@ export type Unit = NonNullable<components['schemas']['RecipesIngredientContract'
 export type UnitFamily = 'mass' | 'volume' | 'spoon' | 'count' | 'none';
 
 const families: Partial<Record<Unit, UnitFamily>> = {
-  gram: 'mass',
-  kilogram: 'mass',
-  millilitre: 'volume',
-  litre: 'volume',
-  teaspoon: 'spoon',
-  tablespoon: 'spoon'
+  g: 'mass',
+  kg: 'mass',
+  ml: 'volume',
+  l: 'volume',
+  tsp: 'spoon',
+  tbsp: 'spoon'
 };
 
 export function familyOf(unit: Unit | null | undefined): UnitFamily {
@@ -34,9 +34,9 @@ export function familyOf(unit: Unit | null | undefined): UnitFamily {
 export const canonicalOf = (unit: Unit | null | undefined): Unit | null => {
   switch (familyOf(unit)) {
     case 'mass':
-      return 'gram';
+      return 'g';
     case 'volume':
-      return 'millilitre';
+      return 'ml';
     default:
       return unit ?? null;
   }
@@ -44,7 +44,7 @@ export const canonicalOf = (unit: Unit | null | undefined): Unit | null => {
 
 /** How many canonical units one of this unit is worth. */
 export const toCanonical = (unit: Unit | null | undefined): number =>
-  unit === 'kilogram' || unit === 'litre' ? 1000 : 1;
+  unit === 'kg' || unit === 'l' ? 1000 : 1;
 
 /**
  * Whether scaling this amount means anything.
@@ -58,10 +58,10 @@ export const scales = (unit: Unit | null | undefined): boolean => unit !== 'pinc
 /** The larger unit a family re-expresses into, when the number gets big. */
 export const largerUnit = (unit: Unit | null | undefined): Unit | null => {
   switch (unit) {
-    case 'gram':
-      return 'kilogram';
-    case 'millilitre':
-      return 'litre';
+    case 'g':
+      return 'kg';
+    case 'ml':
+      return 'l';
     default:
       return null;
   }

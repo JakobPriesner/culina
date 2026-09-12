@@ -11,4 +11,11 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Use cases and the wire vocabulary are internal by convention; the
+         project that tests them has to see them. -->
+    <InternalsVisibleTo Include="IntegrationTests" />
+    <InternalsVisibleTo Include="Application.UnitTests" />
+  </ItemGroup>
+
 </Project>

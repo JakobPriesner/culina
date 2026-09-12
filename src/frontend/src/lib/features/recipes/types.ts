@@ -1,3 +1,5 @@
+import type { components } from '$api/generated/schema';
+
 import type { Unit } from './units';
 
 /**
@@ -7,7 +9,10 @@ import type { Unit } from './units';
  * wire then changes one mapper instead of every component that reads it, and
  * the UI gets names that suit the screen rather than the database.
  */
-export type YieldKind = 'servings' | 'pieces';
+export type YieldKind = components['schemas']['RecipesRecipeDetail']['yieldKind'];
+
+/** The languages a recipe can be written in, from the contract. */
+export type RecipeLanguage = components['schemas']['RecipesRecipeDetail']['language'];
 
 export interface Quantity {
   /** Null when the recipe does not say how much. */
@@ -80,7 +85,7 @@ export interface Recipe {
   readonly householdId: string;
   readonly title: string;
   readonly description: string | null;
-  readonly language: string;
+  readonly language: RecipeLanguage;
   readonly yieldAmount: number;
   readonly yieldKind: YieldKind;
   readonly prepMinutes: number | null;

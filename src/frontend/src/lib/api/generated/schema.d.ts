@@ -844,7 +844,7 @@ export interface components {
              * @description In what, or null for a bare count.
              * @enum {string|null}
              */
-            unit?: "gram" | "kilogram" | "millilitre" | "litre" | "teaspoon" | "tablespoon" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
             /** @description The shoppable noun: "butter". */
             name: string;
             /** @description The preparation: "finely chopped". */
@@ -881,8 +881,11 @@ export interface components {
             title: string;
             /** @description A short introduction, if there is one. */
             description?: string | null;
-            /** @description The language the title and steps are written in. */
-            language: string;
+            /**
+             * @description The language the title and steps are written in.
+             * @enum {string}
+             */
+            language: "en" | "de";
             /**
              * Format: double
              * @description How many it makes.
@@ -1020,7 +1023,7 @@ export interface components {
              * @description The ingredient's unit, on a read.
              * @enum {string|null}
              */
-            unit?: "gram" | "kilogram" | "millilitre" | "litre" | "teaspoon" | "tablespoon" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
         };
         /** @description The recipe's complete new state. */
         RecipesUpdateRequest: {
@@ -1028,8 +1031,11 @@ export interface components {
             title: string;
             /** @description A short introduction. */
             description?: string | null;
-            /** @description `en` or `de`. */
-            language: string;
+            /**
+             * @description `en` or `de`.
+             * @enum {string}
+             */
+            language: "en" | "de";
             /**
              * Format: double
              * @description How many it makes.

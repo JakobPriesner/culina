@@ -14,18 +14,18 @@ const scale = (value: number | null, unit: Unit | null, factor: number) =>
 describe('mass and volume', () => {
   it.each([
     // raw amount, factor, expected value, expected unit
-    [7.3, 1, 7.3, 'gram'],
-    [14.6, 0.5, 7.5, 'gram'],
+    [7.3, 1, 7.3, 'g'],
+    [14.6, 0.5, 7.5, 'g'],
     // 133.3 is in the 100–1000 band, so it steps by 10.
-    [100, 1.333, 130, 'gram'],
-    [50, 1.3, 65, 'gram'],
-    [325, 1.333, 430, 'gram'],
+    [100, 1.333, 130, 'g'],
+    [50, 1.3, 65, 'g'],
+    [325, 1.333, 430, 'g'],
     // 1350 stays in grams: nobody writes 1.35 kg.
-    [1000, 1.333, 1350, 'gram'],
-    [500, 2, 1, 'kilogram'],
-    [1000, 2, 2, 'kilogram']
+    [1000, 1.333, 1350, 'g'],
+    [500, 2, 1, 'kg'],
+    [1000, 2, 2, 'kg']
   ])('scales %s g by %s to %s %s', (base, factor, value, unit) => {
-    const scaled = scale(base, 'gram', factor);
+    const scaled = scale(base, 'g', factor);
 
     expect(scaled.value).toBe(value);
     expect(scaled.unit).toBe(unit);
@@ -39,20 +39,20 @@ describe('mass and volume', () => {
   ])('uses the step for the magnitude at the boundary %s', (amount, step) => {
     // Just above the boundary, scaled by an awkward factor: the result has to
     // land on a multiple of that magnitude's step.
-    const scaled = scale(amount, 'gram', 1.07);
-    const inGrams = scaled.unit === 'kilogram' ? scaled.value! * 1000 : scaled.value!;
+    const scaled = scale(amount, 'g', 1.07);
+    const inGrams = scaled.unit === 'kg' ? scaled.value! * 1000 : scaled.value!;
 
     expect(Number((inGrams / step).toFixed(6)) % 1).toBe(0);
   });
 
   it('re-expresses upward when the number gets unwieldy', () => {
-    expect(scale(750, 'gram', 2)).toMatchObject({ value: 1.5, unit: 'kilogram' });
-    expect(scale(1000, 'millilitre', 2)).toMatchObject({ value: 2, unit: 'litre' });
+    expect(scale(750, 'g', 2)).toMatchObject({ value: 1.5, unit: 'kg' });
+    expect(scale(1000, 'ml', 2)).toMatchObject({ value: 2, unit: 'l' });
   });
 
   it('never re-expresses downward, because a scale shows grams', () => {
-    expect(scale(1, 'kilogram', 0.5)).toMatchObject({ value: 500, unit: 'gram' });
-    expect(scale(1, 'litre', 0.5)).toMatchObject({ value: 500, unit: 'millilitre' });
+    expect(scale(1, 'kg', 0.5)).toMatchObject({ value: 500, unit: 'g' });
+    expect(scale(1, 'l', 0.5)).toMatchObject({ value: 500, unit: 'ml' });
   });
 });
 
@@ -82,24 +82,24 @@ describe('countable things', () => {
 
 describe('spoons', () => {
   it('rounds to halves', () => {
-    expect(scale(1, 'tablespoon', 1.7)).toMatchObject({ value: 1.5, unit: 'tablespoon' });
-    expect(scale(2, 'teaspoon', 1.3)).toMatchObject({ value: 2.5, unit: 'teaspoon' });
+    expect(scale(1, 'tbsp', 1.7)).toMatchObject({ value: 1.5, unit: 'tbsp' });
+    expect(scale(2, 'tsp', 1.3)).toMatchObject({ value: 2.5, unit: 'tsp' });
   });
 
   it('allows thirds when the arithmetic produced one, because the spoons exist', () => {
-    expect(scale(1, 'teaspoon', 1 / 3).value).toBeCloseTo(1 / 3, 3);
-    expect(scale(1, 'teaspoon', 2 / 3).value).toBeCloseTo(2 / 3, 3);
+    expect(scale(1, 'tsp', 1 / 3).value).toBeCloseTo(1 / 3, 3);
+    expect(scale(1, 'tsp', 2 / 3).value).toBeCloseTo(2 / 3, 3);
   });
 
   it('does not use a third as a second grid to round onto', () => {
     // 1.7 is nearer 1⅔ than 1½ by arithmetic, but it is a half and a half.
-    expect(scale(1, 'tablespoon', 1.7).value).toBe(1.5);
+    expect(scale(1, 'tbsp', 1.7).value).toBe(1.5);
   });
 
   it('never converts a spoon to millilitres', () => {
     // A US tablespoon is 14.8ml, a metric one 15, an Australian one 20, and a
     // recipe rarely says which it meant.
-    expect(scale(2, 'tablespoon', 2).unit).toBe('tablespoon');
+    expect(scale(2, 'tbsp', 2).unit).toBe('tbsp');
   });
 });
 
@@ -110,16 +110,16 @@ describe('what never scales', () => {
 
   it('leaves an ingredient with no amount alone', () => {
     expect(scale(null, null, 4)).toMatchObject({ value: null, isRange: false });
-    expect(scale(null, 'gram', 0.25)).toMatchObject({ value: null });
+    expect(scale(null, 'g', 0.25)).toMatchObject({ value: null });
   });
 });
 
 describe('a factor of one', () => {
   it('reproduces every amount exactly as authored', () => {
     for (const [value, unit] of [
-      [133.33, 'gram'],
+      [133.33, 'g'],
       [3, 'clove'],
-      [1.75, 'tablespoon'],
+      [1.75, 'tbsp'],
       [1, 'pinch']
     ] as const) {
       expect(scale(value, unit, 1)).toMatchObject({ value, unit, isApproximate: false });
@@ -130,14 +130,14 @@ describe('a factor of one', () => {
 describe('marking an approximation', () => {
   it('is not set when rounding barely moved the amount', () => {
     // 433.3 → 430 is 0.8%, well inside tolerance.
-    expect(scale(325, 'gram', 1.333).isApproximate).toBe(false);
+    expect(scale(325, 'g', 1.333).isApproximate).toBe(false);
   });
 
   it('is set when rounding moved the amount by more than 2%', () => {
     // 7.3 → 7.5 is 2.7%: an approximation, and it says so.
-    expect(scale(7.3, 'gram', 1.0001).isApproximate).toBe(true);
+    expect(scale(7.3, 'g', 1.0001).isApproximate).toBe(true);
     // 133.3 → 130 is 2.5%.
-    expect(scale(100, 'gram', 1.333).isApproximate).toBe(true);
+    expect(scale(100, 'g', 1.333).isApproximate).toBe(true);
   });
 
   it('is never set on a range, which states the truth rather than approximating it', () => {
@@ -148,42 +148,34 @@ describe('marking an approximation', () => {
 describe('scaling from an amount you have', () => {
   it('finds the yield that uses it up', () => {
     // 200 g of flour serves 4; 600 g serves 12.
-    expect(
-      targetYieldForAmount({ value: 200, unit: 'gram' }, { value: 600, unit: 'gram' }, 4)
-    ).toBe(12);
+    expect(targetYieldForAmount({ value: 200, unit: 'g' }, { value: 600, unit: 'g' }, 4)).toBe(12);
   });
 
   it('round-trips: the yield it chose reproduces the amount', () => {
-    const base = { value: 200, unit: 'gram' } as const;
-    const target = targetYieldForAmount(base, { value: 600, unit: 'gram' }, 4)!;
+    const base = { value: 200, unit: 'g' } as const;
+    const target = targetYieldForAmount(base, { value: 600, unit: 'g' }, 4)!;
 
-    expect(scaleQuantity(base, factorFor(4, target))).toMatchObject({ value: 600, unit: 'gram' });
+    expect(scaleQuantity(base, factorFor(4, target))).toMatchObject({ value: 600, unit: 'g' });
   });
 
   it('converts within a family', () => {
-    expect(
-      targetYieldForAmount({ value: 500, unit: 'gram' }, { value: 1, unit: 'kilogram' }, 4)
-    ).toBe(8);
+    expect(targetYieldForAmount({ value: 500, unit: 'g' }, { value: 1, unit: 'kg' }, 4)).toBe(8);
   });
 
   it('refuses across families, because grams of flour are not millilitres of it', () => {
     expect(
-      targetYieldForAmount({ value: 200, unit: 'gram' }, { value: 600, unit: 'millilitre' }, 4)
+      targetYieldForAmount({ value: 200, unit: 'g' }, { value: 600, unit: 'ml' }, 4)
     ).toBeNull();
   });
 
   it('refuses on an ingredient with no amount to scale from', () => {
     expect(
-      targetYieldForAmount({ value: null, unit: 'gram' }, { value: 600, unit: 'gram' }, 4)
+      targetYieldForAmount({ value: null, unit: 'g' }, { value: 600, unit: 'g' }, 4)
     ).toBeNull();
   });
 
   it('rounds the yield to a half, so the number shown and the amounts agree', () => {
-    const target = targetYieldForAmount(
-      { value: 200, unit: 'gram' },
-      { value: 370, unit: 'gram' },
-      4
-    )!;
+    const target = targetYieldForAmount({ value: 200, unit: 'g' }, { value: 370, unit: 'g' }, 4)!;
 
     expect(target % 0.5).toBe(0);
   });
@@ -207,7 +199,7 @@ describe('the factor', () => {
 
 describe('computing from the base, never from a scaled value', () => {
   it('does not drift however many times the stepper is tapped', () => {
-    const base = { value: 333, unit: 'gram' } as const;
+    const base = { value: 333, unit: 'g' } as const;
 
     // Six taps up and six back down has to land exactly where it started.
     const there = scaleQuantity(base, factorFor(4, 10));

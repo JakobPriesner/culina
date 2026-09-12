@@ -25,27 +25,27 @@ const show = (value: number | null, unit: Unit | null, factor = 1, locale = 'en'
 
 describe('numbers', () => {
   it('trims a decimal that says nothing', () => {
-    expect(show(1, 'kilogram')).toBe('1' + nbsp + 'kg');
-    expect(show(1.5, 'kilogram')).toBe('1.5' + nbsp + 'kg');
+    expect(show(1, 'kg')).toBe('1' + nbsp + 'kg');
+    expect(show(1.5, 'kg')).toBe('1.5' + nbsp + 'kg');
   });
 
   it('uses the separator the reader expects', () => {
-    expect(show(1.5, 'kilogram', 1, 'en')).toBe('1.5' + nbsp + 'kg');
-    expect(show(1.5, 'kilogram', 1, 'de')).toBe('1,5' + nbsp + 'kg');
+    expect(show(1.5, 'kg', 1, 'en')).toBe('1.5' + nbsp + 'kg');
+    expect(show(1.5, 'kg', 1, 'de')).toBe('1,5' + nbsp + 'kg');
   });
 });
 
 describe('fractions', () => {
   it('renders as glyphs where the unit is measured in them', () => {
-    expect(show(1, 'teaspoon', 0.5)).toBe('½' + nbsp + 'tsp');
-    expect(show(3, 'tablespoon', 0.5)).toBe('1½' + nbsp + 'tbsp');
-    expect(show(1, 'teaspoon', 1 / 3)).toBe('⅓' + nbsp + 'tsp');
-    expect(show(1, 'teaspoon', 2 / 3)).toBe('⅔' + nbsp + 'tsp');
+    expect(show(1, 'tsp', 0.5)).toBe('½' + nbsp + 'tsp');
+    expect(show(3, 'tbsp', 0.5)).toBe('1½' + nbsp + 'tbsp');
+    expect(show(1, 'tsp', 1 / 3)).toBe('⅓' + nbsp + 'tsp');
+    expect(show(1, 'tsp', 2 / 3)).toBe('⅔' + nbsp + 'tsp');
   });
 
   it('does not, where nobody writes them', () => {
     // Half a gram is 0.5 g, not ½ g.
-    expect(show(1, 'gram', 0.5)).toBe('0.5' + nbsp + 'g');
+    expect(show(1, 'g', 0.5)).toBe('0.5' + nbsp + 'g');
   });
 });
 
@@ -61,24 +61,24 @@ describe('ranges', () => {
 
 describe('approximations', () => {
   it('are marked, so they cannot be mistaken for a measurement', () => {
-    expect(show(7.3, 'gram', 1.0001)).toBe('~7.5' + nbsp + 'g');
+    expect(show(7.3, 'g', 1.0001)).toBe('~7.5' + nbsp + 'g');
   });
 
   it('are not marked when the number is exactly what it says', () => {
-    expect(show(500, 'gram', 2)).toBe('1' + nbsp + 'kg');
+    expect(show(500, 'g', 2)).toBe('1' + nbsp + 'kg');
   });
 });
 
 describe('things with nothing to show', () => {
   it('render as nothing at all, rather than as a zero', () => {
     expect(show(null, null)).toBe('');
-    expect(show(null, 'gram')).toBe('');
+    expect(show(null, 'g')).toBe('');
   });
 });
 
 describe('the parts', () => {
   it('are available separately, so the number can be animated on its own', () => {
-    const parts = formatQuantity(scaleQuantity({ value: 250, unit: 'gram' }, 1), 'en', labels);
+    const parts = formatQuantity(scaleQuantity({ value: 250, unit: 'g' }, 1), 'en', labels);
 
     expect(parts).toMatchObject({ amount: '250', unit: 'g', text: `250${nbsp}g` });
   });

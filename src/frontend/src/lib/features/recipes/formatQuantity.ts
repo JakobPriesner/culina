@@ -30,14 +30,16 @@ const glyphs = new Map<number, string>([
   [0.75, '¾']
 ]);
 
-/** Short forms. Spelled the way a recipe writes them, not the way an enum does. */
+/** The short form shown beside a number, or empty where the ingredient names it. */
 const short: Record<Unit, string> = {
-  gram: 'g',
-  kilogram: 'kg',
-  millilitre: 'ml',
-  litre: 'l',
-  teaspoon: 'tsp',
-  tablespoon: 'tbsp',
+  g: 'g',
+  kg: 'kg',
+  ml: 'ml',
+  l: 'l',
+  tsp: 'tsp',
+  tbsp: 'tbsp',
+  // Count units are named by the ingredient itself — "3 cloves garlic" reads
+  // worse than "3 garlic cloves", so the recipe's own words carry it.
   piece: '',
   clove: '',
   bunch: '',
@@ -48,7 +50,7 @@ const short: Record<Unit, string> = {
 };
 
 export interface QuantityLabels {
-  /** Plural-aware names for count units, supplied by the caller's messages. */
+  /** The word for a unit that has no short form, supplied by the caller. */
   readonly unitName: (unit: Unit, count: number) => string;
   /** Marks an amount that rounding moved: "~". */
   readonly approximately: (amount: string) => string;
