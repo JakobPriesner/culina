@@ -36,7 +36,8 @@ async function openRegistration(page: Page) {
 test.describe('the first-run path', () => {
   test.skip(
     !adminEmail || !adminPassword,
-    'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD with a backend running.'
+    'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD to an ADMINISTRATOR account, ' +
+      'with a backend running: this suite opens registration first.'
   );
 
   test('register, get a household, sign out, sign in, follow a deep link', async ({ page }) => {

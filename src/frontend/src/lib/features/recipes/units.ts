@@ -9,6 +9,31 @@ import type { components } from '$api/generated/schema';
  */
 export type Unit = NonNullable<components['schemas']['RecipesIngredientContract']['unit']>;
 
+/**
+ * The same vocabulary as a value, so a test can walk it.
+ *
+ * A record rather than an array on purpose: the type checker insists a
+ * `Record<Unit, …>` name every unit, so a unit the backend adds and this file
+ * forgets is a compile error instead of a gap nothing notices.
+ */
+const everyUnit: Record<Unit, true> = {
+  g: true,
+  kg: true,
+  ml: true,
+  l: true,
+  tsp: true,
+  tbsp: true,
+  piece: true,
+  clove: true,
+  bunch: true,
+  slice: true,
+  can: true,
+  pack: true,
+  pinch: true
+};
+
+export const units = Object.keys(everyUnit) as readonly Unit[];
+
 export type UnitFamily = 'mass' | 'volume' | 'spoon' | 'count' | 'none';
 
 const families: Partial<Record<Unit, UnitFamily>> = {

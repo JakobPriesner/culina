@@ -25,7 +25,8 @@ public sealed record AddShoppingItemCommand(
 
 internal sealed class AddShoppingItemCommandHandler(
     IShoppingListRepository lists,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<AddShoppingItemCommand, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -50,44 +51,28 @@ internal sealed class AddShoppingItemCommandHandler(
             .Bind(name => RecipeWords.ToQuantity(command.Quantity, command.Unit)
                 .Map(quantity => (Name: name, Quantity: quantity)));
 
-        var list = await lists.ForHouseholdAsync(command.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
         var overrides = await lists
             .SectionOverridesAsync(command.HouseholdId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await list.Bind(found => parsed.Map(pair => (List: found, pair.Name, pair.Quantity)))
+        var result = await parsed
             .Match(
-                bundle => SaveAsync(bundle.List, bundle.Name, bundle.Quantity, overrides, cancellationToken),
+                pair => ShoppingListWrites.ApplyAsync(
+                    lists,
+                    unitOfWork,
+                    command.HouseholdId,
+                    // A hand-typed line is not merged: somebody typing "butter"
+                    // when butter is already on the list usually means they want
+                    // more of it noted separately, and merging silently would
+                    // hide that they added anything.
+                    (list, _) => Task.FromResult(
+                        list.AddManual(pair.Name, pair.Quantity, SectionFor(pair.Name, overrides))
+                            .Bind(_ => Result.Success())),
+                    cancellationToken),
                 error => Task.FromResult(Result<Response>.Failure(error)))
             .ConfigureAwait(false);
 
         return tracked.Record(result);
-    }
-
-    private async Task<Result<Response>> SaveAsync(
-        ShoppingList list,
-        ItemName name,
-        Quantity quantity,
-        IReadOnlyDictionary<string, ShoppingSection> overrides,
-        CancellationToken cancellationToken)
-    {
-        var before = list.Version;
-        var section = SectionFor(name, overrides);
-
-        // A hand-typed line is not merged: somebody typing "butter" when butter
-        // is already on the list usually means they want more of it noted
-        // separately, and merging silently would hide that they added anything.
-        var added = list.AddManual(name, quantity, section);
-
-        var saved = await added
-            .Match(
-                _ => lists.SaveAsync(list, before, cancellationToken),
-                error => Task.FromResult(Result.Failure(error)))
-            .ConfigureAwait(false);
-
-        return saved.Map(() => list.Describe());
     }
 
     /// <summary>

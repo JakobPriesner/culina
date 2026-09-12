@@ -66,6 +66,8 @@ test-e2e: ## Run the Playwright suite against a running stack
 	@# ones skip unless an account is supplied, because a test that quietly
 	@# passes with no backend is worse than one that says it did not run:
 	@#   CULINA_E2E_EMAIL=you@example.com CULINA_E2E_PASSWORD=... make test-e2e
+	@# The first-run suite needs that account to be an administrator — it opens
+	@# registration before it can register anyone.
 	cd $(FRONTEND) && pnpm test:e2e
 
 # ── Quality ──────────────────────────────────────────────────────────────────

@@ -193,6 +193,42 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         Assert.False(remaining[0].GetProperty("isChecked").GetBoolean());
     }
 
+    [Fact]
+    public async Task AddItem_ShouldNotRejectSomebodyElseAddingAtTheSameMoment()
+    {
+        // Arrange
+        // Two people in the same kitchen, one list, one row, one version. This
+        // is the ordinary case — one is at the fridge and the other in the
+        // cupboard — and it used to mean the second one got a 412 and their
+        // item was simply not on the list.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        var names = new[] { "Butter", "Mehl", "Zucker", "Eier", "Milch" };
+
+        // Act
+        var responses = await Task.WhenAll(names.Select(name => client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items",
+            new { name },
+            Token)));
+
+        // Assert
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+
+        var stored = await client.GetAsync(
+            $"/api/v1/households/{householdId}/shopping-list",
+            Token);
+
+        var onTheList = stored.Json!.Value.GetProperty("items")
+            .EnumerateArray()
+            .Select(item => item.GetProperty("name").GetString())
+            .ToList();
+
+        // Every one of them, not four out of five.
+        Assert.Equal(names.Length, onTheList.Count);
+        Assert.All(names, name => Assert.Contains(name, onTheList));
+    }
+
     private static async Task<Guid> HouseholdAsync(ApiClient client)
     {
         var me = await client.GetAsync("/api/v1/users/me", Token);

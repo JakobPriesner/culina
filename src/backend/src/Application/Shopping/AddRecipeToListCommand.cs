@@ -23,7 +23,8 @@ public sealed record AddRecipeToListCommand(
 internal sealed class AddRecipeToListCommandHandler(
     IShoppingListRepository lists,
     IRecipeRepository recipes,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<AddRecipeToListCommand, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -38,56 +39,50 @@ internal sealed class AddRecipeToListCommandHandler(
             .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var list = await lists.ForHouseholdAsync(command.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
         var overrides = await lists
             .SectionOverridesAsync(command.HouseholdId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await recipe.Bind(found => list.Map(target => (Recipe: found, List: target)))
+        var result = await recipe
             .Match(
-                pair => SaveAsync(pair.List, pair.Recipe, command.Servings, overrides, cancellationToken),
+                found => ShoppingListWrites.ApplyAsync(
+                    lists,
+                    unitOfWork,
+                    command.HouseholdId,
+                    (list, _) => Task.FromResult(
+                        AddIngredients(list, found, command.Servings, overrides)),
+                    cancellationToken),
                 error => Task.FromResult(Result<Response>.Failure(error)))
             .ConfigureAwait(false);
 
         return tracked.Record(result);
     }
 
-    private async Task<Result<Response>> SaveAsync(
+    private static Result AddIngredients(
         ShoppingList list,
         Recipe recipe,
         decimal servings,
-        IReadOnlyDictionary<string, ShoppingSection> overrides,
-        CancellationToken cancellationToken)
+        IReadOnlyDictionary<string, ShoppingSection> overrides)
     {
-        var before = list.Version;
-
         // Exact decimal arithmetic, and the sum is stored unrounded. A recipe
         // for two scaled to five contributes 2.5 × its amounts, and three such
         // recipes must add up to what they actually add up to — rounding each
         // one first would compound the error into a number nobody asked for.
         var factor = recipe.Yield.Amount > 0 ? servings / recipe.Yield.Amount : 1m;
 
-        foreach (var ingredient in recipe.Groups.SelectMany(group => group.Ingredients))
-        {
-            var scaled = Scale(ingredient.Quantity, factor);
-            var name = ItemName.Create(ingredient.Name);
-
-            var added = name.Bind(itemName => list.Add(
-                itemName,
-                scaled,
-                AddShoppingItemCommandHandler.SectionFor(itemName, overrides)));
-
-            if (added.Match(_ => false, _ => true))
-            {
-                return added.Map(_ => list.Describe());
-            }
-        }
-
-        var saved = await lists.SaveAsync(list, before, cancellationToken).ConfigureAwait(false);
-
-        return saved.Map(() => list.Describe());
+        // `Bind` short-circuits, so the first ingredient that cannot be read
+        // stops the rest: half a recipe on the list is worse than none of it.
+        return recipe.Groups
+            .SelectMany(group => group.Ingredients)
+            .Aggregate(
+                Result.Success(),
+                (outcome, ingredient) => outcome.Bind(() => ItemName
+                    .Create(ingredient.Name)
+                    .Bind(name => list.Add(
+                        name,
+                        Scale(ingredient.Quantity, factor),
+                        AddShoppingItemCommandHandler.SectionFor(name, overrides)))
+                    .Bind(_ => Result.Success())));
     }
 
     /// <summary>

@@ -71,3 +71,36 @@ describe('what it cannot read', () => {
     expect(parse('   ')).toMatchObject({ name: '', quantity: { value: null, unit: null } });
   });
 });
+
+describe('German as it is actually typed', () => {
+  /*
+   * A phone keyboard and a laptop keyboard produce different spellings of the
+   * same word, and German plurals are not a suffix rule. "2 Packungen Feta"
+   * once landed on the shopping list as an ingredient called "Packungen Feta".
+   */
+  it('reads a unit written with an umlaut', () => {
+    expect(parse('2 Stück Zwiebeln').quantity).toEqual({
+      value: 2,
+      unit: 'piece'
+    });
+    expect(parse('3 Esslöffel Öl').quantity.unit).toBe('tbsp');
+    expect(parse('1 Päckchen Hefe').quantity.unit).toBe('pack');
+  });
+
+  it('reads the plural as the same unit', () => {
+    expect(parse('2 Packungen Feta')).toMatchObject({
+      quantity: { value: 2, unit: 'pack' },
+      name: 'Feta'
+    });
+    expect(parse('2 Prisen Salz').quantity.unit).toBe('pinch');
+    expect(parse('2 Dosen Tomaten').quantity.unit).toBe('can');
+  });
+
+  it('still refuses to read a name as a unit', () => {
+    // "Zitronen" is a plural ingredient, not a plural unit.
+    expect(parse('3 Zitronen')).toMatchObject({
+      quantity: { value: 3, unit: null },
+      name: 'Zitronen'
+    });
+  });
+});

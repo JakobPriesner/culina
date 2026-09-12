@@ -16,7 +16,8 @@ public sealed record RemoveShoppingItemsCommand(Guid HouseholdId, Guid UserId, G
 
 internal sealed class RemoveShoppingItemsCommandHandler(
     IShoppingListRepository lists,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<RemoveShoppingItemsCommand, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -37,37 +38,20 @@ internal sealed class RemoveShoppingItemsCommandHandler(
                 Result<Response>.Failure(HouseholdErrors.NotFound(command.HouseholdId)));
         }
 
-        var list = await lists.ForHouseholdAsync(command.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
-        var result = await list
-            .Match(
-                found => RemoveAsync(found, command.ItemId, cancellationToken),
-                error => Task.FromResult(Result<Response>.Failure(error)))
+        var result = await ShoppingListWrites
+            .ApplyAsync(
+                lists,
+                unitOfWork,
+                command.HouseholdId,
+                // Clearing what is bought is the one bulk action worth having:
+                // after a shop, removing a dozen ticked lines one at a time is
+                // the tedium the list exists to avoid.
+                (list, _) => Task.FromResult(
+                    command.ItemId is { } id ? list.Remove(id) : Ok(list.ClearChecked())),
+                cancellationToken)
             .ConfigureAwait(false);
 
         return tracked.Record(result);
-    }
-
-    private async Task<Result<Response>> RemoveAsync(
-        ShoppingList list,
-        Guid? itemId,
-        CancellationToken cancellationToken)
-    {
-        var before = list.Version;
-
-        // Clearing what is bought is the one bulk action worth having: after a
-        // shop, removing a dozen ticked lines one at a time is the tedium the
-        // list exists to avoid.
-        var removed = itemId is { } id ? list.Remove(id) : Ok(list.ClearChecked());
-
-        var saved = await removed
-            .Match(
-                () => lists.SaveAsync(list, before, cancellationToken),
-                error => Task.FromResult(Result.Failure(error)))
-            .ConfigureAwait(false);
-
-        return saved.Map(() => list.Describe());
     }
 
     private static Result Ok(int removed)

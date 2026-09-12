@@ -41,8 +41,9 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    /* Above the bottom navigation on a phone, and clear of the home indicator. */
-    inset-block-end: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    /* Above whatever the shell has parked at the bottom — the cooking bar, the
+       bottom navigation, or neither — and clear of the home indicator. */
+    inset-block-end: calc(var(--bottom-inset) + var(--space-4) + env(safe-area-inset-bottom, 0px));
     inset-inline: var(--space-4);
     /* The strip itself must not intercept taps; each toast opts back in. */
     pointer-events: none;
