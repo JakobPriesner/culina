@@ -6,6 +6,11 @@ import { getLocale, locales, setLocale, type Locale } from '$lib/paraglide/runti
  * Messages are compiled to functions, so a key that does not exist fails the
  * build instead of rendering an empty string in production. Nothing in a
  * component is ever a literal string a person can read.
+ *
+ * **Append new keys to `messages/*.json`; never re-sort the files.** The
+ * compiler falls over with "No Lix transaction is active" on some reorderings,
+ * and — worse — it can emit correct output *and* exit non-zero, so a working
+ * app is not evidence that the build passed. Appending has always worked.
  */
 export { m } from '$lib/paraglide/messages';
 export { locales, type Locale };
