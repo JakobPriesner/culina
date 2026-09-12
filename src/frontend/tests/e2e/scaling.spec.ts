@@ -1,0 +1,90 @@
+import { expect, test } from '@playwright/test';
+
+import {
+  needsBackend,
+  seedRecipe,
+  signInWithHousehold,
+  skipReason,
+  unique
+} from './support/culina';
+
+/**
+ * The bug this architecture exists to prevent.
+ *
+ * A step stores a reference to an ingredient rather than the words "200 g
+ * butter", so that scaling a recipe cannot leave the ingredient list saying one
+ * thing and the instructions another. That is the single most common defect in
+ * recipe apps, and it is invisible until somebody is standing at a hob.
+ */
+test.describe('scaling a recipe', () => {
+  test.skip(needsBackend, skipReason);
+
+  test('changes the ingredient list and the amounts inside the steps together', async ({
+    page
+  }) => {
+    await signInWithHousehold(page);
+
+    const recipeId = await seedRecipe(page, {
+      title: unique('Scaling'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }],
+      steps: ['Melt {0} in a wide pan.']
+    });
+
+    await page.goto(`/recipes/${recipeId}`);
+
+    const ingredients = page.getByRole('region', { name: /ingredients|zutaten/i });
+    const steps = page.getByRole('region', { name: /steps|zubereitung/i });
+
+    await expect(ingredients).toContainText('200');
+    await expect(steps).toContainText('200');
+
+    // Two servings to four, one tap at a time and looking in between — which
+    // is what a person does, and what the screen has to keep up with.
+    const oneMore = page.getByRole('button', { name: /^(one more|eine mehr)$/i });
+
+    await oneMore.click();
+    await expect(ingredients).toContainText('300');
+
+    await oneMore.click();
+    await expect(ingredients).toContainText('400');
+    // The assertion that matters. A list that scales and a step that does not
+    // is how somebody puts half the butter in.
+    await expect(steps).toContainText('400');
+    await expect(steps).not.toContainText('200');
+  });
+
+  test('travels in the URL, so a scaled recipe can be sent to somebody', async ({ page }) => {
+    await signInWithHousehold(page);
+
+    const recipeId = await seedRecipe(page, {
+      title: unique('Shared'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }],
+      steps: ['Melt {0}.']
+    });
+
+    // Opened at six, straight from a link.
+    await page.goto(`/recipes/${recipeId}?yield=6`);
+
+    await expect(page.getByRole('region', { name: /ingredients|zutaten/i })).toContainText('600');
+    await expect(page.getByRole('region', { name: /steps|zubereitung/i })).toContainText('600');
+  });
+
+  test('says so when the amounts stop being trustworthy', async ({ page }) => {
+    await signInWithHousehold(page);
+
+    const recipeId = await seedRecipe(page, {
+      title: unique('Doubtful'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }]
+    });
+
+    // Far beyond what the times and the tin can survive. A doubled cake in the
+    // same tin is a raw cake, and no formula fixes that — so the app says it
+    // rather than quietly lying.
+    await page.goto(`/recipes/${recipeId}?yield=12`);
+
+    await expect(page.getByText(/time|zeit/i).first()).toBeVisible();
+  });
+});

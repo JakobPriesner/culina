@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  import { goto, replaceState } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, Skeleton } from '$ds';
@@ -66,7 +66,13 @@
   });
 
   function scale(value: number) {
-    replaceState(urlAtYield(page.url, value, recipes.detail), {});
+    // See the detail page: `replaceState` moves the address bar without
+    // telling the page, and every amount here is derived from the yield.
+    void goto(urlAtYield(page.url, value, recipes.detail), {
+      replaceState: true,
+      keepFocus: true,
+      noScroll: true
+    });
     void cooking.rescale(value);
   }
 

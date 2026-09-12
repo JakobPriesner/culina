@@ -16,6 +16,12 @@ internal static partial class PipelineLogs
     internal static partial void Unhandled(this ILogger logger, string method, string path, Exception exception);
 
     [LoggerMessage(
+        EventId = LogEvents.PipelineBase + 2,
+        Level = LogLevel.Information,
+        Message = "Could not read the body of {Method} {Path}")]
+    internal static partial void UnreadableBody(this ILogger logger, string method, string path);
+
+    [LoggerMessage(
         EventId = LogEvents.PipelineBase + 1,
         Level = LogLevel.Warning,
         Message = "Rejected {Method} {Path}: {Reason}")]
