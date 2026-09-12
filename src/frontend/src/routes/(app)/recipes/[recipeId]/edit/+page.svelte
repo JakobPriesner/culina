@@ -6,6 +6,7 @@
   import { Field, TextArea, TextInput } from '$ds';
   import { createAutosave } from '$features/recipes/editor/autosave.svelte';
   import IngredientEditor from '$features/recipes/editor/IngredientEditor.svelte';
+  import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
   import { m } from '$shell/i18n';
@@ -116,6 +117,17 @@
           />
         {/snippet}
       </Field>
+
+      <PhotoField
+        {recipeId}
+        imageId={current.imageId}
+        onchange={(imageId) => {
+          // The image is saved by its own endpoint, so this only keeps the
+          // draft in step — touching autosave would write the recipe again for
+          // a change it does not own.
+          draft = draft ? { ...draft, imageId } : draft;
+        }}
+      />
 
       <div class="numbers">
         <Field label={m['editor.yieldAmount']()}>

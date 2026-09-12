@@ -1,7 +1,10 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
 
+  import { Image } from '$ds';
+
   import { m } from '$shell/i18n';
+  import { imageSrcset, imageUrl } from './recipeImage';
   import { matchLineFor, metaLineFor } from './recipeMeta';
   import type { RecipeSummary } from './types';
 
@@ -30,6 +33,24 @@
 </script>
 
 <article class="recipe" class:pending aria-busy={pending || undefined}>
+  <!--
+    A photo when there is one, and nothing at all when there is not — a grey
+    placeholder box on every recipe somebody has not photographed is worse than
+    the honest absence of one. The box reserves its space from the ratio, so
+    nothing shifts as the picture arrives.
+  -->
+  {#if recipe.imageId}
+    <div class="photo">
+      <Image
+        src={imageUrl(recipe.id, 400)}
+        srcset={imageSrcset(recipe.id)}
+        sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw"
+        alt=""
+        ratio={4 / 3}
+      />
+    </div>
+  {/if}
+
   {#if eyebrow}
     <p class="eyebrow">{eyebrow}</p>
   {/if}
@@ -65,6 +86,10 @@
   .pending {
     opacity: 0.6;
     transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  .photo {
+    margin-bottom: var(--space-2);
   }
 
   .eyebrow {

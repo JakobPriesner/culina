@@ -549,6 +549,90 @@ export interface paths {
         patch: operations["updateCookSessionV1"];
         trace?: never;
     };
+    "/api/v1/households/{householdId}/shopping-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the shopping list
+         * @description One list per household, created the first time anyone looks. Amounts are **unrounded**: summing rounded amounts compounds error, and how a number is shown is the client's business.
+         */
+        get: operations["getShoppingListV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/shopping-list/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add something to the list
+         * @description A hand-typed line is never merged into an existing one: typing "butter" when butter is already there usually means you want more of it noted, and merging silently would hide that you added anything.
+         */
+        post: operations["addShoppingItemV1"];
+        /**
+         * Remove a line, or clear what is bought
+         * @description Pass `itemId` for one line; omit it to clear everything ticked off.
+         */
+        delete: operations["removeShoppingItemsV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/shopping-list/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a recipe's ingredients
+         * @description At the scaling you are cooking, so the amounts are the real ones. Lines merge when the names match — folded, so Müsli meets Muesli — and the units can be added at all. Spoons never convert to millilitres, so those stay two lines.
+         */
+        post: operations["addRecipeToShoppingListV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Tick it off, or move it
+         * @description Moving an item teaches the household where that thing lives, so the correction never has to be made twice. That is what replaces a configuration screen.
+         */
+        patch: operations["updateShoppingItemV1"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1309,6 +1393,88 @@ export interface components {
              * @description The largest number of accounts this instance allows.
              */
             maxUsers: number;
+        };
+        /** @description Something to put on the list. */
+        ShoppingAddItemRequest: {
+            /** @description What to buy. */
+            name: string;
+            /**
+             * Format: double
+             * @description How much, if you know.
+             */
+            quantity?: number | null;
+            /**
+             * @description In what.
+             * @enum {string|null}
+             */
+            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+        };
+        /** @description A recipe's ingredients, at a chosen scaling. */
+        ShoppingAddRecipeRequest: {
+            /**
+             * Format: uuid
+             * @description Which recipe.
+             */
+            recipeId: string;
+            /**
+             * Format: double
+             * @description How many it is being made for, so the amounts are the real ones.
+             */
+            servings: number;
+        };
+        /** @description One line on the list. */
+        ShoppingItemContract: {
+            /**
+             * Format: uuid
+             * @description The line's id.
+             */
+            itemId: string;
+            /** @description What to buy, as somebody wrote it. */
+            name: string;
+            /**
+             * Format: double
+             * @description How much, unrounded.
+             */
+            quantity?: number | null;
+            /**
+             * @description In what, or null for a bare count.
+             * @enum {string|null}
+             */
+            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            /**
+             * @description Where in the shop it is found.
+             * @enum {string}
+             */
+            section: "produce" | "dairy_eggs" | "meat_fish" | "bakery" | "dry_goods" | "canned_jars" | "frozen" | "spices_baking" | "drinks" | "household" | "other";
+            /** @description Whether it is already in the trolley. */
+            isChecked: boolean;
+            /** @description Whether a person typed it rather than a recipe contributing it. */
+            isManual: boolean;
+        };
+        /** @description A household's shopping list. */
+        ShoppingResponse: {
+            /**
+             * Format: uuid
+             * @description The list's id.
+             */
+            listId: string;
+            /** @description What is on it, in shop order. */
+            items: components["schemas"]["ShoppingItemContract"][];
+            /**
+             * Format: int64
+             * @description The entity version, for If-Match on a change.
+             */
+            version: number;
+        };
+        /** @description A change to one line. */
+        ShoppingUpdateItemRequest: {
+            /** @description Whether it is now in the trolley. */
+            isChecked?: boolean | null;
+            /**
+             * @description Where it actually belongs, when the guess was wrong.
+             * @enum {string|null}
+             */
+            section?: "produce" | "dairy_eggs" | "meat_fish" | "bakery" | "dry_goods" | "canned_jars" | "frozen" | "spices_baking" | "drinks" | "household" | "other" | null;
         };
         /** @description One household the user belongs to. */
         UsersGetCurrentHouseholdMembership: {
@@ -3369,6 +3535,255 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getShoppingListV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    addShoppingItemV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingAddItemRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeShoppingItemsV1: {
+        parameters: {
+            query?: {
+                itemId?: string;
+            };
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    addRecipeToShoppingListV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingAddRecipeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateShoppingItemV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingUpdateItemRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -35,4 +35,18 @@ public static class RecipeVocabulary
 
     /// <summary>The languages a recipe can be written in.</summary>
     public static readonly IReadOnlyList<string> Languages = ["en", "de"];
+
+    /// <summary>
+    /// Where in a shop a thing is found, in the order a shop is walked.
+    /// </summary>
+    /// <remarks>
+    /// The order is the entire value of sections — a list read top to bottom is
+    /// a route rather than a scavenger hunt — so it is part of the contract
+    /// rather than something each client decides for itself.
+    /// </remarks>
+    public static readonly IReadOnlyList<string> ShoppingSections =
+    [
+        "produce", "dairy_eggs", "meat_fish", "bakery", "dry_goods",
+        "canned_jars", "frozen", "spices_baking", "drinks", "household", "other"
+    ];
 }

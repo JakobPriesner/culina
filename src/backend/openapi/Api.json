@@ -2435,6 +2435,349 @@
           }
         }
       }
+    },
+    "/api/v1/households/{householdId}/shopping-list": {
+      "get": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Read the shopping list",
+        "description": "One list per household, created the first time anyone looks. Amounts are **unrounded**: summing rounded amounts compounds error, and how a number is shown is the client's business.",
+        "operationId": "getShoppingListV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/shopping-list/items": {
+      "post": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Add something to the list",
+        "description": "A hand-typed line is never merged into an existing one: typing \"butter\" when butter is already there usually means you want more of it noted, and merging silently would hide that you added anything.",
+        "operationId": "addShoppingItemV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingAddItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Remove a line, or clear what is bought",
+        "description": "Pass `itemId` for one line; omit it to clear everything ticked off.",
+        "operationId": "removeShoppingItemsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/shopping-list/recipes": {
+      "post": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Add a recipe's ingredients",
+        "description": "At the scaling you are cooking, so the amounts are the real ones. Lines merge when the names match — folded, so Müsli meets Muesli — and the units can be added at all. Spoons never convert to millilitres, so those stay two lines.",
+        "operationId": "addRecipeToShoppingListV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingAddRecipeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
+      "patch": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Tick it off, or move it",
+        "description": "Moving an item teaches the household where that thing lives, so the correction never has to be made twice. That is what replaces a configuration screen.",
+        "operationId": "updateShoppingItemV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingUpdateItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3861,6 +4204,195 @@
         },
         "description": "Who may create an account on this instance."
       },
+      "ShoppingAddItemRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to buy."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "How much, if you know.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "enum": [
+              "g",
+              "kg",
+              "ml",
+              "l",
+              "tsp",
+              "tbsp",
+              "piece",
+              "clove",
+              "bunch",
+              "slice",
+              "can",
+              "pack",
+              "pinch"
+            ],
+            "type": "string",
+            "description": "In what.",
+            "nullable": true
+          }
+        },
+        "description": "Something to put on the list."
+      },
+      "ShoppingAddRecipeRequest": {
+        "required": [
+          "recipeId",
+          "servings"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "Which recipe.",
+            "format": "uuid"
+          },
+          "servings": {
+            "type": "number",
+            "description": "How many it is being made for, so the amounts are the real ones.",
+            "format": "double"
+          }
+        },
+        "description": "A recipe's ingredients, at a chosen scaling."
+      },
+      "ShoppingItemContract": {
+        "required": [
+          "itemId",
+          "name",
+          "section",
+          "isChecked",
+          "isManual"
+        ],
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "The line's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What to buy, as somebody wrote it."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "How much, unrounded.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "enum": [
+              "g",
+              "kg",
+              "ml",
+              "l",
+              "tsp",
+              "tbsp",
+              "piece",
+              "clove",
+              "bunch",
+              "slice",
+              "can",
+              "pack",
+              "pinch"
+            ],
+            "type": "string",
+            "description": "In what, or null for a bare count.",
+            "nullable": true
+          },
+          "section": {
+            "enum": [
+              "produce",
+              "dairy_eggs",
+              "meat_fish",
+              "bakery",
+              "dry_goods",
+              "canned_jars",
+              "frozen",
+              "spices_baking",
+              "drinks",
+              "household",
+              "other"
+            ],
+            "type": "string",
+            "description": "Where in the shop it is found."
+          },
+          "isChecked": {
+            "type": "boolean",
+            "description": "Whether it is already in the trolley."
+          },
+          "isManual": {
+            "type": "boolean",
+            "description": "Whether a person typed it rather than a recipe contributing it."
+          }
+        },
+        "description": "One line on the list."
+      },
+      "ShoppingResponse": {
+        "required": [
+          "listId",
+          "items",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "description": "The list's id.",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShoppingItemContract"
+            },
+            "description": "What is on it, in shop order."
+          },
+          "version": {
+            "type": "integer",
+            "description": "The entity version, for If-Match on a change.",
+            "format": "int64"
+          }
+        },
+        "description": "A household's shopping list."
+      },
+      "ShoppingUpdateItemRequest": {
+        "type": "object",
+        "properties": {
+          "isChecked": {
+            "type": "boolean",
+            "description": "Whether it is now in the trolley.",
+            "nullable": true
+          },
+          "section": {
+            "enum": [
+              "produce",
+              "dairy_eggs",
+              "meat_fish",
+              "bakery",
+              "dry_goods",
+              "canned_jars",
+              "frozen",
+              "spices_baking",
+              "drinks",
+              "household",
+              "other"
+            ],
+            "type": "string",
+            "description": "Where it actually belongs, when the guess was wrong.",
+            "nullable": true
+          }
+        },
+        "description": "A change to one line."
+      },
       "UsersGetCurrentHouseholdMembership": {
         "required": [
           "householdId",
@@ -4159,6 +4691,9 @@
     },
     {
       "name": "CookSessions"
+    },
+    {
+      "name": "Shopping"
     }
   ]
 }
