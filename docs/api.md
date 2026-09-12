@@ -171,3 +171,34 @@ tracing (`dotnet-observability`).
   caller. Existence is not leaked through a status code.
 - **No `GET` mutates state**, which is what makes the CSRF exemption for safe
   methods sound.
+
+## The generated client
+
+The OpenAPI document is the contract. `pnpm generate:api` writes
+`src/lib/api/generated/schema.d.ts` from `src/backend/openapi/Api.json`; it is
+committed, never hand-edited, and ignored by the formatter and the linter.
+
+`src/lib/api/` is the only place in the frontend that may call `fetch` or import
+the generated schema — an ESLint rule fails the build otherwise, because the
+moment a component builds its own request it also has to remember credentials,
+CSRF, conditional requests and the shape of a failure.
+
+Everything cross-cutting lives there once:
+
+- `credentials: 'include'` and no base URL, because the generated paths already
+  carry `/api/v1` and the app is served from the same origin as its API. There is
+  no `Authorization` header anywhere.
+- `X-Culina-CSRF` on every unsafe request, read from the `culina.csrf` cookie at
+  send time so a sign-in in another tab is picked up without a reload.
+- `If-None-Match` on reads and `If-Match` on writes, both from an in-memory ETag
+  cache. A 304 is replayed from memory and never reaches the caller as an empty
+  success. A successful write forgets the URL it wrote and anything on its path.
+  Memory only: a household's recipes must not outlive the session on disk.
+- Every response becomes a `Result<T>` — `{ ok: true, value }` or
+  `{ ok: false, error }`. Nothing throws for a failure the server described.
+  `AppError` carries `code`, `detail`, `status`, `requestId` and one entry per
+  wrong field. **Branch on `code`; `detail` is prose and will be reworded.**
+- A 401 clears the cache and notifies the shell, exactly once, never retried.
+- A 403 with `auth.csrf_invalid` is retried exactly once, then given up on.
+- A 15-second deadline per request, combined with the caller's own signal so a
+  request still dies with the component that started it.
