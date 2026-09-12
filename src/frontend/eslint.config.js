@@ -24,6 +24,12 @@ export default ts.config(
       // types means the contract is wrong, so the backend is what gets fixed.
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      // A leading underscore is how a value is discarded on purpose, which is
+      // the only reason an unused binding should ever survive review.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+      ],
       'no-restricted-globals': [
         'error',
         {
@@ -53,6 +59,14 @@ export default ts.config(
     rules: { 'no-restricted-globals': 'off', 'no-restricted-imports': 'off' }
   },
   {
-    ignores: ['.svelte-kit/', 'build/', 'node_modules/', 'src/lib/api/generated/']
+    ignores: [
+      '.svelte-kit/',
+      'build/',
+      'node_modules/',
+      // Both generated from a source of truth elsewhere: the backend's OpenAPI
+      // document and messages/*.json. Never hand-edited, so never linted.
+      'src/lib/api/generated/',
+      'src/lib/paraglide/'
+    ]
   }
 );

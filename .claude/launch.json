@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "culina-frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "src/frontend", "dev", "--port", "5173", "--strictPort"],
+      "port": 5173
+    }
+  ]
+}

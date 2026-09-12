@@ -5,3 +5,9 @@ pnpm-lock.yaml
 # Generated from the backend's OpenAPI document; never hand-edited, so never
 # reformatted either.
 src/lib/api/generated
+
+# Compiled from messages/*.json by the Paraglide Vite plugin.
+src/lib/paraglide
+
+# Paraglide's module cache.
+project.inlang/cache

@@ -2,8 +2,6 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/svelte';
 import { afterEach } from 'vitest';
 
-import { resetAll } from './resettable';
-
 /*
  * A browser resolves `new Request('/api/v1/…')` against the document. The test
  * environment borrows Node's Request, which demands an absolute URL and throws
@@ -19,12 +17,11 @@ globalThis.Request = class extends AbsoluteRequest {
   }
 } as typeof Request;
 
-// Components are unmounted and module-level state is restored between tests, so
-// one test's dialog cannot be found by the next one's query and one test's
-// signed-in user cannot leak into the next one's assertions.
+// Components are unmounted between tests, so one test's dialog cannot be found
+// by the next one's query. A store that holds state exposes its own `reset`,
+// which its suite calls — explicit, and visible in the test that needs it.
 afterEach(() => {
   cleanup();
-  resetAll();
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-mode');
 });
