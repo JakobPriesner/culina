@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FourStates from '$ds/__fixtures__/FourStates.svelte';
   import {
     Button,
     Checkbox,
@@ -153,6 +154,17 @@
           placeholder="Search recipes"
           bind:value={search}
         />
+      </div>
+    </section>
+
+    <section>
+      <h2>States</h2>
+      <div class="stack">
+        <FourStates state="loading" />
+        <FourStates state="empty" />
+        <FourStates state="filtered" />
+        <FourStates state="error" />
+        <FourStates state="loaded" refreshing />
       </div>
     </section>
   </main>

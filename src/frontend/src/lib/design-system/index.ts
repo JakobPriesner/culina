@@ -8,6 +8,11 @@
 export { default as Button } from './actions/Button.svelte';
 export { default as IconButton } from './actions/IconButton.svelte';
 
+export { default as BusyRegion } from './feedback/BusyRegion.svelte';
+export { default as EmptyState } from './feedback/EmptyState.svelte';
+export { default as ErrorState } from './feedback/ErrorState.svelte';
+export { default as Skeleton } from './feedback/Skeleton.svelte';
+
 export { default as Checkbox } from './inputs/Checkbox.svelte';
 export { default as Field } from './inputs/Field.svelte';
 export { default as RadioGroup } from './inputs/RadioGroup.svelte';
