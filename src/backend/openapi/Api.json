@@ -1557,6 +1557,263 @@
           }
         }
       }
+    },
+    "/api/v1/recipes/{recipeId}/notes": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read your notes",
+        "description": "Your own notes only. Another member of the same household never sees them: the recipe is shared and canonical, the note is yours.",
+        "operationId": "getRecipeNotesV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetNotesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Write your notes",
+        "description": "A replacement. An omitted or empty note is deleted rather than stored blank, so the panel never shows a box nobody asked for.",
+        "operationId": "saveRecipeNotesV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesSaveNotesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetNotesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipes/{recipeId}/cook-log": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read your cooking history",
+        "description": "How many times you have made this and when you last did. Personal, like notes: two people in one household keep separate histories.",
+        "operationId": "getRecipeCookLogV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetCookLogResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Say you made it",
+        "description": "The body may be empty: one tap is the whole interaction. The response carries the new count and the entry id, so the confirmation can say \"that's the 8th time\" and offer an undo.",
+        "operationId": "recordRecipeCookedV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      null
+                    ],
+                    "nullable": true
+                  },
+                  {
+                    "$ref": "#/components/schemas/RecipesRecordCookedRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesRecordCookedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2061,6 +2318,127 @@
         },
         "description": "A new recipe."
       },
+      "RecipesGetCookLogCookLogItem": {
+        "required": [
+          "entryId",
+          "madeAt"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "description": "The entry's id, for undoing it.",
+            "format": "uuid"
+          },
+          "madeAt": {
+            "type": "string",
+            "description": "When.",
+            "format": "date-time"
+          },
+          "servings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "How much you made, if you said.",
+            "format": "double",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "Anything you wrote.",
+            "nullable": true
+          }
+        },
+        "description": "One time you cooked it."
+      },
+      "RecipesGetCookLogResponse": {
+        "required": [
+          "count",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many times you have made it.",
+            "format": "int32"
+          },
+          "lastMadeAt": {
+            "type": "string",
+            "description": "When you last made it, if ever.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetCookLogCookLogItem"
+            },
+            "description": "Every entry, newest first."
+          }
+        },
+        "description": "How often you have cooked this, and when."
+      },
+      "RecipesGetNotesResponse": {
+        "required": [
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "overall": {
+            "type": "string",
+            "description": "A note about the recipe as a whole, if there is one.",
+            "nullable": true
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetNotesStepNote"
+            },
+            "description": "Notes attached to individual steps."
+          }
+        },
+        "description": "Your notes on one recipe."
+      },
+      "RecipesGetNotesStepNote": {
+        "required": [
+          "stepId",
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "description": "Which step.",
+            "format": "uuid"
+          },
+          "body": {
+            "type": "string",
+            "description": "What it says."
+          }
+        },
+        "description": "A note attached to one step."
+      },
       "RecipesIngredientContract": {
         "required": [
           "name"
@@ -2312,6 +2690,98 @@
           }
         },
         "description": "A recipe in full."
+      },
+      "RecipesRecordCookedRequest": {
+        "type": "object",
+        "properties": {
+          "madeAt": {
+            "type": "string",
+            "description": "When, if not now.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "servings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "How much you made.",
+            "format": "double",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "Anything worth remembering.",
+            "nullable": true
+          }
+        },
+        "description": "That you cooked this."
+      },
+      "RecipesRecordCookedResponse": {
+        "required": [
+          "entryId",
+          "madeAt",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "description": "The entry's id, so the undo in the toast can remove it.",
+            "format": "uuid"
+          },
+          "madeAt": {
+            "type": "string",
+            "description": "When it was recorded as made.",
+            "format": "date-time"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many times you have now made it.",
+            "format": "int32"
+          }
+        },
+        "description": "The entry that was recorded."
+      },
+      "RecipesSaveNotesRequest": {
+        "required": [
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "overall": {
+            "type": "string",
+            "description": "A note about the recipe as a whole, or null to remove it.",
+            "nullable": true
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetNotesStepNote"
+            },
+            "description": "Notes attached to individual steps."
+          }
+        },
+        "description": "Your notes on one recipe, in full."
       },
       "RecipesStepContract": {
         "required": [

@@ -14,6 +14,10 @@ using Application.Households.RevokeInvitation;
 using Application.Recipes.Create;
 using Application.Recipes.Delete;
 using Application.Recipes.GetById;
+using Application.Recipes.GetCookLog;
+using Application.Recipes.GetNotes;
+using Application.Recipes.RecordCooked;
+using Application.Recipes.SaveNotes;
 using Application.Recipes.Update;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
@@ -112,6 +116,14 @@ public static class DependencyInjection
                 GetRecipeQueryHandler>()
             .AddScoped<ICommandHandler<UpdateRecipeCommand, Contracts.Recipes.RecipeDetail>,
                 UpdateRecipeCommandHandler>()
-            .AddScoped<ICommandHandler<DeleteRecipeCommand>, DeleteRecipeCommandHandler>();
+            .AddScoped<ICommandHandler<DeleteRecipeCommand>, DeleteRecipeCommandHandler>()
+            .AddScoped<IQueryHandler<GetNotesQuery, Contracts.Recipes.GetNotes.Response>,
+                GetNotesQueryHandler>()
+            .AddScoped<ICommandHandler<SaveNotesCommand, Contracts.Recipes.GetNotes.Response>,
+                SaveNotesCommandHandler>()
+            .AddScoped<IQueryHandler<GetCookLogQuery, Contracts.Recipes.GetCookLog.Response>,
+                GetCookLogQueryHandler>()
+            .AddScoped<ICommandHandler<RecordCookedCommand, Contracts.Recipes.RecordCooked.Response>,
+                RecordCookedCommandHandler>();
     }
 }
