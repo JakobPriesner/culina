@@ -45,6 +45,22 @@ internal static class MiddlewareExtensions
         return app.UseMiddleware<SameOriginMiddleware>();
     }
 
+    /// <summary>Puts the authenticated user on the logging scope and the span.</summary>
+    internal static IApplicationBuilder UseSessionContext(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<SessionContextMiddleware>();
+    }
+
+    /// <summary>Requires unsafe cookie-authenticated requests to carry the CSRF token.</summary>
+    internal static IApplicationBuilder UseCsrfGuard(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<CsrfMiddleware>();
+    }
+
     /// <summary>Gives framework-generated statuses a problem document body.</summary>
     internal static IApplicationBuilder UseProblemStatusPages(this IApplicationBuilder app)
     {

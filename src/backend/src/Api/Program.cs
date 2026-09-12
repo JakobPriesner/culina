@@ -65,9 +65,8 @@ app.UseRateLimiter();             // 10. Before authentication: brute force cost
 
 app.UseAuthentication();          // 11. Cookie to principal.
 
-// 12. UseSessionContext — user id on the logging scope and the current span
-// 13. UseCsrfGuard      — needs the session to compare the token against
-
+app.UseSessionContext();          // 12. User id on the logging scope and the span.
+app.UseCsrfGuard();               // 13. Needs the session to compare the token against.
 app.UseAuthorization();           // 14. Policies, after identity is established.
 
 app.MapHealthEndpoints();
