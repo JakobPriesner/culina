@@ -2861,12 +2861,12 @@
           },
           "unit": {
             "enum": [
-              "gram",
-              "kilogram",
-              "millilitre",
-              "litre",
-              "teaspoon",
-              "tablespoon",
+              "g",
+              "kg",
+              "ml",
+              "l",
+              "tsp",
+              "tbsp",
               "piece",
               "clove",
               "bunch",
@@ -2956,6 +2956,10 @@
             "nullable": true
           },
           "language": {
+            "enum": [
+              "en",
+              "de"
+            ],
             "type": "string",
             "description": "The language the title and steps are written in."
           },
@@ -3176,12 +3180,12 @@
           },
           "unit": {
             "enum": [
-              "gram",
-              "kilogram",
-              "millilitre",
-              "litre",
-              "teaspoon",
-              "tablespoon",
+              "g",
+              "kg",
+              "ml",
+              "l",
+              "tsp",
+              "tbsp",
               "piece",
               "clove",
               "bunch",
@@ -3219,6 +3223,10 @@
             "nullable": true
           },
           "language": {
+            "enum": [
+              "en",
+              "de"
+            ],
             "type": "string",
             "description": "`en` or `de`."
           },

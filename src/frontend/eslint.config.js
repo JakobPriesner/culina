@@ -64,9 +64,11 @@ export default ts.config(
       'src/lib/app/Navigation.svelte',
       'src/routes/+layout.svelte',
       // The auth pages link to each other through `resolve()` plus a query
-      // string carrying where the person was going, which the rule cannot
-      // follow through a variable.
-      'src/routes/(auth)/**'
+      // string carrying where the person was going, and a recipe reflects its
+      // chosen yield into its own URL — both already resolved, which the rule
+      // cannot follow through a variable.
+      'src/routes/(auth)/**',
+      'src/routes/(app)/recipes/**'
     ],
     rules: { 'svelte/no-navigation-without-resolve': 'off' }
   },

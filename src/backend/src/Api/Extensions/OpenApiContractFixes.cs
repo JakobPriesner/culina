@@ -1,7 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Api.Infrastructure;
-using Domain.Recipes;
+using Contracts.Recipes;
 using Microsoft.OpenApi;
 
 namespace Api.Extensions;
@@ -100,7 +99,7 @@ internal static class OpenApiContractFixes
     /// <remarks>
     /// <para>
     /// Contracts is a leaf: it cannot reference the domain, so a unit travels
-    /// as a string rather than as <see cref="Unit"/>. Without this the document
+    /// as a wire code rather than as a domain enum. Without this the document
     /// says "some string" and the generated client has to redeclare the
     /// vocabulary — which is the one thing sharing a contract is supposed to
     /// prevent.
@@ -119,33 +118,33 @@ internal static class OpenApiContractFixes
         }
     }
 
-    private static string[] NamesOf<TEnum>()
-        where TEnum : struct, Enum =>
-        [.. Enum.GetNames<TEnum>().Select(JsonNamingPolicy.SnakeCaseLower.ConvertName)];
-
     /// <summary>
     /// Every place a closed set is carried as a string, and what it may be.
     /// </summary>
     /// <remarks>
-    /// The step segment's kind is the one that is not a domain enum: the
-    /// contract deliberately flattens a union so the generated client does not
-    /// have to narrow one, and the two values are stated here instead.
+    /// The values come from <see cref="RecipeVocabulary"/>, which is the same
+    /// list the reader and the writer use. Publishing a separately written list
+    /// is how a document ends up advertising <c>gram</c> for an API that only
+    /// accepts <c>g</c>.
     /// </remarks>
-    private static readonly (string Schema, string Property, string[] Values)[] Vocabularies =
+    private static readonly (string Schema, string Property, IReadOnlyList<string> Values)[]
+        Vocabularies =
     [
-        ("RecipesIngredientContract", "unit", NamesOf<Unit>()),
-        ("RecipesStepSegmentContract", "unit", NamesOf<Unit>()),
-        ("RecipesRecipeDetail", "yieldKind", NamesOf<YieldKind>()),
-        ("RecipesGetAllRecipeSummary", "yieldKind", NamesOf<YieldKind>()),
-        ("RecipesUpdateRequest", "yieldKind", NamesOf<YieldKind>()),
-        ("RecipesStepSegmentContract", "type", ["text", "ingredient"])
+        ("RecipesIngredientContract", "unit", RecipeVocabulary.Units),
+        ("RecipesStepSegmentContract", "unit", RecipeVocabulary.Units),
+        ("RecipesRecipeDetail", "yieldKind", RecipeVocabulary.YieldKinds),
+        ("RecipesGetAllRecipeSummary", "yieldKind", RecipeVocabulary.YieldKinds),
+        ("RecipesUpdateRequest", "yieldKind", RecipeVocabulary.YieldKinds),
+        ("RecipesRecipeDetail", "language", RecipeVocabulary.Languages),
+        ("RecipesUpdateRequest", "language", RecipeVocabulary.Languages),
+        ("RecipesStepSegmentContract", "type", RecipeVocabulary.StepSegmentKinds)
     ];
 
     private static void Describe(
         OpenApiDocument document,
         string schemaName,
         string propertyName,
-        string[] values)
+        IReadOnlyList<string> values)
     {
         IOpenApiSchema? declared = null;
         IOpenApiSchema? found = null;
