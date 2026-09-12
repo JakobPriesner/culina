@@ -30,6 +30,35 @@ public interface IRecipeRepository
         long expectedVersion,
         CancellationToken cancellationToken);
 
+    /// <summary>Attaches a stored image to a recipe, replacing any previous one.</summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="image">What was stored.</param>
+    /// <param name="contentType">The media type of the renditions.</param>
+    /// <param name="now">The injected current time.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>What this image replaced, if anything.</returns>
+    Task<Result<ImageReplacement>> SetImageAsync(
+        Guid recipeId,
+        StoredImage image,
+        string contentType,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
+
+    /// <summary>Removes a recipe's image.</summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="now">The injected current time.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>What was removed, if anything.</returns>
+    Task<Result<ImageReplacement>> RemoveImageAsync(
+        Guid recipeId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
+
+    /// <summary>The content hash of a recipe's image, for serving it.</summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<Result<string>> ImageHashAsync(Guid recipeId, CancellationToken cancellationToken);
+
     /// <summary>Deletes a recipe and everything under it.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="cancellationToken">Cancels the write.</param>

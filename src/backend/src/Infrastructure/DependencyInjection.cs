@@ -8,6 +8,7 @@ using Infrastructure.Persistence.Migrations;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Users;
 using Infrastructure.Settings;
+using Infrastructure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -45,6 +46,7 @@ public static class DependencyInjection
             .AddPersistence()
             .AddInstanceSettings()
             .AddIdentity()
+            .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton(TimeProvider.System);
     }
 

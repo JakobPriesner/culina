@@ -114,6 +114,83 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
         return version.Value;
     }
 
+    public async Task<Result<ImageReplacement>> SetImageAsync(
+        Guid recipeId,
+        StoredImage image,
+        string contentType,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+
+        var previous = await PreviousHashAsync(recipeId, cancellationToken).ConfigureAwait(false);
+        var imageId = CulinaId.New();
+
+        // The row is replaced rather than accumulated: a recipe has one hero
+        // image, and keeping the old row would leave nothing to tell which one
+        // is current.
+        await executor.ExecuteAsync(
+            """
+            delete from recipe_images where recipe_id = @recipeId;
+
+            insert into recipe_images
+                (id, recipe_id, content_hash, width, height, byte_size, content_type, created_at)
+            values (@id, @recipeId, @contentHash, @width, @height, @byteSize, @contentType, @now);
+
+            update recipes set image_id = @id, updated_at = @now, version = version + 1
+            where id = @recipeId;
+            """,
+            new
+            {
+                id = imageId,
+                recipeId,
+                contentHash = image.ContentHash,
+                width = image.Width,
+                height = image.Height,
+                byteSize = image.ByteSize,
+                contentType,
+                now
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return new ImageReplacement(previous);
+    }
+
+    public async Task<Result<ImageReplacement>> RemoveImageAsync(
+        Guid recipeId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var previous = await PreviousHashAsync(recipeId, cancellationToken).ConfigureAwait(false);
+
+        await executor.ExecuteAsync(
+            """
+            delete from recipe_images where recipe_id = @recipeId;
+
+            update recipes set image_id = null, updated_at = @now, version = version + 1
+            where id = @recipeId;
+            """,
+            new { recipeId, now },
+            cancellationToken).ConfigureAwait(false);
+
+        return new ImageReplacement(previous);
+    }
+
+    public async Task<Result<string>> ImageHashAsync(
+        Guid recipeId,
+        CancellationToken cancellationToken)
+    {
+        var hash = await PreviousHashAsync(recipeId, cancellationToken).ConfigureAwait(false);
+
+        return hash is null ? ImageErrors.NotFound : hash;
+    }
+
+    private Task<string?> PreviousHashAsync(Guid recipeId, CancellationToken cancellationToken) =>
+        executor.ExecuteScalarAsync<string?>(
+            "select content_hash from recipe_images where recipe_id = @recipeId;",
+            new { recipeId },
+            cancellationToken);
+
     public async Task<Result> DeleteAsync(Guid recipeId, CancellationToken cancellationToken)
     {
         await executor.ExecuteAsync(

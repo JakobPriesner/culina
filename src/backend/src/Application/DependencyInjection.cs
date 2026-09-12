@@ -16,9 +16,12 @@ using Application.Recipes.Delete;
 using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
 using Application.Recipes.GetCookLog;
+using Application.Recipes.GetImage;
 using Application.Recipes.GetNotes;
 using Application.Recipes.RecordCooked;
+using Application.Recipes.RemoveImage;
 using Application.Recipes.SaveNotes;
+using Application.Recipes.SetImage;
 using Application.Recipes.Update;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
@@ -127,6 +130,10 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetCookLogQuery, Contracts.Recipes.GetCookLog.Response>,
                 GetCookLogQueryHandler>()
             .AddScoped<ICommandHandler<RecordCookedCommand, Contracts.Recipes.RecordCooked.Response>,
-                RecordCookedCommandHandler>();
+                RecordCookedCommandHandler>()
+            .AddScoped<ICommandHandler<SetRecipeImageCommand, Contracts.Recipes.RecipeDetail>,
+                SetRecipeImageCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveRecipeImageCommand>, RemoveRecipeImageCommandHandler>()
+            .AddScoped<IQueryHandler<GetRecipeImageQuery, ImageDelivery>, GetRecipeImageQueryHandler>();
     }
 }
