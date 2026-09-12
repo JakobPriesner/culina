@@ -273,5 +273,7 @@
   "units.can": "Dose",
   "units.cans": "Dosen",
   "units.pack": "Packung",
-  "units.packs": "Packungen"
+  "units.packs": "Packungen",
+  "app.update.available": "Eine neue Version von Culina ist bereit.",
+  "app.update.reload": "Neu laden"
 }

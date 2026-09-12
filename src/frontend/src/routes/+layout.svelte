@@ -11,6 +11,7 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
+  import { watchForUpdates } from '$shell/updates.svelte';
 
   interface Props {
     children: Snippet;
@@ -24,6 +25,7 @@
     document.getElementById('boot')?.remove();
 
     const stopFollowingTheDevice = preferences.start();
+    const stopWatchingForUpdates = watchForUpdates();
 
     // The API layer decides *when* a session has ended; what happens next is
     // the app's business, and keeping that here is what stops the client from
@@ -33,7 +35,10 @@
       void goto(loginUrlFor(page.url), { replaceState: true });
     });
 
-    return stopFollowingTheDevice;
+    return () => {
+      stopFollowingTheDevice();
+      stopWatchingForUpdates();
+    };
   });
 </script>
 
