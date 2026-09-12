@@ -1,0 +1,24 @@
+{
+    "name": "Culina",
+    "short_name": "Culina",
+    "description": "Your recipes, the way you cook them.",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#fdfbf7",
+    "theme_color": "#fdfbf7",
+    "categories": ["food", "lifestyle", "productivity"],
+    "icons": [
+        { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+        { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+        { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+        {
+            "src": "/icon-maskable-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -196,3 +196,24 @@ bead when something needs action.
   the compile, not the review.
 - `/.well-known/security.txt` ships with a working contact and a future
   `Expires` (`frontend-static-assets`).
+
+## Public files
+
+`robots.txt`, `sitemap.xml` and `.well-known/security.txt` are written at build
+time from one list of public routes (`src/lib/app/publicRoutes.ts`), so a new
+public route cannot end up allowed in one and missing from the other.
+
+Two build-time variables control them, both optional:
+
+| Variable | Effect when unset |
+| --- | --- |
+| `PUBLIC_SITE_URL` | No sitemap and no security.txt. An instance on a private network has no public address and should not invent one. |
+| `PUBLIC_SECURITY_CONTACT` | No security.txt. A contact nobody reads is worse than none: it tells a finder they have reported something when they have not. |
+
+`security.txt` expires a year after the build. That is the honest value, and
+what keeps it fresh is that every release regenerates it — an expired
+security.txt is worse than no security.txt.
+
+None of this is access control. Every route in the `Disallow` list returns 401
+to a stranger; robots.txt only asks well-behaved crawlers not to advertise that
+the instance exists.
