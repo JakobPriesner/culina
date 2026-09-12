@@ -57,6 +57,13 @@
   /* A long-form measure. Ingredient lists and steps are prose, and prose past
      about 70 characters is hard to track back to the next line. */
   --measure: 68ch;
+  --layout-wide: 80rem;
+
+  /* The inline padding every full-width band uses, so the brand in the header
+     and the heading below it start on the same line. */
+  --layout-gutter: var(--space-8);
+  --text-display: clamp(2.5rem, 2rem + 1.6vw, 4rem);
+  --font-editorial: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,

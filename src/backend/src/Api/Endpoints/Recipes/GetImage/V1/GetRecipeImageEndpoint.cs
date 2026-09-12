@@ -53,7 +53,7 @@ internal sealed class GetRecipeImageEndpoint : IEndpoint
                 "Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as "
                 + "private as the recipe it belongs to; its ETag is the content hash, which cannot "
                 + "change under the same address.")
-            .WithQueryParameters("w")
+            .WithRepeatableQueryParameters(["w"], [], ["w"])
             .Produces<byte[]>(StatusCodes.Status200OK, "image/webp")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

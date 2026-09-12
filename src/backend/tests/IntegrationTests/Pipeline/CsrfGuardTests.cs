@@ -54,6 +54,39 @@ public class CsrfGuardTests
     }
 
     [Fact]
+    public async Task ExemptEndpoint_ShouldPassThrough_WhenTheTokenIsLost()
+    {
+        // Arrange
+        // The wedge this exists to prevent: the readable CSRF cookie is gone
+        // but the HttpOnly session cookie survives, so every unsafe request
+        // fails — including the sign-out that would clear the session.
+        var world = new CsrfWorld();
+        var context = world.Request("POST", csrfHeader: null, exempt: true);
+
+        // Act
+        var reached = await world.InvokeAsync(context);
+
+        // Assert
+        // Signing in again is the way out, so signing in cannot be blocked.
+        Assert.True(reached);
+    }
+
+    [Fact]
+    public async Task ExemptEndpoint_ShouldStillBeTheOnlyOneExempted()
+    {
+        // Arrange
+        var world = new CsrfWorld();
+        var context = world.Request("POST", csrfHeader: null, exempt: false);
+
+        // Act
+        var reached = await world.InvokeAsync(context);
+
+        // Assert
+        // The exemption is per endpoint, not a hole in the guard.
+        Assert.False(reached);
+    }
+
+    [Fact]
     public async Task UnsafeRequest_ShouldBeRejected_WhenTheHeaderIsMissing()
     {
         // Arrange
@@ -135,7 +168,11 @@ public class CsrfGuardTests
                 userAgent: null);
         }
 
-        internal DefaultHttpContext Request(string method, string? csrfHeader, bool signedIn = true)
+        internal DefaultHttpContext Request(
+            string method,
+            string? csrfHeader,
+            bool signedIn = true,
+            bool exempt = false)
         {
             var services = new ServiceCollection()
                 .AddSingleton(new Application.Abstractions.Settings.CookieSettings { Secure = false })
@@ -149,6 +186,12 @@ public class CsrfGuardTests
 
             context.Request.Method = method;
             context.Request.Path = "/api/v1/recipes";
+
+            if (exempt)
+            {
+                context.SetEndpoint(
+                    new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new CsrfExempt()), "exempt"));
+            }
 
             if (signedIn)
             {

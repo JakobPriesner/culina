@@ -4,6 +4,7 @@
   import { Button, Divider } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
+  import Page from '$shell/Page.svelte';
   import LocalePicker from '$shell/LocalePicker.svelte';
   import ThemeToggle from '$shell/ThemeToggle.svelte';
 
@@ -22,48 +23,47 @@
 
 <svelte:head><title>{m['me.title']()}</title></svelte:head>
 
-<div class="page">
-  <h1>{m['me.title']()}</h1>
+<Page>
+  <div class="stack">
+    <h1>{m['me.title']()}</h1>
 
-  {#if session.user}
-    <p class="who">{session.user.displayName}</p>
-    <p class="email">{session.user.email}</p>
-  {/if}
+    {#if session.user}
+      <p class="who">{session.user.displayName}</p>
+      <p class="email">{session.user.email}</p>
+    {/if}
 
-  <Divider />
-
-  <section class="section">
-    <h2>{m['me.appearance']()}</h2>
-    <div class="setting">
-      <span class="setting-label">{m['me.theme']()}</span>
-      <ThemeToggle />
-    </div>
-
-    <LocalePicker />
-  </section>
-
-  {#if session.activeHousehold}
     <Divider />
 
     <section class="section">
-      <h2>{m['me.household']()}</h2>
-      <p>{session.activeHousehold.name}</p>
+      <h2>{m['me.appearance']()}</h2>
+      <div class="setting">
+        <span class="setting-label">{m['me.theme']()}</span>
+        <ThemeToggle />
+      </div>
+
+      <LocalePicker />
     </section>
-  {/if}
 
-  <Divider />
+    {#if session.activeHousehold}
+      <Divider />
 
-  <Button onclick={signOut}>{m['auth.signOut']()}</Button>
-</div>
+      <section class="section">
+        <h2>{m['me.household']()}</h2>
+        <p>{session.activeHousehold.name}</p>
+      </section>
+    {/if}
+
+    <Divider />
+
+    <Button onclick={signOut}>{m['auth.signOut']()}</Button>
+  </div>
+</Page>
 
 <style>
-  .page {
+  .stack {
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
-    max-width: var(--measure);
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-4) var(--space-16);
     align-items: flex-start;
   }
 

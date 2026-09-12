@@ -54,6 +54,10 @@ internal sealed class SignInEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .AllowAnonymous()
+            // Signing in is the way out of a session whose CSRF token has been
+            // lost, so it cannot be the thing the missing token blocks. See
+            // CsrfExempt; the same-origin guard still covers it.
+            .WithMetadata(new CsrfExempt())
             .RequireRateLimiting(RateLimitExtensions.Login);
     }
 }

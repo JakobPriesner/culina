@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Api.Infrastructure;
 using Domain.Recipes;
 using Microsoft.OpenApi;
 
@@ -112,21 +113,32 @@ internal static class OpenApiContractFixes
     /// </remarks>
     internal static void PublishVocabularies(OpenApiDocument document)
     {
-        var units = Enum.GetNames<Unit>()
-            .Select(name => JsonNamingPolicy.SnakeCaseLower.ConvertName(name))
-            .ToArray();
-
-        foreach (var (schema, property) in UnitProperties)
+        foreach (var (schema, property, values) in Vocabularies)
         {
-            Describe(document, schema, property, units);
+            Describe(document, schema, property, values);
         }
     }
 
-    /// <summary>Every place a <see cref="Unit"/> is carried as a string.</summary>
-    private static readonly (string Schema, string Property)[] UnitProperties =
+    private static string[] NamesOf<TEnum>()
+        where TEnum : struct, Enum =>
+        [.. Enum.GetNames<TEnum>().Select(JsonNamingPolicy.SnakeCaseLower.ConvertName)];
+
+    /// <summary>
+    /// Every place a closed set is carried as a string, and what it may be.
+    /// </summary>
+    /// <remarks>
+    /// The step segment's kind is the one that is not a domain enum: the
+    /// contract deliberately flattens a union so the generated client does not
+    /// have to narrow one, and the two values are stated here instead.
+    /// </remarks>
+    private static readonly (string Schema, string Property, string[] Values)[] Vocabularies =
     [
-        ("RecipesIngredientContract", "unit"),
-        ("RecipesStepSegmentContract", "unit")
+        ("RecipesIngredientContract", "unit", NamesOf<Unit>()),
+        ("RecipesStepSegmentContract", "unit", NamesOf<Unit>()),
+        ("RecipesRecipeDetail", "yieldKind", NamesOf<YieldKind>()),
+        ("RecipesGetAllRecipeSummary", "yieldKind", NamesOf<YieldKind>()),
+        ("RecipesUpdateRequest", "yieldKind", NamesOf<YieldKind>()),
+        ("RecipesStepSegmentContract", "type", ["text", "ingredient"])
     ];
 
     private static void Describe(
@@ -149,6 +161,59 @@ internal static class OpenApiContractFixes
         }
 
         property.Enum = [.. values.Select(value => (JsonNode)value)];
+    }
+
+    /// <summary>
+    /// Describes the query parameters an endpoint accepts.
+    /// </summary>
+    /// <remarks>
+    /// They are already declared, as endpoint metadata, so the guard middleware
+    /// can reject anything else. Publishing the same declaration is what closes
+    /// the loop: the generated client can send exactly what the server will
+    /// accept, and nothing it would refuse.
+    ///
+    /// Without this the document says an operation takes no parameters at all,
+    /// and the typed client simply cannot call it.
+    /// </remarks>
+    internal static void DescribeQueryParameters(
+        OpenApiOperation operation,
+        AllowedQueryParameters allowed)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(allowed);
+
+        operation.Parameters ??= [];
+
+        foreach (var name in allowed.Single)
+        {
+            operation.Parameters.Add(Query(name, allowed.IsInteger(name), repeatable: false));
+        }
+
+        foreach (var name in allowed.Repeatable)
+        {
+            operation.Parameters.Add(Query(name, allowed.IsInteger(name), repeatable: true));
+        }
+    }
+
+    private static OpenApiParameter Query(string name, bool isInteger, bool repeatable)
+    {
+        var scalar = new OpenApiSchema
+        {
+            Type = isInteger ? JsonSchemaType.Integer : JsonSchemaType.String
+        };
+
+        return new OpenApiParameter
+        {
+            Name = name,
+            In = ParameterLocation.Query,
+            Required = false,
+            // Repeated rather than comma-joined: `?tag=vegan&tag=quick` is what
+            // the guard accepts and what the query parser reads.
+            Explode = repeatable,
+            Schema = repeatable
+                ? new OpenApiSchema { Type = JsonSchemaType.Array, Items = scalar }
+                : scalar
+        };
     }
 
     /// <summary>

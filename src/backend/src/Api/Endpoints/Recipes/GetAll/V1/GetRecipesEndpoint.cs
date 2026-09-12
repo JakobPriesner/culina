@@ -41,7 +41,8 @@ internal sealed class GetRecipesEndpoint : IEndpoint
                 + "go stale.")
             .WithRepeatableQueryParameters(
                 ["householdId", "query", "maxMinutes", "sort", "cursor", "limit"],
-                ["tag", "ingredient"])
+                ["tag", "ingredient"],
+                ["maxMinutes", "limit"])
             .Produces<Response>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

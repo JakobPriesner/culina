@@ -2,9 +2,11 @@
   /**
    * The three navigation icons, in one place.
    *
-   * Outlined at rest and filled when current, which is the second signal
-   * alongside colour — colour alone fails for the people most likely to be
-   * cooking one-handed in bad light.
+   * Always outlined. These are open shapes — a book, a basket — and filling
+   * one solid at 24px makes a blob rather than an emphasis. The current
+   * destination is carried by the pill behind it, by colour, and by
+   * `aria-current`, so there are three signals without a fourth that looks
+   * worse.
    */
   import type { DestinationIcon } from './navigation';
 
@@ -18,9 +20,9 @@
 
 <svg
   viewBox="0 0 24 24"
-  fill={current ? 'currentColor' : 'none'}
+  fill="none"
   stroke="currentColor"
-  stroke-width="1.6"
+  stroke-width={current ? 2 : 1.6}
   stroke-linecap="round"
   stroke-linejoin="round"
 >

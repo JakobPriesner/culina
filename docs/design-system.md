@@ -5,6 +5,12 @@ product. Component placement rules come from `sveltekit-components-and-pages`;
 this document fixes the **tokens, the theme architecture and the component
 inventory**.
 
+## September 2026 refinement
+
+The current implementation lightens the yellow/brown neutral ramp, introduces an editorial display type token and a shared bowl wordmark, and gives authentication a photographic frame that yields to the form on mobile. Controls and quantities keep system typography. The exact palette is maintained in `tokens/primitives.css`; examples below illustrate the theme architecture.
+
+Review `/design/recipes` for the interactive recipe concept and `/design` for primitives in development. The recipe concept uses labelled temporary sample data and does not replace the unfinished production recipe pages. Both preview routes share the release guard. [The revised product plan](product-quality-plan.md) explains the release scope and quality contracts.
+
 ## Design intent
 
 Food photography is the content. Everything else gets out of its way.
