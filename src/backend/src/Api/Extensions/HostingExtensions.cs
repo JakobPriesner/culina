@@ -68,6 +68,16 @@ internal static class HostingExtensions
             {
                 var headers = context.Context.Response.GetTypedHeaders();
 
+                // The service worker decides what every later request is
+                // answered with, so a stale copy of it is a stale copy of the
+                // whole app. It is revalidated every time, never reused blind.
+                if (IsServiceWorker(context.Context.Request.Path))
+                {
+                    headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
+
+                    return;
+                }
+
                 headers.CacheControl = IsImmutable(context.File.Name, context.Context.Request.Path)
                     ? new CacheControlHeaderValue
                     {
@@ -125,6 +135,9 @@ internal static class HostingExtensions
 
         return app;
     }
+
+    private static bool IsServiceWorker(PathString path) =>
+        path.Equals("/service-worker.js", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsImmutable(string fileName, PathString path) =>
         // SvelteKit puts content-hashed assets under /_app/immutable/, which is

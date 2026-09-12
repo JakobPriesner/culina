@@ -87,6 +87,14 @@ export default ts.config(
     rules: { 'no-restricted-globals': 'off', 'no-restricted-imports': 'off' }
   },
   {
+    // The service worker runs with no window, no session and no store: the
+    // typed client is not available to it, and the whole point of the file is
+    // to answer requests the network cannot. It is also the one file that must
+    // never touch the API — see the comment at the top of it.
+    files: ['src/service-worker.ts'],
+    rules: { 'no-restricted-globals': 'off' }
+  },
+  {
     ignores: [
       '.svelte-kit/',
       'build/',

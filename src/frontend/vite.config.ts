@@ -46,6 +46,11 @@ export default defineConfig({
       // every client route.
       adapter: adapter({ fallback: 'index.html', strict: false }),
 
+      // Registered by the app, not by the framework: Culina asks before it
+      // swaps a running build out from under someone mid-recipe, and that
+      // conversation needs the registration object. See lib/app/updates.
+      serviceWorker: { register: false },
+
       alias: {
         $api: 'src/lib/api',
         $ds: 'src/lib/design-system',

@@ -273,5 +273,7 @@
   "units.can": "can",
   "units.cans": "cans",
   "units.pack": "pack",
-  "units.packs": "packs"
+  "units.packs": "packs",
+  "app.update.available": "A new version of Culina is ready.",
+  "app.update.reload": "Reload"
 }
