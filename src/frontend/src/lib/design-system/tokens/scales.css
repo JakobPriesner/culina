@@ -18,6 +18,14 @@
   --space-16: 4rem;
   --space-24: 6rem;
 
+  /* Control heights. The smallest is 44px, not because it looks small but
+     because that is the floor for something a wet thumb has to hit while the
+     phone is propped against a mixing bowl. "Small" here means dense, never
+     hard to press. */
+  --control-sm: 2.75rem;
+  --control-md: 3rem;
+  --control-lg: 3.5rem;
+
   /* Radius. Photos and cards share one value so nothing looks almost-aligned. */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;

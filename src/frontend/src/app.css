@@ -2,6 +2,7 @@
 @import './lib/design-system/tokens/scales.css';
 @import './lib/design-system/tokens/semantic.css';
 @import './lib/design-system/themes/warm-paper.css';
+@import './lib/design-system/inputs/control.css';
 
 /*
  * Base element styles. Everything else is a component; there is no utility
