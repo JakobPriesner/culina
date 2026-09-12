@@ -46,6 +46,9 @@ internal static class OpenApiExtensions
                 // a base URL here would only double the prefix.
                 document.Servers = [];
 
+                OpenApiContractFixes.CollapseStringOrIntegerUnions(document);
+                OpenApiContractFixes.DescribeProblemExtensions(document);
+
                 return Task.CompletedTask;
             });
         });
