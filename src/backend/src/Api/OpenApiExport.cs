@@ -9,16 +9,16 @@ namespace Api;
 /// </summary>
 /// <remarks>
 /// <para>
-/// An explicit step (<c>dotnet run -- --export-openapi</c>, or
-/// <c>make api</c>) rather than a build target. The build-time generator starts
-/// the application to enumerate its endpoints, and this application refuses to
-/// start without valid configuration — which is behaviour worth keeping, so the
-/// export works around it instead of weakening it.
+/// An explicit step (<c>make openapi</c>) rather than an MSBuild target,
+/// because the document is produced by enumerating the endpoints of a
+/// <em>started</em> host — building one is not enough, and neither is
+/// constructing the pipeline by hand.
 /// </para>
 /// <para>
-/// The placeholder configuration below exists only on this path. Nothing is
-/// connected to and no request is served: the host is built, the document is
-/// read from it, and the process exits.
+/// Starting the host means the export needs the same configuration and the same
+/// database the app needs, which is why <c>make openapi</c> brings the database
+/// up first. The app starts, the document is read, the app stops, and no
+/// request is ever served.
 /// </para>
 /// </remarks>
 internal static class OpenApiExport
@@ -29,31 +29,20 @@ internal static class OpenApiExport
 
     internal static bool Requested(string[] args) => args.Contains(Flag, StringComparer.Ordinal);
 
-    internal static IReadOnlyDictionary<string, string?> PlaceholderConfiguration()
-    {
-        var scratch = Path.Combine(Path.GetTempPath(), "culina-openapi-export");
-
-        return new Dictionary<string, string?>
-        {
-            ["Database:Host"] = "openapi-export",
-            ["Database:Name"] = "openapi-export",
-            ["Database:Username"] = "openapi-export",
-            ["Database:Password"] = "openapi-export",
-            ["Storage:ImagePath"] = Path.Combine(scratch, "images"),
-            ["Storage:DataProtectionKeyPath"] = Path.Combine(scratch, "keys")
-        };
-    }
-
     internal static async Task WriteAsync(WebApplication app, string[] args)
     {
         var path = OutputPath(args);
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
+        await app.StartAsync().ConfigureAwait(false);
+
         // Registered per document name, so the key is the version this
         // application exposes.
         var provider = app.Services.GetRequiredKeyedService<IOpenApiDocumentProvider>(DocumentName);
         var document = await provider.GetOpenApiDocumentAsync().ConfigureAwait(false);
+
+        await app.StopAsync().ConfigureAwait(false);
 
         var stream = File.Create(path);
         await using (stream.ConfigureAwait(false))

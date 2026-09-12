@@ -23,7 +23,16 @@ namespace IntegrationTests.Fixtures;
 /// </para>
 /// </remarks>
 /// <param name="postgres">The database the host should use.</param>
-public sealed class CulinaApiFactory(PostgresFixture postgres) : WebApplicationFactory<Program>
+/// <param name="overrides">
+/// Extra configuration for one test class. Rate limits in particular are
+/// deliberately generous here: sharing one client address across a suite would
+/// otherwise trip the production limits, and a test that fails because the
+/// limiter works is a test that teaches people to remove the limiter. The limit
+/// itself is proven by a test that lowers it on purpose.
+/// </param>
+public sealed class CulinaApiFactory(
+    PostgresFixture postgres,
+    IReadOnlyDictionary<string, string>? overrides = null) : WebApplicationFactory<Program>
 {
     private readonly string dataRoot =
         Path.Combine(Path.GetTempPath(), $"culina-test-{Guid.CreateVersion7():n}");
@@ -47,6 +56,17 @@ public sealed class CulinaApiFactory(PostgresFixture postgres) : WebApplicationF
         // There is no TLS over the test client, so a __Host- cookie would be
         // refused outright.
         builder.UseSetting("Cookies:Secure", "false");
+
+        builder.UseSetting("RateLimits:RegisterPerIpPerHour", "10000");
+        builder.UseSetting("RateLimits:LoginPerIpPerMinute", "10000");
+        builder.UseSetting("RateLimits:LoginPerAccountPerMinute", "10000");
+        builder.UseSetting("RateLimits:InvitationPerIpPerHour", "10000");
+        builder.UseSetting("RateLimits:RequestsPerSessionPerMinute", "100000");
+
+        foreach (var (key, value) in overrides ?? new Dictionary<string, string>())
+        {
+            builder.UseSetting(key, value);
+        }
     }
 
     /// <summary>

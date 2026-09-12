@@ -36,11 +36,25 @@ public static class DependencyInjection
 
         DapperConfiguration.Apply();
 
+        // Order matters here, and only here: hosted services start in
+        // registration order, and the settings loader reads a table the
+        // migration runner creates.
         return services
             .AddPersistence()
+            .AddInstanceSettings()
             .AddIdentity()
             .AddSingleton(TimeProvider.System);
     }
+
+    /// <summary>
+    /// Admin-editable settings: one mutable singleton per group, its store, and
+    /// the loader that fills them in before the first request.
+    /// </summary>
+    private static IServiceCollection AddInstanceSettings(this IServiceCollection services) =>
+        services
+            .AddSingleton<RegistrationSettings>()
+            .AddScoped<ISettingsStore<RegistrationSettings>, PostgresSettingsStore<RegistrationSettings>>()
+            .AddHostedService<InstanceSettingsLoader>();
 
     private static IServiceCollection AddIdentity(this IServiceCollection services) =>
         // Stateless and thread-safe, so one instance serves every request.

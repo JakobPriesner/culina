@@ -55,6 +55,20 @@ public static class ResultExtensions
         return result.Match(bind, Result.Failure);
     }
 
+    /// <summary>
+    /// Chains a value-producing operation onto a valueless success, so a guard
+    /// can precede the work that produces something.
+    /// </summary>
+    /// <typeparam name="TOut">The outgoing value.</typeparam>
+    /// <param name="result">The guard's outcome.</param>
+    /// <param name="bind">Runs only when the guard passed.</param>
+    public static Result<TOut> Bind<TOut>(this Result result, Func<Result<TOut>> bind)
+    {
+        ArgumentNullException.ThrowIfNull(bind);
+
+        return result.Match(bind, Result<TOut>.Failure);
+    }
+
     /// <summary>Chains a valueless operation onto a valueless success.</summary>
     /// <param name="result">The result to chain from.</param>
     /// <param name="bind">Runs only on success.</param>

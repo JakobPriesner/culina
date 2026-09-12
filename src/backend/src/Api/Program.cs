@@ -6,14 +6,6 @@ using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (OpenApiExport.Requested(args))
-{
-    // Reading the document requires a built host, and the host refuses to start
-    // without valid configuration. Placeholders satisfy that on this path only;
-    // nothing is connected to and no request is served.
-    builder.Configuration.AddInMemoryCollection(OpenApiExport.PlaceholderConfiguration());
-}
-
 builder.AddObservability();
 
 builder.Services
@@ -31,13 +23,6 @@ builder.Host.UseDefaultServiceProvider(options =>
 });
 
 var app = builder.Build();
-
-if (OpenApiExport.Requested(args))
-{
-    await OpenApiExport.WriteAsync(app, args).ConfigureAwait(false);
-
-    return;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THE ORDER OF THIS PIPELINE IS THE CONTRACT, not a preference. Moving a line
@@ -72,5 +57,14 @@ app.UseAuthorization();           // 14. Policies, after identity is established
 app.MapHealthEndpoints();
 app.MapEndpoints();
 app.MapSinglePageAppFallback();
+
+// After the endpoints are mapped: the document is built by enumerating them,
+// so exporting any earlier produces an empty file.
+if (OpenApiExport.Requested(args))
+{
+    await OpenApiExport.WriteAsync(app, args).ConfigureAwait(false);
+
+    return;
+}
 
 await app.RunAsync().ConfigureAwait(false);

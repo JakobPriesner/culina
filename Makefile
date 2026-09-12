@@ -81,7 +81,7 @@ api: openapi ## Export the OpenAPI document and regenerate the frontend client
 	@echo "Regenerated. Commit openapi/Api.json together with the client — CI"
 	@echo "fails if the committed client does not match the document."
 
-openapi: ## Export the OpenAPI document to src/backend/openapi/Api.json
+openapi: db-up ## Export the OpenAPI document to src/backend/openapi/Api.json
 	cd $(API) && dotnet run -- --export-openapi ../../openapi/Api.json
 
 # ── Container ────────────────────────────────────────────────────────────────

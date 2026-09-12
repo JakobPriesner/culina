@@ -1,3 +1,5 @@
+using Application.Abstractions.Messaging;
+using Application.Users.Register;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Application;
@@ -27,6 +29,9 @@ public static class DependencyInjection
 
         // Handlers are grouped by domain, in the same order as the folders.
         // Nothing depends on the order itself.
-        return services;
+        return services
+            // Users
+            .AddScoped<ICommandHandler<RegisterUserCommand, Contracts.Users.Register.Response>,
+                RegisterUserCommandHandler>();
     }
 }
