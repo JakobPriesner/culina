@@ -1,0 +1,131 @@
+import { expect, test, type Page } from '@playwright/test';
+
+import {
+  ensureAccount,
+  needsBackend,
+  seedRecipe,
+  signInWithHousehold,
+  skipReason,
+  unique
+} from './support/culina';
+
+/**
+ * Cooking, which is the one screen used with wet hands and no attention to
+ * spare.
+ *
+ * The transition into it matters more than the screen does: the same surface
+ * with a different emphasis, so nothing a person was looking at jumps somewhere
+ * else. And leaving it must not lose the place — a phone that locked itself
+ * between step two and step three is the normal case, not an edge one.
+ */
+// One browser for the file, so the tests share a session and a cook session.
+test.describe.configure({ mode: 'serial' });
+
+test.describe('cooking a recipe', () => {
+  test.skip(needsBackend, skipReason);
+
+  /*
+   * Its own account, per project, signed into once for the whole file.
+   *
+   * Its own, because only one recipe can be being cooked at a time — the
+   * database says so, and it is the right rule — so a desktop and a mobile
+   * browser sharing one account are two browsers taking the cook session away
+   * from each other.
+   *
+   * Once, because signing in is rate limited per account, as it should be. A
+   * suite that signs in for every test is a suite that locks itself out.
+   */
+  let page: Page;
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    if (needsBackend) {
+      return;
+    }
+
+    const who = await ensureAccount(browser, `cook-${testInfo.project.name}`);
+
+    page = await browser.newPage();
+
+    await signInWithHousehold(page, who);
+  });
+
+  test.afterAll(async () => {
+    await page?.close();
+  });
+
+  test('keeps the place through leaving the page and coming back', async () => {
+    const title = unique('Cooking');
+    const recipeId = await seedRecipe(page, {
+      title,
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }],
+      steps: ['Melt {0}.', 'Wait for it to foam.', 'Take it off the heat.']
+    });
+
+    await page.goto(`/recipes/${recipeId}`);
+    await page.getByRole('button', { name: /^(start cooking|kochen starten)$/i }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
+
+    const next = page.getByRole('button', { name: /^(next step|nächster schritt)$/i });
+
+    await next.click();
+    await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
+
+    // The phone goes away — a different screen, a lock, a call.
+    await page.goto('/shopping');
+
+    // And the bar says what is still going on, from anywhere in the app.
+    const bar = page.getByText(new RegExp(`cooking ${title}|${title} wird gekocht`, 'i'));
+
+    await expect(bar).toBeVisible();
+
+    await page.getByRole('link', { name: /pick it back up|weitermachen/i }).click();
+
+    // Back at step two, not back at the beginning.
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
+    await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
+
+    // Through the last step, where the primary action becomes finishing.
+    await next.click();
+    await expect(page.getByText(/step 3 of 3|schritt 3 von 3/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i }).click();
+
+    // And the bar is gone, because nothing is being cooked any more.
+    await expect(bar).toHaveCount(0);
+  });
+
+  test('scales while cooking, and the step text scales with it', async () => {
+    const recipeId = await seedRecipe(page, {
+      title: unique('Cooking scale'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }],
+      steps: ['Melt {0}.']
+    });
+
+    // Straight into cooking at a different yield, the way a shared link would.
+    await page.goto(`/recipes/${recipeId}/cook?yield=4`);
+
+    await expect(page.getByRole('main')).toContainText('400');
+
+    await page.getByRole('button', { name: /^(one more|eine mehr)$/i }).click();
+
+    await expect(page.getByRole('main')).toContainText('500');
+  });
+
+  test('offers a timer for a step that waits', async () => {
+    const recipeId = await seedRecipe(page, {
+      title: unique('Timed'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 1, unit: 'piece', name: 'Onion' }],
+      steps: ['Soften {0} slowly.']
+    });
+
+    await page.goto(`/recipes/${recipeId}/cook`);
+
+    // No duration on this step, so no timer: a timer offered for an instruction
+    // that does not wait is a button that teaches people to ignore buttons.
+    await expect(page.getByRole('button', { name: /min timer|timer über/i })).toHaveCount(0);
+  });
+});

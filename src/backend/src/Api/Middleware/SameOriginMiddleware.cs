@@ -24,12 +24,14 @@ internal sealed class SameOriginMiddleware(RequestDelegate next)
 {
     public Task InvokeAsync(
         HttpContext context,
+        CookieSettings cookies,
         ILogger<SameOriginMiddleware> logger)
     {
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(cookies);
         ArgumentNullException.ThrowIfNull(logger);
 
-        if (IsSafe(context.Request.Method) || !CarriesSessionCookie(context.Request))
+        if (IsSafe(context.Request.Method) || !CarriesSessionCookie(context.Request, cookies))
         {
             return next(context);
         }
@@ -52,8 +54,19 @@ internal sealed class SameOriginMiddleware(RequestDelegate next)
     private static bool IsSafe(string method) =>
         HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
 
-    private static bool CarriesSessionCookie(HttpRequest request) =>
-        request.Cookies.ContainsKey(CookieSettings.SessionCookieName);
+    /// <summary>
+    /// Asked of the same source the cookie is written from.
+    /// </summary>
+    /// <remarks>
+    /// The name depends on whether cookies are marked <c>Secure</c>: a browser
+    /// rejects a <c>__Host-</c> cookie over plain HTTP, so local development
+    /// drops the prefix. Hard-coding the production name here meant this guard
+    /// saw no session in development and waved every foreign origin through —
+    /// a security check that behaves differently from the one that ships,
+    /// which is the one thing it must never do.
+    /// </remarks>
+    private static bool CarriesSessionCookie(HttpRequest request, CookieSettings cookies) =>
+        request.Cookies.ContainsKey(Authentication.SessionCookies.Name(cookies));
 
     private static bool IsOurs(HttpRequest request)
     {

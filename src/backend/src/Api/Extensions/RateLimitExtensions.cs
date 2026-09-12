@@ -68,7 +68,12 @@ internal static class RateLimitExtensions
     /// </summary>
     private static RateLimitPartition<string> PerClient(HttpContext context, int permit, TimeSpan window)
     {
-        var key = context.Request.Cookies.TryGetValue(CookieSettings.SessionCookieName, out var session)
+        // The name, not the constant: it loses its `__Host-` prefix wherever
+        // cookies are not marked Secure, and a limiter keyed on a cookie that
+        // is never there is a limiter that only ever sees an address.
+        var cookies = context.RequestServices.GetRequiredService<CookieSettings>();
+
+        var key = context.Request.Cookies.TryGetValue(Authentication.SessionCookies.Name(cookies), out var session)
             ? $"session:{session}"
             : $"ip:{context.Connection.RemoteIpAddress}";
 

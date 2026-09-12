@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   needsBackend,
@@ -16,14 +16,30 @@ import {
  * thing and the instructions another. That is the single most common defect in
  * recipe apps, and it is invisible until somebody is standing at a hob.
  */
+// Signed in once for the whole file: signing in is rate limited per account,
+// as it should be, and a suite that signs in for every test locks itself out.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('scaling a recipe', () => {
   test.skip(needsBackend, skipReason);
 
-  test('changes the ingredient list and the amounts inside the steps together', async ({
-    page
-  }) => {
-    await signInWithHousehold(page);
+  let page: Page;
 
+  test.beforeAll(async ({ browser }) => {
+    if (needsBackend) {
+      return;
+    }
+
+    page = await browser.newPage();
+
+    await signInWithHousehold(page);
+  });
+
+  test.afterAll(async () => {
+    await page?.close();
+  });
+
+  test('changes the ingredient list and the amounts inside the steps together', async () => {
     const recipeId = await seedRecipe(page, {
       title: unique('Scaling'),
       yieldAmount: 2,
@@ -54,9 +70,7 @@ test.describe('scaling a recipe', () => {
     await expect(steps).not.toContainText('200');
   });
 
-  test('travels in the URL, so a scaled recipe can be sent to somebody', async ({ page }) => {
-    await signInWithHousehold(page);
-
+  test('travels in the URL, so a scaled recipe can be sent to somebody', async () => {
     const recipeId = await seedRecipe(page, {
       title: unique('Shared'),
       yieldAmount: 2,
@@ -71,9 +85,7 @@ test.describe('scaling a recipe', () => {
     await expect(page.getByRole('region', { name: /steps|zubereitung/i })).toContainText('600');
   });
 
-  test('says so when the amounts stop being trustworthy', async ({ page }) => {
-    await signInWithHousehold(page);
-
+  test('says so when the amounts stop being trustworthy', async () => {
     const recipeId = await seedRecipe(page, {
       title: unique('Doubtful'),
       yieldAmount: 2,

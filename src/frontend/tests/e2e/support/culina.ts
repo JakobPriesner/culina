@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 
 /**
  * What every flow needs before it can be about anything.
@@ -16,6 +16,9 @@ export const credentials = {
 
 export const needsBackend = !credentials.email || !credentials.password;
 
+/** Where the built app is served. Playwright's baseURL, for request contexts. */
+const origin = 'http://localhost:4173';
+
 export const skipReason =
   'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD to an administrator account, with a backend running.';
 
@@ -27,6 +30,77 @@ export const skipReason =
  */
 export const unique = (word: string): string =>
   `${word} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/**
+ * An account of this suite's own, made once and reused after that.
+ *
+ * Some state belongs to a person and cannot be shared: only one recipe can be
+ * being cooked at a time, so two browsers driving one account are two browsers
+ * fighting over the same cook session. A flow that needs to own that state asks
+ * for an account named after itself.
+ *
+ * Reused rather than made fresh each run because registration is rate limited
+ * per address — as it should be — and a suite that burns five registrations an
+ * hour would lock itself out.
+ */
+export async function ensureAccount(
+  browser: Browser,
+  name: string
+): Promise<{ email: string; password: string }> {
+  const who = { email: `${name}@culina.test`, password: credentials.password! };
+  const context = await browser.newContext();
+
+  try {
+    const signedIn = await context.request.post('/api/v1/sessions', {
+      headers: { Origin: origin },
+      data: who
+    });
+
+    if (signedIn.ok()) {
+      return who;
+    }
+
+    await openRegistration(browser);
+
+    const created = await context.request.post('/api/v1/users', {
+      headers: { Origin: origin },
+      data: { email: who.email, displayName: name, password: who.password }
+    });
+
+    expect(created.ok(), await created.text()).toBe(true);
+
+    return who;
+  } finally {
+    await context.close();
+  }
+}
+
+/** The instance has to be told to accept new accounts, by somebody who may. */
+async function openRegistration(browser: Browser): Promise<void> {
+  const context = await browser.newContext();
+
+  try {
+    const signedIn = await context.request.post('/api/v1/sessions', {
+      headers: { Origin: origin },
+      data: credentials
+    });
+
+    expect(signedIn.ok(), 'CULINA_E2E_* must be an administrator: ' + (await signedIn.text())).toBe(
+      true
+    );
+
+    const csrf = (await context.cookies()).find((cookie) => cookie.name === 'culina.csrf')?.value;
+
+    const opened = await context.request.put('/api/v1/settings/registration', {
+      headers: { Origin: origin, 'X-Culina-CSRF': csrf ?? '' },
+      data: { openRegistration: true, requireInvitation: false, maxUsers: 100 }
+    });
+
+    expect(opened.ok(), await opened.text()).toBe(true);
+  } finally {
+    await context.close();
+  }
+}
 
 export async function signIn(page: Page, who = credentials): Promise<void> {
   await page.goto('/login');

@@ -107,7 +107,30 @@ public class SameOriginGuardTests
         Assert.Equal("auth.foreign_origin", await CodeAsync(context));
     }
 
-    private static DefaultHttpContext Request(string method, string? origin, bool withSession)
+    [Fact]
+    public async Task Request_ShouldBeRejected_WhenCookiesAreNotSecureAndTheOriginIsForeign()
+    {
+        // Arrange
+        // Local development drops the `__Host-` prefix, because a browser
+        // refuses that cookie over plain HTTP. This guard used to look for the
+        // production name only, so in development it saw no session and let
+        // every foreign origin through — a security check behaving differently
+        // from the one that ships is the one thing it must never do.
+        var context = Request("POST", "https://not-culina.example", withSession: true, secureCookies: false);
+
+        // Act
+        var reached = await InvokeAsync(context, secureCookies: false);
+
+        // Assert
+        Assert.False(reached);
+        Assert.Equal("auth.foreign_origin", await CodeAsync(context));
+    }
+
+    private static DefaultHttpContext Request(
+        string method,
+        string? origin,
+        bool withSession,
+        bool secureCookies = true)
     {
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
@@ -123,13 +146,15 @@ public class SameOriginGuardTests
 
         if (withSession)
         {
-            context.Request.Headers.Cookie = $"{CookieSettings.SessionCookieName}=opaque";
+            var name = secureCookies ? CookieSettings.SessionCookieName : "culina.session";
+
+            context.Request.Headers.Cookie = $"{name}=opaque";
         }
 
         return context;
     }
 
-    private static async Task<bool> InvokeAsync(HttpContext context)
+    private static async Task<bool> InvokeAsync(HttpContext context, bool secureCookies = true)
     {
         var reached = false;
 
@@ -139,7 +164,10 @@ public class SameOriginGuardTests
             return Task.CompletedTask;
         });
 
-        await middleware.InvokeAsync(context, NullLogger<SameOriginMiddleware>.Instance);
+        await middleware.InvokeAsync(
+            context,
+            new CookieSettings { Secure = secureCookies },
+            NullLogger<SameOriginMiddleware>.Instance);
 
         return reached;
     }
