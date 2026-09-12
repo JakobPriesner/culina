@@ -1395,6 +1395,76 @@
         "summary": "Find recipes",
         "description": "Cursor-paginated. Repeat `ingredient` to ask what you can cook from what you have: results rank by how many of them a recipe uses and how few extras it needs, and each carries `ingredientMatch`. There is no pantry to maintain, so nothing can go stale.",
         "operationId": "getRecipesV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxMinutes",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "ingredient",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -2026,6 +2096,14 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "w",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -2597,6 +2675,10 @@
             "format": "double"
           },
           "yieldKind": {
+            "enum": [
+              "servings",
+              "pieces"
+            ],
             "type": "string",
             "description": "`servings` or `pieces`."
           },
@@ -2883,6 +2965,10 @@
             "format": "double"
           },
           "yieldKind": {
+            "enum": [
+              "servings",
+              "pieces"
+            ],
             "type": "string",
             "description": "`servings` or `pieces`."
           },
@@ -3059,6 +3145,10 @@
         "type": "object",
         "properties": {
           "type": {
+            "enum": [
+              "text",
+              "ingredient"
+            ],
             "type": "string",
             "description": "`text` or `ingredient`."
           },
@@ -3138,6 +3228,10 @@
             "format": "double"
           },
           "yieldKind": {
+            "enum": [
+              "servings",
+              "pieces"
+            ],
             "type": "string",
             "description": "`servings` or `pieces`."
           },

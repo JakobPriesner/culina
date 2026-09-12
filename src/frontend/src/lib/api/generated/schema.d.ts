@@ -745,8 +745,11 @@ export interface components {
              * @description How many it makes.
              */
             yieldAmount: number;
-            /** @description `servings` or `pieces`. */
-            yieldKind: string;
+            /**
+             * @description `servings` or `pieces`.
+             * @enum {string}
+             */
+            yieldKind: "servings" | "pieces";
             /** @description Its tags. */
             tags: string[];
             /**
@@ -885,8 +888,11 @@ export interface components {
              * @description How many it makes.
              */
             yieldAmount: number;
-            /** @description `servings` or `pieces`. */
-            yieldKind: string;
+            /**
+             * @description `servings` or `pieces`.
+             * @enum {string}
+             */
+            yieldKind: "servings" | "pieces";
             /**
              * Format: int32
              * @description Hands-on time.
@@ -991,8 +997,11 @@ export interface components {
         };
         /** @description One piece of a step: either words, or a reference to an ingredient. */
         RecipesStepSegmentContract: {
-            /** @description `text` or `ingredient`. */
-            type: string;
+            /**
+             * @description `text` or `ingredient`.
+             * @enum {string}
+             */
+            type: "text" | "ingredient";
             /** @description The words, for a text segment. */
             value?: string | null;
             /**
@@ -1026,8 +1035,11 @@ export interface components {
              * @description How many it makes.
              */
             yieldAmount: number;
-            /** @description `servings` or `pieces`. */
-            yieldKind: string;
+            /**
+             * @description `servings` or `pieces`.
+             * @enum {string}
+             */
+            yieldKind: "servings" | "pieces";
             /**
              * Format: int32
              * @description Hands-on time.
@@ -2390,7 +2402,16 @@ export interface operations {
     };
     getRecipesV1: {
         parameters: {
-            query?: never;
+            query?: {
+                householdId?: string;
+                query?: string;
+                maxMinutes?: number;
+                sort?: string;
+                cursor?: string;
+                limit?: number;
+                tag?: string[];
+                ingredient?: string[];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2830,7 +2851,9 @@ export interface operations {
     };
     getRecipeImageV1: {
         parameters: {
-            query?: never;
+            query?: {
+                w?: number;
+            };
             header?: never;
             path: {
                 recipeId: string;

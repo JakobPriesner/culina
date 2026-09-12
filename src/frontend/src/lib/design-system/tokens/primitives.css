@@ -12,17 +12,17 @@
 
 :root {
   /* Paper: the ground everything sits on, warm rather than neutral. */
-  --c-sand-50: #fdfbf7;
-  --c-sand-100: #f8f4ec;
-  --c-sand-200: #ece3d4;
-  --c-sand-300: #dccfb9;
-  --c-sand-400: #a48965;
-  --c-sand-500: #816e56;
-  --c-sand-600: #6b5943;
-  --c-sand-700: #4a3d2f;
-  --c-sand-800: #2e2721;
-  --c-sand-900: #1f1a16;
-  --c-sand-950: #141110;
+  --c-sand-50: #faf9f6;
+  --c-sand-100: #f2f0ea;
+  --c-sand-200: #e5e1d8;
+  --c-sand-300: #d2cdc2;
+  --c-sand-400: #91897c;
+  --c-sand-500: #746c60;
+  --c-sand-600: #625b50;
+  --c-sand-700: #443f36;
+  --c-sand-800: #2e2b25;
+  --c-sand-900: #23211c;
+  --c-sand-950: #181713;
 
   /* The single accent. One colour, reserved for the primary action. */
   --c-terracotta-200: #f3c9b6;

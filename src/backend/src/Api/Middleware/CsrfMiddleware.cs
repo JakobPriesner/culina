@@ -36,7 +36,9 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(tokens);
         ArgumentNullException.ThrowIfNull(logger);
 
-        if (IsSafe(context.Request.Method) || context.User.FindFirst(CulinaClaims.SessionId) is null)
+        if (IsSafe(context.Request.Method)
+            || context.User.FindFirst(CulinaClaims.SessionId) is null
+            || context.GetEndpoint()?.Metadata.GetMetadata<CsrfExempt>() is not null)
         {
             await next(context).ConfigureAwait(false);
 

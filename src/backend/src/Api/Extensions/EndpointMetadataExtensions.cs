@@ -29,15 +29,17 @@ internal static class EndpointMetadataExtensions
     /// <param name="builder">The endpoint being configured.</param>
     /// <param name="single">Parameters that may appear at most once.</param>
     /// <param name="repeatable">Parameters that may appear several times.</param>
+    /// <param name="integers">Which of them are whole numbers, for the contract.</param>
     internal static TBuilder WithRepeatableQueryParameters<TBuilder>(
         this TBuilder builder,
         IReadOnlyCollection<string> single,
-        IReadOnlyCollection<string> repeatable)
+        IReadOnlyCollection<string> repeatable,
+        IReadOnlyCollection<string>? integers = null)
         where TBuilder : IEndpointConventionBuilder
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.WithMetadata(new AllowedQueryParameters(single, repeatable));
+        builder.WithMetadata(new AllowedQueryParameters(single, repeatable, integers));
 
         return builder;
     }

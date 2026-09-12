@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization.Metadata;
+using Api.Infrastructure;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -28,6 +29,22 @@ internal static class OpenApiExtensions
             // and it is also how the operations are organised on disk.
             options.CreateSchemaReferenceId = type => SchemaName(type)
                 ?? OpenApiOptions.CreateDefaultSchemaReferenceId(type);
+
+            // Query parameters are declared once, as endpoint metadata, and
+            // read twice: by the guard that rejects anything else, and here.
+            options.AddOperationTransformer((operation, context, _) =>
+            {
+                var allowed = context.Description.ActionDescriptor.EndpointMetadata
+                    .OfType<AllowedQueryParameters>()
+                    .FirstOrDefault();
+
+                if (allowed is not null)
+                {
+                    OpenApiContractFixes.DescribeQueryParameters(operation, allowed);
+                }
+
+                return Task.CompletedTask;
+            });
 
             options.AddDocumentTransformer((document, _, _) =>
             {

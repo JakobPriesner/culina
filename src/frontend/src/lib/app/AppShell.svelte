@@ -2,18 +2,21 @@
   import type { Snippet } from 'svelte';
 
   import { navigating } from '$app/state';
+  import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
+  import Brand from './Brand.svelte';
   import { m } from './i18n';
   import Navigation from './Navigation.svelte';
 
   /**
    * The frame every signed-in page sits in.
    *
-   * The navigation is rendered once and never re-created, so moving between
-   * sections does not rebuild it — and the slot above it is reserved whether or
-   * not anything is in it, so the cooking bar appearing later never pushes the
-   * page.
+   * A navbar across the top, and on a phone the same three destinations along
+   * the bottom as well, where a thumb reaches. The navigation is rendered once
+   * and never re-created, so moving between sections does not rebuild it — and
+   * the slot above the bottom bar is reserved whether or not anything is in it,
+   * so the cooking bar appearing later never pushes the page.
    */
   interface Props {
     children: Snippet;
@@ -30,17 +33,23 @@
        every single page. -->
   <a class="skip" href="#content">{m['nav.skip']()}</a>
 
-  {#if navigating.to}
-    <span class="progress" role="progressbar" aria-label={m['app.navigating']()}></span>
-  {/if}
+  <header class="header">
+    {#if navigating.to}
+      <span class="progress" role="progressbar" aria-label={m['app.navigating']()}></span>
+    {/if}
 
-  <div class="rail"><Navigation /></div>
+    <div class="header-inner">
+      <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
+
+      <div class="wide-only"><Navigation placement="top" /></div>
+    </div>
+  </header>
 
   <main class="content" id="content" tabindex="-1">{@render children()}</main>
 
   <div class="dock">{@render dock?.()}</div>
 
-  <div class="bar"><Navigation /></div>
+  <div class="bar narrow-only"><Navigation placement="bottom" /></div>
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
 </div>
@@ -49,12 +58,36 @@
   .shell {
     display: grid;
     min-height: 100dvh;
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto auto;
+    grid-template-rows: auto 1fr auto auto;
     grid-template-areas:
+      'header'
       'content'
       'dock'
       'bar';
+  }
+
+  .header {
+    grid-area: header;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-raised);
+  }
+
+  /* The same rhythm as the signed-out header, so the app does not change shape
+     the moment someone signs in. */
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    max-width: var(--layout-wide);
+    margin-inline: auto;
+    padding: var(--space-3) var(--layout-gutter);
+  }
+
+  .brand {
+    text-decoration: none;
   }
 
   .content {
@@ -76,22 +109,20 @@
     position: sticky;
     bottom: 0;
     z-index: var(--z-sticky);
-  }
-
-  .rail {
-    display: none;
-    grid-area: rail;
+    border-top: 1px solid var(--border);
+    background: var(--surface-raised);
+    /* Clear of the home indicator. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
   /* A thin line across the top while a route resolves. Not a spinner: this is
      usually over before it is noticed, and a spinner that flashes is worse than
      nothing. */
   .progress {
-    position: fixed;
+    position: absolute;
     inset-block-start: 0;
     inset-inline: 0;
     height: 2px;
-    z-index: var(--z-overlay);
     background: var(--accent);
     transform-origin: left center;
     animation: advance 1.2s var(--ease-out) forwards;
@@ -123,25 +154,16 @@
     transform: none;
   }
 
+  .wide-only {
+    display: none;
+  }
+
   @media (min-width: 48rem) {
-    .shell {
-      grid-template-columns: 14rem 1fr;
-      grid-template-rows: 1fr auto;
-      grid-template-areas:
-        'rail content'
-        'rail dock';
-    }
-
-    .rail {
+    .wide-only {
       display: block;
-      position: sticky;
-      top: 0;
-      align-self: start;
-      height: 100dvh;
-      border-right: 1px solid var(--border);
     }
 
-    .bar {
+    .narrow-only {
       display: none;
     }
   }

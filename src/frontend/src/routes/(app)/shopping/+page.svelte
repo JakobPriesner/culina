@@ -1,23 +1,18 @@
 <script lang="ts">
   import { m } from '$shell/i18n';
+  import Page from '$shell/Page.svelte';
 
   // Replaced by the list itself in the phase 8 beads.
 </script>
 
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
-<div class="page">
+<Page>
   <h1>{m['shopping.title']()}</h1>
   <p class="note">{m['shopping.comingSoon']()}</p>
-</div>
+</Page>
 
 <style>
-  .page {
-    max-width: var(--measure);
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-4);
-  }
-
   .note {
     margin-top: var(--space-2);
     color: var(--text-muted);

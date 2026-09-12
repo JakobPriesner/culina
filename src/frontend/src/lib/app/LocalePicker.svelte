@@ -41,6 +41,7 @@
   }
 
   .select {
+    min-height: var(--control-sm);
     padding: var(--space-1) var(--space-2);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
