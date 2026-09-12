@@ -5,6 +5,8 @@
   import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
+  import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
+
   import Brand from './Brand.svelte';
   import { m } from './i18n';
   import Navigation from './Navigation.svelte';
@@ -47,7 +49,12 @@
 
   <main class="content" id="content" tabindex="-1">{@render children()}</main>
 
-  <div class="dock">{@render dock?.()}</div>
+  <!-- The slot is reserved whether or not anything is in it, so the bar
+       appearing never pushes the page. -->
+  <div class="dock">
+    <NowCookingBar />
+    {@render dock?.()}
+  </div>
 
   <div class="bar narrow-only"><Navigation placement="bottom" /></div>
 

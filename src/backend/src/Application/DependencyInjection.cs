@@ -1,4 +1,5 @@
 using Application.Abstractions.Messaging;
+using Application.CookSessions;
 using Application.Households.ChangeMemberRole;
 using Application.Households.Create;
 using Application.Households.CreateInvitation;
@@ -110,6 +111,13 @@ public static class DependencyInjection
             // Instance settings
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<StartCookSessionCommand,
+                Contracts.CookSessions.Response>, StartCookSessionCommandHandler>()
+            .AddScoped<ICommandHandler<UpdateCookSessionCommand,
+                Contracts.CookSessions.Response>, UpdateCookSessionCommandHandler>()
+            .AddScoped<ICommandHandler<EndCookSessionCommand>, EndCookSessionCommandHandler>()
+            .AddScoped<IQueryHandler<GetCurrentCookSessionQuery,
+                Contracts.CookSessions.Response>, GetCurrentCookSessionQueryHandler>()
             .AddScoped<IQueryHandler<GetRegistrationPolicyQuery,
                 Contracts.Registration.GetPolicy.Response>, GetRegistrationPolicyQueryHandler>()
             .AddScoped<ICommandHandler<UpdateRegistrationSettingsCommand,

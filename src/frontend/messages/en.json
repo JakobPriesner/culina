@@ -212,5 +212,19 @@
   "scaleTo.apply": "Scale the recipe",
   "scaleTo.cancel": "Cancel",
   "scaleTo.result": "That makes {yield}.",
-  "scaleTo.impossible": "That ingredient has no amount to scale from."
+  "scaleTo.impossible": "That ingredient has no amount to scale from.",
+  "cooking.nowCooking": "Cooking {title}",
+  "cooking.resume": "Pick it back up",
+  "cooking.stepOf": "Step {current} of {total}",
+  "cooking.next": "Next step",
+  "cooking.previous": "Previous step",
+  "cooking.finish": "I made it",
+  "cooking.abandon": "Stop cooking",
+  "cooking.timer.start": "Start {minutes} min timer",
+  "cooking.timer.running": "{minutes}:{seconds} left",
+  "cooking.timer.done": "Time is up",
+  "cooking.timer.dismiss": "Dismiss the timer",
+  "cooking.madeIt.toast": "Added to your cooking history.",
+  "cooking.madeIt.undo": "Undo",
+  "cooking.screenOn": "Screen stays on while you cook."
 }
