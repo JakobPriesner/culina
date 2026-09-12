@@ -1304,6 +1304,259 @@
           }
         }
       }
+    },
+    "/api/v1/recipes": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Start a recipe",
+        "description": "Only a household and a title are required. Everything else is added later, which is what makes the create form something people finish.",
+        "operationId": "createRecipeV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesRecipeDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipes/{recipeId}": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read a recipe",
+        "description": "The whole recipe, with steps as segments carrying each referenced ingredient's name and base amount — so a client renders and scales without another request.",
+        "operationId": "getRecipeByIdV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesRecipeDetail"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Replace a recipe",
+        "description": "A full replacement, because the editor holds the whole recipe on screen. Requires If-Match: missing is 428, stale is 412.",
+        "operationId": "updateRecipeV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesRecipeDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Delete a recipe",
+        "description": "Idempotent: deleting a recipe that is already gone also answers 204.",
+        "operationId": "deleteRecipeV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1788,6 +2041,479 @@
             "nullable": true
           }
         }
+      },
+      "RecipesCreateRequest": {
+        "required": [
+          "householdId",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Which household will own it.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "What to call it."
+          }
+        },
+        "description": "A new recipe."
+      },
+      "RecipesIngredientContract": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "ingredientId": {
+            "type": "string",
+            "description": "The line's id. Omit to create a new one; steps refer to it.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "How much, or null when the recipe does not say.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "In what, or null for a bare count.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The shoppable noun: \"butter\"."
+          },
+          "note": {
+            "type": "string",
+            "description": "The preparation: \"finely chopped\".",
+            "nullable": true
+          }
+        },
+        "description": "One line of the ingredient list."
+      },
+      "RecipesIngredientGroupContract": {
+        "required": [
+          "ingredients"
+        ],
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "description": "The group's id. Omit to create a new one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The heading, or null for the implicit first group. A recipe with one\nunnamed group renders as a plain list.",
+            "nullable": true
+          },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesIngredientContract"
+            },
+            "description": "Its ingredient lines, in order."
+          }
+        },
+        "description": "An ingredient group and its lines."
+      },
+      "RecipesRecipeDetail": {
+        "required": [
+          "recipeId",
+          "householdId",
+          "title",
+          "language",
+          "yieldAmount",
+          "yieldKind",
+          "groups",
+          "steps",
+          "tags",
+          "createdBy",
+          "createdAt",
+          "updatedAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe's id.",
+            "format": "uuid"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "Which household owns it.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "description": {
+            "type": "string",
+            "description": "A short introduction, if there is one.",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "description": "The language the title and steps are written in."
+          },
+          "yieldAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many it makes.",
+            "format": "double"
+          },
+          "yieldKind": {
+            "type": "string",
+            "description": "`servings` or `pieces`."
+          },
+          "prepMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "Hands-on time.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "Time in the oven or on the hob.",
+            "format": "int32",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "Prep plus cook, or null when neither is known.",
+            "format": "int32",
+            "nullable": true
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Its hero image, if it has one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesIngredientGroupContract"
+            },
+            "description": "Its ingredient groups, in order."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesStepContract"
+            },
+            "description": "Its steps, in order."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its tags."
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Who wrote it down.",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was written down.",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When it last changed.",
+            "format": "date-time"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "A recipe in full."
+      },
+      "RecipesStepContract": {
+        "required": [
+          "segments"
+        ],
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "description": "The step's id. Omit to create a new one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesStepSegmentContract"
+            },
+            "description": "Its text, split into words and ingredient references."
+          },
+          "durationSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "How long it takes, when it waits. Drives the inline timer.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "description": "One instruction."
+      },
+      "RecipesStepSegmentContract": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "`text` or `ingredient`."
+          },
+          "value": {
+            "type": "string",
+            "description": "The words, for a text segment.",
+            "nullable": true
+          },
+          "recipeIngredientId": {
+            "type": "string",
+            "description": "Which ingredient, for an ingredient segment.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The ingredient's name, on a read.",
+            "nullable": true
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "The ingredient's base amount, on a read.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "The ingredient's unit, on a read.",
+            "nullable": true
+          }
+        },
+        "description": "One piece of a step: either words, or a reference to an ingredient."
+      },
+      "RecipesUpdateRequest": {
+        "required": [
+          "title",
+          "language",
+          "yieldAmount",
+          "yieldKind",
+          "groups",
+          "steps",
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "What to call it."
+          },
+          "description": {
+            "type": "string",
+            "description": "A short introduction.",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "description": "`en` or `de`."
+          },
+          "yieldAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many it makes.",
+            "format": "double"
+          },
+          "yieldKind": {
+            "type": "string",
+            "description": "`servings` or `pieces`."
+          },
+          "prepMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "Hands-on time.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "Time in the oven or on the hob.",
+            "format": "int32",
+            "nullable": true
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesIngredientGroupContract"
+            },
+            "description": "Its ingredient groups, in order."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesStepContract"
+            },
+            "description": "Its steps, in order."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its tags."
+          }
+        },
+        "description": "The recipe's complete new state."
       },
       "SessionsGetAllResponse": {
         "required": [
@@ -2315,6 +3041,9 @@
     },
     {
       "name": "Settings"
+    },
+    {
+      "name": "Recipes"
     }
   ]
 }

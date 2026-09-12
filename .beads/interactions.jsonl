@@ -73,3 +73,4 @@
 {"id":"int-45af10b98b18892ab634549a794691c3","kind":"field_change","created_at":"2026-09-12T08:31:02.48998Z","actor":"Jakob Priesner","issue_id":"culina-v2-3vh","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
 {"id":"int-74be56f704514002b8cd3f5724d3c6f5","kind":"field_change","created_at":"2026-09-12T08:34:01.669366Z","actor":"Jakob Priesner","issue_id":"culina-v2-3vh","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-530e9aa5334d43494a2e696ad57a1a99","kind":"field_change","created_at":"2026-09-12T08:34:25.085375Z","actor":"Jakob Priesner","issue_id":"culina-v2-083","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}
+{"id":"int-bf2bf22f4770535cca6d24b83b3fae76","kind":"field_change","created_at":"2026-09-12T08:39:56.275656Z","actor":"Jakob Priesner","issue_id":"culina-v2-2vs","extra":{"field":"status","new_value":"in_progress","old_value":"open"}}

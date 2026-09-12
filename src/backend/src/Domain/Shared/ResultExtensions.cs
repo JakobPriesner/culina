@@ -125,6 +125,44 @@ public static class ResultExtensions
         });
     }
 
+    /// <summary>
+    /// Gathers many results into one, failing on the first failure.
+    /// </summary>
+    /// <typeparam name="TValue">What each result carries.</typeparam>
+    /// <param name="results">The results to gather, evaluated in order.</param>
+    /// <remarks>
+    /// Unlike <see cref="Result.Combine"/>, which runs every check to report
+    /// them all, this stops at the first failure — because the values it
+    /// gathers are usually parsed from each other, and continuing past a
+    /// failure would mean parsing nonsense.
+    /// </remarks>
+    public static Result<IReadOnlyList<TValue>> Collect<TValue>(
+        this IEnumerable<Result<TValue>> results)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+
+        List<TValue> values = [];
+
+        foreach (var result in results)
+        {
+            var failure = result.Match(
+                value =>
+                {
+                    values.Add(value);
+
+                    return (Error?)null;
+                },
+                error => error);
+
+            if (failure is not null)
+            {
+                return Result<IReadOnlyList<TValue>>.Failure(failure);
+            }
+        }
+
+        return values;
+    }
+
     /// <summary>Turns a possibly-absent reference into a result.</summary>
     /// <typeparam name="TValue">The carried value.</typeparam>
     /// <param name="value">The value, or null when it was not found.</param>

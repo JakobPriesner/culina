@@ -30,6 +30,19 @@ public interface IHouseholdRepository
         long expectedVersion,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether a user belongs to a household.
+    /// </summary>
+    /// <param name="householdId">Which household.</param>
+    /// <param name="userId">Who to check.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// One indexed lookup, for the many operations that only need to know
+    /// whether the caller may see something. Loading the whole household to ask
+    /// would make every recipe read pay for a members list nobody wanted.
+    /// </remarks>
+    Task<bool> IsMemberAsync(Guid householdId, Guid userId, CancellationToken cancellationToken);
+
     /// <summary>The household's members, with their names, for the members screen.</summary>
     /// <param name="householdId">Which household.</param>
     /// <param name="cancellationToken">Cancels the query.</param>

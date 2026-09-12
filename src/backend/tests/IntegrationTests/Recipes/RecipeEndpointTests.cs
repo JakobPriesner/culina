@@ -1,0 +1,296 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using IntegrationTests.Fixtures;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace IntegrationTests.Recipes;
+
+[Collection(RequiresDatabase.Name)]
+public class RecipeEndpointTests(PostgresFixture postgres)
+{
+    private const string Password = "correct horse battery staple";
+
+    [Fact]
+    public async Task Create_ShouldNeedOnlyAHouseholdAndATitle()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId, title = "Bolognese" },
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = response.Json!.Value;
+        Assert.Equal("Bolognese", created.GetProperty("title").GetString());
+        // The defaults a recipe starts with, so the editor has something to show.
+        Assert.Equal(4, created.GetProperty("yieldAmount").GetDecimal());
+        Assert.Equal("servings", created.GetProperty("yieldKind").GetString());
+        Assert.Single(created.GetProperty("groups").EnumerateArray().ToList());
+    }
+
+    [Fact]
+    public async Task Create_ShouldBeRefused_ForAHouseholdTheCallerIsNotIn()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId = Guid.CreateVersion7(), title = "Bolognese" },
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Update_ShouldStoreIngredientsAndSteps_WithTheirReferences()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        var butterId = Guid.CreateVersion7();
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, FullRecipe(butterId));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var body = saved.Json!.Value;
+        var ingredients = body.GetProperty("groups")[0].GetProperty("ingredients");
+        Assert.Equal(2, ingredients.GetArrayLength());
+        Assert.Equal(200.5m, ingredients[0].GetProperty("quantity").GetDecimal());
+        Assert.Equal("g", ingredients[0].GetProperty("unit").GetString());
+        Assert.Equal(60, body.GetProperty("totalMinutes").GetInt32());
+    }
+
+    [Fact]
+    public async Task Read_ShouldInlineTheIngredientNameAndBaseAmount_InTheStepSegments()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        var butterId = Guid.CreateVersion7();
+        await PutAsync(client, recipe.Id, recipe.ETag, FullRecipe(butterId));
+
+        // Act
+        var read = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Assert
+        // This is what lets the client render "melt 200.5 g butter" and rescale
+        // it without another request.
+        var segments = read.Json!.Value.GetProperty("steps")[1].GetProperty("segments");
+        var reference = segments.EnumerateArray().Single(s => s.GetProperty("type").GetString() == "ingredient");
+        Assert.Equal("butter", reference.GetProperty("name").GetString());
+        Assert.Equal(200.5m, reference.GetProperty("quantity").GetDecimal());
+        Assert.Equal(butterId, reference.GetProperty("recipeIngredientId").GetGuid());
+    }
+
+    [Fact]
+    public async Task Update_ShouldRejectAStepReferringToAnIngredientTheRecipeDoesNotHave()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, new
+        {
+            title = "Bolognese",
+            language = "en",
+            yieldAmount = 4,
+            yieldKind = "servings",
+            groups = new[] { new { name = (string?)null, ingredients = Array.Empty<object>() } },
+            steps = new[]
+            {
+                new
+                {
+                    segments = new object[]
+                    {
+                        new { type = "ingredient", recipeIngredientId = Guid.CreateVersion7() }
+                    }
+                }
+            },
+            tags = Array.Empty<string>()
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
+        Assert.Equal("recipes.unknown_ingredient_reference", saved.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Update_ShouldRequireIfMatch_AndRejectAStaleOne()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        await PutAsync(client, recipe.Id, recipe.ETag, FullRecipe(Guid.CreateVersion7()));
+
+        // Act
+        var missing = await client.PutAsync(
+            $"/api/v1/recipes/{recipe.Id}",
+            FullRecipe(Guid.CreateVersion7()),
+            Token);
+        var stale = await PutAsync(client, recipe.Id, recipe.ETag, FullRecipe(Guid.CreateVersion7()));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.PreconditionRequired, missing.StatusCode);
+        Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
+    }
+
+    [Fact]
+    public async Task Read_ShouldAnswer304_WhenTheCallerAlreadyHasThisVersion()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/recipes/{recipe.Id}");
+        request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(recipe.ETag));
+        var response = await client.SendAsync(request, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotModified, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_ShouldBeIdempotent_BecauseTheOutcomeIsWhatTheCallerWanted()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var first = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", Token);
+        var second = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task Read_ShouldSayNotFound_ForARecipeInAnotherHousehold()
+    {
+        // Arrange
+        using var owner = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(owner);
+        using var stranger = await SecondUserAsync();
+
+        // Act
+        var response = await stranger.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Assert
+        // Never a 403: that would confirm the recipe exists.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("recipes.not_found", response.ProblemCode);
+    }
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    private static object FullRecipe(Guid butterId) => new
+    {
+        title = "Bolognese",
+        description = "A weeknight standby.",
+        language = "en",
+        yieldAmount = 4,
+        yieldKind = "servings",
+        prepMinutes = 15,
+        cookMinutes = 45,
+        groups = new[]
+        {
+            new
+            {
+                name = (string?)null,
+                ingredients = new object[]
+                {
+                    new { ingredientId = butterId, quantity = 200.5, unit = "g", name = "butter", note = "cubed" },
+                    new { name = "salt" }
+                }
+            }
+        },
+        steps = new object[]
+        {
+            new { segments = new object[] { new { type = "text", value = "Preheat the pan." } } },
+            new
+            {
+                durationSeconds = 300,
+                segments = new object[]
+                {
+                    new { type = "text", value = "Melt " },
+                    new { type = "ingredient", recipeIngredientId = butterId },
+                    new { type = "text", value = "." }
+                }
+            }
+        },
+        tags = new[] { "quick", "weeknight" }
+    };
+
+    private static async Task<ApiResponse> PutAsync(ApiClient client, Guid recipeId, string etag, object body)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
+        {
+            Content = JsonContent.Create(body)
+        };
+
+        request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(etag));
+
+        return await client.SendAsync(request, Token);
+    }
+
+    private static async Task<Guid> FirstHouseholdIdAsync(ApiClient client) =>
+        (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+
+    private static async Task<(Guid Id, string ETag)> CreateRecipeAsync(ApiClient client)
+    {
+        var householdId = await FirstHouseholdIdAsync(client);
+        var created = await client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId, title = "Bolognese" },
+            Token);
+        var id = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        var read = await client.GetAsync($"/api/v1/recipes/{id}", Token);
+
+        return (id, read.ETag!);
+    }
+
+    private async Task<ApiClient> SignedInAsync()
+    {
+        await postgres.ResetAsync(Token);
+
+        return await SignInAsync("ada@example.com");
+    }
+
+    private async Task<ApiClient> SecondUserAsync()
+    {
+        var settings = postgres.Api.Services
+            .GetRequiredService<Application.Abstractions.Settings.RegistrationSettings>();
+        settings.OpenRegistration = true;
+        settings.RequireInvitation = false;
+
+        return await SignInAsync("grace@example.com");
+    }
+
+    private async Task<ApiClient> SignInAsync(string email)
+    {
+        var client = postgres.Api.NewApiClient();
+
+        await client.PostAsync(
+            "/api/v1/users",
+            new { email, displayName = "Ada", password = Password },
+            Token);
+        await client.PostAsync("/api/v1/sessions", new { email, password = Password }, Token);
+
+        return client;
+    }
+}

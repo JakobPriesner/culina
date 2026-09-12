@@ -110,6 +110,19 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         return version.Value;
     }
 
+    public async Task<bool> IsMemberAsync(
+        Guid householdId,
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        await executor.ExecuteScalarAsync<bool>(
+            """
+            select exists (
+                select 1 from household_members
+                where household_id = @householdId and user_id = @userId);
+            """,
+            new { householdId, userId },
+            cancellationToken).ConfigureAwait(false);
+
     public async Task<IReadOnlyList<HouseholdMemberView>> MembersAsync(
         Guid householdId,
         CancellationToken cancellationToken)

@@ -11,6 +11,10 @@ using Application.Households.RedeemInvitation;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
+using Application.Recipes.Create;
+using Application.Recipes.Delete;
+using Application.Recipes.GetById;
+using Application.Recipes.Update;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -99,6 +103,15 @@ public static class DependencyInjection
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
             .AddScoped<ICommandHandler<UpdateRegistrationSettingsCommand,
                 Contracts.Settings.UpdateRegistration.Response>,
-                UpdateRegistrationSettingsCommandHandler>();
+                UpdateRegistrationSettingsCommandHandler>()
+
+            // Recipes
+            .AddScoped<ICommandHandler<CreateRecipeCommand, Contracts.Recipes.RecipeDetail>,
+                CreateRecipeCommandHandler>()
+            .AddScoped<IQueryHandler<GetRecipeQuery, Contracts.Recipes.RecipeDetail>,
+                GetRecipeQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateRecipeCommand, Contracts.Recipes.RecipeDetail>,
+                UpdateRecipeCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteRecipeCommand>, DeleteRecipeCommandHandler>();
     }
 }
