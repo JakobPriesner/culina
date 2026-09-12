@@ -2,6 +2,8 @@ using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Households;
+using Infrastructure.Persistence.Users;
 using Infrastructure.Persistence.Migrations;
 using Infrastructure.Settings;
 using Microsoft.Extensions.Configuration;
@@ -55,6 +57,8 @@ public static class DependencyInjection
             .AddScoped<DbExecutor>()
             .AddScoped<IUnitOfWork, UnitOfWork>()
             .AddScoped<IDatabaseProbe, DatabaseProbe>()
+            .AddScoped<IUserRepository, UserRepository>()
+            .AddScoped<IHouseholdRepository, HouseholdRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.

@@ -141,3 +141,7 @@ dotnet_diagnostic.CA1812.severity = none
 # The xUnit v3 runner has none, so requiring it in tests adds noise to every
 # await without changing behaviour.
 dotnet_diagnostic.CA2007.severity = none
+# CA2000: tests routinely build a disposable through a small factory method and
+# `await using` it at the call site. The analyzer cannot follow ownership across
+# that boundary and reports every such helper.
+dotnet_diagnostic.CA2000.severity = none

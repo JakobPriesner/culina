@@ -60,12 +60,18 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// </summary>
     public CulinaApiFactory Api => api ??= new CulinaApiFactory(this);
 
+    /// <summary>
+    /// A connection for a test, from the one pool this fixture owns. Building a
+    /// data source per test would leak a pool per test.
+    /// </summary>
+    internal DbSession NewSession() => new(DataSource);
+
+    private NpgsqlDataSource DataSource => dataSource ??= CulinaDataSource.Build(Settings);
+
     /// <summary>Empties every table, leaving the migrated schema in place.</summary>
     public async Task ResetAsync(CancellationToken cancellationToken)
     {
-        dataSource ??= CulinaDataSource.Build(Settings);
-
-        await DatabaseReset.TruncateAllAsync(dataSource, cancellationToken);
+        await DatabaseReset.TruncateAllAsync(DataSource, cancellationToken);
     }
 
     public async ValueTask DisposeAsync()

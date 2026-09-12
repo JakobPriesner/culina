@@ -43,8 +43,4 @@ internal static class RequestErrors
         "Too many requests. Wait a moment and try again.",
         ErrorType.RateLimited);
 
-    internal static readonly Error VersionMismatch = new(
-        "request.version_mismatch",
-        "This item changed since you loaded it. Reload it and try again.",
-        ErrorType.PreconditionFailed);
 }

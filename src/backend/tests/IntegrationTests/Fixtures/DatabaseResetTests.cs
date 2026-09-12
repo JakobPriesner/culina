@@ -10,7 +10,7 @@ public class DatabaseResetTests(PostgresFixture postgres)
     {
         // Arrange
         _ = postgres.Api.Services; // starting the host applies the migrations
-        await using var session = new DbSession(CulinaDataSource.Build(postgres.Settings));
+        await using var session = postgres.NewSession();
         var executor = new DbExecutor(session);
 
         await executor.ExecuteAsync(
