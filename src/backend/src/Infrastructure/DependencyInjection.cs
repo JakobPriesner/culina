@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
+using Infrastructure.Identity;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Migrations;
 using Infrastructure.Settings;
@@ -35,8 +36,13 @@ public static class DependencyInjection
 
         return services
             .AddPersistence()
+            .AddIdentity()
             .AddSingleton(TimeProvider.System);
     }
+
+    private static IServiceCollection AddIdentity(this IServiceCollection services) =>
+        // Stateless and thread-safe, so one instance serves every request.
+        services.AddSingleton<IPasswordHasher, Argon2PasswordHasher>();
 
     private static IServiceCollection AddPersistence(this IServiceCollection services) =>
         services
