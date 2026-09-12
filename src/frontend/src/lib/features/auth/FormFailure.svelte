@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { AppError } from '$api';
+  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
   /**
@@ -25,7 +26,7 @@
 
 {#if failure && !aboutOneField}
   <div class="failure" role="alert">
-    <p class="message">{message ?? failure.detail}</p>
+    <p class="message">{message ?? explain(failure)}</p>
 
     {#if failure.requestId}
       <p class="reference">{m['error.reference']()} <code>{failure.requestId}</code></p>

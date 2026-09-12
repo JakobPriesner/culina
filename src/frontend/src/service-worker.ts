@@ -1,5 +1,8 @@
-/// <reference types="@sveltejs/kit" />
 /// <reference lib="webworker" />
+// The `$service-worker` module is declared in service-worker.d.ts, which
+// tsconfig.worker.json names alongside this file. `pnpm check` runs it: the
+// app's own tsconfig excludes the worker, and an unchecked worker once shipped
+// a constant that was never declared.
 
 import { base, build, files, version } from '$service-worker';
 
@@ -12,11 +15,15 @@ import { base, build, files, version } from '$service-worker';
  * fonts, the icons — so a dropped connection shows Culina saying it cannot
  * reach the server, rather than the browser's dinosaur.
  *
- * What it deliberately does *not* do is cache a single API response. A recipe
- * is somebody's data, the tablet in a shared kitchen is somebody else's device,
- * and a cache that outlives a sign-out is a data leak with no user-visible
- * cause. Reading recipes offline is a separate, deliberate opt-in with its own
- * lifecycle; until then, `/api` goes to the network and nowhere else.
+ * It keeps one narrow exception for the API, in its own cache: a recipe you
+ * have opened stays readable and cookable without a network. Everything else
+ * under `/api` goes to the network and nowhere else — nothing that changes
+ * anything is ever answered from a cache, and the exception is a list of exact
+ * shapes below rather than a rule anyone could widen by accident.
+ *
+ * That cache holds somebody's data on what may be a shared kitchen tablet, so
+ * it is not allowed to outlive a session: the app empties it when anyone signs
+ * in or out. See `culina:forget`.
  */
 const worker = self as unknown as ServiceWorkerGlobalScope;
 
@@ -38,6 +45,23 @@ const cacheName = `culina-${version}`;
  * file name is an implementation detail of one particular way of hosting it.
  */
 const document = `${base}/`;
+
+/**
+ * Recipes that have been read, kept apart from the build's own files.
+ *
+ * Not named for the version: a deploy must not cost somebody the recipes they
+ * are relying on being able to open. Its lifetime is a session, not a build.
+ */
+const privateCacheName = 'culina-private';
+
+/**
+ * How many recipe responses to keep.
+ *
+ * A number, because a cache with no limit is a disk-space bug waiting for the
+ * person with three hundred recipes. Oldest written goes first, which for a
+ * recipe collection is close enough to least used.
+ */
+const privateCacheLimit = 120;
 
 /**
  * Everything else worth having before the network goes away.
@@ -94,8 +118,17 @@ worker.addEventListener('activate', (event) => {
  * when the person says so.
  */
 worker.addEventListener('message', (event) => {
-  if ((event.data as { type?: string } | null)?.type === 'culina:activate') {
+  const type = (event.data as { type?: string } | null)?.type;
+
+  if (type === 'culina:activate') {
     void worker.skipWaiting();
+  }
+
+  // Sent when anyone signs in or out. Both, not just out: a device where one
+  // person closed the browser without signing out and another signed in must
+  // not answer the second one from the first one's cache.
+  if (type === 'culina:forget') {
+    event.waitUntil(caches.delete(privateCacheName));
   }
 });
 
@@ -108,8 +141,17 @@ worker.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Another origin, or the API. Neither is ours to cache.
-  if (url.origin !== worker.location.origin || isApi(url)) {
+  if (url.origin !== worker.location.origin) {
+    return;
+  }
+
+  if (isApi(url)) {
+    const policy = policyFor(url);
+
+    if (policy) {
+      event.respondWith(apiResponse(request, policy));
+    }
+
     return;
   }
 
@@ -127,6 +169,118 @@ worker.addEventListener('fetch', (event) => {
 
 const isApi = (url: URL): boolean =>
   url.pathname === `${base}/api` || url.pathname.startsWith(`${base}/api/`);
+
+/**
+ * The only API reads that are ever kept, and how.
+ *
+ * An allow-list of exact shapes. A rule like "cache anything under /recipes"
+ * would quietly start keeping whatever is added there next.
+ */
+type CachePolicy = 'cache-first' | 'stale-while-revalidate' | 'network-first';
+
+const one = (pattern: RegExp, policy: CachePolicy) => ({ pattern, policy }) as const;
+
+const readable = [
+  // Content-addressed and immutable: the URL carries the width and the recipe's
+  // version, so what is cached can never be the wrong picture.
+  one(/^\/api\/v1\/recipes\/[^/]+\/image$/, 'cache-first'),
+  // The recipe itself. Shown from the cache at once and refreshed behind it, so
+  // opening a recipe is instant and still current a moment later.
+  one(/^\/api\/v1\/recipes\/[^/]+$/, 'stale-while-revalidate'),
+  // The list is the one screen where being out of date is visible, so the
+  // network wins when there is one and the cache only catches a fall.
+  one(/^\/api\/v1\/recipes$/, 'network-first'),
+  // Who is signed in. Without it a cold start with no network cannot tell
+  // "offline" from "signed out", and answers the second one — which locks
+  // somebody out of the recipes this cache exists to have kept for them.
+  // Never cached as a failure: a 401 is not `ok`, so an expired session is
+  // still an expired session the moment the network comes back.
+  one(/^\/api\/v1\/users\/me$/, 'stale-while-revalidate')
+];
+
+function policyFor(url: URL): CachePolicy | null {
+  const path = url.pathname.slice(base.length);
+
+  return readable.find((candidate) => candidate.pattern.test(path))?.policy ?? null;
+}
+
+/**
+ * Answers a recipe read, keeping a copy for the next time there is no network.
+ *
+ * A cached response is returned as it was stored, headers and all, so the
+ * client's own ETag handling sees exactly what the server sent.
+ *
+ * Nothing in here may throw. A rejected promise passed to `respondWith` reaches
+ * the page as "Failed to fetch" — a network error the app cannot tell apart
+ * from a dead wifi, for a request that actually succeeded.
+ */
+async function apiResponse(request: Request, policy: CachePolicy): Promise<Response> {
+  const cache = await caches.open(privateCacheName).catch(() => null);
+  const cached = cache ? await cache.match(request).catch(() => undefined) : undefined;
+
+  if (cached && policy === 'cache-first') {
+    return cached;
+  }
+
+  // Started once and awaited at most once more: a `Request` is spent by the
+  // fetch that used it, so there is no second attempt to be had.
+  const fresh = fetchAndStore(request, cache);
+
+  if (cached && policy === 'stale-while-revalidate') {
+    // Deliberately not awaited: the point of showing the cached copy is not
+    // waiting for the network. The rejection is already handled inside.
+    void fresh;
+
+    return cached;
+  }
+
+  const response = await fresh;
+
+  if (response) {
+    return response;
+  }
+
+  if (cached) {
+    return cached;
+  }
+
+  // Nothing cached and no network. The app has a good sentence for this; what
+  // it needs from here is the ordinary failure, which is what re-throwing the
+  // fetch gives it.
+  return fetch(request.url, { credentials: 'include', headers: request.headers });
+}
+
+/** Fetches, stores what is worth storing, and never rejects. */
+async function fetchAndStore(request: Request, cache: Cache | null): Promise<Response | null> {
+  try {
+    const response = await fetch(request);
+
+    // A 304 carries no body to keep, and an error response cached is a fault
+    // that outlives the deploy that fixed it.
+    if (cache && response.ok && response.type === 'basic') {
+      try {
+        await cache.put(request, response.clone());
+        await trim(cache);
+      } catch {
+        // Out of quota, or a response the Cache API will not take. Worth
+        // nothing and worth failing over even less.
+      }
+    }
+
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+/** Drops the oldest entries once the cache is over its limit. */
+async function trim(cache: Cache): Promise<void> {
+  const keys = await cache.keys();
+
+  for (const stale of keys.slice(0, keys.length - privateCacheLimit)) {
+    await cache.delete(stale);
+  }
+}
 
 async function shellResponse(): Promise<Response> {
   const cache = await caches.open(cacheName);

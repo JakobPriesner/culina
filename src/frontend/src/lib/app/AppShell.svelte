@@ -8,6 +8,7 @@
   import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
 
   import Brand from './Brand.svelte';
+  import { connection } from './connection.svelte';
   import { m } from './i18n';
   import Navigation from './Navigation.svelte';
 
@@ -63,6 +64,12 @@
       <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
 
       <div class="wide-only"><Navigation placement="top" /></div>
+
+      <!-- A statement, not an alarm. It says why a change did not save; it does
+           not take over the screen, and it never appears as a dialogue. -->
+      {#if !connection.online}
+        <p class="offline">{m['connection.offline']()}</p>
+      {/if}
     </div>
   </header>
 
@@ -112,6 +119,17 @@
     max-width: var(--layout-wide);
     margin-inline: auto;
     padding: var(--space-3) var(--layout-gutter);
+  }
+
+  /* Pushed to the end of the header, so it never moves the navigation. */
+  .offline {
+    margin: 0 0 0 auto;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    background: var(--warning-subtle);
+    color: var(--text);
+    font-size: var(--text-xs);
+    white-space: nowrap;
   }
 
   .brand {

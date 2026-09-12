@@ -275,5 +275,8 @@
   "units.pack": "pack",
   "units.packs": "packs",
   "app.update.available": "A new version of Culina is ready.",
-  "app.update.reload": "Reload"
+  "app.update.reload": "Reload",
+  "error.offline": "You are offline. This will be possible again when you reconnect.",
+  "error.timeout": "That took too long. Try again.",
+  "connection.offline": "Offline"
 }
