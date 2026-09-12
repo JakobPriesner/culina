@@ -19,4 +19,22 @@ export const load = async ({ url }) => {
   if (session.status !== 'authenticated') {
     redirect(307, loginUrlFor(url));
   }
+
+  const welcome = '/welcome';
+  const onWelcome = url.pathname === welcome;
+  const hasHousehold = session.households.length > 0;
+
+  // Nothing in the app works without a household, so an account that has none
+  // goes to the screen that offers the two ways to get one — rather than to a
+  // recipe list that can only be empty.
+  if (!hasHousehold && !onWelcome) {
+    redirect(307, welcome);
+  }
+
+  // And the other way: that screen says "you are not in a household yet", which
+  // would be a lie to someone who is. Following an invitation link is the one
+  // reason to be there anyway.
+  if (hasHousehold && onWelcome && !url.searchParams.has('code')) {
+    redirect(307, '/');
+  }
 };

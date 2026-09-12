@@ -202,3 +202,34 @@ Everything cross-cutting lives there once:
 - A 403 with `auth.csrf_invalid` is retried exactly once, then given up on.
 - A 15-second deadline per request, combined with the caller's own signal so a
   request still dies with the component that started it.
+
+## ETags must cover what the response contains
+
+Culina's ETags are derived from each entity's monotonic version, which is cheap,
+stable, and already what optimistic concurrency needs. Two rules keep that safe,
+both learned the hard way:
+
+1. **A version alone identifies a resource only when the URL does.**
+   `/users/me` names a different person for every session, and two people are
+   both at version 1 on the day they sign up. A browser holding one person's
+   response revalidates it, is told `304`, and shows their name and households to
+   the next person to sign in on that device. Any route whose meaning depends on
+   who is asking passes the entity's identity into the tag.
+
+2. **A tag must change whenever any part of the body does.** `/users/me` lists
+   the households the account belongs to, and joining one does not change the
+   account — so a tag made only of the account's version answers `304` to a
+   client that is missing a kitchen it can now cook in. The tag folds the
+   membership set in alongside the version.
+
+Both are asserted in `CurrentUserEndpointTests`, and both tests were verified to
+fail without the fix.
+
+## Rate limits during end-to-end tests
+
+The limits (`RateLimits__*`) are configuration, so a test run raises them rather
+than the defaults being weakened:
+
+```bash
+RateLimits__RegisterPerIpPerHour=200 RateLimits__LoginPerIpPerMinute=200 dotnet run
+```

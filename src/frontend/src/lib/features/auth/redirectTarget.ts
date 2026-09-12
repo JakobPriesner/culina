@@ -18,7 +18,7 @@ import { resolve } from '$app/paths';
  * - anything not starting with `/` — relative to wherever we happen to be.
  */
 export function safeRedirect(next: string | null): string {
-  const home = resolve('/');
+  const home = resolve('/(app)');
 
   if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) {
     return home;
@@ -35,5 +35,5 @@ export function safeRedirect(next: string | null): string {
  * places.
  */
 export function loginUrlFor(url: URL): string {
-  return `${resolve('/login')}?next=${encodeURIComponent(url.pathname + url.search)}`;
+  return `${resolve('/(auth)/login')}?next=${encodeURIComponent(url.pathname + url.search)}`;
 }

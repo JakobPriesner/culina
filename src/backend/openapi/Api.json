@@ -1305,6 +1305,28 @@
         }
       }
     },
+    "/api/v1/registration/policy": {
+      "get": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Read what a new account is allowed to do",
+        "description": "Public: a sign-up form has to know which fields to ask for before anyone has an account.",
+        "operationId": "getRegistrationPolicyV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationGetPolicyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipes": {
       "post": {
         "tags": [
@@ -3125,6 +3147,29 @@
         },
         "description": "The recipe's complete new state."
       },
+      "RegistrationGetPolicyResponse": {
+        "required": [
+          "openRegistration",
+          "requireInvitation",
+          "hasAccounts"
+        ],
+        "type": "object",
+        "properties": {
+          "openRegistration": {
+            "type": "boolean",
+            "description": "Whether anyone may create an account."
+          },
+          "requireInvitation": {
+            "type": "boolean",
+            "description": "Whether a new account must present an invitation code."
+          },
+          "hasAccounts": {
+            "type": "boolean",
+            "description": "Whether this instance has been set up yet."
+          }
+        },
+        "description": "What a sign-up form needs to know before it draws itself."
+      },
       "SessionsGetAllResponse": {
         "required": [
           "items"
@@ -3595,6 +3640,9 @@
     },
     {
       "name": "Settings"
+    },
+    {
+      "name": "Registration"
     },
     {
       "name": "Recipes"

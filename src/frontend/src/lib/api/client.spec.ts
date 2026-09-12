@@ -159,7 +159,8 @@ describe('a failure', () => {
         detail: 'That recipe is not valid.',
         status: 400,
         requestId: 'req-9',
-        fields: [{ field: 'title', code: 'required', detail: 'Give it a name.' }]
+        fields: [{ field: 'title', code: 'required', detail: 'Give it a name.' }],
+        retryAfterSeconds: null
       }
     });
   });
@@ -193,6 +194,54 @@ describe('a failure', () => {
     const result = await request(() => http.GET(me));
 
     expect(result.ok === false && result.error.code).toBe(ErrorCodes.timeout);
+  });
+});
+
+describe('being rate limited', () => {
+  it('carries how long to wait, so the form can say when rather than "later"', async () => {
+    respondWith(
+      new Response(JSON.stringify({ code: 'request.too_many', detail: 'Slow down.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/problem+json', 'Retry-After': '45' }
+      })
+    );
+
+    const result = await request(() => http.GET(me));
+
+    expect(result.ok === false && result.error.retryAfterSeconds).toBe(45);
+  });
+
+  it('reads an HTTP date as well as a count of seconds', async () => {
+    const when = new Date(Date.now() + 90_000).toUTCString();
+
+    respondWith(
+      new Response(JSON.stringify({ code: 'request.too_many', detail: 'Slow down.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/problem+json', 'Retry-After': when }
+      })
+    );
+
+    const result = await request(() => http.GET(me));
+    const seconds = result.ok === false ? result.error.retryAfterSeconds : null;
+
+    expect(seconds).toBeGreaterThan(80);
+    expect(seconds).toBeLessThanOrEqual(90);
+  });
+
+  it('never reports a negative wait, however wrong the clock is', async () => {
+    respondWith(
+      new Response(JSON.stringify({ code: 'request.too_many', detail: 'Slow down.' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/problem+json',
+          'Retry-After': new Date(Date.now() - 60_000).toUTCString()
+        }
+      })
+    );
+
+    const result = await request(() => http.GET(me));
+
+    expect(result.ok === false && result.error.retryAfterSeconds).toBe(0);
   });
 });
 

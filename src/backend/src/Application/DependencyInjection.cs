@@ -23,6 +23,7 @@ using Application.Recipes.RemoveImage;
 using Application.Recipes.SaveNotes;
 using Application.Recipes.SetImage;
 using Application.Recipes.Update;
+using Application.Registration.GetPolicy;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -109,6 +110,8 @@ public static class DependencyInjection
             // Instance settings
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
+            .AddScoped<IQueryHandler<GetRegistrationPolicyQuery,
+                Contracts.Registration.GetPolicy.Response>, GetRegistrationPolicyQueryHandler>()
             .AddScoped<ICommandHandler<UpdateRegistrationSettingsCommand,
                 Contracts.Settings.UpdateRegistration.Response>,
                 UpdateRegistrationSettingsCommandHandler>()

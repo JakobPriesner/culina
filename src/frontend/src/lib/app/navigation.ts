@@ -25,19 +25,19 @@ const startsWith = (prefix: string) => (pathname: string) =>
 
 export const destinations: readonly Destination[] = [
   {
-    href: resolve('/'),
+    href: resolve('/(app)'),
     icon: 'recipes',
     label: m['nav.recipes'],
     match: (path) => path === '/' || startsWith('/recipes')(path)
   },
   {
-    href: resolve('/shopping'),
+    href: resolve('/(app)/shopping'),
     icon: 'shopping',
     label: m['nav.shopping'],
     match: startsWith('/shopping')
   },
   {
-    href: resolve('/me'),
+    href: resolve('/(app)/me'),
     icon: 'me',
     label: m['nav.me'],
     match: startsWith('/me')

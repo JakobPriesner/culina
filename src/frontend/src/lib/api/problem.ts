@@ -22,6 +22,14 @@ export interface AppError {
   readonly status: number;
   readonly requestId: string | null;
   readonly fields: readonly FieldProblem[];
+  /**
+   * How long to wait before trying again, from `Retry-After` on a 429.
+   *
+   * Carried on the error because the alternative is every form reaching for the
+   * raw response — and "try again later" without a number is advice nobody can
+   * act on.
+   */
+  readonly retryAfterSeconds: number | null;
 }
 
 /** The codes the client itself acts on. Everything else is the UI's business. */
@@ -42,33 +50,60 @@ const isProblem = (body: unknown): body is ProblemDocument =>
   typeof body === 'object' && body !== null && 'code' in body;
 
 /** Reads an RFC 9457 document, falling back to something honest if it is not one. */
-export function toAppError(status: number, body: unknown): AppError {
+export function toAppError(response: Response, body: unknown): AppError {
+  const retryAfterSeconds = readRetryAfter(response);
+
   if (!isProblem(body)) {
     return {
       code: ErrorCodes.unexpected,
       detail: 'Something went wrong. Please try again.',
-      status,
+      status: response.status,
       requestId: null,
-      fields: []
+      fields: [],
+      retryAfterSeconds
     };
   }
 
   return {
     code: body.code,
     detail: body.detail ?? body.title ?? 'Something went wrong. Please try again.',
-    status,
+    status: response.status,
     requestId: body.requestId ?? null,
     fields: (body.errors ?? []).map((cause) => ({
       field: cause.field ?? null,
       code: cause.code,
       detail: cause.detail
-    }))
+    })),
+    retryAfterSeconds
   };
+}
+
+/**
+ * `Retry-After` is either a number of seconds or an HTTP date. Both are
+ * converted to seconds from now, because that is the only form a countdown can
+ * use, and a clock that is wrong on the client must not produce a negative one.
+ */
+function readRetryAfter(response: Response): number | null {
+  const header = response.headers.get('Retry-After');
+
+  if (!header) {
+    return null;
+  }
+
+  const seconds = Number(header);
+
+  if (Number.isFinite(seconds)) {
+    return Math.max(0, Math.round(seconds));
+  }
+
+  const when = Date.parse(header);
+
+  return Number.isNaN(when) ? null : Math.max(0, Math.round((when - Date.now()) / 1000));
 }
 
 /** A failure that never reached a server, described the same way as one that did. */
 export function clientError(code: string, detail: string): AppError {
-  return { code, detail, status: 0, requestId: null, fields: [] };
+  return { code, detail, status: 0, requestId: null, fields: [], retryAfterSeconds: null };
 }
 
 export const offline = () =>

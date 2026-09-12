@@ -29,7 +29,7 @@ internal sealed class UpdateCurrentUserEndpoint : IEndpoint
                         Domain.Shared.Result<Response>.Failure(error))).ConfigureAwait(false);
 
                 return result.Match(
-                    updated => ETag.Ok(context, updated, updated.Version),
+                    updated => ETag.Ok(context, updated, updated.Version, context.CurrentUser().UserId),
                     CustomResults.Problem);
             })
             .WithName("updateCurrentUserV1")

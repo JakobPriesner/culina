@@ -22,7 +22,7 @@ internal sealed class GetPreferencesEndpoint : IEndpoint
                     .ConfigureAwait(false);
 
                 return result.Match(
-                    preferences => ETag.Ok(context, preferences, preferences.Version),
+                    preferences => ETag.Ok(context, preferences, preferences.Version, context.CurrentUser().UserId),
                     CustomResults.Problem);
             })
             .WithName("getUserSettingsV1")

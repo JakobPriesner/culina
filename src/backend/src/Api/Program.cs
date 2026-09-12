@@ -6,6 +6,15 @@ using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The export starts the host, so it needs somewhere to listen — but not the
+// port the app uses, or exporting the contract would be impossible while the
+// app is running, which is exactly when it is usually done. Port 0 is whatever
+// is free; no request is ever served on it.
+if (OpenApiExport.Requested(args))
+{
+    builder.WebHost.UseUrls("http://127.0.0.1:0");
+}
+
 builder.AddObservability();
 
 builder.Services

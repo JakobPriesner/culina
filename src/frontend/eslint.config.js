@@ -60,7 +60,14 @@ export default ts.config(
      * rule cannot see that through a variable. It stays on everywhere a literal
      * route could still be written by hand.
      */
-    files: ['src/lib/app/Navigation.svelte', 'src/routes/+layout.svelte'],
+    files: [
+      'src/lib/app/Navigation.svelte',
+      'src/routes/+layout.svelte',
+      // The auth pages link to each other through `resolve()` plus a query
+      // string carrying where the person was going, which the rule cannot
+      // follow through a variable.
+      'src/routes/(auth)/**'
+    ],
     rules: { 'svelte/no-navigation-without-resolve': 'off' }
   },
   {

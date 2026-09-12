@@ -1,6 +1,6 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
-import { siteFiles } from './build-tools/siteFiles';
+import { siteFiles } from './build-tools/siteFiles.js';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';

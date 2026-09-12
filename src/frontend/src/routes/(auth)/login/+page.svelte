@@ -1,11 +1,16 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, ErrorState, Field, TextInput } from '$ds';
-  import { ErrorCodes, type AppError } from '$api';
+  import { ErrorCodes } from '$api';
+  import FormField from '$features/auth/FormField.svelte';
+  import FormFailure from '$features/auth/FormFailure.svelte';
+  import SubmitButton from '$features/auth/SubmitButton.svelte';
   import { safeRedirect } from '$features/auth/redirectTarget';
   import { session } from '$features/auth/session.svelte';
-  import { createLoadingState } from '$shell/loadingState.svelte';
+  import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
 
   /**
@@ -16,25 +21,27 @@
    */
   let email = $state('');
   let password = $state('');
-  let failure = $state<AppError | null>(null);
 
-  const busy = createLoadingState();
+  const submission = createSubmission();
+
+  onDestroy(() => submission.dispose());
 
   // From the URL, so from whoever wrote the link: only a path inside this app
   // is accepted. See `safeRedirect`.
   const destination = $derived(safeRedirect(page.url.searchParams.get('next')));
 
+  const registerHref = $derived(
+    `${resolve('/(auth)/register')}?next=${encodeURIComponent(destination)}`
+  );
+
   async function submit(event: SubmitEvent) {
     event.preventDefault();
-    failure = null;
-    busy.start();
 
-    const error = await session.signIn(email, password);
+    const succeeded = await submission.run(() => session.signIn(email, password));
 
-    busy.stop();
-
-    if (error) {
-      failure = error;
+    if (!succeeded) {
+      // The address stays: retyping it is a punishment for a typo in the other
+      // field, and it is the half that is rarely wrong.
       password = '';
 
       return;
@@ -42,60 +49,53 @@
 
     // Replaced, not pushed: pressing back from inside the app should not land
     // on a sign-in form for a session that already exists.
-    // eslint-disable-next-line svelte/no-navigation-without-resolve -- already a resolved in-app path, see safeRedirect
     await goto(destination, { replaceState: true });
   }
 </script>
 
 <svelte:head><title>{m['auth.signIn.title']()}</title></svelte:head>
 
-<form class="form" onsubmit={submit}>
+<form class="form" onsubmit={submit} novalidate>
   <h1 class="title">{m['auth.signIn.title']()}</h1>
 
-  {#if failure}
-    <!-- One message for "no such account" and "wrong password", always:
-         telling them apart turns this form into a way to discover which
-         addresses are registered. -->
-    <ErrorState
-      title={m['auth.signIn.failed']()}
-      body={failure.code === ErrorCodes.invalidCredentials ? '' : failure.detail}
-      requestIdLabel={m['error.reference']()}
-      requestId={failure.requestId}
-    />
-  {/if}
+  <!--
+    One message for "no such account" and for "wrong password", always. Telling
+    them apart turns this form into a way to discover which addresses are
+    registered here.
+  -->
+  <FormFailure
+    failure={submission.failure}
+    message={submission.failure?.code === ErrorCodes.invalidCredentials
+      ? m['auth.signIn.failed']()
+      : undefined}
+  />
 
-  <Field label={m['auth.signIn.email']()}>
-    {#snippet children({ id, describedBy, invalid })}
-      <TextInput
-        {id}
-        {describedBy}
-        {invalid}
-        type="email"
-        autocomplete="username"
-        inputmode="email"
-        required
-        bind:value={email}
-      />
-    {/snippet}
-  </Field>
+  <FormField
+    name="email"
+    label={m['auth.signIn.email']()}
+    type="email"
+    autocomplete="username"
+    inputmode="email"
+    autofocus
+    bind:value={email}
+    {submission}
+  />
 
-  <Field label={m['auth.signIn.password']()}>
-    {#snippet children({ id, describedBy, invalid })}
-      <TextInput
-        {id}
-        {describedBy}
-        {invalid}
-        type="password"
-        autocomplete="current-password"
-        required
-        bind:value={password}
-      />
-    {/snippet}
-  </Field>
+  <FormField
+    name="password"
+    label={m['auth.signIn.password']()}
+    type="password"
+    autocomplete="current-password"
+    bind:value={password}
+    {submission}
+  />
 
-  <Button type="submit" variant="primary" size="lg" full loading={busy.showing}>
-    {m['auth.signIn.submit']()}
-  </Button>
+  <SubmitButton label={m['auth.signIn.submit']()} {submission} />
+
+  <p class="alternative">
+    {m['auth.signIn.noAccount']()}
+    <a href={registerHref}>{m['auth.signIn.register']()}</a>
+  </p>
 </form>
 
 <style>
@@ -107,5 +107,11 @@
 
   .title {
     font-size: var(--text-2xl);
+  }
+
+  .alternative {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-align: center;
   }
 </style>

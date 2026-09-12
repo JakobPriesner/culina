@@ -2,6 +2,7 @@ using Api.Endpoints;
 using Api.Endpoints.Households;
 using Api.Endpoints.Invitations;
 using Api.Endpoints.Recipes;
+using Api.Endpoints.Registration;
 using Api.Endpoints.Sessions;
 using Api.Endpoints.Settings;
 using Api.Endpoints.Users;
@@ -27,6 +28,7 @@ internal static class EndpointExtensions
             .AddHouseholdsEndpoints()
             .AddInvitationsEndpoints()
             .AddSettingsEndpoints()
+            .AddRegistrationEndpoints()
             .AddRecipesEndpoints();
     }
 

@@ -21,7 +21,18 @@ internal sealed class GetCurrentUserEndpoint : IEndpoint
                     .Handle(new GetCurrentUserQuery(context.CurrentUser().UserId), cancellationToken)
                     .ConfigureAwait(false);
 
-                return result.Match(user => ETag.Ok(context, user, user.Version), CustomResults.Problem);
+                return result.Match(
+                    // The households are part of the body, so they are part of
+                    // the tag: joining one does not change the account itself,
+                    // and a tag made only of the account's version would say
+                    // "nothing changed" to a client that is missing a kitchen.
+                    user => ETag.Ok(
+                        context,
+                        user,
+                        user.Version,
+                        user.UserId,
+                        ETag.Fingerprint(user.Households.Select(h => $"{h.HouseholdId:N}:{h.Role}"))),
+                    CustomResults.Problem);
             })
             .WithName("getCurrentUserV1")
             .WithTags(Tags.Users)
