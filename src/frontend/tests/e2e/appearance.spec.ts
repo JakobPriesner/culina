@@ -30,7 +30,9 @@ test.describe('appearance @offline', () => {
   });
 
   test('remembers a choice across a reload', async ({ page }) => {
-    await page.goto('/');
+    // The sign-in page, because appearance and language must be changeable
+    // before there is an account to store them against.
+    await page.goto('/login');
 
     const toggle = page.getByRole('button', { name: /appearance|darstellung/i });
 
@@ -44,16 +46,16 @@ test.describe('appearance @offline', () => {
   });
 
   test('switches language without reloading', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     const picker = page.getByRole('combobox');
 
     await picker.selectOption('de');
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
-    await expect(page.getByText('Deine Rezepte, so wie du kochst.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
 
     await picker.selectOption('en');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.getByText('Your recipes, the way you cook them.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   });
 });

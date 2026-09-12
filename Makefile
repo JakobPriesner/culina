@@ -62,6 +62,10 @@ test-frontend: ## Run the frontend unit tests
 	cd $(FRONTEND) && pnpm test:unit
 
 test-e2e: ## Run the Playwright suite against a running stack
+	@# Suites tagged @offline need nothing but the built app. The signed-in
+	@# ones skip unless an account is supplied, because a test that quietly
+	@# passes with no backend is worse than one that says it did not run:
+	@#   CULINA_E2E_EMAIL=you@example.com CULINA_E2E_PASSWORD=... make test-e2e
 	cd $(FRONTEND) && pnpm test:e2e
 
 # ── Quality ──────────────────────────────────────────────────────────────────

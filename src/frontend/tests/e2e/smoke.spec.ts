@@ -10,6 +10,8 @@ test('the built app boots without throwing @offline', async ({ page }) => {
 
   page.on('pageerror', (error) => failures.push(error.message));
 
+  // Unauthenticated, so this lands on the sign-in page — which is itself the
+  // thing that must render for anyone at all.
   await page.goto('/');
 
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

@@ -44,6 +44,32 @@
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
+    <!--
+      Painted before a single byte of JavaScript has run, and removed by the
+      root layout once the app is mounted. The app cannot know whether this is a
+      signed-in person until it has asked the server, and a white rectangle for
+      that half second is the worst thing a self-hosted app can open with.
+
+      Styled inline because the stylesheet is itself a request.
+    -->
+    <div
+      id="boot"
+      style="
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: var(--surface, #fdfbf7);
+        color: var(--text-muted, #6b5943);
+        font:
+          500 0.875rem/1.5 ui-sans-serif,
+          system-ui,
+          sans-serif;
+      "
+    >
+      <span>Culina</span>
+    </div>
+
     <div style="display: contents">%sveltekit.body%</div>
   </body>
 </html>
