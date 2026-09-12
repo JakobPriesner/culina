@@ -15,13 +15,18 @@ namespace Api.Infrastructure;
 /// <c>result.Match(Results.Ok, CustomResults.Problem)</c>.
 /// </remarks>
 /// <param name="error">The failure to report.</param>
-internal sealed class ProblemResult(Error error) : IResult
+/// <param name="statusOverride">
+/// The status to keep instead of the one the error type implies. Used when the
+/// framework has already chosen a status — a 401 challenge, a 405 from routing
+/// — and the document is being attached to it rather than deciding it.
+/// </param>
+internal sealed class ProblemResult(Error error, int? statusOverride = null) : IResult
 {
     public async Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
-        var status = ErrorStatusCodes.Of(error.Type);
+        var status = statusOverride ?? ErrorStatusCodes.Of(error.Type);
 
         var problem = new ProblemDetails
         {

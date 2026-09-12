@@ -98,4 +98,26 @@ public class HealthTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
+
+    [Fact]
+    public async Task AuthenticationChallenge_ShouldStayA401_WhenItIsGivenAProblemBody()
+    {
+        // Arrange
+        using var client = postgres.Api.CreateClient();
+
+        // Act
+        using var response = await client.GetAsync(
+            new Uri("/api/v1/sessions", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // Regression: the status-code-pages handler used to derive the status
+        // from the error type, which turned every framework-generated status
+        // into a 500.
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal("auth.not_authenticated", problem.GetProperty("code").GetString());
+    }
 }

@@ -52,15 +52,22 @@ public sealed class ApiClient(HttpClient http) : IDisposable
     /// Sends a request built by the caller, for header-level tests. Takes
     /// ownership of the message, which is single-use.
     /// </summary>
+    /// <param name="request">The request to send.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <param name="attachCsrf">
+    /// False to deliberately omit the CSRF header, which is the shape of a
+    /// cross-site request riding this browser's cookie jar.
+    /// </param>
     public async Task<ApiResponse> SendAsync(
         HttpRequestMessage request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool attachCsrf = true)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         using var owned = request;
 
-        if (CsrfToken is { } token && !IsSafe(request.Method))
+        if (attachCsrf && CsrfToken is { } token && !IsSafe(request.Method))
         {
             request.Headers.TryAddWithoutValidation(CsrfHeader, token);
         }

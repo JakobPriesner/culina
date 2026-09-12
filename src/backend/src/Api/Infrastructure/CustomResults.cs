@@ -27,11 +27,15 @@ internal static class CustomResults
     /// </summary>
     /// <param name="context">The request being rejected.</param>
     /// <param name="error">The failure to report.</param>
-    internal static Task WriteProblemAsync(HttpContext context, Error error)
+    /// <param name="statusOverride">
+    /// Keeps a status the framework already chose, instead of deriving one
+    /// from the error type.
+    /// </param>
+    internal static Task WriteProblemAsync(HttpContext context, Error error, int? statusOverride = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(error);
 
-        return new ProblemResult(error).ExecuteAsync(context);
+        return new ProblemResult(error, statusOverride).ExecuteAsync(context);
     }
 }

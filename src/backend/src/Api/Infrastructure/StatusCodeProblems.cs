@@ -1,3 +1,4 @@
+using Domain.Sessions;
 using Domain.Shared;
 
 namespace Api.Infrastructure;
@@ -6,10 +7,21 @@ namespace Api.Infrastructure;
 /// Gives framework-generated statuses a problem document body.
 /// </summary>
 /// <remarks>
-/// A 404 from an unmatched route and a 405 from a wrong method are produced by
-/// routing, not by a handler, so they would otherwise be the only API responses
-/// with an empty body. The frontend parses one error format, so they get one
-/// too. Non-API paths are left alone: the app shell owns those.
+/// <para>
+/// A 404 from an unmatched route, a 405 from a wrong method and a 401 from an
+/// authentication challenge are produced by the framework, not by a handler, so
+/// they would otherwise be the only API responses with an empty body. The
+/// frontend parses one error format, so they get one too.
+/// </para>
+/// <para>
+/// The original status is always preserved. Deriving it from the error type
+/// here would rewrite every one of them — a 401 challenge would arrive as a
+/// 500 — which is exactly the bug this comment exists to prevent recurring.
+/// </para>
+/// <para>
+/// Non-API paths are left alone: the app shell owns those, and a browser asking
+/// for a client route should not be handed JSON it would render as text.
+/// </para>
 /// </remarks>
 internal static class StatusCodeProblems
 {
@@ -23,7 +35,12 @@ internal static class StatusCodeProblems
         "That method is not supported at this address.",
         ErrorType.Validation);
 
-    private static readonly Error Unhandled = new(
+    private static readonly Error UnsupportedMediaType = new(
+        "request.unsupported_media_type",
+        "That content type is not supported at this address.",
+        ErrorType.Validation);
+
+    private static readonly Error Rejected = new(
         "request.rejected",
         "The request could not be handled.",
         ErrorType.Failure);
@@ -34,19 +51,21 @@ internal static class StatusCodeProblems
 
         if (!ApiPaths.IsApi(context.Request.Path))
         {
-            // The problem document is the API's error format. A browser asking
-            // for a client route that the app shell should have answered gets
-            // the plain status, not JSON it would render as text.
             return Task.CompletedTask;
         }
 
-        var error = context.Response.StatusCode switch
+        var status = context.Response.StatusCode;
+
+        var error = status switch
         {
+            StatusCodes.Status401Unauthorized => SessionErrors.NotAuthenticated,
+            StatusCodes.Status403Forbidden => RequestErrors.Forbidden,
             StatusCodes.Status404NotFound => NoSuchEndpoint,
             StatusCodes.Status405MethodNotAllowed => MethodNotAllowed,
-            _ => Unhandled
+            StatusCodes.Status415UnsupportedMediaType => UnsupportedMediaType,
+            _ => Rejected
         };
 
-        return CustomResults.WriteProblemAsync(context, error);
+        return CustomResults.WriteProblemAsync(context, error, status);
     }
 }

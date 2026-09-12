@@ -62,6 +62,8 @@ public static class DependencyInjection
             .AddSingleton<IPasswordHasher, Argon2PasswordHasher>()
             .AddSingleton<ISessionTokens, SessionTokens>()
             .AddScoped<ISessionStore, SessionStore>()
+            // Singleton: the attempt counters must be shared across requests.
+            .AddSingleton<ILoginAttempts, InMemoryLoginAttempts>()
             .AddHostedService<ExpiredSessionSweeper>();
 
     private static IServiceCollection AddPersistence(this IServiceCollection services) =>

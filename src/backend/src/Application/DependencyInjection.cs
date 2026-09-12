@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Sessions.GetAll;
+using Application.Sessions.Revoke;
+using Application.Sessions.SignIn;
 using Application.Users.Register;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,6 +35,13 @@ public static class DependencyInjection
         return services
             // Users
             .AddScoped<ICommandHandler<RegisterUserCommand, Contracts.Users.Register.Response>,
-                RegisterUserCommandHandler>();
+                RegisterUserCommandHandler>()
+
+            // Sessions
+            .AddScoped<ICommandHandler<SignInCommand, SignInOutcome>, SignInCommandHandler>()
+            .AddScoped<ICommandHandler<RevokeSessionCommand>, RevokeSessionCommandHandler>()
+            .AddScoped<IQueryHandler<GetSessionsQuery, Contracts.Sessions.GetAll.Response>,
+                GetSessionsQueryHandler>()
+            .AddScoped<SignInDependencies>();
     }
 }

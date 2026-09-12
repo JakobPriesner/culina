@@ -33,6 +33,11 @@ internal static class RequestErrors
         $"Query parameter '{name}' may only be given once.",
         ErrorType.Validation);
 
+    internal static readonly Error Forbidden = new(
+        "request.forbidden",
+        "You do not have access to that.",
+        ErrorType.Forbidden);
+
     internal static readonly Error ForeignOrigin = new(
         "auth.foreign_origin",
         "This request did not come from the application.",

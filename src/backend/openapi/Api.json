@@ -77,6 +77,159 @@
           }
         }
       }
+    },
+    "/api/v1/sessions": {
+      "post": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Sign in",
+        "description": "Starts a session. Sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. Failure is always auth.invalid_credentials, whether or not the address is registered.",
+        "operationId": "signInV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionsSignInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsSignInResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "List your signed-in devices",
+        "description": "Every active session for the caller, most recently used first.",
+        "operationId": "getSessionsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsGetAllResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/current": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Sign out",
+        "description": "Deletes the current session and clears its cookies.",
+        "operationId": "signOutV1",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Sign out one device",
+        "description": "Ends one of your sessions. Another user's session is never visible.",
+        "operationId": "revokeSessionV1",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -120,6 +273,115 @@
             "nullable": true
           }
         }
+      },
+      "SessionsGetAllResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionsGetAllSessionSummary"
+            },
+            "description": "One entry per signed-in device, most recently used first."
+          }
+        },
+        "description": "The caller's active sessions."
+      },
+      "SessionsGetAllSessionSummary": {
+        "required": [
+          "sessionId",
+          "createdAt",
+          "lastSeenAt",
+          "isCurrent"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "The session's id, for revoking it.",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was started.",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "description": "When a request last used it.",
+            "format": "date-time"
+          },
+          "ipAddress": {
+            "type": "string",
+            "description": "Where it was started from.",
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "string",
+            "description": "What browser started it.",
+            "nullable": true
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "description": "Whether this is the session making the request."
+          }
+        },
+        "description": "One signed-in device."
+      },
+      "SessionsSignInRequest": {
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account was registered with."
+          },
+          "password": {
+            "type": "string",
+            "description": "The account's password."
+          }
+        },
+        "description": "Credentials."
+      },
+      "SessionsSignInResponse": {
+        "required": [
+          "userId",
+          "displayName",
+          "email",
+          "isAdmin",
+          "csrfToken"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The signed-in user's id.",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "What they are called."
+          },
+          "email": {
+            "type": "string",
+            "description": "The address they signed in with."
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "description": "Whether this account administers the instance."
+          },
+          "csrfToken": {
+            "type": "string",
+            "description": "The CSRF token to send in `X-Culina-CSRF` on every unsafe request."
+          }
+        },
+        "description": "Who signed in, and the token their requests must echo."
       },
       "UsersRegisterRequest": {
         "required": [
@@ -189,6 +451,9 @@
   "tags": [
     {
       "name": "Users"
+    },
+    {
+      "name": "Sessions"
     }
   ]
 }

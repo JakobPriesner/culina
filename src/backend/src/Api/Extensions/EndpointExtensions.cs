@@ -1,4 +1,5 @@
 using Api.Endpoints;
+using Api.Endpoints.Sessions;
 using Api.Endpoints.Users;
 
 namespace Api.Extensions;
@@ -17,7 +18,8 @@ internal static class EndpointExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         return services
-            .AddUsersEndpoints();
+            .AddUsersEndpoints()
+            .AddSessionsEndpoints();
     }
 
     /// <summary>Maps everything registered as an <see cref="IEndpoint"/>.</summary>
