@@ -12,9 +12,9 @@ namespace Application.Users;
 /// </remarks>
 internal static class PreferenceWords
 {
-    internal static Result<Locale> ToLocale(string? value) =>
-        PreferenceCodes.ToLocale(value) is { } locale
-            ? locale
+    internal static Result<Language> ToLanguage(string? value) =>
+        PreferenceCodes.ToLanguage(value) is { } language
+            ? language
             : Invalid("locale", "Locale must be 'en' or 'de'.");
 
     internal static Result<ThemeMode> ToMode(string? value) =>

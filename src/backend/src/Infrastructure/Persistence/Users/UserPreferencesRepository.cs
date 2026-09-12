@@ -61,7 +61,7 @@ internal sealed class UserPreferencesRepository(DbExecutor executor) : IUserPref
             new
             {
                 userId = preferences.UserId,
-                locale = PreferenceCodes.Of(preferences.Locale),
+                locale = PreferenceCodes.Of(preferences.Language),
                 theme = preferences.Theme,
                 mode = PreferenceCodes.Of(preferences.Mode),
                 measurementSystem = PreferenceCodes.Of(preferences.MeasurementSystem)
@@ -92,7 +92,7 @@ internal static class UserPreferencesRowMappings
             // An unrecognised stored value falls back to the default rather
             // than throwing: a preference is not worth failing a request over,
             // and the next save corrects it.
-            PreferenceCodes.ToLocale(row.Locale) ?? Locale.En,
+            PreferenceCodes.ToLanguage(row.Locale) ?? Language.En,
             row.Theme,
             PreferenceCodes.ToMode(row.Mode) ?? ThemeMode.System,
             PreferenceCodes.ToMeasurementSystem(row.MeasurementSystem) ?? MeasurementSystem.Metric,

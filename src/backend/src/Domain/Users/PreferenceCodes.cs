@@ -1,3 +1,5 @@
+using Domain.Shared;
+
 namespace Domain.Users;
 
 /// <summary>
@@ -11,9 +13,9 @@ namespace Domain.Users;
 public static class PreferenceCodes
 {
     /// <summary>The code for a language.</summary>
-    public static string Of(Locale locale) => locale switch
+    public static string Of(Language language) => language switch
     {
-        Locale.De => "de",
+        Language.De => "de",
         _ => "en"
     };
 
@@ -33,10 +35,10 @@ public static class PreferenceCodes
     };
 
     /// <summary>Reads a language code, or null when it is not one.</summary>
-    public static Locale? ToLocale(string? code) => code switch
+    public static Language? ToLanguage(string? code) => code switch
     {
-        "en" => Locale.En,
-        "de" => Locale.De,
+        "en" => Language.En,
+        "de" => Language.De,
         _ => null
     };
 

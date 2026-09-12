@@ -31,15 +31,15 @@ internal sealed class UpdatePreferencesCommandHandler(IUserPreferencesRepository
 
         using var tracked = UseCaseActivity.Start("Users.UpdatePreferences");
 
-        var locale = PreferenceWords.ToLocale(command.Locale);
+        var language = PreferenceWords.ToLanguage(command.Locale);
         var mode = PreferenceWords.ToMode(command.Mode);
         var measurement = PreferenceWords.ToMeasurementSystem(command.MeasurementSystem);
 
         var chosen = Result.Combine(
-                Ignoring(locale),
+                Ignoring(language),
                 Ignoring(mode),
                 Ignoring(measurement))
-            .Bind(() => locale.Bind(l => mode.Bind(m => measurement.Map(s => (Locale: l, Mode: m, System: s)))));
+            .Bind(() => language.Bind(l => mode.Bind(m => measurement.Map(s => (Language: l, Mode: m, System: s)))));
 
         var result = await chosen.Match(
             choice => SaveAsync(command, choice, cancellationToken),
@@ -50,12 +50,12 @@ internal sealed class UpdatePreferencesCommandHandler(IUserPreferencesRepository
 
     private async Task<Result<Response>> SaveAsync(
         UpdatePreferencesCommand command,
-        (Locale Locale, ThemeMode Mode, MeasurementSystem System) choice,
+        (Language Language, ThemeMode Mode, MeasurementSystem System) choice,
         CancellationToken cancellationToken)
     {
         var stored = await preferences.GetAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
-        var changed = stored.Change(choice.Locale, command.Theme, choice.Mode, choice.System);
+        var changed = stored.Change(choice.Language, command.Theme, choice.Mode, choice.System);
 
         return await changed.Match(
             async () =>
@@ -64,7 +64,7 @@ internal sealed class UpdatePreferencesCommandHandler(IUserPreferencesRepository
 
                 return saved.Map(version => new Response
                 {
-                    Locale = PreferenceCodes.Of(stored.Locale),
+                    Locale = PreferenceCodes.Of(stored.Language),
                     Theme = stored.Theme,
                     Mode = PreferenceCodes.Of(stored.Mode),
                     MeasurementSystem = PreferenceCodes.Of(stored.MeasurementSystem),

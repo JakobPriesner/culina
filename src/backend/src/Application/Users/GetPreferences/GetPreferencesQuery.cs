@@ -37,7 +37,7 @@ internal static class PreferencesMappings
 
         return new Response
         {
-            Locale = PreferenceCodes.Of(preferences.Locale),
+            Locale = PreferenceCodes.Of(preferences.Language),
             Theme = preferences.Theme,
             Mode = PreferenceCodes.Of(preferences.Mode),
             MeasurementSystem = PreferenceCodes.Of(preferences.MeasurementSystem),

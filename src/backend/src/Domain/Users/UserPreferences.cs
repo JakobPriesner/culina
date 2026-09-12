@@ -2,16 +2,6 @@ using Domain.Shared;
 
 namespace Domain.Users;
 
-/// <summary>The language a person reads Culina in.</summary>
-public enum Locale
-{
-    /// <summary>English.</summary>
-    En = 0,
-
-    /// <summary>German.</summary>
-    De = 1
-}
-
 /// <summary>Whether to follow the device or force one appearance.</summary>
 public enum ThemeMode
 {
@@ -55,14 +45,14 @@ public sealed class UserPreferences
 
     private UserPreferences(
         Guid userId,
-        Locale locale,
+        Language language,
         string theme,
         ThemeMode mode,
         MeasurementSystem measurementSystem,
         long version)
     {
         UserId = userId;
-        Locale = locale;
+        Language = language;
         Theme = theme;
         Mode = mode;
         MeasurementSystem = measurementSystem;
@@ -72,8 +62,8 @@ public sealed class UserPreferences
     /// <summary>Whose preferences these are.</summary>
     public Guid UserId { get; }
 
-    /// <summary>The language they read in.</summary>
-    public Locale Locale { get; private set; }
+    /// <summary>The language they read the interface in.</summary>
+    public Language Language { get; private set; }
 
     /// <summary>
     /// The theme id. A free string rather than an enum, because themes are
@@ -92,33 +82,33 @@ public sealed class UserPreferences
 
     /// <summary>The preferences a new account starts with.</summary>
     /// <param name="userId">Whose they are.</param>
-    /// <param name="locale">Their language, usually guessed from Accept-Language.</param>
-    public static UserPreferences Default(Guid userId, Locale locale = Locale.En) =>
-        new(userId, locale, DefaultTheme, ThemeMode.System, MeasurementSystem.Metric, version: 1);
+    /// <param name="language">Their language, usually guessed from Accept-Language.</param>
+    public static UserPreferences Default(Guid userId, Language language = Language.En) =>
+        new(userId, language, DefaultTheme, ThemeMode.System, MeasurementSystem.Metric, version: 1);
 
     /// <summary>Rebuilds preferences from storage.</summary>
     /// <param name="userId">Whose they are.</param>
-    /// <param name="locale">Their language.</param>
+    /// <param name="language">Their language.</param>
     /// <param name="theme">Their theme id.</param>
     /// <param name="mode">Their appearance choice.</param>
     /// <param name="measurementSystem">Their unit choice.</param>
     /// <param name="version">The stored version.</param>
     public static UserPreferences Restore(
         Guid userId,
-        Locale locale,
+        Language language,
         string theme,
         ThemeMode mode,
         MeasurementSystem measurementSystem,
         long version) =>
-        new(userId, locale, theme, mode, measurementSystem, version);
+        new(userId, language, theme, mode, measurementSystem, version);
 
     /// <summary>Applies a change.</summary>
-    /// <param name="locale">The chosen language.</param>
+    /// <param name="language">The chosen language.</param>
     /// <param name="theme">The chosen theme id.</param>
     /// <param name="mode">The chosen appearance.</param>
     /// <param name="measurementSystem">The chosen units.</param>
     public Result Change(
-        Locale locale,
+        Language language,
         string theme,
         ThemeMode mode,
         MeasurementSystem measurementSystem)
@@ -130,7 +120,7 @@ public sealed class UserPreferences
             return UserErrors.InvalidTheme;
         }
 
-        Locale = locale;
+        Language = language;
         Theme = trimmed;
         Mode = mode;
         MeasurementSystem = measurementSystem;
