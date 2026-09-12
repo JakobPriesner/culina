@@ -44,13 +44,19 @@ The goal is an amount a person can act on. `133.333 g` is arithmetic;
 | Raw amount | Step | Example |
 | --- | --- | --- |
 | `< 10` | `0.5` | `7.3 g` → `7.5 g` |
-| `10 – 100` | `5` | `133.3 g` → `135 g` |
+| `10 – 100` | `5` | `63.3 g` → `65 g` |
 | `100 – 1000` | `10` | `433.3 g` → `430 g` |
 | `≥ 1000` | `50` | `1333 g` → `1350 g` |
 
-Round half away from zero. Re-express upward when it reads better:
-`1500 g` → `1.5 kg`, `2000 ml` → `2 l`. Never downward — `0.5 kg` is shown as
-`500 g`, because a scale shows grams.
+The band is chosen by the amount being rounded, not by the amount in the recipe:
+`133.3 g` is in the third band and becomes `130 g`.
+
+Round half away from zero. Re-express upward **only when the larger unit reads
+better** — at least one of it, and no more than one decimal place:
+
+- `1500 g` → `1.5 kg`, `2000 ml` → `2 l`
+- `1350 g` stays `1350 g`, because nobody writes `1.35 kg`
+- `500 g` stays `500 g`, because a scale shows grams
 
 ### 2. Countable things — an honest range, never a fraction
 
@@ -64,6 +70,9 @@ or no unit at all.
 1 onion   × 0.4 = 0.4   →  "1 onion"       never round a count to zero
 ```
 
+Below one there is no range to offer: the recipe needs the onion, and it needs
+one of them, not "one or two".
+
 - Within `0.15` of an integer, snap to it: `3.9` → `4`, not `3–4`.
 - Otherwise show `floor–ceil`.
 - **A count never rounds to 0.** The minimum is 1: a recipe that needs an onion
@@ -71,9 +80,16 @@ or no unit at all.
 
 ### 3. Spoons — halves, then thirds
 
-`tsp` and `tbsp` round to the nearest `0.5`, and `⅓`/`⅔` are allowed because
-measuring spoons come in those sizes. `1.7 tbsp` → `1½ tbsp`. Below `0.25`,
-show `a pinch of` for `tsp`.
+`tsp` and `tbsp` round to the nearest `0.5`. `⅓` and `⅔` are **not a second
+grid to round onto** — they exist so that a recipe scaled by a third lands on
+the spoon that is actually in the drawer instead of being marked approximate for
+no reason. A third is therefore used only when the arithmetic genuinely produced
+one (within `0.02`):
+
+- `1 tsp × ⅓` → `⅓ tsp`
+- `1.7 tbsp` → `1½ tbsp`, not `1⅔` — it is a half and a half
+
+Below `0.25`, show `a pinch of` for `tsp`.
 
 ### 4. Things that never scale
 

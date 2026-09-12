@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Domain.Recipes;
 using Microsoft.OpenApi;
 
 namespace Api.Extensions;
@@ -88,6 +91,64 @@ internal static class OpenApiContractFixes
 
         // The pattern only existed to validate the string half.
         schema.Pattern = null;
+    }
+
+    /// <summary>
+    /// Publishes the closed vocabularies the contract carries as plain strings.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Contracts is a leaf: it cannot reference the domain, so a unit travels
+    /// as a string rather than as <see cref="Unit"/>. Without this the document
+    /// says "some string" and the generated client has to redeclare the
+    /// vocabulary — which is the one thing sharing a contract is supposed to
+    /// prevent.
+    /// </para>
+    /// <para>
+    /// Listed explicitly rather than matched by property name. A rule that
+    /// attaches an enum to anything called <c>unit</c> would eventually attach
+    /// it to something that is not one.
+    /// </para>
+    /// </remarks>
+    internal static void PublishVocabularies(OpenApiDocument document)
+    {
+        var units = Enum.GetNames<Unit>()
+            .Select(name => JsonNamingPolicy.SnakeCaseLower.ConvertName(name))
+            .ToArray();
+
+        foreach (var (schema, property) in UnitProperties)
+        {
+            Describe(document, schema, property, units);
+        }
+    }
+
+    /// <summary>Every place a <see cref="Unit"/> is carried as a string.</summary>
+    private static readonly (string Schema, string Property)[] UnitProperties =
+    [
+        ("RecipesIngredientContract", "unit"),
+        ("RecipesStepSegmentContract", "unit")
+    ];
+
+    private static void Describe(
+        OpenApiDocument document,
+        string schemaName,
+        string propertyName,
+        string[] values)
+    {
+        IOpenApiSchema? declared = null;
+        IOpenApiSchema? found = null;
+
+        document.Components?.Schemas?.TryGetValue(schemaName, out declared);
+        declared?.Properties?.TryGetValue(propertyName, out found);
+
+        if (found is not OpenApiSchema property)
+        {
+            throw new InvalidOperationException(
+                $"'{schemaName}.{propertyName}' is not in the document. "
+                + "The vocabulary list in OpenApiContractFixes is stale.");
+        }
+
+        property.Enum = [.. values.Select(value => (JsonNode)value)];
     }
 
     /// <summary>

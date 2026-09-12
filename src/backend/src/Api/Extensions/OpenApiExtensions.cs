@@ -47,6 +47,7 @@ internal static class OpenApiExtensions
                 document.Servers = [];
 
                 OpenApiContractFixes.CollapseStringOrIntegerUnions(document);
+                OpenApiContractFixes.PublishVocabularies(document);
                 OpenApiContractFixes.DescribeProblemExtensions(document);
 
                 return Task.CompletedTask;

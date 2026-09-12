@@ -1,0 +1,68 @@
+import type { components } from '$api/generated/schema';
+
+/**
+ * The unit vocabulary, taken from the backend enum rather than redeclared.
+ *
+ * The families below are the client's business — they describe how an amount is
+ * *shown*, which the server has no opinion about — but the set of units is one
+ * definition on both sides.
+ */
+export type Unit = NonNullable<components['schemas']['RecipesIngredientContract']['unit']>;
+
+export type UnitFamily = 'mass' | 'volume' | 'spoon' | 'count' | 'none';
+
+const families: Partial<Record<Unit, UnitFamily>> = {
+  gram: 'mass',
+  kilogram: 'mass',
+  millilitre: 'volume',
+  litre: 'volume',
+  teaspoon: 'spoon',
+  tablespoon: 'spoon'
+};
+
+export function familyOf(unit: Unit | null | undefined): UnitFamily {
+  if (!unit) {
+    return 'none';
+  }
+
+  // Everything not named above counts things: pieces, cloves, cans. A pinch is
+  // handled separately — it is a gesture, not a quantity.
+  return families[unit] ?? 'count';
+}
+
+/** The unit a family is measured in before it is made readable again. */
+export const canonicalOf = (unit: Unit | null | undefined): Unit | null => {
+  switch (familyOf(unit)) {
+    case 'mass':
+      return 'gram';
+    case 'volume':
+      return 'millilitre';
+    default:
+      return unit ?? null;
+  }
+};
+
+/** How many canonical units one of this unit is worth. */
+export const toCanonical = (unit: Unit | null | undefined): number =>
+  unit === 'kilogram' || unit === 'litre' ? 1000 : 1;
+
+/**
+ * Whether scaling this amount means anything.
+ *
+ * A pinch is a gesture. Doubling a recipe does not double the pinch of salt,
+ * and an ingredient with no amount at all — "salt", "pepper to taste" — has
+ * nothing to scale.
+ */
+export const scales = (unit: Unit | null | undefined): boolean => unit !== 'pinch';
+
+/** The larger unit a family re-expresses into, when the number gets big. */
+export const largerUnit = (unit: Unit | null | undefined): Unit | null => {
+  switch (unit) {
+    case 'gram':
+      return 'kilogram';
+    case 'millilitre':
+      return 'litre';
+    default:
+      return null;
+  }
+};

@@ -837,8 +837,11 @@ export interface components {
              * @description How much, or null when the recipe does not say.
              */
             quantity?: number | null;
-            /** @description In what, or null for a bare count. */
-            unit?: string | null;
+            /**
+             * @description In what, or null for a bare count.
+             * @enum {string|null}
+             */
+            unit?: "gram" | "kilogram" | "millilitre" | "litre" | "teaspoon" | "tablespoon" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
             /** @description The shoppable noun: "butter". */
             name: string;
             /** @description The preparation: "finely chopped". */
@@ -1004,8 +1007,11 @@ export interface components {
              * @description The ingredient's base amount, on a read.
              */
             quantity?: number | null;
-            /** @description The ingredient's unit, on a read. */
-            unit?: string | null;
+            /**
+             * @description The ingredient's unit, on a read.
+             * @enum {string|null}
+             */
+            unit?: "gram" | "kilogram" | "millilitre" | "litre" | "teaspoon" | "tablespoon" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
         };
         /** @description The recipe's complete new state. */
         RecipesUpdateRequest: {

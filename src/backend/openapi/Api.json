@@ -2778,6 +2778,21 @@
             "nullable": true
           },
           "unit": {
+            "enum": [
+              "gram",
+              "kilogram",
+              "millilitre",
+              "litre",
+              "teaspoon",
+              "tablespoon",
+              "piece",
+              "clove",
+              "bunch",
+              "slice",
+              "can",
+              "pack",
+              "pinch"
+            ],
             "type": "string",
             "description": "In what, or null for a bare count.",
             "nullable": true
@@ -3070,6 +3085,21 @@
             "nullable": true
           },
           "unit": {
+            "enum": [
+              "gram",
+              "kilogram",
+              "millilitre",
+              "litre",
+              "teaspoon",
+              "tablespoon",
+              "piece",
+              "clove",
+              "bunch",
+              "slice",
+              "can",
+              "pack",
+              "pinch"
+            ],
             "type": "string",
             "description": "The ingredient's unit, on a read.",
             "nullable": true
