@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto, replaceState } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, ErrorState, Skeleton } from '$ds';
@@ -32,9 +32,22 @@
   /**
    * Replaced, not pushed: scaling is a view of the recipe, and every tap of the
    * stepper becoming a back-button step would bury the page you came from.
+   *
+   * `goto`, not `replaceState`. `replaceState` is for shallow routing — state
+   * the page carries without the URL meaning anything different — so it changes
+   * the address bar and tells nothing on screen that anything happened. The
+   * yield is not shallow: it is what every amount on the page is derived from,
+   * and a stepper that silently moved the address bar and left the amounts
+   * alone is exactly the quiet wrongness this app exists to avoid.
    */
   function scale(value: number) {
-    replaceState(urlAtYield(page.url, value, recipes.detail), {});
+    void goto(urlAtYield(page.url, value, recipes.detail), {
+      replaceState: true,
+      // The thumb is still on the stepper and the eye is on the ingredient
+      // list; neither should be moved by a number changing.
+      keepFocus: true,
+      noScroll: true
+    });
   }
 
   /**

@@ -247,6 +247,48 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         return await client.SendAsync(request, Token);
     }
 
+    [Fact]
+    public async Task Update_ShouldBlameTheCaller_WhenTheBodyCannotBeRead()
+    {
+        // Arrange
+        // A step segment without its `type`, which is the shape the contract
+        // requires. The body is rejected before any handler runs, and what the
+        // caller gets back must still be a problem document saying it was their
+        // request — not a 500, which sends them looking on the wrong side and
+        // buries real faults in the log.
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipe.Id}")
+        {
+            Content = System.Net.Http.Json.JsonContent.Create(new
+            {
+                title = "Bolognese",
+                language = "en",
+                yieldAmount = 4,
+                yieldKind = "servings",
+                groups = Array.Empty<object>(),
+                steps = new[] { new { segments = new[] { new { value = "Stir." } } } },
+                tags = Array.Empty<string>()
+            })
+        };
+
+        request.Headers.IfMatch.Add(
+            System.Net.Http.Headers.EntityTagHeaderValue.Parse(recipe.ETag));
+
+        // Act
+        var response = await client.SendAsync(request, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // The code differs by which layer caught it — minimal APIs turn this
+        // into a status, and GlobalExceptionHandler answers where the exception
+        // escapes instead — so what is pinned here is the part that matters:
+        // a 400, described the way every other failure is.
+        Assert.NotNull(response.ProblemCode);
+        Assert.Equal(400, response.Json!.Value.GetProperty("status").GetInt32());
+    }
+
     private static async Task<Guid> FirstHouseholdIdAsync(ApiClient client) =>
         (await client.GetAsync("/api/v1/households", Token))
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
