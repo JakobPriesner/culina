@@ -2,6 +2,11 @@ import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 
+// Under Vitest, Svelte must resolve to its client build: without this the
+// component entry points resolve to the server build and every render fails
+// with "mount(...) is not available on the server".
+const underTest = Boolean(process.env['VITEST']);
+
 export default defineConfig({
   plugins: [
     sveltekit({
@@ -24,6 +29,8 @@ export default defineConfig({
       }
     })
   ],
+
+  resolve: underTest ? { conditions: ['browser'] } : {},
 
   server: {
     port: 5173,
