@@ -203,5 +203,14 @@
   "editor.changedElsewhere": "Jemand anderes hat dieses Rezept geändert. Lade neu, um die Version zu sehen.",
   "editor.edit": "Bearbeiten",
   "editor.done": "Fertig",
-  "editor.optional": "optional"
+  "editor.optional": "optional",
+  "scaleTo.open": "Auf meine Menge anpassen",
+  "scaleTo.title": "Wie viel hast du da?",
+  "scaleTo.body": "Wähl eine Zutat und sag, wie viel du davon hast. Das ganze Rezept richtet sich danach.",
+  "scaleTo.ingredient": "Zutat",
+  "scaleTo.amount": "Menge",
+  "scaleTo.apply": "Rezept anpassen",
+  "scaleTo.cancel": "Abbrechen",
+  "scaleTo.result": "Das ergibt {yield}.",
+  "scaleTo.impossible": "Diese Zutat hat keine Menge, von der sich rechnen ließe."
 }

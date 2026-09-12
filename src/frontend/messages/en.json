@@ -203,5 +203,14 @@
   "editor.changedElsewhere": "Somebody else changed this recipe. Reload to see their version.",
   "editor.edit": "Edit",
   "editor.done": "Done",
-  "editor.optional": "optional"
+  "editor.optional": "optional",
+  "scaleTo.open": "Scale to what I have",
+  "scaleTo.title": "How much do you have?",
+  "scaleTo.body": "Pick an ingredient and say how much of it you have. The whole recipe reshapes around it.",
+  "scaleTo.ingredient": "Ingredient",
+  "scaleTo.amount": "Amount",
+  "scaleTo.apply": "Scale the recipe",
+  "scaleTo.cancel": "Cancel",
+  "scaleTo.result": "That makes {yield}.",
+  "scaleTo.impossible": "That ingredient has no amount to scale from."
 }

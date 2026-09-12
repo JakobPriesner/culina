@@ -3,6 +3,7 @@
 
   import { m } from '$shell/i18n';
   import { createScaling } from './scaled.svelte';
+  import ScaleToAmountSheet from './ScaleToAmountSheet.svelte';
   import IngredientRow from './IngredientRow.svelte';
   import ServingsControl from './ServingsControl.svelte';
   import StepText from './StepText.svelte';
@@ -55,6 +56,7 @@
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
+  let scalingByAmount = $state(false);
 
   const scaling = createScaling(
     () => recipe,
@@ -119,6 +121,10 @@
       base={recipe.yieldAmount}
       onchange={(value) => onservings?.(value)}
     />
+
+    <!-- The other end of the same machinery: a leftover 600 g of flour rather
+         than a number of portions. -->
+    <Button onclick={() => (scalingByAmount = true)}>{m['scaleTo.open']()}</Button>
 
     {#if scaling.timesAreDoubtful}
       <!--
@@ -194,6 +200,12 @@
       {/if}
     </section>
   </div>
+
+  <ScaleToAmountSheet
+    bind:open={scalingByAmount}
+    {recipe}
+    onapply={(value) => onservings?.(value)}
+  />
 
   <footer class="foot">
     {#if cooking}
