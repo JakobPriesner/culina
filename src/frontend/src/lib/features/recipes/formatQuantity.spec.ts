@@ -9,7 +9,11 @@ import type { Unit } from './units';
  * where `1,5 kg` and `1.5 kg` are pinned down.
  */
 const labels: QuantityLabels = {
-  unitName: (unit: Unit, count: number) => (count === 1 ? unit : `${unit}s`),
+  // Stands in for the real, localised labels. Spoons are abbreviated and never
+  // pluralised; anything else that needs a word beside the number is spelled
+  // out, and a word does pluralise.
+  unitName: (unit: Unit, count: number) =>
+    unit === 'tsp' || unit === 'tbsp' ? unit : count === 1 ? unit : `${unit}s`,
   approximately: (amount) => `~${amount}`
 };
 
@@ -81,5 +85,23 @@ describe('the parts', () => {
     const parts = formatQuantity(scaleQuantity({ value: 250, unit: 'g' }, 1), 'en', labels);
 
     expect(parts).toMatchObject({ amount: '250', unit: 'g', text: `250${nbsp}g` });
+  });
+});
+
+describe('units whose abbreviation is a word', () => {
+  /*
+   * A German recipe says EL, not tbsp. Spoons used to carry a hard-coded
+   * English abbreviation, which no translation could reach; they now come from
+   * the labels like every other unit that needs a word.
+   */
+  it('take their short form from the labels, so a translation can reach it', () => {
+    const german: QuantityLabels = {
+      unitName: (unit: Unit) => ({ tsp: 'TL', tbsp: 'EL' })[unit as 'tsp' | 'tbsp'] ?? '',
+      approximately: (amount) => `~${amount}`
+    };
+
+    expect(formatQuantity(scaleQuantity({ value: 2, unit: 'tbsp' }, 1), 'de', german).text).toBe(
+      `2${nbsp}EL`
+    );
   });
 });

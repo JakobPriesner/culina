@@ -182,7 +182,7 @@
 <style>
   .controls {
     position: sticky;
-    bottom: var(--space-4);
+    bottom: calc(var(--bottom-inset) + var(--space-4));
     display: flex;
     flex-wrap: wrap;
     align-items: center;

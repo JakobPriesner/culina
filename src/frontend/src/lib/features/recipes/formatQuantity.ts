@@ -36,8 +36,10 @@ const short: Record<Unit, string> = {
   kg: 'kg',
   ml: 'ml',
   l: 'l',
-  tsp: 'tsp',
-  tbsp: 'tbsp',
+  // Spoons are absent, not empty-by-accident: their abbreviation is a word in
+  // the reader's language (EL, not tbsp), so it comes from the labels.
+  tsp: '',
+  tbsp: '',
   // Count units are named by the ingredient itself — "3 cloves garlic" reads
   // worse than "3 garlic cloves", so the recipe's own words carry it.
   piece: '',

@@ -6,6 +6,9 @@
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { session } from '$features/auth/session.svelte';
+  import { shopping } from '$features/shopping/stores/shopping.svelte';
+  import { toaster } from '$shell/toaster.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
@@ -31,6 +34,28 @@
    */
   function scale(value: number) {
     replaceState(urlAtYield(page.url, value, recipes.detail), {});
+  }
+
+  /**
+   * Puts the ingredients on the list at the scaling on screen.
+   *
+   * The scaling matters: adding a recipe you have scaled to six and getting the
+   * amounts for four is the kind of quiet wrongness nobody notices until they
+   * are short of butter.
+   */
+  async function addToShoppingList() {
+    const householdId = session.activeHouseholdId;
+
+    if (!householdId) {
+      return;
+    }
+
+    const failure = await shopping.addRecipe(householdId, recipeId, servings);
+
+    toaster.show({
+      message: failure ? failure.detail : m['shopping.added'](),
+      tone: failure ? 'danger' : 'success'
+    });
   }
 
   /** The yield travels with you, so cooking opens at the number you chose. */
@@ -69,6 +94,7 @@
       {servings}
       onservings={scale}
       onstartcooking={startCooking}
+      onaddtolist={addToShoppingList}
     />
 
     <PersonalNotePanel {recipeId} />

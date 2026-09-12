@@ -261,5 +261,17 @@
   "editor.photoRemove": "Remove the photo",
   "editor.photoHint": "One picture of the finished dish. It is what you will recognise it by.",
   "editor.photoTooLarge": "That photo is too large. Try one under 10 MB.",
-  "editor.photoFailed": "That photo could not be saved."
+  "editor.photoFailed": "That photo could not be saved.",
+  "units.tsp": "tsp",
+  "units.tbsp": "tbsp",
+  "units.clove": "clove",
+  "units.cloves": "cloves",
+  "units.bunch": "bunch",
+  "units.bunches": "bunches",
+  "units.slice": "slice",
+  "units.slices": "slices",
+  "units.can": "can",
+  "units.cans": "cans",
+  "units.pack": "pack",
+  "units.packs": "packs"
 }

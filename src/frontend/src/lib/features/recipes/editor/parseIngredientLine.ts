@@ -20,11 +20,29 @@ export interface ParsedIngredient {
 }
 
 /**
+ * Folds a typed word to the form the table below is keyed by.
+ *
+ * German is written with umlauts and typed both ways: the same person writes
+ * `Stück` at a keyboard and `Stueck` on a phone in a hurry. Folding here means
+ * the table holds one spelling of each word instead of two, and `Esslöffel`
+ * cannot be the one that was forgotten.
+ */
+const fold = (word: string): string =>
+  word
+    .toLowerCase()
+    .replace(/\.$/, '')
+    .replaceAll('ä', 'ae')
+    .replaceAll('ö', 'oe')
+    .replaceAll('ü', 'ue')
+    .replaceAll('ß', 'ss');
+
+/**
  * What people actually type, mapped to the wire codes.
  *
  * Both languages, because a German recipe says `EL` and an English one says
  * `tbsp`, and the same person writes both depending on where the recipe came
- * from.
+ * from. Plurals are listed rather than stripped: German plurals are not a
+ * suffix rule, and a parser that guessed would read `Zitronen` as a unit.
  */
 const spellings: Record<string, Unit> = {
   g: 'g',
@@ -32,9 +50,13 @@ const spellings: Record<string, Unit> = {
   gramm: 'g',
   gram: 'g',
   grams: 'g',
+  gramme: 'g',
   kg: 'kg',
   kilo: 'kg',
+  kilos: 'kg',
   kilogramm: 'kg',
+  kilogram: 'kg',
+  kilograms: 'kg',
   ml: 'ml',
   milliliter: 'ml',
   millilitre: 'ml',
@@ -42,15 +64,20 @@ const spellings: Record<string, Unit> = {
   liter: 'l',
   litre: 'l',
   tsp: 'tsp',
+  tsps: 'tsp',
   teaspoon: 'tsp',
   teaspoons: 'tsp',
   tl: 'tsp',
   teeloeffel: 'tsp',
   tbsp: 'tbsp',
+  tbsps: 'tbsp',
+  tbs: 'tbsp',
   tablespoon: 'tbsp',
   tablespoons: 'tbsp',
   el: 'tbsp',
+  essloeffel: 'tbsp',
   stk: 'piece',
+  stueck: 'piece',
   piece: 'piece',
   pieces: 'piece',
   zehe: 'clove',
@@ -58,6 +85,7 @@ const spellings: Record<string, Unit> = {
   clove: 'clove',
   cloves: 'clove',
   bund: 'bunch',
+  bunches: 'bunch',
   bunch: 'bunch',
   scheibe: 'slice',
   scheiben: 'slice',
@@ -68,9 +96,16 @@ const spellings: Record<string, Unit> = {
   can: 'can',
   cans: 'can',
   packung: 'pack',
+  packungen: 'pack',
+  paeckchen: 'pack',
   pack: 'pack',
+  packs: 'pack',
+  packet: 'pack',
+  packets: 'pack',
   prise: 'pinch',
-  pinch: 'pinch'
+  prisen: 'pinch',
+  pinch: 'pinch',
+  pinches: 'pinch'
 };
 
 /** `1/2`, a fraction glyph, `1,5` and `1.5` are all the same number to a person. */
@@ -106,8 +141,8 @@ export function parseIngredientLine(line: string): ParsedIngredient {
 
   // A unit only counts when there is an amount for it to measure: "Salz" is an
   // ingredient, and a word starting a name is not a litre.
-  const unit =
-    value === null ? null : (spellings[firstWord.toLowerCase().replace(/\.$/, '')] ?? null);
+  const unitWord = fold(firstWord);
+  const unit = value === null ? null : (spellings[unitWord] ?? null);
   const name = (unit ? restWords.join(' ') : afterAmount).trim();
 
   return {

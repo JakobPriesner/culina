@@ -1,7 +1,7 @@
 import { formatQuantity, type QuantityText } from '../formatQuantity';
+import { quantityLabels as labels } from '../quantityLabels';
 import { factorFor, scaleQuantity, trustedFactorRange } from '../scaling';
 import type { Ingredient, Recipe, Quantity } from '../types';
-import type { Unit } from '../units';
 import { m } from '$shell/i18n';
 import { preferences } from '$shell/preferences.svelte';
 
@@ -13,22 +13,6 @@ import { preferences } from '$shell/preferences.svelte';
  * apps and the whole reason a step stores a reference rather than the words
  * "200 g butter".
  */
-/**
- * The units that need a word beside the number.
- *
- * Count units do not: the ingredient names itself, and "3 cloves garlic" reads
- * worse than "3 garlic cloves". A pinch is the exception — "1 salt" is not a
- * thing anyone writes.
- */
-const unitNames: Partial<Record<Unit, () => string>> = {
-  pinch: m['units.pinch']
-};
-
-const labels = {
-  unitName: (unit: Unit) => unitNames[unit]?.() ?? '',
-  approximately: (amount: string) => `~${amount}`
-};
-
 export function createScaling(recipe: () => Recipe | null, target: () => number) {
   const factor = $derived.by(() => {
     const current = recipe();

@@ -41,6 +41,8 @@
     servings: number;
     onservings?: (value: number) => void;
     onstartcooking?: () => void;
+    /** Puts the ingredients on the shopping list, at the scaling on screen. */
+    onaddtolist?: () => void;
     onstopcooking?: () => void;
     onstep?: (index: number) => void;
   }
@@ -52,6 +54,7 @@
     servings,
     onservings,
     onstartcooking,
+    onaddtolist,
     onstopcooking,
     onstep
   }: Props = $props();
@@ -230,6 +233,10 @@
     {#if cooking}
       <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
     {:else}
+      {#if onaddtolist}
+        <Button size="lg" onclick={onaddtolist}>{m['shopping.addToList']()}</Button>
+      {/if}
+
       <Button variant="primary" size="lg" onclick={onstartcooking}>
         {m['recipe.startCooking']()}
       </Button>
@@ -361,11 +368,15 @@
     color: var(--text-muted);
   }
 
+  /* Clear of whatever the shell has already parked at the bottom of the
+     viewport — the cooking bar, the phone's navigation bar, or both. */
   .foot {
     position: sticky;
-    bottom: var(--space-4);
+    bottom: calc(var(--bottom-inset) + var(--space-4));
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    gap: var(--space-3);
   }
 
   @media (max-width: 47.999rem) {

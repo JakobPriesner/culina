@@ -63,6 +63,15 @@
      and the heading below it start on the same line. */
   --layout-gutter: var(--space-8);
   --text-display: clamp(2.5rem, 2rem + 1.6vw, 4rem);
+
+  /* How much of the bottom of the viewport the app shell has already claimed —
+     the cooking bar, the phone's navigation bar, or both. Anything a page
+     sticks to the bottom offsets by this, or it ends up sliced in half by a bar
+     it cannot see. AppShell measures the real values and overrides these; the
+     zeroes here keep a page rendered outside the shell (sign-in, the gallery)
+     from sticking to nothing. */
+  --bottom-inset: 0px;
+  --bar-inset: 0px;
   --font-editorial: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
 
   --font-sans:

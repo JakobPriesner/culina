@@ -24,6 +24,7 @@ public sealed record UpdateShoppingItemCommand(
 internal sealed class UpdateShoppingItemCommandHandler(
     IShoppingListRepository lists,
     IHouseholdRepository households,
+    IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<UpdateShoppingItemCommand, Response>
 {
@@ -45,25 +46,23 @@ internal sealed class UpdateShoppingItemCommandHandler(
                 Result<Response>.Failure(HouseholdErrors.NotFound(command.HouseholdId)));
         }
 
-        var list = await lists.ForHouseholdAsync(command.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
-        var result = await list
-            .Match(
-                found => ApplyAsync(found, command, cancellationToken),
-                error => Task.FromResult(Result<Response>.Failure(error)))
+        var result = await ShoppingListWrites
+            .ApplyAsync(
+                lists,
+                unitOfWork,
+                command.HouseholdId,
+                (list, token) => ChangeAsync(list, command, token),
+                cancellationToken)
             .ConfigureAwait(false);
 
         return tracked.Record(result);
     }
 
-    private async Task<Result<Response>> ApplyAsync(
+    private async Task<Result> ChangeAsync(
         ShoppingList list,
         UpdateShoppingItemCommand command,
         CancellationToken cancellationToken)
     {
-        var before = list.Version;
-
         var changed = command.IsChecked is { } isChecked
             ? list.Check(command.ItemId, isChecked, time.GetUtcNow())
             : Result.Success();
@@ -81,13 +80,7 @@ internal sealed class UpdateShoppingItemCommandHandler(
                 .ConfigureAwait(false);
         }
 
-        var saved = await changed
-            .Match(
-                () => lists.SaveAsync(list, before, cancellationToken),
-                error => Task.FromResult(Result.Failure(error)))
-            .ConfigureAwait(false);
-
-        return saved.Map(() => list.Describe());
+        return changed;
     }
 
     /// <summary>

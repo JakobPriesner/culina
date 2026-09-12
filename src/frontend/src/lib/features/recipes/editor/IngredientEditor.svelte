@@ -4,6 +4,7 @@
   import { m } from '$shell/i18n';
   import { parseIngredientLine } from './parseIngredientLine';
   import { formatQuantity } from '../formatQuantity';
+  import { quantityLabels } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
   import { preferences } from '$shell/preferences.svelte';
   import type { Ingredient } from '../types';
@@ -25,13 +26,8 @@
   let line = $state('');
   let input = $state<HTMLInputElement>();
 
-  const labels = {
-    unitName: () => '',
-    approximately: (amount: string) => amount
-  };
-
   const shown = (ingredient: Ingredient) =>
-    formatQuantity(scaleQuantity(ingredient.quantity, 1), preferences.locale, labels).text;
+    formatQuantity(scaleQuantity(ingredient.quantity, 1), preferences.locale, quantityLabels).text;
 
   function add() {
     const text = line.trim();

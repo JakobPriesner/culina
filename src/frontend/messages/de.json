@@ -261,5 +261,17 @@
   "editor.photoRemove": "Foto entfernen",
   "editor.photoHint": "Ein Bild vom fertigen Gericht. Daran erkennst du es wieder.",
   "editor.photoTooLarge": "Das Foto ist zu groß. Versuch eins unter 10 MB.",
-  "editor.photoFailed": "Das Foto konnte nicht gespeichert werden."
+  "editor.photoFailed": "Das Foto konnte nicht gespeichert werden.",
+  "units.tsp": "TL",
+  "units.tbsp": "EL",
+  "units.clove": "Zehe",
+  "units.cloves": "Zehen",
+  "units.bunch": "Bund",
+  "units.bunches": "Bund",
+  "units.slice": "Scheibe",
+  "units.slices": "Scheiben",
+  "units.can": "Dose",
+  "units.cans": "Dosen",
+  "units.pack": "Packung",
+  "units.packs": "Packungen"
 }

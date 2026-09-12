@@ -27,9 +27,28 @@
   }
 
   let { children, dock }: Props = $props();
+
+  /**
+   * How much of the viewport bottom is already spoken for.
+   *
+   * The dock and the bottom bar are their own grid rows, so they never cover
+   * page content that simply flows. They do cover anything a page sticks to the
+   * bottom of the viewport — an action footer, say — and a "Start cooking"
+   * button sliced in half by the cooking bar is exactly the kind of detail that
+   * makes an app feel unfinished. Pages read this instead of guessing.
+   *
+   * Measured rather than declared: the bottom bar is display:none on a wide
+   * screen and reports zero, so one expression covers both layouts.
+   */
+  let dockHeight = $state(0);
+  let barHeight = $state(0);
 </script>
 
-<div class="shell">
+<div
+  class="shell"
+  style:--bar-inset="{barHeight}px"
+  style:--bottom-inset="{dockHeight + barHeight}px"
+>
   <!-- First in the tab order and invisible until focused: without it, reaching
        the page content by keyboard means tabbing through the navigation on
        every single page. -->
@@ -51,12 +70,14 @@
 
   <!-- The slot is reserved whether or not anything is in it, so the bar
        appearing never pushes the page. -->
-  <div class="dock">
+  <div class="dock" bind:clientHeight={dockHeight}>
     <NowCookingBar />
     {@render dock?.()}
   </div>
 
-  <div class="bar narrow-only"><Navigation placement="bottom" /></div>
+  <div class="bar narrow-only" bind:clientHeight={barHeight}>
+    <Navigation placement="bottom" />
+  </div>
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
 </div>
@@ -107,7 +128,7 @@
   .dock {
     grid-area: dock;
     position: sticky;
-    bottom: 0;
+    bottom: var(--bar-inset);
     z-index: var(--z-sticky);
   }
 
