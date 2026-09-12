@@ -212,5 +212,19 @@
   "scaleTo.apply": "Rezept anpassen",
   "scaleTo.cancel": "Abbrechen",
   "scaleTo.result": "Das ergibt {yield}.",
-  "scaleTo.impossible": "Diese Zutat hat keine Menge, von der sich rechnen ließe."
+  "scaleTo.impossible": "Diese Zutat hat keine Menge, von der sich rechnen ließe.",
+  "cooking.nowCooking": "{title} wird gekocht",
+  "cooking.resume": "Weitermachen",
+  "cooking.stepOf": "Schritt {current} von {total}",
+  "cooking.next": "Nächster Schritt",
+  "cooking.previous": "Vorheriger Schritt",
+  "cooking.finish": "Hab ich gekocht",
+  "cooking.abandon": "Kochen beenden",
+  "cooking.timer.start": "Timer über {minutes} Min. starten",
+  "cooking.timer.running": "Noch {minutes}:{seconds}",
+  "cooking.timer.done": "Die Zeit ist um",
+  "cooking.timer.dismiss": "Timer schließen",
+  "cooking.madeIt.toast": "Zu deiner Kochhistorie hinzugefügt.",
+  "cooking.madeIt.undo": "Rückgängig",
+  "cooking.screenOn": "Der Bildschirm bleibt beim Kochen an."
 }

@@ -465,10 +465,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cook-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start cooking
+         * @description Starting a session gives up whatever else you had going, in one transaction. At most one session is active per person, which is what makes `GET /cook-sessions/current` a single unambiguous answer.
+         */
+        post: operations["startCookSessionV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cook-sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What you are cooking
+         * @description 404 when nothing is being cooked. Drives the bar that lets you pick a recipe back up where you left it, so the answer carries the recipe's title and needs no second request.
+         */
+        get: operations["getCurrentCookSessionV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cook-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Finish or abandon
+         * @description Pass `completed=true` when the cooking was finished.
+         */
+        delete: operations["endCookSessionV1"];
+        options?: never;
+        head?: never;
+        /**
+         * Move to a step, or rescale
+         * @description Called on every step advance, so it is deliberately cheap: a step touches two columns and does not bump the version, because the last tap genuinely is the truth about where the cook is. Rescaling does bump it.
+         */
+        patch: operations["updateCookSessionV1"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A cooking session. */
+        CookSessionsResponse: {
+            /**
+             * Format: uuid
+             * @description The session's id.
+             */
+            sessionId: string;
+            /**
+             * Format: uuid
+             * @description What is being cooked.
+             */
+            recipeId: string;
+            /** @description What that recipe is called, so a resume bar needs no second request. */
+            recipeTitle: string;
+            /**
+             * Format: double
+             * @description The scaling in force.
+             */
+            servings: number;
+            /**
+             * Format: int32
+             * @description Which step the cook is on.
+             */
+            currentStepIndex: number;
+            /**
+             * Format: date-time
+             * @description When they started.
+             */
+            startedAt: string;
+            /**
+             * Format: date-time
+             * @description When they last did anything.
+             */
+            lastActiveAt: string;
+            /**
+             * Format: int64
+             * @description The entity version, for If-Match on a change worth guarding.
+             */
+            version: number;
+        };
+        /** @description What to start cooking. */
+        CookSessionsStartRequest: {
+            /**
+             * Format: uuid
+             * @description Which recipe.
+             */
+            recipeId: string;
+            /**
+             * Format: double
+             * @description The scaling to cook at, so resuming reopens at the same numbers.
+             */
+            servings: number;
+        };
+        /** @description A change to a session in progress. */
+        CookSessionsUpdateRequest: {
+            /**
+             * Format: int32
+             * @description Which step the cook is on, from zero.
+             */
+            currentStepIndex?: number | null;
+            /**
+             * Format: double
+             * @description A new scaling, because one more person arrived.
+             */
+            servings?: number | null;
+        };
         /** @description The role to give a member. */
         HouseholdsChangeMemberRoleRequest: {
             /** @description `owner` or `member`. */
@@ -2990,6 +3120,197 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    startCookSessionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookSessionsStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookSessionsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCurrentCookSessionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookSessionsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    endCookSessionV1: {
+        parameters: {
+            query?: {
+                completed?: string;
+            };
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateCookSessionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookSessionsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookSessionsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

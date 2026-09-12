@@ -2150,10 +2150,342 @@
           }
         }
       }
+    },
+    "/api/v1/cook-sessions": {
+      "post": {
+        "tags": [
+          "CookSessions"
+        ],
+        "summary": "Start cooking",
+        "description": "Starting a session gives up whatever else you had going, in one transaction. At most one session is active per person, which is what makes `GET /cook-sessions/current` a single unambiguous answer.",
+        "operationId": "startCookSessionV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookSessionsStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookSessionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cook-sessions/current": {
+      "get": {
+        "tags": [
+          "CookSessions"
+        ],
+        "summary": "What you are cooking",
+        "description": "404 when nothing is being cooked. Drives the bar that lets you pick a recipe back up where you left it, so the answer carries the recipe's title and needs no second request.",
+        "operationId": "getCurrentCookSessionV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookSessionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cook-sessions/{sessionId}": {
+      "patch": {
+        "tags": [
+          "CookSessions"
+        ],
+        "summary": "Move to a step, or rescale",
+        "description": "Called on every step advance, so it is deliberately cheap: a step touches two columns and does not bump the version, because the last tap genuinely is the truth about where the cook is. Rescaling does bump it.",
+        "operationId": "updateCookSessionV1",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookSessionsUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookSessionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "CookSessions"
+        ],
+        "summary": "Finish or abandon",
+        "description": "Pass `completed=true` when the cooking was finished.",
+        "operationId": "endCookSessionV1",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "completed",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "CookSessionsResponse": {
+        "required": [
+          "sessionId",
+          "recipeId",
+          "recipeTitle",
+          "servings",
+          "currentStepIndex",
+          "startedAt",
+          "lastActiveAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "The session's id.",
+            "format": "uuid"
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "What is being cooked.",
+            "format": "uuid"
+          },
+          "recipeTitle": {
+            "type": "string",
+            "description": "What that recipe is called, so a resume bar needs no second request."
+          },
+          "servings": {
+            "type": "number",
+            "description": "The scaling in force.",
+            "format": "double"
+          },
+          "currentStepIndex": {
+            "type": "integer",
+            "description": "Which step the cook is on.",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "When they started.",
+            "format": "date-time"
+          },
+          "lastActiveAt": {
+            "type": "string",
+            "description": "When they last did anything.",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "description": "The entity version, for If-Match on a change worth guarding.",
+            "format": "int64"
+          }
+        },
+        "description": "A cooking session."
+      },
+      "CookSessionsStartRequest": {
+        "required": [
+          "recipeId",
+          "servings"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "Which recipe.",
+            "format": "uuid"
+          },
+          "servings": {
+            "type": "number",
+            "description": "The scaling to cook at, so resuming reopens at the same numbers.",
+            "format": "double"
+          }
+        },
+        "description": "What to start cooking."
+      },
+      "CookSessionsUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "currentStepIndex": {
+            "type": "integer",
+            "description": "Which step the cook is on, from zero.",
+            "format": "int32",
+            "nullable": true
+          },
+          "servings": {
+            "type": "number",
+            "description": "A new scaling, because one more person arrived.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "A change to a session in progress."
+      },
       "HouseholdsChangeMemberRoleRequest": {
         "required": [
           "role"
@@ -3778,6 +4110,9 @@
     },
     {
       "name": "Recipes"
+    },
+    {
+      "name": "CookSessions"
     }
   ]
 }

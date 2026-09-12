@@ -1,30 +1,46 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   import { goto, replaceState } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Skeleton } from '$ds';
+  import { Button, Skeleton } from '$ds';
+  import { cooking } from '$features/cooking/stores/cooking.svelte';
+  import StepTimer from '$features/cooking/StepTimer.svelte';
+  import { createTimers } from '$features/cooking/timers.svelte';
+  import { createWakeLock } from '$features/cooking/wakeLock.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
+  import { toaster } from '$shell/toaster.svelte';
 
   /**
    * The same recipe, being cooked.
    *
-   * A separate route rather than a flag on the page, so cooking has a URL: it
-   * survives a reload, it can be resumed on the phone propped against the
-   * bowl, and the back button means what it looks like it means.
+   * A route rather than a flag, so cooking has a URL: it survives a reload, it
+   * can be resumed on the phone propped against the bowl, and the back button
+   * means what it looks like it means.
    */
   const recipeId = $derived(page.params.recipeId ?? '');
-
-  let currentStep = $state(0);
-
   const servings = $derived(yieldFrom(page.url, recipes.detail));
 
-  function scale(value: number) {
-    replaceState(urlAtYield(page.url, value, recipes.detail), {});
-  }
+  const wakeLock = createWakeLock();
+  const timers = createTimers(() => cooking.session?.sessionId ?? null);
+
+  const currentStep = $derived(cooking.session?.currentStepIndex ?? 0);
+  const totalSteps = $derived(recipes.detail?.steps.length ?? 0);
+
+  onMount(() => {
+    const stopHolding = wakeLock.engage();
+    const stopTicking = timers.tick();
+
+    return () => {
+      stopHolding();
+      stopTicking();
+    };
+  });
 
   $effect(() => {
     if (recipeId) {
@@ -32,16 +48,70 @@
     }
   });
 
-  function stopCooking() {
-    const target = new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url);
+  // Starting is idempotent from the page's point of view: arriving here with a
+  // session already going for this recipe simply resumes it.
+  $effect(() => {
+    const detail = recipes.detail;
 
-    void goto(urlAtYield(target, servings, recipes.detail));
+    if (!detail || detail.id !== recipeId || !cooking.resolved) {
+      return;
+    }
+
+    if (cooking.session?.recipeId !== recipeId) {
+      void cooking.start(recipeId, servings).then(() => timers.load());
+    } else {
+      timers.load();
+    }
+  });
+
+  function scale(value: number) {
+    replaceState(urlAtYield(page.url, value, recipes.detail), {});
+    void cooking.rescale(value);
   }
+
+  function move(index: number) {
+    if (index >= 0 && index < totalSteps) {
+      cooking.moveTo(index);
+    }
+  }
+
+  async function finish(completed: boolean) {
+    await cooking.end(completed);
+    timers.clear();
+
+    if (completed) {
+      toaster.show({ message: m['cooking.madeIt.toast'](), tone: 'success' });
+    }
+
+    await goto(
+      urlAtYield(
+        new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url),
+        servings,
+        recipes.detail
+      )
+    );
+  }
+
+  const stepTimer = $derived(timers.timers.find((timer) => timer.stepIndex === currentStep));
+  const duration = $derived(recipes.detail?.steps[currentStep]?.durationSeconds ?? null);
 </script>
 
 <svelte:head>
   <title>{recipes.detail?.title ?? m['recipes.title']()}</title>
 </svelte:head>
+
+<!-- The whole screen advances, because a cook's hands are busy and the target
+     should be the phone rather than a button on it. Arrow keys for a laptop
+     propped on the counter. -->
+<svelte:window
+  onkeydown={(event) => {
+    if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+      move(currentStep + 1);
+    } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+      move(currentStep - 1);
+    }
+  }}
+/>
 
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
@@ -51,12 +121,74 @@
       {servings}
       onservings={scale}
       {currentStep}
-      onstep={(index) => (currentStep = index)}
-      onstopcooking={stopCooking}
+      onstep={move}
+      onstopcooking={() => finish(false)}
     />
+
+    <div class="controls">
+      {#if duration !== null}
+        <StepTimer
+          durationSeconds={duration}
+          timer={stepTimer}
+          secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
+          onstart={() =>
+            timers.start(currentStep, duration, m['recipe.step']({ number: currentStep + 1 }))}
+          ondismiss={() => timers.dismiss(currentStep)}
+        />
+      {/if}
+
+      <p class="progress">
+        {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
+      </p>
+
+      <div class="moves">
+        <Button disabled={currentStep === 0} onclick={() => move(currentStep - 1)}>
+          {m['cooking.previous']()}
+        </Button>
+
+        {#if currentStep < totalSteps - 1}
+          <Button variant="primary" onclick={() => move(currentStep + 1)}>
+            {m['cooking.next']()}
+          </Button>
+        {:else}
+          <Button variant="primary" onclick={() => finish(true)}>
+            {m['cooking.finish']()}
+          </Button>
+        {/if}
+      </div>
+    </div>
   {:else}
     <div aria-busy="true" aria-label={m['recipes.list.loading']()}>
       <Skeleton width="100%" height="12rem" />
     </div>
   {/if}
 </Page>
+
+<style>
+  .controls {
+    position: sticky;
+    bottom: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-overlay);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .progress {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .moves {
+    display: flex;
+    gap: var(--space-3);
+  }
+</style>

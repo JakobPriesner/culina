@@ -233,3 +233,28 @@ than the defaults being weakened:
 ```bash
 RateLimits__RegisterPerIpPerHour=200 RateLimits__LoginPerIpPerMinute=200 dotnet run
 ```
+
+## Cooking sessions
+
+`POST /cook-sessions`, `GET /cook-sessions/current`, `PATCH /cook-sessions/{id}`,
+`DELETE /cook-sessions/{id}`.
+
+At most **one active session per person**, enforced by a partial unique index
+rather than by application code — two devices starting a session at the same
+moment is exactly the case application code gets wrong. Starting abandons
+whatever else was going, in one transaction, because the abandonment is what
+makes the insert legal.
+
+`PATCH` is called on every step advance, so it is deliberately cheap: a step
+touches two columns and **does not bump the version**, since the last tap
+genuinely is the truth about where the cook is, and making each advance a
+concurrency event would leave a second device permanently stale for no benefit.
+Rescaling does bump it.
+
+`GET /cook-sessions/current` carries the recipe's title, so the bar that leads
+back to what is on the hob costs one request rather than two on every page.
+
+**Timers are not in the API.** A timer must keep counting while the app is
+closed and the phone is in a pocket, so it is a wall-clock deadline stored on
+the device, keyed by session id. A cooking session is a fact worth persisting; a
+timer is local ephemera.

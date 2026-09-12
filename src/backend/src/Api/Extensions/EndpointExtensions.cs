@@ -1,4 +1,5 @@
 using Api.Endpoints;
+using Api.Endpoints.CookSessions;
 using Api.Endpoints.Households;
 using Api.Endpoints.Invitations;
 using Api.Endpoints.Recipes;
@@ -29,7 +30,8 @@ internal static class EndpointExtensions
             .AddInvitationsEndpoints()
             .AddSettingsEndpoints()
             .AddRegistrationEndpoints()
-            .AddRecipesEndpoints();
+            .AddRecipesEndpoints()
+            .AddCookSessionEndpoints();
     }
 
     /// <summary>Maps everything registered as an <see cref="IEndpoint"/>.</summary>
