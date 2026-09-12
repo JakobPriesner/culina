@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { Button, EmptyState, ErrorState, SearchField } from '$ds';
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
@@ -65,6 +66,12 @@
       {/if}
     </div>
 
+    <div class="actions">
+      <Button variant="primary" href={resolve('/(app)/recipes/new')}>
+        {m['recipes.empty.action']()}
+      </Button>
+    </div>
+
     <div class="search">
       <SearchField
         id="recipe-search"
@@ -98,7 +105,9 @@
   {:else if recipes.status === 'ready' && recipes.items.length === 0}
     <EmptyState title={m['recipes.empty.title']()} body={m['recipes.empty.body']()}>
       {#snippet action()}
-        <Button variant="primary">{m['recipes.empty.action']()}</Button>
+        <Button variant="primary" href={resolve('/(app)/recipes/new')}>
+          {m['recipes.empty.action']()}
+        </Button>
       {/snippet}
     </EmptyState>
   {:else}
@@ -147,6 +156,10 @@
 
   .search {
     width: min(22rem, 100%);
+  }
+
+  .actions {
+    order: 1;
   }
 
   .more {
