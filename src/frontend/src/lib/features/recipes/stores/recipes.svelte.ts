@@ -42,6 +42,20 @@ class RecipeStore {
    */
   #writes = new Map<string, Promise<unknown>>();
 
+  /**
+   * Which read is allowed to write to the store.
+   *
+   * Typing into the search box starts a request per pause, and they do not come
+   * back in the order they were sent — a short query matches more rows and
+   * takes longer, so the *earlier* search regularly answers last. Without this,
+   * a list settles on whatever the slowest request said, which is the wrong
+   * answer and looks like the filter is broken.
+   */
+  #readToken = 0;
+
+  /** The request a newer one has made pointless. */
+  #reading: AbortController | null = null;
+
   get items(): readonly RecipeSummary[] {
     return this.#items;
   }
@@ -73,10 +87,16 @@ class RecipeStore {
 
   /** Replaces the list. Used when the filters change. */
   async list(householdId: string, filters: RecipeFilters = {}): Promise<void> {
+    const token = this.#beginRead();
+
     this.#status = 'loading';
     this.#error = null;
 
     const result = await this.#fetchPage(householdId, filters, null);
+
+    if (token !== this.#readToken) {
+      return;
+    }
 
     result.match(
       (page) => {
@@ -98,7 +118,14 @@ class RecipeStore {
       return;
     }
 
+    const token = this.#beginRead();
     const result = await this.#fetchPage(householdId, filters, this.#cursor);
+
+    // A filter changed while the next page was in flight: those rows belong to
+    // a list that is no longer on screen.
+    if (token !== this.#readToken) {
+      return;
+    }
 
     result.match(
       (page) => {
@@ -248,11 +275,29 @@ class RecipeStore {
     this.#cursor = null;
     this.#pending = [];
     this.#writes.clear();
+    this.#reading?.abort();
+    this.#reading = null;
+    this.#readToken += 1;
+  }
+
+  /**
+   * Claims the right to write the list, and gives up the previous request.
+   *
+   * Aborting is politeness — the token is what makes it correct.
+   */
+  #beginRead(): number {
+    this.#reading?.abort();
+    this.#reading = new AbortController();
+
+    return ++this.#readToken;
   }
 
   async #fetchPage(householdId: string, filters: RecipeFilters, cursor: string | null) {
+    const signal = this.#reading?.signal;
+
     const result = await request(() =>
       http.GET('/api/v1/recipes', {
+        signal,
         params: {
           query: {
             householdId,
