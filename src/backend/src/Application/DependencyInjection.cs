@@ -14,6 +14,8 @@ using Application.Households.RevokeInvitation;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
+using Application.Settings.GetRegistration;
+using Application.Settings.UpdateRegistration;
 using Application.Users.GetCurrent;
 using Application.Users.GetPreferences;
 using Application.Users.Register;
@@ -52,6 +54,7 @@ public static class DependencyInjection
             // Users
             .AddScoped<ICommandHandler<RegisterUserCommand, Contracts.Users.Register.Response>,
                 RegisterUserCommandHandler>()
+            .AddScoped<RegistrationDependencies>()
             .AddScoped<IQueryHandler<GetCurrentUserQuery, Contracts.Users.GetCurrent.Response>,
                 GetCurrentUserQueryHandler>()
             .AddScoped<ICommandHandler<UpdateCurrentUserCommand, Contracts.Users.UpdateCurrent.Response>,
@@ -89,6 +92,13 @@ public static class DependencyInjection
                 GetInvitationsQueryHandler>()
             .AddScoped<ICommandHandler<RevokeInvitationCommand>, RevokeInvitationCommandHandler>()
             .AddScoped<ICommandHandler<RedeemInvitationCommand,
-                Contracts.Households.RedeemInvitation.Response>, RedeemInvitationCommandHandler>();
+                Contracts.Households.RedeemInvitation.Response>, RedeemInvitationCommandHandler>()
+
+            // Instance settings
+            .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
+                Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateRegistrationSettingsCommand,
+                Contracts.Settings.UpdateRegistration.Response>,
+                UpdateRegistrationSettingsCommandHandler>();
     }
 }

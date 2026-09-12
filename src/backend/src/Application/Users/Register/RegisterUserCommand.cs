@@ -14,19 +14,21 @@ namespace Application.Users.Register;
 /// <param name="DisplayName">What to call them.</param>
 /// <param name="Password">Their chosen password.</param>
 /// <param name="HouseholdName">What to call the first household, if one is created.</param>
+/// <param name="InvitationCode">A code that joins the new account to a household.</param>
 public sealed record RegisterUserCommand(
     string Email,
     string DisplayName,
     string Password,
-    string? HouseholdName);
+    string? HouseholdName,
+    string? InvitationCode);
 
 internal sealed class RegisterUserCommandHandler(
-    RegistrationSettings registration,
     IUserRepository users,
     IHouseholdRepository households,
+    IInvitationRepository invitations,
     IPasswordHasher passwordHasher,
     IUnitOfWork unitOfWork,
-    TimeProvider time)
+    RegistrationDependencies dependencies)
     : ICommandHandler<RegisterUserCommand, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -43,7 +45,7 @@ internal sealed class RegisterUserCommandHandler(
         var accepted = MayRegister(isFirstAccount, existing).Bind(() => Validate(command));
 
         var result = await accepted.Match(
-            account => StoreAsync(account, isFirstAccount, command.HouseholdName, cancellationToken),
+            account => StoreAsync(account, isFirstAccount, command, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
@@ -61,21 +63,12 @@ internal sealed class RegisterUserCommandHandler(
             return Result.Success();
         }
 
-        if (!registration.OpenRegistration)
+        if (!dependencies.Registration.OpenRegistration)
         {
             return UserErrors.RegistrationClosed;
         }
 
-        // Invitation-gated registration is not implemented yet. Until the
-        // invitation endpoints exist, requiring a code means registration
-        // genuinely is closed, and saying so is better than quietly accepting
-        // an account the admin did not intend to allow.
-        if (registration.RequireInvitation)
-        {
-            return UserErrors.RegistrationClosed;
-        }
-
-        return existingUsers >= registration.MaxUsers
+        return existingUsers >= dependencies.Registration.MaxUsers
             ? UserErrors.MaxUsersReached
             : Result.Success();
     }
@@ -100,30 +93,102 @@ internal sealed class RegisterUserCommandHandler(
     private async Task<Result<Response>> StoreAsync(
         NewAccount account,
         bool isFirstAccount,
-        string? householdName,
+        RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
         var user = User.Register(
             account.Email,
             account.DisplayName,
             passwordHasher.Hash(account.Password),
-            time.GetUtcNow());
+            dependencies.Time.GetUtcNow());
 
-        // The account and its first household are one atomic step: an admin
-        // account with no household would land on a dead end.
+        // The account and the household it lands in are one atomic step: an
+        // account with neither a household nor a way to get one is a dead end,
+        // and a consumed invitation with no account behind it is worse.
         return await unitOfWork.InTransactionAsync(
             async token =>
             {
                 var added = await users.AddAsync(user, isFirstAccount, token).ConfigureAwait(false);
 
                 return await added.Match(
-                    async () => Result<Response>.Success(user.ToRegisterResponse(
-                        isFirstAccount,
-                        await FirstHouseholdIdAsync(user, isFirstAccount, householdName, token)
-                            .ConfigureAwait(false))),
+                    () => PlaceAsync(user, isFirstAccount, command, token),
                     error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gives the new account somewhere to cook: its own household for the very
+    /// first user, or the household the invitation admits to.
+    /// </summary>
+    private async Task<Result<Response>> PlaceAsync(
+        User user,
+        bool isFirstAccount,
+        RegisterUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        if (isFirstAccount)
+        {
+            var created = await FirstHouseholdIdAsync(user, true, command.HouseholdName, cancellationToken)
+                .ConfigureAwait(false);
+
+            return user.ToRegisterResponse(isAdmin: true, created);
+        }
+
+        if (string.IsNullOrWhiteSpace(command.InvitationCode))
+        {
+            // Allowed only when the policy does not demand a code; the account
+            // then starts with no household and the client offers to create one.
+            return dependencies.Registration.RequireInvitation
+                ? HouseholdErrors.InvitationInvalid
+                : user.ToRegisterResponse(isAdmin: false, householdId: null);
+        }
+
+        return await JoinByInvitationAsync(user, command.InvitationCode, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<Result<Response>> JoinByInvitationAsync(
+        User user,
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var found = await invitations.FindByCodeAsync(code, cancellationToken).ConfigureAwait(false);
+
+        var redeemed = found.Bind(invitation => invitation
+            .Redeem(user.Id, dependencies.Time.GetUtcNow())
+            .Map(() => invitation));
+
+        return await redeemed.Match(
+            invitation => AddToHouseholdAsync(user, invitation, cancellationToken),
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
+    }
+
+    private async Task<Result<Response>> AddToHouseholdAsync(
+        User user,
+        HouseholdInvitation invitation,
+        CancellationToken cancellationToken)
+    {
+        var marked = await invitations.MarkRedeemedAsync(invitation, cancellationToken)
+            .ConfigureAwait(false);
+        var household = await households.FindAsync(invitation.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var joined = marked.Bind(() => household)
+            .Bind(found => found
+                .Add(user.Id, HouseholdRole.Member, user.CreatedAt)
+                .Map(() => found));
+
+        return await joined.Match(
+            async found =>
+            {
+                var saved = await households
+                    .UpdateAsync(found, found.Version, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return saved.Map(_ => user.ToRegisterResponse(isAdmin: false, found.Id));
+            },
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
     private async Task<Guid?> FirstHouseholdIdAsync(

@@ -1202,6 +1202,108 @@
           }
         }
       }
+    },
+    "/api/v1/settings/registration": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Read the registration policy",
+        "description": "Instance administrator only.",
+        "operationId": "getRegistrationSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetRegistrationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Change the registration policy",
+        "description": "Instance administrator only. Takes effect on the next registration, with no restart.",
+        "operationId": "updateRegistrationSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateRegistrationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsUpdateRegistrationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1796,6 +1898,102 @@
         },
         "description": "Who signed in, and the token their requests must echo."
       },
+      "SettingsGetRegistrationResponse": {
+        "required": [
+          "openRegistration",
+          "requireInvitation",
+          "maxUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "openRegistration": {
+            "type": "boolean",
+            "description": "Whether anyone may create an account."
+          },
+          "requireInvitation": {
+            "type": "boolean",
+            "description": "Whether a new account must present an invitation code."
+          },
+          "maxUsers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The largest number of accounts this instance allows.",
+            "format": "int32"
+          }
+        },
+        "description": "Who may create an account on this instance."
+      },
+      "SettingsUpdateRegistrationRequest": {
+        "required": [
+          "openRegistration",
+          "requireInvitation",
+          "maxUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "openRegistration": {
+            "type": "boolean",
+            "description": "Whether anyone may create an account."
+          },
+          "requireInvitation": {
+            "type": "boolean",
+            "description": "Whether a new account must present an invitation code."
+          },
+          "maxUsers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The largest number of accounts this instance allows.",
+            "format": "int32"
+          }
+        },
+        "description": "The registration policy to apply."
+      },
+      "SettingsUpdateRegistrationResponse": {
+        "required": [
+          "openRegistration",
+          "requireInvitation",
+          "maxUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "openRegistration": {
+            "type": "boolean",
+            "description": "Whether anyone may create an account."
+          },
+          "requireInvitation": {
+            "type": "boolean",
+            "description": "Whether a new account must present an invitation code."
+          },
+          "maxUsers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The largest number of accounts this instance allows.",
+            "format": "int32"
+          }
+        },
+        "description": "Who may create an account on this instance."
+      },
       "UsersGetCurrentHouseholdMembership": {
         "required": [
           "householdId",
@@ -1942,6 +2140,11 @@
           "householdName": {
             "type": "string",
             "description": "What to call the household created alongside the first account on an\ninstance. Ignored otherwise.",
+            "nullable": true
+          },
+          "invitationCode": {
+            "type": "string",
+            "description": "An invitation code, which joins the new account to that household.\nRequired when the instance's registration policy says so.",
             "nullable": true
           }
         },
@@ -2109,6 +2312,9 @@
     },
     {
       "name": "Households"
+    },
+    {
+      "name": "Settings"
     }
   ]
 }

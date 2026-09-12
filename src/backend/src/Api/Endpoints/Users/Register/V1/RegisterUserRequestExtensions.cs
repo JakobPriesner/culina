@@ -19,6 +19,7 @@ internal static class RegisterUserRequestExtensions
             request.Email,
             request.DisplayName,
             request.Password,
-            request.HouseholdName);
+            request.HouseholdName,
+            request.InvitationCode);
     }
 }

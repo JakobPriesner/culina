@@ -23,7 +23,10 @@ internal static class DependencyInjection
                 CulinaClaims.Scheme,
                 configureOptions: null);
 
-        return services.AddAuthorization();
+        services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
+            AdminRequirementHandler>();
+
+        return services.AddAuthorizationBuilder().AddAdminPolicy().Services;
     }
 
     internal static IServiceCollection AddPresentation(this IServiceCollection services)

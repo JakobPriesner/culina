@@ -17,4 +17,10 @@ public sealed record Request
     /// instance. Ignored otherwise.
     /// </summary>
     public string? HouseholdName { get; init; }
+
+    /// <summary>
+    /// An invitation code, which joins the new account to that household.
+    /// Required when the instance's registration policy says so.
+    /// </summary>
+    public string? InvitationCode { get; init; }
 }
