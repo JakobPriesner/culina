@@ -1,14 +1,16 @@
 import { error } from '@sveltejs/kit';
 
+import { galleryEnabled } from '$shell/gallery';
+
 /**
- * The gallery exists only while developing.
+ * The gallery is not part of the product.
  *
- * `import.meta.env.DEV` is statically false in a production build, so the page
- * body is removed by the bundler — this makes the route itself behave the same
- * way, rather than serving an empty page at a URL that looks like a feature.
+ * `galleryEnabled` is statically false in a release build, so the page body is
+ * removed by the bundler; this makes the route itself behave the same way,
+ * rather than serving an empty page at a URL that looks like a feature.
  */
 export const load = () => {
-  if (!import.meta.env.DEV) {
+  if (!galleryEnabled) {
     error(404, 'Not found');
   }
 };

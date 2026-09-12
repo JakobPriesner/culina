@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { galleryEnabled } from '$shell/gallery';
   import FourStates from '$ds/__fixtures__/FourStates.svelte';
+  import Overlays from '$ds/__fixtures__/Overlays.svelte';
   import {
     Button,
     Checkbox,
@@ -15,9 +17,9 @@
   } from '$ds';
 
   /*
-   * The design-system gallery. Development only: `import.meta.env.DEV` is
-   * statically false in a production build, so the whole tree below is removed
-   * by the bundler and never ships.
+   * The design-system gallery. Not part of the product: `galleryEnabled` is
+   * statically false in a release build, so the whole tree below is removed by
+   * the bundler and never ships.
    *
    * This is the one file exempt from "no hard-coded user-visible text" — the
    * strings here are specimens, not product copy, and translating them would
@@ -35,7 +37,7 @@
 
 <svelte:head><title>Design system</title></svelte:head>
 
-{#if import.meta.env.DEV}
+{#if galleryEnabled}
   <main class="gallery">
     <h1>Design system</h1>
 
@@ -155,6 +157,11 @@
           bind:value={search}
         />
       </div>
+    </section>
+
+    <section>
+      <h2>Overlays and containers</h2>
+      <Overlays />
     </section>
 
     <section>

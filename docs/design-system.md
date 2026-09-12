@@ -264,3 +264,44 @@ matters, and then it is the whole conversation.
 `BusyRegion` is the rule that a refetch of data already on screen **keeps the old
 data**. Replacing a list you are reading with a skeleton loses your place, loses
 your scroll position, and tells you less than the stale list did.
+
+## Overlays
+
+`Sheet`, `Modal` and `Popover` all come from one place; no feature builds its
+own. `Sheet` and `Modal` are the same `Dialog` with different geometry — a sheet
+rises from the bottom edge on a phone, where a thumb already is, and becomes a
+centred dialog past 48rem, because a full-width strip along the bottom of a
+desktop window is a long way from where the eye is. One component and one API,
+so a feature cannot pick the wrong one for the viewport.
+
+`Dialog` is a native `<dialog>` opened with `showModal()`. The browser already
+traps focus, makes the rest of the page inert, puts the dialog in the top layer
+above every stacking context, closes on Escape, and restores focus to whatever
+opened it. A hand-rolled version of that is a few hundred lines and is still
+worse on a screen reader. What is done by hand: locking the page's scroll
+(counted, so a dialog above a dialog does not unlock early), labelling, a
+visible close control — Escape and the backdrop both work but neither is
+discoverable — and keeping the caller's `open` in step with the browser's own
+closing.
+
+`Popover` is the native `popover` attribute, which brings light dismiss, the top
+layer and the trigger pairing for free. For a decision that must be answered,
+use `Sheet` or `Modal`: a popover that must not be dismissed is a modal wearing
+the wrong clothes.
+
+Because all of this is browser behaviour, it is asserted in Playwright rather
+than jsdom — jsdom implements `<dialog>` without the top layer that gives it
+those properties.
+
+## Toasts instead of confirmations
+
+Asking "are you sure?" before something reversible costs everyone a decision to
+protect against a mistake that was already cheap to fix. Culina does the thing
+and offers **Undo** in a toast.
+
+Each toast is `role="status"` — a polite live region, never assertive: it reports
+something that already happened. The clock pauses on hover *and* on focus,
+because a keyboard user reading with focus inside the toast is doing exactly what
+a pointer user hovering is doing. Undo removes the message as it runs, so a
+second press cannot undo the undo. At most three stack; beyond that it is a log,
+not a notification.
