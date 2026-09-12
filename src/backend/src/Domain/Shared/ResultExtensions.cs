@@ -15,6 +15,8 @@ public static class ResultExtensions
     /// <param name="result">The result to transform.</param>
     /// <param name="map">Runs only on success.</param>
     public static Result<TOut> Map<TIn, TOut>(this Result<TIn> result, Func<TIn, TOut> map)
+        where TIn : notnull
+        where TOut : notnull
     {
         ArgumentNullException.ThrowIfNull(map);
 
@@ -26,6 +28,7 @@ public static class ResultExtensions
     /// <param name="result">The result to transform.</param>
     /// <param name="map">Runs only on success.</param>
     public static Result<TOut> Map<TOut>(this Result result, Func<TOut> map)
+        where TOut : notnull
     {
         ArgumentNullException.ThrowIfNull(map);
 
@@ -38,6 +41,8 @@ public static class ResultExtensions
     /// <param name="result">The result to chain from.</param>
     /// <param name="bind">Runs only on success.</param>
     public static Result<TOut> Bind<TIn, TOut>(this Result<TIn> result, Func<TIn, Result<TOut>> bind)
+        where TIn : notnull
+        where TOut : notnull
     {
         ArgumentNullException.ThrowIfNull(bind);
 
@@ -49,6 +54,7 @@ public static class ResultExtensions
     /// <param name="result">The result to chain from.</param>
     /// <param name="bind">Runs only on success.</param>
     public static Result Bind<TIn>(this Result<TIn> result, Func<TIn, Result> bind)
+        where TIn : notnull
     {
         ArgumentNullException.ThrowIfNull(bind);
 
@@ -63,6 +69,7 @@ public static class ResultExtensions
     /// <param name="result">The guard's outcome.</param>
     /// <param name="bind">Runs only when the guard passed.</param>
     public static Result<TOut> Bind<TOut>(this Result result, Func<Result<TOut>> bind)
+        where TOut : notnull
     {
         ArgumentNullException.ThrowIfNull(bind);
 
@@ -88,6 +95,7 @@ public static class ResultExtensions
         this Result<TValue> result,
         Func<TValue, bool> predicate,
         Error error)
+        where TValue : notnull
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentNullException.ThrowIfNull(error);
@@ -101,6 +109,7 @@ public static class ResultExtensions
     /// <param name="result">The result to observe.</param>
     /// <param name="onSuccess">The side effect.</param>
     public static Result<TValue> Tap<TValue>(this Result<TValue> result, Action<TValue> onSuccess)
+        where TValue : notnull
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
 
@@ -138,6 +147,7 @@ public static class ResultExtensions
     /// </remarks>
     public static Result<IReadOnlyList<TValue>> Collect<TValue>(
         this IEnumerable<Result<TValue>> results)
+        where TValue : notnull
     {
         ArgumentNullException.ThrowIfNull(results);
 

@@ -75,6 +75,7 @@ internal sealed class UpdatePreferencesCommandHandler(IUserPreferencesRepository
     }
 
     /// <summary>Reduces a parse to pass/fail so several can be combined.</summary>
-    private static Result Ignoring<TValue>(Result<TValue> result) =>
+    private static Result Ignoring<TValue>(Result<TValue> result)
+        where TValue : notnull =>
         result.Match(_ => Result.Success(), Result.Failure);
 }

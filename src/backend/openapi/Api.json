@@ -1365,6 +1365,56 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Find recipes",
+        "description": "Cursor-paginated. Repeat `ingredient` to ask what you can cook from what you have: results rank by how many of them a recipe uses and how few extras it needs, and each carries `ingredientMatch`. There is no pantry to maintain, so nothing can go stale.",
+        "operationId": "getRecipesV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetAllResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/recipes/{recipeId}": {
@@ -2317,6 +2367,196 @@
           }
         },
         "description": "A new recipe."
+      },
+      "RecipesGetAllIngredientMatch": {
+        "required": [
+          "matched",
+          "requested",
+          "missing"
+        ],
+        "type": "object",
+        "properties": {
+          "matched": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many of the named ingredients this recipe uses.",
+            "format": "int32"
+          },
+          "requested": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many were named.",
+            "format": "int32"
+          },
+          "missing": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many other ingredients it still needs.",
+            "format": "int32"
+          }
+        },
+        "description": "How well a recipe fits what you have."
+      },
+      "RecipesGetAllRecipeSummary": {
+        "required": [
+          "recipeId",
+          "title",
+          "yieldAmount",
+          "yieldKind",
+          "tags",
+          "cookCount",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe's id.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Its hero image, if it has one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              }
+            ],
+            "description": "Prep plus cook, or null when neither is known.",
+            "format": "int32",
+            "nullable": true
+          },
+          "yieldAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many it makes.",
+            "format": "double"
+          },
+          "yieldKind": {
+            "type": "string",
+            "description": "`servings` or `pieces`."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its tags."
+          },
+          "cookCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many times the caller has made it.",
+            "format": "int32"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When it last changed.",
+            "format": "date-time"
+          },
+          "ingredientMatch": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetAllIngredientMatch"
+              }
+            ]
+          }
+        },
+        "description": "A recipe as it appears in a list."
+      },
+      "RecipesGetAllResponse": {
+        "required": [
+          "items",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetAllRecipeSummary"
+            },
+            "description": "The recipes on this page, in the requested order."
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass this back as `cursor` for the next page, or null at the end.",
+            "nullable": true
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many recipes match, across all pages.",
+            "format": "int32"
+          }
+        },
+        "description": "A page of recipes."
       },
       "RecipesGetCookLogCookLogItem": {
         "required": [

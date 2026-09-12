@@ -157,7 +157,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         return new RecipeScope(
             session,
             executor,
-            new RecipeRepository(executor, new TagWriter(executor)),
+            new RecipeRepository(executor, new TagWriter(executor), new RecipeSearcher(executor)),
             new UserRepository(executor),
             new HouseholdRepository(executor));
     }

@@ -1,5 +1,6 @@
 using Api.Endpoints.Recipes.Create.V1;
 using Api.Endpoints.Recipes.Delete.V1;
+using Api.Endpoints.Recipes.GetAll.V1;
 using Api.Endpoints.Recipes.GetById.V1;
 using Api.Endpoints.Recipes.GetCookLog.V1;
 using Api.Endpoints.Recipes.GetNotes.V1;
@@ -16,6 +17,7 @@ internal static class RecipesEndpoints
         services
             .AddSingleton<IEndpoint, CreateRecipeEndpoint>()
             .AddSingleton<IEndpoint, GetRecipeEndpoint>()
+            .AddSingleton<IEndpoint, GetRecipesEndpoint>()
             .AddSingleton<IEndpoint, UpdateRecipeEndpoint>()
             .AddSingleton<IEndpoint, DeleteRecipeEndpoint>()
             .AddSingleton<IEndpoint, GetNotesEndpoint>()

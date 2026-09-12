@@ -82,7 +82,8 @@ internal static class RecipeAssembler
                 row.DurationSeconds),
             "step");
 
-    private static TValue Unwrap<TValue>(Result<TValue> result, string what) =>
+    private static TValue Unwrap<TValue>(Result<TValue> result, string what)
+        where TValue : notnull =>
         result.Match(
             value => value,
             error => throw new InvalidOperationException(

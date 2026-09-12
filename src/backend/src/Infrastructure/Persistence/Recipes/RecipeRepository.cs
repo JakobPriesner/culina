@@ -7,8 +7,13 @@ namespace Infrastructure.Persistence.Recipes;
 /// <summary>Stores recipes.</summary>
 /// <param name="executor">Runs the SQL inside the request's transaction.</param>
 /// <param name="tags">Resolves tag slugs to rows.</param>
-internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags) : IRecipeRepository
+/// <param name="searcher">Runs the search projection.</param>
+internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, RecipeSearcher searcher)
+    : IRecipeRepository
 {
+    public Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken) =>
+        searcher.SearchAsync(search, cancellationToken);
+
     public async Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken)
     {
         // One round trip for the whole aggregate. A recipe is never useful

@@ -25,6 +25,7 @@ public interface ICommandHandler<in TCommand>
 /// <typeparam name="TCommand">The command this handler accepts.</typeparam>
 /// <typeparam name="TResponse">The API-shaped response it produces.</typeparam>
 public interface ICommandHandler<in TCommand, TResponse>
+    where TResponse : notnull
 {
     /// <summary>Executes the command.</summary>
     /// <param name="command">What to do.</param>

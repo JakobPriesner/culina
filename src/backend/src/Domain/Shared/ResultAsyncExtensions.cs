@@ -19,6 +19,8 @@ public static class ResultAsyncExtensions
     public static async Task<Result<TOut>> MapAsync<TIn, TOut>(
         this Task<Result<TIn>> task,
         Func<TIn, TOut> map)
+        where TIn : notnull
+        where TOut : notnull
     {
         ArgumentNullException.ThrowIfNull(task);
 
@@ -35,6 +37,8 @@ public static class ResultAsyncExtensions
     public static async Task<Result<TOut>> BindAsync<TIn, TOut>(
         this Task<Result<TIn>> task,
         Func<TIn, Task<Result<TOut>>> bind)
+        where TIn : notnull
+        where TOut : notnull
     {
         ArgumentNullException.ThrowIfNull(task);
         ArgumentNullException.ThrowIfNull(bind);
@@ -55,6 +59,7 @@ public static class ResultAsyncExtensions
         this Task<Result<TValue>> task,
         Func<TValue, bool> predicate,
         Error error)
+        where TValue : notnull
     {
         ArgumentNullException.ThrowIfNull(task);
 

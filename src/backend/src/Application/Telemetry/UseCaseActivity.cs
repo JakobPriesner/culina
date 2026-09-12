@@ -67,6 +67,7 @@ public sealed class UseCaseActivity : IDisposable
     /// <typeparam name="TValue">What the handler produced.</typeparam>
     /// <param name="result">The handler's outcome.</param>
     public Result<TValue> Record<TValue>(Result<TValue> result)
+        where TValue : notnull
     {
         result.Match(_ => { }, Failed);
 

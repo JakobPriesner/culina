@@ -13,6 +13,7 @@ using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
 using Application.Recipes.Create;
 using Application.Recipes.Delete;
+using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
 using Application.Recipes.GetCookLog;
 using Application.Recipes.GetNotes;
@@ -112,6 +113,8 @@ public static class DependencyInjection
             // Recipes
             .AddScoped<ICommandHandler<CreateRecipeCommand, Contracts.Recipes.RecipeDetail>,
                 CreateRecipeCommandHandler>()
+            .AddScoped<IQueryHandler<GetRecipesQuery, Contracts.Recipes.GetAll.Response>,
+                GetRecipesQueryHandler>()
             .AddScoped<IQueryHandler<GetRecipeQuery, Contracts.Recipes.RecipeDetail>,
                 GetRecipeQueryHandler>()
             .AddScoped<ICommandHandler<UpdateRecipeCommand, Contracts.Recipes.RecipeDetail>,

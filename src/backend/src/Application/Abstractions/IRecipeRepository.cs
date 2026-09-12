@@ -11,6 +11,11 @@ public interface IRecipeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken);
 
+    /// <summary>Finds matching recipes, one page at a time.</summary>
+    /// <param name="search">What to look for.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken);
+
     /// <summary>Stores a new recipe.</summary>
     /// <param name="recipe">The recipe to store.</param>
     /// <param name="cancellationToken">Cancels the write.</param>

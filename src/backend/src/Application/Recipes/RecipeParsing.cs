@@ -87,11 +87,13 @@ internal static class RecipeParsing
             ? new IngredientSegment(id)
             : new TextSegment(segment.Value ?? string.Empty);
 
-    private static Result Labelled<TValue>(Result<TValue> result, string field) =>
+    private static Result Labelled<TValue>(Result<TValue> result, string field)
+        where TValue : notnull =>
         result.Match(
             _ => Result.Success(),
             error => Result.Failure(new FieldError(field, error.Code, error.Description)));
 
-    private static Result Ignoring<TValue>(Result<TValue> result) =>
+    private static Result Ignoring<TValue>(Result<TValue> result)
+        where TValue : notnull =>
         result.Match(_ => Result.Success(), Result.Failure);
 }

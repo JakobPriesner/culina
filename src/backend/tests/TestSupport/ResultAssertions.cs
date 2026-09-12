@@ -18,7 +18,8 @@ public static class ResultAssertions
     /// <summary>Asserts success and returns the value.</summary>
     /// <typeparam name="TValue">What the operation produced.</typeparam>
     /// <param name="result">The outcome under test.</param>
-    public static TValue ShouldBeSuccess<TValue>(this Result<TValue> result) =>
+    public static TValue ShouldBeSuccess<TValue>(this Result<TValue> result)
+        where TValue : notnull =>
         result.Match(
             value => value,
             error => throw new XunitException(
@@ -49,6 +50,7 @@ public static class ResultAssertions
     /// <param name="result">The outcome under test.</param>
     /// <param name="expected">The error the operation should have returned.</param>
     public static void ShouldBeFailure<TValue>(this Result<TValue> result, Error expected)
+        where TValue : notnull
     {
         ArgumentNullException.ThrowIfNull(expected);
 
@@ -60,7 +62,8 @@ public static class ResultAssertions
     /// <summary>Asserts failure and returns the error, for asserting on its causes.</summary>
     /// <typeparam name="TValue">What a success would have produced.</typeparam>
     /// <param name="result">The outcome under test.</param>
-    public static Error ShouldBeFailure<TValue>(this Result<TValue> result) =>
+    public static Error ShouldBeFailure<TValue>(this Result<TValue> result)
+        where TValue : notnull =>
         result.Match<Error>(
             _ => throw new XunitException("Expected failure, but the operation succeeded."),
             error => error);

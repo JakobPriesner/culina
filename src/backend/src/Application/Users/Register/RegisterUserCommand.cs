@@ -227,7 +227,8 @@ internal sealed class RegisterUserCommandHandler(
     /// Re-labels a value object's failure with the request field it came from,
     /// so the client can mark the right input.
     /// </summary>
-    private static Result Labelled<TValue>(Result<TValue> result, string field) =>
+    private static Result Labelled<TValue>(Result<TValue> result, string field)
+        where TValue : notnull =>
         result.Match(_ => Result.Success(), error => Result.Failure(Label(error, field)));
 
     private static Result Labelled(Result result, string field) =>

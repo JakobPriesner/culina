@@ -12,6 +12,7 @@ namespace Application.Abstractions.Messaging;
 /// makes exempting safe HTTP methods from the CSRF check sound.
 /// </remarks>
 public interface IQueryHandler<in TQuery, TResponse>
+    where TResponse : notnull
 {
     /// <summary>Answers the query.</summary>
     /// <param name="query">What to read.</param>

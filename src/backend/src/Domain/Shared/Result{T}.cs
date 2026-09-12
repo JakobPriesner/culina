@@ -6,10 +6,19 @@ namespace Domain.Shared;
 /// </summary>
 /// <typeparam name="TValue">What a successful outcome carries.</typeparam>
 /// <remarks>
-/// <see cref="Match{TOut}"/> is the only way to observe the outcome, so the value
-/// is reachable exactly when it exists.
+/// <para>
+/// <see cref="Match{TOut}"/> is the only way to observe the outcome, so the
+/// value is reachable exactly when it exists.
+/// </para>
+/// <para>
+/// <typeparamref name="TValue"/> is constrained to be non-nullable, which turns
+/// a recurring mistake into a compile error: modelling "absent" as a null
+/// inside a success gives the type two ways to say nothing, and callers then
+/// have to check both.
+/// </para>
 /// </remarks>
 public readonly struct Result<TValue>
+    where TValue : notnull
 {
     private readonly TValue? value;
     private readonly Error? error;
