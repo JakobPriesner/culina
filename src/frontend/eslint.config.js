@@ -53,6 +53,14 @@ export default ts.config(
     }
   },
   {
+    // A design-system component takes its href as a prop: it cannot know
+    // whether the caller is linking to a route or off site, so resolution stays
+    // with the page that knows. The rule keeps working everywhere else, which
+    // is where a literal internal link would actually appear.
+    files: ['src/lib/design-system/**'],
+    rules: { 'svelte/no-navigation-without-resolve': 'off' }
+  },
+  {
     // The wrapper is the one place allowed to call fetch and to see the
     // generated schema.
     files: ['src/lib/api/**'],

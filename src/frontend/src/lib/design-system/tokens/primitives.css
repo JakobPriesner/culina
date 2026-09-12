@@ -36,9 +36,12 @@
   --c-sage-200: #cfe0c8;
   --c-amber-500: #b3801f;
   --c-amber-200: #f5e2b8;
-  --c-rust-500: #b03a2e;
-  --c-rust-600: #8f2d23;
-  --c-rust-200: #f4cdc7;
+  /* A true red, not another clay. Destructive has to be distinguishable from
+     primary at a glance, and in a warm palette a red-brown danger colour sits
+     only a few degrees of hue from the terracotta accent. */
+  --c-rust-500: #c62f2f;
+  --c-rust-600: #9e1f1f;
+  --c-rust-200: #f7cfcb;
 
   --c-white: #ffffff;
   --c-black: #000000;

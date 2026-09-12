@@ -174,6 +174,18 @@ cooking/   CookSurface  CookStep  CookIngredientStrip  CookProgress
 shopping/  ShoppingSection  ShoppingItemRow  AddFromRecipeSheet  SectionPicker
 household/ HouseholdSwitcher  MemberList  InvitationPanel
 app/       AppShell  NavRail  NavBar  ThemeToggle  LocalePicker  OfflineBadge
+
+Sizing note: the space scale is sparse (1, 2, 3, 4, 6, 8, 12, 16, 24) and there
+are three control heights — `--control-sm` is 2.75rem, not because it looks
+small but because 44px is the floor for something a wet thumb has to hit while
+the phone is propped against a mixing bowl. "Small" means dense, never hard to
+press.
+
+`inputs/control.css` is the one global class in the app (`.ds-control`). It
+describes what a typed-into or chosen-from control looks like, once, because a
+text input, a select and a search field that each own a copy of that are three
+things that drift — and the drift is only visible when two of them sit next to
+each other in a form.
 ```
 
 ## The interaction that defines the product

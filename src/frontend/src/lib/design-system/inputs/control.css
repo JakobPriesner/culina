@@ -1,0 +1,44 @@
+/*
+ * The one description of what a typed-into or chosen-from control looks like.
+ *
+ * Deliberately global rather than repeated in each component's scoped styles:
+ * a text input, a select and a search field that each own a copy of this are
+ * three things that drift, and the drift is only visible when two of them sit
+ * next to each other in a form. This is the exception to "no global classes",
+ * and it exists for exactly these components.
+ */
+
+.ds-control {
+  width: 100%;
+  min-width: 0;
+  height: var(--control-md);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.ds-control::placeholder {
+  color: var(--text-subtle);
+}
+
+.ds-control:hover:not(:disabled) {
+  border-color: var(--text-subtle);
+}
+
+.ds-control:disabled {
+  background: var(--surface-sunken);
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
+
+/* Colour is never the only signal: the message under the field says what is
+   wrong, and aria-invalid says it to a screen reader. */
+.ds-control[aria-invalid='true'] {
+  border-color: var(--danger);
+}
