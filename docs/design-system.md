@@ -232,3 +232,35 @@ The complete list. Anything not here does not animate.
 | Toast enter/leave | 200 ms | arrival without a jump |
 | Shopping item check | 200 ms | the row sinking is the confirmation |
 | Skeleton shimmer | 1.4 s loop | static tint under reduced motion |
+
+## Waiting, emptiness and failure
+
+`createLoadingState()` in `lib/app/` is the only implementation of the timing
+rules, and every feature uses it rather than its own `setTimeout` — the moment
+two screens disagree about these numbers the app feels inconsistent and nobody
+can say why.
+
+- **~150 ms before anything appears.** Most responses arrive inside that, and a
+  skeleton that flashes for one frame makes a fast app feel broken.
+- **~300 ms minimum once shown.** Otherwise a response landing at 160 ms
+  produces a flicker that reads as a glitch rather than as progress.
+- **~10 s to "this is taking longer than usual", with a retry.** Better than
+  spinning forever while the person wonders whether to reload.
+
+`Skeleton` shows the shape of what is coming, so the layout does not jump. It is
+`aria-hidden`; the container carries `aria-busy`, because a screen reader listing
+twelve empty boxes is worse than silence. Under `prefers-reduced-motion` it is a
+flat tint, which says "this is coming" just as well.
+
+`EmptyState` insists on a real action, and on distinguishing **"you have not made
+one yet"** from **"your filter matched nothing"** — the second is a mistake to
+undo, the first is an invitation. "No results" alone tells someone what they can
+already see.
+
+`ErrorState` keeps the page frame, says what failed in plain language, offers
+retry, and shows the request id in small print. Nobody reads that id until it
+matters, and then it is the whole conversation.
+
+`BusyRegion` is the rule that a refetch of data already on screen **keeps the old
+data**. Replacing a list you are reading with a skeleton loses your place, loses
+your scroll position, and tells you less than the stale list did.
