@@ -28,7 +28,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
     public async Task InvokeAsync(
         HttpContext context,
         ISessionStore sessions,
-        ISessionTokens tokens,
+        ISecretTokens tokens,
         ILogger<CsrfMiddleware> logger)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -62,7 +62,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
     private static async Task<bool> IsValidAsync(
         HttpContext context,
         ISessionStore sessions,
-        ISessionTokens tokens)
+        ISecretTokens tokens)
     {
         if (context.Request.Headers[CulinaHeaders.Csrf] is not [{ Length: > 0 } presented])
         {

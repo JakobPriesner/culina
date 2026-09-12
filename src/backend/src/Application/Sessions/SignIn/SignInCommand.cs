@@ -24,7 +24,7 @@ public sealed record SignInCommand(
 internal sealed class SignInCommandHandler(
     IUserRepository users,
     ISessionStore sessions,
-    ISessionTokens tokens,
+    ISecretTokens tokens,
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
     SignInDependencies dependencies)

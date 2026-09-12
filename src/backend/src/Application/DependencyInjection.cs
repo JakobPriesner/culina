@@ -1,12 +1,16 @@
 using Application.Abstractions.Messaging;
 using Application.Households.ChangeMemberRole;
 using Application.Households.Create;
+using Application.Households.CreateInvitation;
 using Application.Households.Delete;
 using Application.Households.GetAll;
 using Application.Households.GetById;
+using Application.Households.GetInvitations;
 using Application.Households.GetMembers;
+using Application.Households.RedeemInvitation;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
+using Application.Households.RevokeInvitation;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -78,6 +82,13 @@ public static class DependencyInjection
                 GetMembersQueryHandler>()
             .AddScoped<ICommandHandler<ChangeMemberRoleCommand,
                 Contracts.Households.ChangeMemberRole.Response>, ChangeMemberRoleCommandHandler>()
-            .AddScoped<ICommandHandler<RemoveMemberCommand>, RemoveMemberCommandHandler>();
+            .AddScoped<ICommandHandler<RemoveMemberCommand>, RemoveMemberCommandHandler>()
+            .AddScoped<ICommandHandler<CreateInvitationCommand,
+                Contracts.Households.CreateInvitation.Response>, CreateInvitationCommandHandler>()
+            .AddScoped<IQueryHandler<GetInvitationsQuery, Contracts.Households.GetInvitations.Response>,
+                GetInvitationsQueryHandler>()
+            .AddScoped<ICommandHandler<RevokeInvitationCommand>, RevokeInvitationCommandHandler>()
+            .AddScoped<ICommandHandler<RedeemInvitationCommand,
+                Contracts.Households.RedeemInvitation.Response>, RedeemInvitationCommandHandler>();
     }
 }

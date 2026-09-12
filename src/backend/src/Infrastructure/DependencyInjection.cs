@@ -60,7 +60,7 @@ public static class DependencyInjection
         // Stateless and thread-safe, so one instance serves every request.
         services
             .AddSingleton<IPasswordHasher, Argon2PasswordHasher>()
-            .AddSingleton<ISessionTokens, SessionTokens>()
+            .AddSingleton<ISecretTokens, SecretTokens>()
             .AddScoped<ISessionStore, SessionStore>()
             // Singleton: the attempt counters must be shared across requests.
             .AddSingleton<ILoginAttempts, InMemoryLoginAttempts>()
@@ -80,6 +80,7 @@ public static class DependencyInjection
             .AddScoped<IUserRepository, UserRepository>()
             .AddScoped<IUserPreferencesRepository, UserPreferencesRepository>()
             .AddScoped<IHouseholdRepository, HouseholdRepository>()
+            .AddScoped<IInvitationRepository, InvitationRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.

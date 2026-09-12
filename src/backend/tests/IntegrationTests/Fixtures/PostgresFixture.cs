@@ -1,5 +1,6 @@
 using Application.Abstractions.Settings;
 using Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -68,10 +69,24 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     private NpgsqlDataSource DataSource => dataSource ??= CulinaDataSource.Build(Settings);
 
-    /// <summary>Empties every table, leaving the migrated schema in place.</summary>
+    /// <summary>
+    /// Returns the instance to a clean state: every table empty, and every
+    /// instance-settings group back at its compiled-in defaults.
+    /// </summary>
+    /// <remarks>
+    /// Settings are deliberately a process-wide mutable singleton, so a test
+    /// that opens registration would otherwise leak that into every test that
+    /// runs afterwards. Resetting them here means no test has to remember.
+    /// </remarks>
     public async Task ResetAsync(CancellationToken cancellationToken)
     {
         await DatabaseReset.TruncateAllAsync(DataSource, cancellationToken);
+
+        if (api is not null)
+        {
+            api.Services.GetRequiredService<RegistrationSettings>()
+                .CopyFrom(new RegistrationSettings());
+        }
     }
 
     public async ValueTask DisposeAsync()

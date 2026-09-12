@@ -8,7 +8,7 @@ namespace Infrastructure.Identity;
 /// <summary>Stores sessions.</summary>
 /// <param name="executor">Runs the SQL.</param>
 /// <param name="tokens">Hashes the cookie value for lookup.</param>
-internal sealed class SessionStore(DbExecutor executor, ISessionTokens tokens) : ISessionStore
+internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : ISessionStore
 {
     private const string Columns =
         "id, user_id, token_hash, csrf_token_hash, created_at, last_seen_at, expires_at, "

@@ -131,7 +131,7 @@ public class SessionStoreTests(PostgresFixture postgres)
 
         var session = postgres.NewSession();
         var executor = new DbExecutor(session);
-        var tokens = new SessionTokens();
+        var tokens = new SecretTokens();
 
         return new SessionScope(
             session,
@@ -144,7 +144,7 @@ public class SessionStoreTests(PostgresFixture postgres)
         DbSession Db,
         ISessionStore Sessions,
         IUserRepository Users,
-        ISessionTokens Tokens) : IAsyncDisposable
+        ISecretTokens Tokens) : IAsyncDisposable
     {
         internal (Session Session, string Token) NewSession(Guid userId, TimeSpan? lifetime = null)
         {

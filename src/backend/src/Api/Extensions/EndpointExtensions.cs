@@ -1,5 +1,6 @@
 using Api.Endpoints;
 using Api.Endpoints.Households;
+using Api.Endpoints.Invitations;
 using Api.Endpoints.Sessions;
 using Api.Endpoints.Users;
 
@@ -21,7 +22,8 @@ internal static class EndpointExtensions
         return services
             .AddUsersEndpoints()
             .AddSessionsEndpoints()
-            .AddHouseholdsEndpoints();
+            .AddHouseholdsEndpoints()
+            .AddInvitationsEndpoints();
     }
 
     /// <summary>Maps everything registered as an <see cref="IEndpoint"/>.</summary>

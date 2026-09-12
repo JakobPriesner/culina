@@ -941,6 +941,267 @@
           }
         }
       }
+    },
+    "/api/v1/households/{householdId}/invitations": {
+      "post": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Invite someone",
+        "description": "Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored.",
+        "operationId": "createHouseholdInvitationV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsCreateInvitationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "List open invitations",
+        "description": "Owners only. Returns metadata and never a code: the code is shown once, at creation, so this list cannot hand one out.",
+        "operationId": "getHouseholdInvitationsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetInvitationsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/invitations/{invitationId}": {
+      "delete": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Revoke an invitation",
+        "description": "Owners only. The code stops working immediately.",
+        "operationId": "revokeHouseholdInvitationV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{code}/redemptions": {
+      "post": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Join a household",
+        "description": "Unknown, expired and already-used codes all return the identical households.invitation_invalid, so a code cannot be probed for validity.",
+        "operationId": "redeemInvitationV1",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsRedeemInvitationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -983,6 +1244,31 @@
           }
         },
         "description": "The member after the change."
+      },
+      "HouseholdsCreateInvitationResponse": {
+        "required": [
+          "invitationId",
+          "code",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "string",
+            "description": "The invitation's id, for revoking it.",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "description": "The code to share. Shown exactly once — only its digest is stored, so\nthis value cannot be recovered afterwards."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "When it stops working.",
+            "format": "date-time"
+          }
+        },
+        "description": "A newly issued invitation."
       },
       "HouseholdsCreateRequest": {
         "required": [
@@ -1131,6 +1417,54 @@
         },
         "description": "One household, with everyone in it."
       },
+      "HouseholdsGetInvitationsInvitationSummary": {
+        "required": [
+          "invitationId",
+          "createdBy",
+          "createdAt",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "string",
+            "description": "The invitation's id, for revoking it.",
+            "format": "uuid"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Who issued it.",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was issued.",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "When it stops working.",
+            "format": "date-time"
+          }
+        },
+        "description": "An open invitation."
+      },
+      "HouseholdsGetInvitationsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsGetInvitationsInvitationSummary"
+            },
+            "description": "One entry per open invitation, newest first."
+          }
+        },
+        "description": "The household's unused invitations."
+      },
       "HouseholdsGetMembersResponse": {
         "required": [
           "items"
@@ -1228,6 +1562,25 @@
           }
         },
         "description": "One person in a household."
+      },
+      "HouseholdsRedeemInvitationResponse": {
+        "required": [
+          "householdId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          }
+        },
+        "description": "The household the caller just joined."
       },
       "HouseholdsRenameRequest": {
         "required": [

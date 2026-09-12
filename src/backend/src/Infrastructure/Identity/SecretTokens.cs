@@ -18,7 +18,7 @@ namespace Infrastructure.Identity;
 /// replayed as a live session.
 /// </para>
 /// </remarks>
-internal sealed class SessionTokens : ISessionTokens
+internal sealed class SecretTokens : ISecretTokens
 {
     private const int TokenBytes = 32;
 

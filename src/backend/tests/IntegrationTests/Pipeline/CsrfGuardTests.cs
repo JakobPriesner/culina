@@ -112,7 +112,7 @@ public class CsrfGuardTests
     /// <summary>A session that exists, and the two tokens that belong to it.</summary>
     private sealed class CsrfWorld
     {
-        internal SessionTokens Tokens { get; } = new();
+        internal SecretTokens Tokens { get; } = new();
 
         internal string SessionToken { get; }
 
