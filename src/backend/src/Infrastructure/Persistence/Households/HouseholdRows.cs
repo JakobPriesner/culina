@@ -26,6 +26,26 @@ internal sealed record HouseholdMemberRow
     public DateTimeOffset JoinedAt { get; init; }
 }
 
+/// <summary>
+/// The members-with-names projection as PostgreSQL returns it.
+/// </summary>
+/// <remarks>
+/// A row type with settable properties rather than mapping straight onto the
+/// positional read model: Dapper's underscore matching applies to properties,
+/// not to constructor parameters, so a positional record silently fails to bind
+/// snake_case columns.
+/// </remarks>
+internal sealed record HouseholdMemberViewRow
+{
+    public Guid UserId { get; init; }
+
+    public string DisplayName { get; init; } = string.Empty;
+
+    public string Role { get; init; } = string.Empty;
+
+    public DateTimeOffset JoinedAt { get; init; }
+}
+
 /// <summary>Turns stored rows back into a domain household.</summary>
 internal static class HouseholdRowMappings
 {
@@ -45,6 +65,17 @@ internal static class HouseholdRowMappings
             row.CreatedAt,
             row.Version,
             members.Select(member => member.ToDomain()));
+    }
+
+    internal static Application.Abstractions.HouseholdMemberView ToView(this HouseholdMemberViewRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+
+        return new Application.Abstractions.HouseholdMemberView(
+            row.UserId,
+            row.DisplayName,
+            row.Role,
+            row.JoinedAt);
     }
 
     internal static HouseholdMember ToDomain(this HouseholdMemberRow row)

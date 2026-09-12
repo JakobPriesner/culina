@@ -1,4 +1,12 @@
 using Application.Abstractions.Messaging;
+using Application.Households.ChangeMemberRole;
+using Application.Households.Create;
+using Application.Households.Delete;
+using Application.Households.GetAll;
+using Application.Households.GetById;
+using Application.Households.GetMembers;
+using Application.Households.RemoveMember;
+using Application.Households.Rename;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -54,6 +62,22 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RevokeSessionCommand>, RevokeSessionCommandHandler>()
             .AddScoped<IQueryHandler<GetSessionsQuery, Contracts.Sessions.GetAll.Response>,
                 GetSessionsQueryHandler>()
-            .AddScoped<SignInDependencies>();
+            .AddScoped<SignInDependencies>()
+
+            // Households
+            .AddScoped<IQueryHandler<GetHouseholdsQuery, Contracts.Households.GetAll.Response>,
+                GetHouseholdsQueryHandler>()
+            .AddScoped<ICommandHandler<CreateHouseholdCommand, Contracts.Households.Create.Response>,
+                CreateHouseholdCommandHandler>()
+            .AddScoped<IQueryHandler<GetHouseholdQuery, Contracts.Households.GetById.Response>,
+                GetHouseholdQueryHandler>()
+            .AddScoped<ICommandHandler<RenameHouseholdCommand, Contracts.Households.Rename.Response>,
+                RenameHouseholdCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteHouseholdCommand>, DeleteHouseholdCommandHandler>()
+            .AddScoped<IQueryHandler<GetMembersQuery, Contracts.Households.GetMembers.Response>,
+                GetMembersQueryHandler>()
+            .AddScoped<ICommandHandler<ChangeMemberRoleCommand,
+                Contracts.Households.ChangeMemberRole.Response>, ChangeMemberRoleCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveMemberCommand>, RemoveMemberCommandHandler>();
     }
 }

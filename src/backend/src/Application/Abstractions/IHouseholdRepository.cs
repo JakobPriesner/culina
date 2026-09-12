@@ -30,6 +30,13 @@ public interface IHouseholdRepository
         long expectedVersion,
         CancellationToken cancellationToken);
 
+    /// <summary>The household's members, with their names, for the members screen.</summary>
+    /// <param name="householdId">Which household.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<IReadOnlyList<HouseholdMemberView>> MembersAsync(
+        Guid householdId,
+        CancellationToken cancellationToken);
+
     /// <summary>Deletes a household and everything it owns.</summary>
     /// <param name="householdId">Which household.</param>
     /// <param name="cancellationToken">Cancels the write.</param>

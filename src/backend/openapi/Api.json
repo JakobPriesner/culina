@@ -420,10 +420,880 @@
           }
         }
       }
+    },
+    "/api/v1/households": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "List your households",
+        "description": "Every household the caller belongs to, by name.",
+        "operationId": "getHouseholdsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetAllResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Create a household",
+        "description": "The caller becomes its first owner.",
+        "operationId": "createHouseholdV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdsCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Read a household",
+        "description": "A household and its members. A non-member sees a 404, never a 403.",
+        "operationId": "getHouseholdByIdV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetByIdResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Rename a household",
+        "description": "Owners only. Requires If-Match with the version you last read.",
+        "operationId": "renameHouseholdV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdsRenameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsRenameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Delete a household",
+        "description": "Owners only. Deletes the household and every recipe, tag and shopping list it owns. There is no undo.",
+        "operationId": "deleteHouseholdV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/members": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "List a household's members",
+        "description": "Members only. A non-member sees a 404.",
+        "operationId": "getHouseholdMembersV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetMembersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Change a member's role",
+        "description": "Owners only. Demoting the last owner is refused: a household with no owner can never be administered again.",
+        "operationId": "changeHouseholdMemberRoleV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdsChangeMemberRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsChangeMemberRoleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Remove a member, or leave",
+        "description": "An owner may remove anyone; anyone may remove themselves. Neither may leave the household without an owner.",
+        "operationId": "removeHouseholdMemberV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "HouseholdsChangeMemberRoleRequest": {
+        "required": [
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "`owner` or `member`."
+          }
+        },
+        "description": "The role to give a member."
+      },
+      "HouseholdsChangeMemberRoleResponse": {
+        "required": [
+          "member",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "member": {
+            "$ref": "#/components/schemas/HouseholdsMember"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The household's new version.",
+            "format": "int64"
+          }
+        },
+        "description": "The member after the change."
+      },
+      "HouseholdsCreateRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to call it."
+          }
+        },
+        "description": "A new household."
+      },
+      "HouseholdsCreateResponse": {
+        "required": [
+          "householdId",
+          "name",
+          "memberCount",
+          "yourRole",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "memberCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many people are in it.",
+            "format": "int32"
+          },
+          "yourRole": {
+            "type": "string",
+            "description": "What the caller may do in it."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "The household that was created."
+      },
+      "HouseholdsGetAllResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsHouseholdSummary"
+            },
+            "description": "One entry per household, by name."
+          }
+        },
+        "description": "The households the caller belongs to."
+      },
+      "HouseholdsGetByIdResponse": {
+        "required": [
+          "createdAt",
+          "members",
+          "householdId",
+          "name",
+          "memberCount",
+          "yourRole",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "description": "When it was created.",
+            "format": "date-time"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsMember"
+            },
+            "description": "Its members."
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "memberCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many people are in it.",
+            "format": "int32"
+          },
+          "yourRole": {
+            "type": "string",
+            "description": "What the caller may do in it."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "One household, with everyone in it."
+      },
+      "HouseholdsGetMembersResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsMember"
+            },
+            "description": "One entry per member."
+          }
+        },
+        "description": "Everyone in a household."
+      },
+      "HouseholdsHouseholdSummary": {
+        "required": [
+          "householdId",
+          "name",
+          "memberCount",
+          "yourRole",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "memberCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many people are in it.",
+            "format": "int32"
+          },
+          "yourRole": {
+            "type": "string",
+            "description": "What the caller may do in it."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "A household as it appears in a list."
+      },
+      "HouseholdsMember": {
+        "required": [
+          "userId",
+          "displayName",
+          "role",
+          "joinedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Who.",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "What they are called."
+          },
+          "role": {
+            "type": "string",
+            "description": "`owner` or `member`."
+          },
+          "joinedAt": {
+            "type": "string",
+            "description": "When they joined.",
+            "format": "date-time"
+          }
+        },
+        "description": "One person in a household."
+      },
+      "HouseholdsRenameRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to call the household."
+          }
+        },
+        "description": "The new name."
+      },
+      "HouseholdsRenameResponse": {
+        "required": [
+          "householdId",
+          "name",
+          "memberCount",
+          "yourRole",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "memberCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "How many people are in it.",
+            "format": "int32"
+          },
+          "yourRole": {
+            "type": "string",
+            "description": "What the caller may do in it."
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "The household after the change."
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -883,6 +1753,9 @@
     },
     {
       "name": "Sessions"
+    },
+    {
+      "name": "Households"
     }
   ]
 }

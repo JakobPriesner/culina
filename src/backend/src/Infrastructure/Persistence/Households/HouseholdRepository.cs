@@ -110,6 +110,27 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         return version.Value;
     }
 
+    public async Task<IReadOnlyList<HouseholdMemberView>> MembersAsync(
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        // Joined in SQL rather than loading a user per member: the members
+        // screen is the only place a name is needed, and the domain has no
+        // business carrying one.
+        var rows = await executor.QueryAsync<HouseholdMemberViewRow>(
+            """
+            select m.user_id, u.display_name, m.role, m.joined_at
+            from household_members m
+            join users u on u.id = m.user_id
+            where m.household_id = @householdId
+            order by m.joined_at;
+            """,
+            new { householdId },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. rows.Select(row => row.ToView())];
+    }
+
     public async Task<Result> DeleteAsync(Guid householdId, CancellationToken cancellationToken)
     {
         // Recipes, tags and the shopping list cascade from here; there is no

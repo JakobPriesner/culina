@@ -54,6 +54,12 @@ public static class HouseholdErrors
         "That invitation is not valid. Ask for a new one.",
         ErrorType.NotFound);
 
+    /// <summary>The role is not one this app recognises.</summary>
+    public static readonly Error InvalidRole = new(
+        "households.invalid_role",
+        "A member is either an owner or a member.",
+        ErrorType.Validation);
+
     /// <summary>The household name is blank or too long.</summary>
     public static readonly Error InvalidName = new(
         "households.invalid_name",
