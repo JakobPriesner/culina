@@ -143,4 +143,34 @@ test.describe('cooking a recipe', () => {
     // that does not wait is a button that teaches people to ignore buttons.
     await expect(page.getByRole('button', { name: /min timer|timer über/i })).toHaveCount(0);
   });
+
+  test('puts the biggest target under the thumb that is pressed most', async () => {
+    const recipeId = await seedRecipe(page, {
+      title: unique('Wet hands'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }],
+      steps: ['Melt {0}.', 'Stir it.', 'Rest it.']
+    });
+
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.goto(`/recipes/${recipeId}/cook`);
+    await expect(page.getByText(/step 1 of 3|schritt 1 von 3/i)).toBeVisible();
+
+    const next = await page
+      .getByRole('button', { name: /^(next step|nächster schritt)$/i })
+      .boundingBox();
+    const previous = await page
+      .getByRole('button', { name: /^(previous step|vorheriger schritt)$/i })
+      .boundingBox();
+
+    // Measured, because it was measurably wrong: "Previous step" is a longer
+    // phrase than "Next step", and the control that undoes progress used to be
+    // the wider of the two. Next is pressed once per step with a wet thumb and
+    // an eye on a pan; previous is pressed when something went wrong.
+    expect(next!.width).toBeGreaterThan(previous!.width * 2);
+
+    // And neither is ever below the size a thumb can find.
+    expect(Math.min(next!.height, previous!.height)).toBeGreaterThanOrEqual(44);
+    expect(Math.min(next!.width, previous!.width)).toBeGreaterThanOrEqual(44);
+  });
 });

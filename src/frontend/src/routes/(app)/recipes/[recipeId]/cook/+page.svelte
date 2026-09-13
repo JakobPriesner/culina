@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, Skeleton } from '$ds';
+  import { Button, IconButton, Skeleton } from '$ds';
   import { busy } from '$shell/busy.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
@@ -197,22 +197,32 @@
 
       <div class="moves">
         <!-- The largest control size, because these are pressed with a wet
-             thumb while looking at a pan rather than at the screen. -->
-        <Button
+             thumb while looking at a pan rather than at the screen.
+             Measured at 320 px, "Previous step" used to be the *wider* of the
+             two simply because it is a longer phrase — the control that undoes
+             progress was an easier target than the one pressed at every step.
+             It is an icon now, and next takes the room that frees. -->
+        <IconButton
+          label={m['cooking.previous']()}
           size="lg"
+          bordered
           disabled={!ready || currentStep === 0}
           onclick={() => move(currentStep - 1)}
         >
-          {m['cooking.previous']()}
-        </Button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m14 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </IconButton>
 
         <!-- One control that changes what it says, not two that replace each
              other. Swapping the element loses focus at exactly the moment
              somebody reaches the last step, which for a keyboard user means
              tabbing back into the page to finish. -->
-        <Button size="lg" variant="primary" disabled={!ready} onclick={advance}>
-          {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
-        </Button>
+        <div class="advance">
+          <Button size="lg" variant="primary" full disabled={!ready} onclick={advance}>
+            {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
+          </Button>
+        </div>
       </div>
     </div>
   {:else}
@@ -247,6 +257,27 @@
 
   .moves {
     display: flex;
+    flex: 1;
     gap: var(--space-3);
+  }
+
+  /* Next takes whatever is left. It is pressed once per step and Previous is
+     pressed when something went wrong, and a target's size should say which is
+     which. */
+  .advance {
+    flex: 1;
+  }
+
+  /* On a phone the progress line takes its own row, so the controls have the
+     whole width rather than whatever the words beside them left over. */
+  @media (max-width: 30rem) {
+    .controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .progress {
+      text-align: center;
+    }
   }
 </style>
