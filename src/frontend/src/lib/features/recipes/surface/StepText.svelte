@@ -78,4 +78,22 @@
   .ingredient-plain {
     font-weight: var(--weight-semibold);
   }
+
+  /*
+   * On paper an ingredient reference is simply the words it stands for. It is
+   * a button on screen because pointing at it lights up the line it came from,
+   * and there is nothing to point at on a sheet of paper.
+   */
+  @media print {
+    .ingredient {
+      display: inline;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: inherit;
+      font-weight: var(--weight-medium);
+      text-decoration: none;
+    }
+  }
 </style>

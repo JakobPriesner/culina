@@ -55,6 +55,28 @@ export function createScaling(recipe: () => Recipe | null, target: () => number)
         : m['recipes.meta.servings']({ count: current.yieldAmount });
     },
 
+    /**
+     * What it makes at the servings on screen.
+     *
+     * The base yield is what the recipe was written for; this is what the
+     * amounts beside it currently say. Paper needs this one, because a printed
+     * sheet has no servings control to explain itself with — and a page headed
+     * "4 servings" whose ingredients are scaled to six is a quiet lie.
+     */
+    get currentYieldLabel() {
+      const current = recipe();
+
+      if (!current) {
+        return '';
+      }
+
+      const amount = Math.round(current.yieldAmount * factor * 100) / 100;
+
+      return current.yieldKind === 'pieces'
+        ? m['recipes.meta.pieces']({ count: amount })
+        : m['recipes.meta.servings']({ count: amount });
+    },
+
     show,
 
     /** The same, for an ingredient. */

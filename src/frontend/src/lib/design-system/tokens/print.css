@@ -1,0 +1,65 @@
+/*
+ * Layer 3, for paper.
+ *
+ * Print is a medium, not a theme. Every theme and both modes collapse to the
+ * same thing here — ink on paper — because a printer has one background and it
+ * is white, and the browser's "background graphics" setting is off by default
+ * anyway. A dark theme that printed as dark would come out as a page of toner
+ * behind every word, or, with graphics off, as white text on white paper.
+ *
+ * It sits beside the themes rather than inside one for the same reason: adding
+ * a second theme must not mean writing its print palette too. This is imported
+ * after them, so it wins wherever the medium is paper.
+ *
+ * The whole set is assigned rather than the few that obviously matter. A
+ * partial palette is how one forgotten token ends up as pale grey on white,
+ * which is exactly the token nobody checks before sending a page to a printer.
+ */
+@media print {
+  :root {
+    --surface: var(--c-white);
+    --surface-raised: var(--c-white);
+    --surface-sunken: var(--c-white);
+    --surface-overlay: var(--c-white);
+    --surface-accent-subtle: var(--c-white);
+    --surface-hover: var(--c-white);
+    --surface-selected: var(--c-white);
+
+    /* Three weights of grey and no more: a laser printer renders a fourth as
+       the same dots as the third. */
+    --text: var(--c-black);
+    --text-muted: var(--c-sand-700);
+    --text-subtle: var(--c-sand-600);
+    --text-on-accent: var(--c-white);
+    --text-danger: var(--c-black);
+    --text-success: var(--c-black);
+
+    --border: var(--c-sand-400);
+    --border-strong: var(--c-sand-600);
+    --border-focus: var(--c-black);
+
+    /* The accent is the one colour on screen. On paper it is a grey that says
+       nothing, so it becomes ink like everything else. */
+    --accent: var(--c-black);
+    --accent-hover: var(--c-black);
+    --accent-active: var(--c-black);
+    --accent-contrast: var(--c-white);
+
+    --danger: var(--c-black);
+    --danger-hover: var(--c-black);
+    --danger-subtle: var(--c-white);
+    --success: var(--c-black);
+    --success-subtle: var(--c-white);
+    --warning: var(--c-black);
+    --warning-subtle: var(--c-white);
+
+    /* A shadow is a screen's way of lifting something off the page. Paper is
+       the page. */
+    --shadow-card: none;
+    --shadow-overlay: none;
+    --scrim: transparent;
+
+    --skeleton-base: var(--c-white);
+    --skeleton-highlight: var(--c-white);
+  }
+}
