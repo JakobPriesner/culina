@@ -71,6 +71,13 @@ RateLimits__RequestsPerSessionPerMinute=20000 \
 make backend
 ```
 
+`make test-e2e` rebuilds the frontend, but uses the API that is already running.
+Restart the API after endpoint changes. To test against a different local API,
+set `CULINA_API=http://127.0.0.1:5001` alongside the test credentials.
+
+The archive round-trip uses a fresh test household each run: importing into a
+reused household would double its old recipes every time the suite runs.
+
 ## The contract between the halves
 
 The frontend's API client is generated from the backend's OpenAPI document, and
