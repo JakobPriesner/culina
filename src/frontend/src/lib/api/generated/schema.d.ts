@@ -432,6 +432,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipe-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a recipe from a web page
+         * @description Reads the schema.org Recipe a site publishes for search engines, and falls back to the page's words. Nothing is created: what comes back is a draft, shown for correction before anything is saved.
+         *
+         *     Only ordinary public http and https pages. The address is resolved and checked before every connection — including after each redirect — because the server does the fetching, and an unguarded one would read the private network it sits in. Refusals are deliberately vague about which address was refused and why.
+         */
+        post: operations["importRecipeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipes/{recipeId}/notes": {
         parameters: {
             query?: never;
@@ -1273,6 +1295,34 @@ export interface components {
             builtIn: ("g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch")[];
             /** @description What this household has written, that is not built in. */
             own: string[];
+        };
+        /** @description Asks for a recipe to be read from a web page. */
+        RecipesImportRequest: {
+            /** @description The address. An ordinary public http or https page. */
+            url: string;
+        };
+        /** @description What a page turned out to say. */
+        RecipesImportResponse: {
+            /** @description Where it was read from, after any redirects. */
+            sourceUrl: string;
+            /** @description What the page called it. */
+            title?: string | null;
+            /** @description Its ingredients, one line each, exactly as the page wrote them. */
+            ingredientLines: string[];
+            /** @description Its instructions, one paragraph each. */
+            steps: string[];
+            /**
+             * Format: double
+             * @description What it says it makes, when that was a plain number.
+             */
+            servings?: number | null;
+            /**
+             * Format: int32
+             * @description How long it takes, when the page said.
+             */
+            totalMinutes?: number | null;
+            /** @description The page's words, when it published no structured data. */
+            text?: string | null;
         };
         /** @description One line of the ingredient list. */
         RecipesIngredientContract: {
@@ -3259,6 +3309,57 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    importRecipeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesImportRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesImportResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

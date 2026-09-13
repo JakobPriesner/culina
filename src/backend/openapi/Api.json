@@ -1836,6 +1836,68 @@
         }
       }
     },
+    "/api/v1/recipe-imports": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read a recipe from a web page",
+        "description": "Reads the schema.org Recipe a site publishes for search engines, and falls back to the page's words. Nothing is created: what comes back is a draft, shown for correction before anything is saved.\n\nOnly ordinary public http and https pages. The address is resolved and checked before every connection — including after each redirect — because the server does the fetching, and an unguarded one would read the private network it sits in. Refusals are deliberately vague about which address was refused and why.",
+        "operationId": "importRecipeV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesImportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipes/{recipeId}/notes": {
       "get": {
         "tags": [
@@ -4322,6 +4384,70 @@
           }
         },
         "description": "The units a household can measure in."
+      },
+      "RecipesImportRequest": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The address. An ordinary public http or https page."
+          }
+        },
+        "description": "Asks for a recipe to be read from a web page."
+      },
+      "RecipesImportResponse": {
+        "required": [
+          "sourceUrl",
+          "ingredientLines",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceUrl": {
+            "type": "string",
+            "description": "Where it was read from, after any redirects."
+          },
+          "title": {
+            "type": "string",
+            "description": "What the page called it.",
+            "nullable": true
+          },
+          "ingredientLines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its ingredients, one line each, exactly as the page wrote them."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its instructions, one paragraph each."
+          },
+          "servings": {
+            "type": "number",
+            "description": "What it says it makes, when that was a plain number.",
+            "format": "double",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "How long it takes, when the page said.",
+            "format": "int32",
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "description": "The page's words, when it published no structured data.",
+            "nullable": true
+          }
+        },
+        "description": "What a page turned out to say."
       },
       "RecipesIngredientContract": {
         "required": [

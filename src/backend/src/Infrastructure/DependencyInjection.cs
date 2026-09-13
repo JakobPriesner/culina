@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Infrastructure.Identity;
+using Infrastructure.Import;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
@@ -93,6 +94,7 @@ public static class DependencyInjection
             .AddScoped<IPersonalNoteRepository, PersonalNoteRepository>()
             .AddScoped<ICookLogRepository, CookLogRepository>()
             .AddScoped<ICookSessionRepository, CookSessionRepository>()
+            .AddSingleton<IWebPageFetcher, SafeWebPageFetcher>()
             .AddScoped<IMealPlanRepository, MealPlanRepository>()
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<MigrationRunner>()

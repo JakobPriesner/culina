@@ -26,6 +26,16 @@ public sealed record RateLimitSettings
     /// <summary>Invitation redemptions allowed per hour from one address.</summary>
     public int InvitationPerIpPerHour { get; init; } = 10;
 
+    /// <summary>
+    /// Recipe imports allowed per hour from one caller.
+    /// </summary>
+    /// <remarks>
+    /// The one operation that makes the server fetch an address somebody else
+    /// chose. Generous for a person writing down recipes, and nowhere near
+    /// enough to sweep a network with.
+    /// </remarks>
+    public int ImportsPerHour { get; init; } = 30;
+
     /// <summary>Requests allowed per minute from one authenticated session.</summary>
     public int RequestsPerSessionPerMinute { get; init; } = 600;
 
@@ -36,6 +46,7 @@ public sealed record RateLimitSettings
         SettingsGuard.InRange(LoginPerAccountPerMinute, 1, 10_000, SectionName, nameof(LoginPerAccountPerMinute));
         SettingsGuard.InRange(RegisterPerIpPerHour, 1, 10_000, SectionName, nameof(RegisterPerIpPerHour));
         SettingsGuard.InRange(InvitationPerIpPerHour, 1, 10_000, SectionName, nameof(InvitationPerIpPerHour));
+        SettingsGuard.InRange(ImportsPerHour, 1, 10_000, SectionName, nameof(ImportsPerHour));
         SettingsGuard.InRange(RequestsPerSessionPerMinute, 10, 100_000, SectionName, nameof(RequestsPerSessionPerMinute));
     }
 }

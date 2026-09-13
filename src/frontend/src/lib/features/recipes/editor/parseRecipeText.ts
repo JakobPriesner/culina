@@ -21,6 +21,15 @@ export interface ParsedRecipe {
   readonly title: string;
   readonly ingredients: readonly ParsedIngredient[];
   readonly steps: readonly string[];
+  /**
+   * What it makes, and how long it takes.
+   *
+   * Only a site that publishes structured data knows these. A pasted block of
+   * text does not say, and guessing would put a number in a recipe that scales
+   * every amount in it.
+   */
+  readonly servings?: number;
+  readonly totalMinutes?: number;
 }
 
 /**
