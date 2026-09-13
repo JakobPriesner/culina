@@ -310,5 +310,13 @@
   "preview.doneShort": "Done",
   "preview.closeIngredients": "Close ingredients",
   "preview.resume": "Continue cooking",
-  "preview.inProgress": "In progress"
+  "preview.inProgress": "In progress",
+  "import.paste.open": "Paste a recipe instead",
+  "import.paste.title": "Paste a recipe",
+  "import.paste.hint": "Paste the whole thing — a message, a page, a photo you typed out. You will see what was understood before anything is made.",
+  "import.paste.label": "The recipe, as text",
+  "import.paste.found": "Understood: {ingredients} ingredients, {steps} steps.",
+  "import.paste.create": "Make this recipe",
+  "import.paste.cancel": "Never mind",
+  "import.paste.untitled": "Untitled recipe"
 }
