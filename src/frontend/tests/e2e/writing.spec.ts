@@ -201,14 +201,23 @@ test.describe('writing a recipe', () => {
     await line.press('Enter');
 
     // A word no seeded list has ever heard of is still an ingredient.
+    //
+    // Waited for by the write, not by the word "Saved": that word is already on
+    // screen from the save before, and the suggestion below comes from what
+    // this household's recipes actually say — which means from the database.
     await line.fill(`1 bunch ${invented}`);
-    await line.press('Enter');
+    await Promise.all([
+      page.waitForResponse((one) => one.request().method() === 'PUT' && one.ok()),
+      line.press('Enter')
+    ]);
 
     await expect(page.getByText(invented)).toBeVisible();
-    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
 
     // And from then on it is one of this kitchen's own words.
-    await line.fill(invented.slice(0, 8));
+    // Nearly the whole word: these suites share one instance, and every
+    // earlier run of this test left a "Herbbutter…" of its own behind. A
+    // prefix they all share is a prefix that finds ten of them.
+    await line.fill(invented.slice(0, -2));
     await expect(list.getByRole('option', { name: invented })).toBeVisible();
   });
 

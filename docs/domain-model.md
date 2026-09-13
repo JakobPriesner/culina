@@ -367,6 +367,39 @@ household in `HouseholdIngredientSection(HouseholdId, NameNormalised, Section)`
 and wins over the seed from then on — sensible default, trivially correctable,
 no configuration screen.
 
+## Planning
+
+### MealPlanEntry
+
+`Id`, `HouseholdId`, `Date`, `RecipeId`, `Servings?`, `Slot`, `SortOrder`.
+
+Household-owned, like the recipe: a plan is what the people who eat together
+have agreed on, and one only its author could see would be a diary.
+
+**A date, not a timestamp.** "Thursday" has no time zone, and storing one would
+move somebody's dinner when they travelled.
+
+`Servings` is null for however many the recipe was written for. Most planned
+meals are cooked as written, and asking every time is a question with an obvious
+answer.
+
+`Slot` is `breakfast`, `lunch` or `dinner`, defaulting to dinner. Three, and no
+"snack" or "dessert": a slot only earns its place if it changes what you buy.
+The week view shows no slot picker at all — it lives in the sheet that adds a
+meal — so a household that only ever plans dinner never meets the concept.
+
+**A week, not a calendar.** A week is the unit people plan in, because they shop
+at the weekend for the week that follows; the API reads seven days from the
+**Monday** of the week containing `from`, and always returns all seven whether
+or not anything is planned in them. A month view is where recurrence,
+drag-and-drop and a second reason for a shopping list come from, and Culina has
+exactly one list per household on purpose.
+
+**The plan writes the shopping list through the existing path**, one
+`POST /households/{id}/shopping-list/recipes` per planned meal. A second code
+path that merged a whole week at once would be a second place for merging to
+behave differently, and merging is the entire value of the list.
+
 ## Persistence conventions
 
 - PostgreSQL, accessed with Npgsql + Dapper. No EF Core, no ORM change
