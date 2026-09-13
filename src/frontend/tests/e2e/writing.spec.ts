@@ -82,6 +82,52 @@ test.describe('writing a recipe', () => {
     await expect(page.getByRole('region', { name: /ingredients|zutaten/i })).toContainText('Mehl');
   });
 
+  test('mentions an ingredient in a step, and the step carries its amount', async () => {
+    const title = unique('Mentioned');
+
+    await page.goto('/recipes/new');
+    await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
+    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await expect(page).toHaveURL(/\/edit/);
+
+    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
+
+    await line.fill('200 g Butter');
+    await line.press('Enter');
+    await expect(page.getByText(/200\s*g/)).toBeVisible();
+
+    // Saved before the mention is written, because a line the server has never
+    // seen has no id for a step to point at.
+    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /add a step|schritt hinzufügen/i }).click();
+
+    const step = page.getByRole('combobox', { name: /step 1|schritt 1/i });
+
+    // The whole of the ceremony: an @, then the keyboard.
+    await step.fill('Schmilz @But');
+    await expect(page.getByRole('option', { name: /Butter/ })).toBeVisible();
+    await step.press('Enter');
+    await expect(step).toHaveValue('Schmilz @Butter ');
+
+    await step.pressSequentially('in der Pfanne.');
+    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+
+    // And what it bought: the amount is inside the sentence, and it follows
+    // the portions rather than sitting there as a number somebody typed.
+    await page.goto(`/recipes/${new URL(page.url()).pathname.split('/')[2]}`);
+
+    const method = page.getByRole('region', { name: /^(steps|zubereitung)$/i });
+
+    await expect(method).toContainText(/200\s*g\s*Butter/);
+
+    // Written for four, read at five: the amount in the sentence is derived,
+    // not a number somebody typed into it.
+    await page.getByRole('button', { name: /^(one more|eine mehr)$/i }).click();
+
+    await expect(method).toContainText(/250\s*g\s*Butter/);
+  });
+
   test('shows a new recipe in the list it belongs to', async () => {
     const title = unique('Listed');
 
