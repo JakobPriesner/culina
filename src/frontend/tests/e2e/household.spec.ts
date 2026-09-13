@@ -1,13 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  accountFor,
   ensureAccount,
+  householdId,
   signIn,
   needsBackend,
   seedRecipe,
   signInWithHousehold,
   skipReason,
-  unique
+  unique,
+  writeHeaders
 } from './support/culina';
 
 /**
@@ -30,15 +33,14 @@ test.describe('sharing a kitchen', () => {
 
     owner = await browser.newPage();
 
-    await signInWithHousehold(owner);
+    await signInWithHousehold(owner, await accountFor(browser, testInfo));
 
-    // A brand new person each run, not a reusable one: an invitation can only
-    // be accepted by somebody who is not already in the household, and a guest
-    // kept between runs is in it after the first.
-    guest = await ensureAccount(
-      browser,
-      unique(`guest-${testInfo.project.name}`).replaceAll(' ', '-')
-    );
+    guest = await ensureAccount(browser, `guest-${testInfo.project.name}`);
+
+    // The guest is shown out before the run, not after it: the tests that
+    // follow the invitation need them inside, and starting from empty is what
+    // makes the invitation acceptable again.
+    await showOthersOut();
   });
 
   test.afterAll(async () => {
@@ -113,6 +115,30 @@ test.describe('sharing a kitchen', () => {
 
     await theirContext.close();
   });
+
+  /**
+   * Empties the household of everyone but its owner, so the flow can run again.
+   *
+   * An invitation can only be accepted by somebody not already in the
+   * household, and a fresh account per run is an instance slowly filling with
+   * accounts — which is a limit the instance is right to have.
+   */
+  async function showOthersOut() {
+    const headers = await writeHeaders(owner);
+    const household = await householdId(owner.request);
+    const me = await (await owner.request.get('/api/v1/users/me')).json();
+    const members = await (
+      await owner.request.get(`/api/v1/households/${household}/members`)
+    ).json();
+
+    for (const member of members.items as { userId: string }[]) {
+      if (member.userId !== me.userId) {
+        await owner.request.delete(`/api/v1/households/${household}/members/${member.userId}`, {
+          headers
+        });
+      }
+    }
+  }
 
   test('an invitation can be taken back before anyone uses it', async () => {
     await owner.goto('/me');

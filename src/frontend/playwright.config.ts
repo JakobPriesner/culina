@@ -14,6 +14,9 @@ const port = 4173;
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  // Opens registration once, so the per-flow accounts can be created without
+  // every worker asking the administrator the same question.
+  globalSetup: './tests/e2e/support/globalSetup.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

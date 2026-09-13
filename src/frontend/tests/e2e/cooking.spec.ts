@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  ensureAccount,
+  accountFor,
   needsBackend,
   seedRecipe,
   signInWithHousehold,
@@ -42,11 +42,9 @@ test.describe('cooking a recipe', () => {
       return;
     }
 
-    const who = await ensureAccount(browser, `cook-${testInfo.project.name}`);
-
     page = await browser.newPage();
 
-    await signInWithHousehold(page, who);
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
   });
 
   test.afterAll(async () => {
@@ -69,7 +67,21 @@ test.describe('cooking a recipe', () => {
 
     const next = page.getByRole('button', { name: /^(next step|nächster schritt)$/i });
 
-    await next.click();
+    // The step lands on screen at once and reaches the server behind it. Both
+    // are waited for here: the first is what the cook sees, the second is what
+    // survives the page going away a moment later. A phone that locks keeps the
+    // page alive and the request with it; a hard navigation this fast does not,
+    // and that is the test's impatience rather than the app's problem.
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/cook-sessions/') &&
+          response.request().method() === 'PATCH' &&
+          response.ok()
+      ),
+      next.click()
+    ]);
+
     await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
 
     // The phone goes away — a different screen, a lock, a call.

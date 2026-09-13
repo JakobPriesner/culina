@@ -47,6 +47,11 @@ services:
       # you its subnet. Keep it as small as it can be.
       ForwardedHeaders__KnownProxies: ${ForwardedHeaders__KnownProxies:-}
       ForwardedHeaders__KnownNetworks: ${ForwardedHeaders__KnownNetworks:-}
+      # Left at their defaults unless an operator says otherwise. The
+      # end-to-end suite raises them, because every request in it comes from
+      # one address and the defaults are right to refuse that.
+      RateLimits__LoginPerIpPerMinute: ${RateLimits__LoginPerIpPerMinute:-10}
+      RateLimits__RegisterPerIpPerHour: ${RateLimits__RegisterPerIpPerHour:-5}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-culina-api}
     ports:

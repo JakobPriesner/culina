@@ -33,6 +33,16 @@
   const currentStep = $derived(cooking.session?.currentStepIndex ?? 0);
   const totalSteps = $derived(recipes.detail?.steps.length ?? 0);
 
+  /**
+   * Whether there is a session to move within.
+   *
+   * The controls are drawn from the recipe, which arrives first; the session
+   * they move is a separate request. Between the two, a tap on Next did
+   * nothing at all — no step, no request, no explanation — which in a kitchen
+   * reads as a broken button rather than as a slow one.
+   */
+  const ready = $derived(cooking.session?.recipeId === recipeId);
+
   onMount(() => {
     const stopHolding = wakeLock.engage();
     const stopTicking = timers.tick();
@@ -163,16 +173,16 @@
       </p>
 
       <div class="moves">
-        <Button disabled={currentStep === 0} onclick={() => move(currentStep - 1)}>
+        <Button disabled={!ready || currentStep === 0} onclick={() => move(currentStep - 1)}>
           {m['cooking.previous']()}
         </Button>
 
         {#if currentStep < totalSteps - 1}
-          <Button variant="primary" onclick={() => move(currentStep + 1)}>
+          <Button variant="primary" disabled={!ready} onclick={() => move(currentStep + 1)}>
             {m['cooking.next']()}
           </Button>
         {:else}
-          <Button variant="primary" onclick={() => finish(true)}>
+          <Button variant="primary" disabled={!ready} onclick={() => finish(true)}>
             {m['cooking.finish']()}
           </Button>
         {/if}

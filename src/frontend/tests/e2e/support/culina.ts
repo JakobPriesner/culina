@@ -44,8 +44,31 @@ export const unique = (word: string): string =>
  * hour would lock itself out. Remembered within a worker for the same reason:
  * signing in is rate limited per account, and checking whether an account
  * exists costs a sign-in.
+ *
+ * The instance was told to accept new accounts once, in globalSetup.
  */
 const known = new Map<string, { email: string; password: string }>();
+
+/**
+ * The account this spec file owns, on this viewport.
+ *
+ * One per flow rather than one for the suite, and it is not tidiness: signing
+ * in is rate limited per account, so every spec sharing one account is every
+ * spec queueing behind the same limit. Separate accounts also mean separate
+ * households, so two flows cannot see each other's recipes or each other's
+ * shopping list.
+ */
+export function accountFor(browser: Browser, test: { file: string; project: { name: string } }) {
+  // Named for the file, not the test: one account per flow. `title` inside a
+  // `beforeAll` is the hook's, which would make an account per test and a
+  // registration per test with it.
+  const spec = test.file
+    .split(/[/\\]/)
+    .pop()!
+    .replace(/\.spec\.ts$/, '');
+
+  return ensureAccount(browser, `${spec}-${test.project.name}`);
+}
 
 export async function ensureAccount(
   browser: Browser,
@@ -72,8 +95,6 @@ export async function ensureAccount(
       return who;
     }
 
-    await openRegistration(browser);
-
     const created = await context.request.post('/api/v1/users', {
       headers: { Origin: origin },
       data: { email: who.email, displayName: name, password: who.password }
@@ -83,33 +104,6 @@ export async function ensureAccount(
     known.set(name, who);
 
     return who;
-  } finally {
-    await context.close();
-  }
-}
-
-/** The instance has to be told to accept new accounts, by somebody who may. */
-async function openRegistration(browser: Browser): Promise<void> {
-  const context = await browser.newContext();
-
-  try {
-    const signedIn = await context.request.post('/api/v1/sessions', {
-      headers: { Origin: origin },
-      data: credentials
-    });
-
-    expect(signedIn.ok(), 'CULINA_E2E_* must be an administrator: ' + (await signedIn.text())).toBe(
-      true
-    );
-
-    const csrf = (await context.cookies()).find((cookie) => cookie.name === 'culina.csrf')?.value;
-
-    const opened = await context.request.put('/api/v1/settings/registration', {
-      headers: { Origin: origin, 'X-Culina-CSRF': csrf ?? '' },
-      data: { openRegistration: true, requireInvitation: false, maxUsers: 100 }
-    });
-
-    expect(opened.ok(), await opened.text()).toBe(true);
   } finally {
     await context.close();
   }

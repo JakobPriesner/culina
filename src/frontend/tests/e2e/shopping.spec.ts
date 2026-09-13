@@ -1,66 +1,55 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import {
+  accountFor,
+  needsBackend,
+  seedRecipe,
+  signInWithHousehold,
+  skipReason,
+  unique
+} from './support/culina';
+
 /**
  * The shopping list, the way it is used: one hand, one line at a time.
  *
- * The keyboard path is the point. A one-line add is only a one-line add if
- * Enter sends it — reaching for the button after every item is the data entry
- * this screen exists to avoid — and a synthetic key event cannot prove that.
- * Playwright presses a real key.
- *
- * Skipped without a backend, because a shopping list with nothing behind it is
- * a page that cannot be wrong.
+ * Two things make this better than a notes app — amounts merge across recipes,
+ * and the sections are the order a shop is walked — and nothing else is built.
  */
-const email = process.env['CULINA_E2E_EMAIL'];
-const password = process.env['CULINA_E2E_PASSWORD'];
-
-/**
- * A name no other run can be holding.
- *
- * The list belongs to a household, and every project and worker shares one
- * account: a test that asserts on "Salz" is asserting on whatever the browser
- * next to it is doing.
- */
-const unique = (word: string) =>
-  `${word} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-
-async function signIn(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel(/email|e-mail/i).fill(email!);
-  await page.getByLabel(/password|passwort/i).fill(password!);
-  await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
-
-  await expect(page).toHaveURL(/\/(welcome)?$/);
-
-  // An account can exist without a household — registration allows it, and the
-  // list belongs to a household rather than to a person. The first run of this
-  // suite against a fresh account lands here; later ones do not.
-  if (new URL(page.url()).pathname === '/welcome') {
-    await page.getByLabel(/name your household|heißen/i).fill('E2E kitchen');
-    await page.getByRole('button', { name: /^(create a household|haushalt anlegen)$/i }).click();
-
-    await expect(page).toHaveURL(/\/$/);
-  }
-}
+test.describe.configure({ mode: 'serial' });
 
 test.describe('the shopping list', () => {
-  test.skip(
-    !email || !password,
-    'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD with a backend running.'
-  );
+  test.skip(needsBackend, skipReason);
 
-  test('takes a written line on Enter, with its unit intact', async ({ page }) => {
-    await signIn(page);
+  let page: Page;
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    if (needsBackend) {
+      return;
+    }
+
+    page = await browser.newPage();
+
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
+  });
+
+  test.afterAll(async () => {
+    await page?.close();
+  });
+
+  test('takes a written line on Enter, with its unit intact', async () => {
     await page.goto('/shopping');
 
     const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
     const name = unique('Feta');
 
     await field.fill(`2 Packungen ${name}`);
+    // A real key, not a synthetic event: a one-line add is only a one-line add
+    // if Enter sends it, and reaching for the button after every item is the
+    // data entry this screen exists to avoid.
     await field.press('Enter');
 
-    // The field empties, which is the signal that the line was taken: the next
-    // item can be typed straight away.
+    // The field empties, which is the signal the line was taken: the next item
+    // can be typed straight away.
     await expect(field).toHaveValue('');
 
     const row = page.getByRole('listitem').filter({ hasText: name });
@@ -73,12 +62,71 @@ test.describe('the shopping list', () => {
     await expect(row).toHaveCount(0);
   });
 
-  test('keeps its actions clear of the bars pinned to the bottom', async ({ page }) => {
-    await signIn(page);
+  test('merges the same ingredient across two recipes', async () => {
+    const butter = unique('Butter');
+
+    // Two recipes that share an ingredient, at different amounts and in
+    // different units: 200 g and 0.05 kg is 250 g of one thing, not two lines.
+    const cake = await seedRecipe(page, {
+      title: unique('Cake'),
+      yieldAmount: 4,
+      ingredients: [{ quantity: 200, unit: 'g', name: butter }]
+    });
+
+    const biscuits = await seedRecipe(page, {
+      title: unique('Biscuits'),
+      yieldAmount: 4,
+      ingredients: [{ quantity: 0.05, unit: 'kg', name: butter }]
+    });
+
+    for (const recipeId of [cake, biscuits]) {
+      await page.goto(`/recipes/${recipeId}`);
+      await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+      await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
+    }
+
+    await page.goto('/shopping');
+
+    const row = page.getByRole('listitem').filter({ hasText: butter });
+
+    // One line, adding up to what it actually adds up to. Three recipes and
+    // three lines of butter is how a list stops being worth carrying.
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText(/250\s*g/);
+
+    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await expect(row).toHaveCount(0);
+  });
+
+  test('adds a recipe at the servings on screen, not the ones it was written for', async () => {
+    const orzo = unique('Orzo');
+    const recipeId = await seedRecipe(page, {
+      title: unique('Scaled to six'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: orzo }]
+    });
+
+    // Scaled to six on screen. Getting the amounts for two is the kind of quiet
+    // wrongness nobody notices until they are short of butter.
+    await page.goto(`/recipes/${recipeId}?yield=6`);
+    await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+    await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
+
+    await page.goto('/shopping');
+
+    const row = page.getByRole('listitem').filter({ hasText: orzo });
+
+    await expect(row).toContainText(/600\s*g/);
+
+    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+  });
+
+  test('keeps what is already in the trolley, and clears it in one go', async () => {
+    const name = unique('Salz');
+
     await page.goto('/shopping');
 
     const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
-    const name = unique('Salz');
 
     await field.fill(`1 Prise ${name}`);
     await field.press('Enter');
@@ -88,13 +136,43 @@ test.describe('the shopping list', () => {
 
     await expect(row).toBeVisible();
 
-    // A row the bottom navigation covers cannot be ticked off, and on a phone
-    // that is the whole screen. Scrolled to the end of the list, the last row
-    // has to be above whatever the shell has parked there.
-    await page.mouse.wheel(0, 5000);
+    await row.getByRole('checkbox').check();
 
-    const box = (await row.boundingBox())!;
-    const bottomOfViewport = page.viewportSize()!.height;
+    // Ticked off, and still on screen: a line that vanishes when it is found is
+    // a line nobody can check they actually picked up.
+    await expect(row).toBeVisible();
+    await expect(row.getByRole('checkbox')).toBeChecked();
+
+    // One bulk action, because after a shop removing a dozen ticked lines one
+    // at a time is the tedium this exists to avoid.
+    await page.getByRole('button', { name: /clear|gekauftes entfernen/i }).click();
+
+    await expect(row).toHaveCount(0);
+  });
+
+  test('keeps its rows clear of the bars pinned to the bottom', async () => {
+    const name = unique('Mehl');
+
+    await page.goto('/shopping');
+
+    const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
+
+    await field.fill(`1 kg ${name}`);
+    await field.press('Enter');
+    await expect(field).toHaveValue('');
+
+    const row = page.getByRole('listitem').filter({ hasText: name });
+
+    await expect(row).toBeVisible();
+
+    // All the way down, where the shell has parked the cooking bar and, on a
+    // phone, the navigation. A row either of them covers cannot be ticked off,
+    // and on a phone that is most of the screen.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+    const last = page.getByRole('listitem').last();
+    const box = (await last.boundingBox())!;
+
     const covered = await page.evaluate(
       ([y, height]) => {
         const at = document.elementFromPoint(20, y! + height! / 2);
@@ -104,8 +182,7 @@ test.describe('the shopping list', () => {
       [box.y, box.height]
     );
 
-    expect(box.y).toBeLessThan(bottomOfViewport);
-    expect(covered, 'the row is behind a bar').toBe(false);
+    expect(covered, 'the last row is behind a bar').toBe(false);
 
     await row.getByRole('button', { name: /remove|entfernen/i }).click();
   });

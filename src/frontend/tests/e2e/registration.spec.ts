@@ -1,44 +1,22 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { needsBackend, skipReason } from './support/culina';
+
 /**
  * The whole first-run path, against a real backend: create an account, get a
  * household, sign out, sign back in, and follow a deep link.
  *
- * Skipped without an administrator to borrow, because the instance has to be
- * told to accept new accounts before any of this is possible — and a test that
- * quietly passes with no backend is worse than one that says it did not run.
+ * The only suite that makes an account of its own for every run, because what
+ * it is testing is what happens to somebody who has never been here.
  */
-const adminEmail = process.env['CULINA_E2E_EMAIL'];
-const adminPassword = process.env['CULINA_E2E_PASSWORD'];
-
 async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel(/email|e-mail/i).fill(email);
   await page.getByLabel(/password|passwort/i).fill(password);
   await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
 }
 
-/**
- * Borrows the browser's own session — `page.request` shares its cookie jar,
- * which the test runner's top-level `request` fixture does not.
- */
-async function openRegistration(page: Page) {
-  const cookies = await page.context().cookies();
-  const csrf = cookies.find((cookie) => cookie.name === 'culina.csrf')?.value ?? '';
-
-  const response = await page.request.put('/api/v1/settings/registration', {
-    headers: { 'X-Culina-CSRF': csrf, Origin: new URL(page.url()).origin },
-    data: { openRegistration: true, requireInvitation: false, maxUsers: 100 }
-  });
-
-  expect(response.ok(), await response.text()).toBe(true);
-}
-
 test.describe('the first-run path', () => {
-  test.skip(
-    !adminEmail || !adminPassword,
-    'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD to an ADMINISTRATOR account, ' +
-      'with a backend running: this suite opens registration first.'
-  );
+  test.skip(needsBackend, skipReason);
 
   test('register, get a household, sign out, sign in, follow a deep link', async ({ page }) => {
     // A different address every run, so the test does not depend on the state
@@ -46,17 +24,8 @@ test.describe('the first-run path', () => {
     const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
     const password = 'a sentence nobody else would pick';
 
-    await page.goto('/login');
-    await signIn(page, adminEmail!, adminPassword!);
-    await expect(page).toHaveURL(/\/$/);
-
-    await openRegistration(page);
-
-    await page.goto('/me');
-    await page.getByRole('button', { name: /sign out|abmelden/i }).click();
-    await expect(page).toHaveURL(/\/login/);
-
-    // Register.
+    // Register. The instance was told to accept new accounts once, for the
+    // whole run, in globalSetup.
     await page.goto('/register');
     await page.getByLabel(/call you|nennen/i).fill('Sam');
     await page.getByLabel(/email|e-mail/i).fill(email);
@@ -74,6 +43,10 @@ test.describe('the first-run path', () => {
     // Sign out, and come back through a deep link.
     await page.goto('/me');
     await page.getByRole('button', { name: /sign out|abmelden/i }).click();
+
+    // Waited for: signing out is a request, and a deep link followed before it
+    // lands is a deep link followed while still signed in.
+    await expect(page).toHaveURL(/\/login/);
 
     await page.goto('/shopping');
     await expect(page).toHaveURL(/\/login\?next=%2Fshopping/);

@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { needsBackend, signInWithHousehold, skipReason, unique } from './support/culina';
+import {
+  accountFor,
+  needsBackend,
+  signInWithHousehold,
+  skipReason,
+  unique
+} from './support/culina';
 
 /**
  * The properties the whole auth design rests on, asserted against the built app
@@ -17,14 +23,14 @@ test.describe('the way in', () => {
 
   let page: Page;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser }, testInfo) => {
     if (needsBackend) {
       return;
     }
 
     page = await browser.newPage();
 
-    await signInWithHousehold(page);
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
   });
 
   test.afterAll(async () => {
@@ -67,7 +73,10 @@ test.describe('the way in', () => {
     expect(elsewhere.status()).toBe(403);
   });
 
-  test('sends a stranger to sign in, and then where they were going', async ({ browser }) => {
+  test('sends a stranger to sign in, and then where they were going', async ({
+    browser
+  }, testInfo) => {
+    const who = await accountFor(browser, testInfo);
     const stranger = await browser.newContext();
     const strangersPage = await stranger.newPage();
 
@@ -77,14 +86,22 @@ test.describe('the way in', () => {
     // recipe should land on that recipe, not be made to find it again.
     await expect(strangersPage).toHaveURL(/\/login\?next=%2Fshopping/);
 
+    await strangersPage.getByLabel(/email|e-mail/i).fill(who.email);
+    await strangersPage.getByLabel(/password|passwort/i).fill(who.password);
+    await strangersPage.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
+
+    // And the whole way back, not to the front page.
+    await expect(strangersPage).toHaveURL(/\/shopping$/);
+    await expect(strangersPage.getByRole('heading', { level: 1 })).toBeVisible();
+
     await stranger.close();
   });
 
-  test('leaves nothing behind when a session ends', async ({ browser }) => {
+  test('leaves nothing behind when a session ends', async ({ browser }, testInfo) => {
     const context = await browser.newContext();
     const theirs = await context.newPage();
 
-    await signInWithHousehold(theirs);
+    await signInWithHousehold(theirs, await accountFor(browser, testInfo));
     await theirs.goto('/me');
     await theirs.getByRole('button', { name: /sign out|abmelden/i }).click();
     await expect(theirs).toHaveURL(/\/login/);

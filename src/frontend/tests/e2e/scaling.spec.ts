@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  accountFor,
   needsBackend,
   seedRecipe,
   signInWithHousehold,
@@ -25,14 +26,14 @@ test.describe('scaling a recipe', () => {
 
   let page: Page;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser }, testInfo) => {
     if (needsBackend) {
       return;
     }
 
     page = await browser.newPage();
 
-    await signInWithHousehold(page);
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
   });
 
   test.afterAll(async () => {
