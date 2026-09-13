@@ -67,6 +67,36 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// </summary>
     internal DbSession NewSession() => new(DataSource);
 
+    /// <summary>
+    /// Runs one statement against the instance's database.
+    /// </summary>
+    /// <remarks>
+    /// For arranging a state the API deliberately has no way to produce — an
+    /// invitation that has already expired, a membership row removed under a
+    /// live session. Reaching past the API to set those up is the only way to
+    /// test what happens when they are true.
+    /// </remarks>
+    public async Task ExecuteAsync(string sql, CancellationToken cancellationToken)
+    {
+        var connection = await DataSource.OpenConnectionAsync(cancellationToken);
+
+        await using (connection.ConfigureAwait(false))
+        {
+            var command = connection.CreateCommand();
+
+            await using (command.ConfigureAwait(false))
+            {
+                // The SQL here is written in test source, never composed from
+                // anything a caller supplied.
+#pragma warning disable CA2100
+                command.CommandText = sql;
+#pragma warning restore CA2100
+
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+    }
+
     private NpgsqlDataSource DataSource => dataSource ??= CulinaDataSource.Build(Settings);
 
     /// <summary>

@@ -133,6 +133,73 @@ public class RecipeImageTests(PostgresFixture postgres)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    [Fact]
+    public async Task Served_ShouldCarryNoMetadataFromTheOriginal()
+    {
+        // Arrange
+        // A photograph taken in somebody's kitchen carries where that kitchen
+        // is. Culina re-encodes every upload, and the re-encoding is the place
+        // that has to drop it — an instance shared with a household would
+        // otherwise hand out its own address with a picture of dinner.
+        var (client, recipeId) = await SeedAsync();
+
+        await UploadAsync(client, recipeId, LocatedPhotograph(), "kitchen.jpg", "image/jpeg");
+
+        // Act
+        var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
+
+        // Assert
+        using var decoded = Image.Load(served.Bytes.Span);
+
+        Assert.Null(decoded.Metadata.ExifProfile);
+        Assert.Null(decoded.Metadata.XmpProfile);
+        Assert.Null(decoded.Metadata.IptcProfile);
+    }
+
+    [Fact]
+    public async Task Upload_ShouldRefuseAnImageTooLargeToDecode_WithoutDecodingIt()
+    {
+        // Arrange
+        // Ten thousand pixels square of one colour compresses to a few hundred
+        // kilobytes, so a byte limit lets it straight through — and decoding it
+        // to find out how big it is *is* the attack. The dimensions come from
+        // the header, before anything is allocated.
+        var (client, recipeId) = await SeedAsync();
+
+        // Act
+        var response = await UploadAsync(
+            client,
+            recipeId,
+            PngBytes(10_000, 10_000),
+            "huge.png",
+            "image/png");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("recipes.image_too_many_pixels", response.ProblemCode);
+    }
+
+    /// <summary>A small photograph that says where it was taken.</summary>
+    private static byte[] LocatedPhotograph()
+    {
+        using var image = new Image<Rgba32>(64, 48);
+        using var buffer = new MemoryStream();
+
+        var exif = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
+
+        exif.SetValue(
+            SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.GPSLatitudeRef,
+            "N");
+        exif.SetValue(
+            SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.GPSLatitude,
+            [new Rational(49), new Rational(47), new Rational(0)]);
+
+        image.Metadata.ExifProfile = exif;
+        image.Save(buffer, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+
+        return buffer.ToArray();
+    }
+
     private static byte[] PngBytes(int width, int height)
     {
         using var image = new Image<Rgba32>(width, height);

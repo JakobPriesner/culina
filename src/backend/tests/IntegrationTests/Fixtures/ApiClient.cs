@@ -80,9 +80,16 @@ public sealed class ApiClient(HttpClient http) : IDisposable
 
         RememberCsrfToken(response);
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        // Read as bytes, then decoded: an image response is not text, and a
+        // test that wants to look inside one needs what was actually sent.
+        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
-        return new ApiResponse(response.StatusCode, response.Headers, response.Content.Headers, body);
+        return new ApiResponse(
+            response.StatusCode,
+            response.Headers,
+            response.Content.Headers,
+            System.Text.Encoding.UTF8.GetString(bytes),
+            bytes);
     }
 
     private static bool IsSafe(HttpMethod method) =>
@@ -120,7 +127,8 @@ public sealed record ApiResponse(
     System.Net.HttpStatusCode StatusCode,
     System.Net.Http.Headers.HttpResponseHeaders Headers,
     System.Net.Http.Headers.HttpContentHeaders ContentHeaders,
-    string Body)
+    string Body,
+    ReadOnlyMemory<byte> Bytes)
 {
     /// <summary>The problem document's machine-readable code, if this is one.</summary>
     public string? ProblemCode => Json?.TryGetProperty("code", out var code) == true
