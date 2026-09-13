@@ -311,3 +311,19 @@ because a keyboard user reading with focus inside the toast is doing exactly wha
 a pointer user hovering is doing. Undo removes the message as it runs, so a
 second press cannot undo the undo. At most three stack; beyond that it is a log,
 not a notification.
+
+## Never dim text with opacity
+
+Reducing a text element's opacity blends it toward whatever is behind it by an
+amount no palette review can see and the theme's own contrast test cannot
+reach — the tokens are all correct, and the rendered page is not. The cooking
+screen dimmed its non-current steps to `0.45`, which put body text at **2.7:1**
+against the page in light mode. The intent was right; opacity was the wrong way
+to express it.
+
+Recede with a colour the contract already proves readable — `--text-muted` —
+and with size and weight. Opacity is for things that are not text.
+
+The rendered pages are checked by axe on every route in both modes, which is
+the layer that catches this. The token table catches what the design system
+promises; only the page catches what it renders.

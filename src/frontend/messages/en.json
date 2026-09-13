@@ -294,5 +294,6 @@
   "editor.keptHere": "Kept on this device",
   "editor.recovered": "Unsaved changes from this device were brought back.",
   "editor.conflict.keepMine": "Keep my version",
-  "editor.conflict.takeTheirs": "Take theirs"
+  "editor.conflict.takeTheirs": "Take theirs",
+  "editor.heading": "Editing {title}"
 }

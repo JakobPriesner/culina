@@ -68,10 +68,16 @@
     font-size: var(--text-sm);
   }
 
+  /* Weight, not colour. The accent on an accent-tinted surface is 3.7:1 in
+     light and 2.9:1 in dark — two colours a few degrees apart, which is what
+     makes the tint work as a background and what makes it unreadable as text
+     on top of itself. The whole bar is the link; this only has to look like
+     the part you press. */
   .resume {
     flex: none;
     font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
-    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 </style>

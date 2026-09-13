@@ -210,6 +210,13 @@
     {@const current = draft}
 
     <header class="head">
+      <!-- Every page says what it is. This one's title is a text field that can
+           be empty and can change while it is read aloud, so the heading is a
+           sentence about the page rather than the field's value. Not shown:
+           the field is right there, and printing the title twice above itself
+           is how a screen fills up with things nobody asked for. -->
+      <h1 class="visually-hidden">{m['editor.heading']({ title: current.title })}</h1>
+
       <a class="back" href={resolve('/(app)/recipes/[recipeId]', { recipeId })}>
         ← {m['editor.done']()}
       </a>
@@ -341,6 +348,20 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     text-decoration: none;
+  }
+
+  /* Read aloud, never drawn. The clip-path pair is the one that survives every
+     browser's idea of what a zero-sized element means. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
 
   .conflict {

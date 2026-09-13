@@ -294,5 +294,6 @@
   "editor.keptHere": "Auf diesem Gerät gesichert",
   "editor.recovered": "Nicht gespeicherte Änderungen von diesem Gerät sind wieder da.",
   "editor.conflict.keepMine": "Meine Fassung behalten",
-  "editor.conflict.takeTheirs": "Ihre übernehmen"
+  "editor.conflict.takeTheirs": "Ihre übernehmen",
+  "editor.heading": "{title} bearbeiten"
 }
