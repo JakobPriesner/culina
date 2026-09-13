@@ -12,6 +12,13 @@ export interface PreviewRecipe {
   steps: string[];
 }
 
+export interface PreviewProgress {
+  servings: number;
+  currentStep: number;
+  cooking: boolean;
+  checked: Record<string, boolean>;
+}
+
 /** Fictional examples for visual review, never persisted or fetched as household data. */
 export function sampleRecipes(): PreviewRecipe[] {
   return [
@@ -37,6 +44,7 @@ export function sampleRecipes(): PreviewRecipe[] {
       description: m['preview.toast.body'](),
       minutes: 15,
       tag: m['preview.tag.simple'](),
+      image: `${base}/images/culina-tomato-toast.webp`,
       ingredients: [
         { name: m['preview.ingredient.bread'](), quantity: 4, unit: '' },
         { name: m['preview.ingredient.tomatoes'](), quantity: 400, unit: 'g' },
@@ -50,6 +58,7 @@ export function sampleRecipes(): PreviewRecipe[] {
       description: m['preview.rice.body'](),
       minutes: 40,
       tag: m['preview.tag.slow'](),
+      image: `${base}/images/culina-miso-rice.webp`,
       ingredients: [
         { name: m['preview.ingredient.rice'](), quantity: 200, unit: 'g' },
         { name: m['preview.ingredient.mushrooms'](), quantity: 250, unit: 'g' },

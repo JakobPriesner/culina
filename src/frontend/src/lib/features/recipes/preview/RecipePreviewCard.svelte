@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconButton } from '$ds';
+  import { IconButton, Image } from '$ds';
   import { m } from '$shell/i18n';
   import type { PreviewRecipe } from './recipes';
   interface Props {
@@ -11,13 +11,16 @@
   let { recipe, favourite, onopen, onfavourite }: Props = $props();
 </script>
 
-<article class="recipe">
-  <span class="tag">{recipe.tag}</span>
-  <h3><button class="open" onclick={onopen}>{recipe.title}</button></h3>
-  <p class="description">{recipe.description}</p>
-  <p class="meta">
-    {m['preview.minutes']({ count: recipe.minutes })}<span aria-hidden="true"> ↗</span>
-  </p>
+<article class="recipe" class:without-photo={!recipe.image}>
+  {#if recipe.image}<Image src={recipe.image} alt="" ratio={4 / 3} />{/if}
+  <div class="copy">
+    <span class="tag">{recipe.tag}</span>
+    <h3><button class="open" onclick={onopen}>{recipe.title}</button></h3>
+    <p class="description">{recipe.description}</p>
+    <p class="meta">
+      {m['preview.minutes']({ count: recipe.minutes })}<span aria-hidden="true"> ↗</span>
+    </p>
+  </div>
   <div class="favourite">
     <IconButton
       label={m['preview.favourite']({ title: recipe.title })}
@@ -40,8 +43,12 @@
 <style>
   .recipe {
     position: relative;
-    border-top: 1px solid var(--border);
-    padding: var(--space-6) var(--space-12) var(--space-6) 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .copy {
+    padding-block: var(--space-4);
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -69,6 +76,14 @@
     content: '';
     position: absolute;
     inset: 0;
+    border-radius: var(--radius-lg);
+  }
+  .open:focus-visible {
+    outline: none;
+  }
+  .open:focus-visible::after {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 4px;
   }
   .tag {
     color: var(--text-muted);
@@ -92,6 +107,12 @@
     z-index: 1;
     position: absolute;
     top: var(--space-3);
-    right: 0;
+    right: var(--space-3);
+    border-radius: var(--radius-full);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+  }
+  .without-photo .copy {
+    padding-right: var(--space-12);
   }
 </style>

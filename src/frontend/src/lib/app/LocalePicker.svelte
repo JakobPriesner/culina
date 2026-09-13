@@ -2,6 +2,8 @@
   import { locales, m, type Locale } from './i18n';
   import { preferences } from './preferences.svelte';
 
+  let { compact = false }: { compact?: boolean } = $props();
+
   /**
    * A plain select: there are two languages, everyone recognises the control,
    * and a custom menu would buy nothing but keyboard bugs.
@@ -15,7 +17,7 @@
 </script>
 
 <div class="field">
-  <label class="label" for={id}>{m['locale.label']()}</label>
+  <label class="label" class:compact for={id}>{m['locale.label']()}</label>
   <select
     {id}
     class="select"
@@ -49,5 +51,14 @@
     color: var(--text);
     font: inherit;
     font-size: var(--text-sm);
+  }
+
+  .label.compact {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 </style>

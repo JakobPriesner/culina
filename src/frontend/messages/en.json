@@ -296,5 +296,9 @@
   "editor.conflict.keepMine": "Keep my version",
   "editor.conflict.takeTheirs": "Take theirs",
   "editor.heading": "Editing {title}",
-  "recipe.noneThisStep": "Nothing from the list for this step."
+  "recipe.noneThisStep": "Nothing from the list for this step.",
+  "preview.doneShort": "Done",
+  "preview.closeIngredients": "Close ingredients",
+  "preview.resume": "Continue cooking",
+  "preview.inProgress": "In progress"
 }
