@@ -181,7 +181,12 @@
           {/if}
         {/each}
       {:else}
-        <p class="empty">{m['recipe.noIngredients']()}</p>
+        <!-- Two different emptinesses. While cooking the list is filtered to
+             what this step names, so "none written down" would be a lie about a
+             recipe that has seven. -->
+        <p class="empty">
+          {cooking ? m['recipe.noneThisStep']() : m['recipe.noIngredients']()}
+        </p>
       {/if}
     </section>
 

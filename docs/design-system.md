@@ -327,3 +327,13 @@ and with size and weight. Opacity is for things that are not text.
 The rendered pages are checked by axe on every route in both modes, which is
 the layer that catches this. The token table catches what the design system
 promises; only the page catches what it renders.
+
+## A control that changes what it says is one control
+
+Two controls in an `{#if}`/`{:else}` that swap places are two elements, and
+swapping them takes focus with them. The cooking screen did that at the last
+step: the keyboard user who had just pressed Next found themselves back at the
+top of the page, at exactly the moment the remaining action was "I made it".
+
+Render one control and change its label and its handler. Use two only when they
+are genuinely two things a person might choose between.

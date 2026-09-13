@@ -214,3 +214,149 @@ test.describe('what moves while a page loads', () => {
     });
   }
 });
+
+/**
+ * Every flow, by keyboard alone.
+ *
+ * Not only for people who cannot use a pointer: a keyboard walk is the fastest
+ * way to find a control that is a `div`, a focus order that jumps around the
+ * page, and a dialog that lets focus escape behind it. If the tab order makes
+ * sense, the page structure almost certainly does too.
+ */
+test.describe('reaching everything with a keyboard', () => {
+  test.skip(needsBackend, skipReason);
+
+  let context: BrowserContext;
+  let page: Page;
+  let recipeId: string;
+
+  test.beforeAll(async ({ browser }, testInfo) => {
+    if (needsBackend) {
+      return;
+    }
+
+    context = await browser.newContext();
+    page = await context.newPage();
+
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
+
+    recipeId = await seedRecipe(page, {
+      title: unique('Reachable'),
+      yieldAmount: 2,
+      ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }],
+      steps: ['Melt {0}.', 'Wait.']
+    });
+
+    // An earlier describe in this file cooked something else with the same
+    // account, and only one recipe can be cooked at a time. Arriving with one
+    // already going means the screen starts by abandoning it, which is a race
+    // this test has no reason to be running.
+    await endAnyCooking(page);
+  });
+
+  test.afterAll(async () => {
+    await context?.close();
+  });
+
+  /** Leaves the account with nothing being cooked. */
+  async function endAnyCooking(who: Page) {
+    const current = await who.request.get('/api/v1/cook-sessions/current');
+
+    if (!current.ok()) {
+      return;
+    }
+
+    const body: { sessionId?: string } = await current.json();
+    const cookies = await who.context().cookies();
+    const csrf = cookies.find((cookie) => cookie.name === 'culina.csrf')?.value ?? '';
+
+    if (body.sessionId) {
+      await who.request.delete(`/api/v1/cook-sessions/${body.sessionId}?completed=false`, {
+        headers: { 'X-Culina-CSRF': csrf, Origin: new URL(who.url()).origin }
+      });
+    }
+  }
+
+  /** Everything the tab key reaches, in the order it reaches it. */
+  async function tabOrder(limit = 40) {
+    const reached: string[] = [];
+
+    for (let index = 0; index < limit; index += 1) {
+      await page.keyboard.press('Tab');
+
+      const focused = await page.evaluate(() => {
+        const element = document.activeElement;
+
+        if (!element || element === document.body) {
+          return null;
+        }
+
+        const name =
+          element.getAttribute('aria-label') ?? element.textContent?.trim().slice(0, 40) ?? '';
+
+        return `${element.tagName.toLowerCase()}:${name}`;
+      });
+
+      if (focused === null) {
+        break;
+      }
+
+      if (reached.includes(focused) && reached[0] === focused) {
+        // Back to where it started: the whole page has been walked.
+        break;
+      }
+
+      reached.push(focused);
+    }
+
+    return reached;
+  }
+
+  test('the first stop is the skip link, on every screen', async () => {
+    // Without it, reaching the page content by keyboard means tabbing through
+    // the navigation on every single page.
+    for (const path of ['/', `/recipes/${recipeId}`, '/shopping', '/me']) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await page.keyboard.press('Tab');
+
+      const first = await page.evaluate(() => document.activeElement?.textContent?.trim());
+
+      expect(first, path).toMatch(/skip to content|zum inhalt/i);
+    }
+  });
+
+  test('every control on the recipe is reachable, and nothing is a div', async () => {
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    const reached = await tabOrder();
+
+    // The controls that matter, in the order somebody would meet them.
+    expect(reached.join('\n')).toMatch(/one fewer|eine weniger/i);
+    expect(reached.join('\n')).toMatch(/scale to what i have|auf meine menge/i);
+    expect(reached.join('\n')).toMatch(/shopping list|einkaufsliste/i);
+    expect(reached.join('\n')).toMatch(/start cooking|kochen starten/i);
+
+    // Everything focusable is a real control. A focusable `div` is a control
+    // that a screen reader describes as nothing at all.
+    const tags = new Set(reached.map((entry) => entry.split(':')[0]));
+
+    expect([...tags].sort()).toEqual(['a', 'button', 'input', 'textarea']);
+  });
+
+  test('cooking can be driven without touching the screen', async () => {
+    await page.goto(`/recipes/${recipeId}/cook`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByText(/step 1 of 2|schritt 1 von 2/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /^(next step|nächster schritt)$/i }).focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByText(/step 2 of 2|schritt 2 von 2/i)).toBeVisible();
+
+    // And the control that finishes is where the one that advanced was, so the
+    // hand does not have to go looking.
+    await expect(page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i })).toBeFocused();
+  });
+});

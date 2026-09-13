@@ -57,9 +57,19 @@ CULINA_E2E_EMAIL=you@example.com CULINA_E2E_PASSWORD=... make test-e2e
 ```
 
 Without those, the suites that need a backend say they were skipped rather than
-passing quietly. Every flow makes an account of its own, named after its file —
-and raises the instance's rate limits, because every request in the suite comes
-from one address and the defaults are right to refuse that.
+passing quietly. Every flow makes an account of its own, named after its file.
+
+The instance the suite runs against needs its rate limits raised, because six
+browsers driving one instance from one address is a burst no person produces and
+the defaults are right to refuse it. CI does this for the stack it starts; for a
+local run, start the API with:
+
+```bash
+RateLimits__LoginPerIpPerMinute=1000 \
+RateLimits__RegisterPerIpPerHour=1000 \
+RateLimits__RequestsPerSessionPerMinute=20000 \
+make backend
+```
 
 ## The contract between the halves
 

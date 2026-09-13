@@ -52,6 +52,7 @@ services:
       # one address and the defaults are right to refuse that.
       RateLimits__LoginPerIpPerMinute: ${RateLimits__LoginPerIpPerMinute:-10}
       RateLimits__RegisterPerIpPerHour: ${RateLimits__RegisterPerIpPerHour:-5}
+      RateLimits__RequestsPerSessionPerMinute: ${RateLimits__RequestsPerSessionPerMinute:-600}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-culina-api}
     ports:

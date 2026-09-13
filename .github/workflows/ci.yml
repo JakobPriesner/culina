@@ -207,6 +207,8 @@ jobs:
         env:
           RateLimits__LoginPerIpPerMinute: '1000'
           RateLimits__RegisterPerIpPerHour: '1000'
+          # Six browsers driving one instance is a burst no person produces.
+          RateLimits__RequestsPerSessionPerMinute: '20000'
         run: |
           docker build -t culina:ci --build-arg REVISION="${GITHUB_SHA::7}" .
           CULINA_IMAGE=culina:ci \
