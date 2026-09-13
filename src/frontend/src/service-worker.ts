@@ -176,7 +176,7 @@ const isApi = (url: URL): boolean =>
  * An allow-list of exact shapes. A rule like "cache anything under /recipes"
  * would quietly start keeping whatever is added there next.
  */
-type CachePolicy = 'cache-first' | 'stale-while-revalidate' | 'network-first';
+type CachePolicy = 'cache-first' | 'network-first';
 
 const one = (pattern: RegExp, policy: CachePolicy) => ({ pattern, policy }) as const;
 
@@ -184,18 +184,23 @@ const readable = [
   // Content-addressed and immutable: the URL carries the width and the recipe's
   // version, so what is cached can never be the wrong picture.
   one(/^\/api\/v1\/recipes\/[^/]+\/image$/, 'cache-first'),
-  // The recipe itself. Shown from the cache at once and refreshed behind it, so
-  // opening a recipe is instant and still current a moment later.
-  one(/^\/api\/v1\/recipes\/[^/]+$/, 'stale-while-revalidate'),
-  // The list is the one screen where being out of date is visible, so the
-  // network wins when there is one and the cache only catches a fall.
+  // The recipe, the list, and who is signed in: the network wins whenever
+  // there is one, and the cache only ever catches a fall.
+  //
+  // Not stale-while-revalidate, which is the obvious choice and the wrong one.
+  // Showing the stored copy first means that the moment after somebody edits a
+  // recipe, opening it shows the version from before their edit — the app
+  // arguing with itself about what it just saved. Opening a recipe is fast
+  // enough without it, and what was promised is that a recipe stays *readable*
+  // with no network, not that it appears instantly with one.
+  one(/^\/api\/v1\/recipes\/[^/]+$/, 'network-first'),
   one(/^\/api\/v1\/recipes$/, 'network-first'),
-  // Who is signed in. Without it a cold start with no network cannot tell
+  // Who is signed in. Without this a cold start with no network cannot tell
   // "offline" from "signed out", and answers the second one — which locks
   // somebody out of the recipes this cache exists to have kept for them.
   // Never cached as a failure: a 401 is not `ok`, so an expired session is
   // still an expired session the moment the network comes back.
-  one(/^\/api\/v1\/users\/me$/, 'stale-while-revalidate')
+  one(/^\/api\/v1\/users\/me$/, 'network-first')
 ];
 
 function policyFor(url: URL): CachePolicy | null {
@@ -222,17 +227,9 @@ async function apiResponse(request: Request, policy: CachePolicy): Promise<Respo
     return cached;
   }
 
-  // Started once and awaited at most once more: a `Request` is spent by the
-  // fetch that used it, so there is no second attempt to be had.
+  // Started once and awaited once: a `Request` is spent by the fetch that used
+  // it, so there is no second attempt to be had.
   const fresh = fetchAndStore(request, cache);
-
-  if (cached && policy === 'stale-while-revalidate') {
-    // Deliberately not awaited: the point of showing the cached copy is not
-    // waiting for the network. The rejection is already handled inside.
-    void fresh;
-
-    return cached;
-  }
 
   const response = await fresh;
 

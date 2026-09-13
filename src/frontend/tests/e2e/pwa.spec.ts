@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { accountFor, needsBackend, signInWithHousehold, skipReason } from './support/culina';
+
 /**
  * The app installs, opens without a network, and never keeps anyone's data.
  *
@@ -86,22 +88,15 @@ test.describe('the service worker @offline', () => {
  * signed-in shell beside the navigation, so this suite needs an account.
  */
 test.describe('being offline', () => {
-  const email = process.env['CULINA_E2E_EMAIL'];
-  const password = process.env['CULINA_E2E_PASSWORD'];
-
   test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only.');
-  test.skip(
-    !email || !password,
-    'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD with a backend running.'
-  );
+  test.skip(needsBackend, skipReason);
 
-  test('is said once, quietly, and taken back without ceremony', async ({ page, context }) => {
-    await page.goto('/login');
-    await page.getByLabel(/email|e-mail/i).fill(email!);
-    await page.getByLabel(/password|passwort/i).fill(password!);
-    await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
-
-    await expect(page).toHaveURL(/\/(welcome)?$/);
+  test('is said once, quietly, and taken back without ceremony', async ({
+    browser,
+    page,
+    context
+  }, testInfo) => {
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
 
     const badge = page.getByText(/^offline$/i);
 
@@ -126,21 +121,11 @@ test.describe('being offline', () => {
  * and is wanted by nobody.
  */
 test.describe('a recipe already opened', () => {
-  const email = process.env['CULINA_E2E_EMAIL'];
-  const password = process.env['CULINA_E2E_PASSWORD'];
-
   test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only.');
-  test.skip(
-    !email || !password,
-    'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD with a backend running.'
-  );
+  test.skip(needsBackend, skipReason);
 
-  test('is still readable with the network gone', async ({ page, context }) => {
-    await page.goto('/login');
-    await page.getByLabel(/email|e-mail/i).fill(email!);
-    await page.getByLabel(/password|passwort/i).fill(password!);
-    await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
-    await expect(page).toHaveURL(/\/(welcome)?$/);
+  test('is still readable with the network gone', async ({ browser, page, context }, testInfo) => {
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
 
     // Its own recipe, written through the API: the test must not depend on
     // what happens to be in this household.
@@ -182,12 +167,11 @@ test.describe('a recipe already opened', () => {
     ).toEqual([]);
   });
 
-  test('is gone from the device the moment anyone signs out', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByLabel(/email|e-mail/i).fill(email!);
-    await page.getByLabel(/password|passwort/i).fill(password!);
-    await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
-    await expect(page).toHaveURL(/\/(welcome)?$/);
+  test('is gone from the device the moment anyone signs out', async ({
+    browser,
+    page
+  }, testInfo) => {
+    await signInWithHousehold(page, await accountFor(browser, testInfo));
 
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
     await page.reload();

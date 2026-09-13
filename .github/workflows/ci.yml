@@ -194,6 +194,13 @@ jobs:
       # The real image against a real database, so the suite exercises what
       # ships rather than a development arrangement that resembles it.
       - name: Start the stack
+        # The suite gives every flow its own account and every request arrives
+        # from one address, so the rate limits are doing their job when they
+        # refuse it. This instance exists to be signed into; the limits
+        # themselves have their own tests.
+        env:
+          RateLimits__LoginPerIpPerMinute: '1000'
+          RateLimits__RegisterPerIpPerHour: '1000'
         run: |
           docker build -t culina:ci --build-arg REVISION="${GITHUB_SHA::7}" .
           CULINA_IMAGE=culina:ci \
