@@ -31,8 +31,21 @@
   const wakeLock = createWakeLock();
   const timers = createTimers(() => cooking.session?.sessionId ?? null);
 
-  const currentStep = $derived(cooking.session?.currentStepIndex ?? 0);
   const totalSteps = $derived(recipes.detail?.steps.length ?? 0);
+
+  /**
+   * Which step is being cooked, kept inside the recipe that is on screen.
+   *
+   * The session records a position by index, and a recipe edited from another
+   * device can have fewer steps than it had when the cooking started. Clamping
+   * means the worst case is being shown the last step rather than a blank
+   * screen. It cannot detect a step *inserted* above this one — that needs the
+   * position to be a step's identity rather than its place in a list, which is
+   * recorded in docs/domain-model.md as a known limit.
+   */
+  const currentStep = $derived(
+    Math.min(cooking.session?.currentStepIndex ?? 0, Math.max(0, totalSteps - 1))
+  );
 
   /**
    * Whether there is a session to move within.
@@ -178,16 +191,27 @@
       </p>
 
       <div class="moves">
-        <Button disabled={!ready || currentStep === 0} onclick={() => move(currentStep - 1)}>
+        <!-- The largest control size, because these are pressed with a wet
+             thumb while looking at a pan rather than at the screen. -->
+        <Button
+          size="lg"
+          disabled={!ready || currentStep === 0}
+          onclick={() => move(currentStep - 1)}
+        >
           {m['cooking.previous']()}
         </Button>
 
         {#if currentStep < totalSteps - 1}
-          <Button variant="primary" disabled={!ready} onclick={() => move(currentStep + 1)}>
+          <Button
+            size="lg"
+            variant="primary"
+            disabled={!ready}
+            onclick={() => move(currentStep + 1)}
+          >
             {m['cooking.next']()}
           </Button>
         {:else}
-          <Button variant="primary" disabled={!ready} onclick={() => finish(true)}>
+          <Button size="lg" variant="primary" disabled={!ready} onclick={() => finish(true)}>
             {m['cooking.finish']()}
           </Button>
         {/if}

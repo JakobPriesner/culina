@@ -24,8 +24,11 @@ number 400 px away. Scaling is honest instead of cosmetic, and the app rounds
 the way a cook writes: `4–5 cloves`, never `4.5`.
 
 **3. The app never loses your place.** Servings are remembered per recipe.
-Leave mid-cook and come back to the same step with your timers still running.
-A slim bar anywhere in the app brings you straight back.
+Leave mid-cook and come back to the same step with your timers still running —
+they count from a deadline, not from a page that has to stay open, so ten
+minutes in a pocket is ten minutes gone. They do not ring while the app is
+closed, and nothing in the app pretends otherwise. A slim bar anywhere brings
+you straight back.
 
 ## What it deliberately does not do
 
