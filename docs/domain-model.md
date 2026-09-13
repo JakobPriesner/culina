@@ -230,6 +230,25 @@ was invisible, it matched "oil" inside "olive oil", and there was no way to say
 Household-scoped so each household keeps its own vocabulary and nothing leaks
 between them. `(HouseholdId, Slug)` is unique. `RecipeTag(RecipeId, TagId)`.
 
+### CookPhoto
+
+A picture of one attempt, hung on the `CookLogEntry` that dates it:
+`ImageHash`, `Width`, `Height`, stored as three columns on `cook_log_entries`
+that move together (a check constraint says so).
+
+**Personal, like the note and the log itself.** Two people in one household keep
+separate histories and separate photographs of them. The recipe's own
+`RecipeImage` is the household's and says what the dish is supposed to look
+like; this says what it looked like on a Tuesday, and the two are not the same
+claim.
+
+On the entry rather than in a table of its own, because unlike a recipe's hero
+image there is nothing to replace: one attempt, one photo. The bytes are
+content-addressed and live on the volume, so **a future sweep for unreferenced
+files must read `cook_log_entries.image_hash` as well as
+`recipe_images.content_hash`.** Removing a photo clears the columns and leaves
+the file, which may be another attempt's picture too.
+
 ### RecipeImage
 
 `Id`, `RecipeId`, `ContentHash` (SHA-256, content-addressed), `Width`,

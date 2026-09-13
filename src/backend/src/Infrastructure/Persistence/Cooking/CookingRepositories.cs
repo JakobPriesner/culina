@@ -36,6 +36,12 @@ internal sealed record CookLogRow
     public decimal? Servings { get; init; }
 
     public string? Note { get; init; }
+
+    public string? ImageHash { get; init; }
+
+    public int? ImageWidth { get; init; }
+
+    public int? ImageHeight { get; init; }
 }
 
 /// <summary>Stores one person's notes.</summary>
@@ -110,7 +116,8 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
     {
         var rows = await executor.QueryAsync<CookLogRow>(
             """
-            select id, recipe_id, user_id, household_id, made_at, servings, note
+            select id, recipe_id, user_id, household_id, made_at, servings, note,
+                   image_hash, image_width, image_height
             from cook_log_entries
             where recipe_id = @recipeId and user_id = @userId
             order by made_at desc;
@@ -118,8 +125,71 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
             new { recipeId, userId },
             cancellationToken).ConfigureAwait(false);
 
-        return [.. rows.Select(row => CookLogEntry.Restore(
-            row.Id, row.RecipeId, row.UserId, row.HouseholdId, row.MadeAt, row.Servings, row.Note))];
+        return [.. rows.Select(ToEntry)];
+    }
+
+    /// <summary>The photo a row carries, or null when it carries none.</summary>
+    /// <remarks>
+    /// The three columns move together — the database has a check constraint
+    /// saying so — but the mapper does not lean on it: a half-written row reads
+    /// as an attempt with no picture rather than throwing on a page somebody is
+    /// looking at.
+    /// </remarks>
+    private static CookLogEntry ToEntry(CookLogRow row) => CookLogEntry.Restore(
+        row.Id,
+        row.RecipeId,
+        row.UserId,
+        row.HouseholdId,
+        row.MadeAt,
+        row.Servings,
+        row.Note,
+        row is { ImageHash: { } hash, ImageWidth: { } width, ImageHeight: { } height }
+            ? new CookPhoto(hash, width, height)
+            : null);
+
+    public async Task<Result<CookLogEntry>> FindAsync(
+        Guid entryId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        // Scoped to the caller in SQL: somebody else's attempt is not found
+        // rather than forbidden, which is the same answer a recipe gives.
+        var row = await executor.QuerySingleOrDefaultAsync<CookLogRow>(
+            """
+            select id, recipe_id, user_id, household_id, made_at, servings, note,
+                   image_hash, image_width, image_height
+            from cook_log_entries
+            where id = @entryId and user_id = @userId;
+            """,
+            new { entryId, userId },
+            cancellationToken).ConfigureAwait(false);
+
+        return row is null ? CookingErrors.EntryNotFound : ToEntry(row);
+    }
+
+    public async Task<Result> SetPhotoAsync(
+        Guid entryId,
+        Guid userId,
+        CookPhoto? photo,
+        CancellationToken cancellationToken)
+    {
+        var affected = await executor.ExecuteAsync(
+            """
+            update cook_log_entries
+            set image_hash = @hash, image_width = @width, image_height = @height
+            where id = @entryId and user_id = @userId;
+            """,
+            new
+            {
+                entryId,
+                userId,
+                hash = photo?.ContentHash,
+                width = photo?.Width,
+                height = photo?.Height
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return affected == 0 ? CookingErrors.EntryNotFound : Result.Success();
     }
 
     public async Task<Result> AddAsync(CookLogEntry entry, CancellationToken cancellationToken)

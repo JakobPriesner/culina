@@ -525,6 +525,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read your photo of an attempt
+         * @description Widths 400, 800 and 1600. Private and revalidated: this is one person's photograph, and its ETag is the content hash, which cannot change under the same address.
+         */
+        get: operations["getCookPhotoV1"];
+        /**
+         * Add a photo of how yours turned out
+         * @description Yours, not the household's: the recipe's own photograph is what the dish is supposed to look like, and this is what it looked like on the day. Decoded to find out what it is and re-encoded to WebP, which strips the EXIF a phone photograph carries — including where the kitchen is.
+         */
+        put: operations["setCookPhotoV1"];
+        post?: never;
+        /**
+         * Remove your photo of an attempt
+         * @description The entry itself stays: that you cooked it is still true. The stored file is left alone, because it is content-addressed and another attempt may be the same picture; reclaiming it belongs to a sweep, not to a delete.
+         */
+        delete: operations["removeCookPhotoV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cook-sessions": {
         parameters: {
             query?: never;
@@ -1069,6 +1097,8 @@ export interface components {
             servings?: number | null;
             /** @description Anything you wrote. */
             note?: string | null;
+            /** @description Whether there is a picture of how this one turned out. */
+            hasPhoto: boolean;
         };
         /** @description How often you have cooked this, and when. */
         RecipesGetCookLogResponse: {
@@ -3464,6 +3494,152 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCookPhotoV1: {
+        parameters: {
+            query?: {
+                w?: number;
+            };
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/webp": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setCookPhotoV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    file: components["schemas"]["IFormFile"];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetCookLogResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeCookPhotoV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetCookLogResponse"];
+                };
             };
             /** @description Unauthorized */
             401: {

@@ -1,4 +1,5 @@
 using Application.Abstractions.Messaging;
+using Application.Cooking.CookPhoto;
 using Application.CookSessions;
 using Application.Households.ChangeMemberRole;
 using Application.Households.Create;
@@ -18,8 +19,8 @@ using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
 using Application.Recipes.GetCookLog;
 using Application.Recipes.GetImage;
-using Application.Recipes.GetNotes;
 using Application.Recipes.GetIngredients;
+using Application.Recipes.GetNotes;
 using Application.Recipes.GetUnits;
 using Application.Recipes.RecordCooked;
 using Application.Recipes.RemoveImage;
@@ -164,6 +165,11 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<SetRecipeImageCommand, Contracts.Recipes.RecipeDetail>,
                 SetRecipeImageCommandHandler>()
             .AddScoped<ICommandHandler<RemoveRecipeImageCommand>, RemoveRecipeImageCommandHandler>()
-            .AddScoped<IQueryHandler<GetRecipeImageQuery, ImageDelivery>, GetRecipeImageQueryHandler>();
+            .AddScoped<IQueryHandler<GetRecipeImageQuery, ImageDelivery>, GetRecipeImageQueryHandler>()
+            .AddScoped<ICommandHandler<SetCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
+                SetCookPhotoCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
+                RemoveCookPhotoCommandHandler>()
+            .AddScoped<IQueryHandler<GetCookPhotoQuery, ImageDelivery>, GetCookPhotoQueryHandler>();
     }
 }

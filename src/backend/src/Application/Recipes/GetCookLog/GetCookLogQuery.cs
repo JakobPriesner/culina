@@ -58,7 +58,8 @@ internal static class CookLogMappings
                     EntryId = entry.Id,
                     MadeAt = entry.MadeAt,
                     Servings = entry.Servings,
-                    Note = entry.Note
+                    Note = entry.Note,
+                    HasPhoto = entry.Photo is not null
                 })
             ]
         };

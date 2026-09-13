@@ -20,6 +20,26 @@ public interface ICookLogRepository
     /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result> AddAsync(CookLogEntry entry, CancellationToken cancellationToken);
 
+    /// <summary>One of this person's entries, or not found.</summary>
+    /// <param name="entryId">Which entry.</param>
+    /// <param name="userId">Whose it must be.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<Result<CookLogEntry>> FindAsync(
+        Guid entryId,
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    /// <summary>Hangs a photo on an entry, or takes the one it has away.</summary>
+    /// <param name="entryId">Which entry.</param>
+    /// <param name="userId">Whose it must be.</param>
+    /// <param name="photo">What was stored, or null to remove.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    Task<Result> SetPhotoAsync(
+        Guid entryId,
+        Guid userId,
+        CookPhoto? photo,
+        CancellationToken cancellationToken);
+
     /// <summary>Removes an entry, for the undo behind the "made it" toast.</summary>
     /// <param name="entryId">Which entry.</param>
     /// <param name="userId">Whose it must be.</param>

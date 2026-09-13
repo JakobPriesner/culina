@@ -23,7 +23,8 @@ public sealed class CookLogEntry
         Guid householdId,
         DateTimeOffset madeAt,
         decimal? servings,
-        string? note)
+        string? note,
+        CookPhoto? photo)
     {
         Id = id;
         RecipeId = recipeId;
@@ -32,6 +33,7 @@ public sealed class CookLogEntry
         MadeAt = madeAt;
         Servings = servings;
         Note = note;
+        Photo = photo;
     }
 
     /// <summary>The entry's id.</summary>
@@ -54,6 +56,20 @@ public sealed class CookLogEntry
 
     /// <summary>Anything they wanted to remember.</summary>
     public string? Note { get; }
+
+    /// <summary>
+    /// A picture of how it actually turned out, if they took one.
+    /// </summary>
+    /// <remarks>
+    /// Theirs, not the household's. The recipe's own photograph is what the
+    /// dish is supposed to look like; this is what it looked like on a Tuesday,
+    /// and the two are not the same claim.
+    /// </remarks>
+    public CookPhoto? Photo { get; private set; }
+
+    /// <summary>Hangs a photo on this attempt, replacing any it had.</summary>
+    /// <param name="photo">What was stored.</param>
+    public void Illustrate(CookPhoto? photo) => Photo = photo;
 
     /// <summary>Records that someone cooked this.</summary>
     /// <param name="recipeId">Which recipe.</param>
@@ -89,7 +105,8 @@ public sealed class CookLogEntry
             householdId,
             madeAt,
             servings,
-            string.IsNullOrEmpty(trimmed) ? null : trimmed);
+            string.IsNullOrEmpty(trimmed) ? null : trimmed,
+            photo: null);
     }
 
     /// <summary>Rebuilds an entry from storage.</summary>
@@ -100,6 +117,7 @@ public sealed class CookLogEntry
     /// <param name="madeAt">When.</param>
     /// <param name="servings">How much.</param>
     /// <param name="note">What they wrote.</param>
+    /// <param name="photo">The picture they took, if any.</param>
     public static CookLogEntry Restore(
         Guid id,
         Guid recipeId,
@@ -107,6 +125,15 @@ public sealed class CookLogEntry
         Guid householdId,
         DateTimeOffset madeAt,
         decimal? servings,
-        string? note) =>
-        new(id, recipeId, userId, householdId, madeAt, servings, note);
+        string? note,
+        CookPhoto? photo = null) =>
+        new(id, recipeId, userId, householdId, madeAt, servings, note, photo);
 }
+
+/// <summary>
+/// A picture of one attempt.
+/// </summary>
+/// <param name="ContentHash">Where the bytes are, in the image store.</param>
+/// <param name="Width">The stored width, for reserving the space it will take.</param>
+/// <param name="Height">The stored height.</param>
+public sealed record CookPhoto(string ContentHash, int Width, int Height);

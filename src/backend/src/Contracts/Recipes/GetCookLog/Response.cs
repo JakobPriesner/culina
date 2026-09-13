@@ -27,4 +27,14 @@ public sealed record CookLogItem
 
     /// <summary>Anything you wrote.</summary>
     public string? Note { get; init; }
+
+    /// <summary>
+    /// Whether there is a picture of how this one turned out.
+    /// </summary>
+    /// <remarks>
+    /// A flag rather than a URL: the address is <c>/recipes/{recipeId}/cook-log/
+    /// {entryId}/photo</c> and the client already knows both halves of it.
+    /// Sending a URL the client can derive is a second thing to keep in step.
+    /// </remarks>
+    public required bool HasPhoto { get; init; }
 }

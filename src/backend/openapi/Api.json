@@ -2333,6 +2333,208 @@
         }
       }
     },
+    "/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo": {
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Add a photo of how yours turned out",
+        "description": "Yours, not the household's: the recipe's own photograph is what the dish is supposed to look like, and this is what it looked like on the day. Decoded to find out what it is and re-encoded to WebP, which strips the EXIF a phone photograph carries — including where the kitchen is.",
+        "operationId": "setCookPhotoV1",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetCookLogResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Remove your photo of an attempt",
+        "description": "The entry itself stays: that you cooked it is still true. The stored file is left alone, because it is content-addressed and another attempt may be the same picture; reclaiming it belongs to a sweep, not to a delete.",
+        "operationId": "removeCookPhotoV1",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetCookLogResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read your photo of an attempt",
+        "description": "Widths 400, 800 and 1600. Private and revalidated: this is one person's photograph, and its ETag is the content hash, which cannot change under the same address.",
+        "operationId": "getCookPhotoV1",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "w",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cook-sessions": {
       "post": {
         "tags": [
@@ -3602,7 +3804,8 @@
       "RecipesGetCookLogCookLogItem": {
         "required": [
           "entryId",
-          "madeAt"
+          "madeAt",
+          "hasPhoto"
         ],
         "type": "object",
         "properties": {
@@ -3626,6 +3829,10 @@
             "type": "string",
             "description": "Anything you wrote.",
             "nullable": true
+          },
+          "hasPhoto": {
+            "type": "boolean",
+            "description": "Whether there is a picture of how this one turned out."
           }
         },
         "description": "One time you cooked it."

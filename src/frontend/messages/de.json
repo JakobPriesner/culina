@@ -318,5 +318,10 @@
   "import.paste.found": "Verstanden: {ingredients} Zutaten, {steps} Schritte.",
   "import.paste.create": "Rezept anlegen",
   "import.paste.cancel": "Doch nicht",
-  "import.paste.untitled": "Rezept ohne Titel"
+  "import.paste.untitled": "Rezept ohne Titel",
+  "attempts.title": "Deine Versuche",
+  "attempts.add": "Foto vom {date} hinzufügen",
+  "attempts.remove": "Entfernen",
+  "attempts.choose": "Foto auswählen",
+  "attempts.photoAlt": "So ist es dir am {date} gelungen"
 }
