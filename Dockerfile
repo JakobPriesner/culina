@@ -62,6 +62,12 @@ RUN dotnet publish src/Api/Api.csproj \
         --no-restore \
         --output /app
 
+# The two data directories, made here because the runtime image has no shell to
+# make them in. Docker seeds a volume's mount point from what the image already
+# has at that path — including its ownership — so without this the volumes
+# arrive owned by root and the non-root app cannot write a single photograph.
+RUN mkdir -p /data/images /data/keys
+
 # ── 3. What ships ────────────────────────────────────────────────────────────
 # Chiseled: no shell and no package manager, which is both a much smaller
 # attack surface and a much smaller CVE feed to keep up with.
@@ -80,6 +86,9 @@ LABEL org.opencontainers.image.title="Culina" \
 WORKDIR /app
 
 COPY --from=backend /app ./
+
+# Owned by the user that runs, for the reason above.
+COPY --from=backend --chown=$APP_UID:$APP_UID /data /data
 
 # Both must be volumes. Recipe images are the data that cannot be rebuilt, and
 # the key ring is what the framework protects anything else with. The
