@@ -276,6 +276,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Take your recipes with you
+         * @description Plain, readable JSON: this household's recipes with their photographs inline, and your own notes and cooking history. Notes are personal — two people in one kitchen keep separate ones — so an archive carries the asking person's and nobody else's.
+         *
+         *     A step's ingredient references travel as positions rather than ids, so a restored step still names the right ingredient in whatever database it lands in.
+         */
+        get: operations["exportArchiveV1"];
+        put?: never;
+        /**
+         * Put an archive's recipes back
+         * @description Adds the archive's recipes to this household; it never replaces what is already there, because a restore that deleted your kitchen would be the worst possible reading of the word.
+         *
+         *     One recipe at a time, in its own transaction. An archive is usually restored because something went wrong, and refusing four hundred recipes over one that a newer version wrote strangely is the least helpful thing it could do — what could not be written is counted and reported.
+         */
+        post: operations["restoreArchiveV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invitations/{code}/redemptions": {
         parameters: {
             query?: never;
@@ -771,6 +799,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description What a restore did. */
+        ArchiveRestored: {
+            /**
+             * Format: int32
+             * @description How many recipes were written.
+             */
+            restored: number;
+            /**
+             * Format: int32
+             * @description How many could not be, and were passed over.
+             */
+            skipped: number;
+        };
         /** @description A cooking session. */
         CookSessionsResponse: {
             /**
@@ -2787,6 +2828,101 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    exportArchiveV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    restoreArchiveV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    file: components["schemas"]["IFormFile"];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveRestored"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

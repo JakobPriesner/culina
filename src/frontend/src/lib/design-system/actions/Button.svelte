@@ -25,6 +25,14 @@
     loading?: boolean;
     /** Turns the button into a link. Navigation belongs in an anchor. */
     href?: string;
+    /**
+     * Saves what the link points at instead of navigating to it.
+     *
+     * Only meaningful with `href`, and only for something the browser would
+     * otherwise try to display. The browser's own download is what gives a file
+     * a name and a progress indication; a blob assembled in memory has neither.
+     */
+    download?: string;
     /** Announced in place of the label when the label is only an icon. */
     label?: string;
     onclick?: (event: MouseEvent) => void;
@@ -40,6 +48,7 @@
     disabled = false,
     loading = false,
     href,
+    download,
     label,
     onclick
   }: Props = $props();
@@ -67,6 +76,7 @@
     class:full
     class:loading
     href={inert ? undefined : href}
+    {download}
     aria-disabled={inert ? 'true' : undefined}
     aria-label={label}
     aria-busy={loading ? 'true' : undefined}

@@ -400,6 +400,35 @@ exactly one list per household on purpose.
 path that merged a whole week at once would be a second place for merging to
 behave differently, and merging is the entire value of the list.
 
+## The archive
+
+`GET /households/{id}/archive` writes a household's recipes out as plain,
+readable JSON — photographs inline, base64 — and `POST` to the same address puts
+one back. The right answer to "what if I stop using Culina", which a self-hosted
+app owes its users.
+
+**A step's ingredient references travel as positions, never as ids.** The
+position is into the recipe's ingredients read in order, group by group, which
+is the order they are written back in. Ids are assigned by whichever database
+the archive lands in, so a format that carried them would restore into steps
+pointing at nothing — and a step whose amounts have come loose is precisely the
+failure this app exists to prevent.
+
+**Notes are the asking person's, and nobody else's.** The recipes belong to the
+household; notes and the cook log are personal, and an archive carrying every
+member's would be one person handing out another's private writing.
+
+**A restore adds; it never replaces.** One recipe per transaction, so an archive
+restored because something went wrong is not refused wholesale over one recipe a
+newer version wrote strangely — what could not be written is counted and
+reported. The format's version is read first and an unknown one is refused
+outright, because a half-restored recipe is worse than a failed restore: nobody
+can tell which half is wrong.
+
+**The export is streamed**, a recipe at a time. With photographs inline an
+archive of a well-used household is tens of megabytes, and building it in memory
+would make the export the largest allocation in the process.
+
 ## Persistence conventions
 
 - PostgreSQL, accessed with Npgsql + Dapper. No EF Core, no ORM change

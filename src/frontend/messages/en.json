@@ -349,5 +349,12 @@
   "import.url.read": "Read it",
   "import.url.or": "or paste it",
   "import.url.failed": "That page could not be read. It may be gone, or it may not be an ordinary public page.",
-  "import.paste.source": "From {url}"
+  "import.paste.source": "From {url}",
+  "archive.title": "Your recipes, as a file",
+  "archive.hint": "Plain readable JSON with your photographs in it, plus your own notes and cooking history. It is yours to keep, and restoring it adds the recipes back — it never replaces what is already here.",
+  "archive.export": "Download everything",
+  "archive.restore": "Restore from a file",
+  "archive.choose": "Choose an archive",
+  "archive.restored": "{restored} recipes restored, {skipped} skipped.",
+  "archive.restoreFailed": "That file could not be restored."
 }

@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { Button, Divider } from '$ds';
+  import ArchivePanel from '$features/archive/ArchivePanel.svelte';
   import InvitePanel from '$features/auth/InvitePanel.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
@@ -56,6 +57,10 @@
       <Divider />
 
       <InvitePanel householdId={session.activeHousehold.householdId} />
+
+      <Divider />
+
+      <ArchivePanel householdId={session.activeHousehold.householdId} />
     {/if}
 
     <Divider />

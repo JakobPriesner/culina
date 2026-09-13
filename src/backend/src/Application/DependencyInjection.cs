@@ -1,4 +1,5 @@
 using Application.Abstractions.Messaging;
+using Application.Archive;
 using Application.Cooking.CookPhoto;
 using Application.CookSessions;
 using Application.Households.ChangeMemberRole;
@@ -173,6 +174,9 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RemoveCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
                 RemoveCookPhotoCommandHandler>()
             .AddScoped<IQueryHandler<GetCookPhotoQuery, ImageDelivery>, GetCookPhotoQueryHandler>()
+            .AddScoped<IQueryHandler<ExportArchiveQuery, ArchiveWritten>, ExportArchiveQueryHandler>()
+            .AddScoped<ICommandHandler<RestoreArchiveCommand, ArchiveRestored>,
+                RestoreArchiveCommandHandler>()
             .AddScoped<IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response>,
                 ImportRecipeQueryHandler>()
             .AddScoped<IQueryHandler<GetMealPlanQuery, Contracts.Planning.MealPlanResponse>,

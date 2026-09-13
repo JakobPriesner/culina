@@ -1131,6 +1131,138 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/archive": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Take your recipes with you",
+        "description": "Plain, readable JSON: this household's recipes with their photographs inline, and your own notes and cooking history. Notes are personal — two people in one kitchen keep separate ones — so an archive carries the asking person's and nobody else's.\n\nA step's ingredient references travel as positions rather than ids, so a restored step still names the right ingredient in whatever database it lands in.",
+        "operationId": "exportArchiveV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Put an archive's recipes back",
+        "description": "Adds the archive's recipes to this household; it never replaces what is already there, because a restore that deleted your kitchen would be the worst possible reading of the word.\n\nOne recipe at a time, in its own transaction. An archive is usually restored because something went wrong, and refusing four hundred recipes over one that a newer version wrote strangely is the least helpful thing it could do — what could not be written is counted and reported.",
+        "operationId": "restoreArchiveV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveRestored"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invitations/{code}/redemptions": {
       "post": {
         "tags": [
@@ -3393,6 +3525,26 @@
   },
   "components": {
     "schemas": {
+      "ArchiveRestored": {
+        "required": [
+          "restored",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "restored": {
+            "type": "integer",
+            "description": "How many recipes were written.",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "How many could not be, and were passed over.",
+            "format": "int32"
+          }
+        },
+        "description": "What a restore did."
+      },
       "CookSessionsResponse": {
         "required": [
           "sessionId",
