@@ -31,6 +31,8 @@ class RecipeStore {
   #error = $state<AppError | null>(null);
   #total = $state(0);
   #cursor = $state<string | null>(null);
+  #loadingMore = $state(false);
+  #moreFailed = $state(false);
   /** Ids of rows whose change has been applied here but not yet confirmed. */
   #pending = $state<string[]>([]);
 
@@ -81,6 +83,17 @@ class RecipeStore {
     return this.#cursor !== null;
   }
 
+  /**
+   * True when the next page could not be fetched.
+   *
+   * A list that fetches by itself must stop by itself. Without this, a dead
+   * connection is a loop: the end of the list stays in view, asks again,
+   * fails again, and the browser spends the rest of the afternoon on it.
+   */
+  get moreFailed(): boolean {
+    return this.#moreFailed;
+  }
+
   isPending(id: string): boolean {
     return this.#pending.includes(id);
   }
@@ -91,6 +104,8 @@ class RecipeStore {
 
     this.#status = 'loading';
     this.#error = null;
+    this.#moreFailed = false;
+    this.#loadingMore = false;
 
     const result = await this.#fetchPage(householdId, filters, null);
 
@@ -112,14 +127,26 @@ class RecipeStore {
     );
   }
 
-  /** Appends the next page. The list already on screen is never disturbed. */
+  /**
+   * Appends the next page. The list already on screen is never disturbed.
+   *
+   * Safe to call while it is already running: the end of the list scrolls into
+   * view once per placeholder row and the browser says so more than once, so
+   * the second ask has to be free rather than a second request for the same
+   * cursor.
+   */
   async loadMore(householdId: string, filters: RecipeFilters = {}): Promise<void> {
-    if (!this.#cursor) {
+    if (!this.#cursor || this.#loadingMore) {
       return;
     }
 
+    this.#loadingMore = true;
+    this.#moreFailed = false;
+
     const token = this.#beginRead();
     const result = await this.#fetchPage(householdId, filters, this.#cursor);
+
+    this.#loadingMore = false;
 
     // A filter changed while the next page was in flight: those rows belong to
     // a list that is no longer on screen.
@@ -134,9 +161,10 @@ class RecipeStore {
         this.#total = page.total;
       },
       (error) => {
-        // The page that is already there stays. A failed "load more" is a
-        // reason to offer the button again, not to empty the screen.
+        // The page that is already there stays. A failed page is a reason to
+        // stop fetching and ask, not to empty the screen.
         this.#error = error;
+        this.#moreFailed = true;
       }
     );
   }
@@ -273,6 +301,8 @@ class RecipeStore {
     this.#error = null;
     this.#total = 0;
     this.#cursor = null;
+    this.#loadingMore = false;
+    this.#moreFailed = false;
     this.#pending = [];
     this.#writes.clear();
     this.#reading?.abort();

@@ -131,6 +131,62 @@ describe('the next page', () => {
     expect(recipes.hasMore).toBe(false);
   });
 
+  it('is asked for once, however often the end of the list is reached', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')], 9, 'cursor-1'));
+    await recipes.list(household);
+
+    const slow = Promise.withResolvers<Response>();
+    const server = vi.fn((input: Request) =>
+      input.url.includes('cursor') ? slow.promise : Promise.resolve(page([]))
+    );
+
+    vi.stubGlobal('fetch', server);
+
+    // Three placeholder rows come into view together, and each one asks.
+    const asks = [
+      recipes.loadMore(household),
+      recipes.loadMore(household),
+      recipes.loadMore(household)
+    ];
+
+    slow.resolve(page([summary('r2', 'Soup')], 9, null));
+    await Promise.all(asks);
+
+    expect(server).toHaveBeenCalledTimes(1);
+    expect(recipes.items).toHaveLength(2);
+  });
+
+  it('stops asking once a page fails, so a dead connection is not a loop', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')], 9, 'cursor-1'));
+    await recipes.list(household);
+
+    serverAnswers(() => new Response('', { status: 500 }));
+    await recipes.loadMore(household);
+
+    expect(recipes.moreFailed).toBe(true);
+    expect(recipes.items).toHaveLength(1);
+
+    // The row is still there to ask for again — by hand, this time.
+    serverAnswers(() => page([summary('r2', 'Soup')], 9, null));
+    await recipes.loadMore(household);
+
+    expect(recipes.moreFailed).toBe(false);
+    expect(recipes.items.map((item) => item.title)).toEqual(['Orzo', 'Soup']);
+  });
+
+  it('forgets a failed page when the filter changes', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')], 9, 'cursor-1'));
+    await recipes.list(household);
+
+    serverAnswers(() => new Response('', { status: 500 }));
+    await recipes.loadMore(household);
+
+    serverAnswers(() => page([summary('r9', 'Other')]));
+    await recipes.list(household, { query: 'other' });
+
+    expect(recipes.moreFailed).toBe(false);
+  });
+
   it('is discarded when the filter changed while it was in flight', async () => {
     serverAnswers(() => page([summary('r1', 'Orzo')], 9, 'cursor-1'));
     await recipes.list(household);

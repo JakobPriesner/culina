@@ -1,5 +1,7 @@
 <script lang="ts">
   import { m } from '$shell/i18n';
+  import { whenVisible } from '$shell/whenVisible';
+
   import RecipeCard from './RecipeCard.svelte';
   import RecipeCardSkeleton from './RecipeCardSkeleton.svelte';
   import type { RecipeSummary } from './types';
@@ -18,12 +20,23 @@
     loading?: boolean;
     /** Ids whose change is in flight. */
     pending?: readonly string[];
+    /**
+     * Asked for the next page when the end of the list comes into view.
+     *
+     * Given only while there is a next page to ask for. It is called once per
+     * row of placeholders and again whenever they come back into view, so it
+     * has to be free to call while its own request is still running.
+     */
+    onmore?: () => void;
   }
 
-  let { recipes, loading = false, pending = [] }: Props = $props();
+  let { recipes, loading = false, pending = [], onmore }: Props = $props();
 
   /** Enough to fill the visible area without pretending to know the count. */
   const placeholders = [0, 1, 2, 3, 4, 5];
+
+  /** One row's worth: the next page is on its way before these are read. */
+  const next = [0, 1, 2];
 </script>
 
 {#if loading}
@@ -37,6 +50,15 @@
     {#each recipes as recipe (recipe.id)}
       <li><RecipeCard {recipe} pending={pending.includes(recipe.id)} /></li>
     {/each}
+
+    <!-- The end of the list, drawn as the rows that are coming. Reaching them
+         is what fetches them, so there is no button to find and no moment
+         where the list looks finished when it is not. -->
+    {#if onmore}
+      {#each next as row (row)}
+        <li aria-hidden="true" {@attach whenVisible(onmore)}><RecipeCardSkeleton /></li>
+      {/each}
+    {/if}
   </ul>
 {/if}
 
