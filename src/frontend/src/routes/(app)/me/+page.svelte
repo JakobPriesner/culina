@@ -8,6 +8,7 @@
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
   import LocalePicker from '$shell/LocalePicker.svelte';
+  import MeasurementPicker from '$shell/MeasurementPicker.svelte';
   import ThemeToggle from '$shell/ThemeToggle.svelte';
 
   /**
@@ -44,6 +45,8 @@
       </div>
 
       <LocalePicker />
+
+      <MeasurementPicker />
     </section>
 
     {#if session.activeHousehold}

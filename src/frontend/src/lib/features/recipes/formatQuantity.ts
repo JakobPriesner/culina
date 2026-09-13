@@ -1,4 +1,5 @@
 import type { ScaledQuantity } from './scaling';
+import { isCustomary } from './measurement';
 import { familyOf, isBuiltIn, type BuiltInUnit, type Unit } from './units';
 
 /**
@@ -119,7 +120,12 @@ function number(value: number, locale: string, unit: Unit | null): string {
 
   // Only where the amount is spoken as a fraction in the first place. `½ g` is
   // not a thing anyone writes — a scale shows 0.5 g — but half an onion is.
-  if (fraction > 0 && (familyOf(unit) === 'spoon' || isPartOfOne(whole, unit))) {
+  // Customary units are written as fractions with a whole part too: "1½ cups"
+  // is how a US recipe says it, and "1.5 cup" is how nothing says it.
+  if (
+    fraction > 0 &&
+    (familyOf(unit) === 'spoon' || isCustomary(unit) || isPartOfOne(whole, unit))
+  ) {
     const glyph = [...glyphs].find(([size]) => Math.abs(size - fraction) < 0.005)?.[1];
 
     if (glyph) {

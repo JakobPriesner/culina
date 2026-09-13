@@ -209,3 +209,34 @@ common bug in recipe apps, and the model makes it impossible here.
   reproduces ~600 g of flour.
 - Factor `1` is an identity: every amount renders exactly as authored.
 - German and English formatting of the same value.
+
+## Imperial units
+
+`UserSettings.MeasurementSystem` changes what is **shown**, never what is
+stored. A recipe keeps whatever its author wrote, so switching the setting and
+switching back leaves it exactly as it was — and a German recipe shared with an
+American is one recipe read two ways.
+
+The conversion happens **inside** `scaleQuantity`, before rounding, not after
+it. Converting a number that has already been rounded rounds it twice, and a
+quarter-ounce of drift on each of a recipe's twelve amounts is a different
+recipe.
+
+| | Imperial |
+| --- | --- |
+| Mass | ounces below a pound, then pounds |
+| Volume | fluid ounces below a cup, then cups |
+| Spoons | unchanged — a teaspoon is a teaspoon in both systems |
+| Counts, pinches, a household's own units | unchanged |
+
+**Mass never becomes cups.** A cup is a volume, and "1 cup of flour" is between
+120 g and 150 g depending on how it was packed and whether it was sifted.
+Turning 250 g into "2 cups" produces a recipe that is wrong in a way nobody can
+see, and an unfamiliar recipe beats a confidently wrong one.
+
+Amounts round onto measures that exist: quarters for ounces and fluid ounces,
+and quarters *and thirds* for cups, because a ⅓-cup measure is in every set.
+Fractions hold up to sixteen of a unit — "10½ oz" is what a recipe says, and
+rounding it to 11 would be a four per cent lie for no gain. Anything rounding
+moved by more than two per cent is still marked with a tilde, as it is in
+metric.

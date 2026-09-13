@@ -356,5 +356,8 @@
   "archive.restore": "Aus Datei wiederherstellen",
   "archive.choose": "Archiv auswählen",
   "archive.restored": "{restored} Rezepte wiederhergestellt, {skipped} übersprungen.",
-  "archive.restoreFailed": "Diese Datei konnte nicht wiederhergestellt werden."
+  "archive.restoreFailed": "Diese Datei konnte nicht wiederhergestellt werden.",
+  "measurement.label": "Mengen",
+  "measurement.metric": "Gramm und Milliliter",
+  "measurement.imperial": "Ounces und Cups"
 }
