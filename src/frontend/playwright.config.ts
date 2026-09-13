@@ -6,9 +6,9 @@ import { defineConfig, devices } from '@playwright/test';
  * import, a missing asset, a service worker that never registers — these tests
  * exist to catch.
  *
- * `API_URL` points the preview server's /api proxy at a running backend. Without
- * it only the suites tagged @offline are meaningful, so the rest are skipped
- * rather than failing for the wrong reason.
+ * `CULINA_API` overrides the /api proxy target (localhost:5000 by default).
+ * Signed-in suites need a running backend and CULINA_E2E_* credentials; they
+ * skip without credentials. Suites tagged @offline only need the built app.
  */
 const port = 4173;
 

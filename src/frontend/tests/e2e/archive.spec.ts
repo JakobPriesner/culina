@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
-  accountFor,
+  ensureAccount,
   needsBackend,
   seedRecipe,
   signInWithHousehold,
@@ -30,7 +30,10 @@ test.describe('an archive of everything', () => {
 
     page = await browser.newPage();
 
-    await signInWithHousehold(page, await accountFor(browser, testInfo));
+    // Restoring adds recipes. Reusing a household doubles its old fixtures on
+    // every run, eventually turning a small round-trip check into a huge import.
+    const account = unique(`archive-${testInfo.project.name}`).replace(/\s+/g, '-');
+    await signInWithHousehold(page, await ensureAccount(browser, account));
 
     title = unique('Archived');
 
