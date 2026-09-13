@@ -164,6 +164,13 @@ tracing (`dotnet-observability`).
   `version`, and honours `If-None-Match` with `304`.
 - **Every unsafe single-entity write** requires `If-Match`: missing → `428`,
   stale → `412`. The check is in the SQL `WHERE`.
+- **A `412` is never retried.** Retrying it would silently overwrite whoever
+  wrote first. The client rolls its own copy back, keeps what was typed on the
+  device that typed it, and puts the choice to the person: keep mine — which
+  re-reads to learn the current version and writes over it deliberately — or
+  take theirs, which drops the local copy. Merging two people's recipes
+  automatically is a guess, and a guess about somebody's dinner is worse than a
+  question.
 - **Every collection** is wrapped (`items`, `nextCursor`, `total`) and
   cursor-paginated.
 - **Authenticated responses** carry `Cache-Control: no-store`.

@@ -61,6 +61,19 @@ export function createAutosave(save: () => Promise<AppError | null>) {
       timer = setTimeout(() => void run(), quietMs);
     },
 
+    /**
+     * Forgets the last failure.
+     *
+     * For the one case where the failure has been dealt with rather than
+     * retried: a conflict the author resolved by taking somebody else's
+     * version, where leaving the message on screen would describe a situation
+     * that no longer exists.
+     */
+    clear() {
+      failure = null;
+      state = 'idle';
+    },
+
     /** Sends whatever is owed right now — on blur, or on leaving the page. */
     async flush() {
       clearTimeout(timer);

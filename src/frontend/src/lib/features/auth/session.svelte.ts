@@ -1,4 +1,5 @@
 import { forgetCachedResponses, http, request, type AppError } from '$api';
+import { forgetEveryDraft } from '$features/recipes/editor/journal';
 import { forgetCachedReads } from '$shell/connection.svelte';
 import { registerStore, resetAllStores } from '$shell/stores';
 import { preferences } from '$shell/preferences.svelte';
@@ -118,6 +119,9 @@ class SessionStore {
     resetAllStores();
     forgetCachedResponses();
     forgetCachedReads();
+    // An unsent recipe belongs to whoever wrote it. Scoping the key by account
+    // stops it being shown to the next person; only this stops it being kept.
+    forgetEveryDraft();
     this.#status = 'anonymous';
   }
 
