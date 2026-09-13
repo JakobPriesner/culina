@@ -107,6 +107,17 @@ notice losing.
 | Every response carries a correlation id | Met | `EveryResponse_ShouldCarryARequestId_WhenTheRequestIsHandled` |
 | An exception is logged once, and never reaches the client | Met | `GlobalExceptionHandler` is the only place; the message is never in the response |
 
+## Offline, and what it cannot promise
+
+| Requirement | Verdict | Evidence |
+| --- | --- | --- |
+| Authenticated responses are not cached generically | Met | An allow-list of exact paths, and a test that nothing else can appear in the store: `keeps nothing from the API that anyone did not ask it to` |
+| Private material is cleared when the session changes | Met | On sign-in as well as sign-out. `is gone from the device the moment anyone signs out`, `keeps nothing of the first person for the second` |
+| Cached responses never override the server while online | Met | Network-first for everything but the immutable image; the cache only catches a fall |
+| The store is bounded | Met | 120 entries, oldest evicted |
+| A reload is never imposed while somebody is working | Met | `says nothing while somebody is cooking or editing`, and it is offered again at the next safe moment |
+| Revocation on a disconnected device | **Cannot be met** | A device that is not in contact with the server cannot learn anything from it. Documented plainly in `docs/operations.md` rather than papered over |
+
 ## Exceptions, with reasons
 
 **No account recovery.** There is no "forgot password" flow, and therefore no

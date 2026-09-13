@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { accountFor, needsBackend, signInWithHousehold, skipReason } from './support/culina';
+import {
+  accountFor,
+  ensureAccount,
+  needsBackend,
+  signInWithHousehold,
+  skipReason
+} from './support/culina';
 
 /**
  * The app installs, opens without a network, and never keeps anyone's data.
@@ -189,6 +195,46 @@ test.describe('a recipe already opened', () => {
 
     // The next person at this tablet is a different person.
     await expect.poll(() => cachedApiPaths(page)).toEqual([]);
+  });
+});
+
+/**
+ * A shared device, which is the case the cache exists in tension with.
+ *
+ * A tablet on a kitchen counter is used by more than one person, and what one
+ * of them read is not the next one's to see.
+ */
+test.describe('a device two people use', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only.');
+  test.skip(needsBackend, skipReason);
+
+  test('keeps nothing of the first person for the second', async ({ browser, page }, testInfo) => {
+    const first = await accountFor(browser, testInfo);
+    const second = await ensureAccount(browser, `second-${testInfo.project.name}`);
+
+    await signInWithHousehold(page, first);
+
+    await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+    await page.reload();
+    await expect
+      .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+      .toBe(true);
+
+    // Read something worth keeping, so there is something to leave behind.
+    await page.goto('/');
+    await expect.poll(() => cachedApiPaths(page).then((paths) => paths.length)).toBeGreaterThan(0);
+
+    // The first person walks away without signing out — which is the normal
+    // case, and the reason signing *in* clears as well as signing out.
+    await page.goto('/login');
+    await page.getByLabel(/email|e-mail/i).fill(second.email);
+    await page.getByLabel(/password|passwort/i).fill(second.password);
+    await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
+
+    await expect(page).toHaveURL(/\/(welcome)?$/);
+
+    // Nothing of the first person's is still on the device.
+    await expect.poll(() => cachedApiPaths(page)).not.toContain('/api/v1/recipes');
   });
 });
 

@@ -162,6 +162,44 @@ destructive one is called out in its release notes.
   never again; adding six system libraries to the image to silence them is not a
   trade worth making.
 
+## What works without a network, and what does not
+
+Culina installs as an app and opens without a network. What that means exactly,
+because a promise about offline behaviour is easy to overstate:
+
+**It opens.** The app itself — the shell, the fonts, the icons — is stored per
+build. A kitchen the wifi does not reach shows Culina saying it cannot reach the
+server, rather than the browser's error page.
+
+**A recipe you have opened stays readable.** Reading a recipe stores it, along
+with its photograph and who you are. Opening it again with no network shows it.
+That is the whole of the promise: recipes nobody has opened are not there, and
+nothing in the app claims they are.
+
+**Nothing can be changed.** Every change goes to the server. Offline, the app
+says so — "You are offline. This will be possible again when you reconnect" —
+rather than pretending to save and losing the work later. There is no queue of
+pending changes, deliberately: a queue that replays into a shared household is a
+conflict-resolution problem nobody asked for.
+
+**What is stored, and for how long.** At most 120 recipe responses, oldest
+first, in a store the browser may evict at any time for its own reasons. It is
+emptied when anybody signs in or out on that device — both, because a browser
+closed without signing out never reached the way out.
+
+**A disconnected device cannot learn that access was revoked.** Somebody removed
+from a household keeps whatever their device already stored until it next
+reaches the server. There is no way around this: the device is not in contact
+with anything that could tell it. It is the same limit as a printed recipe, and
+it is worth knowing rather than assuming otherwise. Everything else — the
+recipes they had not opened, the shopping list, the household — is gone the
+moment they reconnect.
+
+**A shared device keeps what was read on it.** A tablet on a counter that two
+people use stores the recipes whoever last used it opened, until the next person
+signs in. If that matters for your household, sign out rather than closing the
+lid.
+
 ## When something is wrong
 
 | | |
