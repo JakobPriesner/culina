@@ -107,6 +107,12 @@ jobs:
       - run: pnpm verify:release
         working-directory: src/frontend
 
+      # What the app weighs, printed every run and failing when it grows past
+      # what was agreed. The way this gets worse is never a decision anybody
+      # made — it is one convenient dependency that brings a date library.
+      - run: pnpm verify:budget
+        working-directory: src/frontend
+
   contract:
     name: Contract
     runs-on: ubuntu-latest

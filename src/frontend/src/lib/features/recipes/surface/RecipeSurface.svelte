@@ -271,9 +271,15 @@
   }
 
   /* The chrome recedes when cooking; it does not disappear, because knowing
-     which recipe you are in is not optional. */
+     which recipe you are in is not optional.
+
+     Smaller and quieter, not faded. Opacity on text is how contrast breaks
+     without anybody noticing: it blends toward the background by an amount no
+     palette review can see, and the theme's own contrast test cannot reach it.
+     `--text-muted` is a colour the contract already proves readable in both
+     modes. */
   .cooking .head {
-    opacity: 0.55;
+    color: var(--text-muted);
     font-size: var(--text-sm);
   }
 
@@ -348,18 +354,19 @@
 
   /*
    * The current step grows in place. Its neighbours stay where they are and
-   * stay readable — dimmed, not hidden, because the step you just finished is
-   * the one you most often need to glance back at.
+   * stay readable — quieter, not faded, because the step you just finished is
+   * the one you most often need to glance back at, and at 0.45 opacity it was
+   * 2.7:1 against the page. Readable has a number, and that was not it.
    */
   .cooking .step {
-    opacity: 0.45;
+    color: var(--text-muted);
     transition:
-      opacity var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out),
       font-size var(--duration-base) var(--ease-spatial);
   }
 
   .cooking .step.current {
-    opacity: 1;
+    color: var(--text);
     font-size: var(--text-cook);
     line-height: var(--leading-normal);
   }

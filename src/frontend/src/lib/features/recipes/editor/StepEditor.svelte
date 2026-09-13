@@ -148,6 +148,7 @@
 
         <TextArea
           id="step-{index}"
+          label={m['editor.stepLabel']({ number: index + 1 })}
           value={textOf(step)}
           rows={2}
           oninput={(text) => update(index, text)}

@@ -15,11 +15,20 @@
     /** How tall it starts. It never gets shorter than this. */
     rows?: number;
     maxlength?: number;
+    /**
+     * The accessible name, for the places where there is no visible label.
+     *
+     * A step in the editor is one of them: the number beside it is the label a
+     * sighted person reads, and a `<label>` repeating it would be a second copy
+     * of the same word on screen.
+     */
+    label?: string;
     oninput?: (value: string) => void;
   }
 
   let {
     id,
+    label,
     value = $bindable(),
     placeholder,
     describedBy,
@@ -55,6 +64,7 @@
   {rows}
   {maxlength}
   bind:value
+  aria-label={label}
   aria-describedby={describedBy}
   aria-invalid={invalid ? 'true' : undefined}
   oninput={(event) => {

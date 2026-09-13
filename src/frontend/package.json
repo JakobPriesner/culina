@@ -17,9 +17,11 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
-    "verify:release": "node --experimental-strip-types build-tools/checkRelease.ts"
+    "verify:release": "node --experimental-strip-types build-tools/checkRelease.ts",
+    "verify:budget": "node --experimental-strip-types build-tools/checkBudget.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
     "@inlang/paraglide-js": "^2.25.1",
     "@playwright/test": "^1.63.0",
