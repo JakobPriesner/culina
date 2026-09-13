@@ -96,3 +96,27 @@ largest thing on the page and they are served content-addressed, in three
 widths, cached immutably, and behind an aspect-ratio box that reserves the
 space. What is not measured is the largest contentful paint on a slow
 connection, which needs a device lab rather than a CI runner.
+
+## Cooking with wet hands
+
+Advancing a step with wet hands is a real problem, and voice control is the
+obvious answer to it. Culina does not have voice control, and this is the
+reasoning, recorded so it does not have to be had again.
+
+**Misrecognition mid-cook is worse than the problem it solves.** Jumping to step
+nine because a podcast was playing in the kitchen is a genuinely bad failure —
+worse than wiping a hand on a towel — and there is no undo that makes it fine,
+because by the time you notice you have lost your place in something on a hob.
+
+What was done instead was measured. At 320 px the two controls were **129 × 56**
+for "Next step" and **161 × 56** for "Previous step": the wider target was the
+one that undoes progress, purely because it is a longer phrase. Previous is now
+an icon at the minimum comfortable size and Next takes the rest of the bar —
+roughly three times the area at 320 px and four at 390 px — with the progress
+line on its own row so the controls have the whole width.
+
+Both still clear 44 px in both directions, and a test asserts the ratio so a
+future label cannot quietly reverse it again. Cooking is also fully drivable
+from a keyboard, and the screen is held awake with a lock that is retaken every
+time the tab comes back — because that is not an edge case, it is what happens
+every time somebody checks a message.

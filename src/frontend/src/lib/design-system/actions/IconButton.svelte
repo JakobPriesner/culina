@@ -12,7 +12,7 @@
     /** The icon. Always decorative — `label` is what is announced. */
     children: Snippet;
     label: string;
-    size?: 'sm' | 'md';
+    size?: 'sm' | 'md' | 'lg';
     /** Draws the control's edge. Off by default: most sit inside a toolbar. */
     bordered?: boolean;
     disabled?: boolean;
@@ -100,6 +100,17 @@
   }
 
   .md .icon {
+    width: var(--space-6);
+    height: var(--space-6);
+  }
+
+  /* For the one place a hand is wet and the eye is on a pan. */
+  .lg {
+    width: var(--control-lg);
+    height: var(--control-lg);
+  }
+
+  .lg .icon {
     width: var(--space-6);
     height: var(--space-6);
   }
