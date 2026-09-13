@@ -1,84 +1,36 @@
 <script lang="ts">
-  import { Button, IconButton, TextArea } from '$ds';
+  import { Button, IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
-  import type { Ingredient, Step, StepSegment } from '../types';
+  import MentionField from './MentionField.svelte';
+  import { toSegments, toText } from './mentions';
+  import type { Ingredient, Step } from '../types';
 
   /**
-   * The steps, as plain text.
+   * The steps, as sentences.
    *
-   * An author writes "Melt the butter in the pan" — they do not place tokens.
-   * The link to an ingredient is found by matching the words they already
-   * typed, so the payoff (a step that scales with the list) costs the author
-   * nothing.
+   * An author writes "Melt @butter in the pan" — the `@` is the whole of the
+   * ceremony, and what it buys is a step whose amounts follow the portions.
+   * Naming an ingredient the recipe does not have yet adds it to the list from
+   * inside the sentence, so the method can be written first and measured after.
    *
    * Reordering is buttons, not drag. Drag alone cannot be done with a keyboard,
    * and a recipe is rearranged rarely enough that two arrows are no hardship.
    */
   interface Props {
     steps: readonly Step[];
-    /** Used to find references in the text the author typed. */
+    /** What a mention can point at, and what a new one is added to. */
     ingredients: readonly Ingredient[];
     onchange: (steps: Step[]) => void;
+    onaddingredient: (name: string) => void;
   }
 
-  let { steps, ingredients, onchange }: Props = $props();
-
-  /** The plain sentence a step's segments spell out. */
-  const textOf = (step: Step): string =>
-    step.segments
-      .map((segment) => (segment.kind === 'text' ? segment.text : segment.name))
-      .join('');
-
-  /**
-   * Splits a sentence around the ingredient names it mentions.
-   *
-   * Longest first, so "olive oil" wins over "oil". Only ingredients that have
-   * an id — one the server has already assigned — can be referenced; a line
-   * typed a moment ago is still just words until it has been saved.
-   */
-  function toSegments(text: string): StepSegment[] {
-    const named = ingredients
-      .filter((one) => one.id && one.name)
-      .sort((a, b) => b.name.length - a.name.length);
-
-    const segments: StepSegment[] = [];
-    let rest = text;
-
-    outer: while (rest.length > 0) {
-      for (const ingredient of named) {
-        const at = rest.toLowerCase().indexOf(ingredient.name.toLowerCase());
-
-        if (at !== -1) {
-          if (at > 0) {
-            segments.push({ kind: 'text', text: rest.slice(0, at) });
-          }
-
-          segments.push({
-            kind: 'ingredient',
-            ingredientId: ingredient.id,
-            name: ingredient.name,
-            quantity: ingredient.quantity
-          });
-
-          rest = rest.slice(at + ingredient.name.length);
-
-          continue outer;
-        }
-      }
-
-      segments.push({ kind: 'text', text: rest });
-
-      break;
-    }
-
-    return segments;
-  }
+  let { steps, ingredients, onchange, onaddingredient }: Props = $props();
 
   function update(index: number, text: string) {
     onchange(
       steps.map((step, candidate) =>
-        candidate === index ? { ...step, segments: toSegments(text) } : step
+        candidate === index ? { ...step, segments: toSegments(text, ingredients) } : step
       )
     );
   }
@@ -146,12 +98,13 @@
           </IconButton>
         </div>
 
-        <TextArea
+        <MentionField
           id="step-{index}"
           label={m['editor.stepLabel']({ number: index + 1 })}
-          value={textOf(step)}
-          rows={2}
+          value={toText(step)}
+          {ingredients}
           oninput={(text) => update(index, text)}
+          onadd={onaddingredient}
         />
       </li>
     {/each}

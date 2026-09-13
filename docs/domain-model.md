@@ -166,6 +166,19 @@ is one indexed query rather than a `LIKE` scan.
 The API never exposes the raw token string. Responses carry **segments**; see
 `api.md`.
 
+**How an author writes one.** In the editor a reference is typed as `@butter`,
+and an `@` opens a picker of the recipe's own ingredients. A name the recipe
+does not have yet is offered as "add it", so writing the method builds the
+ingredient list rather than repeating it. What is typed is what is stored —
+there is no hidden token and no rich-text editor — which is why undo, every
+input method and every screen reader work without help. The pill carrying the
+scaled amount is what *reading* renders.
+
+Nothing is linked that the author did not ask for. An earlier version scanned
+each step for any ingredient name it contained; it cost nothing to use, but it
+was invisible, it matched "oil" inside "olive oil", and there was no way to say
+"not that one". A reference you cannot see is a reference you cannot correct.
+
 ### Tag
 
 `Id`, `HouseholdId`, `Name` (1–40), `Slug` (lowercased, normalised).

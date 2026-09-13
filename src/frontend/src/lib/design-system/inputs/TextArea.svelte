@@ -16,6 +16,13 @@
     rows?: number;
     maxlength?: number;
     /**
+     * The element itself, for the rare caller that has to drive the cursor.
+     *
+     * Writing a mention into a step means replacing the half-typed name the
+     * cursor sits in, and only the textarea knows where that is.
+     */
+    element?: HTMLTextAreaElement;
+    /**
      * The accessible name, for the places where there is no visible label.
      *
      * A step in the editor is one of them: the number beside it is the label a
@@ -24,6 +31,15 @@
      */
     label?: string;
     oninput?: (value: string) => void;
+    /** Set when this field is the text half of a combobox. */
+    combobox?: {
+      /** Whether the list of suggestions is showing. */
+      readonly expanded: boolean;
+      /** The id of that list. */
+      readonly controls: string;
+      /** The id of the suggestion arrow keys have landed on. */
+      readonly active?: string | undefined;
+    };
   }
 
   let {
@@ -36,10 +52,10 @@
     disabled = false,
     rows = 3,
     maxlength,
-    oninput
+    oninput,
+    combobox,
+    element = $bindable()
   }: Props = $props();
-
-  let element = $state<HTMLTextAreaElement>();
 
   // Measured rather than guessed from the character count: a pasted paragraph
   // and a list of short lines take different amounts of room.
@@ -64,6 +80,11 @@
   {rows}
   {maxlength}
   bind:value
+  role={combobox ? 'combobox' : undefined}
+  aria-expanded={combobox ? combobox.expanded : undefined}
+  aria-controls={combobox?.controls}
+  aria-activedescendant={combobox?.active}
+  aria-autocomplete={combobox ? 'list' : undefined}
   aria-label={label}
   aria-describedby={describedBy}
   aria-invalid={invalid ? 'true' : undefined}

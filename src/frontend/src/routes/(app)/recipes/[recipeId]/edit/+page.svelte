@@ -36,6 +36,10 @@
 
     const failure = await recipes.update(draft);
 
+    if (!failure) {
+      adoptSaved();
+    }
+
     // Dropped only once the server has it. A failed save leaves the journal
     // exactly where it was, which is the whole point of writing it first.
     if (!failure && session.user) {
@@ -87,6 +91,78 @@
     unsent = kept !== null;
     recovered = kept !== null;
   });
+
+  /**
+   * Takes what the server assigned, and nothing else.
+   *
+   * The draft is otherwise never overwritten from the store — that would delete
+   * whatever was typed while the save was in the air — but two things have to
+   * come back from it.
+   *
+   * The **version**, because every write carries the one the author last saw
+   * and the server hands out a new one each time. A draft that keeps the
+   * version it opened with saves exactly once and then tells the author that
+   * somebody else changed their recipe, which is both wrong and alarming.
+   *
+   * The **ingredient ids**, because a line with no id cannot be mentioned in a
+   * step. Without them the author would have to reload the page before they
+   * could point a sentence at a line they wrote a moment ago. Matched by name
+   * and only onto lines that have none yet, so a line added or removed
+   * mid-save can at worst miss an id rather than inherit the wrong one; the
+   * next save fills it in.
+   */
+  function adoptSaved() {
+    const saved = recipes.detail;
+
+    if (!draft || saved?.id !== draft.id) {
+      return;
+    }
+
+    // Taken from the pool as they are used, so two lines of the same name get
+    // an id each rather than both getting the first one.
+    const unclaimed = saved.groups.flatMap((group) => group.ingredients);
+
+    const claim = (name: string): string => {
+      const at = unclaimed.findIndex((one) => one.name.toLowerCase() === name.toLowerCase());
+
+      return at === -1 ? '' : unclaimed.splice(at, 1)[0]!.id;
+    };
+
+    draft = {
+      ...draft,
+      version: saved.version,
+      groups: draft.groups.map((group) => ({
+        ...group,
+        ingredients: group.ingredients.map((one) =>
+          one.id ? one : { ...one, id: claim(one.name) }
+        )
+      }))
+    };
+  }
+
+  /**
+   * The ingredient list, which the recipe keeps in its first group.
+   *
+   * Groups are the "for the dough" / "for the sauce" headings, and they stay
+   * invisible until a recipe needs them, so the editor only ever writes to the
+   * implicit first one.
+   */
+  const firstGroup = $derived(draft?.groups[0]?.ingredients ?? []);
+
+  const setIngredients = (ingredients: Ingredient[]) =>
+    change({ groups: [{ id: draft?.groups[0]?.id ?? null, name: null, ingredients }] });
+
+  /**
+   * Adds an ingredient named from inside a step.
+   *
+   * With no amount: the author was writing the method, not measuring, and a
+   * made-up quantity would be worse than a blank one they can fill in.
+   */
+  const addIngredient = (name: string) =>
+    setIngredients([
+      ...firstGroup,
+      { id: '', quantity: { value: null, unit: null }, name, note: null }
+    ]);
 
   function change(patch: Partial<Recipe>) {
     if (!draft) {
@@ -315,11 +391,7 @@
       <section>
         <h2 class="section">{m['editor.ingredients']()}</h2>
 
-        <IngredientEditor
-          ingredients={current.groups[0]?.ingredients ?? []}
-          onchange={(ingredients: Ingredient[]) =>
-            change({ groups: [{ id: current.groups[0]?.id ?? null, name: null, ingredients }] })}
-        />
+        <IngredientEditor ingredients={firstGroup} onchange={setIngredients} />
       </section>
 
       <section>
@@ -329,6 +401,7 @@
           steps={current.steps}
           ingredients={current.groups.flatMap((group) => group.ingredients)}
           onchange={(steps: Step[]) => change({ steps })}
+          onaddingredient={addIngredient}
         />
       </section>
     </div>
