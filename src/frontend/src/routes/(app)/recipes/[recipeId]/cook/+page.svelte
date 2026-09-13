@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, Skeleton } from '$ds';
+  import { busy } from '$shell/busy.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import StepTimer from '$features/cooking/StepTimer.svelte';
@@ -46,10 +47,14 @@
   onMount(() => {
     const stopHolding = wakeLock.engage();
     const stopTicking = timers.tick();
+    // Nothing interrupts somebody at a hob — not even an offer. See
+    // `$shell/busy`.
+    const release = busy.hold();
 
     return () => {
       stopHolding();
       stopTicking();
+      release();
     };
   });
 

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { busy } from './busy.svelte';
 import { toaster } from './toaster.svelte';
 import { watchForUpdates } from './updates.svelte';
 
@@ -56,6 +57,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 describe('watching for a new version', () => {
   beforeEach(() => {
     toaster.reset();
+    busy.reset();
   });
 
   it('does nothing at all where service workers do not exist', () => {
@@ -132,6 +134,51 @@ describe('watching for a new version', () => {
     fake.takeControl();
 
     expect(reload).toHaveBeenCalledTimes(1);
+
+    stop();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('a new version arriving at a bad moment', () => {
+  beforeEach(() => {
+    toaster.reset();
+    busy.reset();
+  });
+
+  it('says nothing while somebody is cooking or editing', async () => {
+    const fake = fakeServiceWorker({ waiting: new FakeWorker(), controlled: true });
+    const release = busy.hold();
+
+    vi.stubGlobal('navigator', { serviceWorker: fake.container });
+
+    const stop = watchForUpdates();
+
+    await settle();
+
+    // An offer is still an interruption, and "there is a new version" is never
+    // worth reading with your hands in a bowl.
+    expect(toaster.toasts).toHaveLength(0);
+
+    release();
+    stop();
+    vi.unstubAllGlobals();
+  });
+
+  it('mentions it at the next safe moment, rather than forgetting', async () => {
+    const fake = fakeServiceWorker({ waiting: new FakeWorker(), controlled: true });
+    const release = busy.hold();
+
+    vi.stubGlobal('navigator', { serviceWorker: fake.container });
+
+    const stop = watchForUpdates();
+
+    await settle();
+
+    release();
+    await settle();
+
+    expect(toaster.toasts).toHaveLength(1);
 
     stop();
     vi.unstubAllGlobals();

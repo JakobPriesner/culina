@@ -9,6 +9,7 @@
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
+  import { busy } from '$shell/busy.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
   import type { Ingredient, Recipe, Step } from '$features/recipes/types';
@@ -27,9 +28,13 @@
 
   const autosave = createAutosave(async () => (draft ? recipes.update(draft) : null));
 
+  // Unsaved text on screen is not a moment to offer anybody a reload.
+  const release = busy.hold();
+
   onDestroy(() => {
     void autosave.flush();
     autosave.dispose();
+    release();
   });
 
   $effect(() => {

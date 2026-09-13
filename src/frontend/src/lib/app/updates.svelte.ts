@@ -1,3 +1,4 @@
+import { busy } from './busy.svelte';
 import { toaster } from './toaster.svelte';
 import { m } from './i18n';
 
@@ -12,6 +13,11 @@ import { m } from './i18n';
  *
  * So the new version waits, a toast says it is there, and the reload happens
  * when the person taps it — or, at the latest, the next time they open the app.
+ *
+ * And it is not mentioned at all while somebody is cooking or editing. An offer
+ * is still an interruption, and "there is a new version" is never worth reading
+ * with your hands in a bowl. It waits for the next safe moment, which may be
+ * the next time the app is opened.
  */
 
 /** Where the built worker is served from. */
@@ -87,6 +93,21 @@ function offerIfWaiting(registration: ServiceWorkerRegistration): void {
  * version that is never installed.
  */
 function offer(waiting: ServiceWorker): void {
+  if (!busy.interruptible) {
+    // Asked again when cooking or editing is over. `$effect.root` because this
+    // runs outside a component: the worker's event, not a render.
+    const stop = $effect.root(() => {
+      $effect(() => {
+        if (busy.interruptible) {
+          stop();
+          offer(waiting);
+        }
+      });
+    });
+
+    return;
+  }
+
   toaster.show({
     message: m['app.update.available'](),
     durationMs: 0,
