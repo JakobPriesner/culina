@@ -1753,6 +1753,89 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/ingredients": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Suggest an ingredient",
+        "description": "What this household has written before, then a short seeded list of what a home kitchen buys. Suggestions only: an ingredient is whatever somebody types, and nothing has to be chosen from either list.",
+        "operationId": "getHouseholdIngredientsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetIngredientsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipes/{recipeId}/notes": {
       "get": {
         "tags": [
@@ -3574,6 +3657,45 @@
           }
         },
         "description": "How often you have cooked this, and when."
+      },
+      "RecipesGetIngredientsIngredientSuggestion": {
+        "required": [
+          "name",
+          "section",
+          "own"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to write, in the language that was asked for."
+          },
+          "section": {
+            "type": "string",
+            "description": "Where in a shop it is found."
+          },
+          "own": {
+            "type": "boolean",
+            "description": "Whether this household has written it before."
+          }
+        },
+        "description": "An ingredient a recipe could call for."
+      },
+      "RecipesGetIngredientsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetIngredientsIngredientSuggestion"
+            },
+            "description": "The suggestions, best first."
+          }
+        },
+        "description": "What a kitchen could be cooking with."
       },
       "RecipesGetNotesResponse": {
         "required": [

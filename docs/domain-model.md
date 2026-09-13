@@ -164,6 +164,27 @@ as written, so a German noun keeps its capital. Letters and single spaces only:
 "butter" must merge into one shopping-list line; if the preparation lives in the
 name they never will.
 
+### Ingredient suggestions
+
+There is no ingredient table. An ingredient is whatever somebody types, and
+`GET /households/{id}/ingredients?q=…` only *suggests*:
+
+1. the names this household's recipes already use, ranked by how often, because
+   after a few recipes a kitchen's own words are how these particular people
+   talk about food;
+2. then a short seeded list (`CommonIngredients`, ~120 entries, DE + EN with a
+   shopping section), so an empty kitchen is offered something.
+
+Named in the **recipe's** language, not the reader's: somebody with an English
+app writing down a German recipe wants `Kartoffeln`, and an English word in that
+ingredient list is a word nothing else in it will match.
+
+`CommonIngredients` is not `SectionKeywords` and neither replaces the other.
+That table matches *stems* inside a phrase — `strawberr`, so both "strawberry"
+and "strawberries" find the produce aisle — which is right for guessing and
+wrong for offering. These are names a person would be happy to see typed into
+their recipe, which is right for offering and useless for matching.
+
 ### Step
 
 `Id`, `RecipeId`, `SortOrder`, `Text` (1–4000 chars), `DurationSeconds?`.

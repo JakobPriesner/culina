@@ -412,6 +412,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest an ingredient
+         * @description What this household has written before, then a short seeded list of what a home kitchen buys. Suggestions only: an ingredient is whatever somebody types, and nothing has to be chosen from either list.
+         */
+        get: operations["getHouseholdIngredientsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipes/{recipeId}/notes": {
         parameters: {
             query?: never;
@@ -1064,6 +1084,20 @@ export interface components {
             lastMadeAt?: string | null;
             /** @description Every entry, newest first. */
             items: components["schemas"]["RecipesGetCookLogCookLogItem"][];
+        };
+        /** @description An ingredient a recipe could call for. */
+        RecipesGetIngredientsIngredientSuggestion: {
+            /** @description What to write, in the language that was asked for. */
+            name: string;
+            /** @description Where in a shop it is found. */
+            section: string;
+            /** @description Whether this household has written it before. */
+            own: boolean;
+        };
+        /** @description What a kitchen could be cooking with. */
+        RecipesGetIngredientsResponse: {
+            /** @description The suggestions, best first. */
+            items: components["schemas"]["RecipesGetIngredientsIngredientSuggestion"][];
         };
         /** @description Your notes on one recipe. */
         RecipesGetNotesResponse: {
@@ -3018,6 +3052,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipesGetUnitsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdIngredientsV1: {
+        parameters: {
+            query?: {
+                q?: string;
+                language?: string;
+            };
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetIngredientsResponse"];
                 };
             };
             /** @description Unauthorized */

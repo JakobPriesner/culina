@@ -189,6 +189,7 @@
   "editor.ingredients": "Ingredients",
   "editor.ingredientLine": "Add an ingredient",
   "editor.ingredientHint": "One line: 200 g flour. Press Enter for the next.",
+  "editor.ingredientListLabel": "Ingredient suggestions",
   "editor.removeIngredient": "Remove {name}",
   "editor.amount": "Amount",
   "editor.unit": "Unit",

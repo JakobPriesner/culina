@@ -28,6 +28,24 @@ public interface IRecipeRepository
     /// </remarks>
     Task<IReadOnlyList<string>> OwnUnitsAsync(Guid householdId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The ingredient names this household has written, best match first.
+    /// </summary>
+    /// <param name="householdId">Whose kitchen.</param>
+    /// <param name="query">What has been typed, which may be empty.</param>
+    /// <param name="limit">At most this many.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// A household's own words beat a seeded list after the first few recipes:
+    /// they are how these particular people talk about food. Read from the
+    /// recipes rather than from a catalogue, for the same reason units are.
+    /// </remarks>
+    Task<IReadOnlyList<string>> OwnIngredientNamesAsync(
+        Guid householdId,
+        string? query,
+        int limit,
+        CancellationToken cancellationToken);
+
     /// <summary>Stores a new recipe.</summary>
     /// <param name="recipe">The recipe to store.</param>
     /// <param name="cancellationToken">Cancels the write.</param>

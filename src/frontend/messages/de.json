@@ -189,6 +189,7 @@
   "editor.ingredients": "Zutaten",
   "editor.ingredientLine": "Zutat hinzufügen",
   "editor.ingredientHint": "Eine Zeile: 200 g Mehl. Enter für die nächste.",
+  "editor.ingredientListLabel": "Zutatenvorschläge",
   "editor.removeIngredient": "{name} entfernen",
   "editor.amount": "Menge",
   "editor.unit": "Einheit",
