@@ -97,43 +97,19 @@ internal static class RecipeCodes
     internal static YieldKind ToYieldKind(string stored) =>
         stored == "pieces" ? YieldKind.Pieces : YieldKind.Servings;
 
-    internal static string? Of(Unit? unit) => unit switch
-    {
-        null => null,
-        Unit.Gram => "g",
-        Unit.Kilogram => "kg",
-        Unit.Millilitre => "ml",
-        Unit.Litre => "l",
-        Unit.Teaspoon => "tsp",
-        Unit.Tablespoon => "tbsp",
-        Unit.Piece => "piece",
-        Unit.Clove => "clove",
-        Unit.Bunch => "bunch",
-        Unit.Slice => "slice",
-        Unit.Can => "can",
-        Unit.Pack => "pack",
-        Unit.Pinch => "pinch",
-        _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown unit.")
-    };
+    /// <summary>
+    /// A unit is stored as the code it carries, so this is a passthrough. The
+    /// table that used to be here existed only because the unit was an enum.
+    /// </summary>
+    internal static string? Of(Unit? unit) => unit?.Code;
 
-    internal static Unit? ToUnit(string? stored) => stored switch
-    {
-        null or "" => null,
-        "g" => Unit.Gram,
-        "kg" => Unit.Kilogram,
-        "ml" => Unit.Millilitre,
-        "l" => Unit.Litre,
-        "tsp" => Unit.Teaspoon,
-        "tbsp" => Unit.Tablespoon,
-        "piece" => Unit.Piece,
-        "clove" => Unit.Clove,
-        "bunch" => Unit.Bunch,
-        "slice" => Unit.Slice,
-        "can" => Unit.Can,
-        "pack" => Unit.Pack,
-        "pinch" => Unit.Pinch,
-        // A row written by a newer version: treated as unmeasured rather than
-        // crashing a read, because a recipe that mostly renders beats an error.
-        _ => null
-    };
+    /// <summary>
+    /// A stored unit, or null when the column is empty.
+    /// </summary>
+    /// <remarks>
+    /// A unit that no longer parses is read as unmeasured rather than crashing
+    /// the read, because a recipe that mostly renders beats an error.
+    /// </remarks>
+    internal static Unit? ToUnit(string? stored) =>
+        string.IsNullOrEmpty(stored) ? null : Unit.Create(stored).Match<Unit?>(one => one, _ => null);
 }

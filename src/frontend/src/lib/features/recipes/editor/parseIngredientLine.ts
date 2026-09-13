@@ -123,7 +123,16 @@ const amountPattern = new RegExp(
 );
 const mixedPattern = new RegExp(`^(\\d+)\\s*([${glyphs}])$`);
 
-export function parseIngredientLine(line: string): ParsedIngredient {
+/**
+ * Reads a line, knowing the units this kitchen already uses.
+ *
+ * @param line What was typed.
+ * @param own The household's own units, which the built-in spellings do not
+ *   cover. Once somebody has written "1 Schuss Milch" once, every later line
+ *   reads the same way without being told again — which is the whole of what it
+ *   means for a household to have added a unit.
+ */
+export function parseIngredientLine(line: string, own: readonly string[] = []): ParsedIngredient {
   const trimmed = line.trim();
 
   // Everything after the comma is how it is prepared, not what it is — but a
@@ -142,7 +151,10 @@ export function parseIngredientLine(line: string): ParsedIngredient {
   // A unit only counts when there is an amount for it to measure: "Salz" is an
   // ingredient, and a word starting a name is not a litre.
   const unitWord = fold(firstWord);
-  const unit = value === null ? null : (spellings[unitWord] ?? null);
+  const unit =
+    value === null
+      ? null
+      : (spellings[unitWord] ?? own.find((candidate) => fold(candidate) === unitWord) ?? null);
   const name = (unit ? restWords.join(' ') : afterAmount).trim();
 
   return {

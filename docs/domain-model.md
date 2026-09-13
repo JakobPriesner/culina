@@ -136,6 +136,30 @@ grouping affordance until a second group exists.
 | `Name` | `string` | 1–120 chars, the *shoppable* noun: "butter" |
 | `Note` | `string?` | ≤ 200 chars, preparation: "finely chopped", "room temperature" |
 
+### Unit
+
+An open vocabulary, carried as a code rather than as an enum.
+
+Thirteen units are **built in** — `g kg ml l tsp tbsp piece clove bunch slice
+can pack pinch` — and they are the ones that *convert*: a kilo is a thousand
+grams for everyone. They are published in the OpenAPI document so a generated
+client shares that table rather than redeclaring it.
+
+Anything else is a unit **a household wrote**, and writing it is the whole of
+adding one. There is no catalogue table and no screen for it: a unit exists
+because something is measured in it, so the list a picker offers and the recipes
+actually written can never disagree. `GET /households/{id}/units` returns both
+halves.
+
+What a household adds joins the **Count** family. It scales with the portions
+and it sums with itself, and it converts to nothing — nobody knows how much a
+`Schuss` is, and a shopping list that claimed to would be inventing the number.
+That is what makes an open vocabulary safe rather than reckless.
+
+Compared case-insensitively, so `Schuss` and `schuss` are one unit, and stored
+as written, so a German noun keeps its capital. Letters and single spaces only:
+`200g` is an amount that lost its space, not a unit.
+
 **`Note` is separate from `Name` on purpose.** "butter, finely chopped" and
 "butter" must merge into one shopping-list line; if the preparation lives in the
 name they never will.

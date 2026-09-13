@@ -29,6 +29,12 @@ public static class RecipeErrors
         "An amount must be greater than zero.",
         ErrorType.Validation);
 
+    /// <summary>A unit is blank, too long, or not made of words.</summary>
+    public static readonly Error InvalidUnit = new(
+        "recipes.invalid_unit",
+        "A unit is written in words: 'g', 'tbsp', 'Schuss'. At most 16 characters.",
+        ErrorType.Validation);
+
     /// <summary>Two amounts cannot be added because their units do not combine.</summary>
     public static readonly Error IncompatibleUnits = new(
         "recipes.incompatible_units",

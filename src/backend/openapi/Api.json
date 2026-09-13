@@ -1700,6 +1700,59 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/units": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read the units this kitchen measures in",
+        "description": "The thirteen built-in units, which convert, and whatever else this household's recipes have used. A unit is added by writing it: there is no list to maintain, so the offered units and the recipes can never disagree.",
+        "operationId": "getHouseholdUnitsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetUnitsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipes/{recipeId}/notes": {
       "get": {
         "tags": [
@@ -3562,6 +3615,45 @@
         },
         "description": "A note attached to one step."
       },
+      "RecipesGetUnitsResponse": {
+        "required": [
+          "builtIn",
+          "own"
+        ],
+        "type": "object",
+        "properties": {
+          "builtIn": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "g",
+                "kg",
+                "ml",
+                "l",
+                "tsp",
+                "tbsp",
+                "piece",
+                "clove",
+                "bunch",
+                "slice",
+                "can",
+                "pack",
+                "pinch"
+              ],
+              "type": "string"
+            },
+            "description": "The units every household starts with, in picker order."
+          },
+          "own": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What this household has written, that is not built in."
+          }
+        },
+        "description": "The units a household can measure in."
+      },
       "RecipesIngredientContract": {
         "required": [
           "name"
@@ -3581,21 +3673,6 @@
             "nullable": true
           },
           "unit": {
-            "enum": [
-              "g",
-              "kg",
-              "ml",
-              "l",
-              "tsp",
-              "tbsp",
-              "piece",
-              "clove",
-              "bunch",
-              "slice",
-              "can",
-              "pack",
-              "pinch"
-            ],
             "type": "string",
             "description": "In what, or null for a bare count.",
             "nullable": true
@@ -3900,21 +3977,6 @@
             "nullable": true
           },
           "unit": {
-            "enum": [
-              "g",
-              "kg",
-              "ml",
-              "l",
-              "tsp",
-              "tbsp",
-              "piece",
-              "clove",
-              "bunch",
-              "slice",
-              "can",
-              "pack",
-              "pinch"
-            ],
             "type": "string",
             "description": "The ingredient's unit, on a read.",
             "nullable": true
@@ -4221,21 +4283,6 @@
             "nullable": true
           },
           "unit": {
-            "enum": [
-              "g",
-              "kg",
-              "ml",
-              "l",
-              "tsp",
-              "tbsp",
-              "piece",
-              "clove",
-              "bunch",
-              "slice",
-              "can",
-              "pack",
-              "pinch"
-            ],
             "type": "string",
             "description": "In what.",
             "nullable": true
@@ -4289,21 +4336,6 @@
             "nullable": true
           },
           "unit": {
-            "enum": [
-              "g",
-              "kg",
-              "ml",
-              "l",
-              "tsp",
-              "tbsp",
-              "piece",
-              "clove",
-              "bunch",
-              "slice",
-              "can",
-              "pack",
-              "pinch"
-            ],
             "type": "string",
             "description": "In what, or null for a bare count.",
             "nullable": true

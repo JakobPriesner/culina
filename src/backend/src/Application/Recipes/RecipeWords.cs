@@ -16,24 +16,15 @@ internal static class RecipeWords
 
     internal static string Of(YieldKind kind) => kind == YieldKind.Pieces ? "pieces" : "servings";
 
-    internal static string? Of(Unit? unit) => unit switch
-    {
-        null => null,
-        Unit.Gram => "g",
-        Unit.Kilogram => "kg",
-        Unit.Millilitre => "ml",
-        Unit.Litre => "l",
-        Unit.Teaspoon => "tsp",
-        Unit.Tablespoon => "tbsp",
-        Unit.Piece => "piece",
-        Unit.Clove => "clove",
-        Unit.Bunch => "bunch",
-        Unit.Slice => "slice",
-        Unit.Can => "can",
-        Unit.Pack => "pack",
-        Unit.Pinch => "pinch",
-        _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown unit.")
-    };
+    /// <summary>
+    /// The unit, as it is written.
+    /// </summary>
+    /// <remarks>
+    /// A unit carries its own wire code, so there is nothing to translate. The
+    /// table that used to live here — and its two copies, in the shopping
+    /// mapper and the row mapper — existed only because the unit was an enum.
+    /// </remarks>
+    internal static string? Of(Unit? unit) => unit?.Code;
 
     internal static Result<Language> ToLanguage(string? value) => value switch
     {
@@ -63,22 +54,10 @@ internal static class RecipeWords
     /// a null inside a success is exactly what Result&lt;T&gt; refuses, and
     /// rightly — the absence belongs inside Quantity, which has a name for it.
     /// </remarks>
-    internal static Result<Quantity> ToQuantity(decimal? amount, string? unit) => unit switch
-    {
-        null or "" => Quantity.Create(amount, null),
-        "g" => Quantity.Create(amount, Unit.Gram),
-        "kg" => Quantity.Create(amount, Unit.Kilogram),
-        "ml" => Quantity.Create(amount, Unit.Millilitre),
-        "l" => Quantity.Create(amount, Unit.Litre),
-        "tsp" => Quantity.Create(amount, Unit.Teaspoon),
-        "tbsp" => Quantity.Create(amount, Unit.Tablespoon),
-        "piece" => Quantity.Create(amount, Unit.Piece),
-        "clove" => Quantity.Create(amount, Unit.Clove),
-        "bunch" => Quantity.Create(amount, Unit.Bunch),
-        "slice" => Quantity.Create(amount, Unit.Slice),
-        "can" => Quantity.Create(amount, Unit.Can),
-        "pack" => Quantity.Create(amount, Unit.Pack),
-        "pinch" => Quantity.Create(amount, Unit.Pinch),
-        _ => new FieldError("unit", RecipeErrors.InvalidQuantity.Code, $"'{unit}' is not a unit.")
-    };
+    internal static Result<Quantity> ToQuantity(decimal? amount, string? unit) =>
+        string.IsNullOrEmpty(unit)
+            ? Quantity.Create(amount, null)
+            : Unit.Create(unit).Match(
+                measure => Quantity.Create(amount, measure),
+                error => new FieldError("unit", error.Code, error.Description));
 }

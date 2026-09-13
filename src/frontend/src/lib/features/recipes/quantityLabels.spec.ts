@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { formatQuantity } from './formatQuantity';
 import { quantityLabels } from './quantityLabels';
 import { scaleQuantity } from './scaling';
-import { units } from './units';
+import { builtInUnits } from './units';
 
 /*
  * The app's real labels, as opposed to the stubs `formatQuantity.spec.ts` uses.
@@ -39,8 +39,14 @@ describe('the shared quantity labels', () => {
   it('give a word or a short form to every unit but the bare count', () => {
     // A unit that renders as nothing is information silently dropped: `600` on
     // a shopping list is not an amount of anything.
-    for (const unit of units.filter((candidate) => candidate !== 'piece')) {
+    for (const unit of builtInUnits.filter((candidate) => candidate !== 'piece')) {
       expect(show(2, unit), unit).not.toBe('2');
     }
+  });
+
+  it('show a unit a household wrote exactly as it was written', () => {
+    // It has no translation and no abbreviation — it is its own label, and
+    // anything else would be the app renaming somebody's kitchen.
+    expect(show(2, 'Schuss')).toBe('2\u00a0Schuss');
   });
 });

@@ -392,6 +392,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the units this kitchen measures in
+         * @description The thirteen built-in units, which convert, and whatever else this household's recipes have used. A unit is added by writing it: there is no list to maintain, so the offered units and the recipes can never disagree.
+         */
+        get: operations["getHouseholdUnitsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipes/{recipeId}/notes": {
         parameters: {
             query?: never;
@@ -1062,6 +1082,13 @@ export interface components {
             /** @description What it says. */
             body: string;
         };
+        /** @description The units a household can measure in. */
+        RecipesGetUnitsResponse: {
+            /** @description The units every household starts with, in picker order. */
+            builtIn: ("g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch")[];
+            /** @description What this household has written, that is not built in. */
+            own: string[];
+        };
         /** @description One line of the ingredient list. */
         RecipesIngredientContract: {
             /**
@@ -1074,11 +1101,8 @@ export interface components {
              * @description How much, or null when the recipe does not say.
              */
             quantity?: number | null;
-            /**
-             * @description In what, or null for a bare count.
-             * @enum {string|null}
-             */
-            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            /** @description In what, or null for a bare count. */
+            unit?: string | null;
             /** @description The shoppable noun: "butter". */
             name: string;
             /** @description The preparation: "finely chopped". */
@@ -1253,11 +1277,8 @@ export interface components {
              * @description The ingredient's base amount, on a read.
              */
             quantity?: number | null;
-            /**
-             * @description The ingredient's unit, on a read.
-             * @enum {string|null}
-             */
-            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            /** @description The ingredient's unit, on a read. */
+            unit?: string | null;
         };
         /** @description The recipe's complete new state. */
         RecipesUpdateRequest: {
@@ -1403,11 +1424,8 @@ export interface components {
              * @description How much, if you know.
              */
             quantity?: number | null;
-            /**
-             * @description In what.
-             * @enum {string|null}
-             */
-            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            /** @description In what. */
+            unit?: string | null;
         };
         /** @description A recipe's ingredients, at a chosen scaling. */
         ShoppingAddRecipeRequest: {
@@ -1436,11 +1454,8 @@ export interface components {
              * @description How much, unrounded.
              */
             quantity?: number | null;
-            /**
-             * @description In what, or null for a bare count.
-             * @enum {string|null}
-             */
-            unit?: "g" | "kg" | "ml" | "l" | "tsp" | "tbsp" | "piece" | "clove" | "bunch" | "slice" | "can" | "pack" | "pinch" | null;
+            /** @description In what, or null for a bare count. */
+            unit?: string | null;
             /**
              * @description Where in the shop it is found.
              * @enum {string}
@@ -2976,6 +2991,46 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdUnitsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetUnitsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

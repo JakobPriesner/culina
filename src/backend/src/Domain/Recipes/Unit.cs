@@ -1,53 +1,137 @@
+using System.Globalization;
+using Domain.Shared;
+
 namespace Domain.Recipes;
 
 /// <summary>
-/// The units an ingredient amount can be given in.
+/// What an ingredient amount is measured in.
 /// </summary>
 /// <remarks>
-/// A closed set, surfaced through OpenAPI so the frontend shares one
-/// definition rather than redeclaring the vocabulary. Values travel as
-/// lowercase strings.
+/// <para>
+/// A code rather than an enum, because the vocabulary is open. Thirteen units
+/// are built in and every household starts with them; a cook who measures in
+/// <c>Schuss</c>, <c>Handvoll</c> or <c>Becher</c> adds one by writing it, and
+/// that is the whole of adding a unit. No screen, no list to maintain, and no
+/// way for a catalogue to disagree with what the recipes actually say.
+/// </para>
+/// <para>
+/// What a household adds is a <see cref="UnitFamily.Count"/> unit: it scales
+/// with the portions and it sums with itself, but it never converts to grams or
+/// millilitres. Nobody knows how much a Schuss is, and a shopping list that
+/// claimed to would be inventing the number. See <see cref="Units"/>.
+/// </para>
+/// <para>
+/// Compared case-insensitively so <c>Schuss</c> and <c>schuss</c> are one unit,
+/// and stored as it was written so a German noun keeps its capital letter.
+/// </para>
 /// </remarks>
-public enum Unit
+public sealed record Unit
 {
+    /// <summary>The longest unit the database column accepts.</summary>
+    public const int MaxCodeLength = 16;
+
+    private Unit(string code) => Code = code;
+
+    /// <summary>How it is written, on the wire and in the database.</summary>
+    public string Code { get; }
+
     /// <summary>Grams.</summary>
-    Gram = 0,
+    public static Unit Gram { get; } = new("g");
 
     /// <summary>Kilograms.</summary>
-    Kilogram = 1,
+    public static Unit Kilogram { get; } = new("kg");
 
     /// <summary>Millilitres.</summary>
-    Millilitre = 2,
+    public static Unit Millilitre { get; } = new("ml");
 
     /// <summary>Litres.</summary>
-    Litre = 3,
+    public static Unit Litre { get; } = new("l");
 
     /// <summary>Teaspoons.</summary>
-    Teaspoon = 4,
+    public static Unit Teaspoon { get; } = new("tsp");
 
     /// <summary>Tablespoons.</summary>
-    Tablespoon = 5,
+    public static Unit Tablespoon { get; } = new("tbsp");
 
     /// <summary>Individual items: three onions, two eggs.</summary>
-    Piece = 6,
+    public static Unit Piece { get; } = new("piece");
 
     /// <summary>Cloves, as of garlic.</summary>
-    Clove = 7,
+    public static Unit Clove { get; } = new("clove");
 
     /// <summary>Bunches, as of parsley.</summary>
-    Bunch = 8,
+    public static Unit Bunch { get; } = new("bunch");
 
     /// <summary>Slices.</summary>
-    Slice = 9,
+    public static Unit Slice { get; } = new("slice");
 
     /// <summary>Tins or cans.</summary>
-    Can = 10,
+    public static Unit Can { get; } = new("can");
 
     /// <summary>Packets.</summary>
-    Pack = 11,
+    public static Unit Pack { get; } = new("pack");
 
     /// <summary>A pinch. Deliberately never scaled.</summary>
-    Pinch = 12
+    public static Unit Pinch { get; } = new("pinch");
+
+    /// <summary>
+    /// The units every household starts with, in the order a picker offers
+    /// them.
+    /// </summary>
+    public static IReadOnlyList<Unit> BuiltIn { get; } =
+    [
+        Gram, Kilogram, Millilitre, Litre, Teaspoon, Tablespoon,
+        Piece, Clove, Bunch, Slice, Can, Pack, Pinch
+    ];
+
+    /// <summary>Creates a unit from what somebody wrote.</summary>
+    /// <param name="code">The unit, built in or not.</param>
+    /// <remarks>
+    /// Letters and single spaces, so <c>EL</c>, <c>Schuss</c> and <c>fl oz</c>
+    /// are units and <c>200g</c> is a mistake — an amount that lost its space,
+    /// which would otherwise become a unit nobody could ever match again.
+    /// </remarks>
+    public static Result<Unit> Create(string? code)
+    {
+        var trimmed = Collapse(code);
+
+        if (trimmed.Length is 0 or > MaxCodeLength || !trimmed.All(IsAllowed))
+        {
+            return RecipeErrors.InvalidUnit;
+        }
+
+        // Returned as itself so the built-ins stay reference-equal and a
+        // `switch` over them in a test reads the way it looks.
+        return BuiltIn.FirstOrDefault(one => one.Code.Equals(trimmed, StringComparison.OrdinalIgnoreCase))
+            ?? new Unit(trimmed);
+    }
+
+    /// <inheritdoc />
+    public bool Equals(Unit? other) =>
+        other is not null && Code.Equals(other.Code, StringComparison.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(Code);
+
+    /// <inheritdoc />
+    public override string ToString() => Code;
+
+    private static bool IsAllowed(char character) =>
+        char.IsLetter(character) || character == ' ' || character == '.';
+
+    /// <summary>
+    /// Trims, and makes any run of whitespace one space.
+    /// </summary>
+    /// <remarks>
+    /// "fl  oz" and "fl oz" have to be the same unit, or a shopping list ends
+    /// up with two lines whose difference nobody can see.
+    /// </remarks>
+    private static string Collapse(string? code) =>
+        string.Join(
+            ' ',
+            (code ?? string.Empty).Split(
+                (char[]?)null,
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 }
 
 /// <summary>
@@ -69,6 +153,9 @@ public enum UnitFamily
     /// </summary>
     Spoon = 3,
 
-    /// <summary>Countable things, which only add to the identical unit.</summary>
+    /// <summary>
+    /// Countable things, and everything a household added itself. They only
+    /// add to the identical unit.
+    /// </summary>
     Count = 4
 }

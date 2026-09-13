@@ -16,6 +16,18 @@ public interface IRecipeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The units this household has written that are not built in.
+    /// </summary>
+    /// <param name="householdId">Whose kitchen.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// Read from the recipes rather than from a table of its own. A unit exists
+    /// because something is measured in it, so there is no list to maintain and
+    /// no way for a catalogue to disagree with what the recipes actually say.
+    /// </remarks>
+    Task<IReadOnlyList<string>> OwnUnitsAsync(Guid householdId, CancellationToken cancellationToken);
+
     /// <summary>Stores a new recipe.</summary>
     /// <param name="recipe">The recipe to store.</param>
     /// <param name="cancellationToken">Cancels the write.</param>

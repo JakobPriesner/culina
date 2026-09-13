@@ -130,8 +130,13 @@ internal static class OpenApiContractFixes
     private static readonly (string Schema, string Property, IReadOnlyList<string> Values)[]
         Vocabularies =
     [
-        ("RecipesIngredientContract", "unit", RecipeVocabulary.Units),
-        ("RecipesStepSegmentContract", "unit", RecipeVocabulary.Units),
+        // The units a recipe carries are deliberately *not* listed. The
+        // vocabulary is open — a household adds a unit by writing one — and a
+        // closed enum here would generate a client that cannot send what the
+        // server accepts. What is published instead is the built-in list, on
+        // the response that exists to carry it, so the client still gets the
+        // conversion vocabulary as a type rather than redeclaring it.
+        ("RecipesGetUnitsResponse", "builtIn", RecipeVocabulary.Units),
         ("RecipesRecipeDetail", "yieldKind", RecipeVocabulary.YieldKinds),
         ("RecipesGetAllRecipeSummary", "yieldKind", RecipeVocabulary.YieldKinds),
         ("RecipesUpdateRequest", "yieldKind", RecipeVocabulary.YieldKinds),
@@ -139,9 +144,7 @@ internal static class OpenApiContractFixes
         ("RecipesUpdateRequest", "language", RecipeVocabulary.Languages),
         ("RecipesStepSegmentContract", "type", RecipeVocabulary.StepSegmentKinds),
         ("ShoppingItemContract", "section", RecipeVocabulary.ShoppingSections),
-        ("ShoppingUpdateItemRequest", "section", RecipeVocabulary.ShoppingSections),
-        ("ShoppingItemContract", "unit", RecipeVocabulary.Units),
-        ("ShoppingAddItemRequest", "unit", RecipeVocabulary.Units)
+        ("ShoppingUpdateItemRequest", "section", RecipeVocabulary.ShoppingSections)
     ];
 
     private static void Describe(
@@ -163,7 +166,12 @@ internal static class OpenApiContractFixes
                 + "The vocabulary list in OpenApiContractFixes is stale.");
         }
 
-        property.Enum = [.. values.Select(value => (JsonNode)value)];
+        // An array of codes carries the vocabulary on its items, not on the
+        // array. Without this the document would say "a list, which is itself
+        // one of these strings", which is not a thing.
+        var target = property.Items as OpenApiSchema ?? property;
+
+        target.Enum = [.. values.Select(value => (JsonNode)value)];
     }
 
     /// <summary>

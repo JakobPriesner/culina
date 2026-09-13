@@ -19,12 +19,17 @@ public static class Units
 {
     /// <summary>The family a unit belongs to.</summary>
     /// <param name="unit">The unit, or null for no unit at all.</param>
-    public static UnitFamily FamilyOf(Unit? unit) => unit switch
+    /// <remarks>
+    /// A unit the built-in list has never heard of counts things. That is what
+    /// makes an open vocabulary safe: a household's own unit scales and sums
+    /// with itself, and the arithmetic never has to guess what it weighs.
+    /// </remarks>
+    public static UnitFamily FamilyOf(Unit? unit) => Lower(unit) switch
     {
         null => UnitFamily.None,
-        Unit.Gram or Unit.Kilogram => UnitFamily.Mass,
-        Unit.Millilitre or Unit.Litre => UnitFamily.Volume,
-        Unit.Teaspoon or Unit.Tablespoon => UnitFamily.Spoon,
+        "g" or "kg" => UnitFamily.Mass,
+        "ml" or "l" => UnitFamily.Volume,
+        "tsp" or "tbsp" => UnitFamily.Spoon,
         _ => UnitFamily.Count
     };
 
@@ -46,10 +51,9 @@ public static class Units
     /// How many canonical units one of this unit is worth.
     /// </summary>
     /// <param name="unit">The unit to convert from.</param>
-    public static decimal ToCanonicalFactor(Unit? unit) => unit switch
+    public static decimal ToCanonicalFactor(Unit? unit) => Lower(unit) switch
     {
-        Unit.Kilogram => 1000m,
-        Unit.Litre => 1000m,
+        "kg" or "l" => 1000m,
         _ => 1m
     };
 
@@ -81,5 +85,8 @@ public static class Units
     /// double the pinch of salt, and pretending otherwise is the kind of small
     /// lie that makes people stop trusting the scaling.
     /// </remarks>
-    public static bool Scales(Unit? unit) => unit != Unit.Pinch;
+    public static bool Scales(Unit? unit) => Lower(unit) != "pinch";
+
+    /// <summary>The code, folded, or null when there is no unit.</summary>
+    private static string? Lower(Unit? unit) => unit?.Code.ToLowerInvariant();
 }

@@ -14,6 +14,30 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
     public Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken) =>
         searcher.SearchAsync(search, cancellationToken);
 
+    public async Task<IReadOnlyList<string>> OwnUnitsAsync(
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        // The built-ins are excluded here rather than in C# so the query does
+        // the counting: a household with four hundred recipes should not send
+        // four hundred rows back to have thirteen of them filtered out.
+        var written = await executor.QueryAsync<string>(
+            """
+            select distinct i.unit
+            from recipe_ingredients i
+            join ingredient_groups g on g.id = i.group_id
+            join recipes r on r.id = g.recipe_id
+            where r.household_id = @householdId
+              and i.unit is not null
+              and lower(i.unit) <> all (@builtIn)
+            order by i.unit;
+            """,
+            new { householdId, builtIn = Unit.BuiltIn.Select(unit => unit.Code).ToArray() },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. written];
+    }
+
     public async Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken)
     {
         // One round trip for the whole aggregate. A recipe is never useful
