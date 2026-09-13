@@ -73,11 +73,14 @@ test.describe('cooking a recipe', () => {
     // page alive and the request with it; a hard navigation this fast does not,
     // and that is the test's impatience rather than the app's problem.
     await Promise.all([
+      // Any answer, not only a successful one: waiting for `ok` here means
+      // waiting forever when the answer is something else, and hiding what it
+      // was behind a timeout. Whether the move stuck is asserted below, on the
+      // screen, which is where it matters.
       page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/cook-sessions/') &&
-          response.request().method() === 'PATCH' &&
-          response.ok()
+          response.request().method() === 'PATCH'
       ),
       next.click()
     ]);

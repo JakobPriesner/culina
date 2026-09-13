@@ -37,7 +37,28 @@ class CookingStore {
     this.#resolved = true;
   }
 
+  /**
+   * Begins cooking, once.
+   *
+   * Shared by concurrent callers rather than started twice. The cook screen
+   * asks in an effect, and an effect can run again before the first answer
+   * arrives — a second POST abandons the session the first one made and comes
+   * back at step one, which lands on somebody who had already tapped Next.
+   */
+  /** In flight, so a second ask joins the first rather than starting again. */
+  #starting: Promise<AppError | null> | null = null;
+
   async start(recipeId: string, servings: number): Promise<AppError | null> {
+    this.#starting ??= this.#begin(recipeId, servings);
+
+    try {
+      return await this.#starting;
+    } finally {
+      this.#starting = null;
+    }
+  }
+
+  async #begin(recipeId: string, servings: number): Promise<AppError | null> {
     const result = await request(() =>
       http.POST('/api/v1/cook-sessions', { body: { recipeId, servings } })
     );

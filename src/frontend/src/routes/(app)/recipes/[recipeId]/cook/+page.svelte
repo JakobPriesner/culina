@@ -57,6 +57,11 @@
    */
   const ready = $derived(cooking.session?.recipeId === recipeId);
 
+  const onLastStep = $derived(currentStep >= totalSteps - 1);
+
+  /** Forward, or done — the same control, because it is the same gesture. */
+  const advance = () => (onLastStep ? finish(true) : move(currentStep + 1));
+
   onMount(() => {
     const stopHolding = wakeLock.engage();
     const stopTicking = timers.tick();
@@ -201,20 +206,13 @@
           {m['cooking.previous']()}
         </Button>
 
-        {#if currentStep < totalSteps - 1}
-          <Button
-            size="lg"
-            variant="primary"
-            disabled={!ready}
-            onclick={() => move(currentStep + 1)}
-          >
-            {m['cooking.next']()}
-          </Button>
-        {:else}
-          <Button size="lg" variant="primary" disabled={!ready} onclick={() => finish(true)}>
-            {m['cooking.finish']()}
-          </Button>
-        {/if}
+        <!-- One control that changes what it says, not two that replace each
+             other. Swapping the element loses focus at exactly the moment
+             somebody reaches the last step, which for a keyboard user means
+             tabbing back into the page to finish. -->
+        <Button size="lg" variant="primary" disabled={!ready} onclick={advance}>
+          {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
+        </Button>
       </div>
     </div>
   {:else}

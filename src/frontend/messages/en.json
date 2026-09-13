@@ -295,5 +295,6 @@
   "editor.recovered": "Unsaved changes from this device were brought back.",
   "editor.conflict.keepMine": "Keep my version",
   "editor.conflict.takeTheirs": "Take theirs",
-  "editor.heading": "Editing {title}"
+  "editor.heading": "Editing {title}",
+  "recipe.noneThisStep": "Nothing from the list for this step."
 }
