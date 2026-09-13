@@ -278,5 +278,17 @@
   "app.update.reload": "Neu laden",
   "error.offline": "Du bist offline. Sobald du wieder verbunden bist, geht das wieder.",
   "error.timeout": "Das hat zu lange gedauert. Versuch es noch einmal.",
-  "connection.offline": "Offline"
+  "connection.offline": "Offline",
+  "me.invite.title": "Diese Küche teilen",
+  "me.invite.body": "Wer den Link hat, kann beitreten und sieht jedes Rezept hier.",
+  "me.invite.create": "Einladung erstellen",
+  "me.invite.link": "Der Link zum Verschicken",
+  "me.invite.copy": "Link kopieren",
+  "me.invite.copied": "Kopiert.",
+  "me.invite.once": "Wird nur einmal gezeigt. Verschick ihn jetzt – er lässt sich nicht noch einmal lesen.",
+  "me.invite.expires": "Läuft {when} ab.",
+  "me.invite.outstanding": "Noch nicht eingelöste Einladungen",
+  "me.invite.revoke": "Zurücknehmen",
+  "me.invite.revoked": "Diese Einladung funktioniert nicht mehr.",
+  "me.invite.none": "Keine offen."
 }
