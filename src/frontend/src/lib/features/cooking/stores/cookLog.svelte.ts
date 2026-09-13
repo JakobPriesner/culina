@@ -18,6 +18,9 @@ export interface Recorded {
   readonly count: number;
 }
 
+/** One time it was made, as the strip of attempts shows it. */
+export type CookLogItem = CookLog['items'][number];
+
 class CookLogStore {
   #log = $state<CookLog | null>(null);
 
@@ -27,6 +30,11 @@ class CookLogStore {
 
   get lastMadeAt(): string | null {
     return this.#log?.lastMadeAt ?? null;
+  }
+
+  /** Every attempt, newest first. */
+  get items(): readonly CookLogItem[] {
+    return this.#log?.items ?? [];
   }
 
   async load(recipeId: string): Promise<void> {
@@ -64,6 +72,49 @@ class CookLogStore {
     );
 
     await this.load(recipeId);
+  }
+
+  /**
+   * Hangs a photograph on one attempt.
+   *
+   * The whole log comes back rather than the one entry, because the strip shows
+   * all of them and a single entry would leave the client refetching the rest
+   * to draw anything.
+   */
+  async setPhoto(recipeId: string, entryId: string, file: File): Promise<boolean> {
+    const body = new FormData();
+
+    body.append('file', file);
+
+    const result = await request(() =>
+      http.PUT('/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo', {
+        params: { path: { recipeId, entryId } },
+        body: body as unknown as { file: string },
+        // FormData sets its own multipart boundary; serialising it as JSON
+        // would send the string "[object FormData]".
+        bodySerializer: (value: unknown) => value as FormData
+      })
+    );
+
+    if (result.ok) {
+      this.#log = result.value;
+    }
+
+    return result.ok;
+  }
+
+  async removePhoto(recipeId: string, entryId: string): Promise<boolean> {
+    const result = await request(() =>
+      http.DELETE('/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo', {
+        params: { path: { recipeId, entryId } }
+      })
+    );
+
+    if (result.ok) {
+      this.#log = result.value;
+    }
+
+    return result.ok;
   }
 
   reset(): void {

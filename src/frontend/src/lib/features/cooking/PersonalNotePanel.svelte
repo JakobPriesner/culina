@@ -7,6 +7,7 @@
   import { m } from '$shell/i18n';
   import { formatDate } from '$shell/i18n';
   import { cookLog } from './stores/cookLog.svelte';
+  import AttemptStrip from './AttemptStrip.svelte';
   import { notes } from './stores/notes.svelte';
 
   /**
@@ -50,6 +51,8 @@
   <!-- Paper only. The note lives in a text area, and a text area prints as an
        empty box; this is the same words in a form paper can carry. -->
   {#if notes.overall}<p class="written">{notes.overall}</p>{/if}
+
+  <AttemptStrip {recipeId} />
 
   {#if cookLog.count > 0}
     <p class="history">

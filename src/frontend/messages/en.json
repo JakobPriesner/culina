@@ -318,5 +318,10 @@
   "import.paste.found": "Understood: {ingredients} ingredients, {steps} steps.",
   "import.paste.create": "Make this recipe",
   "import.paste.cancel": "Never mind",
-  "import.paste.untitled": "Untitled recipe"
+  "import.paste.untitled": "Untitled recipe",
+  "attempts.title": "Your attempts",
+  "attempts.add": "Add a photo of {date}",
+  "attempts.remove": "Remove",
+  "attempts.choose": "Choose a photo",
+  "attempts.photoAlt": "How yours turned out on {date}"
 }
