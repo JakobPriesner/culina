@@ -24,6 +24,16 @@
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
   const filtered = $derived(applied.trim().length > 0);
 
+  /**
+   * Whether the end of the list fetches the next page by itself.
+   *
+   * It stops once a page fails. A list that asks for itself would otherwise
+   * ask forever while the connection is down, because the thing that triggers
+   * the request — the end of the list, in view — never goes away. From then on
+   * it is a button, and one deliberate press is worth more than a thousand.
+   */
+  const autoLoads = $derived(recipes.hasMore && !recipes.moreFailed);
+
   $effect(() => {
     if (householdId) {
       void recipes.list(householdId, { query: applied });
@@ -51,6 +61,18 @@
 
     if (householdId) {
       void recipes.list(householdId, { query: applied });
+    }
+  }
+
+  /**
+   * The next page, asked for by reading far enough down.
+   *
+   * Also the retry: a page that failed is asked for in exactly the same way,
+   * by the same call, so there is no second path that can drift.
+   */
+  function more() {
+    if (householdId) {
+      void recipes.loadMore(householdId, { query: applied });
     }
   }
 </script>
@@ -119,13 +141,13 @@
     <RecipeGrid
       recipes={recipes.items}
       loading={recipes.status === 'loading' && recipes.items.length === 0}
+      onmore={autoLoads ? more : undefined}
     />
 
-    {#if recipes.hasMore}
+    {#if recipes.moreFailed}
       <div class="more">
-        <Button onclick={() => householdId && recipes.loadMore(householdId, { query: applied })}>
-          {m['recipes.list.more']()}
-        </Button>
+        <p class="stalled">{m['recipes.list.moreFailed']()}</p>
+        <Button onclick={more}>{m['error.retry']()}</Button>
       </div>
     {/if}
   {/if}
@@ -169,7 +191,14 @@
 
   .more {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
     margin-top: var(--space-8);
+  }
+
+  .stalled {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 </style>

@@ -149,7 +149,7 @@
   "recipes.list.clearSearch": "Clear search",
   "recipes.list.count": "{count} recipes",
   "recipes.list.loading": "Loading your recipes",
-  "recipes.list.more": "Show more",
+  "recipes.list.moreFailed": "Could not load the next recipes.",
   "recipes.list.searchLabel": "Search recipes",
   "recipes.list.searchPlaceholder": "Recipe or ingredient",
   "recipes.match.complete": "You have everything",

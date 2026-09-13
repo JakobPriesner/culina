@@ -149,7 +149,7 @@
   "recipes.list.clearSearch": "Suche leeren",
   "recipes.list.count": "{count} Rezepte",
   "recipes.list.loading": "Deine Rezepte werden geladen",
-  "recipes.list.more": "Mehr anzeigen",
+  "recipes.list.moreFailed": "Die nächsten Rezepte konnten nicht geladen werden.",
   "recipes.list.searchLabel": "Rezepte durchsuchen",
   "recipes.list.searchPlaceholder": "Rezept oder Zutat",
   "recipes.match.complete": "Du hast alles da",
