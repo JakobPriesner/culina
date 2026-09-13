@@ -31,7 +31,11 @@ export function createScaling(recipe: () => Recipe | null, target: () => number)
   );
 
   const show = (quantity: Quantity): QuantityText =>
-    formatQuantity(scaleQuantity(quantity, factor), preferences.locale, labels);
+    formatQuantity(
+      scaleQuantity(quantity, factor, preferences.measurementSystem),
+      preferences.locale,
+      labels
+    );
 
   return {
     get factor() {

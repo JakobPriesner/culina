@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import {
   accountFor,
+  ensureAccount,
   needsBackend,
   seedRecipe,
   signInWithHousehold,
@@ -120,5 +121,89 @@ test.describe('scaling a recipe', () => {
     await expect(page.getByRole('region', { name: /ingredients|zutaten/i })).toContainText(
       /370\s*g/
     );
+  });
+});
+
+/**
+ * The same recipe, in the units the reader owns.
+ *
+ * Its own account, and not by accident: the choice is a stored preference, and
+ * a test that changed it on the account the rest of this file shares would
+ * leave every other test reading ounces.
+ */
+test.describe('measured the way the reader measures', () => {
+  test.skip(needsBackend, skipReason);
+
+  let page: Page;
+
+  test.beforeAll(async ({ browser }) => {
+    if (needsBackend) {
+      return;
+    }
+
+    page = await browser.newPage();
+
+    await signInWithHousehold(page, await ensureAccount(browser, 'imperial'));
+  });
+
+  test.afterAll(async () => {
+    await page?.close();
+  });
+
+  test('converts mass and volume, and leaves everything else alone', async () => {
+    const recipeId = await seedRecipe(page, {
+      title: unique('Imperial'),
+      yieldAmount: 2,
+      ingredients: [
+        { quantity: 227, unit: 'g', name: 'Butter' },
+        { quantity: 240, unit: 'ml', name: 'Milk' },
+        { quantity: 2, unit: 'tbsp', name: 'Oil' },
+        { quantity: 3, unit: 'clove', name: 'Garlic' }
+      ],
+      steps: ['Melt {0}.']
+    });
+
+    // Waited for, not assumed: the choice is pushed to the server, and the next
+    // navigation reboots the app and reads it back from there.
+    const saved = () =>
+      page.waitForResponse(
+        (one) => one.url().includes('/users/me/settings') && one.request().method() === 'PUT'
+      );
+
+    await page.goto('/me');
+    await Promise.all([saved(), page.getByLabel(/^(amounts|mengen)$/i).selectOption('imperial')]);
+
+    // The app reads the choice back on boot, and the amounts are rendered from
+    // it. Asserting before that read has landed is asserting on the default.
+    const settingsRead = page.waitForResponse(
+      (one) => one.url().includes('/users/me/settings') && one.request().method() === 'GET'
+    );
+
+    await page.goto(`/recipes/${recipeId}`);
+    await settingsRead;
+
+    const ingredients = page.getByRole('region', { name: /ingredients|zutaten/i });
+
+    await expect(ingredients).toContainText(/8\s*oz/);
+    await expect(ingredients).toContainText(/1\s*cup/);
+    // A spoon is a spoon in both systems, and a clove is a clove.
+    await expect(ingredients).toContainText(/2\s*(tbsp|EL)/);
+    await expect(ingredients).toContainText(/3\s*cloves/);
+
+    // Never cups for a mass: a cup of flour is between 120 g and 150 g
+    // depending on how it was packed, so "in cups" is a number nobody can act
+    // on. The butter is ounces.
+    await expect(ingredients).not.toContainText('cup Butter');
+
+    // The step carries the converted amount too, because it carries the
+    // ingredient rather than a number somebody typed into it.
+    await expect(page.getByRole('region', { name: /steps|zubereitung/i })).toContainText(/8\s*oz/);
+
+    // Shown, not stored: switching back leaves the recipe exactly as written.
+    await page.goto('/me');
+    await Promise.all([saved(), page.getByLabel(/^(amounts|mengen)$/i).selectOption('metric')]);
+    await page.goto(`/recipes/${recipeId}`);
+
+    await expect(ingredients).toContainText(/227\s*g/);
   });
 });

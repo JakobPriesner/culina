@@ -1,3 +1,4 @@
+import { fromGrams, fromMillilitres, toMeasure, type MeasurementSystem } from './measurement';
 import { canonicalOf, familyOf, largerUnit, scales, toCanonical, type Unit } from './units';
 
 /**
@@ -78,8 +79,18 @@ export const clampYield = (value: number): number =>
  *
  * `133.333 g` is arithmetic; `1⅓ eggs` is honest and useless. This returns what
  * a cook would write down.
+ *
+ * The measurement system is applied here rather than afterwards, because
+ * converting a number that has already been rounded rounds it twice — and a
+ * quarter-ounce of drift on each of a recipe's twelve amounts is a different
+ * recipe. It touches mass and volume only: a teaspoon is a teaspoon in both
+ * systems, and two onions are two onions.
  */
-export function scaleQuantity(base: Quantity, factor: number): ScaledQuantity {
+export function scaleQuantity(
+  base: Quantity,
+  factor: number,
+  system: MeasurementSystem = 'metric'
+): ScaledQuantity {
   const unchanged: ScaledQuantity = {
     value: base.value,
     upper: null,
@@ -94,13 +105,20 @@ export function scaleQuantity(base: Quantity, factor: number): ScaledQuantity {
     return unchanged;
   }
 
-  if (factor === 1) {
+  const family = familyOf(base.unit);
+  const converts = system === 'imperial' && (family === 'mass' || family === 'volume');
+
+  if (factor === 1 && !converts) {
     return unchanged;
   }
 
   const exact = base.value * factor;
 
-  switch (familyOf(base.unit)) {
+  if (converts) {
+    return customary(exact, base.unit!, family === 'mass');
+  }
+
+  switch (family) {
     case 'mass':
     case 'volume':
       return measured(exact, base.unit!);
@@ -143,6 +161,29 @@ function measured(exact: number, unit: Unit): ScaledQuantity {
     isApproximate: drifted(inCanonical, rounded),
     isRange: false,
     exact: inCanonical
+  };
+}
+
+/**
+ * Mass and volume, in the units a US kitchen owns.
+ *
+ * Converted from the exact amount and rounded once, onto a measure that is
+ * actually in the drawer. Mass becomes ounces and pounds and never cups: a cup
+ * of flour is between 120 g and 150 g depending on how it was packed, and
+ * turning 250 g into "2 cups" is a confidently wrong recipe.
+ */
+function customary(exact: number, unit: Unit, isMass: boolean): ScaledQuantity {
+  const inCanonical = exact * toCanonical(unit);
+  const converted = isMass ? fromGrams(inCanonical) : fromMillilitres(inCanonical);
+  const rounded = toMeasure(converted.value, converted.steps);
+
+  return {
+    value: trim(Math.max(0, rounded)),
+    upper: null,
+    unit: converted.unit,
+    isApproximate: drifted(converted.value, rounded),
+    isRange: false,
+    exact: converted.value
   };
 }
 

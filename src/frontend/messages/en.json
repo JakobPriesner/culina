@@ -356,5 +356,8 @@
   "archive.restore": "Restore from a file",
   "archive.choose": "Choose an archive",
   "archive.restored": "{restored} recipes restored, {skipped} skipped.",
-  "archive.restoreFailed": "That file could not be restored."
+  "archive.restoreFailed": "That file could not be restored.",
+  "measurement.label": "Amounts",
+  "measurement.metric": "Grams and millilitres",
+  "measurement.imperial": "Ounces and cups"
 }
