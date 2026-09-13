@@ -41,12 +41,22 @@ export const unique = (word: string): string =>
  *
  * Reused rather than made fresh each run because registration is rate limited
  * per address — as it should be — and a suite that burns five registrations an
- * hour would lock itself out.
+ * hour would lock itself out. Remembered within a worker for the same reason:
+ * signing in is rate limited per account, and checking whether an account
+ * exists costs a sign-in.
  */
+const known = new Map<string, { email: string; password: string }>();
+
 export async function ensureAccount(
   browser: Browser,
   name: string
 ): Promise<{ email: string; password: string }> {
+  const remembered = known.get(name);
+
+  if (remembered) {
+    return remembered;
+  }
+
   const who = { email: `${name}@culina.test`, password: credentials.password! };
   const context = await browser.newContext();
 
@@ -57,6 +67,8 @@ export async function ensureAccount(
     });
 
     if (signedIn.ok()) {
+      known.set(name, who);
+
       return who;
     }
 
@@ -68,6 +80,7 @@ export async function ensureAccount(
     });
 
     expect(created.ok(), await created.text()).toBe(true);
+    known.set(name, who);
 
     return who;
   } finally {

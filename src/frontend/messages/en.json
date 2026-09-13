@@ -278,5 +278,17 @@
   "app.update.reload": "Reload",
   "error.offline": "You are offline. This will be possible again when you reconnect.",
   "error.timeout": "That took too long. Try again.",
-  "connection.offline": "Offline"
+  "connection.offline": "Offline",
+  "me.invite.title": "Share this kitchen",
+  "me.invite.body": "Anyone with the link can join and see every recipe here.",
+  "me.invite.create": "Make an invitation",
+  "me.invite.link": "The link to send",
+  "me.invite.copy": "Copy the link",
+  "me.invite.copied": "Copied.",
+  "me.invite.once": "Shown once. Send it now — it cannot be read again.",
+  "me.invite.expires": "Expires {when}.",
+  "me.invite.outstanding": "Invitations not used yet",
+  "me.invite.revoke": "Take it back",
+  "me.invite.revoked": "That invitation will not work any more.",
+  "me.invite.none": "None waiting to be used."
 }
