@@ -349,5 +349,12 @@
   "import.url.read": "Lesen",
   "import.url.or": "oder einfügen",
   "import.url.failed": "Diese Seite konnte nicht gelesen werden. Vielleicht gibt es sie nicht mehr – oder sie ist keine gewöhnliche öffentliche Seite.",
-  "import.paste.source": "Von {url}"
+  "import.paste.source": "Von {url}",
+  "archive.title": "Deine Rezepte als Datei",
+  "archive.hint": "Lesbares JSON mit deinen Fotos darin, dazu deine eigenen Notizen und deine Kochhistorie. Sie gehört dir – beim Wiederherstellen kommen die Rezepte dazu, nichts wird ersetzt.",
+  "archive.export": "Alles herunterladen",
+  "archive.restore": "Aus Datei wiederherstellen",
+  "archive.choose": "Archiv auswählen",
+  "archive.restored": "{restored} Rezepte wiederhergestellt, {skipped} übersprungen.",
+  "archive.restoreFailed": "Diese Datei konnte nicht wiederhergestellt werden."
 }

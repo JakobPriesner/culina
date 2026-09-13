@@ -1,3 +1,4 @@
+using Api.Endpoints.Households.Archive.V1;
 using Api.Endpoints.Households.ChangeMemberRole.V1;
 using Api.Endpoints.Households.Create.V1;
 using Api.Endpoints.Households.CreateInvitation.V1;
@@ -27,5 +28,7 @@ internal static class HouseholdsEndpoints
             .AddSingleton<IEndpoint, RemoveMemberEndpoint>()
             .AddSingleton<IEndpoint, CreateInvitationEndpoint>()
             .AddSingleton<IEndpoint, GetInvitationsEndpoint>()
-            .AddSingleton<IEndpoint, RevokeInvitationEndpoint>();
+            .AddSingleton<IEndpoint, RevokeInvitationEndpoint>()
+            .AddSingleton<IEndpoint, ExportArchiveEndpoint>()
+            .AddSingleton<IEndpoint, RestoreArchiveEndpoint>();
 }
