@@ -143,6 +143,28 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
         Stream buffered,
         CancellationToken cancellationToken)
     {
+        ImageInfo header;
+
+        try
+        {
+            // The header first, and only the header. A byte limit does not bound
+            // a pixel count: a few kilobytes of PNG can describe fifty thousand
+            // pixels square, and decoding it to find that out is the whole of
+            // the attack. Reading the dimensions costs nothing.
+            header = await Image.IdentifyAsync(buffered, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
+        {
+            return ImageErrors.Unreadable;
+        }
+
+        if ((long)header.Width * header.Height > MaxPixels)
+        {
+            return ImageErrors.TooManyPixels;
+        }
+
+        buffered.Position = 0;
+
         Image image;
 
         try
@@ -158,10 +180,6 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
 
         using (image)
         {
-            if ((long)image.Width * image.Height > MaxPixels)
-            {
-                return ImageErrors.TooManyPixels;
-            }
 
             var renditions = await RenderAsync(image, cancellationToken).ConfigureAwait(false);
             var hash = Convert.ToHexStringLower(SHA256.HashData(renditions[^1].Bytes));
@@ -196,7 +214,21 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
 
             await using (encoded.ConfigureAwait(false))
             {
-                await resized.SaveAsync(encoded, new WebpEncoder { Quality = 82 }, cancellationToken)
+                await resized
+                    .SaveAsync(
+                        encoded,
+                        new WebpEncoder
+                        {
+                            Quality = 82,
+                            // The re-encoding is the only place metadata can be
+                            // dropped, and dropping it is the point. A photograph
+                            // taken in somebody's kitchen carries where that
+                            // kitchen is; an instance that served it back would be
+                            // handing out its owner's address with a picture of
+                            // dinner. Nothing in EXIF is worth keeping here.
+                            SkipMetadata = true
+                        },
+                        cancellationToken)
                     .ConfigureAwait(false);
 
                 renditions.Add(new Rendition(width, encoded.ToArray()));

@@ -90,6 +90,7 @@ CORS policy anywhere. `make` with no target lists every command.
 | [`docs/configuration.md`](docs/configuration.md) | Every environment variable and what breaks without it |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to work on it, and what the conventions enforce |
 | [`SECURITY.md`](SECURITY.md) | Reporting a vulnerability |
+| [`docs/security-review.md`](docs/security-review.md) | What was checked against ASVS 5.0 L2, and what is deliberately absent |
 
 ## Licence
 

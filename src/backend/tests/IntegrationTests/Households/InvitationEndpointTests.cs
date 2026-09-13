@@ -174,6 +174,41 @@ public class InvitationEndpointTests(PostgresFixture postgres)
         (await client.GetAsync("/api/v1/households", Token))
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
 
+    [Fact]
+    public async Task Redeem_ShouldRefuseACodeThatHasExpired()
+    {
+        // Arrange
+        // A link in a message somebody scrolls past for a year is not consent
+        // given a year later. Aged in the database because the API has no way
+        // to produce an expired code, which is the point.
+        var (owner, other) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var otherClient = other;
+        var householdId = await FirstHouseholdIdAsync(owner);
+
+        var created = await owner.PostAsync(
+            $"/api/v1/households/{householdId}/invitations",
+            new { },
+            Token);
+
+        var code = created.Json!.Value.GetProperty("code").GetString()!;
+
+        await postgres.ExecuteAsync(
+            "update household_invitations set expires_at = now() - interval '1 day';",
+            Token);
+
+        // Act
+        var redeemed = await other.PostAsync(
+            $"/api/v1/invitations/{code}/redemptions",
+            new { },
+            Token);
+
+        // Assert
+        // The same answer an unknown code gets: a code that is refused for a
+        // reason tells whoever is guessing which guesses were close.
+        Assert.Equal(HttpStatusCode.NotFound, redeemed.StatusCode);
+    }
+
     private async Task<ApiClient> SignedInAsync(string email)
     {
         var client = postgres.Api.NewApiClient();
