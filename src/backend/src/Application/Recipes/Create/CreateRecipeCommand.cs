@@ -29,7 +29,7 @@ internal sealed class CreateRecipeCommandHandler(
         using var tracked = UseCaseActivity.Start("Recipes.Create");
 
         var permitted = await RecipeAccess
-            .MayWriteToHouseholdAsync(households, command.HouseholdId, command.UserId, cancellationToken)
+            .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var prepared = permitted.Bind(() => RecipeTitle.Create(command.Title));

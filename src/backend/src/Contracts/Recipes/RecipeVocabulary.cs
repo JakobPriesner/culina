@@ -20,7 +20,17 @@ namespace Contracts.Recipes;
 /// </remarks>
 public static class RecipeVocabulary
 {
-    /// <summary>Every unit code, in the order a picker should offer them.</summary>
+    /// <summary>
+    /// The units every household starts with, in the order a picker offers
+    /// them.
+    /// </summary>
+    /// <remarks>
+    /// Not a closed set. These are the units that <em>convert</em> — a kilo is
+    /// a thousand grams for everyone — and they are published so a generated
+    /// client shares that table rather than redeclaring it. A household adds a
+    /// unit by writing one, and what it writes counts things: it scales with
+    /// the portions, it adds to itself, and it converts to nothing.
+    /// </remarks>
     public static readonly IReadOnlyList<string> Units =
     [
         "g", "kg", "ml", "l", "tsp", "tbsp",

@@ -104,3 +104,37 @@ describe('German as it is actually typed', () => {
     });
   });
 });
+
+describe('a unit this kitchen added itself', () => {
+  it('does not read a word it has never seen as a unit', () => {
+    // Otherwise "2 Zwiebeln" becomes two Zwiebeln of nothing, and the
+    // ingredient loses its name to a unit nobody asked for.
+    expect(parse('1 Schuss Milch')).toEqual({
+      quantity: { value: 1, unit: null },
+      name: 'Schuss Milch',
+      note: null
+    });
+  });
+
+  it('reads a unit this kitchen has written before', () => {
+    // Which is the whole of what adding a unit means: write it once, and every
+    // line after that reads back the way it was meant.
+    expect(parse('1 Schuss Milch', ['Schuss'])).toEqual({
+      quantity: { value: 1, unit: 'Schuss' },
+      name: 'Milch',
+      note: null
+    });
+  });
+
+  it('matches a household unit however it was capitalised', () => {
+    expect(parse('2 schuss Öl', ['Schuss']).quantity.unit).toBe('Schuss');
+  });
+
+  it('still needs an amount before it will call a word a unit', () => {
+    expect(parse('Schuss Milch', ['Schuss'])).toEqual({
+      quantity: { value: null, unit: null },
+      name: 'Schuss Milch',
+      note: null
+    });
+  });
+});

@@ -17,9 +17,11 @@ It splits cleanly instead:
 | **Server** | Exact decimal arithmetic only. Shopping-list quantities are stored **unrounded**, so merging never compounds rounding error. Knows nothing about how a number is shown. |
 | **Client** | Human rounding, which is **presentation**. One pure module, no I/O, exhaustively unit-tested. |
 
-The only genuinely shared thing is the unit vocabulary, and that is a backend
-enum surfaced through OpenAPI — one definition, both sides
-(`frontend-api-client`).
+The only genuinely shared thing is the unit vocabulary. Its convertible half —
+the thirteen built-in units — is surfaced through OpenAPI, so there is one
+definition on both sides (`frontend-api-client`). The rest of the vocabulary is
+open: a household adds a unit by writing one, and what it writes counts things,
+so scaling it needs no table at all.
 
 ## The factor
 

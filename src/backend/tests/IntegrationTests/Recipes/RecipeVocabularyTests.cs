@@ -34,25 +34,45 @@ public class RecipeVocabularyTests
     }
 
     [Fact]
-    public void EveryUnitTheApiCanReturn_ShouldBePublished()
+    public void ThePublishedUnits_ShouldBeExactlyTheOnesBuiltIn()
     {
         // Arrange & Act
-        var written = Enum.GetValues<Unit>().Select(unit => RecipeWords.Of(unit)).ToList();
+        var written = Unit.BuiltIn.Select(unit => unit.Code).ToHashSet();
 
         // Assert
-        // Otherwise a recipe could be saved and read back with a unit the
-        // contract says cannot exist.
-        Assert.All(written, code => Assert.Contains(code, RecipeVocabulary.Units));
+        // The published list is what a household starts with, not what it is
+        // limited to — but a built-in the document forgets is a built-in no
+        // picker ever offers.
+        Assert.Equal(written, RecipeVocabulary.Units.ToHashSet());
     }
 
-    [Fact]
-    public void ThePublishedUnits_ShouldBeExactlyTheOnesTheDomainHas()
+    [Theory]
+    [InlineData("Schuss")]
+    [InlineData("Handvoll")]
+    [InlineData("fl oz")]
+    public void AUnitAHouseholdWrites_ShouldBeAccepted(string code)
     {
         // Arrange & Act
-        var written = Enum.GetValues<Unit>().Select(unit => RecipeWords.Of(unit)!).ToHashSet();
+        var result = RecipeWords.ToQuantity(1m, code);
 
         // Assert
-        Assert.Equal(written, RecipeVocabulary.Units.ToHashSet());
+        // The vocabulary is open: writing a unit is how a unit is added.
+        Assert.False(Rejected(result));
+    }
+
+    [Theory]
+    [InlineData("200g")]
+    [InlineData("2 1/2")]
+    [InlineData("a very long unit indeed")]
+    public void SomethingThatIsNotAUnit_ShouldBeRejected(string code)
+    {
+        // Arrange & Act
+        var result = RecipeWords.ToQuantity(1m, code);
+
+        // Assert
+        // Open is not the same as anything. "200g" is an amount that lost its
+        // space, and accepting it would make a unit nobody could match again.
+        Assert.True(Rejected(result));
     }
 
     [Fact]

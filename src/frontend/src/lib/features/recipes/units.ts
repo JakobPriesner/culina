@@ -1,22 +1,32 @@
 import type { components } from '$api/generated/schema';
 
 /**
- * The unit vocabulary, taken from the backend enum rather than redeclared.
+ * What an amount is measured in.
  *
- * The families below are the client's business — they describe how an amount is
- * *shown*, which the server has no opinion about — but the set of units is one
- * definition on both sides.
+ * A plain code, because the vocabulary is open: thirteen units are built in and
+ * a household adds one by writing it. See `BuiltInUnit` for the ones that
+ * convert.
  */
-export type Unit = NonNullable<components['schemas']['RecipesIngredientContract']['unit']>;
+export type Unit = string;
+
+/**
+ * The units that convert, taken from the backend rather than redeclared.
+ *
+ * A kilo is a thousand grams for everyone, so this half of the vocabulary is
+ * shared and closed. The server publishes it on the units response, which is
+ * the one place it has to appear — and taking it from there is what stops this
+ * file and the server from drifting apart.
+ */
+export type BuiltInUnit = components['schemas']['RecipesGetUnitsResponse']['builtIn'][number];
 
 /**
  * The same vocabulary as a value, so a test can walk it.
  *
  * A record rather than an array on purpose: the type checker insists a
- * `Record<Unit, …>` name every unit, so a unit the backend adds and this file
- * forgets is a compile error instead of a gap nothing notices.
+ * `Record<BuiltInUnit, …>` name every unit, so a unit the backend adds and this
+ * file forgets is a compile error instead of a gap nothing notices.
  */
-const everyUnit: Record<Unit, true> = {
+const everyBuiltIn: Record<BuiltInUnit, true> = {
   g: true,
   kg: true,
   ml: true,
@@ -32,11 +42,15 @@ const everyUnit: Record<Unit, true> = {
   pinch: true
 };
 
-export const units = Object.keys(everyUnit) as readonly Unit[];
+export const builtInUnits = Object.keys(everyBuiltIn) as readonly BuiltInUnit[];
+
+/** Whether this is one of the units that convert. */
+export const isBuiltIn = (unit: Unit | null | undefined): unit is BuiltInUnit =>
+  unit !== null && unit !== undefined && unit in everyBuiltIn;
 
 export type UnitFamily = 'mass' | 'volume' | 'spoon' | 'count' | 'none';
 
-const families: Partial<Record<Unit, UnitFamily>> = {
+const families: Partial<Record<BuiltInUnit, UnitFamily>> = {
   g: 'mass',
   kg: 'mass',
   ml: 'volume',
@@ -50,9 +64,12 @@ export function familyOf(unit: Unit | null | undefined): UnitFamily {
     return 'none';
   }
 
-  // Everything not named above counts things: pieces, cloves, cans. A pinch is
-  // handled separately — it is a gesture, not a quantity.
-  return families[unit] ?? 'count';
+  // Everything not named above counts things: pieces, cloves, cans — and every
+  // unit a household wrote itself, which is what makes an open vocabulary safe.
+  // A counting unit scales and adds to itself, and the arithmetic never has to
+  // guess what a Schuss weighs. A pinch is handled separately: it is a gesture,
+  // not a quantity.
+  return (isBuiltIn(unit) ? families[unit] : undefined) ?? 'count';
 }
 
 /** The unit a family is measured in before it is made readable again. */
@@ -70,6 +87,22 @@ export const canonicalOf = (unit: Unit | null | undefined): Unit | null => {
 /** How many canonical units one of this unit is worth. */
 export const toCanonical = (unit: Unit | null | undefined): number =>
   unit === 'kg' || unit === 'l' ? 1000 : 1;
+
+/**
+ * Whether two amounts in these units can be added at all.
+ *
+ * Mass and volume convert within themselves; everything else, spoons and counts
+ * and a household's own units alike, has to match exactly.
+ */
+export function canCombine(left: Unit | null | undefined, right: Unit | null | undefined): boolean {
+  const family = familyOf(left);
+
+  if (family !== familyOf(right)) {
+    return false;
+  }
+
+  return family === 'mass' || family === 'volume' || left === right;
+}
 
 /**
  * Whether scaling this amount means anything.

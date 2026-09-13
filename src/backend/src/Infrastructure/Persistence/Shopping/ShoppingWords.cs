@@ -44,41 +44,19 @@ internal static class ShoppingWords
         _ => null
     };
 
-    /// <summary>The same unit codes a recipe uses, so one vocabulary spans both.</summary>
-    internal static string? Of(Unit? unit) => unit switch
-    {
-        null => null,
-        Unit.Gram => "g",
-        Unit.Kilogram => "kg",
-        Unit.Millilitre => "ml",
-        Unit.Litre => "l",
-        Unit.Teaspoon => "tsp",
-        Unit.Tablespoon => "tbsp",
-        Unit.Piece => "piece",
-        Unit.Clove => "clove",
-        Unit.Bunch => "bunch",
-        Unit.Slice => "slice",
-        Unit.Can => "can",
-        Unit.Pack => "pack",
-        Unit.Pinch => "pinch",
-        _ => null
-    };
+    /// <summary>
+    /// A unit is stored as the code it carries. One vocabulary spans a recipe
+    /// and a shopping list, and there is nothing to translate between them.
+    /// </summary>
+    internal static string? Of(Unit? unit) => unit?.Code;
 
-    internal static Unit? ToUnit(string? value) => value switch
-    {
-        "g" => Unit.Gram,
-        "kg" => Unit.Kilogram,
-        "ml" => Unit.Millilitre,
-        "l" => Unit.Litre,
-        "tsp" => Unit.Teaspoon,
-        "tbsp" => Unit.Tablespoon,
-        "piece" => Unit.Piece,
-        "clove" => Unit.Clove,
-        "bunch" => Unit.Bunch,
-        "slice" => Unit.Slice,
-        "can" => Unit.Can,
-        "pack" => Unit.Pack,
-        "pinch" => Unit.Pinch,
-        _ => null
-    };
+    /// <summary>
+    /// A stored unit, or null when the row has none.
+    /// </summary>
+    /// <remarks>
+    /// A row whose unit no longer parses is read as unmeasured rather than
+    /// crashing the read: a list that mostly renders beats an error.
+    /// </remarks>
+    internal static Unit? ToUnit(string? value) =>
+        string.IsNullOrEmpty(value) ? null : Unit.Create(value).Match<Unit?>(one => one, _ => null);
 }

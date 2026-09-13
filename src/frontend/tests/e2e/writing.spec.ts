@@ -128,6 +128,51 @@ test.describe('writing a recipe', () => {
     await expect(method).toContainText(/250\s*g\s*Butter/);
   });
 
+  test('measures in a unit this kitchen invented, and scales it', async () => {
+    const title = unique('Schuss');
+
+    await page.goto('/recipes/new');
+    await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
+    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await expect(page).toHaveURL(/\/edit/);
+
+    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
+
+    // Waited for the write itself, not for the word "Saved": that word is
+    // already on screen from the save before, so it would be true too early.
+    const saved = () => page.waitForResponse((one) => one.request().method() === 'PUT' && one.ok());
+
+    // A word the built-in spellings have never heard of is not a unit yet, so
+    // the whole thing lands in the name — which is the honest read of it.
+    await line.fill('1 Schuss Milch');
+    await Promise.all([saved(), line.press('Enter')]);
+
+    // Corrected once, in the parts the parse is shown back as. The unit field
+    // is a list you can also type into: that is how a unit is added.
+    await page.getByRole('button', { name: /correct|korrigieren/i }).click();
+    await page.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill('Schuss');
+    await page.getByRole('textbox', { name: /^(ingredient|zutat)$/i }).fill('Milch');
+    await saved();
+
+    // And from then on the kitchen knows the word.
+    await line.fill('2 Schuss Sahne');
+    await Promise.all([saved(), line.press('Enter')]);
+
+    await page.goto(`/recipes/${new URL(page.url()).pathname.split('/')[2]}`);
+
+    const list = page.getByRole('region', { name: /ingredients|zutaten/i });
+
+    await expect(list).toContainText(/1\s*Schuss/);
+    await expect(list).toContainText(/2\s*Schuss/);
+
+    // It scales with the portions like any other unit it counts in, rounding
+    // the way a cook writes rather than to a quarter of a splash — and it
+    // converts to nothing, because nobody knows how much a Schuss is.
+    await page.getByRole('button', { name: /^(one more|eine mehr)$/i }).click();
+
+    await expect(list).toContainText(/2[–-]3\s*Schuss/);
+  });
+
   test('shows a new recipe in the list it belongs to', async () => {
     const title = unique('Listed');
 

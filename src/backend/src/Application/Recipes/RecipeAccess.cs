@@ -34,7 +34,14 @@ internal static class RecipeAccess
             error => Task.FromResult(Result<Recipe>.Failure(error))).ConfigureAwait(false);
     }
 
-    internal static async Task<Result> MayWriteToHouseholdAsync(
+    /// <summary>
+    /// Whether the caller is in this household at all.
+    /// </summary>
+    /// <remarks>
+    /// The same answer for reading and for writing: a household has members,
+    /// not roles, and a member may do anything in their own kitchen.
+    /// </remarks>
+    internal static async Task<Result> MemberOfAsync(
         IHouseholdRepository households,
         Guid householdId,
         Guid userId,

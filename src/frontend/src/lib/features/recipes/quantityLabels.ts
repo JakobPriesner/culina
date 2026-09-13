@@ -1,7 +1,7 @@
 import { m } from '$shell/i18n';
 
 import type { QuantityLabels } from './formatQuantity';
-import type { Unit } from './units';
+import type { BuiltInUnit, Unit } from './units';
 
 /**
  * The words that go beside an amount, in the reader's language.
@@ -20,7 +20,7 @@ import type { Unit } from './units';
  * `Dosen` are not `can` and `cans`, and a rule that appends an `s` is a rule
  * that only works in one language.
  */
-const unitNames: Partial<Record<Unit, readonly [one: () => string, many: () => string]>> = {
+const unitNames: Partial<Record<BuiltInUnit, readonly [one: () => string, many: () => string]>> = {
   // Spoons are abbreviated, but not the same way in every language: a German
   // recipe says EL and TL, and `2 tbsp` in an otherwise German list is the kind
   // of half-translated detail that makes an app feel imported. Neither language
@@ -37,7 +37,9 @@ const unitNames: Partial<Record<Unit, readonly [one: () => string, many: () => s
 
 export const quantityLabels: QuantityLabels = {
   unitName: (unit: Unit, count: number) => {
-    const names = unitNames[unit];
+    // A unit a household wrote has no name here, and needs none: it is its own
+    // label, and `formatQuantity` shows it as it was typed.
+    const names = unitNames[unit as BuiltInUnit];
 
     return names ? (count === 1 ? names[0]() : names[1]()) : '';
   },

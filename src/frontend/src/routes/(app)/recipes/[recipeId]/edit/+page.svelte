@@ -11,6 +11,7 @@
   import { ErrorCodes, type AppError } from '$api';
   import { forget, recall, remember } from '$features/recipes/editor/journal';
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
+  import { units } from '$features/recipes/stores/units.svelte';
   import { session } from '$features/auth/session.svelte';
   import { busy } from '$shell/busy.svelte';
   import { m } from '$shell/i18n';
@@ -62,6 +63,14 @@
   $effect(() => {
     if (recipeId) {
       void recipes.load(recipeId);
+    }
+  });
+
+  // The units this kitchen uses, so a line that says "1 Schuss Milch" reads
+  // back as a Schuss of milk rather than as an ingredient called "Schuss Milch".
+  $effect(() => {
+    if (draft) {
+      void units.load(draft.householdId);
     }
   });
 
