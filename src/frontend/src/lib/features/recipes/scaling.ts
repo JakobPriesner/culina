@@ -28,6 +28,16 @@ export interface ScaledQuantity {
   /** True when rounding moved the value by more than 2%. */
   readonly isApproximate: boolean;
   readonly isRange: boolean;
+  /**
+   * The arithmetic, before any of it was made readable — in the unit of
+   * `value`, so the two can be compared directly.
+   *
+   * Kept so that an approximation can say what it approximated, and so that
+   * nothing downstream has to re-derive it from a number that was already
+   * rounded. Scaling an already-scaled amount drifts, and drifts differently
+   * depending on how many times somebody tapped the stepper.
+   */
+  readonly exact: number | null;
 }
 
 /** Beyond these, times and tins stop being right and the app says so. */
@@ -42,8 +52,16 @@ const approximationThreshold = 0.02;
 /** How close to a whole number a count has to be before it is simply that number. */
 const countSnap = 0.15;
 
+/**
+ * How much of the recipe is being made.
+ *
+ * Both numbers are checked rather than trusted: a base yield of zero, or a
+ * target that arrived from a URL as `abc`, would otherwise produce a factor of
+ * `NaN` and turn every amount on the page into `NaN` — which looks like the app
+ * forgetting the recipe rather than like bad input.
+ */
 export function factorFor(baseYield: number, targetYield: number): number {
-  if (baseYield <= 0) {
+  if (!Number.isFinite(baseYield) || baseYield <= 0 || !Number.isFinite(targetYield)) {
     return 1;
   }
 
@@ -51,7 +69,9 @@ export function factorFor(baseYield: number, targetYield: number): number {
 }
 
 export const clampYield = (value: number): number =>
-  Math.min(yieldLimits.highest, Math.max(yieldLimits.lowest, value));
+  Number.isFinite(value)
+    ? Math.min(yieldLimits.highest, Math.max(yieldLimits.lowest, value))
+    : yieldLimits.lowest;
 
 /**
  * Scales one amount and makes it something a person can act on.
@@ -65,7 +85,8 @@ export function scaleQuantity(base: Quantity, factor: number): ScaledQuantity {
     upper: null,
     unit: base.unit,
     isApproximate: false,
-    isRange: false
+    isRange: false,
+    exact: base.value
   };
 
   // Nothing to scale: no amount given, or a pinch, which is a gesture.
@@ -110,7 +131,8 @@ function measured(exact: number, unit: Unit): ScaledQuantity {
       upper: null,
       unit: bigger,
       isApproximate: drifted(inCanonical, rounded),
-      isRange: false
+      isRange: false,
+      exact: inCanonical / 1000
     };
   }
 
@@ -119,7 +141,8 @@ function measured(exact: number, unit: Unit): ScaledQuantity {
     upper: null,
     unit: canonical,
     isApproximate: drifted(inCanonical, rounded),
-    isRange: false
+    isRange: false,
+    exact: inCanonical
   };
 }
 
@@ -169,12 +192,22 @@ function spooned(exact: number, unit: Unit): ScaledQuantity {
     upper: null,
     unit,
     isApproximate: drifted(exact, rounded),
-    isRange: false
+    isRange: false,
+    exact
   };
 }
 
 /** How near a third an amount has to be before it is treated as one. */
 const thirdTolerance = 0.02;
+
+/**
+ * The pieces of one thing a kitchen has words for.
+ *
+ * A quarter is the floor: below that the honest answer for a countable
+ * ingredient stops existing, and a quarter of an onion is the smallest piece
+ * anybody is going to cut.
+ */
+const kitchenFractions = [0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1];
 
 /** The two multiples of `step` either side of `exact`, never below zero. */
 const multiples = (exact: number, step: number): number[] => [
@@ -191,19 +224,24 @@ const closest = (exact: number, candidates: number[]): number =>
  * Countable things become an honest range rather than a fraction.
  *
  * Half of three cloves is not one and a half cloves; it is one or two, and the
- * cook decides. A count never rounds to zero: a recipe that needs an onion
- * still needs an onion at half scale.
+ * cook decides.
  */
 function counted(exact: number, unit: Unit | null): ScaledQuantity {
-  // Below one there is no range to offer: the recipe needs the onion, and it
-  // needs one of them, not "one or two".
+  // Below one, the fraction is the answer. Half a recipe wants half an onion,
+  // and saying "1 onion" instead is not a rounding — it is two and a half
+  // times the onion, silently, in the one direction nobody checks. It is
+  // written as a fraction a kitchen recognises rather than as `0.4`, and never
+  // as nothing: a quarter is the smallest piece of a thing worth asking for.
   if (exact < 1) {
+    const fraction = closest(exact, kitchenFractions);
+
     return {
-      value: 1,
+      value: fraction,
       upper: null,
       unit,
-      isApproximate: drifted(exact, 1),
-      isRange: false
+      isApproximate: drifted(exact, fraction),
+      isRange: false,
+      exact
     };
   }
 
@@ -217,7 +255,8 @@ function counted(exact: number, unit: Unit | null): ScaledQuantity {
       upper: null,
       unit,
       isApproximate: drifted(exact, value),
-      isRange: false
+      isRange: false,
+      exact
     };
   }
 
@@ -231,7 +270,8 @@ function counted(exact: number, unit: Unit | null): ScaledQuantity {
     // A range is not an approximation: it states the truth, which is that
     // either amount will do.
     isApproximate: false,
-    isRange: true
+    isRange: true,
+    exact
   };
 }
 
@@ -261,10 +301,25 @@ export function targetYieldForAmount(
     return null;
   }
 
-  // Rounded to a half portion, and the factor is then recomputed from this
-  // number — so what the person sees and what the amounts do agree.
-  return clampYield(Math.round((to / from) * baseYield * 2) / 2);
+  // Exact, and deliberately not rounded. Rounding here to a tidy number of
+  // servings would move the amount away from the one the person said they had:
+  // 370 g of flour became a recipe calling for 380 g, with 370 nowhere on the
+  // screen. The label rounds instead — see `yieldLabel` — so what is shown
+  // stays readable and what is cooked stays exactly what was asked for.
+  // Trimmed only of the floating-point tail, which is far below anything the
+  // amounts can show and would otherwise put `7.400000000000001` in a URL.
+  return clampYield(Number((((to / from) * baseYield) as number).toFixed(6)));
 }
+
+/**
+ * The number of servings to put on screen.
+ *
+ * Scaling to an amount produces a yield like 7.4, which is true and is not what
+ * anybody wants to read. This is the only place a yield is rounded, and it
+ * rounds nothing that is used in arithmetic.
+ */
+export const yieldLabel = (value: number): number =>
+  Number.isFinite(value) ? Math.round(value * 2) / 2 : 0;
 
 /** True when rounding moved the amount by more than the threshold. */
 const drifted = (exact: number, rounded: number): boolean =>

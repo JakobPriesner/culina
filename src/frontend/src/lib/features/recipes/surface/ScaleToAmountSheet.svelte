@@ -2,7 +2,7 @@
   import { Button, Field, Select, Sheet, TextInput } from '$ds';
 
   import { m } from '$shell/i18n';
-  import { targetYieldForAmount } from '../scaling';
+  import { targetYieldForAmount, yieldLabel } from '../scaling';
   import { parseIngredientLine } from '../editor/parseIngredientLine';
   import type { Recipe } from '../types';
 
@@ -54,10 +54,13 @@
     target === null
       ? null
       : m['scaleTo.result']({
+          // The label, not the exact yield: the amounts are computed from
+          // 7.4 so the flour comes out at the 370 g somebody said they had,
+          // and "7.4 servings" is not a sentence.
           yield:
             recipe.yieldKind === 'pieces'
-              ? m['recipes.meta.pieces']({ count: target })
-              : m['recipes.meta.servings']({ count: target })
+              ? m['recipes.meta.pieces']({ count: yieldLabel(target) })
+              : m['recipes.meta.servings']({ count: yieldLabel(target) })
         })
   );
 </script>

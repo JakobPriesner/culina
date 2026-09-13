@@ -105,3 +105,21 @@ describe('units whose abbreviation is a word', () => {
     );
   });
 });
+
+describe('part of one countable thing', () => {
+  /*
+   * Scaling a recipe down asks for half an onion, and half an onion is how a
+   * person says it. `0.5 piece` is arithmetic showing through.
+   */
+  it('reads as a fraction, because nobody writes 0.5 onion', () => {
+    const amount = (factor: number) =>
+      formatQuantity(scaleQuantity({ value: 1, unit: 'piece' }, factor), 'en', labels).amount;
+
+    expect(amount(0.5)).toBe('½');
+    expect(amount(1 / 3)).toBe('⅓');
+  });
+
+  it('leaves grams alone, because a scale shows 0.5 g', () => {
+    expect(show(1, 'g', 0.5)).toBe('0.5' + nbsp + 'g');
+  });
+});

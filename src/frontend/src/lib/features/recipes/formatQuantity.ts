@@ -17,10 +17,11 @@ export interface QuantityText {
 }
 
 /**
- * Fractions as glyphs, where the unit makes them natural.
+ * Fractions as glyphs, where the amount makes them natural.
  *
- * Spoons and cups are measured in halves and thirds because the spoons exist;
- * `0.5 tsp` is a number, `½ tsp` is the thing in the drawer.
+ * Spoons are measured in halves and thirds because the spoons exist: `0.5 tsp`
+ * is a number, `½ tsp` is the thing in the drawer. Part of one countable thing
+ * is the same: nobody writes `0.5 onion`, they write half an onion.
  */
 const glyphs = new Map<number, string>([
   [0.25, '¼'],
@@ -94,13 +95,22 @@ function unitTextFor(quantity: ScaledQuantity, count: number, labels: QuantityLa
   return short[quantity.unit] || labels.unitName(quantity.unit, count);
 }
 
+/**
+ * Whether this is a piece of a single countable thing.
+ *
+ * `½ onion`, yes. `2½ onions` is not something a recipe says — that is where a
+ * range belongs, and scaling produces one.
+ */
+const isPartOfOne = (whole: number, unit: Unit | null): boolean =>
+  whole === 0 && familyOf(unit) === 'count';
+
 function number(value: number, locale: string, unit: Unit | null): string {
   const whole = Math.floor(value);
   const fraction = Number((value - whole).toFixed(4));
 
-  // Only where the unit is measured in fractions in the first place. `½ g` is
-  // not a thing anyone writes.
-  if (familyOf(unit) === 'spoon' && fraction > 0) {
+  // Only where the amount is spoken as a fraction in the first place. `½ g` is
+  // not a thing anyone writes — a scale shows 0.5 g — but half an onion is.
+  if (fraction > 0 && (familyOf(unit) === 'spoon' || isPartOfOne(whole, unit))) {
     const glyph = [...glyphs].find(([size]) => Math.abs(size - fraction) < 0.005)?.[1];
 
     if (glyph) {
