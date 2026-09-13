@@ -47,6 +47,10 @@
 
   <p class="hint">{m['notes.hint']()}</p>
 
+  <!-- Paper only. The note lives in a text area, and a text area prints as an
+       empty box; this is the same words in a form paper can carry. -->
+  {#if notes.overall}<p class="written">{notes.overall}</p>{/if}
+
   {#if cookLog.count > 0}
     <p class="history">
       {m['notes.madeCount']({ count: cookLog.count })}{#if lastMade}
@@ -67,6 +71,10 @@
 </section>
 
 <style>
+  .written {
+    display: none;
+  }
+
   .notes {
     display: flex;
     flex-direction: column;
@@ -95,5 +103,31 @@
   .history {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  /*
+   * Notes print when there are any — they are the most useful thing on the
+   * sheet, being what went wrong last time. An empty one is a heading and an
+   * invitation to type, and paper cannot be typed into.
+   */
+  @media print {
+    .notes {
+      display: none;
+    }
+
+    .notes:has(.written) {
+      display: block;
+      break-inside: avoid-page;
+    }
+
+    .hint,
+    .status {
+      display: none;
+    }
+
+    .written {
+      display: block;
+      white-space: pre-wrap;
+    }
   }
 </style>

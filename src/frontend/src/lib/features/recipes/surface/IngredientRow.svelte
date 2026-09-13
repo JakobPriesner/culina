@@ -57,4 +57,23 @@
   .note {
     color: var(--text-muted);
   }
+
+  /* The amount column is sized for a thumb to land beside on a screen. On
+     paper the eye does the work, and the two halves read better close. */
+  @media print {
+    .row {
+      /* A floor, not `auto`: each row is its own grid, so a column that sizes
+         to its content leaves every amount a different width and the names
+         ragged down the page. Narrower than the screen's, which is sized for a
+         thumb to land beside. */
+      grid-template-columns: minmax(3.75rem, auto) 1fr;
+      gap: var(--space-2);
+      padding-block: 1mm;
+    }
+
+    .highlighted {
+      background: none;
+      box-shadow: none;
+    }
+  }
 </style>

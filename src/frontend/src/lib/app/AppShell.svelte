@@ -220,4 +220,25 @@
       transform: scaleX(0.5);
     }
   }
+
+  /*
+   * On paper there is no app: no bar to skip to, no navigation to use, no
+   * connection to have lost. Only what is in the middle of the screen.
+   */
+  @media print {
+    .skip,
+    .header,
+    .dock,
+    .bar {
+      display: none !important;
+    }
+
+    .shell,
+    .content {
+      display: block;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+    }
+  }
 </style>

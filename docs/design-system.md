@@ -347,3 +347,23 @@ Reading shows ingredients beside the complete method on larger screens. Cooking 
 Preview progress belongs to the recipe collection, rather than to a detail component that disappears when closed. Returning to the collection preserves search, filters, favourites, portions, ingredient checks and current steps for the mounted preview session. It restores the opening control's focus and the collection's scroll position. A Continue cooking action makes an active session visible. Reloading or changing language remounts this temporary preview; this is not an implementation of durable cooking recovery.
 
 The shared Image primitive also provides a labelled fallback and accepts a new source after an image failure. These behaviors apply wherever the primitive is used. New sample photography is documented in `design-assets.md`.
+
+## Print
+
+Print is a medium, not a theme. `tokens/print.css` is imported after the themes
+and collapses every one of them — and both modes — to ink on paper, because a
+printer has one background and it is white, and the browser's "background
+graphics" setting is off by default anyway: a dark theme that printed as dark
+would come out as a page of toner behind every word, or as white text on white.
+
+It assigns the **whole** semantic set, for the same reason a theme does. A
+partial palette is how one forgotten token ends up as pale grey on white, and
+that is exactly the token nobody checks before sending a page to a printer.
+
+What is hidden on paper is hidden by the component that owns it — the shell
+hides its header and bars, the recipe surface hides its photograph and its
+servings control — so it is always obvious what is being hidden and why. The one
+global rule covers what is never content anywhere: form fields, dialogs, live
+regions. Deliberately **not** every button: a step's ingredient reference is a
+button so that pointing at it lights up the ingredient list, and a blanket rule
+took the amounts out of the printed steps, which is the one thing they are for.

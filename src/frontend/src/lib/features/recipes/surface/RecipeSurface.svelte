@@ -133,6 +133,11 @@
     {#if recipe.description}
       <p class="description">{recipe.description}</p>
     {/if}
+
+    <!-- Paper only. On screen the servings control says this, and says it
+         better because it can be changed; on paper there is nothing to say it
+         at all, and the amounts below have to be accounted for. -->
+    <p class="printed-yield">{scaling.currentYieldLabel}</p>
   </header>
 
   <!-- Same position in both weightings. Moving this breaks the transition. -->
@@ -254,6 +259,11 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-8);
+  }
+
+  /* Screen has the servings control for this; paper has nothing. */
+  .printed-yield {
+    display: none;
   }
 
   .hero {
@@ -401,6 +411,68 @@
   @media (prefers-reduced-motion: reduce) {
     .cooking .step {
       transition: none;
+    }
+  }
+
+  /*
+   * One page: the title, what it makes at the servings on screen, the
+   * ingredients and the steps.
+   *
+   * The photograph does not print. It is what makes you choose a recipe and it
+   * is a page of ink once you have chosen it — and the paper is going on a
+   * worktop next to something wet, not on a wall.
+   *
+   * The amounts printed are the scaled ones, because they are the ones on
+   * screen. Scaling a recipe to six and printing it for four is exactly the
+   * kind of quiet lie this app is built to avoid.
+   */
+  @media print {
+    .hero,
+    .servings,
+    .foot {
+      display: none !important;
+    }
+
+    .surface {
+      display: block;
+      max-width: none;
+      padding: 0;
+    }
+
+    .head {
+      margin-bottom: 6mm;
+    }
+
+    /* The meta line carries the yield the recipe was *written* for, which
+       beside a scaled ingredient list is the one number on the page that is
+       not true. Its tags and its timings are no loss either: what a paper
+       recipe needs is what it makes and how to make it. */
+    .meta {
+      display: none;
+    }
+
+    .printed-yield {
+      display: block;
+      margin-top: 2mm;
+      font-weight: var(--weight-medium);
+    }
+
+    .title {
+      font-size: 20pt;
+    }
+
+    /* Two columns on paper, which a screen cannot afford and a page can: the
+       ingredients sit beside the first steps instead of on a page of their
+       own, and most recipes come out as one sheet. */
+    .body {
+      display: grid;
+      grid-template-columns: 32% 1fr;
+      gap: 8mm;
+      align-items: start;
+    }
+
+    .steps .list {
+      gap: 4mm;
     }
   }
 </style>

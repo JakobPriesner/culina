@@ -2,6 +2,8 @@
 @import './lib/design-system/tokens/scales.css';
 @import './lib/design-system/tokens/semantic.css';
 @import './lib/design-system/themes/warm-paper.css';
+/* After the themes: on paper every one of them is ink on paper. */
+@import './lib/design-system/tokens/print.css';
 @import './lib/design-system/inputs/control.css';
 
 /*
@@ -91,4 +93,75 @@ img {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * Print.
+ *
+ * A recipe on paper is the oldest way to use one, and it is the thing almost
+ * every recipe app gets wrong: four pages, a navigation bar, an advertisement,
+ * and the amounts from before you scaled it.
+ *
+ * What comes out here is one page of black on white — the title, what it makes
+ * at the servings on screen, the ingredients and the steps. Everything else is
+ * the app, and the app is not the recipe.
+ */
+@media print {
+  html,
+  body {
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  /* Serif, and a size meant for paper rather than for a screen at arm's
+     length. Points, not pixels: a printer knows what a point is. */
+  body {
+    font-family: var(--font-editorial), Georgia, serif;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+
+  /*
+   * Things that are never content: a field to fill in, a dialog that is not
+   * open, a live region announcing something that already happened.
+   *
+   * Deliberately *not* every button. A step's ingredient reference is a button
+   * so that pointing at it lights up the ingredient list, and hiding every
+   * button took the amounts out of the printed steps — which is the one thing
+   * this app exists to put in them. Chrome is hidden by the component that owns
+   * it, where it is obvious what is being hidden and why.
+   */
+  input,
+  select,
+  textarea,
+  dialog,
+  [role='dialog'],
+  [role='status'],
+  [role='alert'],
+  [role='progressbar'] {
+    display: none !important;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* A heading alone at the foot of a page, or a step split across two, is the
+     one thing that makes a printed recipe hard to cook from. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid-page;
+  }
+
+  li,
+  figure,
+  img {
+    break-inside: avoid-page;
+  }
+}
+
+@page {
+  margin: 18mm 16mm;
 }
