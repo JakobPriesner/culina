@@ -267,6 +267,55 @@ test.describe('writing a recipe', () => {
     );
   });
 
+  test('reads a recipe from a link, and says so plainly when it cannot', async () => {
+    const title = unique('Linked');
+
+    await page.goto('/recipes/new');
+    await page.getByRole('button', { name: /paste a recipe|rezept einfügen/i }).click();
+
+    const link = page.getByRole('textbox', { name: /a link to a recipe|link zu einem rezept/i });
+
+    // The refusal first, and against a real address: the server does the
+    // fetching, so an unguarded import would read the network it sits in. This
+    // one goes nowhere, and says so without saying what it found.
+    await link.fill('http://169.254.169.254/latest/meta-data/');
+    await page.getByRole('button', { name: /^(read it|lesen)$/i }).click();
+
+    await expect(page.getByRole('alert')).toContainText(/could not be read|nicht gelesen werden/i);
+
+    // And the ordinary case. The page itself is stubbed here — what the server
+    // does with an address is proven where the fetching is — so this is about
+    // the draft arriving and landing in the same preview a paste does.
+    await page.route('**/api/v1/recipe-imports', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sourceUrl: 'https://example.test/orzo',
+          title,
+          ingredientLines: ['200 g orzo', '2 courgettes'],
+          steps: ['Boil the orzo.', 'Fry the courgettes.'],
+          servings: 4,
+          totalMinutes: 35,
+          text: null
+        })
+      })
+    );
+
+    await link.fill('https://example.test/orzo');
+    await page.getByRole('button', { name: /^(read it|lesen)$/i }).click();
+
+    await expect(page.getByRole('status')).toContainText(/2/);
+    await expect(page.getByText('200 g', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: /make this recipe|rezept anlegen/i }).click();
+    await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
+
+    await expect(page.getByText('orzo')).toBeVisible();
+    // What the site published about the recipe, not only its words.
+    await expect(page.getByRole('textbox', { name: /^(makes|ergibt)$/i })).toHaveValue('4');
+  });
+
   test('shows a new recipe in the list it belongs to', async () => {
     const title = unique('Listed');
 

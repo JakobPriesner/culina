@@ -23,6 +23,7 @@ using Application.Recipes.GetImage;
 using Application.Recipes.GetIngredients;
 using Application.Recipes.GetNotes;
 using Application.Recipes.GetUnits;
+using Application.Recipes.Import;
 using Application.Recipes.RecordCooked;
 using Application.Recipes.RemoveImage;
 using Application.Recipes.SaveNotes;
@@ -172,6 +173,8 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RemoveCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
                 RemoveCookPhotoCommandHandler>()
             .AddScoped<IQueryHandler<GetCookPhotoQuery, ImageDelivery>, GetCookPhotoQueryHandler>()
+            .AddScoped<IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response>,
+                ImportRecipeQueryHandler>()
             .AddScoped<IQueryHandler<GetMealPlanQuery, Contracts.Planning.MealPlanResponse>,
                 GetMealPlanQueryHandler>()
             .AddScoped<ICommandHandler<PlanMealCommand, Contracts.Planning.MealPlanResponse>,

@@ -344,5 +344,10 @@
   "plan.empty.title": "Noch nichts geplant.",
   "plan.empty.description": "Leg ein Rezept auf einen Tag – die Woche schreibt deine Einkaufsliste.",
   "plan.empty.action": "Etwas zum Kochen finden",
-  "plan.open": "Woche planen"
+  "plan.open": "Woche planen",
+  "import.url.label": "Ein Link zu einem Rezept",
+  "import.url.read": "Lesen",
+  "import.url.or": "oder einfügen",
+  "import.url.failed": "Diese Seite konnte nicht gelesen werden. Vielleicht gibt es sie nicht mehr – oder sie ist keine gewöhnliche öffentliche Seite.",
+  "import.paste.source": "Von {url}"
 }

@@ -344,5 +344,10 @@
   "plan.empty.title": "Nothing planned yet.",
   "plan.empty.description": "Put a recipe on a day and the week writes your shopping list.",
   "plan.empty.action": "Find something to cook",
-  "plan.open": "Plan the week"
+  "plan.open": "Plan the week",
+  "import.url.label": "A link to a recipe",
+  "import.url.read": "Read it",
+  "import.url.or": "or paste it",
+  "import.url.failed": "That page could not be read. It may be gone, or it may not be an ordinary public page.",
+  "import.paste.source": "From {url}"
 }

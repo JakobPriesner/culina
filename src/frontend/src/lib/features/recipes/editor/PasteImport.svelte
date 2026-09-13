@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { Button, TextArea } from '$ds';
+  import { Button, Field, TextArea, TextInput } from '$ds';
 
+  import { http, request } from '$api';
   import { m } from '$shell/i18n';
+  import { parseIngredientLine } from './parseIngredientLine';
   import { parseRecipeText, type ParsedRecipe } from './parseRecipeText';
   import { formatQuantity } from '../formatQuantity';
   import { quantityLabels } from '../quantityLabels';
@@ -31,9 +33,78 @@
 
   let text = $state('');
   let open = $state(false);
+  let url = $state('');
+  let reading = $state(false);
+  let failure = $state<string | null>(null);
 
-  const parsed = $derived(parseRecipeText(text, units.own));
+  /**
+   * What a website published, when a website published it.
+   *
+   * Held apart from the pasted text rather than folded into it: structured data
+   * is what the site said, and rewriting it into a block of words only to read
+   * it back with heuristics would lose the very thing that made it worth
+   * fetching. Typing into the box takes over, because that is somebody
+   * disagreeing with it.
+   */
+  let published = $state<ParsedRecipe | null>(null);
+
+  const parsed = $derived(published ?? parseRecipeText(text, units.own));
   const found = $derived(parsed.ingredients.length + parsed.steps.length);
+
+  /**
+   * Reads a recipe from a web page.
+   *
+   * The server does the fetching — it has to, because a browser cannot read
+   * another site — which is why it refuses every address that is not an
+   * ordinary public page. What comes back is a draft, and it lands in the same
+   * preview a paste does: nothing is created until somebody looks at it.
+   */
+  async function read() {
+    const address = url.trim();
+
+    if (!address) {
+      return;
+    }
+
+    reading = true;
+    failure = null;
+
+    const result = await request(() =>
+      http.POST('/api/v1/recipe-imports', { body: { url: address } })
+    );
+
+    reading = false;
+
+    if (!result.ok) {
+      failure = m['import.url.failed']();
+
+      return;
+    }
+
+    const draft = result.value;
+
+    // A site that publishes nothing structured gives back its words, and those
+    // go through the same parser a paste does — one set of heuristics, on the
+    // side where the person correcting them is.
+    if (draft.text) {
+      published = null;
+      text = draft.text;
+
+      return;
+    }
+
+    published = {
+      title: draft.title ?? '',
+      ingredients: draft.ingredientLines.map((line) => parseIngredientLine(line, units.own)),
+      steps: [...draft.steps],
+      ...(draft.servings === undefined || draft.servings === null
+        ? {}
+        : { servings: draft.servings }),
+      ...(draft.totalMinutes === undefined || draft.totalMinutes === null
+        ? {}
+        : { totalMinutes: draft.totalMinutes })
+    };
+  }
 
   const shown = (quantity: Parameters<typeof scaleQuantity>[0]) =>
     formatQuantity(scaleQuantity(quantity, 1), preferences.locale, quantityLabels).text;
@@ -50,15 +121,43 @@
     <h2 id="paste-heading" class="heading">{m['import.paste.title']()}</h2>
     <p class="hint">{m['import.paste.hint']()}</p>
 
+    <div class="from-url">
+      <Field label={m['import.url.label']()}>
+        {#snippet children({ id, describedBy, invalid })}
+          <TextInput
+            {id}
+            {describedBy}
+            {invalid}
+            type="url"
+            inputmode="url"
+            placeholder="https://"
+            bind:value={url}
+          />
+        {/snippet}
+      </Field>
+
+      <Button loading={reading} disabled={!url.trim()} onclick={() => void read()}>
+        {m['import.url.read']()}
+      </Button>
+    </div>
+
+    {#if failure}<p class="failure" role="alert">{failure}</p>{/if}
+
+    <p class="or">{m['import.url.or']()}</p>
+
     <TextArea
       id="pasted"
       label={m['import.paste.label']()}
       bind:value={text}
       rows={8}
-      oninput={(next) => (text = next)}
+      oninput={(next) => {
+        text = next;
+        // Typing is somebody disagreeing with what the site said.
+        published = null;
+      }}
     />
 
-    {#if text.trim()}
+    {#if text.trim() || published}
       <!-- Polite: it reports what was understood while somebody is still
            looking at what they pasted, and must not interrupt them. -->
       <p class="count" role="status">
@@ -145,6 +244,28 @@
 
   .hint {
     color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .from-url {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-3);
+  }
+
+  .from-url :global(> :first-child) {
+    flex: 1;
+  }
+
+  .or {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .failure {
+    color: var(--text-danger);
     font-size: var(--text-sm);
   }
 

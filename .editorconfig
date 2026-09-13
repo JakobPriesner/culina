@@ -115,6 +115,13 @@ dotnet_diagnostic.CA1034.severity = none
 #         a collision with Microsoft.Extensions.DependencyInjection only
 #         inconveniences an external consumer importing both.
 dotnet_diagnostic.CA1724.severity = none
+# CA1054/CA1056: URL-shaped parameters and properties should be System.Uri.
+#         They should not, here. A wire contract carries a URL as a string
+#         because that is what JSON carries, and the one URL a user supplies is
+#         untrusted text that may not parse as a Uri at all — turning it into
+#         one is validation, and validation is the thing being asked for.
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1056.severity = none
 # CA1062: null-checking public arguments. Every public entry point already uses
 #         ArgumentNullException.ThrowIfNull; the analyzer cannot see through the
 #         helper and reports false positives.

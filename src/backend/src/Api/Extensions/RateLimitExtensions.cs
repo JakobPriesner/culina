@@ -20,6 +20,16 @@ internal static class RateLimitExtensions
     internal const string Register = "auth-register";
     internal const string Invitation = "auth-invitation";
 
+    /// <summary>
+    /// Importing, which is the one thing that makes the server fetch.
+    /// </summary>
+    /// <remarks>
+    /// Limited hard and separately from everything else. Even with every
+    /// address checked, a person who can ask the server to open connections
+    /// quickly can use it to make a great many of them.
+    /// </remarks>
+    internal const string Import = "recipe-import";
+
     internal static IServiceCollection AddCulinaRateLimiter(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -36,6 +46,9 @@ internal static class RateLimitExtensions
 
             options.AddPolicy(Invitation, context =>
                 PerClient(context, limits.InvitationPerIpPerHour, TimeSpan.FromHours(1)));
+
+            options.AddPolicy(Import, context =>
+                PerClient(context, limits.ImportsPerHour, TimeSpan.FromHours(1)));
 
             // A generous ceiling on everything else, so one misbehaving client
             // cannot exhaust the connection pool.

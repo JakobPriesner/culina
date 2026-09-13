@@ -147,3 +147,49 @@ it looks: there is no `unsafe-inline`, no `unsafe-eval`, and scripts are
 The reverse proxy, the host, the database server, and everything the operator
 runs alongside them. TLS configuration, in particular, is entirely theirs —
 `docs/operations.md` says what the app expects and nothing more.
+
+## Importing a recipe from a URL
+
+`POST /api/v1/recipe-imports` is the one endpoint that makes the **server** open
+a connection to an address a user chose, from inside whatever network it is
+deployed in. Unguarded, that is a server-side request forgery hole: read the
+cloud metadata service for credentials, reach the database on the next
+container, or use reply timing as a port scanner.
+
+Five controls, in `SafeWebPageFetcher`, and all five are load-bearing:
+
+1. **Scheme allowlist.** `http` and `https` only. `file:` reads the disk;
+   `gopher:` writes arbitrary bytes to an arbitrary port.
+2. **Every connection goes to a checked address.** The host is resolved inside
+   the socket's connect callback, every returned address is checked against
+   `PublicAddress`, and the socket dials *the address that was checked*.
+   Validating a name and then handing the name to the socket leaves the window
+   that DNS rebinding lives in.
+3. **Redirects are followed by hand**, five at most, each hop validated again
+   from scratch. Automatic redirects would take the second hop with none of this.
+4. **A deadline** on the whole exchange, so a server answering one byte a minute
+   cannot hold a connection.
+5. **A cap on what is read**, enforced while reading rather than after: a
+   `Content-Length` is a claim, not a limit.
+
+`PublicAddress` denies loopback, private, carrier-grade NAT, link-local
+(including `169.254.169.254`), benchmarking, documentation, multicast and
+broadcast ranges, their IPv6 equivalents, unique-local, the NAT64 well-known
+prefix, and **IPv4 addresses wrapped in IPv6** — checking the wrapper instead of
+the value is exactly how `::ffff:127.0.0.1` gets through.
+
+**Refusals are deliberately vague.** Every one reports "that address cannot be
+fetched"; distinguishing "blocked" from "timed out" would turn the endpoint into
+a port scanner with a friendly error message. The host is logged for the
+operator and never returned to the caller.
+
+The endpoint requires a session and has its own hourly rate limit
+(`RateLimits__ImportsPerHour`, default 30), separate from everything else.
+
+`PublicAddressTests` covers every range; `SafeWebPageFetcherTests` starts a real
+HTTP server on loopback and asserts the fetcher never connects to it.
+
+**It is an import, not a scraper.** One page at a time, at a person's request,
+for their own use. The fetcher identifies itself plainly rather than
+impersonating a browser, and it reads the structured data a site publishes for
+search engines rather than reverse-engineering its markup.

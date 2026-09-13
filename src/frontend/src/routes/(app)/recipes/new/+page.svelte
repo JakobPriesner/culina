@@ -63,6 +63,10 @@
 
       return recipes.update({
         ...outcome,
+        // Only a site that published structured data knows these. A pasted
+        // block of words does not say, and the recipe keeps its defaults.
+        ...(pasted.servings === undefined ? {} : { yieldAmount: pasted.servings }),
+        ...(pasted.totalMinutes === undefined ? {} : { cookMinutes: pasted.totalMinutes }),
         groups: [
           {
             id: null,
