@@ -701,6 +701,50 @@ export interface paths {
         patch: operations["updateShoppingItemV1"];
         trace?: never;
     };
+    "/api/v1/households/{householdId}/meal-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a week of the plan
+         * @description Seven days from the Monday of the week containing `from`, or of this week when it is omitted. Always all seven, planned or not: a week with holes in it is a week the client has to fill in itself.
+         */
+        get: operations["getMealPlanV1"];
+        put?: never;
+        /**
+         * Plan a meal
+         * @description Omit `servings` for however many the recipe was written for, and `slot` for dinner. The whole week comes back, because the week is the screen.
+         */
+        post: operations["planMealV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/meal-plan/{entryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a meal off the plan
+         * @description The week it was in comes back, because the week is the screen.
+         */
+        delete: operations["unplanMealV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -975,6 +1019,83 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        /** @description A week of planned meals. */
+        PlanningMealPlanResponse: {
+            /**
+             * Format: date
+             * @description The Monday the week starts on.
+             */
+            from: string;
+            /** @description The seven days, in order. */
+            days: components["schemas"]["PlanningPlannedDay"][];
+        };
+        /** @description Plans a meal. */
+        PlanningPlanMealRequest: {
+            /**
+             * Format: date
+             * @description Which day.
+             */
+            date: string;
+            /**
+             * Format: uuid
+             * @description What to cook.
+             */
+            recipeId: string;
+            /**
+             * Format: double
+             * @description For how many, or omit for however many it was written for.
+             */
+            servings?: number | null;
+            /** @description `breakfast`, `lunch` or `dinner`. Defaults to dinner. */
+            slot?: string | null;
+        };
+        /** @description One day of the week. */
+        PlanningPlannedDay: {
+            /**
+             * Format: date
+             * @description Which day.
+             */
+            date: string;
+            /** @description What is planned, in the order it was put there. */
+            meals: components["schemas"]["PlanningPlannedMeal"][];
+        };
+        /** @description One planned meal. */
+        PlanningPlannedMeal: {
+            /**
+             * Format: uuid
+             * @description The entry's id, for taking it off again.
+             */
+            entryId: string;
+            /**
+             * Format: uuid
+             * @description Which recipe.
+             */
+            recipeId: string;
+            /** @description What it is called, so the card needs no second request. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Its picture, if it has one.
+             */
+            imageId?: string | null;
+            /**
+             * Format: int32
+             * @description Hands-on plus cooking, when both are known.
+             */
+            totalMinutes?: number | null;
+            /**
+             * Format: double
+             * @description How many it is planned for, or null for however many it was written for.
+             */
+            servings?: number | null;
+            /**
+             * Format: double
+             * @description The servings the recipe itself is written for.
+             */
+            recipeServings: number;
+            /** @description `breakfast`, `lunch` or `dinner`. */
+            slot: string;
+        };
         /** @description An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded. */
         ProblemDetails: {
             type?: string | null;
@@ -4079,6 +4200,151 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getMealPlanV1: {
+        parameters: {
+            query?: {
+                from?: string;
+            };
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanningMealPlanResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    planMealV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanningPlanMealRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanningMealPlanResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    unplanMealV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanningMealPlanResponse"];
                 };
             };
             /** @description Unauthorized */

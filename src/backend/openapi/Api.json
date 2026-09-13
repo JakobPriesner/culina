@@ -3116,6 +3116,217 @@
           }
         }
       }
+    },
+    "/api/v1/households/{householdId}/meal-plan": {
+      "get": {
+        "tags": [
+          "Planning"
+        ],
+        "summary": "Read a week of the plan",
+        "description": "Seven days from the Monday of the week containing `from`, or of this week when it is omitted. Always all seven, planned or not: a week with holes in it is a week the client has to fill in itself.",
+        "operationId": "getMealPlanV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanningMealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Planning"
+        ],
+        "summary": "Plan a meal",
+        "description": "Omit `servings` for however many the recipe was written for, and `slot` for dinner. The whole week comes back, because the week is the screen.",
+        "operationId": "planMealV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanningPlanMealRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanningMealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/meal-plan/{entryId}": {
+      "delete": {
+        "tags": [
+          "Planning"
+        ],
+        "summary": "Take a meal off the plan",
+        "description": "The week it was in comes back, because the week is the screen.",
+        "operationId": "unplanMealV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanningMealPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3585,6 +3796,135 @@
       "IFormFile": {
         "type": "string",
         "format": "binary"
+      },
+      "PlanningMealPlanResponse": {
+        "required": [
+          "from",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The Monday the week starts on.",
+            "format": "date"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanningPlannedDay"
+            },
+            "description": "The seven days, in order."
+          }
+        },
+        "description": "A week of planned meals."
+      },
+      "PlanningPlanMealRequest": {
+        "required": [
+          "date",
+          "recipeId"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Which day.",
+            "format": "date"
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "What to cook.",
+            "format": "uuid"
+          },
+          "servings": {
+            "type": "number",
+            "description": "For how many, or omit for however many it was written for.",
+            "format": "double",
+            "nullable": true
+          },
+          "slot": {
+            "type": "string",
+            "description": "`breakfast`, `lunch` or `dinner`. Defaults to dinner.",
+            "nullable": true
+          }
+        },
+        "description": "Plans a meal."
+      },
+      "PlanningPlannedDay": {
+        "required": [
+          "date",
+          "meals"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Which day.",
+            "format": "date"
+          },
+          "meals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanningPlannedMeal"
+            },
+            "description": "What is planned, in the order it was put there."
+          }
+        },
+        "description": "One day of the week."
+      },
+      "PlanningPlannedMeal": {
+        "required": [
+          "entryId",
+          "recipeId",
+          "title",
+          "recipeServings",
+          "slot"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "description": "The entry's id, for taking it off again.",
+            "format": "uuid"
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "Which recipe.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "What it is called, so the card needs no second request."
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Its picture, if it has one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "Hands-on plus cooking, when both are known.",
+            "format": "int32",
+            "nullable": true
+          },
+          "servings": {
+            "type": "number",
+            "description": "How many it is planned for, or null for however many it was written for.",
+            "format": "double",
+            "nullable": true
+          },
+          "recipeServings": {
+            "type": "number",
+            "description": "The servings the recipe itself is written for.",
+            "format": "double"
+          },
+          "slot": {
+            "type": "string",
+            "description": "`breakfast`, `lunch` or `dinner`."
+          }
+        },
+        "description": "One planned meal."
       },
       "ProblemDetails": {
         "required": [
@@ -5055,6 +5395,9 @@
     },
     {
       "name": "Shopping"
+    },
+    {
+      "name": "Planning"
     }
   ]
 }

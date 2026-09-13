@@ -13,6 +13,7 @@ using Application.Households.RedeemInvitation;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
+using Application.Planning;
 using Application.Recipes.Create;
 using Application.Recipes.Delete;
 using Application.Recipes.GetAll;
@@ -170,6 +171,12 @@ public static class DependencyInjection
                 SetCookPhotoCommandHandler>()
             .AddScoped<ICommandHandler<RemoveCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
                 RemoveCookPhotoCommandHandler>()
-            .AddScoped<IQueryHandler<GetCookPhotoQuery, ImageDelivery>, GetCookPhotoQueryHandler>();
+            .AddScoped<IQueryHandler<GetCookPhotoQuery, ImageDelivery>, GetCookPhotoQueryHandler>()
+            .AddScoped<IQueryHandler<GetMealPlanQuery, Contracts.Planning.MealPlanResponse>,
+                GetMealPlanQueryHandler>()
+            .AddScoped<ICommandHandler<PlanMealCommand, Contracts.Planning.MealPlanResponse>,
+                PlanMealCommandHandler>()
+            .AddScoped<ICommandHandler<UnplanMealCommand, Contracts.Planning.MealPlanResponse>,
+                UnplanMealCommandHandler>();
     }
 }

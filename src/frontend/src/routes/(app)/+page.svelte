@@ -67,6 +67,11 @@
     </div>
 
     <div class="actions">
+      <!-- The week lives behind the recipe list rather than in the navigation
+           bar, which is closed at three: a plan is a weekly thing, and anything
+           rarer than daily belongs behind one of the three. -->
+      <Button href={resolve('/(app)/plan')}>{m['plan.open']()}</Button>
+
       <Button variant="primary" href={resolve('/(app)/recipes/new')}>
         {m['recipes.empty.action']()}
       </Button>
