@@ -194,6 +194,30 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task AddRecipe_ShouldKeepTheAmountSomebodyScaledTo()
+    {
+        // Arrange
+        // Scaling to an amount you have produces a yield that is not a round
+        // number — 370 g of flour in a recipe built on 200 g for four is 7.4
+        // servings — and the whole point of that control is that 370 is what
+        // comes out. A yield rounded on the way here would put 380 on the list.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Bread", 200);
+
+        // Act
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 7.4m },
+            Token);
+
+        // Assert
+        var butter = response.Json!.Value.GetProperty("items")[0];
+
+        Assert.Equal(370m, butter.GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
     public async Task AddItem_ShouldNotRejectSomebodyElseAddingAtTheSameMoment()
     {
         // Arrange

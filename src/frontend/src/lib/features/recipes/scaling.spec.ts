@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { clampYield, factorFor, scaleQuantity, targetYieldForAmount } from './scaling';
+import { clampYield, factorFor, scaleQuantity, targetYieldForAmount, yieldLabel } from './scaling';
 import type { Unit } from './units';
 
 /*
@@ -70,9 +70,19 @@ describe('countable things', () => {
     expect(scale(4, 'piece', 0.975)).toMatchObject({ value: 4, isRange: false });
   });
 
-  it('never rounds to zero, because the recipe still needs the onion', () => {
-    expect(scale(1, 'piece', 0.4)).toMatchObject({ value: 1, isRange: false });
-    expect(scale(1, 'piece', 0.1)).toMatchObject({ value: 1, isRange: false });
+  it('says half an onion when half an onion is what is wanted', () => {
+    // Not "1 onion". Saying that is not a rounding, it is two and a half times
+    // the onion, silently, in the one direction nobody checks.
+    expect(scale(1, 'piece', 0.5)).toMatchObject({ value: 0.5, isRange: false });
+    expect(scale(1, 'piece', 0.4)).toMatchObject({ value: 1 / 3, isRange: false });
+    expect(scale(3, 'piece', 0.25)).toMatchObject({ value: 0.75, isRange: false });
+  });
+
+  it('never rounds a count to nothing', () => {
+    // A quarter is the smallest piece of a thing anybody is going to cut, and
+    // an ingredient that disappears is an ingredient nobody buys.
+    expect(scale(1, 'piece', 0.1)).toMatchObject({ value: 0.25, isApproximate: true });
+    expect(scale(1, 'piece', 0.01)).toMatchObject({ value: 0.25 });
   });
 
   it('treats an amount with no unit as a count', () => {
@@ -174,10 +184,18 @@ describe('scaling from an amount you have', () => {
     ).toBeNull();
   });
 
-  it('rounds the yield to a half, so the number shown and the amounts agree', () => {
+  it('keeps the amount somebody actually has, and rounds only the label', () => {
+    // 370 g of flour used to become a recipe calling for 380 g, with 370
+    // nowhere on the screen — the one number the person had asked about.
     const target = targetYieldForAmount({ value: 200, unit: 'g' }, { value: 370, unit: 'g' }, 4)!;
 
-    expect(target % 0.5).toBe(0);
+    expect(scaleQuantity({ value: 200, unit: 'g' }, factorFor(4, target))).toMatchObject({
+      value: 370,
+      isApproximate: false
+    });
+
+    // And what is read is still a number of servings anybody would say aloud.
+    expect(yieldLabel(target)).toBe(7.5);
   });
 });
 
@@ -207,5 +225,82 @@ describe('computing from the base, never from a scaled value', () => {
 
     expect(back.value).toBe(333);
     expect(there.value).not.toBe(333);
+  });
+});
+
+/*
+ * The fixtures the release contract asks for, in one place: identity, the
+ * awkward fractions, the amounts that must not move, and every way a yield can
+ * arrive broken.
+ */
+describe('what scaling promises', () => {
+  it('changes nothing at all at factor one', () => {
+    // Author intent, untouched. A recipe opened at its own yield must read
+    // exactly as it was written — not as what the rounding rules would have
+    // produced for the same numbers.
+    for (const quantity of [
+      { value: 133.333, unit: 'g' },
+      { value: 1.7, unit: 'tbsp' },
+      { value: 3, unit: 'clove' },
+      { value: null, unit: 'g' },
+      { value: 1, unit: 'pinch' }
+    ] as const) {
+      expect(scaleQuantity(quantity, 1)).toMatchObject({
+        value: quantity.value,
+        isApproximate: false,
+        isRange: false
+      });
+    }
+  });
+
+  it('keeps the exact arithmetic beside the readable number', () => {
+    const scaled = scaleQuantity({ value: 133, unit: 'g' }, 1 / 3);
+
+    // 44.333 g is arithmetic; 45 g is what a scale can show.
+    expect(scaled.value).toBe(45);
+    expect(scaled.exact).toBeCloseTo(44.3333, 4);
+  });
+
+  it('survives a yield that arrived broken', () => {
+    // A URL is a string somebody can type. None of these may produce NaN, which
+    // would turn every amount on the page into `NaN` — the app looking as if it
+    // had forgotten the recipe rather than as if it had been given nonsense.
+    for (const [base, target] of [
+      [0, 4],
+      [-2, 4],
+      [Number.NaN, 4],
+      [4, Number.NaN],
+      [Number.POSITIVE_INFINITY, 4],
+      [4, Number.NEGATIVE_INFINITY]
+    ]) {
+      const factor = factorFor(base!, target!);
+
+      expect(Number.isFinite(factor), `${base} → ${target}`).toBe(true);
+      expect(scaleQuantity({ value: 200, unit: 'g' }, factor).value).not.toBeNaN();
+    }
+  });
+
+  it('does not scale a pinch, or an amount the recipe never gave', () => {
+    expect(scaleQuantity({ value: 1, unit: 'pinch' }, 4)).toMatchObject({ value: 1 });
+    expect(scaleQuantity({ value: null, unit: null }, 4)).toMatchObject({ value: null });
+  });
+
+  it('gives the same answer however many times the stepper was tapped', () => {
+    // Every amount is computed from the base and the factor. Scaling a value
+    // that was already scaled — and therefore already rounded — drifts, and
+    // drifts differently depending on the route taken to the same number.
+    const base = { value: 133, unit: 'g' } as const;
+    const once = scaleQuantity(base, factorFor(4, 6));
+    const viaEight = scaleQuantity(base, factorFor(4, 8));
+    const backToSix = scaleQuantity(base, factorFor(4, 6));
+
+    expect(backToSix).toEqual(once);
+    expect(viaEight.value).not.toBe(once.value);
+  });
+
+  it('comes home to the authored amounts when the yield goes back', () => {
+    const base = { value: 133.333, unit: 'g' } as const;
+
+    expect(scaleQuantity(base, factorFor(4, 4))).toMatchObject({ value: 133.333 });
   });
 });

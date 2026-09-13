@@ -100,4 +100,25 @@ test.describe('scaling a recipe', () => {
 
     await expect(page.getByText(/time|zeit/i).first()).toBeVisible();
   });
+
+  test('reshapes the recipe around an amount, exactly', async () => {
+    const flour = unique('Mehl');
+    const recipeId = await seedRecipe(page, {
+      title: unique('Anchored'),
+      yieldAmount: 4,
+      ingredients: [{ quantity: 200, unit: 'g', name: flour }]
+    });
+
+    await page.goto(`/recipes/${recipeId}`);
+    await page.getByRole('button', { name: /scale to what i have|auf meine menge/i }).click();
+
+    await page.getByLabel(/^\s*(amount|menge)\s*$/i).fill('370 g');
+    await page.getByRole('button', { name: /scale the recipe|rezept anpassen/i }).click();
+
+    // 370, not 380. The amount somebody said they had is the whole point of
+    // this control, and a tidier number of servings is not worth losing it.
+    await expect(page.getByRole('region', { name: /ingredients|zutaten/i })).toContainText(
+      /370\s*g/
+    );
+  });
 });

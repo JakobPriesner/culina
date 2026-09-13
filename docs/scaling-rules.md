@@ -58,25 +58,33 @@ better** — at least one of it, and no more than one decimal place:
 - `1350 g` stays `1350 g`, because nobody writes `1.35 kg`
 - `500 g` stays `500 g`, because a scale shows grams
 
-### 2. Countable things — an honest range, never a fraction
+### 2. Countable things — a range above one, a fraction below it
 
 Anything with a count unit (`piece`, `clove`, `slice`, `can`, `pack`, `bunch`)
 or no unit at all.
 
 ```
-3 cloves × 1.5 = 4.5   →  "4–5 cloves"
-2 eggs    × 0.67 = 1.33 →  "1–2 eggs"
-4 pieces  × 1.5 = 6.0   →  "6 pieces"      exact, no range
-1 onion   × 0.4 = 0.4   →  "1 onion"       never round a count to zero
+3 cloves × 1.5  = 4.5   →  "4–5 cloves"
+2 eggs   × 0.67 = 1.33  →  "1–2 eggs"
+4 pieces × 1.5  = 6.0   →  "6 pieces"     exact, no range
+1 onion  × 0.5  = 0.5   →  "½ onion"
+1 onion  × 0.1  = 0.1   →  "¼ onion"      approximate, and the floor
 ```
 
-Below one there is no range to offer: the recipe needs the onion, and it needs
-one of them, not "one or two".
+Above one, a range: half of three cloves is not one and a half cloves, it is
+one or two, and the cook decides.
 
 - Within `0.15` of an integer, snap to it: `3.9` → `4`, not `3–4`.
 - Otherwise show `floor–ceil`.
-- **A count never rounds to 0.** The minimum is 1: a recipe that needs an onion
-  still needs an onion at half scale.
+
+Below one, the fraction — written as `¼ ⅓ ½ ⅔ ¾`, because that is how a person
+says part of an onion and `0.4` is not. **A quarter is the floor**, and nothing
+ever rounds to zero: an ingredient that disappears is an ingredient nobody
+buys.
+
+This used to say "1 onion", on the grounds that a recipe which needs an onion
+still needs an onion. That is not a rounding — at half scale it is two and a
+half times the onion, silently, in the one direction nobody checks.
 
 ### 3. Spoons — halves, then thirds
 
@@ -89,7 +97,10 @@ one (within `0.02`):
 - `1 tsp × ⅓` → `⅓ tsp`
 - `1.7 tbsp` → `1½ tbsp`, not `1⅔` — it is a half and a half
 
-Below `0.25`, show `a pinch of` for `tsp`.
+A small spoon amount stays a small spoon amount. An earlier version of this
+document turned anything under `¼ tsp` into "a pinch"; a pinch is a gesture and
+`⅛ tsp` is a measurement, and replacing one with the other changes what is
+cooked.
 
 ### 4. Things that never scale
 
@@ -128,9 +139,16 @@ factor       = availableAmount / baseAmountOfThatIngredient   (converted to a co
 targetYield  = baseYield × factor
 ```
 
-The yield that results is displayed rounded to a sensible value
-(`3.7 portions` → `3.5`), and the factor is then recomputed from that rounded
-yield, so what the user sees and what the numbers do agree.
+**The factor is exact, and only the label is rounded.** 370 g of that flour in
+a recipe built on 200 g for four is a yield of 7.4, and the amounts are computed
+from 7.4 so the flour comes out at 370 g. The control reads `7½ servings`,
+because that is a number somebody would say aloud.
+
+Rounding the yield first and recomputing the factor from it is the obvious
+implementation and the wrong one: it answered "I have 370 g" with a recipe
+calling for 380 g, and 370 appeared nowhere on the screen. Touching the stepper
+afterwards leaves the anchor behind and returns to whole numbers, which is what
+somebody who is no longer scaling to an amount wants.
 
 This reuses the machinery that already exists and introduces no new concept —
 it is simply the same scaling driven from the other end. It is also the real
@@ -139,8 +157,9 @@ human moment: a leftover 600 g of flour, an odd package size.
 ## Display formatting
 
 - Decimals are trimmed: `1.0` → `1`, `1.50` → `1.5`.
-- Common fractions render as glyphs where the unit makes them natural
-  (spoons, cups): `½`, `⅓`, `⅔`, `¼`, `¾`.
+- Common fractions render as glyphs where the amount makes them natural: on
+  spoons, and on part of a single countable thing. `½ tsp` and `½ onion`; never
+  `½ g`, because a scale shows `0.5 g`.
 - Locale-aware separators via `Intl.NumberFormat` — `1,5 kg` in German,
   `1.5 kg` in English.
 - Ranges use an en dash with no spaces: `4–5`.

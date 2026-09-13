@@ -21,6 +21,16 @@
     disabled?: boolean;
     describedBy?: string | undefined;
     onchange?: (value: number) => void;
+    /**
+     * Replaces what a tap on plus or minus arrives at.
+     *
+     * For a value that is displayed rounded — a recipe scaled to an amount
+     * somebody has reads as 7½ servings while its amounts are computed from
+     * 7.4 — stepping from the number on screen would produce 6½ and 8½. The
+     * owner of the value decides where a tap lands; typing still goes through
+     * `onchange`.
+     */
+    onstep?: (direction: 1 | -1) => void;
   }
 
   let {
@@ -34,7 +44,8 @@
     step = 1,
     disabled = false,
     describedBy,
-    onchange
+    onchange,
+    onstep
   }: Props = $props();
 
   const atMin = $derived(value <= min);
@@ -57,7 +68,7 @@
     label={decreaseLabel}
     size="sm"
     disabled={disabled || atMin}
-    onclick={() => set(value - step)}
+    onclick={() => (onstep ? onstep(-1) : set(value - step))}
   >
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M5 12h14" stroke-linecap="round" />
@@ -83,7 +94,7 @@
     label={increaseLabel}
     size="sm"
     disabled={disabled || atMax}
-    onclick={() => set(value + step)}
+    onclick={() => (onstep ? onstep(1) : set(value + step))}
   >
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 5v14M5 12h14" stroke-linecap="round" />
