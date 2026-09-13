@@ -337,3 +337,13 @@ top of the page, at exactly the moment the remaining action was "I made it".
 
 Render one control and change its label and its handler. Use two only when they
 are genuinely two things a person might choose between.
+
+## Recipe preview refinement — 13 September 2026
+
+The development-only `/design/recipes` experience extends the editorial direction with consistent food photography. Collection entries use photographs, typography and spacing without an enclosing card background. A favourite remains a separate, labelled control above the photograph. The feature image fills its reserved area at tablet widths; Image's `fill` option is for parents that already reserve height.
+
+Reading shows ingredients beside the complete method on larger screens. Cooking keeps only the current instruction visible, with a quiet segmented progress line and persistent previous/next controls. On mobile, the shared Sheet exposes ingredients and portions from the bottom controls; on wider screens they stay beside the method. Instructions receive focus on entry and on a step change. Controls remain usable at 320px, with safe-area padding and no motion requirement.
+
+Preview progress belongs to the recipe collection, rather than to a detail component that disappears when closed. Returning to the collection preserves search, filters, favourites, portions, ingredient checks and current steps for the mounted preview session. It restores the opening control's focus and the collection's scroll position. A Continue cooking action makes an active session visible. Reloading or changing language remounts this temporary preview; this is not an implementation of durable cooking recovery.
+
+The shared Image primitive also provides a labelled fallback and accepts a new source after an image failure. These behaviors apply wherever the primitive is used. New sample photography is documented in `design-assets.md`.

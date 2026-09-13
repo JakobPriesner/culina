@@ -22,6 +22,8 @@
     srcset?: string;
     sizes?: string;
     rounded?: boolean;
+    /** Fill a parent that already reserves its own height. */
+    fill?: boolean;
   }
 
   let {
@@ -31,24 +33,48 @@
     loading = 'lazy',
     srcset,
     sizes,
-    rounded = true
+    rounded = true,
+    fill = false
   }: Props = $props();
 
-  let loaded = $state(false);
+  let loadedSource = $state<string>();
+  let failedSource = $state<string>();
 </script>
 
-<div class="frame" class:rounded style:aspect-ratio={ratio}>
-  <img
-    class="image"
-    class:loaded
-    {src}
-    {alt}
-    {loading}
-    {srcset}
-    {sizes}
-    decoding="async"
-    onload={() => (loaded = true)}
-  />
+<div class="frame" class:rounded class:fill style:aspect-ratio={fill ? undefined : ratio}>
+  {#if failedSource === src}
+    <div
+      class="fallback"
+      role={alt ? 'img' : undefined}
+      aria-label={alt || undefined}
+      aria-hidden={alt ? undefined : true}
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 48 48"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        ><path
+          d="M8 25h32c-1 10-7 15-16 15S9 35 8 25ZM5 25h38M18 17c-4-5 4-5 0-10m12 10c-4-5 4-5 0-10"
+          stroke-linecap="round"
+        /></svg
+      >
+    </div>
+  {:else}
+    {#key src}<img
+        class="image"
+        class:loaded={loadedSource === src}
+        {src}
+        {alt}
+        {loading}
+        {srcset}
+        {sizes}
+        decoding="async"
+        onload={() => (loadedSource = src)}
+        onerror={() => (failedSource = src)}
+      />{/key}
+  {/if}
 </div>
 
 <style>
@@ -61,6 +87,28 @@
 
   .rounded {
     border-radius: var(--radius-lg);
+  }
+
+  .fill {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .fill .image,
+  .fallback {
+    position: absolute;
+    inset: 0;
+  }
+
+  .fallback {
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+  }
+
+  .fallback svg {
+    width: var(--space-12);
+    height: var(--space-12);
   }
 
   .image {

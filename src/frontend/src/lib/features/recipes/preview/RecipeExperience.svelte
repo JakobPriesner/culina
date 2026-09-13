@@ -6,7 +6,7 @@
   import LocalePicker from '$shell/LocalePicker.svelte';
   import ThemeToggle from '$shell/ThemeToggle.svelte';
   import { m } from '$shell/i18n';
-  import { sampleRecipes, type PreviewRecipe } from './recipes';
+  import { sampleRecipes, type PreviewRecipe, type PreviewProgress } from './recipes';
   import RecipePreviewCard from './RecipePreviewCard.svelte';
   import RecipePreviewSurface from './RecipePreviewSurface.svelte';
 
@@ -15,7 +15,12 @@
   let filter = $state('all');
   let favourites = $state<string[]>(['orzo']);
   let selected = $state<PreviewRecipe | undefined>();
-  let content: HTMLElement;
+  let detail = $state<HTMLDivElement>();
+  let library: HTMLDivElement;
+  let opener: HTMLElement | undefined;
+  let libraryScroll = 0;
+  let progress = $state<Record<string, PreviewProgress>>({});
+  const activeRecipes = $derived(recipes.filter((recipe) => progress[recipe.id]?.cooking));
   const filters = [
     { id: 'all', label: m['preview.all']() },
     { id: 'favourites', label: m['preview.favourites']() },
@@ -38,9 +43,23 @@
       : [...favourites, id];
   }
   async function open(recipe?: PreviewRecipe) {
-    selected = recipe;
-    await tick();
-    content.querySelector<HTMLElement>('h1')?.focus();
+    if (recipe) {
+      opener = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+      libraryScroll = window.scrollY;
+      progress[recipe.id] ??= { servings: 2, currentStep: 0, cooking: false, checked: {} };
+      selected = recipe;
+      await tick();
+      detail
+        ?.querySelector<HTMLElement>(progress[recipe.id]?.cooking ? '[aria-current="step"]' : 'h1')
+        ?.focus();
+    } else {
+      selected = undefined;
+      await tick();
+      window.scrollTo({ top: libraryScroll, behavior: 'instant' });
+      (opener?.isConnected ? opener : library.querySelector<HTMLElement>('h1'))?.focus({
+        preventScroll: true
+      });
+    }
   }
 </script>
 
@@ -49,97 +68,110 @@
 </div>
 <header class="header">
   <Brand /><span class="context">{m['preview.kitchen']()}</span>
-  <div class="preferences"><LocalePicker /><ThemeToggle /></div>
+  <div class="preferences"><LocalePicker compact /><ThemeToggle /></div>
 </header>
-<main bind:this={content}>
+<main>
   {#if selected}
-    <RecipePreviewSurface recipe={selected} onback={() => void open()} />
-  {:else}
-    <div class="library">
-      <div class="page-title">
-        <div>
-          <h1 tabindex="-1">{m['preview.title']()}</h1>
-          <p class="subtitle">{m['preview.subtitle']()}</p>
-        </div>
-      </div>
-      <div class="tools">
-        <div class="filters" role="group" aria-label={m['preview.filters']()}>
-          {#each filters as item (item.id)}<button
-              class:active={filter === item.id}
-              aria-pressed={filter === item.id}
-              onclick={() => (filter = item.id)}>{item.label}</button
-            >{/each}
-        </div>
-        <div class="search">
-          <SearchField
-            id="preview-search"
-            label={m['preview.search']()}
-            placeholder={m['preview.search']()}
-            clearLabel={m['preview.clear']()}
-            bind:value={search}
-          />
-        </div>
-      </div>
-      {#if !search && filter === 'all'}
-        <section class="feature" aria-labelledby="featured-title">
-          <div class="photo">
-            <Image
-              src={featured.image!}
-              alt={featured.title}
-              loading="eager"
-              ratio={16 / 9}
-              rounded={false}
-            />
-          </div>
-          <div class="feature-copy">
-            <p class="eyebrow">{m['preview.featured']()}</p>
-            <h2 id="featured-title">{featured.title}</h2>
-            <p>{featured.description}</p>
-            <span class="meta"
-              >{m['preview.minutes']({ count: featured.minutes })} · {m[
-                'preview.twoServings'
-              ]()}</span
-            >
-            <div>
-              <Button variant="primary" onclick={() => void open(featured)}
-                >{m['preview.open']()} <span aria-hidden="true">↗</span></Button
-              >
-            </div>
-          </div>
-        </section>
-      {/if}
-      <section class="collection" aria-labelledby="collection-title">
-        <div class="collection-title">
-          <h2 id="collection-title">{m['preview.collection']()}</h2>
-          <span role="status"
-            >{filtered.length === 1
-              ? m['preview.countOne']()
-              : m['preview.count']({ count: filtered.length })}</span
-          >
-        </div>
-        {#if filtered.length}
-          <div class="grid">
-            {#each filtered as recipe (recipe.id)}<RecipePreviewCard
-                {recipe}
-                favourite={favourites.includes(recipe.id)}
-                onopen={() => void open(recipe)}
-                onfavourite={() => toggleFavourite(recipe.id)}
-              />{/each}
-          </div>
-        {:else}
-          <EmptyState title={m['preview.empty.title']()} body={m['preview.empty.body']()}
-            >{#snippet action()}<Button
-                onclick={() => {
-                  search = '';
-                  filter = 'all';
-                }}>{m['preview.reset']()}</Button
-              >{/snippet}</EmptyState
-          >
-        {/if}
-      </section>
-      <footer class="footer">{m['preview.footer']()}</footer>
+    <div bind:this={detail}>
+      <RecipePreviewSurface
+        recipe={selected}
+        progress={progress[selected.id]!}
+        onprogress={(value) => {
+          if (selected) progress[selected.id] = value;
+        }}
+        onback={() => void open()}
+      />
     </div>
   {/if}
+  <div class="library" bind:this={library} hidden={selected !== undefined}>
+    <div class="page-title">
+      <div>
+        <h1 tabindex="-1">{m['preview.title']()}</h1>
+        <p class="subtitle">{m['preview.subtitle']()}</p>
+      </div>
+    </div>
+    {#each activeRecipes as recipe (recipe.id)}
+      <div class="resume">
+        <div>
+          <span>{m['preview.inProgress']()}</span>
+          <p>{recipe.title}</p>
+        </div>
+        <Button size="sm" onclick={() => void open(recipe)}
+          >{m['preview.resume']()} <span aria-hidden="true">→</span></Button
+        >
+      </div>
+    {/each}
+    <div class="tools">
+      <div class="filters" role="group" aria-label={m['preview.filters']()}>
+        {#each filters as item (item.id)}<button
+            class:active={filter === item.id}
+            aria-pressed={filter === item.id}
+            onclick={() => (filter = item.id)}>{item.label}</button
+          >{/each}
+      </div>
+      <div class="search">
+        <SearchField
+          id="preview-search"
+          label={m['preview.search']()}
+          placeholder={m['preview.search']()}
+          clearLabel={m['preview.clear']()}
+          bind:value={search}
+        />
+      </div>
+    </div>
+    {#if !search && filter === 'all'}
+      <section class="feature" aria-labelledby="featured-title">
+        <div class="photo">
+          <Image src={featured.image!} alt={featured.title} loading="eager" fill rounded={false} />
+        </div>
+        <div class="feature-copy">
+          <p class="eyebrow">{m['preview.featured']()}</p>
+          <h2 id="featured-title">{featured.title}</h2>
+          <p>{featured.description}</p>
+          <span class="meta"
+            >{m['preview.minutes']({ count: featured.minutes })} · {m[
+              'preview.twoServings'
+            ]()}</span
+          >
+          <div>
+            <Button variant="primary" onclick={() => void open(featured)}
+              >{m['preview.open']()} <span aria-hidden="true">↗</span></Button
+            >
+          </div>
+        </div>
+      </section>
+    {/if}
+    <section class="collection" aria-labelledby="collection-title">
+      <div class="collection-title">
+        <h2 id="collection-title">{m['preview.collection']()}</h2>
+        <span role="status"
+          >{filtered.length === 1
+            ? m['preview.countOne']()
+            : m['preview.count']({ count: filtered.length })}</span
+        >
+      </div>
+      {#if filtered.length}
+        <div class="grid">
+          {#each filtered as recipe (recipe.id)}<RecipePreviewCard
+              {recipe}
+              favourite={favourites.includes(recipe.id)}
+              onopen={() => void open(recipe)}
+              onfavourite={() => toggleFavourite(recipe.id)}
+            />{/each}
+        </div>
+      {:else}
+        <EmptyState title={m['preview.empty.title']()} body={m['preview.empty.body']()}
+          >{#snippet action()}<Button
+              onclick={() => {
+                search = '';
+                filter = 'all';
+              }}>{m['preview.reset']()}</Button
+            >{/snippet}</EmptyState
+        >
+      {/if}
+    </section>
+    <footer class="footer">{m['preview.footer']()}</footer>
+  </div>
 </main>
 
 <style>
@@ -159,7 +191,7 @@
   .header {
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-6) var(--space-8);
+    padding: var(--space-4) var(--space-8);
     display: flex;
     align-items: center;
     gap: var(--space-8);
@@ -179,7 +211,7 @@
   .library {
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-8) var(--space-8) var(--space-6);
+    padding: var(--space-6) var(--space-8);
   }
   .eyebrow {
     font-size: var(--text-xs);
@@ -242,8 +274,27 @@
     overflow: hidden;
   }
   .photo {
-    display: grid;
-    align-content: center;
+    min-height: 20rem;
+  }
+  .library[hidden] {
+    display: none;
+  }
+  .resume {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    padding-block: var(--space-4);
+    border-block: 1px solid var(--border);
+  }
+  .resume span {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+  }
+  .resume p {
+    margin-top: var(--space-1);
+    font-weight: var(--weight-medium);
   }
   .feature-copy {
     display: flex;
@@ -331,9 +382,17 @@
     .feature-copy {
       padding: var(--space-6);
     }
+    .photo {
+      min-height: 0;
+      aspect-ratio: 4 / 3;
+    }
     .grid {
       grid-template-columns: 1fr;
-      gap: var(--space-3);
+      gap: var(--space-6);
+    }
+    .resume {
+      align-items: flex-start;
+      flex-direction: column;
     }
     .preview-note {
       gap: var(--space-1);

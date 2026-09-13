@@ -350,7 +350,12 @@ test.describe('reaching everything with a keyboard', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByText(/step 1 of 2|schritt 1 von 2/i)).toBeVisible();
 
-    await page.getByRole('button', { name: /^(next step|nächster schritt)$/i }).focus();
+    const next = page.getByRole('button', { name: /^(next step|nächster schritt)$/i });
+    // The recipe is visible before its cooking session is ready. Unlike click,
+    // focus does not wait for a control to become enabled.
+    await expect(next).toBeEnabled();
+    await next.focus();
+    await expect(next).toBeFocused();
     await page.keyboard.press('Enter');
 
     await expect(page.getByText(/step 2 of 2|schritt 2 von 2/i)).toBeVisible();
