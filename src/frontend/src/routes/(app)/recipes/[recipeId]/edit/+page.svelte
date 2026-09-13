@@ -3,12 +3,15 @@
 
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Field, TextArea, TextInput } from '$ds';
+  import { Button, Field, TextArea, TextInput } from '$ds';
   import { createAutosave } from '$features/recipes/editor/autosave.svelte';
   import IngredientEditor from '$features/recipes/editor/IngredientEditor.svelte';
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
+  import { ErrorCodes, type AppError } from '$api';
+  import { forget, recall, remember } from '$features/recipes/editor/journal';
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
+  import { session } from '$features/auth/session.svelte';
   import { busy } from '$shell/busy.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
@@ -26,7 +29,22 @@
   /** The edited copy. Null until the recipe has arrived. */
   let draft = $state<Recipe | null>(null);
 
-  const autosave = createAutosave(async () => (draft ? recipes.update(draft) : null));
+  const autosave = createAutosave(async () => {
+    if (!draft) {
+      return null;
+    }
+
+    const failure = await recipes.update(draft);
+
+    // Dropped only once the server has it. A failed save leaves the journal
+    // exactly where it was, which is the whole point of writing it first.
+    if (!failure && session.user) {
+      forget(session.user.userId, recipeId);
+      unsent = false;
+    }
+
+    return failure;
+  });
 
   // Unsaved text on screen is not a moment to offer anybody a reload.
   const release = busy.hold();
@@ -43,14 +61,31 @@
     }
   });
 
+  /** Whether what is on screen exists only on this device. */
+  let unsent = $state(false);
+
+  /** True when this editor opened onto work a previous visit had not saved. */
+  let recovered = $state(false);
+
   // Taken once per recipe: after that the draft is what the author is editing,
   // and overwriting it from the store would delete what they just typed.
+  //
+  // What this device kept wins over what the server has. It is newer by
+  // definition — it exists precisely because it never reached the server — and
+  // the alternative is opening an editor onto an older version of somebody's
+  // own sentence.
   $effect(() => {
     const loaded = recipes.detail;
 
-    if (loaded && loaded.id === recipeId && draft?.id !== loaded.id) {
-      draft = loaded;
+    if (!loaded || loaded.id !== recipeId || draft?.id === loaded.id) {
+      return;
     }
+
+    const kept = session.user ? recall(session.user.userId, recipeId) : null;
+
+    draft = kept?.recipe ?? loaded;
+    unsent = kept !== null;
+    recovered = kept !== null;
   });
 
   function change(patch: Partial<Recipe>) {
@@ -59,25 +94,111 @@
     }
 
     draft = { ...draft, ...patch };
+    recovered = false;
+
+    // Written here first, synchronously, before anything is sent. The gap
+    // between a keystroke and a save is where work goes missing.
+    if (session.user) {
+      remember(session.user.userId, recipeId, draft);
+      unsent = true;
+    }
+
     autosave.touch();
   }
 
+  /**
+   * What the small word beside the title says.
+   *
+   * In the order that matters. A conflict is never masked by anything
+   * reassuring; work that has not reached the server never reads as "Saved";
+   * and a lost connection reads as where the work is rather than as a failure,
+   * because the work is not lost — it is on this device, and saying "Could not
+   * save" about it is both alarming and untrue.
+   */
   const status = $derived.by(() => {
     if (autosave.failure && changedElsewhere(autosave.failure)) {
       return m['editor.changedElsewhere']();
     }
 
-    switch (autosave.state) {
-      case 'saving':
-        return m['editor.saving']();
-      case 'saved':
-        return m['editor.saved']();
-      case 'failed':
-        return m['editor.saveFailed']();
-      default:
-        return '';
+    if (autosave.state === 'saving') {
+      return m['editor.saving']();
     }
+
+    if (autosave.failure && !unreachable(autosave.failure)) {
+      return m['editor.saveFailed']();
+    }
+
+    if (recovered) {
+      return m['editor.recovered']();
+    }
+
+    if (unsent) {
+      return m['editor.keptHere']();
+    }
+
+    return autosave.state === 'saved' ? m['editor.saved']() : '';
   });
+
+  /** A failure that means the server was not reached, rather than refused. */
+  const unreachable = (failure: AppError) =>
+    failure.code === ErrorCodes.offline || failure.code === ErrorCodes.timeout;
+
+  const conflicted = $derived(autosave.failure !== null && changedElsewhere(autosave.failure));
+
+  /**
+   * Two ways out of a conflict, and no third.
+   *
+   * Merging two people's recipes automatically is a guess, and a guess about
+   * somebody's dinner is worse than a question. So the choice is theirs — and
+   * it has to be offered, because the journal keeps what was typed and would
+   * otherwise show it again on every reload, conflicting again forever.
+   */
+  async function keepMine() {
+    const mine = draft;
+
+    if (!mine) {
+      return;
+    }
+
+    // Re-read to learn the version somebody else's change produced, then write
+    // this text on top of it. Nothing of theirs is silently kept: they were
+    // told to look, and this is the person looking.
+    await recipes.load(recipeId);
+
+    const latest = recipes.detail;
+
+    if (!latest || latest.id !== recipeId) {
+      return;
+    }
+
+    draft = { ...mine, version: latest.version };
+    autosave.clear();
+
+    await autosave.flush();
+  }
+
+  async function takeTheirs() {
+    if (session.user) {
+      forget(session.user.userId, recipeId);
+    }
+
+    await recipes.load(recipeId);
+
+    const latest = recipes.detail;
+
+    if (!latest || latest.id !== recipeId) {
+      return;
+    }
+
+    // Assigned here rather than left to the effect above, which deliberately
+    // takes the recipe only once: it is what stops a save in flight from
+    // overwriting what is being typed, and it would leave this showing the
+    // version the conflict was about.
+    draft = latest;
+    unsent = false;
+    recovered = false;
+    autosave.clear();
+  }
 </script>
 
 <svelte:head><title>{draft?.title ?? m['editor.new']()}</title></svelte:head>
@@ -96,6 +217,15 @@
       <!-- Polite, because it reports something that already happened and must
            not interrupt whatever is being typed. -->
       <p class="status" role="status">{status}</p>
+
+      {#if conflicted}
+        <div class="conflict">
+          <Button onclick={keepMine}>{m['editor.conflict.keepMine']()}</Button>
+          <Button variant="ghost" onclick={takeTheirs}>
+            {m['editor.conflict.takeTheirs']()}
+          </Button>
+        </div>
+      {/if}
     </header>
 
     <div class="form">
@@ -211,6 +341,12 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     text-decoration: none;
+  }
+
+  .conflict {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
   }
 
   .status {

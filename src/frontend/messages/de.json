@@ -290,5 +290,9 @@
   "me.invite.outstanding": "Noch nicht eingelöste Einladungen",
   "me.invite.revoke": "Zurücknehmen",
   "me.invite.revoked": "Diese Einladung funktioniert nicht mehr.",
-  "me.invite.none": "Keine offen."
+  "me.invite.none": "Keine offen.",
+  "editor.keptHere": "Auf diesem Gerät gesichert",
+  "editor.recovered": "Nicht gespeicherte Änderungen von diesem Gerät sind wieder da.",
+  "editor.conflict.keepMine": "Meine Fassung behalten",
+  "editor.conflict.takeTheirs": "Ihre übernehmen"
 }

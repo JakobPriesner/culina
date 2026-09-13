@@ -290,5 +290,9 @@
   "me.invite.outstanding": "Invitations not used yet",
   "me.invite.revoke": "Take it back",
   "me.invite.revoked": "That invitation will not work any more.",
-  "me.invite.none": "None waiting to be used."
+  "me.invite.none": "None waiting to be used.",
+  "editor.keptHere": "Kept on this device",
+  "editor.recovered": "Unsaved changes from this device were brought back.",
+  "editor.conflict.keepMine": "Keep my version",
+  "editor.conflict.takeTheirs": "Take theirs"
 }

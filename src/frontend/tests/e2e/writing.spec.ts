@@ -99,4 +99,89 @@ test.describe('writing a recipe', () => {
 
     await expect(page.getByText(title)).toBeVisible();
   });
+
+  test('does not lose what was typed to a reload, a language switch, or no signal', async ({
+    context
+  }) => {
+    const title = unique('Kept');
+
+    await page.goto('/recipes/new');
+    await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
+    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await expect(page).toHaveURL(/\/edit/);
+
+    const recipeId = new URL(page.url()).pathname.split('/')[2]!;
+    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
+
+    // Offline, which is the case the journal exists for: nothing can reach the
+    // server, and what was typed must still be there afterwards.
+    await context.setOffline(true);
+
+    await line.fill('200 g Butter');
+    await line.press('Enter');
+
+    await expect(page.getByText('Butter')).toBeVisible();
+
+    // The app says where the work is, and does not say "Saved" about something
+    // that only exists on this laptop.
+    await expect(page.getByText(/kept on this device|auf diesem gerät/i)).toBeVisible();
+
+    await context.setOffline(false);
+    await page.reload();
+
+    // Still there, and still described honestly.
+    await expect(page.getByText('Butter')).toBeVisible();
+    await expect(page.getByText(/unsaved changes|nicht gespeicherte änderungen/i)).toBeVisible();
+
+    // A language switch remounts the whole tree — the root layout is keyed by
+    // locale so that compiled messages take effect without a reload — and the
+    // editor's state goes with it. What was typed does not.
+    await page.goto(`/recipes/${recipeId}/edit`);
+    await expect(page.getByText('Butter')).toBeVisible();
+  });
+
+  test('offers a way out when somebody else changed the same recipe', async ({ browser }) => {
+    const title = unique('Contested');
+
+    await page.goto('/recipes/new');
+    await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
+    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await expect(page).toHaveURL(/\/edit/);
+
+    const recipeId = new URL(page.url()).pathname.split('/')[2]!;
+
+    // The other half of the household, writing at the same time.
+    const theirs = await browser.newContext({ storageState: await page.context().storageState() });
+    const them = await theirs.newPage();
+
+    await them.goto(`/recipes/${recipeId}/edit`);
+    await them.getByLabel(/add an ingredient|zutat hinzufügen/i).fill('1 kg Mehl');
+    await them.getByLabel(/add an ingredient|zutat hinzufügen/i).press('Enter');
+    await expect(them.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+
+    // This browser is now writing on top of a version that has moved on.
+    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
+
+    await line.fill('200 g Butter');
+    await line.press('Enter');
+
+    // Said plainly, and neither version is thrown away: both choices are here.
+    await expect(page.getByText(/somebody else changed|jemand anderes/i)).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /keep my version|meine fassung/i })
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: /take theirs|ihre übernehmen/i }).click();
+
+    // Theirs is what is on screen, and this device is no longer holding a draft
+    // that would come back on the next reload and conflict all over again.
+    await expect(page.getByText('Mehl')).toBeVisible();
+    await expect(page.getByText('Butter')).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByText('Mehl')).toBeVisible();
+    await expect(page.getByText('Butter')).toHaveCount(0);
+
+    await theirs.close();
+  });
 });
