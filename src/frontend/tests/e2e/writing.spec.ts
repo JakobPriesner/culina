@@ -173,6 +173,45 @@ test.describe('writing a recipe', () => {
     await expect(list).toContainText(/2[–-]3\s*Schuss/);
   });
 
+  test('suggests an ingredient, seeded first and then in this kitchen’s own words', async () => {
+    const title = unique('Suggested');
+    const invented = unique('Herbbutter').replace(/\s/g, '');
+
+    await page.goto('/recipes/new');
+    await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
+    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await expect(page).toHaveURL(/\/edit/);
+
+    const line = page.getByRole('combobox', { name: /add an ingredient|zutat hinzufügen/i });
+    const list = page.getByRole('listbox', { name: /ingredient suggestions|zutatenvorschläge/i });
+
+    // Nothing is suggested for the amount: nobody needs help typing "200 g".
+    await line.fill('200 g ');
+    await expect(list).toBeHidden();
+
+    // The seeded list is what an empty kitchen has, and it says where the
+    // thing lives in a shop.
+    await line.fill('200 g Potat');
+    await expect(list.getByRole('option', { name: /^Potatoes/ })).toBeVisible();
+
+    // Tab takes the suggestion and leaves the amount alone; Enter would have
+    // finished the line, which is what Enter has always done here.
+    await line.press('Tab');
+    await expect(line).toHaveValue('200 g Potatoes');
+    await line.press('Enter');
+
+    // A word no seeded list has ever heard of is still an ingredient.
+    await line.fill(`1 bunch ${invented}`);
+    await line.press('Enter');
+
+    await expect(page.getByText(invented)).toBeVisible();
+    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+
+    // And from then on it is one of this kitchen's own words.
+    await line.fill(invented.slice(0, 8));
+    await expect(list.getByRole('option', { name: invented })).toBeVisible();
+  });
+
   test('shows a new recipe in the list it belongs to', async () => {
     const title = unique('Listed');
 

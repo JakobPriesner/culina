@@ -3,6 +3,7 @@
   import { TextArea } from '$ds';
 
   import { m } from '$shell/i18n';
+  import SuggestionList, { type Suggestion } from './SuggestionList.svelte';
   import { insertMention, pendingMention, suggest, type PendingMention } from './mentions';
   import { formatQuantity } from '../formatQuantity';
   import { quantityLabels } from '../quantityLabels';
@@ -71,7 +72,19 @@
     return ingredients.some((one) => one.name.toLowerCase() === query.toLowerCase()) ? null : query;
   });
 
-  const rows = $derived(matches.length + (newName ? 1 : 0));
+  /** What the picker shows: the recipe's own lines, then the row that adds one. */
+  const options = $derived<readonly Suggestion[]>([
+    ...matches.map((match) => ({
+      value: match.id,
+      label: match.name,
+      detail: amountOf(match)
+    })),
+    ...(newName
+      ? [{ value: `add:${newName}`, label: m['editor.mentionAdd']({ name: newName }) }]
+      : [])
+  ]);
+
+  const rows = $derived(options.length);
   const open = $derived(pending !== null && pending.at !== settled && rows > 0);
 
   const amountOf = (one: Ingredient) =>
@@ -218,43 +231,13 @@
   <p id={hintId} class="hint">{m['editor.mentionHint']()}</p>
 
   {#if open}
-    <!-- The options are not buttons. Focus stays in the sentence and the
-         highlight travels by aria-activedescendant, which is what lets someone
-         keep typing; a focusable control inside an option would take the
-         cursor out of the step and is not a thing an option may contain. The
-         keyboard is handled on the textarea, which is where the keyboard is —
-         hence the ignores below, which are about the pattern and not about a
-         gap in it. -->
-    <ul id={listId} class="picker" role="listbox" aria-label={m['editor.mentionListLabel']()}>
-      {#each matches as match, index (match.id)}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <li
-          id={rowId(index)}
-          role="option"
-          aria-selected={index === highlighted}
-          class:highlighted={index === highlighted}
-          onmousedown={(event) => event.preventDefault()}
-          onclick={() => pick(index)}
-        >
-          <span>{match.name}</span>
-          <span class="amount">{amountOf(match)}</span>
-        </li>
-      {/each}
-
-      {#if newName}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <li
-          id={rowId(matches.length)}
-          role="option"
-          aria-selected={highlighted === matches.length}
-          class:highlighted={highlighted === matches.length}
-          onmousedown={(event) => event.preventDefault()}
-          onclick={() => pick(matches.length)}
-        >
-          <span>{m['editor.mentionAdd']({ name: newName })}</span>
-        </li>
-      {/if}
-    </ul>
+    <SuggestionList
+      id={listId}
+      label={m['editor.mentionListLabel']()}
+      items={options}
+      {highlighted}
+      onchoose={pick}
+    />
   {/if}
 </div>
 
@@ -267,48 +250,5 @@
     margin-top: var(--space-1);
     color: var(--text-subtle);
     font-size: var(--text-xs);
-  }
-
-  /*
-   * Below the field rather than beside the cursor. A popover that follows the
-   * caret is charming on a desktop and unusable on a phone, where it lands
-   * under the keyboard about half the time.
-   */
-  .picker {
-    position: absolute;
-    z-index: 3;
-    inset-inline: 0;
-    top: calc(100% - var(--space-1));
-    max-height: 14rem;
-    overflow-y: auto;
-    margin: 0;
-    padding: var(--space-1);
-    list-style: none;
-    background: var(--surface-overlay);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-overlay);
-  }
-
-  .picker li {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-
-  .picker li.highlighted,
-  .picker li:hover {
-    background: var(--surface-selected);
-  }
-
-  .amount {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
   }
 </style>

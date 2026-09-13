@@ -38,6 +38,33 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
         return [.. written];
     }
 
+    public async Task<IReadOnlyList<string>> OwnIngredientNamesAsync(
+        Guid householdId,
+        string? query,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        // The most-used spelling of each name wins, which is what stops one
+        // stray "Olivenoel" from displacing the "Olivenöl" written forty times.
+        // The trigram index on the name column is what makes the LIKE cheap.
+        var names = await executor.QueryAsync<string>(
+            """
+            select i.name
+            from recipe_ingredients i
+            join ingredient_groups g on g.id = i.group_id
+            join recipes r on r.id = g.recipe_id
+            where r.household_id = @householdId
+              and (@query = '' or i.name ilike '%' || @query || '%')
+            group by i.name
+            order by (lower(i.name) like lower(@query) || '%') desc, count(*) desc, i.name
+            limit @limit;
+            """,
+            new { householdId, query = query?.Trim() ?? string.Empty, limit },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. names];
+    }
+
     public async Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken)
     {
         // One round trip for the whole aggregate. A recipe is never useful

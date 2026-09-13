@@ -400,7 +400,12 @@
       <section>
         <h2 class="section">{m['editor.ingredients']()}</h2>
 
-        <IngredientEditor ingredients={firstGroup} onchange={setIngredients} />
+        <IngredientEditor
+          ingredients={firstGroup}
+          onchange={setIngredients}
+          householdId={current.householdId}
+          language={current.language}
+        />
       </section>
 
       <section>

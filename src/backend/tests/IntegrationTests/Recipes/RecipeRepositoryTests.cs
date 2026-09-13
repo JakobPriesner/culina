@@ -144,6 +144,87 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         Assert.Equal(expected, slug);
     }
 
+    [Fact]
+    public async Task OwnUnitsAsync_ShouldReturnOnlyWhatTheHouseholdAddedItself()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+
+        recipe.SetContents(
+            [
+                IngredientGroup.Create(null, null, 0,
+                    [
+                        RecipeIngredient.Create(
+                            null, 0,
+                            Quantity.Create(1m, Unit.Create("Schuss").ShouldBeSuccess()).ShouldBeSuccess(),
+                            "milk", null).ShouldBeSuccess(),
+                        RecipeIngredient.Create(
+                            null, 1, Quantity.Create(200m, Unit.Gram).ShouldBeSuccess(), "butter", null)
+                            .ShouldBeSuccess()
+                    ]).ShouldBeSuccess()
+            ],
+            [],
+            Now).ShouldBeSuccess();
+        (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
+
+        // Act
+        var own = await scope.Recipes.OwnUnitsAsync(recipe.HouseholdId, Token);
+
+        // Assert
+        // The built-ins are excluded in the query, not afterwards: a household
+        // with four hundred recipes must not send four hundred rows back to
+        // have thirteen of them filtered out.
+        Assert.Equal(["Schuss"], own);
+    }
+
+    [Fact]
+    public async Task OwnIngredientNamesAsync_ShouldRankAPrefixAboveAMereContains()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+
+        recipe.SetContents(
+            [
+                IngredientGroup.Create(null, null, 0,
+                    [
+                        RecipeIngredient.Create(null, 0, Quantity.Unmeasured, "peanut butter", null)
+                            .ShouldBeSuccess(),
+                        RecipeIngredient.Create(null, 1, Quantity.Unmeasured, "butter", null)
+                            .ShouldBeSuccess()
+                    ]).ShouldBeSuccess()
+            ],
+            [],
+            Now).ShouldBeSuccess();
+        (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
+
+        // Act
+        var found = await scope.Recipes.OwnIngredientNamesAsync(recipe.HouseholdId, "butter", 10, Token);
+
+        // Assert
+        // Somebody typing "butter" means the butter, not the peanut butter that
+        // happens to contain the word.
+        Assert.Equal(["butter", "peanut butter"], found);
+    }
+
+    [Fact]
+    public async Task OwnIngredientNamesAsync_ShouldNotReachIntoAnotherHouseholdsKitchen()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+
+        // Act
+        var found = await scope.Recipes
+            .OwnIngredientNamesAsync(CulinaId.New(), "butter", 10, Token);
+
+        // Assert
+        Assert.Empty(found);
+        Assert.NotEmpty(await scope.Recipes
+            .OwnIngredientNamesAsync(recipe.HouseholdId, "butter", 10, Token));
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private async Task<RecipeScope> NewScopeAsync()
