@@ -2,6 +2,9 @@
 
 A self-hosted recipe app for the people you actually cook with.
 
+![A recipe in Culina: the photograph, the ingredient list, and steps whose
+amounts come from that list](docs/images/recipe.webp)
+
 Culina is built around one observation: a person using a recipe app is never in
 a single state. They move through **finding → deciding → shopping → cooking →
 remembering**, and almost every recipe app treats those as separate screens.
@@ -40,24 +43,39 @@ network. No AI assistant.
 | Shipping | One container serving both from the same origin |
 | i18n | German and English, compile-time via Paraglide |
 
-## Quick start
+## Running it
+
+```bash
+git clone https://github.com/jakobpriesner/culina.git
+cd culina
+cp .env.example .env
+# Fill in Database__Password and the address of your reverse proxy.
+docker compose -f compose.yaml -f compose.prod.yaml up -d
+```
+
+Culina is at `http://localhost:8080`. Point your proxy at it — TLS is the
+proxy's job, deliberately. **The first account you create becomes the
+administrator**, and whether anyone else may register is then that person's
+decision, made in the app.
+
+Two volumes are mandatory, and the compose file declares both: `/data/images`
+holds the only copy of every photograph, and losing it on a redeploy would say
+nothing at all.
+
+[`docs/operations.md`](docs/operations.md) has installing, upgrading, backup,
+a tested restore, and the proxy configuration the app expects.
+
+### Working on it instead
 
 ```bash
 cp .env.example .env
 make dev
 ```
 
-`make` with no target lists every command.
-
-That starts PostgreSQL, the API and the frontend dev server. The app is at
-<http://localhost:5173>; the API is proxied at `/api`, so development is
-same-origin exactly like production.
-
-Running the whole thing as it ships:
-
-```bash
-docker compose -f compose.yaml -f compose.prod.yaml up
-```
+PostgreSQL in a container, the API with hot reload, the frontend dev server.
+The app is at <http://localhost:5173> with `/api` proxied to the backend, so
+development is same-origin exactly like production — which is why Culina has no
+CORS policy anywhere. `make` with no target lists every command.
 
 ## Documentation
 
@@ -67,18 +85,11 @@ docker compose -f compose.yaml -f compose.prod.yaml up
 | [`docs/api.md`](docs/api.md) | The full v1 HTTP surface |
 | [`docs/design-system.md`](docs/design-system.md) | Tokens, theming, component inventory |
 | [`docs/scaling-rules.md`](docs/scaling-rules.md) | How portions scale, and how amounts are rounded |
-| [`docs/deployment.md`](docs/deployment.md) | Image, configuration, CI/CD, operations |
-
-## Working on Culina
-
-Conventions are not in a wiki — they are in [`.claude/skills/`](.claude/skills/)
-and they are enforced by architecture tests and the compiler. Work is tracked
-as [beads](https://github.com/steveyegge/beads) issues:
-
-```bash
-bd ready          # claimable work, blockers resolved
-bd show <id>      # the full ticket before starting
-```
+| [`docs/deployment.md`](docs/deployment.md) | The image, the pipeline, and why they are shaped that way |
+| [`docs/operations.md`](docs/operations.md) | Installing, upgrading, backup and restore |
+| [`docs/configuration.md`](docs/configuration.md) | Every environment variable and what breaks without it |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to work on it, and what the conventions enforce |
+| [`SECURITY.md`](SECURITY.md) | Reporting a vulnerability |
 
 ## Licence
 
