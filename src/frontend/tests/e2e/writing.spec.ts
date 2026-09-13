@@ -212,6 +212,52 @@ test.describe('writing a recipe', () => {
     await expect(list.getByRole('option', { name: invented })).toBeVisible();
   });
 
+  test('takes a recipe pasted as text, after showing what it understood', async () => {
+    const title = unique('Pasted');
+
+    await page.goto('/recipes/new');
+    await page.getByRole('button', { name: /paste a recipe|rezept einfügen/i }).click();
+
+    await page
+      .getByRole('textbox', { name: /the recipe, as text|rezept als text/i })
+      .fill(
+        [
+          title,
+          '',
+          'Ingredients',
+          '250 g flour',
+          '2 eggs',
+          '1-2 tbsp olive oil',
+          'Salt',
+          '',
+          'Method',
+          '1. Whisk the eggs into the flour.',
+          '2. Rest the dough for half an hour.'
+        ].join('\n')
+      );
+
+    // The preview is the feature. What was understood is on screen before a
+    // recipe exists, so a wrong reading costs a keystroke rather than a delete.
+    await expect(page.getByRole('status')).toContainText(/4/);
+    await expect(page.getByText('250 g', { exact: true })).toBeVisible();
+    // A range is read as its lower bound: the one you can still add to.
+    await expect(page.getByText('1 tbsp', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: /make this recipe|rezept anlegen/i }).click();
+    await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
+
+    await expect(page.getByText('flour')).toBeVisible();
+
+    // The steps are fields, so this reads their value rather than the page.
+    // The numbers were the paste's; the editor's list supplies its own.
+    await expect(page.getByRole('combobox', { name: /step 1|schritt 1/i })).toHaveValue(
+      'Whisk the eggs into the flour'
+    );
+    await expect(page.getByRole('combobox', { name: /step 2|schritt 2/i })).toHaveValue(
+      'Rest the dough for half an hour'
+    );
+  });
+
   test('shows a new recipe in the list it belongs to', async () => {
     const title = unique('Listed');
 

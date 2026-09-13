@@ -310,5 +310,13 @@
   "preview.doneShort": "Fertig",
   "preview.closeIngredients": "Zutaten schließen",
   "preview.resume": "Weiterkochen",
-  "preview.inProgress": "Gerade am Kochen"
+  "preview.inProgress": "Gerade am Kochen",
+  "import.paste.open": "Lieber ein Rezept einfügen",
+  "import.paste.title": "Rezept einfügen",
+  "import.paste.hint": "Füg alles ein — eine Nachricht, eine Seite, etwas Abgetipptes. Du siehst, was verstanden wurde, bevor etwas entsteht.",
+  "import.paste.label": "Das Rezept als Text",
+  "import.paste.found": "Verstanden: {ingredients} Zutaten, {steps} Schritte.",
+  "import.paste.create": "Rezept anlegen",
+  "import.paste.cancel": "Doch nicht",
+  "import.paste.untitled": "Rezept ohne Titel"
 }
