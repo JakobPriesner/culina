@@ -100,3 +100,39 @@ describe('finishing', () => {
     expect(localStorage.getItem(`culina.timers.${sessionId}`)).toBeNull();
   });
 });
+
+describe('a phone that was in a pocket', () => {
+  it('shows the right number the instant it is looked at again', () => {
+    // A backgrounded tab has its intervals throttled to once a minute, or
+    // stopped altogether. Waiting for the next tick would mean the first thing
+    // somebody sees on unlocking is a number up to a minute stale, and a
+    // kitchen timer showing the wrong number is worse than one showing none.
+    const kitchen = timers();
+    const stop = kitchen.tick();
+
+    kitchen.start(0, 600, 'Simmer');
+
+    // Time passes with nothing running: no interval fires.
+    vi.setSystemTime(new Date('2026-09-12T12:05:00Z'));
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(kitchen.remaining(kitchen.timers[0]!)).toBe(300);
+
+    stop();
+  });
+
+  it('stops listening once the cooking screen is gone', () => {
+    const kitchen = timers();
+    const stop = kitchen.tick();
+
+    kitchen.start(0, 600, 'Simmer');
+    stop();
+
+    vi.setSystemTime(new Date('2026-09-12T12:05:00Z'));
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    // The clock the component left behind is not still being read.
+    expect(kitchen.remaining(kitchen.timers[0]!)).toBe(600);
+  });
+});

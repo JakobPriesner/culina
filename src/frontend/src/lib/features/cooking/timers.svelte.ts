@@ -85,11 +85,32 @@ export function createTimers(sessionId: () => string | null) {
       persist();
     },
 
-    /** One interval for every timer, rather than one each. */
+    /**
+     * One interval for every timer, rather than one each.
+     *
+     * The clock is also read the moment the app comes back to the front. A
+     * backgrounded tab has its intervals throttled to once a minute or stopped
+     * altogether, so the first thing somebody sees on unlocking their phone
+     * would otherwise be a number that is up to a minute stale — and a kitchen
+     * timer showing the wrong number is worse than one showing none.
+     */
     tick(): () => void {
-      ticking = setInterval(() => (now = Date.now()), 1000);
+      const read = () => (now = Date.now());
 
-      return () => clearInterval(ticking);
+      ticking = setInterval(read, 1000);
+
+      const onVisible = () => {
+        if (document.visibilityState === 'visible') {
+          read();
+        }
+      };
+
+      document.addEventListener('visibilitychange', onVisible);
+
+      return () => {
+        clearInterval(ticking);
+        document.removeEventListener('visibilitychange', onVisible);
+      };
     },
 
     clear() {

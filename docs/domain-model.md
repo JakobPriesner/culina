@@ -216,6 +216,24 @@ so it lives in `localStorage` keyed by cook-session id, storing absolute end
 timestamps. A cooking session is a fact worth persisting; a timer is local
 ephemera. See `sveltekit-state-and-optimistic-ui`.
 
+Two limits, both stated rather than worked around:
+
+**A timer does not ring when the app is closed.** An absolute deadline is right
+whenever the app is looked at again — a phone in a pocket for ten minutes shows
+the correct remaining time on unlocking, and one that ran out shows that it did.
+What it cannot do is make a sound while nothing is running. Promising an alarm
+would need a notification the browser schedules, which needs permission Culina
+does not ask for, and a timer that sometimes rings is worse than one that never
+claims to.
+
+**`CurrentStepIndex` is a position, not an identity.** A recipe edited from
+another device while somebody is cooking it can move the step under them. The
+index is clamped so it can never point past the end, but a step *inserted* above
+the current one shifts the position silently. Making this exact means recording
+the step's id in the session, which is a migration and a contract change for a
+case that is rare and immediately visible to the person cooking. Recorded here
+so the next person weighing it knows it was weighed.
+
 ### CookLogEntry — person-owned
 
 `Id`, `RecipeId`, `UserId`, `HouseholdId`, `MadeAt`, `Servings?`, `Note?`.
