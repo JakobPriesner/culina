@@ -142,11 +142,77 @@ the app cannot write to.
 On the way back up the app finds the schema already at the version the dump was
 taken at and applies nothing. Signing in works, and every recipe is there.
 
+### Rehearsing it
+
+```bash
+scripts/restore-rehearsal.sh
+```
+
+Stands up a clean instance in a project of its own, puts real data in it, takes
+the three backups above, destroys every volume, restores, and then checks what
+came back: the password still signs in, every recipe and every member is there,
+and the photograph is served to the person who uploaded it and still refused to
+a stranger. It tears itself down and touches nothing you are running.
+
+Run it before a release. The first time it ran it found that a fresh instance
+could not accept a photograph at all — the volumes arrived owned by root and the
+app does not run as root — which no amount of reading the runbook would have
+found.
+
+**Measured, on a laptop with three recipes and one photograph: eight seconds.**
+That number is not a service level. What it is useful for is the shape: the
+restore is bounded by the size of the dump and the images, both of which are
+small for a household, and there is no rebuild or reindex step hiding in it.
+A household with a thousand recipes and a photograph on each should still expect
+minutes rather than hours.
+
+### How often, and where
+
+Culina does not schedule backups; your host already has a way to run a command
+nightly, and a backup system you already operate is worth more than one this app
+invented. What the app can say is what a sensible target looks like for a
+self-hosted instance:
+
+- **Nightly**, which puts at most a day's cooking at risk. Recipes are written
+  rarely; losing a day of them is an annoyance, and paying for anything tighter
+  is not obviously worth it.
+- **Kept off the machine that holds the original.** A backup on the same disk is
+  a copy, not a backup.
+- **Encrypted at rest if it leaves your network.** The dump contains every
+  recipe, every address and every password hash. Argon2id hashes are not
+  reversible, but they are not something to hand out either.
+- **Readable only by whoever runs the instance.** `chmod 600`, and an object
+  store bucket that is not public.
+- **Watched.** A backup that silently stopped six weeks ago is the usual way
+  this goes wrong. Alert on the age of the newest file, not on the exit code of
+  the job — a job that succeeds at writing nothing looks fine.
+
 ## Rolling back
 
 Redeploy the previous tag. Safe as long as no migration since then was
 destructive — which is why migrations are additive by default, and why a
 destructive one is called out in its release notes.
+
+What makes that safe rather than hopeful:
+
+- **Migrations are forward-only and never edited.** An applied migration whose
+  file has changed stops the process at boot rather than running anything
+  (`ApplyAsync_ShouldRefuseToStart_WhenAnAppliedMigrationWasEdited`). A mistake
+  is a new migration, always.
+- **Applying them twice does nothing.** The runner compares what is embedded
+  against `schema_migrations` and applies only the difference
+  (`ApplyAsync_ShouldChangeNothing_WhenEveryMigrationHasAlreadyRun`).
+- **An older image against a newer schema works** for any additive migration:
+  the older code simply does not know about the new columns. It does not work
+  across a destructive one, which is why those are called out.
+- **A failed migration serves no traffic.** It logs `Critical` and exits
+  non-zero; earlier migrations that succeeded stay applied
+  (`ApplyAsync_ShouldKeepEarlierMigrations_WhenALaterOneFails`).
+
+There has been no release yet, so "migrations against the previous release" has
+nothing to test against. From the first tag onwards, the release checklist is:
+run the rehearsal, then start the new image against a database restored from the
+previous release's dump.
 
 ## Keeping an eye on it
 
