@@ -4,9 +4,8 @@
   /**
    * Text for a screen reader that the design does not show.
    *
-   * Clipped rather than `display: none` or `visibility: hidden`, both of which
-   * remove it from the accessibility tree as well — which is the opposite of
-   * what this is for.
+   * The clipping itself lives in `display/clipped.css`, so this and the
+   * elements that cannot be wrapped in it share one definition.
    */
   interface Props {
     children: Snippet;
@@ -15,18 +14,4 @@
   let { children }: Props = $props();
 </script>
 
-<span class="hidden">{@render children()}</span>
-
-<style>
-  .hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
-  }
-</style>
+<span class="ds-clipped">{@render children()}</span>

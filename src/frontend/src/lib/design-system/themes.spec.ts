@@ -26,6 +26,7 @@ const forNonText = 3;
  * possible pair would be false confidence and would block reasonable palettes.
  */
 const requiredContrast = [
+  { foreground: '--text-on-feature', background: '--surface-feature', minimum: forText },
   { foreground: '--text', background: '--surface', minimum: forText },
   { foreground: '--text', background: '--surface-raised', minimum: forText },
   { foreground: '--text', background: '--surface-sunken', minimum: forText },

@@ -77,7 +77,8 @@ sub-resource" pattern, not a verb route: redeeming *creates a redemption*.
 | `tag` | Slug. Repeatable; repeated values are ANDed. |
 | `maxMinutes` | Total time ceiling. "I have 25 minutes." |
 | `ingredient` | Repeatable. Ranks by how many match and how few extras are needed. |
-| `sort` | `-updatedAt` (default), `title`, `totalMinutes`, `-cookCount`, `relevance` (implied when `query` or `ingredient` is present). |
+| `sort` | `-updatedAt` (default), `title`, `totalMinutes`, `-cookCount`, `relevance` (implied when `query` or `ingredient` is present), `cookbookOrder` (only with `cookbookId`, and the default when there is one). |
+| `cookbookId` | Only what is on that cookbook — its rows if somebody fills it, its rules if it fills itself. Every other filter still applies, ANDed. |
 | `cursor`, `limit` | Cursor paging. `limit` default 24, max 100. |
 
 Unknown or duplicated parameters are rejected with `400` by
@@ -116,6 +117,64 @@ rounding (`scaling-rules.md`).
 On write, `PUT /recipes/{id}` accepts the same segment shape and the server
 re-serialises it to tokens — so the token format stays a persistence detail.
 
+## Cookbooks
+
+A cookbook is a household's named shelf of recipes. **It is read as a view of
+the collection, not as a collection of its own**: the recipes on one come back
+from `GET /recipes?cookbookId=…`, which is what gives a cookbook the same
+search, tag filter, time ceiling, ingredient ranking and cursor paging the
+whole library has, with no second implementation of any of them.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/cookbooks?householdId=…` | Wrapped, cursor-paginated, most recently changed first. Each carries `recipeCount` and up to four `coverRecipeIds` for the cover mosaic. |
+| `POST` | `/cookbooks` | `201` + `Location`. Only `householdId` and `name` are required. |
+| `GET` | `/cookbooks/{cookbookId}` | `200` + ETag, `304` on `If-None-Match`. The shelf's own metadata — **not** the recipes on it. |
+| `PATCH` | `/cookbooks/{cookbookId}` | Name and description together. `If-Match` required. |
+| `DELETE` | `/cookbooks/{cookbookId}` | `204`, and `204` again when already gone. **Every recipe that was on it survives.** |
+| `PUT` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Put a recipe on. `204`. `409` on a cookbook that fills itself. |
+| `DELETE` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Take it off. `204`, and `204` when it was never on. `409` on a cookbook that fills itself. |
+| `GET` | `/recipes/{recipeId}/cookbooks` | Which cookbooks contain it. Not paged — a recipe is on a handful of shelves or none. |
+
+`PUT` on the membership rather than `POST` to a collection, because being on a
+shelf is a fact at a known address and not a new thing each time. It is
+therefore **idempotent**: a recipe already on keeps the moment it went on, and
+the cookbook's version is not bumped, so a double tap or a retried request
+neither duplicates nor invalidates a good cached copy.
+
+**An unknown or foreign `cookbookId` on `GET /recipes` is an empty page, not a
+`404`.** The 404-never-403 rule governs resources named in the *path*; this is
+a filter value, and an unknown `tag` slug already behaves the same way. The
+cookbook's own page reads `GET /cookbooks/{id}` for its header, and that does
+answer `404`.
+
+### Cookbooks that fill themselves
+
+Send `rules` on `POST /cookbooks` — `{ tags, ingredients, maxMinutes }`, at
+least one of them — and the cookbook holds whatever matches, worked out whenever
+it is read. Omit `rules` for one you fill yourself. A cookbook is one or the
+other, chosen at creation and never changed; `PATCH` may edit a smart
+cookbook's rules but may not give a manual one any, and hand-adding to a smart
+one is `409 cookbooks.rules_decide_membership`.
+
+**Nothing records what matches.** That is what makes "a recipe written this
+evening is on the right shelf already" true rather than eventually true: there
+is no sync to run, no backfill when a rule changes, and no stored membership
+that can disagree with the recipes. It is also why a smart cookbook's
+`recipeCount` and cover come back from evaluating the rules, and why
+`sort=cookbookOrder` falls back on one — it was never put in an order.
+
+Every rule must hold, and each is the clause `GET /recipes` already applies, so
+a shelf and the filter bar cannot disagree about the same words. The exception
+worth knowing: an ingredient **rule excludes**, where the `ingredient` search
+parameter ranks.
+
+**Adding a whole cookbook to the shopping list is not an endpoint.** The client
+sends one `POST /households/{id}/shopping-list/recipes` per recipe, exactly as
+the meal plan does, because a second path that merged many at once would be a
+second place for merging to behave differently — and merging is the entire
+value of the list.
+
 ## Cooking
 
 | Method | Path | Notes |
@@ -148,7 +207,7 @@ body: it generates a clean client and stays greppable.
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| `GET` | `/tags?householdId=…` | With usage counts, for the filter bar. |
+| `GET` | `/tags?householdId=…` | With usage counts, most used first. Not paged. Feeds the filter bar and the smart-cookbook rule editor. |
 | `GET` | `/settings/registration` | Instance settings. Admin only. |
 | `PUT` | `/settings/registration` | `openRegistration`, `requireInvitation`, `maxUsers`. |
 

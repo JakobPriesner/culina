@@ -118,7 +118,21 @@ public sealed record ArchivedIngredient(decimal? Quantity, string? Unit, string 
 /// <summary>One step.</summary>
 /// <param name="Segments">Its text, split into words and ingredient references.</param>
 /// <param name="DurationSeconds">How long it takes, when it waits.</param>
-public sealed record ArchivedStep(IReadOnlyList<ArchivedSegment> Segments, int? DurationSeconds);
+/// <param name="Uses">
+/// Everything the step needs, as positions in the recipe's ingredients read in
+/// order — the same positions <see cref="ArchivedSegment"/> uses, and for the
+/// same reason.
+/// </param>
+/// <remarks>
+/// <c>Uses</c> has a default because an archive written before per-step
+/// ingredients existed simply omits it, and such a file must still restore. For
+/// the same reason it did not warrant a new format version: a reader that does
+/// not know the field ignores it, and one that does gets null.
+/// </remarks>
+public sealed record ArchivedStep(
+    IReadOnlyList<ArchivedSegment> Segments,
+    int? DurationSeconds,
+    IReadOnlyList<int>? Uses = null);
 
 /// <summary>
 /// A piece of a step.

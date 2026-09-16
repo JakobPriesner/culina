@@ -47,6 +47,7 @@
 <style>
   .card {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
     width: 100%;
@@ -59,7 +60,9 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    flex: 1;
+    flex: 1 1 10rem;
+    flex-wrap: wrap;
+    min-height: var(--control-sm);
     min-width: 0;
     color: inherit;
     text-decoration: none;
@@ -74,26 +77,26 @@
   }
 
   .words {
+    flex: 1 1 8rem;
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
 
-  /* Two lines, not one with an ellipsis. Seven columns leave a card about a
-     hundred and seventy pixels wide, and "Zitronen…" and "Zitronen…" are two
-     recipes nobody can tell apart. */
+  /* A narrow day gives the title its own row. Keep the whole name readable
+     so similar recipes remain distinguishable in the seven-day view. */
   .name {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
+    display: block;
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     line-height: var(--leading-tight);
     /* A long unbroken word would otherwise push out of the card rather than
        wrap inside it, and a column this narrow meets one eventually. */
     overflow-wrap: anywhere;
+  }
+
+  .card :global(> button) {
+    margin-inline-start: auto;
   }
 
   .meta {

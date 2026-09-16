@@ -5,7 +5,6 @@ namespace Domain.UnitTests.Shared;
 public class ResultCompositionTests
 {
     private static readonly Error First = new("tests.first", "First.", ErrorType.Validation);
-    private static readonly Error NotFound = new("tests.absent", "Absent.", ErrorType.NotFound);
 
     [Fact]
     public void Map_ShouldTransformTheValue_WhenTheResultIsSuccessful()
@@ -55,32 +54,6 @@ public class ResultCompositionTests
     }
 
     [Fact]
-    public void Ensure_ShouldFail_WhenThePredicateRejectsTheValue()
-    {
-        // Arrange
-        var result = Result<int>.Success(3);
-
-        // Act
-        var guarded = result.Ensure(value => value > 10, First);
-
-        // Assert
-        Assert.Equal(First.Code, guarded.Match(_ => string.Empty, error => error.Code));
-    }
-
-    [Fact]
-    public void Ensure_ShouldPassTheValueThrough_WhenThePredicateAcceptsIt()
-    {
-        // Arrange
-        var result = Result<int>.Success(30);
-
-        // Act
-        var guarded = result.Ensure(value => value > 10, First);
-
-        // Assert
-        Assert.Equal(30, guarded.Match(value => value, _ => -1));
-    }
-
-    [Fact]
     public void Tap_ShouldRunTheSideEffectAndKeepTheValue_WhenSuccessful()
     {
         // Arrange
@@ -92,31 +65,5 @@ public class ResultCompositionTests
         // Assert
         Assert.Equal(7, seen);
         Assert.Equal(7, tapped.Match(value => value, _ => -1));
-    }
-
-    [Fact]
-    public void ToResult_ShouldFailWithTheGivenError_WhenTheReferenceIsAbsent()
-    {
-        // Arrange
-        string? absent = null;
-
-        // Act
-        var result = absent.ToResult(NotFound);
-
-        // Assert
-        Assert.Equal(NotFound.Code, result.Match(value => value, error => error.Code));
-    }
-
-    [Fact]
-    public void ToResult_ShouldSucceed_WhenTheValueTypeIsPresent()
-    {
-        // Arrange
-        int? present = 5;
-
-        // Act
-        var result = present.ToResult(NotFound);
-
-        // Assert
-        Assert.Equal(5, result.Match(value => value, _ => -1));
     }
 }

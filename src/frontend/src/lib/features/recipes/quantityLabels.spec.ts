@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { formatQuantity } from './formatQuantity';
-import { quantityLabels } from './quantityLabels';
+import { quantityLabels, unitFor, unitLabel } from './quantityLabels';
 import { scaleQuantity } from './scaling';
 import { builtInUnits } from './units';
 
@@ -48,5 +48,37 @@ describe('the shared quantity labels', () => {
     // It has no translation and no abbreviation — it is its own label, and
     // anything else would be the app renaming somebody's kitchen.
     expect(show(2, 'Schuss')).toBe('2\u00a0Schuss');
+  });
+});
+
+describe('the words a unit picker shows', () => {
+  it('gives every unit a word, including the ones an amount leaves bare', () => {
+    // `piece` and `clove` contribute nothing beside a number, because the
+    // ingredient carries them — "3 garlic cloves". A list of units to pick from
+    // has no ingredient to lean on, so a blank row there is an unpickable row.
+    for (const unit of builtInUnits) {
+      expect(unitLabel(unit)).not.toBe('');
+    }
+  });
+
+  it('reads its own words back as the units they name', () => {
+    // The picker shows words and the recipe stores codes, so the trip has to
+    // survive both ways: somebody choosing "Zehe" has chosen `clove`, and
+    // storing the German would make one unit into two the moment an English
+    // speaker opened the recipe. Asserted over every unit rather than a sample,
+    // because it is the whole table that has to hold.
+    for (const unit of builtInUnits) {
+      expect(unitFor(unitLabel(unit))).toBe(unit);
+    }
+  });
+
+  it('takes the code itself, for somebody who simply types "tbsp"', () => {
+    expect(unitFor('tbsp')).toBe('tbsp');
+    expect(unitFor('  KG ')).toBe('kg');
+  });
+
+  it('leaves a word it does not know alone, which is how a unit is invented', () => {
+    expect(unitFor('Schuss')).toBe('Schuss');
+    expect(unitLabel('Schuss')).toBe('Schuss');
   });
 });

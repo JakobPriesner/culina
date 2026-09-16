@@ -1,16 +1,24 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, Field, TextInput } from '$ds';
+  import { http, request } from '$api';
+  import { Button, Card, Field, TextInput } from '$ds';
   import FormFailure from '$features/auth/FormFailure.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
+  import {
+    forgetLastDraft,
+    recallLastDraft,
+    rememberLastDraft,
+    type LastDraft
+  } from '$features/recipes/editor/lastDraft';
   import PasteImport from '$features/recipes/editor/PasteImport.svelte';
   import type { ParsedRecipe } from '$features/recipes/editor/parseRecipeText';
+  import { toRecipe } from '$features/recipes/mappers';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   /**
    * Starting a recipe asks for one thing.
@@ -24,6 +32,59 @@
   const submission = createSubmission();
 
   onDestroy(() => submission.dispose());
+
+  /**
+   * A recipe already started here, still nothing but its title.
+   *
+   * Set once, on mount: this page is about starting something, not about
+   * watching a draft change underneath the form while it is open.
+   */
+  let continuing = $state<LastDraft | null>(null);
+
+  onMount(() => {
+    void checkForUnfinishedDraft();
+  });
+
+  async function checkForUnfinishedDraft() {
+    const userId = session.user?.userId;
+    const householdId = session.activeHouseholdId;
+
+    if (!userId || !householdId) {
+      return;
+    }
+
+    const kept = recallLastDraft(userId, householdId);
+
+    if (!kept) {
+      return;
+    }
+
+    const result = await request(() =>
+      http.GET('/api/v1/recipes/{recipeId}', { params: { path: { recipeId: kept.recipeId } } })
+    );
+
+    if (!result.ok) {
+      // Gone, or no longer this household's to see. Either way, not worth
+      // offering back.
+      if (result.error.status === 404) {
+        forgetLastDraft(userId, householdId);
+      }
+
+      return;
+    }
+
+    const recipe = toRecipe(result.value);
+    const stillEmpty =
+      recipe.groups.every((group) => group.ingredients.length === 0) && recipe.steps.length === 0;
+
+    if (stillEmpty) {
+      continuing = { recipeId: recipe.id, title: recipe.title };
+    } else {
+      // It has ingredients or steps now — started elsewhere, or finished here
+      // and simply revisited. Either way, creation is no longer unfinished.
+      forgetLastDraft(userId, householdId);
+    }
+  }
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -85,12 +146,19 @@
         steps: pasted.steps.map((text) => ({
           id: null,
           segments: [{ kind: 'text' as const, text }],
+          uses: [],
           durationSeconds: null
         }))
       });
     });
 
     if (ok && created) {
+      const userId = session.user?.userId;
+
+      if (userId) {
+        rememberLastDraft(userId, householdId, created, named || m['import.paste.untitled']());
+      }
+
       await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: created }));
     }
   }
@@ -98,45 +166,69 @@
 
 <svelte:head><title>{m['editor.new']()}</title></svelte:head>
 
-<Page>
-  <form class="form" onsubmit={submit} novalidate>
-    <h1 class="heading">{m['editor.new']()}</h1>
-
-    <FormFailure failure={submission.failure} />
-
-    <Field label={m['editor.title']()} hint={m['editor.titleHint']()}>
-      {#snippet children({ id, describedBy, invalid })}
-        <TextInput {id} {describedBy} {invalid} bind:value={title} />
-      {/snippet}
-    </Field>
-
-    <div>
-      <Button type="submit" variant="primary" size="lg" loading={submission.showingProgress}>
-        {m['editor.create']()}
-      </Button>
-    </div>
-
-    {#if session.activeHouseholdId}
-      <PasteImport
-        householdId={session.activeHouseholdId}
-        busy={submission.showingProgress}
-        onimport={(parsed) => void start(title.trim() || parsed.title, parsed)}
-      />
+<Page width="reading">
+  <div class="stack">
+    {#if continuing}
+      <Card href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: continuing.recipeId })}>
+        <p class="continueLabel">{m['editor.continueDraftLabel']()}</p>
+        <p class="continueTitle">{continuing.title}</p>
+      </Card>
     {/if}
-  </form>
+
+    <form class="form" onsubmit={submit} novalidate>
+      <h1 class="heading">{continuing ? m['editor.newAnother']() : m['editor.new']()}</h1>
+
+      <FormFailure failure={submission.failure} />
+
+      <Field label={m['editor.title']()} hint={m['editor.titleHint']()}>
+        {#snippet children({ id, describedBy, invalid })}
+          <TextInput {id} {describedBy} {invalid} bind:value={title} />
+        {/snippet}
+      </Field>
+
+      <div>
+        <Button type="submit" variant="primary" size="lg" loading={submission.showingProgress}>
+          {m['editor.create']()}
+        </Button>
+      </div>
+
+      {#if session.activeHouseholdId}
+        <PasteImport
+          householdId={session.activeHouseholdId}
+          busy={submission.showingProgress}
+          onimport={(parsed) => void start(title.trim() || parsed.title, parsed)}
+        />
+      {/if}
+    </form>
+  </div>
 </Page>
 
 <style>
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
   .form {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-    max-width: 32rem;
   }
 
   .heading {
     font-family: var(--font-editorial);
     font-size: var(--text-2xl);
     font-weight: var(--weight-regular);
+  }
+
+  .continueLabel {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+
+  .continueTitle {
+    font-family: var(--font-editorial);
+    font-size: var(--text-xl);
   }
 </style>

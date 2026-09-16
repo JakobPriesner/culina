@@ -98,7 +98,103 @@ public class RecipeTests
 
         // Assert
         result.ShouldBeSuccess();
-        Assert.Equal([butter.Id], recipe.Steps[0].ReferencedIngredients);
+        Assert.Equal([butter.Id], recipe.Steps[0].Uses);
+    }
+
+    [Fact]
+    public void Step_ShouldNeedAnIngredientItsWordsName_EvenWhenTheCallerDidNotListIt()
+    {
+        // Arrange
+        var butter = AnIngredient("butter");
+
+        // Act
+        var step = AStep(0, [new TextSegment("Melt "), new IngredientSegment(butter.Id)]);
+
+        // Assert
+        // The words and the list can never disagree, because the words are
+        // folded into the list where the step is made.
+        Assert.Equal([butter.Id], step.Uses);
+    }
+
+    [Fact]
+    public void Step_ShouldNeedAnIngredientItsWordsDoNotName()
+    {
+        // Arrange
+        var flour = AnIngredient("flour");
+
+        // Act
+        // "Combine everything and knead" needs flour and never says so.
+        var step = AStep(0, [new TextSegment("Combine everything and knead.")], flour.Id);
+
+        // Assert
+        Assert.Equal([flour.Id], step.Uses);
+    }
+
+    [Fact]
+    public void Step_ShouldCollapseAnIngredientListedTwice()
+    {
+        // Arrange
+        var butter = AnIngredient("butter");
+
+        // Act
+        var step = AStep(
+            0,
+            [new TextSegment("Melt "), new IngredientSegment(butter.Id)],
+            butter.Id,
+            butter.Id);
+
+        // Assert
+        // Saying it twice means what saying it once means.
+        Assert.Equal([butter.Id], step.Uses);
+    }
+
+    [Fact]
+    public void Step_ShouldRejectMoreIngredientsThanARecipeCouldHave()
+    {
+        // Arrange
+        var tooMany = Enumerable.Range(0, Recipe.MaxIngredients + 1)
+            .Select(_ => Guid.CreateVersion7())
+            .ToArray();
+
+        // Act
+        var result = Step.Create(null, 0, [new TextSegment("Combine.")], tooMany, null);
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.TooManyIngredients);
+    }
+
+    [Fact]
+    public void SetContents_ShouldRejectAStepThatNeedsAnIngredientThisRecipeNeverHad()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var step = AStep(0, [new TextSegment("Combine.")], Guid.CreateVersion7());
+
+        // Act
+        var result = recipe.SetContents([AGroup()], [step], Now);
+
+        // Assert
+        // Listing an ingredient is checked exactly as naming one is: both end up
+        // in the same set, and the set is what the reference index is built from.
+        result.ShouldBeFailure(RecipeErrors.UnknownIngredientReference);
+    }
+
+    [Fact]
+    public void SetContents_ShouldNameTheStep_WhenAnIngredientItOnlyListedWasRemoved()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var flour = AnIngredient("flour");
+        var step = AStep(1, [new TextSegment("Combine everything and knead.")], flour.Id);
+        recipe.SetContents([AGroup(flour)], [AStep(0, [new TextSegment("Preheat.")]), step], Now)
+            .ShouldBeSuccess();
+
+        // Act
+        var result = recipe.SetContents([AGroup()], [AStep(0, [new TextSegment("Preheat.")]), step], Now);
+
+        // Assert
+        // There is no mention to point at, so the message has to name the step.
+        result.ShouldBeFailure(RecipeErrors.IngredientInUse(2));
     }
 
     [Fact]
@@ -165,6 +261,40 @@ public class RecipeTests
     }
 
     [Fact]
+    public void SetContents_ShouldRefuse_WhenTwoLinesClaimTheSameIngredientId()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var shared = CulinaId.New();
+
+        // Act
+        var result = recipe.SetContents(
+            [AGroup(AnIngredient("butter", shared), AnIngredient("flour", shared))],
+            [],
+            Now);
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.DuplicateIngredient);
+    }
+
+    [Fact]
+    public void SetContents_ShouldCountLinesRatherThanIds_WhenCappingIngredients()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var many = Enumerable.Range(0, Recipe.MaxIngredients)
+            .Select(index => AnIngredient($"thing {index}"))
+            .ToList();
+
+        // Act
+        var result = recipe.SetContents([AGroup([.. many])], [], Now);
+
+        // Assert
+        result.ShouldBeSuccess();
+        Assert.Equal(Recipe.MaxIngredients, recipe.Ingredients.Count());
+    }
+
+    [Fact]
     public void SetContents_ShouldRefuse_WhenThereAreMoreStepsThanAnyoneCouldFollow()
     {
         // Arrange
@@ -184,7 +314,7 @@ public class RecipeTests
     public void Step_ShouldRejectAnImplausibleTimer()
     {
         // Arrange & Act
-        var result = Step.Create(null, 0, [new TextSegment("Rest.")], durationSeconds: 90_000);
+        var result = Step.Create(null, 0, [new TextSegment("Rest.")], [], durationSeconds: 90_000);
 
         // Assert
         result.ShouldBeFailure(RecipeErrors.InvalidDuration);
@@ -218,12 +348,12 @@ public class RecipeTests
         cook,
         Tags: []);
 
-    private static RecipeIngredient AnIngredient(string name) =>
-        RecipeIngredient.Create(null, 0, Quantity.Unmeasured, name, null).ShouldBeSuccess();
+    private static RecipeIngredient AnIngredient(string name, Guid? id = null) =>
+        RecipeIngredient.Create(id, 0, Quantity.Unmeasured, name, null).ShouldBeSuccess();
 
     private static IngredientGroup AGroup(params RecipeIngredient[] ingredients) =>
         IngredientGroup.Create(null, null, 0, ingredients).ShouldBeSuccess();
 
-    private static Step AStep(int sortOrder, StepSegment[] segments) =>
-        Step.Create(null, sortOrder, segments, null).ShouldBeSuccess();
+    private static Step AStep(int sortOrder, StepSegment[] segments, params Guid[] uses) =>
+        Step.Create(null, sortOrder, segments, uses, null).ShouldBeSuccess();
 }

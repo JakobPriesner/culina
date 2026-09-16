@@ -17,6 +17,15 @@ export interface RecipeFilters {
   /** Ask what can be cooked from these. Ranked by fit, not filtered. */
   readonly ingredients?: readonly string[];
   readonly maxMinutes?: number;
+  /**
+   * Read inside one cookbook.
+   *
+   * A cookbook is a view of the collection rather than a second one, so it is
+   * a filter here like any other — which is what lets the cookbook page render
+   * the same grid, with the same search and the same paging, and own none of
+   * it.
+   */
+  readonly cookbookId?: string;
   readonly sort?: 'recent' | 'title' | 'quickest' | 'match';
 }
 
@@ -335,6 +344,7 @@ class RecipeStore {
             tag: filters.tags?.length ? [...filters.tags] : undefined,
             ingredient: filters.ingredients?.length ? [...filters.ingredients] : undefined,
             maxMinutes: filters.maxMinutes,
+            cookbookId: filters.cookbookId,
             sort: filters.sort,
             cursor: cursor ?? undefined,
             limit: pageSize
@@ -402,7 +412,17 @@ class RecipeStore {
   }
 }
 
-export const recipes = new RecipeStore();
+/**
+ * A list of recipes nobody else is sharing.
+ *
+ * More than one can be on screen at once: the cookbook page draws a shelf while
+ * the picker above it searches everything, and a single shared store would mean
+ * each kept replacing the other's contents.
+ */
+export const createRecipeStore = (): RecipeStore => new RecipeStore();
+
+/** The one the collection and the recipe pages read from. */
+export const recipes = createRecipeStore();
 
 export const changedElsewhere = RecipeStore.changedElsewhere;
 

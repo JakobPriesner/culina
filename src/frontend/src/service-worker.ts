@@ -201,6 +201,10 @@ const readable = [
   // Never cached as a failure: a 401 is not `ok`, so an expired session is
   // still an expired session the moment the network comes back.
   one(/^\/api\/v1\/users\/me$/, 'network-first')
+  // Deliberately not `/api/v1/cookbooks`. What a cookbook promises offline is
+  // the recipes on it, and those are the `/recipes` rule above — a cookbook's
+  // own name and cover are chrome, and caching them would widen the offline
+  // surface past anything that was promised.
 ];
 
 function policyFor(url: URL): CachePolicy | null {

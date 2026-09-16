@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Infrastructure.Persistence.Cookbooks;
 
 namespace Infrastructure.Persistence.Recipes;
 
@@ -28,6 +29,8 @@ internal sealed record RecipeSearchRowData
     public int IngredientCount { get; init; }
 
     public int TotalCount { get; init; }
+
+    public DateTimeOffset? AddedToCookbookAt { get; init; }
 }
 
 /// <summary>
@@ -53,7 +56,7 @@ internal sealed class RecipeSearcher(DbExecutor executor)
     /// <summary>A hard ceiling, enforced here and not only in the endpoint.</summary>
     internal const int MaxLimit = 100;
 
-    private const string Projection = """
+    private static readonly string Projection = $$"""
         select
             r.id,
             r.title,
@@ -82,7 +85,9 @@ internal sealed class RecipeSearcher(DbExecutor executor)
                  select 1 from recipe_ingredients ri
                  join ingredient_groups g on g.id = ri.group_id
                  where g.recipe_id = r.id and ri.name ilike '%' || wanted || '%'))
-                as matched_ingredients
+                as matched_ingredients,
+            (select cr.added_at from cookbook_recipes cr
+             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as added_to_cookbook_at
         from recipes r
         where r.household_id = @householdId
           and (@query is null or (
@@ -96,6 +101,19 @@ internal sealed class RecipeSearcher(DbExecutor executor)
                 select count(distinct t.slug) from recipe_tags rt
                 join tags t on t.id = rt.tag_id
                 where rt.recipe_id = r.id and t.slug = any(@tags::text[])) = @tagCount)
+          -- A shelf is a filter over the collection, not a second collection.
+          -- Everything else here — the search, the tags, the time ceiling, the
+          -- ingredient ranking — therefore works inside a cookbook for free,
+          -- and a cookbook belonging to another household matches nothing
+          -- because the household predicate above has already applied.
+          and (@cookbookId is null or exists (
+                select 1 from cookbook_recipes cr
+                where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id))
+          -- A shelf that fills itself, asked here rather than remembered
+          -- anywhere: this is the whole of "a new recipe appears on it by
+          -- itself". The rules live in SmartShelfSql because the cookbook card
+          -- counts the same recipes this lists, and the two must not drift.
+          and {{SmartShelfSql.Matches("@ruleTags::text[]", "@ruleIngredients::text[]", "@ruleMaxMinutes")}}
           -- A recipe with no stated time is excluded by a time filter rather
           -- than treated as taking zero minutes. "I have 25 minutes" asks for
           -- recipes known to fit, and an unknown time is not an answer.
@@ -141,21 +159,33 @@ internal sealed class RecipeSearcher(DbExecutor executor)
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
 
-    private static object Parameters(RecipeSearch search, RecipeCursor? cursor) => new
+    private static object Parameters(RecipeSearch search, RecipeCursor? cursor)
     {
-        householdId = search.HouseholdId,
-        userId = search.UserId,
-        query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim(),
-        queryLike = $"%{search.Query?.Trim()}%",
-        tags = search.Tags.ToArray(),
-        tagCount = search.Tags.Count,
-        ingredients = search.Ingredients.ToArray(),
-        maxMinutes = search.MaxMinutes,
-        cursorId = cursor?.Id ?? Guid.Empty,
-        k0 = KeyAt(cursor, 0),
-        k1 = KeyAt(cursor, 1),
-        k2 = KeyAt(cursor, 2)
-    };
+        // Counted after de-duplication, because the clause compares this to a
+        // count of distinct slugs: ?tag=quick&tag=quick would otherwise ask for
+        // two of a tag a recipe can only carry once, and match nothing.
+        var tags = search.Tags.Distinct(StringComparer.Ordinal).ToArray();
+
+        return new
+        {
+            householdId = search.HouseholdId,
+            userId = search.UserId,
+            query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim(),
+            queryLike = $"%{search.Query?.Trim()}%",
+            tags,
+            tagCount = tags.Length,
+            ingredients = search.Ingredients.ToArray(),
+            maxMinutes = search.MaxMinutes,
+            cookbookId = search.CookbookId,
+            ruleTags = search.Rules?.Tags.Distinct(StringComparer.Ordinal).ToArray() ?? [],
+            ruleIngredients = search.Rules?.Ingredients.ToArray() ?? [],
+            ruleMaxMinutes = search.Rules?.MaxMinutes,
+            cursorId = cursor?.Id ?? Guid.Empty,
+            k0 = KeyAt(cursor, 0),
+            k1 = KeyAt(cursor, 1),
+            k2 = KeyAt(cursor, 2)
+        };
+    }
 
     private static string KeyAt(RecipeCursor? cursor, int index) =>
         cursor is not null && index < cursor.Keys.Count ? cursor.Keys[index] : string.Empty;
@@ -179,5 +209,6 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         data.CookCount,
         data.UpdatedAt,
         data.MatchedIngredients,
-        data.IngredientCount);
+        data.IngredientCount,
+        data.AddedToCookbookAt);
 }

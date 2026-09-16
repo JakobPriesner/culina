@@ -16,6 +16,14 @@ import { session } from '$features/auth/session.svelte';
 export const load = async ({ url }) => {
   await session.resolve();
 
+  // "We could not ask" is not "you are not signed in". A timeout, a dropped
+  // connection or a backend that is still starting up must never cost somebody
+  // a session that is perfectly valid — the layout offers to try again, and the
+  // cookie is still in the jar when they do.
+  if (session.status === 'unavailable') {
+    return;
+  }
+
   if (session.status !== 'authenticated') {
     redirect(307, loginUrlFor(url));
   }

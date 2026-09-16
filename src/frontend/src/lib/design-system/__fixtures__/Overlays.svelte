@@ -38,7 +38,7 @@
 
   <Popover>
     {#snippet trigger({ popovertarget })}
-      <Button {...{ popovertarget }}>More</Button>
+      <Button {popovertarget}>More</Button>
     {/snippet}
     <Button variant="ghost">Duplicate</Button>
   </Popover>

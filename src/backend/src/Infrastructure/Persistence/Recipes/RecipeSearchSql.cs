@@ -22,6 +22,9 @@ internal static class RecipeSearchSql
         RecipeSort.ShortestFirst => "total_minutes asc nulls last, id asc",
         RecipeSort.MostCooked => "cook_count desc, id desc",
         RecipeSort.Relevance => "matched_ingredients desc, extra_ingredients asc, updated_at desc, id desc",
+        // Oldest first: a cookbook reads like a table of contents, and the
+        // order somebody built it in is the order they meant.
+        RecipeSort.CookbookOrder => "added_to_cookbook_at asc, id asc",
         _ => "updated_at desc, id desc"
     };
 
@@ -38,6 +41,8 @@ internal static class RecipeSearchSql
         RecipeSort.Relevance =>
             "(matched_ingredients, -extra_ingredients, updated_at, id) "
             + "< (cast(@k0 as int), -cast(@k1 as int), cast(@k2 as timestamptz), @cursorId)",
+        RecipeSort.CookbookOrder =>
+            "(added_to_cookbook_at, id) > (cast(@k0 as timestamptz), @cursorId)",
         _ => "(updated_at, id) < (cast(@k0 as timestamptz), @cursorId)"
     };
 
@@ -53,6 +58,7 @@ internal static class RecipeSearchSql
             RecipeCursor.Key(row.IngredientCount - row.MatchedIngredients),
             RecipeCursor.Key(row.UpdatedAt)
         ],
+        RecipeSort.CookbookOrder => [RecipeCursor.Key(row.AddedToCookbookAt ?? row.UpdatedAt)],
         _ => [RecipeCursor.Key(row.UpdatedAt)]
     };
 }

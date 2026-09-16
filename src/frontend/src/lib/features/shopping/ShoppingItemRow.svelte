@@ -40,24 +40,39 @@
     onchange={(isChecked) => oncheck(isChecked)}
   />
 
+  <!-- Beside the name rather than flushed to the far edge. Ranged right across
+       a column this wide, "Zucchini" and "3" end up an inch apart with nothing
+       between them, and the eye has to travel the gap for every line. Read as
+       a phrase — "cherry tomatoes, 250 g" — it is one glance. -->
   {#if amount}
     <span class="amount">{amount}</span>
   {/if}
 
-  <IconButton label={m['shopping.remove']({ name: item.name })} size="sm" onclick={onremove}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-    </svg>
-  </IconButton>
+  <span class="remove">
+    <IconButton label={m['shopping.remove']({ name: item.name })} size="sm" onclick={onremove}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+      </svg>
+    </IconButton>
+  </span>
 </li>
 
 <style>
   .row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-3);
-    padding-block: var(--space-1);
+    /* Bled out to the gutter and back so the hover lands on the whole line
+       rather than on the words: the line is the target, not the text. */
+    margin-inline: calc(var(--space-3) * -1);
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-md);
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .row:hover {
+    background: var(--surface-hover);
   }
 
   /* Struck through and dimmed rather than removed: seeing what is already in
@@ -68,7 +83,34 @@
   }
 
   .amount {
+    justify-self: start;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+  }
+
+  .bought .amount {
+    color: inherit;
+  }
+
+  /* Held back until the line is reached. A column of crosses down the edge of
+     a list reads as the thing to press, and it is the one action here that
+     cannot be undone. */
+  .remove {
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .row:hover .remove,
+  .remove:focus-within {
+    opacity: 1;
+  }
+
+  /* A finger has no hover, so on touch there is nothing to reveal it with. */
+  @media (hover: none) {
+    .remove {
+      opacity: 1;
+    }
   }
 </style>

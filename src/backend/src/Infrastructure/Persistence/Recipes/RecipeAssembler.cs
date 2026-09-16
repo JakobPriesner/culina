@@ -4,7 +4,7 @@ using Domain.Shared;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>
-/// Rebuilds a recipe aggregate from the five result sets that make it up.
+/// Rebuilds a recipe aggregate from the six result sets that make it up.
 /// </summary>
 /// <remarks>
 /// A row that no longer parses is a defect in the data, not an expected
@@ -18,9 +18,18 @@ internal static class RecipeAssembler
         IReadOnlyList<IngredientGroupRow> groupRows,
         IReadOnlyList<RecipeIngredientRow> ingredientRows,
         IReadOnlyList<StepRow> stepRows,
+        IReadOnlyList<StepIngredientRefRow> useRows,
         IReadOnlyList<string> tagSlugs,
         RecipeRow row)
     {
+        var uses = useRows
+            .GroupBy(reference => reference.StepId)
+            .ToDictionary(
+                step => step.Key,
+                step => (IReadOnlyCollection<Guid>)[
+                    .. step.Select(reference => reference.RecipeIngredientId)
+                ]);
+
         var recipe = Recipe.Restore(
             row.Id,
             row.HouseholdId,
@@ -41,10 +50,15 @@ internal static class RecipeAssembler
                 tagSlugs),
             row.UpdatedAt);
 
-        recipe.SetContents(
-            [.. groupRows.Select(group => ToGroup(group, ingredientRows))],
-            [.. stepRows.Select(ToStep)],
-            row.UpdatedAt);
+        // Unlike the other two, this one can fail on values that were valid
+        // when they were written — a step's needs are checked against the
+        // ingredient list, and the two are read from separate tables.
+        Expect(
+            recipe.SetContents(
+                [.. groupRows.Select(group => ToGroup(group, ingredientRows))],
+                [.. stepRows.Select(step => ToStep(step, uses))],
+                row.UpdatedAt),
+            "contents");
 
         recipe.SetImage(row.ImageId, row.UpdatedAt);
         recipe.AcceptVersion(row.Version);
@@ -73,14 +87,23 @@ internal static class RecipeAssembler
                 row.Note),
             "ingredient");
 
-    private static Step ToStep(StepRow row) =>
+    private static Step ToStep(
+        StepRow row,
+        IReadOnlyDictionary<Guid, IReadOnlyCollection<Guid>> uses) =>
         Unwrap(
             Step.Create(
                 row.Id,
                 row.SortOrder,
                 Unwrap(StepText.Parse(row.Body), "step text"),
+                uses.GetValueOrDefault(row.Id, []),
                 row.DurationSeconds),
             "step");
+
+    private static void Expect(Result result, string what) =>
+        result.Match(
+            () => { },
+            error => throw new InvalidOperationException(
+                $"Stored {what} is not valid ({error.Code}). The rows are corrupt."));
 
     private static TValue Unwrap<TValue>(Result<TValue> result, string what)
         where TValue : notnull =>

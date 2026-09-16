@@ -31,7 +31,8 @@ internal sealed class SameOriginMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(cookies);
         ArgumentNullException.ThrowIfNull(logger);
 
-        if (IsSafe(context.Request.Method) || !CarriesSessionCookie(context.Request, cookies))
+        if (SafeMethods.Includes(context.Request.Method)
+            || !CarriesSessionCookie(context.Request, cookies))
         {
             return next(context);
         }
@@ -46,13 +47,6 @@ internal sealed class SameOriginMiddleware(RequestDelegate next)
 
         return CustomResults.WriteProblemAsync(context, RequestErrors.ForeignOrigin);
     }
-
-    /// <summary>
-    /// Safe methods are exempt, which is only sound because no <c>GET</c>
-    /// endpoint in Culina changes state.
-    /// </summary>
-    private static bool IsSafe(string method) =>
-        HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
 
     /// <summary>
     /// Asked of the same source the cookie is written from.

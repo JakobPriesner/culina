@@ -8,6 +8,7 @@
   import IngredientEditor from '$features/recipes/editor/IngredientEditor.svelte';
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
+  import { withoutIngredients } from '$features/recipes/editor/stepUsage';
   import { ErrorCodes, type AppError } from '$api';
   import { forget, recall, remember } from '$features/recipes/editor/journal';
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
@@ -158,8 +159,20 @@
    */
   const firstGroup = $derived(draft?.groups[0]?.ingredients ?? []);
 
-  const setIngredients = (ingredients: Ingredient[]) =>
-    change({ groups: [{ id: draft?.groups[0]?.id ?? null, name: null, ingredients }] });
+  function setIngredients(ingredients: Ingredient[]) {
+    const kept = new Set(ingredients.map((one) => one.id));
+    const gone = new Set(firstGroup.filter((one) => !kept.has(one.id)).map((one) => one.id));
+
+    // A deleted line comes off the steps that needed it too. The server refuses
+    // a step needing an ingredient the recipe no longer has, and being told
+    // that on the next autosave is no way to find out you deleted something.
+    // `change` spreads its patch, so an absent key and one set to undefined are
+    // not the same thing — the steps are only named when they have changed.
+    change({
+      groups: [{ id: draft?.groups[0]?.id ?? null, name: null, ingredients }],
+      ...(gone.size > 0 ? { steps: withoutIngredients(draft?.steps ?? [], gone) } : {})
+    });
+  }
 
   /**
    * Adds an ingredient named from inside a step.
@@ -288,7 +301,7 @@
 
 <svelte:head><title>{draft?.title ?? m['editor.new']()}</title></svelte:head>
 
-<Page>
+<Page width="reading">
   {#if draft}
     <!-- Bound once so the snippets below, which are separate closures, can see
          that it is there. -->
@@ -300,7 +313,7 @@
            sentence about the page rather than the field's value. Not shown:
            the field is right there, and printing the title twice above itself
            is how a screen fills up with things nobody asked for. -->
-      <h1 class="visually-hidden">{m['editor.heading']({ title: current.title })}</h1>
+      <h1 class="ds-clipped">{m['editor.heading']({ title: current.title })}</h1>
 
       <a class="back" href={resolve('/(app)/recipes/[recipeId]', { recipeId })}>
         ← {m['editor.done']()}
@@ -402,6 +415,7 @@
 
         <IngredientEditor
           ingredients={firstGroup}
+          steps={current.steps}
           onchange={setIngredients}
           householdId={current.householdId}
           language={current.language}
@@ -425,6 +439,7 @@
 <style>
   .head {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-4);
@@ -435,20 +450,6 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     text-decoration: none;
-  }
-
-  /* Read aloud, never drawn. The clip-path pair is the one that survives every
-     browser's idea of what a zero-sized element means. */
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
   }
 
   .conflict {
@@ -466,12 +467,11 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
-    max-width: 40rem;
   }
 
   .numbers {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
     gap: var(--space-4);
   }
 

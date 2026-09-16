@@ -14,7 +14,7 @@
 <div class="frame">
   <header class="header">
     <Brand />
-    <div class="preferences"><LocalePicker /><ThemeToggle /></div>
+    <div class="preferences"><LocalePicker compact /><ThemeToggle /></div>
   </header>
   <main class="main">
     <aside class="story" aria-label={m['auth.story.label']()}>
@@ -37,7 +37,7 @@
     flex-direction: column;
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding-inline: var(--space-8);
+    padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
   }
   .header {
     display: flex;
@@ -53,7 +53,7 @@
   }
   .main {
     display: grid;
-    grid-template-columns: 1.1fr 1fr;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     align-items: center;
     flex: 1;
     gap: var(--space-16);
@@ -61,26 +61,27 @@
   }
   .story {
     align-self: stretch;
-    background: var(--surface-sunken);
+    background: var(--surface-feature);
+    color: var(--text-on-feature);
     border-radius: var(--radius-lg);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
   }
   .story img {
     width: 100%;
-    height: clamp(14rem, 34vh, 24rem);
+    height: clamp(16rem, 42vh, 28rem);
     object-fit: cover;
   }
   .story-copy {
-    padding: var(--space-8);
+    padding: var(--space-8) var(--space-12);
   }
   .eyebrow {
     font-size: var(--text-xs);
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--text-on-feature);
     margin-bottom: var(--space-3);
   }
   h2 {
@@ -90,11 +91,14 @@
     letter-spacing: -0.04em;
   }
   .description {
-    color: var(--text-muted);
+    color: var(--text-on-feature);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
     max-width: 40ch;
     margin-top: var(--space-4);
   }
   .form-side {
+    min-width: 0;
     padding-block: var(--space-8);
   }
   .form-content {
@@ -114,9 +118,9 @@
       padding: var(--space-6);
     }
   }
-  @media (max-width: 47.999rem) {
+  @media (width < 64rem) {
     .frame {
-      padding-inline: var(--space-6);
+      padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
     }
     .header {
       min-height: var(--space-24);
@@ -135,6 +139,7 @@
       display: none;
     }
     .form-side {
+      min-width: 0;
       padding: 0;
     }
     .footer {

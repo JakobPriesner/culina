@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Select } from '$ds';
+
   import { locales, m, type Locale } from './i18n';
   import { preferences } from './preferences.svelte';
 
@@ -14,20 +16,20 @@
   };
 
   const id = 'locale-picker';
+
+  const options = $derived(locales.map((locale) => ({ value: locale, label: names[locale]() })));
 </script>
 
 <div class="field">
-  <label class="label" class:compact for={id}>{m['locale.label']()}</label>
-  <select
+  <label class="label" class:ds-clipped={compact} for={id}>{m['locale.label']()}</label>
+
+  <Select
     {id}
-    class="select"
+    {options}
+    inline
     value={preferences.locale}
-    onchange={(event) => preferences.setLocale(event.currentTarget.value)}
-  >
-    {#each locales as locale (locale)}
-      <option value={locale}>{names[locale]()}</option>
-    {/each}
-  </select>
+    onchange={(value) => preferences.setLocale(value)}
+  />
 </div>
 
 <style>
@@ -40,25 +42,5 @@
   .label {
     color: var(--text-muted);
     font-size: var(--text-sm);
-  }
-
-  .select {
-    min-height: var(--control-sm);
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--text-sm);
-  }
-
-  .label.compact {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 </style>

@@ -33,7 +33,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         Assert.Equal(4m, found.Yield.Amount);
         Assert.Equal(2, found.Ingredients.Count());
         Assert.Equal(2, found.Steps.Count);
-        Assert.Equal([butter.Id], found.Steps[1].ReferencedIngredients);
+        Assert.Equal([butter.Id], found.Steps[1].Uses);
         Assert.Equal(["quick", "weeknight"], found.Tags.Order(StringComparer.Ordinal));
     }
 
@@ -65,7 +65,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             .ShouldBeSuccess();
         recipe.SetContents(
             [IngredientGroup.Create(null, null, 0, [onions]).ShouldBeSuccess()],
-            [Step.Create(null, 0, [new TextSegment("Chop.")], null).ShouldBeSuccess()],
+            [Step.Create(null, 0, [new TextSegment("Chop.")], [], null).ShouldBeSuccess()],
             Now).ShouldBeSuccess();
 
         // Act
@@ -76,10 +76,48 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
         Assert.Equal("onions", Assert.Single(found.Ingredients).Name);
         Assert.Single(found.Steps);
-        // The reference index is rebuilt from the step text, so nothing from
-        // the previous save survives.
+        // The reference index is rebuilt from the step's own needs, so nothing
+        // from the previous save survives.
         var refs = await scope.CountAsync("select count(*) from step_ingredient_refs;");
         Assert.Equal(0, refs);
+    }
+
+    [Fact]
+    public async Task Find_ShouldReadBackAnIngredientAStepNeedsButDoesNotName()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+        var butter = recipe.Ingredients.First();
+        var salt = recipe.Ingredients.Last();
+
+        recipe.SetContents(
+            [.. recipe.Groups],
+            [
+                Step.Create(
+                    null,
+                    0,
+                    [new TextSegment("Melt "), new IngredientSegment(butter.Id), new TextSegment(".")],
+                    [salt.Id],
+                    null).ShouldBeSuccess()
+            ],
+            Now).ShouldBeSuccess();
+
+        (await scope.Recipes.UpdateAsync(recipe, 1, Token)).ShouldBeSuccess();
+
+        // Act
+        var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
+
+        // Assert
+        // The one the sentence names and the one it does not, both stored and
+        // both read back — which is the whole point of the table being read.
+        // Membership, not order: a step's needs are a set, and the order a
+        // reader sees is put on them where the recipe is described.
+        var uses = Assert.Single(found.Steps).Uses;
+
+        Assert.Equal(2, uses.Count);
+        Assert.Contains(butter.Id, uses);
+        Assert.Contains(salt.Id, uses);
     }
 
     [Fact]
@@ -281,11 +319,13 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             recipe.SetContents(
                 [IngredientGroup.Create(null, null, 0, [butter, salt]).ShouldBeSuccess()],
                 [
-                    Step.Create(null, 0, [new TextSegment("Preheat the pan.")], null).ShouldBeSuccess(),
+                    Step.Create(null, 0, [new TextSegment("Preheat the pan.")], [], null)
+                        .ShouldBeSuccess(),
                     Step.Create(
                         null,
                         1,
                         [new TextSegment("Melt "), new IngredientSegment(butter.Id), new TextSegment(".")],
+                        [],
                         300).ShouldBeSuccess()
                 ],
                 Now).ShouldBeSuccess();

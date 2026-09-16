@@ -24,11 +24,6 @@ internal sealed class HttpUserContext(IHttpContextAccessor accessor) : IUserCont
             "This request is not authenticated. An endpoint whose handler needs a user id "
             + "must declare RequireAuthorization(), so reaching here is a pipeline defect.");
 
-    /// <summary>The session the request is using, for revoking this device.</summary>
-    internal Guid? SessionId => Claim(CulinaClaims.SessionId) is { } value
-        ? Guid.Parse(value, CultureInfo.InvariantCulture)
-        : null;
-
     private string? Claim(string type) =>
         (accessor.HttpContext?.User.Identity as ClaimsIdentity)?.FindFirst(type)?.Value;
 }

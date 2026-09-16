@@ -14,6 +14,7 @@ using Application.Households.RedeemInvitation;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
+using Application.Cookbooks;
 using Application.Planning;
 using Application.Recipes.Create;
 using Application.Recipes.Delete;
@@ -23,6 +24,7 @@ using Application.Recipes.GetCookLog;
 using Application.Recipes.GetImage;
 using Application.Recipes.GetIngredients;
 using Application.Recipes.GetNotes;
+using Application.Recipes.GetTags;
 using Application.Recipes.GetUnits;
 using Application.Recipes.Import;
 using Application.Recipes.RecordCooked;
@@ -184,6 +186,23 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<PlanMealCommand, Contracts.Planning.MealPlanResponse>,
                 PlanMealCommandHandler>()
             .AddScoped<ICommandHandler<UnplanMealCommand, Contracts.Planning.MealPlanResponse>,
-                UnplanMealCommandHandler>();
+                UnplanMealCommandHandler>()
+            .AddScoped<IQueryHandler<GetTagsQuery, Contracts.Recipes.GetTags.Response>,
+                GetTagsQueryHandler>()
+            .AddScoped<IQueryHandler<GetCookbooksQuery, Contracts.Cookbooks.CookbooksResponse>,
+                GetCookbooksQueryHandler>()
+            .AddScoped<IQueryHandler<GetCookbookQuery, Contracts.Cookbooks.CookbookDetail>,
+                GetCookbookQueryHandler>()
+            .AddScoped<ICommandHandler<CreateCookbookCommand, Contracts.Cookbooks.CookbookDetail>,
+                CreateCookbookCommandHandler>()
+            .AddScoped<ICommandHandler<UpdateCookbookCommand, Contracts.Cookbooks.CookbookDetail>,
+                UpdateCookbookCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteCookbookCommand>, DeleteCookbookCommandHandler>()
+            .AddScoped<ICommandHandler<AddRecipeToCookbookCommand>,
+                AddRecipeToCookbookCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveRecipeFromCookbookCommand>,
+                RemoveRecipeFromCookbookCommandHandler>()
+            .AddScoped<IQueryHandler<GetRecipeCookbooksQuery, Contracts.Cookbooks.RecipeCookbooksResponse>,
+                GetRecipeCookbooksQueryHandler>();
     }
 }

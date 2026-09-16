@@ -14,9 +14,13 @@
   --surface: var(--c-sand-50);
   --surface-raised: var(--c-white);
   --surface-sunken: var(--c-sand-100);
+  --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
+  --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
-  --surface-accent-subtle: var(--c-terracotta-200);
+  --surface-accent-subtle: var(--c-olive-100);
   --surface-hover: var(--c-sand-100);
+  --surface-feature: var(--c-olive-900);
+  --text-on-feature: var(--c-sand-50);
   --surface-selected: var(--c-sand-200);
 
   /* Text, in decreasing emphasis. */
@@ -30,12 +34,12 @@
   /* Lines. Used sparingly: spacing separates, borders only enclose. */
   --border: var(--c-sand-200);
   --border-strong: var(--c-sand-400);
-  --border-focus: var(--c-terracotta-600);
+  --border-focus: var(--c-olive-600);
 
   /* The accent. One colour, for the primary action on a screen. */
-  --accent: var(--c-terracotta-600);
-  --accent-hover: var(--c-terracotta-700);
-  --accent-active: var(--c-terracotta-700);
+  --accent: var(--c-olive-600);
+  --accent-hover: var(--c-olive-700);
+  --accent-active: var(--c-olive-700);
   --accent-contrast: var(--c-white);
 
   /* Status. Colour is never the only carrier of meaning; these support an icon

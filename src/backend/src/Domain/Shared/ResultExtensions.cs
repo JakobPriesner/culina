@@ -86,24 +86,6 @@ public static class ResultExtensions
         return result.Match(bind, Result.Failure);
     }
 
-    /// <summary>Fails a success whose value does not satisfy <paramref name="predicate"/>.</summary>
-    /// <typeparam name="TValue">The carried value.</typeparam>
-    /// <param name="result">The result to guard.</param>
-    /// <param name="predicate">The condition the value must satisfy.</param>
-    /// <param name="error">The failure to return when it does not.</param>
-    public static Result<TValue> Ensure<TValue>(
-        this Result<TValue> result,
-        Func<TValue, bool> predicate,
-        Error error)
-        where TValue : notnull
-    {
-        ArgumentNullException.ThrowIfNull(predicate);
-        ArgumentNullException.ThrowIfNull(error);
-
-        return result.Bind(value =>
-            predicate(value) ? Result<TValue>.Success(value) : Result<TValue>.Failure(error));
-    }
-
     /// <summary>Runs a side effect on success and returns the result unchanged.</summary>
     /// <typeparam name="TValue">The carried value.</typeparam>
     /// <param name="result">The result to observe.</param>
@@ -171,29 +153,5 @@ public static class ResultExtensions
         }
 
         return values;
-    }
-
-    /// <summary>Turns a possibly-absent reference into a result.</summary>
-    /// <typeparam name="TValue">The carried value.</typeparam>
-    /// <param name="value">The value, or null when it was not found.</param>
-    /// <param name="error">The failure to report when it is absent.</param>
-    public static Result<TValue> ToResult<TValue>(this TValue? value, Error error)
-        where TValue : class
-    {
-        ArgumentNullException.ThrowIfNull(error);
-
-        return value is null ? Result<TValue>.Failure(error) : Result<TValue>.Success(value);
-    }
-
-    /// <summary>Turns a possibly-absent value type into a result.</summary>
-    /// <typeparam name="TValue">The carried value.</typeparam>
-    /// <param name="value">The value, or null when it was not found.</param>
-    /// <param name="error">The failure to report when it is absent.</param>
-    public static Result<TValue> ToResult<TValue>(this TValue? value, Error error)
-        where TValue : struct
-    {
-        ArgumentNullException.ThrowIfNull(error);
-
-        return value.HasValue ? Result<TValue>.Success(value.Value) : Result<TValue>.Failure(error);
     }
 }

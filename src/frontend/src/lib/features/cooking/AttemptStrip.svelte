@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Image, VisuallyHidden } from '$ds';
+  import { FilePicker, Image, VisuallyHidden } from '$ds';
 
   import { m } from '$shell/i18n';
   import { attemptSrcset, attemptUrl } from '$features/recipes/recipeImage';
@@ -27,7 +27,7 @@
   let failure = $state<string | null>(null);
   /** Which attempt an upload is being chosen for. */
   let target = $state<string | null>(null);
-  let input = $state<HTMLInputElement>();
+  let picker = $state<ReturnType<typeof FilePicker>>();
 
   /** Checked here so an obviously hopeless upload fails instantly. */
   const maxBytes = 10 * 1024 * 1024;
@@ -41,18 +41,13 @@
   function pickFor(entryId: string) {
     target = entryId;
     failure = null;
-    input?.click();
+    picker?.open();
   }
 
-  async function chosen(event: Event) {
-    const element = event.target as HTMLInputElement;
-    const file = element.files?.[0];
+  async function chosen(file: File) {
     const entryId = target;
 
-    // Cleared straight away so choosing the same file twice still fires.
-    element.value = '';
-
-    if (!file || !entryId) {
+    if (!entryId) {
       return;
     }
 
@@ -140,16 +135,12 @@
       {/each}
     </ul>
 
-    <!-- Driven by the frames rather than reached on its own: tabindex -1 keeps
-         it out of the tab order, where it would be a stop with nothing to see. -->
-    <input
-      bind:this={input}
-      class="offscreen"
-      type="file"
-      tabindex="-1"
+    <!-- Driven by the frames rather than reached on its own. -->
+    <FilePicker
+      bind:this={picker}
+      label={m['attempts.choose']()}
       accept="image/*"
-      aria-label={m['attempts.choose']()}
-      onchange={(event) => void chosen(event)}
+      onpick={(file) => void chosen(file)}
     />
   </section>
 {/if}
@@ -159,17 +150,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-  }
-
-  /* Clipped rather than hidden: `display: none` would take it out of the
-     accessibility tree too, and a file input still has to be openable. */
-  .offscreen {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
 
   .title {

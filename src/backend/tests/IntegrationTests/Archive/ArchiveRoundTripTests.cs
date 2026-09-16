@@ -77,6 +77,14 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
         Assert.Equal("Boil ", segments[0].GetProperty("value").GetString());
         Assert.Equal("orzo", segments[1].GetProperty("name").GetString());
         Assert.Equal("olive oil", segments[3].GetProperty("name").GetString());
+
+        // And so does what a step needs but never names, which the words alone
+        // could not have carried across.
+        var seasoning = copy.GetProperty("steps").EnumerateArray().Last();
+        var needed = Assert.Single(seasoning.GetProperty("uses").EnumerateArray()).GetGuid();
+        var oil = ingredients.Single(one => one.GetProperty("name").GetString() == "olive oil");
+
+        Assert.Equal(oil.GetProperty("ingredientId").GetGuid(), needed);
     }
 
     [Fact]
@@ -196,7 +204,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
                         }
                     }
                 },
-                steps = new[]
+                steps = new object[]
                 {
                     new
                     {
@@ -208,6 +216,16 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
                             new { type = "ingredient", recipeIngredientId = lines[1] },
                             new { type = "text", value = "." }
                         }
+                    },
+                    new
+                    {
+                        // Needs the oil and never says so — the kind of step
+                        // whose ingredients an archive used to lose.
+                        segments = new object[]
+                        {
+                            new { type = "text", value = "Season and serve." }
+                        },
+                        uses = new[] { lines[1] }
                     }
                 },
                 tags = Array.Empty<string>()

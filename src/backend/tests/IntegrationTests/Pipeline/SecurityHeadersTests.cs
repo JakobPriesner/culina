@@ -68,6 +68,25 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task DocumentResponses_ShouldNameTheNonceForStylesToo_SoTheBootScreenIsStyled()
+    {
+        // Arrange
+        using var client = postgres.Api.CreateClient();
+
+        // Act
+        using var response = await client.GetAsync(
+            new Uri("/health/live", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // style-src 'self' on its own blocks the document's inline style block
+        // and every style attribute in it, which showed up as a boot screen
+        // rendering as unstyled text in production while looking correct under
+        // the dev server, which sets no policy.
+        Assert.Contains("style-src 'self' 'nonce-", Policy(response), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task NoPolicy_ShouldEverAllowInlineOrEval_OnAnyPath()
     {
         // Arrange

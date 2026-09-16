@@ -7,9 +7,76 @@ inventory**.
 
 ## September 2026 refinement
 
-The current implementation lightens the yellow/brown neutral ramp, introduces an editorial display type token and a shared bowl wordmark, and gives authentication a photographic frame that yields to the form on mobile. Controls and quantities keep system typography. The exact palette is maintained in `tokens/primitives.css`; examples below illustrate the theme architecture.
+Culina pairs warm ivory and charcoal surfaces with olive actions and a quiet
+serif wordmark. Recipe titles use Georgia; controls, quantities, and instructions
+keep system typography. The collection separates page identity from a compact search, filter, and count
+toolbar, with gutters that adapt to narrow phones. Photographs
+lead recipe cards, while recipes without a photo sit on a soft paper surface.
 
-Review `/design/recipes` for the interactive recipe concept and `/design` for primitives in development. The recipe concept uses labelled temporary sample data and does not replace the unfinished production recipe pages. Both preview routes share the release guard. [The revised product plan](product-quality-plan.md) explains the release scope and quality contracts.
+The reading and cooking surfaces use a softly shaded ingredient panel, generous
+instruction spacing, and a visible action dock. Authentication and the optional
+recipe preview use a deep olive photographic feature panel. Its foreground and
+background have explicit semantic tokens (`--text-on-feature` and
+`--surface-feature`), tested for contrast in both modes and mapped to ink on white
+for print. Focus inside the dark preview panel uses its light foreground.
+
+Review `/design/recipes` for the interactive recipe concept and `/design` for
+primitives in development. The concept uses labelled temporary sample data and
+shares its palette, typography, and controls with the production app. Both
+preview routes retain the release guard. [The product plan](product-quality-plan.md)
+explains the release scope and quality contracts.
+
+## Library and shared control polish
+
+The recipe and cookbook libraries share `PageHeader`: an editorial title, a
+short supporting line, and contextual creation actions. On desktop, `LibraryNav`
+is a short, labelled 11rem sidebar near the left edge. Week planning is a
+destination in the sidebar and compact collection sheet, separated from the
+recipe and cookbook links. It occupies its own column on recipe collection and cookbook pages, staying
+visible while scrolling without covering cards. Recipe reading, editing, cooking,
+and the planner retain their full page widths.
+
+Below 64rem, the app bar keeps three stable areas: Recipe book, Shopping, and Me.
+Library opens a scrollable sheet containing the same labelled destinations as the
+desktop sidebar. Future collection destinations extend this list without adding
+app-bar items. The sheet closes after a selection, on Escape, with its close button,
+and when resizing to the desktop layout. The current collection remains marked.
+The full Culina wordmark stays visible on phones. `NewRecipeLink` remains a
+direct link in the header on every signed-in page: a label on wide desktops and a
+labelled, titled plus control on smaller screens.
+
+The sidebar uses flat labelled rows, a subtle column divider, and an active marker.
+The shell header and collection share the same outer alignment. The logo and
+main navigation retain their matched translucent backgrounds; the local sidebar
+does not add another floating card.
+It is navigation, not a segmented view setting. Recipe creation remains a separate
+accent-colored action. The [21-approach design comparison](library-navigation-design.md)
+records the alternatives, three finalists, user-facing tradeoffs, and selected
+adaptive layout. The recipe toolbar aligns a rounded rectangular search field
+with an equally tall `FilterChip`, using its rounded variant; the pressed state
+includes a checkmark as well as color. Count and sort information sit together
+at the trailing edge, reflowing below the controls on phones. Creation buttons
+share plus icons and rounded corners; green remains reserved for recipe creation.
+The 30-minute filter queries the API and composes with text search.
+
+Library search and the quick filter survive recipe navigation within the current
+session. They reset on household changes and sign-out. Search supports Escape to
+clear while preserving focus, and a separate action clears both filters. Counts
+use Paraglide plural variants in English and German, including cookbook counts,
+servings, and pieces.
+
+Photographed recipes retain image-led cards. Recipes without photographs use a
+paper surface, a small cooking mark, and a ruled heading area. Card links have a
+visible directional affordance and a whole-card keyboard focus ring. The feature
+link uses the feature foreground for both text and focus in light and dark mode.
+
+Shared buttons reserve their label geometry while a centered spinner appears;
+the label remains available to assistive technology. Disabled and pending states
+retain readable text. Search and form controls share a separated focus outline.
+
+`library-polish.spec.ts` checks the search round trip, composed filters, reset,
+Escape behavior, reflow, and automated accessibility at 320, 390, 768, and 1280px
+in both locales and modes using temporary API fixtures.
 
 ## Design intent
 
@@ -70,9 +137,9 @@ must define all of them:
 
 ```
 Surfaces   --surface  --surface-raised  --surface-sunken  --surface-overlay
-           --surface-accent-subtle
+           --surface-accent-subtle  --surface-feature
 Text       --text  --text-muted  --text-subtle  --text-on-accent
-           --text-danger  --text-success
+           --text-danger  --text-success  --text-on-feature
 Lines      --border  --border-strong  --border-focus
 Accent     --accent  --accent-hover  --accent-active  --accent-contrast
 Status     --danger --danger-hover --success --warning  (+ -subtle variants)
@@ -160,7 +227,7 @@ If it knows what a recipe is, it is in the wrong folder.
 | | |
 | --- | --- |
 | Actions | `Button` (primary/secondary/ghost/danger × sm/md/lg, `loading`, `iconOnly`), `IconButton`, `Menu`, `Switch` |
-| Input | `TextInput`, `TextArea`, `Select`, `Checkbox`, `RadioGroup`, `Stepper`, `SearchField`, `Field` (label + hint + error + a11y wiring) |
+| Input | `TextInput`, `TextArea`, `Select`, `Checkbox`, `RadioGroup`, `Stepper`, `SearchField`, `Field` (label + hint + error + a11y wiring), `FilePicker` (the clipped file input, opened by a control beside it), `ImageField` (preview when set, template of the same size when not) |
 | Containment | `Card`, `Sheet` (mobile bottom sheet, desktop dialog), `Modal`, `Popover`, `Tabs`, `Disclosure` |
 | Feedback | `Toast` + `toaster`, `Skeleton`, `EmptyState`, `ErrorState`, `ProgressBar`, `Spinner` (first boot only) |
 | Display | `Badge`, `Avatar`, `Icon`, `Image` (aspect-ratio box, lazy, blur-up), `Divider`, `VisuallyHidden` |
@@ -215,6 +282,86 @@ move for the result to make sense.
 That property — *things stay where you expect them to be* — is the reason the
 two states share one component instead of being two pages that happen to show
 the same data.
+
+## Responsive layout contract
+
+Breakpoints follow the space the content needs. A tablet keeps bottom navigation
+until the brand, all destination labels and connection status fit across the
+header. The content stays capped at `--layout-wide` (80rem) on larger monitors;
+prose and shopping lists keep the narrower `--measure`.
+
+| Minimum viewport width | Layout behavior |
+| --- | --- |
+| Base, including 320px | One-column collection and planner; bottom navigation; stacked recipe reading; settings categories wrap above their panel; authentication shows the form. |
+| 40rem / 640px | Two-column recipe collection and planner. Search and action rows can share space where their content fits. |
+| 48rem / 768px | Sheets become centered dialogs. This changes overlay geometry without forcing the page into a desktop layout. |
+| 64rem / 1024px | Top navigation replaces bottom navigation. Recipe ingredients and method sit side by side; settings gains a sidebar; authentication and featured recipes gain a photo column. Collections and planner use three columns. |
+| 80rem / 1280px | The planner displays all seven days across. Other content retains its maximum width. |
+
+Use `min-width` for enhancements and `width < …` for their exact complement,
+so fractional viewport widths do not create a gap. Breakpoint values are literal
+`rem` values in CSS because custom properties cannot be used in native media
+query conditions. Do not add a viewport breakpoint for each individual control.
+The 40rem collection breakpoint is shared by the real and preview collections;
+the 64rem split is shared by navigation and complex page layouts.
+
+Spacing is fluid between these transitions. `--layout-page-space` scales page
+padding from 1.5rem to 3rem, and `--layout-section-gap` scales large gaps over the
+same range. `--layout-gutter-start` and `--layout-gutter-end` include device safe
+areas so the header, page and persistent controls share an alignment even in
+landscape. The viewport permits safe-area coverage without disabling zoom.
+
+Ingredient fields use **container queries**: a narrow shopping list on a large
+monitor must behave like a narrow form. Amount and unit stay together, followed
+by full-width name and preparation fields. A simple three-field entry fits on
+one row at 28rem of actual field space; the four-field recipe entry needs 36rem.
+The ingredient editor puts its actions below the fields under 44rem of editor
+space; shopping entry does so under 40rem. These are component fit thresholds,
+not additional device categories.
+Below 24rem of editor space, written ingredient names get their own full-width
+line below the amount and actions. This also accommodates enlarged text.
+
+Buttons keep a minimum height of 44px (56px for cooking actions) and grow when a
+translated label needs another line. Long names, email addresses and URLs may
+wrap. Action groups wrap as groups; content must not be hidden with page-level
+horizontal overflow clipping to make a test pass.
+
+The desktop header has a transparent full-width container. The brand card and
+navigation track share the same softly translucent background and blur. Only the
+controls intercept pointer events, so exposed content behind the header stays
+usable. Direct recipe creation stays in the header while collection navigation
+lives in the desktop sidebar or a sheet opened from the compact bottom bar. The sidebar offsets by the
+measured header height. Below 32rem of viewport height the header and sidebar
+return to document flow to preserve reading space. Glass surfaces are semantic
+theme tokens shared by both color modes.
+
+The shell measures bottom navigation and the resume bar to keep recipe actions
+above them. Cooking keeps only step navigation sticky; its stop action stays in
+document flow so two footers never compete for the same inset. The preview
+measures its cooking dock too, reserving its actual
+height rather than assuming one row. Below 32rem of viewport height, the top
+header and recipe action docks return to normal document flow to preserve
+reading space. Sheets and dialogs use dynamic viewport height; their body
+scrolls while the heading, close control and footer stay available.
+
+Cookbook shelves scroll horizontally within the page. Keyboard focus reveals
+the whole card, with room for its focus ring; snapping is disabled while focus
+is in the shelf. Popovers constrain their width to the viewport and scroll
+within the space beside their trigger. If rotation or scrolling takes the
+trigger off-screen, the open panel moves into the viewport until the trigger
+returns. Browsers without sized anchor positioning use a centered panel.
+
+`tests/e2e/responsive.spec.ts` checks real production routes with deterministic
+API fixtures and long content in both English and German. It covers 320, 390,
+639/640, 767/768, 1023/1024, 1279/1280 and 1536px, plus short landscape. Checks
+include document and child overflow, useful ingredient input widths, a single
+visible navigation, grid transitions, editing, planner overlays and reachable
+cooking controls. Fixture tests cover layout; the existing signed-in suites
+remain responsible for backend integration.
+`tests/e2e/responsive-transitions.spec.ts` also covers live resizing during
+cooking, keyboard traversal of the cookbook shelf, rotation with forms and
+ingredient pickers open, long ingredient lists, and 200% text at 320, 640 and
+1280px. Both desktop and mobile browser profiles exercise these interactions.
 
 ## Accessibility baseline
 
@@ -337,6 +484,35 @@ top of the page, at exactly the moment the remaining action was "I made it".
 
 Render one control and change its label and its handler. Use two only when they
 are genuinely two things a person might choose between.
+
+## Settings refinement — 15 September 2026
+
+Settings has an anatomy rather than a scroll. The category rail keeps its pills
+and gains an uppercase caption and, past 64rem, a sticky position, so the way
+out of a long archive is never above the fold. The category's heading and its
+one-line lead belong to `me/+layout.svelte`, not to the three pages: the heading
+is the word the rail is already showing, and three pages writing it separately is
+three places for it to drift. The panel is capped at 46rem — a settings row is a
+label on the left and a control on the right, and a 1400px monitor puts a
+centimetre of nothing between them.
+
+Inside a category, `SettingsSection` and `SettingsRow` (local to the settings
+routes — they are page furniture, not primitives) give every setting one
+anatomy: a title and a sentence outside the enclosure, where type does the
+structuring, and the run of related controls inside a hairline border, which is
+the one thing whitespace cannot say. Rows carry a label, an optional line about
+what the setting does *not* do, and the control on the trailing edge; under
+30rem of row — a container query, not a viewport one — the control takes its own
+line. A row's label is a `span`, because the control already carries its own
+label and two labels on one field is an axe failure; `group` is the exception,
+naming a set of radios through `role="group"`.
+
+Appearance chooses a mode outright. `ThemeChoice` shows light, dark and follow
+the device as three native radios in a segmented track, with the chosen one
+raised out of it rather than only tinted. The header keeps the cycling
+`ThemeToggle`, where there is room for one icon and the choice is a passing one.
+The language and measurement pickers now share `.ds-control` and clip their own
+labels beside the row's.
 
 ## Recipe preview refinement — 13 September 2026
 

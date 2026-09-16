@@ -12,10 +12,41 @@ import {
  * Writing a recipe down, which is the part people abandon.
  *
  * A recipe needs a title and nothing else to exist; everything after that is
- * filled in when there is a minute. And an ingredient is one line, not three
- * fields — three fields is three times the tabbing and turns writing a recipe
- * into data entry. Nobody does it that way on paper either.
+ * filled in when there is a minute. An ingredient is written as the three
+ * things it is made of — an amount, a unit and a name — because each is used on
+ * its own afterwards: the amount scales, the unit converts, and the name is
+ * what reaches a shopping list.
  */
+/** The row of empty fields at the foot of the list, where the next one goes. */
+const newIngredient = (page: Page) =>
+  page.getByRole('group', { name: /new ingredient|neue zutat/i });
+
+interface Written {
+  readonly amount?: string;
+  readonly unit?: string;
+  readonly name: string;
+  readonly note?: string;
+}
+
+/**
+ * Writes one ingredient into the fields it is made of.
+ *
+ * The name goes last and carries the Enter, because the name is what makes the
+ * row an ingredient: there is nothing to add until it is there.
+ */
+async function write(page: Page, { amount = '', unit = '', name, note = '' }: Written) {
+  const row = newIngredient(page);
+
+  await row.getByLabel(/^(amount|menge)$/i).fill(amount);
+  await row.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill(unit);
+  await row.getByLabel(/^(preparation|zubereitung)$/i).fill(note);
+
+  const field = row.getByRole('combobox', { name: /^(ingredient|zutat)$/i });
+
+  await field.fill(name);
+  await field.press('Enter');
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('writing a recipe', () => {
@@ -48,29 +79,27 @@ test.describe('writing a recipe', () => {
     // a recipe that cannot be lost by closing a tab.
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 
-    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
-
-    // One line, read into an amount, a unit and a name — and shown back in
-    // parts, which is the only reason guessing is safe.
-    await line.fill('200 g Butter');
-    await line.press('Enter');
+    // Three fields, and the ingredient reads back as the one line a recipe
+    // would print it as.
+    await write(page, { amount: '200', unit: 'g', name: 'Butter' });
 
     await expect(page.getByText('Butter')).toBeVisible();
     await expect(page.getByText(/200\s*g/)).toBeVisible();
 
-    // A German decimal comma is a decimal point, not the note separator: a
-    // person writing "1,5 kg Mehl" means one and a half kilos.
-    await line.fill('1,5 kg Mehl');
-    await line.press('Enter');
+    // A German decimal comma is a decimal point: somebody typing "1,5" into
+    // the amount means one and a half.
+    await write(page, { amount: '1,5', unit: 'kg', name: 'Mehl' });
 
     await expect(page.getByText(/1[.,]5\s*kg/)).toBeVisible();
 
-    // And what comes after a comma is how it is prepared, not what it is.
-    await line.fill('2 Zwiebeln, fein gehackt');
-    await line.press('Enter');
+    // How it is prepared is its own field, and is not what the thing is.
+    await write(page, { amount: '2', name: 'Zwiebeln', note: 'fein gehackt' });
 
     await expect(page.getByText('Zwiebeln')).toBeVisible();
     await expect(page.getByText(/fein gehackt/)).toBeVisible();
+
+    // The fields are empty again, waiting for the next one.
+    await expect(newIngredient(page).getByLabel(/^(amount|menge)$/i)).toHaveValue('');
 
     // Typed, never submitted: an editor that loses work on a closed tab is an
     // editor nobody trusts with a recipe they are still thinking about.
@@ -90,10 +119,7 @@ test.describe('writing a recipe', () => {
     await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
-    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
-
-    await line.fill('200 g Butter');
-    await line.press('Enter');
+    await write(page, { amount: '200', unit: 'g', name: 'Butter' });
     await expect(page.getByText(/200\s*g/)).toBeVisible();
 
     // Saved before the mention is written, because a line the server has never
@@ -136,27 +162,27 @@ test.describe('writing a recipe', () => {
     await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
-    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
-
     // Waited for the write itself, not for the word "Saved": that word is
     // already on screen from the save before, so it would be true too early.
     const saved = () => page.waitForResponse((one) => one.request().method() === 'PUT' && one.ok());
 
-    // A word the built-in spellings have never heard of is not a unit yet, so
-    // the whole thing lands in the name — which is the honest read of it.
-    await line.fill('1 Schuss Milch');
-    await Promise.all([saved(), line.press('Enter')]);
+    // The unit field is a list you can also type into, which is the whole
+    // reason the vocabulary is open: a word nobody has written before becomes
+    // a unit by being written, with nothing to correct afterwards.
+    await Promise.all([saved(), write(page, { amount: '1', unit: 'Schuss', name: 'Milch' })]);
 
-    // Corrected once, in the parts the parse is shown back as. The unit field
-    // is a list you can also type into: that is how a unit is added.
-    await page.getByRole('button', { name: /correct|korrigieren/i }).click();
-    await page.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill('Schuss');
-    await page.getByRole('textbox', { name: /^(ingredient|zutat)$/i }).fill('Milch');
-    await saved();
+    // And from then on the kitchen knows the word — it is on the list before
+    // the whole of it has been typed.
+    const unit = newIngredient(page).getByRole('combobox', { name: /^(unit|einheit)$/i });
 
-    // And from then on the kitchen knows the word.
-    await line.fill('2 Schuss Sahne');
-    await Promise.all([saved(), line.press('Enter')]);
+    await unit.fill('Schu');
+    await expect(
+      page
+        .getByRole('listbox', { name: /unit suggestions|einheitenvorschläge/i })
+        .getByRole('option', { name: 'Schuss' })
+    ).toBeVisible();
+
+    await Promise.all([saved(), write(page, { amount: '2', unit: 'Schuss', name: 'Sahne' })]);
 
     await page.goto(`/recipes/${new URL(page.url()).pathname.split('/')[2]}`);
 
@@ -182,33 +208,38 @@ test.describe('writing a recipe', () => {
     await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
-    const line = page.getByRole('combobox', { name: /add an ingredient|zutat hinzufügen/i });
+    const row = newIngredient(page);
+    const field = row.getByRole('combobox', { name: /^(ingredient|zutat)$/i });
     const list = page.getByRole('listbox', { name: /ingredient suggestions|zutatenvorschläge/i });
 
-    // Nothing is suggested for the amount: nobody needs help typing "200 g".
-    await line.fill('200 g ');
+    // Only the name is suggested. The amount is its own field now, and nobody
+    // needs help typing a number into it.
+    await row.getByLabel(/^(amount|menge)$/i).fill('200');
+    await row.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill('g');
     await expect(list).toBeHidden();
 
     // The seeded list is what an empty kitchen has, and it says where the
     // thing lives in a shop.
-    await line.fill('200 g Potat');
+    await field.fill('Potat');
     await expect(list.getByRole('option', { name: /^Potatoes/ })).toBeVisible();
 
-    // Tab takes the suggestion and leaves the amount alone; Enter would have
-    // finished the line, which is what Enter has always done here.
-    await line.press('Tab');
-    await expect(line).toHaveValue('200 g Potatoes');
-    await line.press('Enter');
+    // Arrowing to a row and pressing Enter takes it. Enter on its own adds
+    // what was typed, which is what stops the list from overruling anybody.
+    await field.press('ArrowDown');
+    await field.press('Enter');
+    await expect(field).toHaveValue('Potatoes');
+
+    await field.press('Enter');
+    await expect(page.getByText(/200\s*g/)).toBeVisible();
 
     // A word no seeded list has ever heard of is still an ingredient.
     //
     // Waited for by the write, not by the word "Saved": that word is already on
     // screen from the save before, and the suggestion below comes from what
     // this household's recipes actually say — which means from the database.
-    await line.fill(`1 bunch ${invented}`);
     await Promise.all([
       page.waitForResponse((one) => one.request().method() === 'PUT' && one.ok()),
-      line.press('Enter')
+      write(page, { amount: '1', unit: 'bunch', name: invented })
     ]);
 
     await expect(page.getByText(invented)).toBeVisible();
@@ -217,7 +248,7 @@ test.describe('writing a recipe', () => {
     // Nearly the whole word: these suites share one instance, and every
     // earlier run of this test left a "Herbbutter…" of its own behind. A
     // prefix they all share is a prefix that finds ten of them.
-    await line.fill(invented.slice(0, -2));
+    await field.fill(invented.slice(0, -2));
     await expect(list.getByRole('option', { name: invented })).toBeVisible();
   });
 
@@ -345,14 +376,12 @@ test.describe('writing a recipe', () => {
     await expect(page).toHaveURL(/\/edit/);
 
     const recipeId = new URL(page.url()).pathname.split('/')[2]!;
-    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
 
     // Offline, which is the case the journal exists for: nothing can reach the
     // server, and what was typed must still be there afterwards.
     await context.setOffline(true);
 
-    await line.fill('200 g Butter');
-    await line.press('Enter');
+    await write(page, { amount: '200', unit: 'g', name: 'Butter' });
 
     await expect(page.getByText('Butter')).toBeVisible();
 
@@ -389,15 +418,11 @@ test.describe('writing a recipe', () => {
     const them = await theirs.newPage();
 
     await them.goto(`/recipes/${recipeId}/edit`);
-    await them.getByLabel(/add an ingredient|zutat hinzufügen/i).fill('1 kg Mehl');
-    await them.getByLabel(/add an ingredient|zutat hinzufügen/i).press('Enter');
+    await write(them, { amount: '1', unit: 'kg', name: 'Mehl' });
     await expect(them.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
 
     // This browser is now writing on top of a version that has moved on.
-    const line = page.getByLabel(/add an ingredient|zutat hinzufügen/i);
-
-    await line.fill('200 g Butter');
-    await line.press('Enter');
+    await write(page, { amount: '200', unit: 'g', name: 'Butter' });
 
     // Said plainly, and neither version is thrown away: both choices are here.
     await expect(page.getByText(/somebody else changed|jemand anderes/i)).toBeVisible();

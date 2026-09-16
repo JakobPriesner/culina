@@ -24,6 +24,8 @@
     --surface-accent-subtle: var(--c-white);
     --surface-hover: var(--c-white);
     --surface-selected: var(--c-white);
+    --surface-feature: var(--c-white);
+    --text-on-feature: var(--c-black);
 
     /* Three weights of grey and no more: a laser printer renders a fourth as
        the same dots as the third. */

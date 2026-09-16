@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using Application.Abstractions;
 
 namespace Infrastructure.Persistence.Recipes;
@@ -26,11 +24,7 @@ namespace Infrastructure.Persistence.Recipes;
 /// <param name="Id">The last row's id.</param>
 internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys, Guid Id)
 {
-    internal string Encode() =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this)))
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
+    internal string Encode() => PageCursor.Encode(this);
 
     /// <summary>
     /// Reads a cursor, or null when it is absent, unreadable, or from a
@@ -43,25 +37,9 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
     /// </remarks>
     internal static RecipeCursor? Decode(string? encoded, RecipeSort sort)
     {
-        if (string.IsNullOrWhiteSpace(encoded))
-        {
-            return null;
-        }
+        var cursor = PageCursor.TryDecode<RecipeCursor>(encoded);
 
-        try
-        {
-            var padded = encoded.Replace('-', '+').Replace('_', '/');
-            padded = padded.PadRight(padded.Length + ((4 - (padded.Length % 4)) % 4), '=');
-
-            var cursor = JsonSerializer.Deserialize<RecipeCursor>(
-                Encoding.UTF8.GetString(Convert.FromBase64String(padded)));
-
-            return cursor?.Sort == sort ? cursor : null;
-        }
-        catch (Exception failure) when (failure is FormatException or JsonException)
-        {
-            return null;
-        }
+        return cursor?.Sort == sort ? cursor : null;
     }
 
     internal static string Key(DateTimeOffset value) =>

@@ -89,7 +89,16 @@
   "preview.twoServings": "2 Portionen",
   "preview.open": "Rezept ansehen",
   "preview.collection": "Aus deinem Rezeptbuch",
-  "preview.count": "{count} Rezepte",
+  "preview.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept",
+        "countPlural=*": "{count} Rezepte"
+      }
+    }
+  ],
   "preview.empty.title": "Hier ist noch nichts dabei.",
   "preview.empty.body": "Suche nach einer anderen Zutat oder zeige wieder alle Rezepte.",
   "preview.reset": "Alle Rezepte anzeigen",
@@ -136,7 +145,6 @@
   "preview.rice.body": "Würzige Pilze. Eine Schüssel zum Wohlfühlen.",
   "preview.rice.step1": "Reis nach Packungsanweisung in Wasser garen. Pilze in Scheiben schneiden.",
   "preview.rice.step2": "Pilze in einer leicht geölten Pfanne scharf anbraten. Miso mit etwas warmem Wasser verrühren, unter die Pilze geben und auf dem Reis servieren.",
-  "preview.countOne": "1 Rezept",
   "recipes.card.open": "{title} öffnen",
   "recipes.empty.action": "Rezept anlegen",
   "recipes.empty.body": "Rezepte, die du anlegst, stehen hier – mit allem, was du beim Kochen brauchst.",
@@ -147,7 +155,16 @@
   "recipes.filtered.body": "Kein Rezept passt zu dieser Suche. Versuch weniger Wörter oder leere den Filter.",
   "recipes.filtered.title": "Nichts gefunden",
   "recipes.list.clearSearch": "Suche leeren",
-  "recipes.list.count": "{count} Rezepte",
+  "recipes.list.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept",
+        "countPlural=*": "{count} Rezepte"
+      }
+    }
+  ],
   "recipes.list.loading": "Deine Rezepte werden geladen",
   "recipes.list.moreFailed": "Die nächsten Rezepte konnten nicht geladen werden.",
   "recipes.list.searchLabel": "Rezepte durchsuchen",
@@ -159,7 +176,16 @@
   "recipes.meta.minutes": "{count} Min.",
   "recipes.meta.pieces": "{count} Stück",
   "recipes.meta.separator": " · ",
-  "recipes.meta.servings": "{count} Portionen",
+  "recipes.meta.servings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Portion",
+        "countPlural=*": "{count} Portionen"
+      }
+    }
+  ],
   "recipe.ingredients": "Zutaten",
   "recipe.steps": "Zubereitung",
   "recipe.step": "Schritt {number}",
@@ -359,5 +385,164 @@
   "archive.restoreFailed": "Diese Datei konnte nicht wiederhergestellt werden.",
   "measurement.label": "Mengen",
   "measurement.metric": "Gramm und Milliliter",
-  "measurement.imperial": "Ounces und Cups"
+  "measurement.imperial": "Ounces und Cups",
+  "session.unavailable.title": "Culina antwortet nicht",
+  "session.unavailable.body": "Du bist weiterhin angemeldet — die Küche war nur nicht erreichbar. Prüfe deine Verbindung und versuch es noch einmal.",
+  "auth.signIn.welcome": "Schön, dass du wieder da bist",
+  "auth.signIn.intro": "Dein Rezeptbuch ist da, wo du es gelassen hast.",
+  "library.label": "Rezeptbuch",
+  "library.recipes": "Alle Rezepte",
+  "library.cookbooks": "Kochbücher",
+  "nav.library": "Rezeptbuch",
+  "cookbooks.title": "Kochbücher",
+  "cookbooks.subtitle": "Rezepte so gesammelt, wie du an sie denkst.",
+  "cookbooks.card.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept",
+        "countPlural=*": "{count} Rezepte"
+      }
+    }
+  ],
+  "cookbooks.card.open": "{name} öffnen",
+  "cookbooks.list.loading": "Deine Kochbücher werden geladen",
+  "cookbooks.empty.title": "Noch keine Kochbücher",
+  "cookbooks.empty.body": "Ein Kochbuch sammelt Rezepte, die zusammengehören – eine Jahreszeit, ein Wochentag, ein Mensch.",
+  "cookbooks.empty.action": "Das erste anlegen",
+  "cookbooks.failed.title": "Deine Kochbücher konnten nicht geladen werden",
+  "cookbooks.failed.body": "Die Verbindung ist unterwegs abgerissen. Es ist nichts verloren gegangen.",
+  "cookbooks.detail.failed": "Das Kochbuch konnte nicht geöffnet werden",
+  "cookbooks.detail.failed.body": "Die Verbindung ist unterwegs abgerissen. Es ist nichts verloren gegangen.",
+  "cookbooks.detail.empty.title": "Hier ist noch nichts",
+  "cookbooks.detail.empty.body": "Leg ein Rezept hinein, dann wartet es hier auf dich.",
+  "cookbooks.detail.noMatch.body": "Noch kein Rezept passt zu den Regeln. Lockere sie oder leg ein passendes Rezept an.",
+  "cookbooks.detail.filtered.title": "Nichts gefunden",
+  "cookbooks.detail.filtered.body": "Kein Rezept in diesem Kochbuch passt zu dieser Suche.",
+  "cookbooks.search": "In diesem Kochbuch suchen",
+  "cookbooks.new.action": "Neues Kochbuch",
+  "cookbooks.new.title": "Neues Kochbuch",
+  "cookbooks.new.save": "Anlegen",
+  "cookbooks.edit.title": "Kochbuch bearbeiten",
+  "cookbooks.edit.save": "Speichern",
+  "cookbooks.edit.action": "Umbenennen",
+  "cookbooks.field.name": "Name",
+  "cookbooks.field.namePlaceholder": "Unter der Woche",
+  "cookbooks.field.description": "Beschreibung",
+  "cookbooks.field.descriptionHint": "Optional. Eine Zeile dazu, was hier hineingehört.",
+  "cookbooks.kind.question": "Wie füllt es sich?",
+  "cookbooks.kind.manual": "Ich lege Rezepte hinein",
+  "cookbooks.kind.smart": "Es füllt sich selbst, nach Regeln",
+  "cookbooks.kind.label": "Automatisch",
+  "cookbooks.rules.title": "Regeln",
+  "cookbooks.rules.hint": "Ein Rezept kommt hinein, wenn es auf alles hier passt.",
+  "cookbooks.rules.tags": "Tags",
+  "cookbooks.rules.tagsHint": "Wähl so viele du magst.",
+  "cookbooks.rules.noTags": "Noch keine Tags in dieser Küche.",
+  "cookbooks.rules.usedBy": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept",
+        "countPlural=*": "{count} Rezepte"
+      }
+    }
+  ],
+  "cookbooks.rules.ingredients": "Zutaten",
+  "cookbooks.rules.ingredientsHint": "Eine nach der anderen. Ein Rezept muss alle enthalten.",
+  "cookbooks.rules.ingredientAdd": "Hinzufügen",
+  "cookbooks.rules.ingredientRemove": "{name} entfernen",
+  "cookbooks.rules.maxMinutes": "Fertig in höchstens",
+  "cookbooks.rules.maxMinutesHint": "Minuten. Leer lassen für beliebig lang.",
+  "cookbooks.rules.minutes": "bis {count} Min.",
+  "cookbooks.rules.none": "Nenn mindestens eine Regel – sonst wären das alle deine Rezepte.",
+  "cookbooks.rules.edit": "Regeln ändern",
+  "cookbooks.rules.byHand": "Dieses füllt sich nach seinen Regeln.",
+  "cookbooks.add.action": "In ein Kochbuch",
+  "cookbooks.add.title": "In ein Kochbuch legen",
+  "cookbooks.add.done": "Fertig",
+  "cookbooks.add.none": "Noch keine Kochbücher. Leg eines an, dann landet dieses Rezept direkt darin.",
+  "cookbooks.add.failed": "Das konnte nicht gespeichert werden.",
+  "cookbooks.addRecipes.title": "Rezepte hinzufügen",
+  "cookbooks.addRecipes.action": "Rezepte hinzufügen",
+  "cookbooks.addRecipes.done": "Fertig",
+  "cookbooks.addRecipes.added": "{title} ist im Kochbuch.",
+  "cookbooks.recipe.inLabel": "Abgelegt in",
+  "cookbooks.picker.all": "Alle Rezepte",
+  "cookbooks.shopping.add": "Alles auf die Einkaufsliste",
+  "cookbooks.shopping.empty": "Hier gibt es nichts hinzuzufügen.",
+  "cookbooks.shopping.done": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept steht auf der Einkaufsliste.",
+        "countPlural=*": "{count} Rezepte stehen auf der Einkaufsliste."
+      }
+    }
+  ],
+  "cookbooks.shopping.partial": "{done} von {total} Rezepten sind auf der Liste gelandet.",
+  "cookbooks.delete.action": "Kochbuch löschen",
+  "cookbooks.delete.done": "{name} ist weg. Alle Rezepte daraus gehören weiter dir.",
+  "cookbooks.delete.failed": "Das Kochbuch konnte nicht gelöscht werden.",
+  "recipes.collection.eyebrow": "Dein Rezeptbuch",
+  "recipes.collection.subtitle": "Alles, was du gerne kochst. An einem Ort.",
+  "recipes.featured.eyebrow": "Eine Idee für heute Abend",
+  "recipes.featured.open": "Rezept öffnen",
+  "recipes.filter.quick": "Bis 30 Minuten",
+  "recipes.filter.reset": "Alle Rezepte anzeigen",
+  "recipes.list.recent": "Neueste zuerst",
+  "recipe.stepNeeds": "Bereitlegen",
+  "picker.search": "Rezept suchen",
+  "picker.clear": "Suche leeren",
+  "picker.close": "Schließen",
+  "picker.done": "Fertig",
+  "picker.nothing": "Kein Rezept passt zu dieser Suche.",
+  "picker.taken": "Dabei",
+  "editor.newIngredient": "Neue Zutat",
+  "editor.addIngredient": "Hinzufügen",
+  "editor.unitListLabel": "Vorschläge für Einheiten",
+  "editor.usedInSteps": "In",
+  "editor.notUsedInAStep": "In keinem Schritt",
+  "editor.goToStep": "Zu Schritt {number}",
+  "editor.stepIngredients": "Zutaten für Schritt {number}",
+  "editor.addStepIngredient": "Zutat hinzufügen",
+  "editor.pickStepIngredients": "Was Schritt {number} braucht",
+  "editor.removeStepIngredient": "{name} von diesem Schritt nehmen",
+  "editor.namedInStep": "{name} steht im Schritt selbst. Nimm das Wort heraus, um es zu entfernen.",
+  "editor.noIngredientsYet": "Noch keine Zutaten. Leg sie oben an, dann kannst du sie hier auswählen.",
+  "editor.continueDraftLabel": "Da weitermachen, wo du aufgehört hast",
+  "editor.newAnother": "Noch ein Rezept",
+  "shopping.subtitle": "Alles, was du brauchst, in einer Liste.",
+  "shopping.remaining": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} fehlt noch",
+        "countPlural=*": "{count} fehlen noch"
+      }
+    }
+  ],
+  "shopping.addRecipe": "Aus einem Rezept",
+  "shopping.addFields": "Auf die Liste setzen",
+  "shopping.itemName": "Artikel",
+  "shopping.addHint": "Eine Zeile: 200 g Butter. Enter für die nächste.",
+  "shopping.allBought": "Das war alles. Einkauf erledigt.",
+  "shopping.loading": "Deine Einkaufsliste wird geladen",
+  "shopping.pick.title": "Welches Rezept?",
+  "me.account": "Konto",
+  "me.account.lead": "Wer du in dieser Küche bist.",
+  "me.appearance.lead": "Wie Culina auf diesem Gerät aussieht und liest.",
+  "me.household.lead": "Mit wem du kochst und was ihr teilt.",
+  "me.admin": "Admin",
+  "me.memberSince": "Dabei seit",
+  "me.signOut.body": "Beim Abmelden ändert sich hier nichts. Deine Rezepte bleiben, wo sie sind.",
+  "me.household.none": "Du bist noch in keinem Haushalt.",
+  "me.role.owner": "Leitung",
+  "me.role.member": "Mitglied",
+  "me.amounts.hint": "Gramm oder Cups – so, wie deine Küche misst.",
+  "units.piece": "Stück"
 }

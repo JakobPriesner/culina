@@ -6,6 +6,7 @@
     Checkbox,
     Field,
     IconButton,
+    ImageField,
     RadioGroup,
     SearchField,
     Select,
@@ -34,6 +35,14 @@
   let course = $state('main');
   let vegetarian = $state(true);
   let openRegistration = $state(false);
+
+  /*
+   * Both states of the picture field, side by side: the point of it is that the
+   * empty one is the same box as the full one, and that is only reviewable if
+   * you can see them together. Nothing is uploaded here — the specimen keeps
+   * the chosen file in the page as an object URL.
+   */
+  let chosen = $state<string | undefined>();
 </script>
 
 <svelte:head><title>Design system</title></svelte:head>
@@ -147,6 +156,17 @@
         bind:checked={openRegistration}
         label="Open registration"
         description="Anyone with the address can create an account."
+      />
+
+      <ImageField
+        label="Photo"
+        hint="One picture of the finished dish. It is what you will recognise it by."
+        chooseLabel="Choose a photo"
+        replaceLabel="Replace the photo"
+        removeLabel="Remove the photo"
+        src={chosen}
+        onpick={(file) => (chosen = URL.createObjectURL(file))}
+        onremove={() => (chosen = undefined)}
       />
 
       <SearchField

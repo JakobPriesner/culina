@@ -24,7 +24,16 @@
   --c-sand-900: #23211c;
   --c-sand-950: #181713;
 
-  /* The single accent. One colour, reserved for the primary action. */
+  /* Olive connects the interface to the ingredients without competing with photography. */
+  --c-olive-100: #edf0e5;
+  --c-olive-200: #dce3ca;
+  --c-olive-300: #c2cfaa;
+  --c-olive-600: #536340;
+  --c-olive-700: #414f32;
+  --c-olive-800: #303d28;
+  --c-olive-900: #293323;
+
+  /* Clay remains available to themes that use a warmer accent. */
   --c-terracotta-200: #f3c9b6;
   --c-terracotta-400: #dd8462;
   --c-terracotta-500: #c9633f;

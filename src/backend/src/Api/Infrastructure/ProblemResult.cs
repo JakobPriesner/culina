@@ -1,6 +1,7 @@
 using System.Globalization;
 using Domain.Shared;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Api.Infrastructure;
 
@@ -34,7 +35,10 @@ internal sealed class ProblemResult(Error error, int? statusOverride = null) : I
             // unambiguously without promising a web page that a self-hosted
             // instance has no way to serve.
             Type = $"urn:culina:problem:{error.Code}",
-            Title = ReasonPhrases.GetReasonPhrase(status),
+            // The framework's table, not a local one: a status added to
+            // ErrorStatusCodes.Of would otherwise arrive here as a title of
+            // "422" until somebody remembered to edit a second file.
+            Title = Phrase(status),
             Status = status,
             Detail = error.Description
         };
@@ -76,25 +80,14 @@ internal sealed class ProblemResult(Error error, int? statusOverride = null) : I
             cause.Code,
             cause.Description))];
 
-    private sealed record ProblemCause(string? Field, string Code, string Detail);
-}
+    /// <summary>
+    /// The status's reason phrase, falling back to the number for a status the
+    /// framework does not know a phrase for.
+    /// </summary>
+    private static string Phrase(int status) =>
+        ReasonPhrases.GetReasonPhrase(status) is { Length: > 0 } phrase
+            ? phrase
+            : status.ToString(CultureInfo.InvariantCulture);
 
-/// <summary>The reason phrases used as problem titles.</summary>
-internal static class ReasonPhrases
-{
-    internal static string GetReasonPhrase(int statusCode) => statusCode switch
-    {
-        StatusCodes.Status400BadRequest => "Bad Request",
-        StatusCodes.Status401Unauthorized => "Unauthorized",
-        StatusCodes.Status403Forbidden => "Forbidden",
-        StatusCodes.Status404NotFound => "Not Found",
-        StatusCodes.Status405MethodNotAllowed => "Method Not Allowed",
-        StatusCodes.Status409Conflict => "Conflict",
-        StatusCodes.Status412PreconditionFailed => "Precondition Failed",
-        StatusCodes.Status428PreconditionRequired => "Precondition Required",
-        StatusCodes.Status429TooManyRequests => "Too Many Requests",
-        StatusCodes.Status503ServiceUnavailable => "Service Unavailable",
-        StatusCodes.Status500InternalServerError => "Internal Server Error",
-        _ => statusCode.ToString(CultureInfo.InvariantCulture)
-    };
+    private sealed record ProblemCause(string? Field, string Code, string Detail);
 }

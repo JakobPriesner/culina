@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -91,6 +92,82 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Equal("butter", reference.GetProperty("name").GetString());
         Assert.Equal(200.5m, reference.GetProperty("quantity").GetDecimal());
         Assert.Equal(butterId, reference.GetProperty("recipeIngredientId").GetGuid());
+    }
+
+    [Fact]
+    public async Task Update_ShouldKeepAnIngredientAStepNeedsButDoesNotName()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        var butterId = Guid.CreateVersion7();
+        var saltId = Guid.CreateVersion7();
+
+        // Act
+        // The first step's words name nothing; salt is what you get out for it.
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, WithNeeds(butterId, saltId));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var steps = saved.Json!.Value.GetProperty("steps");
+        Assert.Equal([saltId], Uses(steps[0]));
+        // The second step lists salt and names butter, and gets both back in
+        // the recipe's own ingredient order rather than the order it sent.
+        Assert.Equal([butterId, saltId], Uses(steps[1]));
+    }
+
+    [Fact]
+    public async Task Update_ShouldNeedWhatTheStepNames_WhenTheClientSaysNothingAboutNeeds()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        var butterId = Guid.CreateVersion7();
+
+        // Act
+        // FullRecipe has never heard of per-step ingredients.
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, FullRecipe(butterId));
+
+        // Assert
+        // A client that omits the field gets exactly what it always got: the
+        // words, and nothing else.
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var steps = saved.Json!.Value.GetProperty("steps");
+        Assert.Empty(Uses(steps[0]));
+        Assert.Equal([butterId], Uses(steps[1]));
+    }
+
+    [Fact]
+    public async Task Update_ShouldRejectAStepNeedingAnIngredientTheRecipeDoesNotHave()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, new
+        {
+            title = "Bolognese",
+            language = "en",
+            yieldAmount = 4,
+            yieldKind = "servings",
+            groups = new[] { new { name = (string?)null, ingredients = Array.Empty<object>() } },
+            steps = new object[]
+            {
+                new
+                {
+                    segments = new object[] { new { type = "text", value = "Combine." } },
+                    uses = new[] { Guid.CreateVersion7() }
+                }
+            },
+            tags = Array.Empty<string>()
+        });
+
+        // Assert
+        // Named as a failure rather than reaching the foreign key on the
+        // reference index, which is what that check exists to stop.
+        Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
+        Assert.Equal("recipes.unknown_ingredient_reference", saved.ProblemCode);
     }
 
     [Fact]
@@ -196,6 +273,50 @@ public class RecipeEndpointTests(PostgresFixture postgres)
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    private static Guid[] Uses(JsonElement step) =>
+        [.. step.GetProperty("uses").EnumerateArray().Select(one => one.GetGuid())];
+
+    /// <summary>The same recipe, with the needs of each step written down.</summary>
+    private static object WithNeeds(Guid butterId, Guid saltId) => new
+    {
+        title = "Bolognese",
+        language = "en",
+        yieldAmount = 4,
+        yieldKind = "servings",
+        groups = new[]
+        {
+            new
+            {
+                name = (string?)null,
+                ingredients = new object[]
+                {
+                    new { ingredientId = butterId, quantity = 200.5, unit = "g", name = "butter" },
+                    new { ingredientId = saltId, name = "salt" }
+                }
+            }
+        },
+        steps = new object[]
+        {
+            new
+            {
+                segments = new object[] { new { type = "text", value = "Season the pan." } },
+                uses = new[] { saltId }
+            },
+            new
+            {
+                // Listed out of order, and butter is named rather than listed.
+                uses = new[] { saltId },
+                segments = new object[]
+                {
+                    new { type = "text", value = "Melt " },
+                    new { type = "ingredient", recipeIngredientId = butterId },
+                    new { type = "text", value = "." }
+                }
+            }
+        },
+        tags = Array.Empty<string>()
+    };
 
     private static object FullRecipe(Guid butterId) => new
     {

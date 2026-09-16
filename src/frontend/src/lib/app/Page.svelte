@@ -23,7 +23,9 @@
   .page {
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-8) var(--layout-gutter) var(--space-24);
+    min-width: 0;
+    padding-block: var(--layout-page-space) var(--space-24);
+    padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
   }
 
   .reading {

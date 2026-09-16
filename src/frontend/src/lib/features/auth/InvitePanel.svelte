@@ -12,6 +12,10 @@
    * every recipe here. So it is said plainly, the code is shown once where it
    * can be copied, and every invitation that has not been used yet can be taken
    * back — which is the only remedy for a link sent to the wrong chat.
+   *
+   * The heading and the sentence warning what the link is belong to the page
+   * that places this, so that every section of settings is titled the same way
+   * by one component rather than three ways by three.
    */
   interface Props {
     householdId: string;
@@ -62,11 +66,8 @@
   }
 </script>
 
-<section class="section">
-  <h2>{m['me.invite.title']()}</h2>
-  <p class="body">{m['me.invite.body']()}</p>
-
-  <Button onclick={create} loading={working}>{m['me.invite.create']()}</Button>
+<div class="panel">
+  <Button variant="primary" onclick={create} loading={working}>{m['me.invite.create']()}</Button>
 
   {#if invitations.freshCode}
     <div class="fresh">
@@ -82,7 +83,7 @@
   <h3>{m['me.invite.outstanding']()}</h3>
 
   {#if invitations.items.length === 0}
-    <p class="body">{m['me.invite.none']()}</p>
+    <p class="empty">{m['me.invite.none']()}</p>
   {:else}
     <ul class="list">
       {#each invitations.items as invitation (invitation.invitationId)}
@@ -95,34 +96,32 @@
       {/each}
     </ul>
   {/if}
-</section>
+</div>
 
 <style>
-  .section {
+  .panel {
+    min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-4);
     align-items: flex-start;
   }
 
-  h2 {
-    font-size: var(--text-lg);
-  }
-
+  /* The caption over the list, not a section of its own: smaller than the body
+     it introduces, which is what tells the eye it is a label rather than the
+     start of something new. */
   h3 {
-    margin-top: var(--space-4);
-    font-size: var(--text-sm);
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    color: var(--text-muted);
+    color: var(--text-subtle);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
   }
 
-  .body {
-    max-width: var(--measure);
-    color: var(--text-muted);
-  }
-
+  /* Raised, so the one thing on the page that cannot be read again is also the
+     one thing that is impossible to scroll past. */
   .fresh {
     display: flex;
     flex-direction: column;
@@ -140,7 +139,13 @@
     font-weight: var(--weight-semibold);
   }
 
+  /* Monospaced and on its own sunken line: a link somebody has to check
+     character by character before sending it to the wrong person. */
   .code {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
     overflow-wrap: anywhere;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: var(--text-sm);
@@ -151,21 +156,35 @@
     color: var(--text-muted);
   }
 
+  .empty {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  /* Hairlines between rows rather than around each: one list, not a stack of
+     little boxes. */
   .list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
     width: 100%;
     margin: 0;
     padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
     list-style: none;
   }
 
   .row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-4);
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  }
+
+  .row + .row {
+    border-top: 1px solid var(--border);
   }
 
   .expiry {

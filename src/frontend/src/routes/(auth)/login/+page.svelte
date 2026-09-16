@@ -56,7 +56,11 @@
 <svelte:head><title>{m['auth.signIn.title']()}</title></svelte:head>
 
 <form class="form" onsubmit={submit} novalidate>
-  <h1 class="title">{m['auth.signIn.title']()}</h1>
+  <header class="intro">
+    <p class="eyebrow">{m['auth.signIn.welcome']()}</p>
+    <h1 class="title">{m['auth.signIn.title']()}</h1>
+    <p class="subtitle">{m['auth.signIn.intro']()}</p>
+  </header>
 
   <!--
     One message for "no such account" and for "wrong password", always. Telling
@@ -106,9 +110,29 @@
   }
 
   .title {
-    font-size: var(--text-2xl);
+    font-family: var(--font-editorial);
+    font-size: var(--text-display);
+    font-weight: var(--weight-regular);
+    letter-spacing: -0.04em;
   }
 
+  .intro {
+    margin-bottom: var(--space-6);
+  }
+  .eyebrow {
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+  }
+  .subtitle {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
   .alternative {
     color: var(--text-muted);
     font-size: var(--text-sm);

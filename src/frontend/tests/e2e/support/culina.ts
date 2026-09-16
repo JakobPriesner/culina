@@ -154,6 +154,37 @@ export async function householdId(api: APIRequestContext): Promise<string> {
   return (await me.json()).households[0].householdId;
 }
 
+/**
+ * Makes a cookbook and puts a recipe on it, returning its id.
+ *
+ * Two calls because they are two things — a shelf exists before anything is on
+ * it, and that is the state a household is in for the minute after they make
+ * one.
+ */
+export async function seedCookbook(page: Page, name: string, recipeId?: string): Promise<string> {
+  const headers = await writeHeaders(page);
+  const household = await householdId(page.request);
+
+  const created = await page.request.post('/api/v1/cookbooks', {
+    headers,
+    data: { householdId: household, name }
+  });
+
+  expect(created.ok(), await created.text()).toBe(true);
+
+  const { cookbookId } = await created.json();
+
+  if (recipeId) {
+    const added = await page.request.put(`/api/v1/cookbooks/${cookbookId}/recipes/${recipeId}`, {
+      headers
+    });
+
+    expect(added.ok(), await added.text()).toBe(true);
+  }
+
+  return cookbookId;
+}
+
 export interface SeedIngredient {
   readonly quantity?: number;
   readonly unit?: string;
@@ -166,6 +197,8 @@ export interface SeedRecipe {
   readonly ingredients?: readonly SeedIngredient[];
   /** Step text. `{0}` in it is replaced by a reference to ingredient 0. */
   readonly steps?: readonly string[];
+  /** Tags as somebody would type them; the server slugs them. */
+  readonly tags?: readonly string[];
 }
 
 /**
@@ -200,7 +233,7 @@ export async function seedRecipe(page: Page, recipe: SeedRecipe): Promise<string
       yieldKind: 'servings',
       groups: [{ ingredients }],
       steps: [],
-      tags: []
+      tags: recipe.tags ?? []
     }
   });
 

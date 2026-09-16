@@ -83,6 +83,23 @@ describe('a modal dialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  /*
+   * Every way out reports, not only the native one. A caller that passes
+   * `open` as an expression rather than a binding — `open={chosen !== null}` —
+   * hears about a dismissal through this and nothing else, so a Close button
+   * that stayed quiet would leave it believing the dialog was still up.
+   */
+  it('tells the caller when it is closed from the visible button', async () => {
+    const onclose = vi.fn();
+
+    renderWithProviders(DialogHarness, { props: { onclose } });
+
+    await userEvent.click(open());
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => expect(onclose).toHaveBeenCalledOnce());
+  });
+
   it('closes from inside, so an action can finish the task', async () => {
     renderWithProviders(DialogHarness, {});
 

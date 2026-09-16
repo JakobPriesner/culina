@@ -70,6 +70,58 @@ describe('resolving the session', () => {
     expect(session.user).toBeNull();
   });
 
+  it('says so when it could not ask, rather than reporting nobody is signed in', async () => {
+    // A backend restarting, a proxy answering 502, a request that timed out.
+    // None of them is the server saying there is no session, and treating them
+    // as one is what puts a sign-in form in front of a valid cookie.
+    serverAnswers(() => json({ code: 'server.unavailable', detail: 'Later.' }, 503));
+
+    await session.resolve();
+
+    expect(session.status).toBe('unavailable');
+  });
+
+  it('says so when the request never reached a server', async () => {
+    serverAnswers(() => {
+      throw new TypeError('Failed to fetch');
+    });
+
+    await session.resolve();
+
+    expect(session.status).toBe('unavailable');
+  });
+
+  it('treats only a 401 as not being signed in', async () => {
+    serverAnswers(signedOut);
+
+    await session.resolve();
+
+    expect(session.status).toBe('anonymous');
+  });
+
+  it('remembers which boot screen this device should paint next time', async () => {
+    await session.resolve();
+
+    // Read by the inline script in app.html, long before any of this exists.
+    expect(localStorage.getItem('culina.boot')).toBe('app');
+
+    serverAnswers(signedOut);
+    await session.refresh();
+
+    expect(localStorage.getItem('culina.boot')).toBe('auth');
+  });
+
+  it('leaves the boot hint alone when it could not ask', async () => {
+    await session.resolve();
+
+    serverAnswers(() => json({ code: 'server.unavailable', detail: 'Later.' }, 503));
+    await session.refresh();
+
+    // Guessing "signed out" from a failure would have this device open on a
+    // sign-in skeleton for a session that is perfectly good.
+    expect(localStorage.getItem('culina.boot')).toBe('app');
+  });
+
   it('asks once, however many callers want the answer', async () => {
     await Promise.all([session.resolve(), session.resolve(), session.resolve()]);
 

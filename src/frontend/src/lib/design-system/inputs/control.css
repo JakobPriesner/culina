@@ -12,7 +12,7 @@
   width: 100%;
   min-width: 0;
   height: var(--control-md);
-  padding-inline: var(--space-3);
+  padding-inline: var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
@@ -41,4 +41,10 @@
    wrong, and aria-invalid says it to a screen reader. */
 .ds-control[aria-invalid='true'] {
   border-color: var(--danger);
+}
+
+.ds-control:focus-visible {
+  border-color: var(--border-focus);
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
 }

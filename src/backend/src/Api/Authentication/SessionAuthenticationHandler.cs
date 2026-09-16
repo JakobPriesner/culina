@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
+using Domain.Sessions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -38,11 +39,52 @@ internal sealed class SessionAuthenticationHandler(
         var found = await sessions.FindActiveByTokenAsync(token, Context.RequestAborted)
             .ConfigureAwait(false);
 
-        return found.Match(
-            session => session.IsActive(time.GetUtcNow())
-                ? AuthenticateResult.Success(TicketFor(session.UserId, session.Id))
-                : AuthenticateResult.NoResult(),
-            _ => AuthenticateResult.NoResult());
+        return await found.Match(
+            AdmitAsync,
+            _ => Task.FromResult(AuthenticateResult.NoResult())).ConfigureAwait(false);
+    }
+
+    /// <summary>Admits the session, and keeps it from lapsing while it is used.</summary>
+    private async Task<AuthenticateResult> AdmitAsync(Session session)
+    {
+        var now = time.GetUtcNow();
+
+        if (!session.IsActive(now))
+        {
+            return AuthenticateResult.NoResult();
+        }
+
+        await RenewAsync(session, now).ConfigureAwait(false);
+
+        return AuthenticateResult.Success(TicketFor(session.UserId, session.Id));
+    }
+
+    /// <summary>
+    /// Keeps a session that is being used from lapsing.
+    /// </summary>
+    /// <remarks>
+    /// Culina has no refresh token, because the cookie is an opaque reference
+    /// and not a self-contained one: there is nothing to exchange, and a
+    /// revoked session stops working on the next request rather than at the end
+    /// of an access token's life. This is what takes its place — the row's
+    /// expiry and both cookies move forward while the session is in use, so
+    /// <c>Cookies__SessionDays</c> means "thirty days unused" rather than
+    /// "thirty days from signing in".
+    /// </remarks>
+    private async Task RenewAsync(Session session, DateTimeOffset now)
+    {
+        if (!session.IsDueForRenewal(now, cookies.RenewAfter))
+        {
+            return;
+        }
+
+        session.Touch(now, cookies.SessionLifetime);
+
+        await sessions.UpdateAsync(session, Context.RequestAborted).ConfigureAwait(false);
+
+        // Authentication runs before any endpoint, so the response has not
+        // started and a cookie can still be added to it.
+        SessionCookies.Renew(Context, cookies, now);
     }
 
     private AuthenticationTicket TicketFor(Guid userId, Guid sessionId)

@@ -21,6 +21,7 @@ internal sealed class SignInEndpoint : IEndpoint
                 HttpContext context,
                 ICommandHandler<SignInCommand, SignInOutcome> handler,
                 CookieSettings cookies,
+                TimeProvider time,
                 CancellationToken cancellationToken) =>
             {
                 var result = await handler
@@ -36,6 +37,7 @@ internal sealed class SignInEndpoint : IEndpoint
                         SessionCookies.Write(
                             context,
                             cookies,
+                            time.GetUtcNow(),
                             outcome.SessionToken,
                             outcome.Response.CsrfToken);
 

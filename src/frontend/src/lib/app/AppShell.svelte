@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  import { navigating } from '$app/state';
+  import { navigating, page } from '$app/state';
   import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
@@ -11,12 +11,14 @@
   import { connection } from './connection.svelte';
   import { m } from './i18n';
   import Navigation from './Navigation.svelte';
+  import LibraryNav from './LibraryNav.svelte';
+  import NewRecipeLink from './NewRecipeLink.svelte';
 
   /**
    * The frame every signed-in page sits in.
    *
-   * A navbar across the top, and on a phone the same three destinations along
-   * the bottom as well, where a thumb reaches. The navigation is rendered once
+   * Global navigation sits at the top on desktop. On phones, the bottom bar
+   * keeps global areas and opens collection navigation in a sheet. The navigation is rendered once
    * and never re-created, so moving between sections does not rebuild it — and
    * the slot above the bottom bar is reserved whether or not anything is in it,
    * so the cooking bar appearing later never pushes the page.
@@ -43,10 +45,18 @@
    */
   let dockHeight = $state(0);
   let barHeight = $state(0);
+  let headerHeight = $state(0);
+  const showLibraryRail = $derived(
+    page.url.pathname === '/' ||
+      page.url.pathname === '/cookbooks' ||
+      page.url.pathname.startsWith('/cookbooks/')
+  );
 </script>
 
 <div
   class="shell"
+  class:library-view={showLibraryRail}
+  style:--header-inset="{headerHeight}px"
   style:--bar-inset="{barHeight}px"
   style:--bottom-inset="{dockHeight + barHeight}px"
 >
@@ -55,7 +65,7 @@
        every single page. -->
   <a class="skip" href="#content">{m['nav.skip']()}</a>
 
-  <header class="header">
+  <header class="header" bind:clientHeight={headerHeight}>
     {#if navigating.to}
       <span class="progress" role="progressbar" aria-label={m['app.navigating']()}></span>
     {/if}
@@ -65,15 +75,25 @@
 
       <div class="wide-only"><Navigation placement="top" /></div>
 
-      <!-- A statement, not an alarm. It says why a change did not save; it does
-           not take over the screen, and it never appears as a dialogue. -->
+      <div class="library-controls">
+        <NewRecipeLink />
+      </div>
       {#if !connection.online}
-        <p class="offline">{m['connection.offline']()}</p>
+        <div class="status"><p class="offline">{m['connection.offline']()}</p></div>
       {/if}
     </div>
   </header>
 
-  <main class="content" id="content" tabindex="-1">{@render children()}</main>
+  <main class="content" id="content" tabindex="-1">
+    {#if showLibraryRail}
+      <div class="library-layout">
+        <aside class="library-rail"><LibraryNav /></aside>
+        <div class="library-content">{@render children()}</div>
+      </div>
+    {:else}
+      {@render children()}
+    {/if}
+  </main>
 
   <!-- The slot is reserved whether or not anything is in it, so the bar
        appearing never pushes the page. -->
@@ -93,6 +113,7 @@
   .shell {
     display: grid;
     min-height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto auto;
     grid-template-areas:
       'header'
@@ -106,34 +127,62 @@
     position: sticky;
     top: 0;
     z-index: var(--z-sticky);
-    border-bottom: 1px solid var(--border);
-    background: var(--surface-raised);
+    pointer-events: none;
   }
 
-  /* The same rhythm as the signed-out header, so the app does not change shape
-     the moment someone signs in. */
+  /* Three floating groups share one row: brand, destinations, library tools. */
   .header-inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-4);
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-3) var(--layout-gutter);
+    min-height: 4.5rem;
+    padding-block: var(--space-3);
+    padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
   }
 
-  /* Pushed to the end of the header, so it never moves the navigation. */
+  .library-controls {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-width: 0;
+    pointer-events: auto;
+  }
+
+  /* Connection feedback gets its own small badge without moving the controls. */
+  .status {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
   .offline {
-    margin: 0 0 0 auto;
+    pointer-events: auto;
+    margin: 0;
     padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-full);
     background: var(--warning-subtle);
     color: var(--text);
     font-size: var(--text-xs);
-    white-space: nowrap;
+    text-align: end;
   }
 
   .brand {
+    grid-column: 1;
+    justify-self: start;
     text-decoration: none;
+    padding: var(--space-2) var(--space-3);
+    margin-inline-start: calc(-1 * var(--space-3));
+    border-radius: var(--radius-full);
+    background: var(--surface-nav-glass);
+    backdrop-filter: blur(16px);
+    pointer-events: auto;
   }
 
   .content {
@@ -141,9 +190,51 @@
     min-width: 0;
     /* Focusable as a skip-link target, but never with a ring of its own. */
     outline: none;
+    scroll-margin-top: var(--space-24);
+  }
+
+  .library-rail {
+    display: none;
+  }
+  .library-content {
+    min-width: 0;
+  }
+
+  @media (min-width: 64rem) {
+    .library-view .header-inner {
+      max-width: calc(var(--layout-wide) + 11rem);
+    }
+    .library-view .brand {
+      margin-inline-start: 0;
+    }
+    .library-layout {
+      display: grid;
+      grid-template-columns: 11rem minmax(0, 1fr);
+      column-gap: var(--space-8);
+      align-items: start;
+      max-width: calc(var(--layout-wide) + 11rem);
+      margin-inline: auto;
+      padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
+    }
+    .library-content > :global(.page) {
+      padding-inline: 0;
+    }
+    .library-rail {
+      display: block;
+      border-inline-end: 1px solid var(--border);
+      position: sticky;
+      top: calc(var(--header-inset) + var(--space-4));
+      margin-block-start: var(--layout-page-space);
+      max-height: calc(100dvh - var(--header-inset) - var(--bottom-inset) - var(--space-8));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      /* Space for keyboard outlines without clipping the compact panel. */
+      padding: var(--space-1) var(--space-3) var(--space-4) 0;
+    }
   }
 
   .dock {
+    min-width: 0;
     grid-area: dock;
     position: sticky;
     bottom: var(--bar-inset);
@@ -159,6 +250,7 @@
     background: var(--surface-raised);
     /* Clear of the home indicator. */
     padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
   }
 
   /* A thin line across the top while a route resolves. Not a spinner: this is
@@ -200,17 +292,51 @@
     transform: none;
   }
 
+  /* The narrow header keeps the brand and recipe creation. Expanded navigation
+     takes the middle slot between them on desktop. */
   .wide-only {
+    pointer-events: auto;
+    grid-column: 2;
     display: none;
   }
 
-  @media (min-width: 48rem) {
+  @media (width < 40rem) {
+    .header-inner {
+      gap: var(--space-2);
+    }
+    .library-controls {
+      flex-wrap: nowrap;
+    }
+  }
+
+  /* Expanded navigation needs room for the brand, labels and recipe creation. */
+  @media (min-width: 64rem) {
+    .header-inner {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    }
+
+    .library-controls {
+      grid-column: 3;
+    }
+
     .wide-only {
       display: block;
     }
 
     .narrow-only {
       display: none;
+    }
+  }
+
+  /* In landscape or with a keyboard open, give the content its height back. */
+  @media screen and (max-height: 32rem) {
+    .header,
+    .library-rail {
+      position: relative;
+      top: auto;
+    }
+    .library-rail {
+      max-height: none;
     }
   }
 
@@ -229,12 +355,20 @@
     .skip,
     .header,
     .dock,
-    .bar {
+    .bar,
+    .library-rail {
       display: none !important;
     }
 
     .shell,
-    .content {
+    .content,
+    .library-view .header-inner {
+      max-width: calc(var(--layout-wide) + 11rem);
+    }
+    .library-view .brand {
+      margin-inline-start: 0;
+    }
+    .library-layout {
       display: block;
       min-height: 0;
       margin: 0;

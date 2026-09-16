@@ -80,6 +80,27 @@ public class RecipeSearchTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Search_ShouldAskForATagOnce_WhenItIsGivenTwice()
+    {
+        // Arrange
+        // A recipe carries a tag once, so asking for it twice asked for
+        // something no recipe could satisfy and quietly returned nothing.
+        var world = await SeedAsync();
+
+        // Act
+        var twice = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&tag=vegetarian&tag=vegetarian",
+            Token);
+        var once = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&tag=vegetarian",
+            Token);
+
+        // Assert
+        Assert.Equal(Titles(once), Titles(twice));
+        Assert.NotEmpty(Titles(twice));
+    }
+
+    [Fact]
     public async Task Search_ShouldRankByWhatYouHave_AndSayHowMuchIsMissing()
     {
         // Arrange

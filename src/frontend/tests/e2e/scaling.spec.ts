@@ -170,7 +170,7 @@ test.describe('measured the way the reader measures', () => {
         (one) => one.url().includes('/users/me/settings') && one.request().method() === 'PUT'
       );
 
-    await page.goto('/me');
+    await page.goto('/me/appearance');
     await Promise.all([saved(), page.getByLabel(/^(amounts|mengen)$/i).selectOption('imperial')]);
 
     // The app reads the choice back on boot, and the amounts are rendered from
@@ -200,7 +200,7 @@ test.describe('measured the way the reader measures', () => {
     await expect(page.getByRole('region', { name: /steps|zubereitung/i })).toContainText(/8\s*oz/);
 
     // Shown, not stored: switching back leaves the recipe exactly as written.
-    await page.goto('/me');
+    await page.goto('/me/appearance');
     await Promise.all([saved(), page.getByLabel(/^(amounts|mengen)$/i).selectOption('metric')]);
     await page.goto(`/recipes/${recipeId}`);
 

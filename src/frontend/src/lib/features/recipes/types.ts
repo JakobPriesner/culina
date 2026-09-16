@@ -54,6 +54,15 @@ export type StepSegment =
 export interface Step {
   readonly id: string | null;
   readonly segments: readonly StepSegment[];
+  /**
+   * Everything the step needs, in the recipe's own ingredient order.
+   *
+   * What you get out before starting it — which is more than the sentence
+   * names, because "combine everything and knead" needs five things and says
+   * none of them. An ingredient the text does mention is always in here: the
+   * server folds the two together, so they cannot come apart.
+   */
+  readonly uses: readonly string[];
   /** Drives the inline timer, when the step is a wait. */
   readonly durationSeconds: number | null;
 }

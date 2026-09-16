@@ -23,12 +23,37 @@
   let { trigger, children, placement = 'bottom-start' }: Props = $props();
 
   const id = $props.id();
+  let anchor: HTMLDivElement;
+  let open = $state(false);
+  let detached = $state(false);
+
+  $effect(() => {
+    if (!open) return;
+    // Anchor fallbacks account for layout overflow, but an open panel can
+    // follow its trigger off-screen when the document scrolls or reflows.
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) detached = !entry.isIntersecting;
+    });
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  });
 </script>
 
-<div class="anchor" style:--anchor-name="--{id}">
+<div class="anchor" bind:this={anchor} style:--anchor-name="--{id}">
   {@render trigger({ popovertarget: id })}
 
-  <div {id} class="panel {placement}" popover="auto">{@render children()}</div>
+  <div
+    {id}
+    class="panel {placement}"
+    class:detached
+    popover="auto"
+    ontoggle={(event) => {
+      open = event.newState === 'open';
+      if (!open) detached = false;
+    }}
+  >
+    {@render children()}
+  </div>
 </div>
 
 <style>
@@ -46,31 +71,59 @@
     background: var(--surface-overlay);
     color: var(--text);
     box-shadow: var(--shadow-overlay);
+    max-width: calc(100dvw - 2 * var(--space-4));
+    /* The position area supplies the available space beside the anchor. A
+       long panel must shrink and scroll when neither side fits its content. */
+    max-height: stretch;
+    overflow: auto;
+    overscroll-behavior: contain;
 
     position-anchor: var(--anchor-name);
     position-area: block-end span-inline-end;
     margin-block-start: var(--space-1);
     /* Flips to the other side when there is no room below, rather than being
        clipped off the bottom of a phone. */
-    position-try-fallbacks: flip-block, flip-inline;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline,
+      --popover-viewport;
   }
 
   .bottom-end {
     position-area: block-end span-inline-start;
   }
 
-  /* Anchor positioning is recent. Where it is missing the panel falls back to
-     ordinary absolute placement under the trigger, which is correct in the
-     common case and never invisible. */
-  @supports not (anchor-name: --a) {
-    .panel {
-      position: absolute;
-      inset-block-start: calc(100% + var(--space-1));
-      inset-inline-start: 0;
-    }
+  .panel.detached {
+    position-anchor: auto;
+    position-area: none;
+    inset: var(--space-4);
+    margin: auto;
+    width: max-content;
+    height: max-content;
+    max-height: calc(100dvh - 2 * var(--space-4));
+  }
 
-    .bottom-end {
-      inset-inline: auto 0;
+  /* Keep the choices reachable even when no anchored position fits. */
+  @position-try --popover-viewport {
+    position-area: none;
+    inset: var(--space-4);
+    margin: auto;
+    width: max-content;
+    height: max-content;
+    max-height: calc(100dvh - 2 * var(--space-4));
+  }
+
+  /* Browsers without sized anchor areas get the same viewport fallback. */
+  @supports not ((anchor-name: --a) and (max-height: stretch)) {
+    .panel {
+      position: fixed;
+      position-area: none;
+      inset: var(--space-4);
+      margin: auto;
+      width: max-content;
+      height: max-content;
+      max-height: calc(100dvh - 2 * var(--space-4));
     }
   }
 </style>

@@ -132,6 +132,9 @@ public class RecipeJsonLdTests
     [InlineData("\"4 servings\"", 4)]
     [InlineData("\"4-6\"", 4)]
     [InlineData("[\"6\", \"6 portions\"]", 6)]
+    [InlineData("\"Serves 4\"", 4)]
+    [InlineData("\"Makes 12 cookies\"", 12)]
+    [InlineData("\"F\u00fcr 4 Personen\"", 4)]
     public void Read_ShouldTakeTheFirstNumberOfTheYield(string yield, int expected)
     {
         // Arrange

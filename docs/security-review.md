@@ -38,6 +38,7 @@ notice losing.
 | Revocation takes effect immediately | Met | `Session_ShouldStopWorking_TheMomentItIsRevokedFromAnotherDevice` |
 | One account cannot revoke another's session | Met | `Revoke_ShouldNotSeeAnotherUsersSession_EvenWithItsExactId` |
 | Sessions expire | Met | `Cookies__SessionDays`, `DeleteExpired_ShouldRemoveLapsedSessions_ButKeepLiveOnes` |
+| Expiry is idle time, not absolute | Met | Renewed on use, at most once per `Cookies__RenewAfterHours`. `AnAuthenticatedRequest_ShouldReissueBothCookies_OnceTheSessionIsDueForRenewal` |
 | Sign-out ends the session server-side | Met | `SignOut_ShouldEndTheSession_SoTheCookieStopsWorking` |
 
 ## V4 — Access control

@@ -28,7 +28,7 @@
 
   /* Radius. Photos and cards share one value so nothing looks almost-aligned. */
   --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
+  --radius-md: 0.625rem;
   --radius-lg: 1rem;
   --radius-full: 9999px;
 
@@ -61,7 +61,11 @@
 
   /* The inline padding every full-width band uses, so the brand in the header
      and the heading below it start on the same line. */
-  --layout-gutter: var(--space-8);
+  --layout-gutter: clamp(1rem, 4vw, 3rem);
+  --layout-gutter-start: max(var(--layout-gutter), env(safe-area-inset-left, 0px));
+  --layout-gutter-end: max(var(--layout-gutter), env(safe-area-inset-right, 0px));
+  --layout-page-space: clamp(1.5rem, 4vw, 3rem);
+  --layout-section-gap: clamp(1.5rem, 3vw, 3rem);
   --text-display: clamp(2.5rem, 2rem + 1.6vw, 4rem);
 
   /* How much of the bottom of the viewport the app shell has already claimed —
@@ -72,7 +76,7 @@
      from sticking to nothing. */
   --bottom-inset: 0px;
   --bar-inset: 0px;
-  --font-editorial: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --font-editorial: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,

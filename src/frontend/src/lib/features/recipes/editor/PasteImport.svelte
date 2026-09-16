@@ -249,12 +249,14 @@
 
   .from-url {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-end;
     gap: var(--space-3);
   }
 
   .from-url :global(> :first-child) {
-    flex: 1;
+    flex: 1 1 16rem;
+    min-width: 0;
   }
 
   .or {
@@ -304,7 +306,7 @@
 
   .row {
     display: grid;
-    grid-template-columns: minmax(4rem, auto) 1fr;
+    grid-template-columns: minmax(4rem, auto) minmax(0, 1fr);
     gap: var(--space-3);
     padding-block: var(--space-1);
   }
@@ -332,6 +334,7 @@
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
   }
 </style>

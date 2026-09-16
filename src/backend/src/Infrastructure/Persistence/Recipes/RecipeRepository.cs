@@ -89,6 +89,11 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
             select id, recipe_id, sort_order, body, duration_seconds
             from steps where recipe_id = @recipeId order by sort_order;
 
+            select r.step_id, r.recipe_ingredient_id
+            from step_ingredient_refs r
+            join steps s on s.id = r.step_id
+            where s.recipe_id = @recipeId;
+
             select t.slug from recipe_tags rt
             join tags t on t.id = rt.tag_id
             where rt.recipe_id = @recipeId order by t.slug;
@@ -108,9 +113,16 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
             var groups = await reader.ReadAsync<IngredientGroupRow>().ConfigureAwait(false);
             var ingredients = await reader.ReadAsync<RecipeIngredientRow>().ConfigureAwait(false);
             var steps = await reader.ReadAsync<StepRow>().ConfigureAwait(false);
+            var uses = await reader.ReadAsync<StepIngredientRefRow>().ConfigureAwait(false);
             var slugs = await reader.ReadAsync<string>().ConfigureAwait(false);
 
-            return RecipeAssembler.Assemble([.. groups], [.. ingredients], [.. steps], [.. slugs], row);
+            return RecipeAssembler.Assemble(
+                [.. groups],
+                [.. ingredients],
+                [.. steps],
+                [.. uses],
+                [.. slugs],
+                row);
         }
     }
 
@@ -339,9 +351,10 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
                 },
                 cancellationToken).ConfigureAwait(false);
 
-            // Rebuilt from the step text rather than supplied by the caller, so
-            // the index cannot disagree with the words it indexes.
-            foreach (var ingredientId in step.ReferencedIngredients)
+            // The step's own set, which Step.Create has already widened to
+            // include everything the sentence mentions — so this cannot
+            // disagree with the words, and it is what the read path reads back.
+            foreach (var ingredientId in step.Uses)
             {
                 await executor.ExecuteAsync(
                     """

@@ -3,6 +3,7 @@
 
   import { m } from '$shell/i18n';
   import MentionField from './MentionField.svelte';
+  import StepIngredients from './StepIngredients.svelte';
   import { toSegments, toText } from './mentions';
   import type { Ingredient, Step } from '../types';
 
@@ -13,6 +14,11 @@
    * ceremony, and what it buys is a step whose amounts follow the portions.
    * Naming an ingredient the recipe does not have yet adds it to the list from
    * inside the sentence, so the method can be written first and measured after.
+   *
+   * Under each sentence is what the step needs, which is the larger question:
+   * "combine everything and knead" names nothing and needs everything, and a
+   * cook standing at the counter is asking what to get out, not what the words
+   * happen to mention.
    *
    * Reordering is buttons, not drag. Drag alone cannot be done with a keyboard,
    * and a recipe is rearranged rarely enough that two arrows are no hardship.
@@ -35,8 +41,12 @@
     );
   }
 
+  function setUses(index: number, uses: string[]) {
+    onchange(steps.map((step, candidate) => (candidate === index ? { ...step, uses } : step)));
+  }
+
   function add() {
-    onchange([...steps, { id: null, segments: [], durationSeconds: null }]);
+    onchange([...steps, { id: null, segments: [], uses: [], durationSeconds: null }]);
   }
 
   function remove(index: number) {
@@ -105,6 +115,13 @@
           {ingredients}
           oninput={(text) => update(index, text)}
           onadd={onaddingredient}
+        />
+
+        <StepIngredients
+          {step}
+          number={index + 1}
+          {ingredients}
+          onchange={(uses) => setUses(index, uses)}
         />
       </li>
     {/each}

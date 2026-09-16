@@ -198,7 +198,12 @@ internal sealed class RestoreArchiveCommandHandler(
                     : (StepSegment)new TextSegment(segment.Text ?? string.Empty))
                 .ToList();
 
-            Step.Create(null, at, segments, step.DurationSeconds)
+            var uses = (step.Uses ?? [])
+                .Where(position => position >= 0 && position < order.Count)
+                .Select(position => order[position].Id)
+                .ToList();
+
+            Step.Create(null, at, segments, uses, step.DurationSeconds)
                 .Match(built => steps.Add(built), _ => { });
         }
 
