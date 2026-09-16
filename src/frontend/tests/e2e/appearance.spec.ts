@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { responsiveData } from './support/responsive';
+
 /**
  * The flash of the wrong theme is the bug this whole arrangement exists to
  * prevent, so it is tested the only way that means anything: by checking that
@@ -57,5 +59,29 @@ test.describe('appearance @offline', () => {
     await picker.selectOption('en');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  });
+
+  /*
+   * Settings shows all three modes at once rather than the header's cycling
+   * button: the question there is "which of these is it", and an icon that has
+   * to be pressed twice to answer that is not an answer. Which makes the state
+   * of the other two radios part of the control, not decoration.
+   */
+  test('chooses a mode outright in settings', async ({ page }) => {
+    await responsiveData(page, 'en');
+    await page.goto('/me/appearance');
+
+    const theme = page.getByRole('group', { name: /^theme$/i });
+    const dark = theme.getByRole('radio', { name: /^dark$/i });
+
+    await expect(theme.getByRole('radio', { name: /^light$/i })).toBeChecked();
+
+    // Clicked the way a person does — on the segment, not on the radio clipped
+    // underneath it.
+    await theme.getByText(/^dark$/i).click();
+
+    await expect(page.locator('html')).toHaveAttribute('data-mode', 'dark');
+    await expect(dark).toBeChecked();
+    await expect(theme.getByRole('radio', { name: /^light$/i })).not.toBeChecked();
   });
 });

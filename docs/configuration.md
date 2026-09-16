@@ -47,7 +47,8 @@ protects later would otherwise change key on every restart.
 | Variable | Default | |
 | --- | --- | --- |
 | `Cookies__Secure` | `true` | Only local HTTP development justifies `false`. With it true the session cookie takes the `__Host-` prefix, which requires HTTPS — over plain `http://` the browser refuses it and signing in cannot work. |
-| `Cookies__SessionDays` | `30` | How long a session survives without activity. |
+| `Cookies__SessionDays` | `30` | How long a session survives without activity. Activity slides it: a device in regular use is never signed out. |
+| `Cookies__RenewAfterHours` | `24` | How long a session may sit unused before the next request extends it and re-issues both cookies. Culina has no refresh token — the cookie is an opaque reference, so this renewal is what takes its place. Lower costs a write per request for nothing; `0` renews on every request and only a test wants that. |
 
 ## Behind a reverse proxy
 

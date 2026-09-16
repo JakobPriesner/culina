@@ -48,9 +48,14 @@
 
   .icon {
     display: block;
-    width: var(--space-12);
-    height: var(--space-12);
-    color: var(--text-subtle);
+    width: var(--space-16);
+    height: var(--space-16);
+    margin-bottom: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-accent-subtle);
+    color: var(--accent);
   }
 
   .icon :global(svg) {
@@ -60,7 +65,10 @@
   }
 
   .title {
-    font-size: var(--text-xl);
+    font-family: var(--font-editorial);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-regular);
+    letter-spacing: -0.025em;
   }
 
   .body {

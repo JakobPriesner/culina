@@ -19,6 +19,14 @@
     describedBy?: string | undefined;
     invalid?: boolean;
     disabled?: boolean;
+    /**
+     * Sized to its longest option rather than to its container.
+     *
+     * For a select that is the whole control — a language, a unit system —
+     * sitting beside its own label in a row, where stretching to the full width
+     * would make a two-word choice look like a text field.
+     */
+    inline?: boolean;
     onchange?: (value: string) => void;
   }
 
@@ -29,12 +37,14 @@
     describedBy,
     invalid = false,
     disabled = false,
+    inline = false,
     onchange
   }: Props = $props();
 </script>
 
 <select
   class="ds-control select"
+  class:inline
   {id}
   {disabled}
   bind:value
@@ -52,5 +62,9 @@
     /* The native arrow needs room that padding-inline alone does not leave. */
     padding-inline-end: var(--space-2);
     cursor: pointer;
+  }
+
+  .select.inline {
+    width: auto;
   }
 </style>

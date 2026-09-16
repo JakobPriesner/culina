@@ -7,6 +7,12 @@ namespace Application.Abstractions;
 /// <param name="Tags">Tag slugs, all of which must be present.</param>
 /// <param name="Ingredients">Ingredients the caller has, for ranking.</param>
 /// <param name="MaxMinutes">A ceiling on total time.</param>
+/// <param name="CookbookId">
+/// Only what is on this shelf by hand, or null. A smart shelf does not set
+/// this — it sets <paramref name="Rules"/> instead, because what is on it was
+/// never written down anywhere.
+/// </param>
+/// <param name="Rules">What a smart shelf asks for, or null.</param>
 /// <param name="Sort">How to order the results.</param>
 /// <param name="Cursor">Where the previous page ended.</param>
 /// <param name="Limit">How many to return.</param>
@@ -17,6 +23,8 @@ public sealed record RecipeSearch(
     IReadOnlyList<string> Tags,
     IReadOnlyList<string> Ingredients,
     int? MaxMinutes,
+    Guid? CookbookId,
+    RecipeRules? Rules,
     RecipeSort Sort,
     string? Cursor,
     int Limit);
@@ -37,8 +45,31 @@ public enum RecipeSort
     MostCooked = 3,
 
     /// <summary>Best fit for the query and the named ingredients.</summary>
-    Relevance = 4
+    Relevance = 4,
+
+    /// <summary>
+    /// The order a cookbook was built in. Only legal with a cookbook, and the
+    /// default when there is one.
+    /// </summary>
+    CookbookOrder = 5
 }
+
+/// <summary>
+/// What a smart cookbook asks for, as the searcher needs it.
+/// </summary>
+/// <remarks>
+/// A copy of the domain's rules rather than the domain type itself, because
+/// this is a port: <c>Application.Abstractions</c> describes what the database
+/// is asked, and a search that took a <c>Cookbook</c> would make every caller
+/// of the recipe list know what a cookbook is.
+/// </remarks>
+/// <param name="Tags">Tag slugs a recipe must all carry.</param>
+/// <param name="Ingredients">Ingredient names a recipe must all use.</param>
+/// <param name="MaxMinutes">The longest a recipe may take, or null.</param>
+public sealed record RecipeRules(
+    IReadOnlyList<string> Tags,
+    IReadOnlyList<string> Ingredients,
+    int? MaxMinutes);
 
 /// <summary>One page of matching recipes.</summary>
 /// <param name="Items">The rows, already ordered.</param>
@@ -61,6 +92,9 @@ public sealed record RecipePage(
 /// <param name="UpdatedAt">When it last changed.</param>
 /// <param name="MatchedIngredients">How many named ingredients it uses.</param>
 /// <param name="IngredientCount">How many ingredients it has in total.</param>
+/// <param name="AddedToCookbookAt">
+/// When it went on the cookbook being read, or null when none is.
+/// </param>
 public sealed record RecipeSearchRow(
     Guid RecipeId,
     string Title,
@@ -72,4 +106,5 @@ public sealed record RecipeSearchRow(
     int CookCount,
     DateTimeOffset UpdatedAt,
     int MatchedIngredients,
-    int IngredientCount);
+    int IngredientCount,
+    DateTimeOffset? AddedToCookbookAt);

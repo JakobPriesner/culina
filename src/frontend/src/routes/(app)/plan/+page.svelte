@@ -1,10 +1,12 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Button, EmptyState, ErrorState, SearchField, Sheet } from '$ds';
+  import { Button, EmptyState, ErrorState } from '$ds';
 
   import PlannedCard from '$features/planning/PlannedCard.svelte';
   import { asDate, mealPlan, type MealSlot } from '$features/planning/mealPlan.svelte';
-  import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
+  import RecipePicker from '$features/recipes/RecipePicker.svelte';
+  import type { RecipeSummary } from '$features/recipes/types';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -39,7 +41,9 @@
   /** The day an "add" was pressed for, which is also what opens the picker. */
   let adding = $state<string | null>(null);
   let slot = $state<MealSlot>('dinner');
-  let search = $state('');
+
+  /** Which shelf the picker is searching, or null for everything. */
+  let narrowedTo = $state<string | null>(null);
   let busy = $state(false);
 
   const monday = $derived.by(() => {
@@ -84,22 +88,23 @@
     }
   });
 
+  // The shelves, so the picker can offer to narrow to one. Only worth asking
+  // for once the picker can be opened, which is whenever this page is.
   $effect(() => {
-    if (householdId && adding) {
-      void recipes.list(householdId, { query: search });
+    if (householdId) {
+      void cookbooks.list(householdId);
     }
   });
 
-  async function pick(recipeId: string) {
+  async function pick(recipe: RecipeSummary) {
     if (!householdId || !adding) {
       return;
     }
 
-    const ok = await mealPlan.plan(householdId, { date: adding, recipeId, slot });
+    const ok = await mealPlan.plan(householdId, { date: adding, recipeId: recipe.id, slot });
 
     if (ok) {
       adding = null;
-      search = '';
     }
   }
 
@@ -223,51 +228,50 @@
   {/if}
 </Page>
 
-<Sheet
-  open={adding !== null}
-  title={m['plan.pick.title']()}
-  closeLabel={m['plan.pick.close']()}
-  onclose={() => (adding = null)}
->
-  <div class="picker">
-    <SearchField
-      id="plan-search"
-      label={m['plan.pick.search']()}
-      clearLabel={m['plan.pick.clear']()}
-      placeholder={m['plan.pick.search']()}
-      value={search}
-      oninput={(value) => (search = value)}
-    />
-
+{#if householdId}
+  <RecipePicker
+    open={adding !== null}
+    {householdId}
+    title={m['plan.pick.title']()}
+    cookbookId={narrowedTo ?? undefined}
+    onpick={(recipe) => void pick(recipe)}
+    onclose={() => (adding = null)}
+  >
     <!-- Which meal, and only here. A slot picker on the week view would put
          three empty rows on every day for the household that only plans
          dinner, which is most of them. -->
-    <fieldset class="slots">
-      <legend>{m['plan.pick.slot']()}</legend>
-      {#each ['breakfast', 'lunch', 'dinner'] as const as which (which)}
-        <label>
-          <input type="radio" name="slot" value={which} bind:group={slot} />
-          {m[`plan.slot.${which}`]()}
-        </label>
-      {/each}
-    </fieldset>
+    {#snippet controls()}
+      <!-- Narrowing to a shelf, and only when the household has one. "What are
+           we cooking Thursday" is usually asked of a subset somebody has
+           already chosen, and this is that subset. -->
+      {#if cookbooks.items.length > 0}
+        <fieldset class="slots">
+          <legend>{m['cookbooks.title']()}</legend>
+          <label>
+            <input type="radio" name="cookbook" value={null} bind:group={narrowedTo} />
+            {m['cookbooks.picker.all']()}
+          </label>
+          {#each cookbooks.items as cookbook (cookbook.id)}
+            <label>
+              <input type="radio" name="cookbook" value={cookbook.id} bind:group={narrowedTo} />
+              {cookbook.name}
+            </label>
+          {/each}
+        </fieldset>
+      {/if}
 
-    <ul class="results">
-      {#each recipes.items as recipe (recipe.id)}
-        <li>
-          <button type="button" onclick={() => void pick(recipe.id)}>
-            <span class="recipe-title">{recipe.title}</span>
-            {#if recipe.totalMinutes}
-              <span class="minutes"
-                >{m['recipes.meta.minutes']({ count: recipe.totalMinutes })}</span
-              >
-            {/if}
-          </button>
-        </li>
-      {/each}
-    </ul>
-  </div>
-</Sheet>
+      <fieldset class="slots">
+        <legend>{m['plan.pick.slot']()}</legend>
+        {#each ['breakfast', 'lunch', 'dinner'] as const as which (which)}
+          <label>
+            <input type="radio" name="slot" value={which} bind:group={slot} />
+            {m[`plan.slot.${which}`]()}
+          </label>
+        {/each}
+      </fieldset>
+    {/snippet}
+  </RecipePicker>
+{/if}
 
 <style>
   .head {
@@ -291,15 +295,14 @@
 
   .weeks {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
   }
 
-  /* Seven columns where there is room, seven rows where there is not. A week
-     read down a phone is still a week; a week squeezed into seven columns on a
-     phone is seven slivers. */
+  /* Day cards stay chronological; seven columns only when each day is usable. */
   .week {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-3);
     margin: 0;
     padding: 0;
@@ -326,6 +329,7 @@
   .name {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: var(--space-2);
     color: var(--text-subtle);
     font-size: var(--text-xs);
@@ -354,14 +358,10 @@
     margin-top: var(--space-6);
   }
 
-  .picker {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
   .slots {
     display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
     gap: var(--space-4);
     padding: 0;
     border: 0;
@@ -375,65 +375,31 @@
   }
 
   .slots label {
+    min-height: var(--control-sm);
     display: flex;
     align-items: center;
     gap: var(--space-2);
   }
 
-  .results {
-    display: flex;
-    flex-direction: column;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    max-height: 50vh;
-    overflow-y: auto;
-  }
-
-  .results button {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-4);
-    width: 100%;
-    padding: var(--space-3);
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
-  }
-
-  .results button:hover {
-    background: var(--surface-hover);
-  }
-
-  .minutes {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    white-space: nowrap;
-  }
-
-  @media (max-width: 63.999rem) {
+  @media (min-width: 40rem) {
     .week {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+  }
 
-    .day {
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: center;
+  @media (min-width: 64rem) {
+    .week {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .week {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
     }
 
     .name {
-      flex: 1 0 100%;
-    }
-
-    .meals {
-      flex: 1;
-      width: auto;
+      flex-direction: column;
     }
   }
 </style>

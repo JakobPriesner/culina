@@ -1,111 +1,88 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, Divider } from '$ds';
-  import ArchivePanel from '$features/archive/ArchivePanel.svelte';
-  import InvitePanel from '$features/auth/InvitePanel.svelte';
+  import { Avatar, Badge, Button } from '$ds';
+
   import { session } from '$features/auth/session.svelte';
-  import { m } from '$shell/i18n';
-  import Page from '$shell/Page.svelte';
-  import LocalePicker from '$shell/LocalePicker.svelte';
-  import MeasurementPicker from '$shell/MeasurementPicker.svelte';
-  import ThemeToggle from '$shell/ThemeToggle.svelte';
+  import { formatDate, m } from '$shell/i18n';
+
+  import SettingsRow from './SettingsRow.svelte';
+  import SettingsSection from './SettingsSection.svelte';
 
   /**
-   * Everything about this person and this device.
+   * Who is signed in, and the way out.
    *
-   * Appearance and language live here rather than in the top bar of every page:
-   * they are set once and then never again, and a control that is used twice a
-   * year does not belong where the eye lands every time.
+   * The first category, and deliberately the emptiest: an account nobody has to
+   * think about is an account that is working. What little there is, though, is
+   * said properly — a name and an address stacked as two bare paragraphs are
+   * two pieces of text, not a person.
    */
+  const user = $derived(session.user);
+
   async function signOut() {
     await session.signOut();
     await goto(resolve('/(auth)/login'), { replaceState: true });
   }
 </script>
 
-<svelte:head><title>{m['me.title']()}</title></svelte:head>
+<svelte:head><title>{m['me.account']()}</title></svelte:head>
 
-<Page>
-  <div class="stack">
-    <h1>{m['me.title']()}</h1>
+{#if user}
+  <div class="identity">
+    <Avatar name={user.displayName} />
 
-    {#if session.user}
-      <p class="who">{session.user.displayName}</p>
-      <p class="email">{session.user.email}</p>
+    <div class="names">
+      <p class="name">{user.displayName}</p>
+      <p class="email">{user.email}</p>
+    </div>
+
+    {#if user.isAdmin}
+      <Badge>{m['me.admin']()}</Badge>
     {/if}
-
-    <Divider />
-
-    <section class="section">
-      <h2>{m['me.appearance']()}</h2>
-      <div class="setting">
-        <span class="setting-label">{m['me.theme']()}</span>
-        <ThemeToggle />
-      </div>
-
-      <LocalePicker />
-
-      <MeasurementPicker />
-    </section>
-
-    {#if session.activeHousehold}
-      <Divider />
-
-      <section class="section">
-        <h2>{m['me.household']()}</h2>
-        <p>{session.activeHousehold.name}</p>
-      </section>
-
-      <Divider />
-
-      <InvitePanel householdId={session.activeHousehold.householdId} />
-
-      <Divider />
-
-      <ArchivePanel householdId={session.activeHousehold.householdId} />
-    {/if}
-
-    <Divider />
-
-    <Button onclick={signOut}>{m['auth.signOut']()}</Button>
   </div>
-</Page>
+
+  <SettingsSection>
+    <SettingsRow label={m['me.memberSince']()}>
+      <span class="value">{formatDate(new Date(user.createdAt), { dateStyle: 'long' })}</span>
+    </SettingsRow>
+  </SettingsSection>
+{/if}
+
+<!-- No heading above it: the button says what it does, and a title repeating
+     the two words on the button is a line nobody reads twice. -->
+<SettingsSection description={m['me.signOut.body']()} bare>
+  <Button onclick={signOut}>{m['auth.signOut']()}</Button>
+</SettingsSection>
 
 <style>
-  .stack {
+  .identity {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-    align-items: flex-start;
-  }
-
-  .who {
-    font-weight: var(--weight-medium);
-  }
-
-  .email {
-    color: var(--text-muted);
-  }
-
-  .section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  h2 {
-    font-size: var(--text-lg);
-  }
-
-  .setting {
-    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-2) var(--space-4);
+    min-width: 0;
   }
 
-  .setting-label {
+  .names {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .name {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+  }
+
+  /* Addresses are long and have no spaces to break at. */
+  .email {
+    overflow-wrap: anywhere;
     color: var(--text-muted);
-    font-size: var(--text-sm);
+  }
+
+  .value {
+    color: var(--text-muted);
   }
 </style>

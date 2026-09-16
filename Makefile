@@ -21,7 +21,7 @@ dev: db-up ## Start the database, the API and the frontend dev server
 	@echo "Frontend http://localhost:5173  (proxies /api to the API)"
 	@trap 'kill 0' INT TERM; \
 		(cd $(API) && dotnet watch run --non-interactive) & \
-		(cd $(FRONTEND) && pnpm dev) & \
+		(cd $(FRONTEND) && pnpm exec vite dev --host) & \
 		wait
 
 backend: db-up ## Run only the API, with hot reload

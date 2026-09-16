@@ -82,12 +82,22 @@
     }
   });
 
+  /**
+   * Set the moment cooking is over, and never unset.
+   *
+   * Ending clears the session, and clearing the session is exactly what the
+   * effect below watches for — so without this, finishing started a fresh
+   * session on the way out, and the cook arrived back at the recipe with the
+   * bar still telling them something was on the hob.
+   */
+  let over = $state(false);
+
   // Starting is idempotent from the page's point of view: arriving here with a
   // session already going for this recipe simply resumes it.
   $effect(() => {
     const detail = recipes.detail;
 
-    if (!detail || detail.id !== recipeId || !cooking.resolved) {
+    if (over || !detail || detail.id !== recipeId || !cooking.resolved) {
       return;
     }
 
@@ -116,6 +126,8 @@
   }
 
   async function finish(completed: boolean) {
+    over = true;
+
     await cooking.end(completed);
     timers.clear();
 
@@ -235,7 +247,8 @@
 <style>
   .controls {
     position: sticky;
-    bottom: calc(var(--bottom-inset) + var(--space-4));
+    bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-4));
+    z-index: var(--z-sticky);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -258,7 +271,8 @@
   .moves {
     display: flex;
     flex: 1;
-    gap: var(--space-3);
+    min-width: 0;
+    gap: var(--space-2);
   }
 
   /* Next takes whatever is left. It is pressed once per step and Previous is
@@ -266,11 +280,12 @@
      which. */
   .advance {
     flex: 1;
+    min-width: 0;
   }
 
   /* On a phone the progress line takes its own row, so the controls have the
      whole width rather than whatever the words beside them left over. */
-  @media (max-width: 30rem) {
+  @media (width < 40rem) {
     .controls {
       flex-direction: column;
       align-items: stretch;
@@ -278,6 +293,11 @@
 
     .progress {
       text-align: center;
+    }
+  }
+  @media screen and (max-height: 32rem) {
+    .controls {
+      position: static;
     }
   }
 </style>

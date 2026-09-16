@@ -1,6 +1,6 @@
 <script lang="ts">
   import { base } from '$app/paths';
-  import { Button } from '$ds';
+  import { Button, FilePicker } from '$ds';
 
   import { http, request } from '$api';
   import { m } from '$shell/i18n';
@@ -12,6 +12,10 @@
    * The right answer to "what if I stop using this", and a self-hosted app owes
    * its users one. Plain, readable JSON: somebody with no Culina at all can
    * open it and find their recipes written out in words.
+   *
+   * The heading and the sentence explaining what is in the file belong to the
+   * page that places this, so every section of settings is titled once, by one
+   * component.
    */
   interface Props {
     householdId: string;
@@ -20,7 +24,7 @@
   let { householdId }: Props = $props();
 
   let restoring = $state(false);
-  let input = $state<HTMLInputElement>();
+  let picker = $state<ReturnType<typeof FilePicker>>();
 
   /**
    * A plain link, not a fetch.
@@ -32,17 +36,7 @@
    */
   const href = $derived(`${base}/api/v1/households/${householdId}/archive`);
 
-  async function restore(event: Event) {
-    const element = event.target as HTMLInputElement;
-    const file = element.files?.[0];
-
-    // Cleared straight away so choosing the same file twice still fires.
-    element.value = '';
-
-    if (!file) {
-      return;
-    }
-
+  async function restore(file: File) {
     restoring = true;
 
     const body = new FormData();
@@ -73,60 +67,35 @@
   }
 </script>
 
-<section class="archive">
-  <h2>{m['archive.title']()}</h2>
-  <p class="hint">{m['archive.hint']()}</p>
-
+<div class="archive">
   <div class="actions">
     <Button {href} download="culina.json">{m['archive.export']()}</Button>
 
-    <Button loading={restoring} onclick={() => input?.click()}>
+    <Button loading={restoring} onclick={() => picker?.open()}>
       {m['archive.restore']()}
     </Button>
   </div>
 
-  <!-- Driven by the button beside it, so it is not a tab stop with nothing to
-       see. Clipped rather than hidden, which would take it out of reach. -->
-  <input
-    bind:this={input}
-    class="offscreen"
-    type="file"
+  <FilePicker
+    bind:this={picker}
+    label={m['archive.choose']()}
     accept="application/json,.json"
-    tabindex="-1"
-    aria-label={m['archive.choose']()}
-    onchange={(event) => void restore(event)}
+    onpick={(file) => void restore(file)}
   />
-</section>
+</div>
 
 <style>
   .archive {
+    min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
     align-items: flex-start;
-  }
-
-  h2 {
-    font-size: var(--text-lg);
-  }
-
-  .hint {
-    max-width: 42rem;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
   }
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
-  }
-
-  .offscreen {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
   }
 </style>

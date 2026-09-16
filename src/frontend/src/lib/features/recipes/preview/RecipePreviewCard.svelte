@@ -49,16 +49,17 @@
   }
   .copy {
     padding-block: var(--space-4);
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
   .open {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     width: 100%;
-    gap: var(--space-3);
+    gap: var(--space-2);
     padding: 0;
     min-height: var(--control-sm);
     text-align: start;
@@ -88,10 +89,13 @@
   .tag {
     color: var(--text-muted);
     font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
   h3 {
     font-family: var(--font-editorial);
-    font-size: var(--text-2xl);
+    font-size: var(--text-xl);
+    line-height: 1.35;
     font-weight: var(--weight-regular);
     letter-spacing: -0.025em;
   }
@@ -101,7 +105,13 @@
   }
   .meta {
     font-size: var(--text-sm);
-    margin-top: var(--space-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    color: var(--text-muted);
   }
   .favourite {
     z-index: 1;

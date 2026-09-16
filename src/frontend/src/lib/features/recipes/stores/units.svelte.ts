@@ -17,7 +17,17 @@ import { builtInUnits, type Unit } from '../units';
  */
 class UnitStore {
   #own = $state<Unit[]>([]);
-  #loadedFor = $state<string | null>(null);
+
+  /**
+   * Which household has been asked for, deliberately not reactive.
+   *
+   * Nothing renders it — it exists only so two components mounting together
+   * ask once. As `$state` it was a trap: `load` reads it and then writes it,
+   * so an `$effect` that called `load` took a dependency on it and re-ran
+   * itself, and a failed request — which puts it back to null — turned that
+   * into a request per frame until the tab ran out of sockets.
+   */
+  #loadedFor: string | null = null;
 
   /** Everything a picker should offer, built-in first. */
   get all(): readonly Unit[] {

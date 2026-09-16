@@ -3,6 +3,8 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, ErrorState, Skeleton } from '$ds';
+  import AddToCookbookSheet from '$features/cookbooks/AddToCookbookSheet.svelte';
+  import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
@@ -23,11 +25,24 @@
   const recipeId = $derived(page.params.recipeId ?? '');
   const servings = $derived(yieldFrom(page.url, recipes.detail));
 
+  let addingToCookbook = $state(false);
+
   $effect(() => {
     if (recipeId) {
       void recipes.load(recipeId);
     }
   });
+
+  // Which shelves it is on, for the line under the title. Asked here rather
+  // than by the sheet alone, because the line is visible before anybody opens
+  // the sheet.
+  $effect(() => {
+    if (recipeId) {
+      void cookbooks.loadMemberships(recipeId);
+    }
+  });
+
+  const shelves = $derived(cookbooks.membershipsOf(recipeId));
 
   /**
    * Replaced, not pushed: scaling is a view of the recipe, and every tap of the
@@ -109,6 +124,9 @@
       onservings={scale}
       onstartcooking={startCooking}
       onaddtolist={addToShoppingList}
+      onaddtocookbook={() => (addingToCookbook = true)}
+      editable
+      cookbooks={shelves}
     />
 
     <PersonalNotePanel {recipeId} />
@@ -120,6 +138,15 @@
     </div>
   {/if}
 </Page>
+
+{#if session.activeHouseholdId}
+  <AddToCookbookSheet
+    open={addingToCookbook}
+    householdId={session.activeHouseholdId}
+    {recipeId}
+    onclose={() => (addingToCookbook = false)}
+  />
+{/if}
 
 <style>
   .back {

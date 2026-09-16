@@ -4,6 +4,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import {
   accountFor,
   needsBackend,
+  seedCookbook,
   seedRecipe,
   signInWithHousehold,
   skipReason,
@@ -69,6 +70,7 @@ test.describe('what a machine can check, signed in', () => {
   let context: BrowserContext;
   let page: Page;
   let recipeId: string;
+  let cookbookId: string;
 
   test.beforeAll(async ({ browser }, testInfo) => {
     if (needsBackend) {
@@ -89,13 +91,21 @@ test.describe('what a machine can check, signed in', () => {
       steps: ['Melt {0} slowly.', 'Let it cool.']
     });
 
+    // A cookbook with the recipe on it, so neither the shelf nor the shelves
+    // are tested empty — an empty state and a full one are different pages.
+    cookbookId = await seedCookbook(page, unique('Accessible shelf'), recipeId);
+
     // Something on the shopping list, so the list is not tested empty.
     await page.goto('/shopping');
 
-    const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
+    await page.getByRole('textbox', { name: /^(amount|menge)$/i }).fill('500');
+    await page.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill('g');
 
-    await field.fill('500 g Mehl');
-    await field.press('Enter');
+    const what = page.getByRole('combobox', { name: /what to buy|was du brauchst/i });
+
+    await what.fill('Mehl');
+    await what.press('Enter');
+    await expect(what).toHaveValue('');
   });
 
   test.afterAll(async () => {
@@ -137,12 +147,30 @@ test.describe('what a machine can check, signed in', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('the profile has no violations', async () => {
-    await page.goto('/me');
+  test('the cookbooks have no violations', async () => {
+    await page.goto('/cookbooks');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
+
+  test('one cookbook has no violations', async () => {
+    await page.goto(`/cookbooks/${cookbookId}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  // Every category, not only the first: the side navigation means the controls
+  // people rarely touch now live on pages nobody looks at either.
+  for (const path of ['/me', '/me/appearance', '/me/household']) {
+    test(`settings at ${path} has no violations`, async () => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+      expect(await violations(page)).toEqual([]);
+    });
+  }
 });
 
 /**

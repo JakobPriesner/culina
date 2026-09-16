@@ -56,13 +56,17 @@ export default ts.config(
     /*
      * Every route id in Culina goes through `resolve()` where it is written —
      * `navigation.ts` and `redirectTarget.ts` — so a base path is honoured.
-     * These two files only consume values that are already resolved, and the
+     * These consumers use values that are already resolved, and the
      * rule cannot see that through a variable. It stays on everywhere a literal
      * route could still be written by hand.
      */
     files: [
       'src/lib/app/Navigation.svelte',
+      'src/lib/app/LibraryNav.svelte',
       'src/routes/+layout.svelte',
+      // Settings lists its categories the way the shell lists its
+      // destinations: resolved once into the list, rendered from it.
+      'src/routes/(app)/me/+layout.svelte',
       // The auth pages link to each other through `resolve()` plus a query
       // string carrying where the person was going, and a recipe reflects its
       // chosen yield into its own URL — both already resolved, which the rule

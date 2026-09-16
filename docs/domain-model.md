@@ -15,6 +15,7 @@ User ──< HouseholdMember >── Household ──< Recipe
                                   │          ├──< IngredientGroup ──< RecipeIngredient
                                   │          ├──< Step ──< StepIngredientRef
                                   │          └──< RecipeTag >── Tag
+                                  ├──< Cookbook ──< CookbookRecipe >── Recipe
                                   └── ShoppingList ──< ShoppingListItem ──< ShoppingListItemSource
 
 User ──< PersonalNote   ── Recipe     per person, never mutates the recipe
@@ -223,6 +224,79 @@ Nothing is linked that the author did not ask for. An earlier version scanned
 each step for any ingredient name it contained; it cost nothing to use, but it
 was invisible, it matched "oil" inside "olive oil", and there was no way to say
 "not that one". A reference you cannot see is a reference you cannot correct.
+
+### Cookbook — household-owned
+
+`Id`, `HouseholdId`, `Name` (1–80), `Description?` (≤ 500), `Kind`
+(`manual` | `smart`), `Rules`, `CreatedBy`, `CreatedAt`, `UpdatedAt`,
+`Version`. A manual cookbook's membership is
+`CookbookRecipe(CookbookId, RecipeId, AddedAt, AddedBy?)`, composite primary
+key; a smart one has none.
+
+A named shelf somebody chose the contents of — a playlist, not a genre. **This
+is not a tag.** A tag is a *property* of a recipe and classifies it; a cookbook
+is a curation, with a name in prose, a description, a cover and a page of its
+own, and being on one says nothing about the recipe itself. A recipe is *tagged*
+vegetarian; it is *in* Sunday roasts.
+
+Household-owned, like the recipes it points at. A private curation of shared
+recipes breaks the moment somebody leaves, and `CreatedBy` is kept so "Anna's
+Sunday roasts" can say whose idea it was without becoming Anna's property.
+
+**The cookbook is only the shelf.** It never holds its recipes in memory: a
+shopping list is bounded by the week and a plan by seven days, but a cookbook
+has no size, so membership is written through the repository the way meal-plan
+entries are, and read through `GET /recipes?cookbookId=…`.
+
+**Adding a recipe that is already on is a no-op**, enforced by the composite
+key rather than by a check — a double tap and a retried request are both
+ordinary. It keeps the moment it first went on, and the cookbook's `Version` is
+**not** bumped: churning it to report that nothing happened would throw away
+every cached copy.
+
+Order inside a cookbook is `AddedAt` ascending, which reads like a table of
+contents. Manual ordering is not implemented; when it is, it adds a
+`SortOrder` column backfilled from `AddedAt`.
+
+`CookbookRecipe.RecipeId` cascades, as `MealPlanEntry.RecipeId` does: a deleted
+recipe drops off every shelf it was on. **The reverse is deliberately not true
+— deleting a cookbook deletes no food.**
+
+The cover is derived, not chosen: up to four photographed recipes, oldest
+first, so a cover stops moving once there are four. A shelf with nothing
+photographed shows its initial rather than a grey box.
+
+#### A cookbook that fills itself
+
+`Rules` is `Tags` (slugs, all required), `Ingredients` (names, all required,
+matched as substrings) and `MaxMinutes?`. Every rule must hold: the shelves
+worth having are the narrow ones. There is no "any of these" and no nesting — a
+rule builder with brackets in it is a query language somebody has to learn.
+
+**The rules are stored; what matches them is not.** A smart cookbook is a saved
+question, answered whenever it is read — which is the whole of "a recipe written
+this evening is on the right shelf the moment it is saved". There is no job to
+run, nothing to backfill when a rule changes, and no membership table that can
+drift out of step with the recipes it claims to describe. It empties itself the
+same way: edit a recipe out of the rules and it is off, with no row to delete.
+
+The clauses are the same ones `GET /recipes` already applies, so a shelf and the
+filter bar cannot reach different conclusions about the same words. The one
+difference: an ingredient **rule excludes**, where the ingredient *search* ranks
+— on a shelf asking for chicken, a recipe without chicken is not a worse match,
+it is not on the shelf.
+
+`Kind` is chosen when the cookbook is made and never changes, and the two are
+never mixed. They answer "why is this recipe here?" with different kinds of
+answer — "somebody put it there" against "it matches" — and a shelf that was
+both could answer neither, nor say what "take this off" was supposed to mean.
+Putting a recipe on a smart cookbook by hand returns `cookbooks.rules_decide_membership`.
+
+A smart cookbook has no order somebody chose, so it reads newest-first rather
+than by a column that is null for every row on it.
+
+**Cookbooks are not in the archive yet**, so an export currently omits them —
+rules included.
 
 ### Tag
 

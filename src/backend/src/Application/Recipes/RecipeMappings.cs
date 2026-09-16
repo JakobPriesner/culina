@@ -27,6 +27,11 @@ internal static class RecipeMappings
 
         var names = recipe.Ingredients.ToDictionary(ingredient => ingredient.Id);
 
+        // Group order, then order within the group: the order the ingredient
+        // list is already shown in, and so the only one a step's needs can be
+        // read in without looking like a shuffle.
+        var order = recipe.Ingredients.Select(ingredient => ingredient.Id).ToList();
+
         return new RecipeDetail
         {
             RecipeId = recipe.Id,
@@ -41,7 +46,7 @@ internal static class RecipeMappings
             TotalMinutes = recipe.TotalMinutes,
             ImageId = recipe.ImageId,
             Groups = [.. recipe.Groups.Select(ToContract)],
-            Steps = [.. recipe.Steps.Select(step => step.ToContract(names))],
+            Steps = [.. recipe.Steps.Select(step => step.ToContract(names, order))],
             Tags = recipe.Tags,
             CreatedBy = recipe.CreatedBy,
             CreatedAt = recipe.CreatedAt,
@@ -68,11 +73,17 @@ internal static class RecipeMappings
 
     private static StepContract ToContract(
         this Step step,
-        IReadOnlyDictionary<Guid, RecipeIngredient> ingredients) => new()
+        IReadOnlyDictionary<Guid, RecipeIngredient> ingredients,
+        IReadOnlyList<Guid> order) => new()
         {
             StepId = step.Id,
             DurationSeconds = step.DurationSeconds,
-            Segments = [.. step.Segments.Select(segment => segment.ToContract(ingredients))]
+            Segments = [.. step.Segments.Select(segment => segment.ToContract(ingredients))],
+
+            // Filtering the recipe's order by the step's set rather than
+            // sorting the set by a lookup: one pass, no dictionary, and an id
+            // the recipe somehow lacks drops out instead of throwing.
+            Uses = [.. order.Where(step.Uses.Contains)]
         };
 
     /// <summary>

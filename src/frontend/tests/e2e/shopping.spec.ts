@@ -17,6 +17,46 @@ import {
  */
 test.describe.configure({ mode: 'serial' });
 
+/**
+ * The three fields a line is written in, the same ones the recipe editor uses.
+ *
+ * An amount, a unit and a name are three things, and asking for them apart is
+ * what saves the app guessing where one ends and the next begins.
+ */
+const writing = (page: Page) => ({
+  amount: page.getByRole('textbox', { name: /^(amount|menge)$/i }),
+  unit: page.getByRole('combobox', { name: /^(unit|einheit)$/i }),
+  name: page.getByRole('combobox', { name: /what to buy|was du brauchst/i })
+});
+
+/** Writes one line and sends it with the key that sends it. */
+async function write(
+  page: Page,
+  line: { amount?: string; unit?: string; name: string }
+): Promise<void> {
+  const fields = writing(page);
+
+  if (line.amount) {
+    await fields.amount.fill(line.amount);
+  }
+
+  if (line.unit) {
+    await fields.unit.fill(line.unit);
+  }
+
+  await fields.name.fill(line.name);
+
+  // A real key, not a synthetic event: a one-line add is only a one-line add
+  // if Enter sends it, and reaching for the button after every item is the
+  // data entry this screen exists to avoid.
+  await fields.name.press('Enter');
+
+  // The fields empty, which is the signal the line was taken: the next item
+  // can be typed straight away.
+  await expect(fields.amount).toHaveValue('');
+  await expect(fields.name).toHaveValue('');
+}
+
 test.describe('the shopping list', () => {
   test.skip(needsBackend, skipReason);
 
@@ -39,18 +79,12 @@ test.describe('the shopping list', () => {
   test('takes a written line on Enter, with its unit intact', async () => {
     await page.goto('/shopping');
 
-    const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
     const name = unique('Feta');
 
-    await field.fill(`2 Packungen ${name}`);
-    // A real key, not a synthetic event: a one-line add is only a one-line add
-    // if Enter sends it, and reaching for the button after every item is the
-    // data entry this screen exists to avoid.
-    await field.press('Enter');
-
-    // The field empties, which is the signal the line was taken: the next item
-    // can be typed straight away.
-    await expect(field).toHaveValue('');
+    // The word the unit list offers, not the code behind it: choosing "Packung"
+    // has to mean `pack`, or the same unit becomes two as soon as somebody with
+    // an English app opens the list.
+    await write(page, { amount: '2', unit: 'Packung', name });
 
     const row = page.getByRole('listitem').filter({ hasText: name });
 
@@ -121,16 +155,82 @@ test.describe('the shopping list', () => {
     await row.getByRole('button', { name: /remove|entfernen/i }).click();
   });
 
+  /*
+   * The other half of how a list fills up. Filling next week's list means
+   * naming four or five recipes in a row, and doing that from the recipe pages
+   * is four round trips through a list and back — so the question gets asked
+   * here, where the answer goes.
+   */
+  test('takes whole recipes from the list itself, several in one opening', async () => {
+    const rice = unique('Reis');
+    const basil = unique('Basilikum');
+    const risotto = unique('Risotto');
+    const pesto = unique('Pesto');
+
+    await seedRecipe(page, {
+      title: risotto,
+      yieldAmount: 4,
+      ingredients: [{ quantity: 300, unit: 'g', name: rice }]
+    });
+
+    await seedRecipe(page, {
+      title: pesto,
+      yieldAmount: 4,
+      ingredients: [{ quantity: 50, unit: 'g', name: basil }]
+    });
+
+    await page.goto('/shopping');
+
+    // The one above the list. An empty list offers the same invitation again
+    // in its empty state, which is the design system's rule about dead ends
+    // rather than an accident.
+    await page
+      .getByRole('button', { name: /add a recipe|rezept hinzufügen/i })
+      .first()
+      .click();
+
+    const picker = page.getByRole('dialog');
+
+    await expect(picker).toBeVisible();
+
+    const search = picker.getByRole('searchbox');
+
+    await search.fill(risotto);
+    await picker.getByRole('button', { name: new RegExp(risotto) }).click();
+
+    // Still up, and saying what it did — the week's list is four or five
+    // recipes and reopening the sheet for each was the slow part.
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole('button', { name: new RegExp(risotto) })).toContainText(
+      /added|hinzugefügt/i
+    );
+
+    await search.fill(pesto);
+    await picker.getByRole('button', { name: new RegExp(pesto) }).click();
+
+    await picker.getByRole('button', { name: /^(done|fertig)$/i }).click();
+    await expect(picker).toBeHidden();
+
+    const riceRow = page.getByRole('listitem').filter({ hasText: rice });
+    const basilRow = page.getByRole('listitem').filter({ hasText: basil });
+
+    // At the yield each recipe is written for, which is what the picker row
+    // said it was.
+    await expect(riceRow).toContainText(/300\s*g/);
+    await expect(basilRow).toContainText(/50\s*g/);
+
+    for (const row of [riceRow, basilRow]) {
+      await row.getByRole('button', { name: /remove|entfernen/i }).click();
+      await expect(row).toHaveCount(0);
+    }
+  });
+
   test('keeps what is already in the trolley, and clears it in one go', async () => {
     const name = unique('Salz');
 
     await page.goto('/shopping');
 
-    const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
-
-    await field.fill(`1 Prise ${name}`);
-    await field.press('Enter');
-    await expect(field).toHaveValue('');
+    await write(page, { amount: '1', unit: 'Prise', name });
 
     const row = page.getByRole('listitem').filter({ hasText: name });
 
@@ -155,11 +255,7 @@ test.describe('the shopping list', () => {
 
     await page.goto('/shopping');
 
-    const field = page.getByRole('textbox', { name: /add|hinzufügen/i });
-
-    await field.fill(`1 kg ${name}`);
-    await field.press('Enter');
-    await expect(field).toHaveValue('');
+    await write(page, { amount: '1', unit: 'kg', name });
 
     const row = page.getByRole('listitem').filter({ hasText: name });
 

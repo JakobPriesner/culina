@@ -17,14 +17,30 @@ type CurrentUser = components['schemas']['UsersGetCurrentResponse'];
 type Membership = components['schemas']['UsersGetCurrentHouseholdMembership'];
 
 /**
- * `unknown` is the state the app boots in, and the only one where a full-page
- * spinner is the right answer: there is genuinely nothing to show until we know
- * whether this is a signed-in person or a stranger.
+ * `unknown` is the state the app boots in, and the only one where the boot
+ * skeleton is the right answer: there is genuinely nothing to show until we
+ * know whether this is a signed-in person or a stranger.
+ *
+ * `unavailable` is the difference between "you are not signed in" and "we could
+ * not ask". Only a 401 means the first. A timeout, a dropped connection or a
+ * backend that is still starting up means the second, and treating it as the
+ * first is what puts a sign-in form in front of somebody whose cookie is
+ * perfectly valid — the single most common way an app looks like it forgets
+ * who you are.
  */
-export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
+export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous' | 'unavailable';
 
 /** Which household is being looked at. A preference, not private data. */
 const activeHouseholdKey = 'culina.household';
+
+/**
+ * Which of the two boot skeletons this device should paint next time.
+ *
+ * Read by the inline script in `app.html`, before any of this code exists. The
+ * document cannot know whether a session is live until the server answers, and
+ * the last answer is right almost every time.
+ */
+const bootHintKey = 'culina.boot';
 
 class SessionStore {
   #status = $state<SessionStatus>('unknown');
@@ -123,6 +139,7 @@ class SessionStore {
     // stops it being shown to the next person; only this stops it being kept.
     forgetEveryDraft();
     this.#status = 'anonymous';
+    remember(bootHintKey, 'auth');
   }
 
   reset(): void {
@@ -142,13 +159,21 @@ class SessionStore {
 
     if (!me.ok) {
       this.#user = null;
-      this.#status = 'anonymous';
+      // 401 is the server saying there is no session. Anything else is us
+      // failing to ask, which is not the same answer and must not sign anyone
+      // out; the app offers to try again instead.
+      this.#status = me.error.status === 401 ? 'anonymous' : 'unavailable';
+
+      if (this.#status === 'anonymous') {
+        remember(bootHintKey, 'auth');
+      }
 
       return;
     }
 
     this.#user = me.value;
     this.#status = 'authenticated';
+    remember(bootHintKey, 'app');
     this.#activeHouseholdId = this.#chooseHousehold(me.value.households);
 
     // The server is the source of truth: a device that has been offline for a

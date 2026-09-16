@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Cookbooks;
 using Application.Telemetry;
 using Contracts.Recipes.GetAll;
 using Domain.Households;
@@ -13,7 +14,8 @@ public sealed record GetRecipesQuery(RecipeSearch Search);
 
 internal sealed class GetRecipesQueryHandler(
     IRecipeRepository recipes,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    ICookbookRepository cookbooks)
     : IQueryHandler<GetRecipesQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -36,9 +38,33 @@ internal sealed class GetRecipesQueryHandler(
                 Result<Response>.Failure(HouseholdErrors.NotFound(query.Search.HouseholdId)));
         }
 
-        var page = await recipes.SearchAsync(query.Search, cancellationToken).ConfigureAwait(false);
+        // Reading inside a cookbook means one of two things, and only the
+        // cookbook knows which: a shelf somebody filled names rows, and one
+        // that fills itself names conditions. Resolved here so the searcher
+        // never has to know what a cookbook is.
+        var scope = await CookbookScope
+            .ResolveAsync(
+                cookbooks,
+                query.Search.CookbookId,
+                query.Search.HouseholdId,
+                cancellationToken)
+            .ConfigureAwait(false);
 
-        return tracked.Record(Result<Response>.Success(page.ToResponse(query.Search)));
+        var search = query.Search with
+        {
+            CookbookId = scope.Membership,
+            Rules = scope.Rules,
+            // A shelf that fills itself was never put in an order, so it falls
+            // back to the default rather than ordering by a column that is null
+            // for every row on it.
+            Sort = query.Search.Sort == RecipeSort.CookbookOrder && !scope.Ordered
+                ? RecipeSort.RecentFirst
+                : query.Search.Sort
+        };
+
+        var page = await recipes.SearchAsync(search, cancellationToken).ConfigureAwait(false);
+
+        return tracked.Record(Result<Response>.Success(page.ToResponse(search)));
     }
 }
 

@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import { resolve } from '$app/paths';
   import { Button, EmptyState, Image, SearchField } from '$ds';
+  import NavIcon from '$shell/NavIcon.svelte';
   import Brand from '$shell/Brand.svelte';
   import LocalePicker from '$shell/LocalePicker.svelte';
   import ThemeToggle from '$shell/ThemeToggle.svelte';
@@ -67,7 +68,7 @@
   <span>{m['preview.notice']()}</span><a href={resolve('/design')}>{m['preview.components']()} ↗</a>
 </div>
 <header class="header">
-  <Brand /><span class="context">{m['preview.kitchen']()}</span>
+  <Brand /><span class="context">{m['preview.footer']()}</span>
   <div class="preferences"><LocalePicker compact /><ThemeToggle /></div>
 </header>
 <main>
@@ -86,6 +87,11 @@
   <div class="library" bind:this={library} hidden={selected !== undefined}>
     <div class="page-title">
       <div>
+        <p class="kitchen-label">
+          <span aria-hidden="true"><NavIcon icon="recipes" current={false} /></span>{m[
+            'preview.kitchen'
+          ]()}
+        </p>
         <h1 tabindex="-1">{m['preview.title']()}</h1>
         <p class="subtitle">{m['preview.subtitle']()}</p>
       </div>
@@ -121,9 +127,6 @@
     </div>
     {#if !search && filter === 'all'}
       <section class="feature" aria-labelledby="featured-title">
-        <div class="photo">
-          <Image src={featured.image!} alt={featured.title} loading="eager" fill rounded={false} />
-        </div>
         <div class="feature-copy">
           <p class="eyebrow">{m['preview.featured']()}</p>
           <h2 id="featured-title">{featured.title}</h2>
@@ -134,21 +137,20 @@
             ]()}</span
           >
           <div>
-            <Button variant="primary" onclick={() => void open(featured)}
-              >{m['preview.open']()} <span aria-hidden="true">↗</span></Button
+            <Button variant="secondary" onclick={() => void open(featured)}
+              >{m['preview.open']()} <span aria-hidden="true">→</span></Button
             >
           </div>
+        </div>
+        <div class="photo">
+          <Image src={featured.image!} alt={featured.title} loading="eager" fill rounded={false} />
         </div>
       </section>
     {/if}
     <section class="collection" aria-labelledby="collection-title">
       <div class="collection-title">
         <h2 id="collection-title">{m['preview.collection']()}</h2>
-        <span role="status"
-          >{filtered.length === 1
-            ? m['preview.countOne']()
-            : m['preview.count']({ count: filtered.length })}</span
-        >
+        <span role="status">{m['preview.count']({ count: filtered.length })}</span>
       </div>
       {#if filtered.length}
         <div class="grid">
@@ -191,7 +193,9 @@
   .header {
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-4) var(--space-8);
+    min-height: 5.5rem;
+    padding: var(--space-4) var(--layout-gutter-end) var(--space-4) var(--layout-gutter-start);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     gap: var(--space-8);
@@ -199,8 +203,8 @@
   .context {
     color: var(--text-muted);
     font-size: var(--text-sm);
-    border-left: 1px solid var(--border);
-    padding-left: var(--space-8);
+    font-family: var(--font-editorial);
+    font-style: italic;
   }
   .preferences {
     margin-left: auto;
@@ -211,7 +215,22 @@
   .library {
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-6) var(--space-8);
+    padding: var(--layout-page-space) var(--layout-gutter-end) var(--layout-page-space)
+      var(--layout-gutter-start);
+  }
+  .kitchen-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .kitchen-label span {
+    width: var(--space-4);
+    height: var(--space-4);
   }
   .eyebrow {
     font-size: var(--text-xs);
@@ -231,7 +250,7 @@
     margin-top: var(--space-3);
   }
   .tools {
-    margin-block: var(--space-6);
+    margin-block: var(--space-8) var(--space-6);
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -259,22 +278,24 @@
     color: var(--text);
   }
   .filters button.active {
-    border-color: var(--border-strong);
-    color: var(--text);
-    background: var(--surface-raised);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+    background: var(--accent);
   }
   .search {
-    width: 20rem;
+    width: min(22rem, 100%);
   }
   .feature {
+    --border-focus: var(--text-on-feature);
     display: grid;
-    grid-template-columns: 1.25fr 1fr;
-    background: var(--surface-sunken);
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    background: var(--surface-feature);
+    color: var(--text-on-feature);
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
   .photo {
-    min-height: 20rem;
+    min-height: 22rem;
   }
   .library[hidden] {
     display: none;
@@ -302,21 +323,28 @@
     justify-content: center;
     gap: var(--space-4);
     padding: var(--space-8) var(--space-12);
+    align-items: flex-start;
   }
   .feature-copy h2 {
     font-family: var(--font-editorial);
     font-weight: var(--weight-regular);
-    font-size: var(--text-3xl);
+    font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+    line-height: 1.18;
     letter-spacing: -0.035em;
   }
   .feature-copy > p:not(.eyebrow) {
-    color: var(--text-muted);
-    max-width: 34ch;
+    color: var(--text-on-feature);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    max-width: 38ch;
+  }
+  .feature .eyebrow {
+    color: var(--text-on-feature);
   }
   .meta {
     font-size: var(--text-sm);
-    color: var(--text-muted);
-    padding-block: var(--space-2);
+    color: var(--text-on-feature);
+    padding-block: var(--space-1);
   }
   .collection {
     margin-top: var(--space-12);
@@ -329,7 +357,10 @@
     gap: var(--space-4);
   }
   .collection-title h2 {
-    font-size: var(--text-xl);
+    font-family: var(--font-editorial);
+    font-weight: var(--weight-regular);
+    font-size: var(--text-2xl);
+    letter-spacing: -0.025em;
   }
   .collection-title span,
   .footer {
@@ -338,8 +369,8 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-8);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
   }
   .footer {
     margin-top: var(--space-8);
@@ -354,9 +385,9 @@
       display: none;
     }
   }
-  @media (max-width: 47.999rem) {
+  @media (width < 64rem) {
     .header {
-      padding: var(--space-4) var(--space-6);
+      padding: var(--space-3) var(--layout-gutter-end) var(--space-3) var(--layout-gutter-start);
       gap: var(--space-2);
       flex-wrap: wrap;
     }
@@ -364,7 +395,7 @@
       gap: var(--space-1);
     }
     .library {
-      padding: var(--space-6);
+      padding: var(--space-6) var(--layout-gutter-end) var(--space-6) var(--layout-gutter-start);
     }
     .search {
       width: 100%;
@@ -379,16 +410,15 @@
     .feature {
       grid-template-columns: 1fr;
     }
+    .feature .photo {
+      grid-row: 1;
+    }
     .feature-copy {
       padding: var(--space-6);
     }
     .photo {
       min-height: 0;
-      aspect-ratio: 4 / 3;
-    }
-    .grid {
-      grid-template-columns: 1fr;
-      gap: var(--space-6);
+      aspect-ratio: 16 / 10;
     }
     .resume {
       align-items: flex-start;
@@ -397,6 +427,16 @@
     .preview-note {
       gap: var(--space-1);
       font-size: var(--text-xs);
+    }
+  }
+  @media (width < 40rem) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (min-width: 64rem) {
+    .grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 </style>

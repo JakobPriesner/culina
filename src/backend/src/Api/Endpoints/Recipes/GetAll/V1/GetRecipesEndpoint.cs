@@ -38,9 +38,14 @@ internal sealed class GetRecipesEndpoint : IEndpoint
                 "Cursor-paginated. Repeat `ingredient` to ask what you can cook from what you have: "
                 + "results rank by how many of them a recipe uses and how few extras it needs, and "
                 + "each carries `ingredientMatch`. There is no pantry to maintain, so nothing can "
-                + "go stale.")
+                + "go stale.\n\n"
+                + "`cookbookId` reads inside one cookbook. Every other filter still applies, so a "
+                + "cookbook is a view of the collection rather than a second one; it defaults to "
+                + "`cookbookOrder`, the order the cookbook was built in. An unknown cookbook is an "
+                + "empty page rather than a 404 — it is a filter value, not a resource named in "
+                + "the path.")
             .WithRepeatableQueryParameters(
-                ["householdId", "query", "maxMinutes", "sort", "cursor", "limit"],
+                ["householdId", "query", "maxMinutes", "cookbookId", "sort", "cursor", "limit"],
                 ["tag", "ingredient"],
                 ["maxMinutes", "limit"])
             .Produces<Response>()

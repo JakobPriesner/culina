@@ -36,7 +36,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(tokens);
         ArgumentNullException.ThrowIfNull(logger);
 
-        if (IsSafe(context.Request.Method)
+        if (SafeMethods.Includes(context.Request.Method)
             || context.User.FindFirst(CulinaClaims.SessionId) is null
             || context.GetEndpoint()?.Metadata.GetMetadata<CsrfExempt>() is not null)
         {
@@ -57,9 +57,6 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
 
         await CustomResults.WriteProblemAsync(context, SessionErrors.CsrfInvalid).ConfigureAwait(false);
     }
-
-    private static bool IsSafe(string method) =>
-        HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
 
     private static async Task<bool> IsValidAsync(
         HttpContext context,

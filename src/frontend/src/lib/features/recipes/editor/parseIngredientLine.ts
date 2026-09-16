@@ -4,13 +4,15 @@ import type { Unit } from '../units';
 /**
  * Reads "200 g Mehl" into an amount, a unit and a name.
  *
- * One input per ingredient, not three. Three fields is three times the tabbing
- * and turns writing down a recipe into data entry — nobody writes a recipe that
- * way on paper either.
+ * For lines that arrive already written, rather than for the editor: a recipe
+ * pasted in as text, a website's ingredient list, a line typed into the
+ * shopping list. Somebody writing a recipe here fills the three fields in
+ * themselves, and nothing has to be guessed.
  *
- * The shortcut is only trustworthy because the result is shown back as separate
- * parts: a wrong read is visible, and one tap fixes it. A parser that guessed
- * silently would be worse than no parser.
+ * Guessing is only ever safe because the result is shown back as separate parts
+ * before it is kept — the paste import shows what it understood, and every part
+ * of it can be corrected. A parser that guessed silently would be worse than no
+ * parser.
  */
 export interface ParsedIngredient {
   readonly quantity: Quantity;

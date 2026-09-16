@@ -15,7 +15,12 @@ const oil = ingredient('i-oil', 'oil');
 const oliveOil = ingredient('i-olive', 'olive oil');
 const list = [butter, oil, oliveOil];
 
-const step = (segments: Step['segments']): Step => ({ id: null, segments, durationSeconds: null });
+const step = (segments: Step['segments']): Step => ({
+  id: null,
+  segments,
+  uses: [],
+  durationSeconds: null
+});
 
 describe('reading a step back as a sentence', () => {
   it('writes a mention as the author typed it', () => {

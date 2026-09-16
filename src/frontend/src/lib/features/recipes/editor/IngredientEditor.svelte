@@ -1,205 +1,133 @@
 <script lang="ts">
-  import { IconButton } from '$ds';
+  import { Button, IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
-  import SuggestionList, { type Suggestion } from './SuggestionList.svelte';
-  import { parseIngredientLine } from './parseIngredientLine';
+  import IngredientFields, {
+    draftOf,
+    emptyDraft,
+    toIngredient,
+    type IngredientDraft
+  } from './IngredientFields.svelte';
   import { formatQuantity } from '../formatQuantity';
-  import { quantityLabels } from '../quantityLabels';
+  import { quantityLabels, unitFor } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
-  import { nameOf, type Section } from '$features/shopping/sections';
-  import { ingredients as known } from '../stores/ingredients.svelte';
   import { units } from '../stores/units.svelte';
   import { preferences } from '$shell/preferences.svelte';
-  import type { Ingredient } from '../types';
+  import { usageOf } from './stepUsage';
+  import type { Ingredient, Step } from '../types';
 
   /**
-   * The ingredient list, written one line at a time.
+   * The ingredient list, written one ingredient at a time.
    *
-   * Type "200 g Mehl", press Enter, type the next. The parse is shown back as
-   * separate parts — that visibility is the whole reason the shortcut is
-   * trustworthy: a wrong read is obvious, and one tap opens the parts to fix.
+   * An amount, a unit and a name, each in its own field, because each is its
+   * own thing: the amount scales, the unit converts, and the name is what ends
+   * up on a shopping list. Typing them apart is what makes them separable
+   * without a parser having to guess where one ends and the next begins.
    *
-   * The unit field is a list you can also type into, which is what makes the
-   * vocabulary open. The thirteen built-in units are offered, this kitchen's
-   * own are offered after them, and a unit nobody has written before is added
-   * by writing it. Once written it is read back from the line from then on, so
-   * "1 Schuss Milch" only ever has to be explained once.
+   * A written ingredient reads back as one line — "200 g flour, sifted" — since
+   * that is how a recipe reads. The fields only reappear to correct it, and
+   * they are the same fields it was written in.
+   *
+   * Under each line is where it ends up in the method. Read-only on purpose:
+   * ingredients are put on steps under the steps, and one thing that can be
+   * done in two places is how the two places start disagreeing. "Not in a step"
+   * is said quietly rather than flagged, because salt to taste belongs to no
+   * step and never will.
    */
   interface Props {
     ingredients: readonly Ingredient[];
+    /** The method, read backwards: which steps each ingredient ends up in. */
+    steps: readonly Step[];
     onchange: (ingredients: Ingredient[]) => void;
     /** Whose kitchen, so the suggestions are this household's own words. */
     householdId: string;
-    /**
-     * What the recipe is written in.
-     *
-     * The recipe's language, not the reader's: somebody with an English app
-     * writing down their grandmother's German recipe wants "Kartoffeln"
-     * suggested, and an English word in that ingredient list is a word nothing
-     * else in it will match.
-     */
+    /** What the recipe is written in, which is what its names are in. */
     language: string;
   }
 
-  let { ingredients, onchange, householdId, language }: Props = $props();
+  let { ingredients, steps, onchange, householdId, language }: Props = $props();
 
-  let line = $state('');
-  let input = $state<HTMLInputElement>();
+  const usage = $derived(usageOf(steps));
+
+  /** Focuses the step itself, which is where anything about it is changed. */
+  const goTo = (number: number) => document.getElementById(`step-${number - 1}`)?.focus();
+
+  let adding = $state<IngredientDraft>(emptyDraft);
   /** Which row is open for correction, by position. Only ever one. */
   let editing = $state<number | null>(null);
-  let highlighted = $state(0);
-  /** Closed until the next keystroke, after choosing or pressing Escape. */
-  let dismissed = $state('');
-
-  const listId = 'ingredient-suggestions';
-
-  /**
-   * Where the ingredient's name sits inside the line.
-   *
-   * The line is an amount, a unit and a name, and only the last of those is
-   * worth suggesting: nobody needs help typing "200 g". The parser already
-   * knows which words are the name, and the name is a suffix of what comes
-   * before the comma, so finding it again is a search from the end.
-   */
-  const span = $derived.by(() => {
-    const parsed = parseIngredientLine(line, units.own);
-    const at = parsed.name ? line.lastIndexOf(parsed.name) : -1;
-
-    return at === -1 ? null : { at, text: parsed.name };
-  });
-
-  const options = $derived<readonly Suggestion[]>(
-    known.items
-      .filter((one) => one.name.toLowerCase() !== span?.text.toLowerCase())
-      .map((one) => ({
-        value: one.name,
-        label: one.name,
-        // Where it lives in a shop, which is the one thing about an ingredient
-        // that is useful to know before you have finished typing its name.
-        detail: one.own ? undefined : nameOf(one.section as Section)
-      }))
-  );
-
-  const open = $derived(options.length > 0 && span !== null && line !== dismissed);
-
-  // Asked for on a pause rather than on a keystroke: a request per letter is a
-  // request per letter, and the answers come back out of order anyway.
-  $effect(() => {
-    const wanted = span?.text ?? '';
-
-    if (!wanted) {
-      known.clear();
-
-      return;
-    }
-
-    const timer = setTimeout(() => void known.suggest(householdId, wanted, language), 180);
-
-    return () => clearTimeout(timer);
-  });
-
-  function choose(index: number) {
-    const chosen = options[index];
-
-    if (!chosen || !span) {
-      return;
-    }
-
-    line = line.slice(0, span.at) + chosen.value + line.slice(span.at + span.text.length);
-    dismissed = line;
-    input?.focus();
-  }
-
-  function onkeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && !open) {
-      event.preventDefault();
-      add();
-
-      return;
-    }
-
-    if (!open) {
-      return;
-    }
-
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        highlighted = (highlighted + 1) % options.length;
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        highlighted = (highlighted - 1 + options.length) % options.length;
-        break;
-      case 'Tab':
-        event.preventDefault();
-        choose(highlighted);
-        break;
-      case 'Enter':
-        // Enter finishes the line, as it always has. Choosing a suggestion is
-        // Tab, so somebody who is already typing the right word is never
-        // stopped by a list agreeing with them.
-        event.preventDefault();
-        add();
-        break;
-      case 'Escape':
-        event.preventDefault();
-        event.stopPropagation();
-        dismissed = line;
-        break;
-    }
-  }
+  let editingDraft = $state<IngredientDraft>(emptyDraft);
 
   const shown = (ingredient: Ingredient) =>
     formatQuantity(scaleQuantity(ingredient.quantity, 1), preferences.locale, quantityLabels).text;
 
-  function add() {
-    const text = line.trim();
-
-    if (!text) {
-      return;
-    }
-
-    const parsed = parseIngredientLine(text, units.own);
-
-    onchange([
-      ...ingredients,
-      // No id: the server assigns one, and a line that has never been saved has
-      // no identity to borrow.
-      { id: '', quantity: parsed.quantity, name: parsed.name, note: parsed.note }
-    ]);
-
-    line = '';
-    dismissed = '';
-    highlighted = 0;
-    known.clear();
-    input?.focus();
-  }
-
-  function replace(index: number, patch: Partial<Ingredient>) {
-    onchange(ingredients.map((one, at) => (at === index ? { ...one, ...patch } : one)));
-  }
-
-  function setUnit(index: number, written: string) {
-    const unit = written.trim() || null;
+  /**
+   * Keeps a unit somebody wrote, once they have finished writing it.
+   *
+   * On settling rather than on every keystroke, or typing "Schuss" would leave
+   * behind S, Sc, Sch and every other prefix of it as units this kitchen
+   * measures in.
+   */
+  function remember(draft: IngredientDraft) {
+    // The field holds a word and the store holds units, so the word has to be
+    // read as one first — otherwise choosing "Zehe" would file the German for
+    // `clove` as a unit this kitchen invented.
+    const unit = unitFor(draft.unit);
 
     if (unit) {
       units.remember(unit);
     }
-
-    replace(index, { quantity: { ...ingredients[index]!.quantity, unit } });
   }
 
-  function setAmount(index: number, written: string) {
-    const value = Number(written.replace(',', '.'));
+  function add() {
+    // The name is the ingredient. An amount with nothing to measure is not a
+    // half-finished row worth keeping, it is a row that says nothing.
+    if (!adding.name.trim()) {
+      return;
+    }
 
-    replace(index, {
-      quantity: {
-        ...ingredients[index]!.quantity,
-        value: written.trim() && Number.isFinite(value) && value > 0 ? value : null
-      }
-    });
+    remember(adding);
+
+    // No id: the server assigns one, and an ingredient that has never been
+    // saved has no identity to borrow.
+    onchange([...ingredients, toIngredient(adding, '')]);
+
+    adding = emptyDraft;
+    document.getElementById('add-ingredient-amount')?.focus();
+  }
+
+  function open(index: number) {
+    if (editing === index) {
+      close();
+
+      return;
+    }
+
+    editing = index;
+    editingDraft = draftOf(ingredients[index]!);
+  }
+
+  function close() {
+    remember(editingDraft);
+    editing = null;
+  }
+
+  /**
+   * Writes a correction straight through to the recipe.
+   *
+   * Per keystroke, so the autosave that watches the recipe sees the edit the
+   * same way it sees every other one — there is no separate moment where a
+   * correction is committed and nothing to lose by navigating away.
+   */
+  function correct(draft: IngredientDraft) {
+    editingDraft = draft;
+
+    const index = editing;
+
+    if (index === null) {
+      return;
+    }
+
+    onchange(ingredients.map((one, at) => (at === index ? toIngredient(draft, one.id) : one)));
   }
 
   function remove(index: number) {
@@ -213,61 +141,47 @@
     {#each ingredients as ingredient, index (index)}
       <li class="row" class:open={editing === index}>
         {#if editing === index}
-          <div class="parts">
-            <label class="part amount-field">
-              <span>{m['editor.amount']()}</span>
-              <input
-                class="ds-control"
-                type="text"
-                inputmode="decimal"
-                value={ingredient.quantity.value === null ? '' : String(ingredient.quantity.value)}
-                oninput={(event) => setAmount(index, event.currentTarget.value)}
-              />
-            </label>
-
-            <label class="part unit-field">
-              <span>{m['editor.unit']()}</span>
-              <!-- A list you can also type into. Native, so the keyboard, the
-                   screen reader and the phone's own suggestions all work, and
-                   typing something that is not on the list is allowed rather
-                   than merely tolerated — that is how a unit gets added. -->
-              <input
-                class="ds-control"
-                type="text"
-                list="known-units"
-                autocomplete="off"
-                value={ingredient.quantity.unit ?? ''}
-                oninput={(event) => setUnit(index, event.currentTarget.value)}
-              />
-            </label>
-
-            <label class="part name-field">
-              <span>{m['editor.ingredientName']()}</span>
-              <input
-                class="ds-control"
-                type="text"
-                value={ingredient.name}
-                oninput={(event) => replace(index, { name: event.currentTarget.value })}
-              />
-            </label>
-
-            <label class="part note-field">
-              <span>{m['editor.ingredientNote']()}</span>
-              <input
-                class="ds-control"
-                type="text"
-                value={ingredient.note ?? ''}
-                oninput={(event) =>
-                  replace(index, { note: event.currentTarget.value.trim() || null })}
-              />
-            </label>
-          </div>
+          <IngredientFields
+            id="ingredient-{index}"
+            label={m['editor.editIngredient']({ name: ingredient.name })}
+            value={editingDraft}
+            onchange={correct}
+            onsubmit={close}
+            {householdId}
+            {language}
+          />
         {:else}
           <span class="amount">{shown(ingredient)}</span>
 
-          <span class="name">
-            {ingredient.name}{#if ingredient.note}<span class="note">, {ingredient.note}</span>{/if}
-          </span>
+          <div class="name">
+            <span class="written"
+              >{ingredient.name}{#if ingredient.note}<span class="note">, {ingredient.note}</span
+                >{/if}</span
+            >
+
+            {#if ingredient.id}
+              {@const inSteps = usage.get(ingredient.id) ?? []}
+
+              <span class="where">
+                {#if inSteps.length > 0}
+                  <!-- A preposition rather than "Step", so the line is
+                       grammatical whether there is one number or four. -->
+                  {m['editor.usedInSteps']()}
+                  {#each inSteps as number, at (number)}
+                    {#if at > 0},
+                    {/if}<button
+                      type="button"
+                      class="jump"
+                      aria-label={m['editor.goToStep']({ number })}
+                      onclick={() => goTo(number)}>{number}</button
+                    >
+                  {/each}
+                {:else}
+                  {m['editor.notUsedInAStep']()}
+                {/if}
+              </span>
+            {/if}
+          </div>
         {/if}
 
         <div class="controls">
@@ -276,7 +190,7 @@
               ? m['editor.doneWithIngredient']({ name: ingredient.name })
               : m['editor.editIngredient']({ name: ingredient.name })}
             size="sm"
-            onclick={() => (editing = editing === index ? null : index)}
+            onclick={() => open(index)}
           >
             {#if editing === index}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -307,48 +221,31 @@
     {/each}
   </ul>
 
-  <!-- Enter adds the line and puts the cursor back, so a whole list can be
-       typed without ever reaching for the mouse. -->
-  <div class="line">
-    <input
-      bind:this={input}
-      class="ds-control"
-      id="ingredient-line"
-      type="text"
-      autocomplete="off"
-      bind:value={line}
-      aria-label={m['editor.ingredientLine']()}
-      placeholder={m['editor.ingredientHint']()}
-      role="combobox"
-      aria-expanded={open}
-      aria-controls={listId}
-      aria-autocomplete="list"
-      aria-activedescendant={open ? `${listId}-${highlighted}` : undefined}
-      oninput={() => (highlighted = 0)}
-      onblur={() => (dismissed = line)}
-      {onkeydown}
+  <!-- Enter adds the ingredient and puts the cursor back on the amount, so a
+       whole list can be typed without ever reaching for the mouse. -->
+  <div class="add">
+    <IngredientFields
+      id="add-ingredient"
+      label={m['editor.newIngredient']()}
+      value={adding}
+      onchange={(draft) => (adding = draft)}
+      onsubmit={add}
+      {householdId}
+      {language}
     />
 
-    {#if open}
-      <SuggestionList
-        id={listId}
-        label={m['editor.ingredientListLabel']()}
-        items={options}
-        {highlighted}
-        onchoose={choose}
-      />
-    {/if}
+    <Button variant="secondary" size="sm" onclick={add} disabled={!adding.name.trim()}>
+      {m['editor.addIngredient']()}
+    </Button>
   </div>
 
-  <!-- One list for every row: the options are the same, and thirteen copies of
-       it in the DOM would be thirteen copies to keep in step. -->
-  <datalist id="known-units">
-    {#each units.all as unit (unit)}<option value={unit}></option>{/each}
-  </datalist>
+  <p class="hint">{m['editor.ingredientHint']()}</p>
 </div>
 
 <style>
   .editor {
+    container: ingredient-editor / inline-size;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -360,37 +257,52 @@
     list-style: none;
   }
 
-  .line {
-    position: relative;
-  }
-
   .row {
     display: grid;
-    grid-template-columns: minmax(4rem, auto) 1fr auto;
+    grid-template-columns: minmax(4rem, auto) minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-3);
     padding-block: var(--space-1);
   }
 
+  .name {
+    min-width: 0;
+  }
+
+  /* Where it ends up in the method. Muted, never a warning colour: an
+     ingredient in no step is a normal recipe, not a mistake to fix. */
+  .where {
+    display: block;
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+  }
+
+  .jump {
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    cursor: pointer;
+  }
+
+  .jump:hover {
+    color: var(--accent);
+  }
+
   .row.open {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
     padding-block: var(--space-3);
   }
 
-  .parts {
+  .add {
     display: grid;
-    grid-template-columns: 5rem 7rem 1fr 1fr;
-    gap: var(--space-2);
-  }
-
-  .part {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    min-width: 0;
-    color: var(--text-subtle);
-    font-size: var(--text-xs);
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--space-3);
   }
 
   .controls {
@@ -408,16 +320,46 @@
     color: var(--text-muted);
   }
 
-  /* Four fields do not fit a phone. They stack into two rows of two, which
-     keeps the amount beside its unit — the pair that is read together. */
-  @media (max-width: 33.999rem) {
-    .parts {
-      grid-template-columns: 5rem 1fr;
+  .hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  /* Keep the written name readable when quantity and actions would consume
+     the row, including a narrow editor with enlarged text. */
+  @container ingredient-editor (width < 24rem) {
+    .row:not(.open) {
+      grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    .name-field,
-    .note-field {
+    .row:not(.open) .name {
       grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .row:not(.open) .controls {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .amount {
+      white-space: normal;
+    }
+  }
+
+  /* On a phone the fields already stack, and a control beside them would have
+     nothing but a sliver left. They go underneath instead — and the row being
+     corrected does the same, or its four fields would be squeezed to make room
+     for two icons while the row below them used the whole width. */
+  @container ingredient-editor (width < 44rem) {
+    .add,
+    .row.open {
+      grid-template-columns: 1fr;
+    }
+
+    .row.open .controls {
+      justify-content: flex-end;
     }
   }
 </style>

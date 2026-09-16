@@ -71,9 +71,22 @@
   /** The browser closed it — Escape, or the close method. Tell the caller. */
   function synchronise() {
     if (open) {
-      open = false;
-      onclose?.();
+      dismiss();
     }
+  }
+
+  /**
+   * Closed, and the caller told about it.
+   *
+   * Every way out goes through here. A caller that passes `open` as an
+   * expression rather than a binding — `open={chosen !== null}` — only ever
+   * learns that this closed from `onclose`, so a dismissal that skipped it
+   * would leave that caller believing the dialog was still up, and the next
+   * open would set state that was already set and change nothing on screen.
+   */
+  function dismiss() {
+    open = false;
+    onclose?.();
   }
 
   /**
@@ -82,7 +95,7 @@
    */
   function dismissOnBackdrop(event: MouseEvent) {
     if (event.target === element) {
-      open = false;
+      dismiss();
     }
   }
 </script>
@@ -96,11 +109,11 @@
 >
   <div class="panel">
     <header class="header">
-      <h2 class="title" class:visually-hidden={hideTitle} id={titleId}>{title}</h2>
+      <h2 class="title" class:ds-clipped={hideTitle} id={titleId}>{title}</h2>
 
       <!-- The backdrop and Escape both dismiss, but neither is discoverable:
            a visible control is the way out that can be seen. -->
-      <IconButton label={closeLabel} onclick={() => (open = false)}>
+      <IconButton label={closeLabel} onclick={dismiss}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
         </svg>
@@ -141,6 +154,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
     gap: var(--space-4);
     padding: var(--space-4) var(--space-4) var(--space-2) var(--space-6);
   }
@@ -151,11 +165,16 @@
 
   .body {
     padding: var(--space-2) var(--space-6) var(--space-6);
+    min-height: 0;
     overflow-y: auto;
+    scroll-padding-block: var(--space-2);
+    overscroll-behavior: contain;
   }
 
   .footer {
     display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--space-3);
     padding: var(--space-4) var(--space-6);
@@ -168,7 +187,7 @@
   }
 
   .centre .panel {
-    max-height: calc(100vh - var(--space-16));
+    max-height: calc(100dvh - var(--space-16));
     border-radius: var(--radius-lg);
   }
 
@@ -185,10 +204,11 @@
   }
 
   .sheet .panel {
-    max-height: 85vh;
+    max-height: 85dvh;
     border-start-start-radius: var(--radius-lg);
     border-start-end-radius: var(--radius-lg);
     padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
   }
 
   @media (min-width: 48rem) {
@@ -199,21 +219,10 @@
     }
 
     .sheet .panel {
-      max-height: calc(100vh - var(--space-16));
+      max-height: calc(100dvh - var(--space-16));
       border-radius: var(--radius-lg);
       padding-bottom: 0;
     }
-  }
-
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 
   /* Both shapes arrive from where they will be, so the movement explains the

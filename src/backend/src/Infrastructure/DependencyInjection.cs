@@ -6,9 +6,11 @@ using Infrastructure.Persistence;
 using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Migrations;
+using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Planning;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Shopping;
+using Infrastructure.Persistence.Tags;
 using Infrastructure.Persistence.Users;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
@@ -96,6 +98,8 @@ public static class DependencyInjection
             .AddScoped<ICookSessionRepository, CookSessionRepository>()
             .AddSingleton<IWebPageFetcher, SafeWebPageFetcher>()
             .AddScoped<IMealPlanRepository, MealPlanRepository>()
+            .AddScoped<ICookbookRepository, CookbookRepository>()
+            .AddScoped<ITagRepository, TagRepository>()
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a

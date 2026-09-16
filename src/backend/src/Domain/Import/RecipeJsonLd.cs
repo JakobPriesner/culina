@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Domain.Recipes;
 
 namespace Domain.Import;
 
@@ -235,10 +236,17 @@ public static class RecipeJsonLd
             return null;
         }
 
-        var digits = new string([.. written.TakeWhile(one => char.IsDigit(one) || one == '.')]);
+        // Skipped to the first digit rather than read from the start: "Serves 4"
+        // and "Makes 12" are as ordinary as "4 servings", and taking only
+        // leading digits read them as no yield at all.
+        var digits = new string([
+            .. written.SkipWhile(one => !char.IsDigit(one))
+                .TakeWhile(one => char.IsDigit(one) || one == '.')
+        ]);
 
         return decimal.TryParse(digits, CultureInfo.InvariantCulture, out var amount)
-            && amount is > 0 and <= 1000
+            && amount > 0
+            && amount <= Yield.MaxAmount
                 ? amount
                 : null;
     }

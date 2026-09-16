@@ -378,6 +378,8 @@ export interface paths {
         /**
          * Find recipes
          * @description Cursor-paginated. Repeat `ingredient` to ask what you can cook from what you have: results rank by how many of them a recipe uses and how few extras it needs, and each carries `ingredientMatch`. There is no pantry to maintain, so nothing can go stale.
+         *
+         *     `cookbookId` reads inside one cookbook. Every other filter still applies, so a cookbook is a view of the collection rather than a second one; it defaults to `cookbookOrder`, the order the cookbook was built in. An unknown cookbook is an empty page rather than a 404 — it is a filter value, not a resource named in the path.
          */
         get: operations["getRecipesV1"];
         put?: never;
@@ -415,6 +417,26 @@ export interface paths {
          * @description Idempotent: deleting a recipe that is already gone also answers 204.
          */
         delete: operations["deleteRecipeV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tags this household uses
+         * @description With usage counts, most used first. Not paged: a household's vocabulary is a few dozen words, and there is no tag management — a tag exists because a recipe carries it and stops existing when the last one lets it go.
+         */
+        get: operations["getTagsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -795,6 +817,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cookbooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's cookbooks
+         * @description Cursor-paginated, most recently changed first. Each carries its recipe count and up to four pictures for its cover; the recipes themselves are read through `GET /recipes?cookbookId=…`, which is what gives a cookbook the same search, filters and paging the whole collection has.
+         */
+        get: operations["getCookbooksV1"];
+        put?: never;
+        /**
+         * Start a cookbook
+         * @description Only a household and a name. "Christmas" is a complete thought, and a form that asks for more before it will save is one people abandon halfway through having the idea.
+         *
+         *     Send `rules` to make a cookbook that fills itself: everything matching them is on it, worked out whenever it is read, so a recipe written this evening is on the right shelf the moment it is saved. Omit `rules` to make one you fill yourself. A cookbook cannot be both, and cannot change which it is.
+         */
+        post: operations["createCookbookV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cookbooks/{cookbookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a cookbook
+         * @description The shelf itself: its name, what it is for, how many recipes are on it and the pictures its cover shows. Not the recipes — those are `GET /recipes?cookbookId=…`, so one screen's worth arrives at a time and every filter still works.
+         */
+        get: operations["getCookbookByIdV1"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a cookbook
+         * @description The shelf only. Every recipe that was on it stays exactly where it was — a cookbook is a pointer, and deleting one deletes no food. Idempotent: deleting one that is already gone also answers 204.
+         */
+        delete: operations["deleteCookbookV1"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename a cookbook
+         * @description The name and what it is for, together: they are edited in one form, and two requests for one form is two ways for half of it to fail. `If-Match` is required — missing is 428, stale is 412.
+         */
+        patch: operations["updateCookbookV1"];
+        trace?: never;
+    };
+    "/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put a recipe on a cookbook
+         * @description Idempotent. A recipe already on the shelf keeps the moment it went on, and the cookbook's version is not bumped — churning it would throw away every cached copy to report that nothing happened.
+         *
+         *     `409` on a cookbook that fills itself: its rules are its whole membership, so a recipe put on by hand would be one the next read did not return.
+         */
+        put: operations["addRecipeToCookbookV1"];
+        post?: never;
+        /**
+         * Take a recipe off a cookbook
+         * @description The recipe itself is untouched. Idempotent: taking off something that was never on also answers 204. `409` on a cookbook that fills itself, which has nothing to take off by hand.
+         */
+        delete: operations["removeRecipeFromCookbookV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{recipeId}/cookbooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which cookbooks a recipe is on
+         * @description Not paged. A recipe is on a handful of shelves or none, and this answers the tick marks in the add-to-cookbook sheet and the line under a recipe's title — a cursor would be machinery for a list that fits on one screen.
+         */
+        get: operations["getRecipeCookbooksV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -877,6 +999,140 @@ export interface components {
              * @description A new scaling, because one more person arrived.
              */
             servings?: number | null;
+        };
+        /** @description One cookbook, with everything its own page needs. */
+        CookbooksCookbookDetail: {
+            /**
+             * Format: uuid
+             * @description The cookbook's id.
+             */
+            cookbookId: string;
+            /**
+             * Format: uuid
+             * @description Which household owns it.
+             */
+            householdId: string;
+            /** @description What it is called. */
+            name: string;
+            /** @description What it is for, if whoever made it said. */
+            description?: string | null;
+            /** @description `manual` or `smart`. */
+            kind: string;
+            rules?: (null) | components["schemas"]["CookbooksCookbookRulesContract"];
+            /**
+             * Format: int32
+             * @description How many recipes are on it.
+             */
+            recipeCount: number;
+            /** @description Up to four photographed recipes for the cover, oldest first. */
+            coverRecipeIds: string[];
+            /**
+             * Format: uuid
+             * @description Whose idea it was.
+             */
+            createdBy: string;
+            /**
+             * Format: date-time
+             * @description When it was made.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When it, or what is on it, last changed.
+             */
+            updatedAt: string;
+            /**
+             * Format: int64
+             * @description Bumped by every write. This is the ETag.
+             */
+            version: number;
+        };
+        /** @description What a cookbook that fills itself asks for. */
+        CookbooksCookbookRulesContract: {
+            /** @description Tag slugs a recipe must all carry. */
+            tags?: string[];
+            /** @description Ingredient names a recipe must all use. Matched as substrings. */
+            ingredients?: string[];
+            /**
+             * Format: int32
+             * @description The longest a recipe may take, or omit for any length.
+             */
+            maxMinutes?: number | null;
+        };
+        /** @description A cookbook as it appears on a shelf. */
+        CookbooksCookbookSummary: {
+            /**
+             * Format: uuid
+             * @description The cookbook's id.
+             */
+            cookbookId: string;
+            /** @description What it is called. */
+            name: string;
+            /** @description What it is for, if whoever made it said. */
+            description?: string | null;
+            /** @description `manual` or `smart`. */
+            kind: string;
+            rules?: (null) | components["schemas"]["CookbooksCookbookRulesContract"];
+            /**
+             * Format: int32
+             * @description How many recipes are on it.
+             */
+            recipeCount: number;
+            /** @description Up to four photographed recipes for the cover, oldest first. */
+            coverRecipeIds: string[];
+            /**
+             * Format: date-time
+             * @description When it, or what is on it, last changed.
+             */
+            updatedAt: string;
+        };
+        /** @description A page of a household's cookbooks. */
+        CookbooksCookbooksResponse: {
+            /** @description The cookbooks on this page, most recently changed first. */
+            items: components["schemas"]["CookbooksCookbookSummary"][];
+            /** @description Pass this back as `cursor` for the next page, or null at the end. */
+            nextCursor?: string | null;
+            /**
+             * Format: int32
+             * @description How many cookbooks the household has, across all pages.
+             */
+            total: number;
+        };
+        /** @description Starts a cookbook. */
+        CookbooksCreateCookbookRequest: {
+            /**
+             * Format: uuid
+             * @description Whose shelf it goes on.
+             */
+            householdId: string;
+            /** @description What to call it. The only thing required. */
+            name: string;
+            /** @description What it is for, or omit. */
+            description?: string | null;
+            rules?: (null) | components["schemas"]["CookbooksCookbookRulesContract"];
+        };
+        /** @description One cookbook a recipe is on. */
+        CookbooksRecipeCookbook: {
+            /**
+             * Format: uuid
+             * @description The cookbook's id.
+             */
+            cookbookId: string;
+            /** @description What it is called. */
+            name: string;
+        };
+        /** @description Which cookbooks a recipe is on. */
+        CookbooksRecipeCookbooksResponse: {
+            /** @description The cookbooks containing it, by name. */
+            items: components["schemas"]["CookbooksRecipeCookbook"][];
+        };
+        /** @description Renames a cookbook, and rewrites what it is for. */
+        CookbooksUpdateCookbookRequest: {
+            /** @description The new name. */
+            name: string;
+            /** @description The new description, or null to clear it. */
+            description?: string | null;
+            rules?: (null) | components["schemas"]["CookbooksCookbookRulesContract"];
         };
         /** @description The role to give a member. */
         HouseholdsChangeMemberRoleRequest: {
@@ -1330,6 +1586,23 @@ export interface components {
             /** @description What it says. */
             body: string;
         };
+        /** @description The tags a household's recipes carry. */
+        RecipesGetTagsResponse: {
+            /** @description The tags, most used first. */
+            items: components["schemas"]["RecipesGetTagsTagInUse"][];
+        };
+        /** @description One tag, and how much of the collection carries it. */
+        RecipesGetTagsTagInUse: {
+            /** @description The normalised form, which is what filters and rules name. */
+            slug: string;
+            /** @description The words somebody actually typed. */
+            name: string;
+            /**
+             * Format: int32
+             * @description How many recipes carry it.
+             */
+            recipeCount: number;
+        };
         /** @description The units a household can measure in. */
         RecipesGetUnitsResponse: {
             /** @description The units every household starts with, in picker order. */
@@ -1531,6 +1804,11 @@ export interface components {
              * @description How long it takes, when it waits. Drives the inline timer.
              */
             durationSeconds?: number | null;
+            /**
+             * @description Everything the step needs, as ingredient ids: what to get out before
+             *     starting it.
+             */
+            uses?: string[] | null;
         };
         /** @description One piece of a step: either words, or a reference to an ingredient. */
         RecipesStepSegmentContract: {
@@ -3114,6 +3392,7 @@ export interface operations {
                 householdId?: string;
                 query?: string;
                 maxMinutes?: number;
+                cookbookId?: string;
                 sort?: string;
                 cursor?: string;
                 limit?: number;
@@ -3362,6 +3641,55 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getTagsV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetTagsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4582,6 +4910,391 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanningMealPlanResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCookbooksV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksCookbooksResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createCookbookV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookbooksCreateCookbookRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksCookbookDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCookbookByIdV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksCookbookDetail"];
+                };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteCookbookV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateCookbookV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookbooksUpdateCookbookRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksCookbookDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    addRecipeToCookbookV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeRecipeFromCookbookV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRecipeCookbooksV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksRecipeCookbooksResponse"];
                 };
             };
             /** @description Unauthorized */

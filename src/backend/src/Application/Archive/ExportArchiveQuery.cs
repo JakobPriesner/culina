@@ -103,6 +103,8 @@ internal sealed class ExportArchiveQueryHandler(
                             Tags: [],
                             Ingredients: [],
                             MaxMinutes: null,
+                            CookbookId: null,
+                            Rules: null,
                             RecipeSort.Title,
                             cursor,
                             Page),
@@ -225,7 +227,8 @@ internal sealed class ExportArchiveQueryHandler(
                     _ => new ArchivedSegment(string.Empty, null)
                 })
             ],
-            step.DurationSeconds);
+            step.DurationSeconds,
+            [.. step.Uses.Where(order.ContainsKey).Select(id => order[id]).Order()]);
     }
 
     private async Task<ArchivedImage?> ToArchivedImageAsync(

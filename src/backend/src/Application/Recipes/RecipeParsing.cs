@@ -63,6 +63,7 @@ internal static class RecipeParsing
             step.StepId,
             sortOrder,
             [.. step.Segments.Select(ToSegment)],
+            step.Uses ?? [],
             step.DurationSeconds);
 
     private static Result<IngredientGroup> ToGroup(IngredientGroupContract group, int sortOrder) =>

@@ -46,6 +46,24 @@ public sealed record StepContract
 
     /// <summary>How long it takes, when it waits. Drives the inline timer.</summary>
     public int? DurationSeconds { get; init; }
+
+    /// <summary>
+    /// Everything the step needs, as ingredient ids: what to get out before
+    /// starting it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An ingredient the text mentions is always included, listed here or not,
+    /// so omitting this field writes exactly what the sentence names — which is
+    /// what a client that has never heard of it was already sending.
+    /// </para>
+    /// <para>
+    /// Read back in the recipe's own ingredient order. Order within a step is
+    /// not stored: the only order a reader can follow is the one the ingredient
+    /// list shows.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<Guid>? Uses { get; init; }
 }
 
 /// <summary>

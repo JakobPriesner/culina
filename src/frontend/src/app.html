@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#fdfbf7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#141110" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Your recipes, the way you cook them." />
@@ -11,26 +11,36 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!--
-      Stamps the stored appearance before the first paint. Inline and
-      synchronous on purpose: anything deferred, imported or loaded from a file
-      paints the default theme first, and a white flash on the way into a dark
-      kitchen is the one bug every user notices.
+      Stamps the stored appearance before the first paint, and says which of the
+      two boot skeletons to draw. Inline and synchronous on purpose: anything
+      deferred, imported or loaded from a file paints the default theme first,
+      and a white flash on the way into a dark kitchen is the one bug every user
+      notices.
 
-      __CULINA_NONCE__ is replaced per response by the backend, because the
-      Content-Security-Policy names a fresh nonce each time and this script must
-      match it. It stays literal under the dev server, which sets no policy.
+      The nonce placeholder below is replaced per response by the backend,
+      because the Content-Security-Policy names a fresh nonce each time and this
+      script must match it. It stays literal under the dev server, which sets no
+      policy.
     -->
     <script nonce="__CULINA_NONCE__">
       (function () {
         var root = document.documentElement;
         var theme = 'warm-paper';
         var mode = 'system';
+        var boot = 'app';
 
         try {
           var stored = JSON.parse(localStorage.getItem('culina.appearance') || '{}');
 
           if (typeof stored.theme === 'string') theme = stored.theme;
           if (typeof stored.mode === 'string') mode = stored.mode;
+
+          // What this device saw last time. The document cannot know whether
+          // this is a signed-in person until the server has answered, and
+          // guessing from the last answer is right almost every time — a
+          // library skeleton in front of a sign-in form is the one arrangement
+          // worth avoiding.
+          if (localStorage.getItem('culina.boot') === 'auth') boot = 'auth';
         } catch (ignored) {
           // A blocked or corrupt store is not a reason to fail to render.
         }
@@ -42,37 +52,317 @@
               ? 'dark'
               : 'light'
             : mode;
+        root.dataset.boot = boot;
       })();
     </script>
+    <!--
+      The boot screen's own styles.
+
+      Inline because the stylesheet is itself a request, and nonced because the
+      document's policy is `style-src 'self' 'nonce-…'` — a plain style
+      attribute is blocked by that policy, which is how this screen came to
+      render as unstyled text in the corner in production. Colours fall back to
+      literals for the dev server, where the tokens arrive with the JavaScript
+      rather than before it.
+    -->
+    <style nonce="__CULINA_NONCE__">
+      #app {
+        display: contents;
+      }
+
+      /* The boot screen paints before the stylesheet has applied its reset, so
+         it states this itself: without it the padding is added to the width and
+         the placeholder rows run off the side of the screen. */
+      #boot,
+      #boot * {
+        box-sizing: border-box;
+      }
+
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface, #faf9f6);
+        color: var(--text, #23211c);
+        font:
+          400 1rem/1.5 ui-sans-serif,
+          system-ui,
+          sans-serif;
+      }
+
+      :root[data-mode='dark'] #boot {
+        background: var(--surface, #181713);
+        color: var(--text, #f2f0ea);
+      }
+
+      /* Everything fades in together, and only after the delay the rest of the
+         app uses: a boot that finishes in 100 ms should never flash a skeleton,
+         while the ground colour is painted immediately either way. */
+      #boot > * {
+        opacity: 0;
+        animation: boot-in 240ms ease-out 150ms forwards;
+      }
+
+      @keyframes boot-in {
+        to {
+          opacity: 1;
+        }
+      }
+
+      .boot-bar,
+      .boot-page {
+        width: 100%;
+        max-width: 78rem;
+        margin-inline: auto;
+        padding-inline: clamp(1rem, 4vw, 2rem);
+      }
+
+      .boot-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 4.5rem;
+        padding-block: 0.75rem;
+      }
+
+      /* The one thing that is known before the server answers, so it is drawn
+         rather than shimmered. */
+      .boot-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--font-editorial, Georgia, serif);
+        font-size: 2rem;
+        letter-spacing: -0.055em;
+        line-height: 1;
+      }
+
+      .boot-brand svg {
+        width: 2.25rem;
+        height: 2.25rem;
+        padding: 0.25rem;
+        border-radius: 999px;
+        background: var(--surface-accent-subtle, #edf0e5);
+        stroke: var(--accent, #536340);
+        stroke-width: 1.8;
+        stroke-linecap: round;
+      }
+
+      :root[data-mode='dark'] .boot-brand svg {
+        background: var(--surface-accent-subtle, #303d28);
+      }
+
+      .boot-dot {
+        color: var(--accent, #536340);
+      }
+
+      .boot-page {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding-block: clamp(1.5rem, 4vw, 3rem);
+      }
+
+      .boot-block {
+        display: block;
+        border-radius: 0.375rem;
+        background: var(--skeleton-base, #e5e1d8);
+        background-image: linear-gradient(
+          90deg,
+          var(--skeleton-base, #e5e1d8) 0%,
+          var(--skeleton-highlight, #f2f0ea) 50%,
+          var(--skeleton-base, #e5e1d8) 100%
+        );
+        background-size: 200% 100%;
+        animation: boot-shimmer 1.4s ease-in-out infinite;
+      }
+
+      :root[data-mode='dark'] .boot-block {
+        background: var(--skeleton-base, #2e2b25);
+        background-image: linear-gradient(
+          90deg,
+          var(--skeleton-base, #2e2b25) 0%,
+          var(--skeleton-highlight, #443f36) 50%,
+          var(--skeleton-base, #2e2b25) 100%
+        );
+      }
+
+      @keyframes boot-shimmer {
+        to {
+          background-position: -200% 0;
+        }
+      }
+
+      .boot-action {
+        width: 9rem;
+        height: 2.75rem;
+        border-radius: 999px;
+      }
+
+      .boot-eyebrow {
+        width: 7rem;
+        height: 0.75rem;
+      }
+
+      .boot-title {
+        width: min(22rem, 70%);
+        height: 2.75rem;
+      }
+
+      .boot-lede {
+        width: min(32rem, 90%);
+        height: 1rem;
+      }
+
+      /* The same rhythm as the real rows: one column on a phone, three across
+         once there is room, so nothing jumps when the recipes arrive. */
+      .boot-rows {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+        margin-block-start: 1rem;
+      }
+
+      .boot-row {
+        height: 17rem;
+        border-radius: 1rem;
+      }
+
+      @media (min-width: 40rem) {
+        .boot-rows {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (min-width: 64rem) {
+        .boot-rows {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      /* The sign-in page: one feature panel beside a short form, collapsing to
+         the form alone on a phone exactly as the real layout does. */
+      .boot-signin {
+        flex: 1;
+        display: grid;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      .boot-feature {
+        display: none;
+        min-height: 24rem;
+        border-radius: 1rem;
+      }
+
+      .boot-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: min(24rem, 100%);
+        margin-inline: auto;
+      }
+
+      .boot-field {
+        height: 3rem;
+        border-radius: 0.75rem;
+      }
+
+      .boot-submit {
+        height: 3rem;
+        border-radius: 999px;
+        margin-block-start: 0.5rem;
+      }
+
+      @media (min-width: 64rem) {
+        .boot-signin {
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        }
+
+        .boot-feature {
+          display: block;
+        }
+      }
+
+      /* Which of the two is drawn is decided before the first paint. */
+      :root[data-boot='auth'] .boot-library,
+      :root:not([data-boot='auth']) .boot-signin {
+        display: none;
+      }
+
+      /* A flat tint rather than a slower shimmer: the point of the animation is
+         "this is coming", and a still block says that too. */
+      @media (prefers-reduced-motion: reduce) {
+        #boot > *,
+        .boot-block {
+          animation: none;
+          opacity: 1;
+        }
+
+        .boot-block {
+          background-image: none;
+        }
+      }
+    </style>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">
     <!--
       Painted before a single byte of JavaScript has run, and removed by the
-      root layout once the app is mounted. The app cannot know whether this is a
-      signed-in person until it has asked the server, and a white rectangle for
-      that half second is the worst thing a self-hosted app can open with.
+      root layout once the app is mounted. Nothing renders until every load
+      function has resolved — including the session, which is a round trip — so
+      this is on screen for as long as that takes, and a white rectangle or a
+      lone word for that half second is the worst thing a self-hosted app can
+      open with.
 
-      Styled inline because the stylesheet is itself a request.
+      A skeleton of the page that is coming, rather than a spinner: it says how
+      long the wait is worth and it reserves the same space, so the first real
+      paint lands where the placeholders were.
     -->
-    <div
-      id="boot"
-      style="
-        position: fixed;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        background: var(--surface, #fdfbf7);
-        color: var(--text-muted, #6b5943);
-        font:
-          500 0.875rem/1.5 ui-sans-serif,
-          system-ui,
-          sans-serif;
-      "
-    >
-      <span>Culina</span>
+    <div id="boot" role="status" aria-busy="true" aria-label="Culina">
+      <div class="boot-bar">
+        <span class="boot-brand">
+          <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M7 22h26M10 25a10 10 0 0 0 20 0M16 17c-4-4 4-5 0-9M24 17c-4-4 4-5 0-9" />
+          </svg>
+          <span aria-hidden="true">culina<span class="boot-dot">.</span></span>
+        </span>
+        <span class="boot-block boot-action" aria-hidden="true"></span>
+      </div>
+
+      <div class="boot-page boot-library" aria-hidden="true">
+        <span class="boot-block boot-eyebrow"></span>
+        <span class="boot-block boot-title"></span>
+        <span class="boot-block boot-lede"></span>
+        <div class="boot-rows">
+          <span class="boot-block boot-row"></span>
+          <span class="boot-block boot-row"></span>
+          <span class="boot-block boot-row"></span>
+        </div>
+      </div>
+
+      <div class="boot-page boot-signin" aria-hidden="true">
+        <span class="boot-block boot-feature"></span>
+        <div class="boot-form">
+          <span class="boot-block boot-title"></span>
+          <span class="boot-block boot-field"></span>
+          <span class="boot-block boot-field"></span>
+          <span class="boot-block boot-submit"></span>
+        </div>
+      </div>
     </div>
 
-    <div style="display: contents">%sveltekit.body%</div>
+    <!--
+      A wrapper that takes no part in layout, so the shell's own grid is the
+      first thing the page has. Styled from the block above rather than with a
+      style attribute: the document's policy nonces `<style>` elements, and an
+      attribute is blocked by it whatever nonce the document carries.
+    -->
+    <div id="app">%sveltekit.body%</div>
   </body>
 </html>

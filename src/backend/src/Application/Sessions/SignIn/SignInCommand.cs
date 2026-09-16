@@ -122,7 +122,7 @@ internal sealed class SignInCommandHandler(
             tokens.Digest(sessionToken),
             tokens.Digest(csrfToken),
             now,
-            TimeSpan.FromDays(dependencies.Cookies.SessionDays),
+            dependencies.Cookies.SessionLifetime,
             command.IpAddress,
             command.UserAgent);
 

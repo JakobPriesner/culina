@@ -82,6 +82,7 @@ const toIngredient = (wire: WireIngredient): Ingredient => ({
 const toStep = (wire: WireStep): Step => ({
   id: wire.stepId ?? null,
   segments: wire.segments.map(toSegment),
+  uses: wire.uses ?? [],
   durationSeconds: wire.durationSeconds ?? null
 });
 
@@ -120,6 +121,7 @@ export const toWireSteps = (steps: readonly Step[]): WireStep[] =>
   steps.map((step) => ({
     stepId: step.id ?? undefined,
     durationSeconds: step.durationSeconds ?? undefined,
+    uses: [...step.uses],
     segments: step.segments.map((segment) =>
       segment.kind === 'ingredient'
         ? { type: 'ingredient' as const, recipeIngredientId: segment.ingredientId }

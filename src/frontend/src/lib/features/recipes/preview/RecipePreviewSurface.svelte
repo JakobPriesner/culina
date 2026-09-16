@@ -17,6 +17,7 @@
     onback: () => void;
   } = $props();
   let ingredientsOpen = $state(false);
+  let dockHeight = $state(0);
   let surface: HTMLDivElement;
   const cooking = $derived(progress.cooking);
 
@@ -35,7 +36,7 @@
   }
 </script>
 
-<div bind:this={surface} class="surface" class:cooking>
+<div bind:this={surface} class="surface" class:cooking style:--preview-dock-height="{dockHeight}px">
   <div class="toolbar">
     <Button variant="ghost" size="sm" onclick={onback}>← {m['preview.back']()}</Button>
     <Button
@@ -94,7 +95,7 @@
     </section>
   </div>
   {#if cooking}
-    <div class="dock">
+    <div class="dock" bind:clientHeight={dockHeight}>
       <div class="step-controls">
         <Button
           size="sm"
@@ -140,19 +141,20 @@
   .surface {
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-6) var(--space-8) var(--space-16);
+    padding: var(--space-6) var(--layout-gutter-end) var(--space-16) var(--layout-gutter-start);
   }
   .toolbar {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: var(--space-3);
     margin-bottom: var(--space-8);
   }
   .recipe-header {
     display: grid;
-    grid-template-columns: 1.5fr 1fr;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
     align-items: center;
-    gap: var(--space-12);
+    gap: var(--layout-section-gap);
     margin-bottom: var(--space-12);
   }
   .recipe-photo {
@@ -177,11 +179,20 @@
   }
   .workspace {
     display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: var(--space-16);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    align-items: start;
+    gap: var(--layout-section-gap);
   }
   h2 {
-    font-size: var(--text-xl);
+    font-family: var(--font-editorial);
+    font-weight: var(--weight-regular);
+    font-size: var(--text-2xl);
+    letter-spacing: -0.025em;
+  }
+  .ingredients {
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
   }
   .ingredients h2,
   .section-heading {
@@ -206,16 +217,18 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-4);
-    padding-bottom: var(--space-8);
-    scroll-margin-block: var(--space-8);
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--border);
+    scroll-margin-block: var(--space-8) calc(var(--preview-dock-height) + var(--space-4));
   }
   .method li[hidden] {
     display: none;
   }
   .number {
     flex-shrink: 0;
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
+    color: var(--accent);
+    font-family: var(--font-editorial);
+    font-size: var(--text-2xl);
     font-variant-numeric: tabular-nums;
   }
   .method li p {
@@ -243,7 +256,7 @@
     background: var(--accent);
   }
   .cooking {
-    padding-bottom: calc(var(--space-24) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--preview-dock-height) + var(--space-8));
   }
   .cooking .recipe-header {
     display: block;
@@ -271,7 +284,8 @@
     gap: var(--space-3);
     max-width: var(--layout-wide);
     margin-inline: auto;
-    padding: var(--space-3) var(--space-8) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+    padding: var(--space-3) var(--layout-gutter-end)
+      calc(var(--space-3) + env(safe-area-inset-bottom, 0px)) var(--layout-gutter-start);
   }
   .step-controls :global(button) {
     min-height: var(--control-lg);
@@ -279,9 +293,9 @@
   .mobile-ingredients {
     display: none;
   }
-  @media (max-width: 47.999rem) {
+  @media (width < 64rem) {
     .surface {
-      padding: var(--space-4) var(--space-6) var(--space-12);
+      padding: var(--space-4) var(--layout-gutter-end) var(--space-12) var(--layout-gutter-start);
     }
     .toolbar {
       gap: var(--space-1);
@@ -301,7 +315,7 @@
       gap: var(--space-8);
     }
     .cooking {
-      padding-bottom: calc(var(--space-24) + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(var(--preview-dock-height) + var(--space-8));
     }
     .cooking .ingredients {
       display: none;
@@ -317,18 +331,27 @@
     }
     .step-controls {
       gap: var(--space-2);
-      padding-inline: var(--space-4);
+      padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
     }
     .method li.current {
       gap: var(--space-3);
     }
   }
   @media (max-width: 23.999rem) {
-    .step-controls {
-      padding-inline: var(--space-3);
+    .ingredients {
+      padding: var(--space-4);
     }
     .step-controls :global(button) {
       padding-inline: var(--space-2);
+    }
+  }
+  @media screen and (max-height: 32rem) {
+    .dock {
+      position: static;
+      margin-top: var(--space-6);
+    }
+    .cooking {
+      padding-bottom: var(--space-8);
     }
   }
 </style>

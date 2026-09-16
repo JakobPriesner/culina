@@ -11,6 +11,7 @@
 
   interface Props {
     id: string;
+    shape?: 'default' | 'pill';
     value: string;
     placeholder: string;
     /** Announced for the field itself, which has no visible label in a toolbar. */
@@ -24,6 +25,7 @@
 
   let {
     id,
+    shape = 'default',
     value = $bindable(),
     placeholder,
     label,
@@ -56,8 +58,17 @@
   <input
     bind:this={element}
     class="ds-control input"
+    class:pill={shape === 'pill'}
     {id}
     type="search"
+    enterkeyhint="search"
+    onkeydown={(event) => {
+      if (event.key === 'Escape' && value && !disabled) {
+        event.preventDefault();
+        event.stopPropagation();
+        clear();
+      }
+    }}
     {placeholder}
     {disabled}
     bind:value
@@ -68,7 +79,7 @@
 
   {#if value}
     <span class="clear">
-      <IconButton label={clearLabel} size="sm" onclick={clear}>
+      <IconButton label={clearLabel} size="sm" {disabled} onclick={clear}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
         </svg>
@@ -87,8 +98,13 @@
 
   .input {
     padding-inline-start: var(--space-12);
-    padding-inline-end: var(--space-12);
+    padding-inline-end: calc(var(--control-sm) + var(--space-2));
+    border-radius: var(--radius-md);
+  }
+
+  .input.pill {
     border-radius: var(--radius-full);
+    background: var(--surface-sunken);
   }
 
   /* The browser's own clear affordance would sit next to ours. */
@@ -103,6 +119,10 @@
     height: var(--space-4);
     color: var(--text-subtle);
     pointer-events: none;
+  }
+
+  .search:focus-within .icon {
+    color: var(--accent);
   }
 
   .icon :global(svg) {

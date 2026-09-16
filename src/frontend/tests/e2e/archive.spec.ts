@@ -50,7 +50,7 @@ test.describe('an archive of everything', () => {
   });
 
   test('downloads as a file, and puts it back', async () => {
-    await page.goto('/me');
+    await page.goto('/me/household');
 
     // A real download, through the browser's own machinery — which is what
     // gives the file a name and somewhere to land.

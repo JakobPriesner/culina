@@ -185,13 +185,25 @@ public sealed class Recipe
         ArgumentNullException.ThrowIfNull(groups);
         ArgumentNullException.ThrowIfNull(steps);
 
+        var lines = groups.Sum(group => group.Ingredients.Count);
+
         var ingredientIds = groups.SelectMany(group => group.Ingredients)
             .Select(ingredient => ingredient.Id)
             .ToHashSet();
 
-        if (ingredientIds.Count > MaxIngredients)
+        // Counted before the set collapses them, for the same reason the step
+        // cap is: the limit is on lines a cook reads, not on distinct ids.
+        if (lines > MaxIngredients)
         {
             return RecipeErrors.TooManyIngredients;
+        }
+
+        // Two lines claiming one id would pass every check here and then fail
+        // as a primary-key violation on insert, which reaches the caller as a
+        // 500 rather than as the validation failure it is.
+        if (ingredientIds.Count != lines)
+        {
+            return RecipeErrors.DuplicateIngredient;
         }
 
         if (steps.Count > MaxSteps)
@@ -225,14 +237,28 @@ public sealed class Recipe
     public void AcceptVersion(long version) => Version = version;
 
     /// <summary>
-    /// Reports a step that mentions an ingredient the recipe no longer has.
+    /// Reports a step that needs an ingredient the recipe no longer has.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// An ingredient that existed before the change gets the more helpful
-    /// "step N still refers to that ingredient"; one that never existed gets
-    /// the plain unknown-reference error. The distinction matters because the
+    /// "step N still needs that ingredient"; one that never existed gets the
+    /// plain unknown-reference error. The distinction matters because the
     /// first is an editing mistake with an obvious fix and the second is a
     /// malformed request.
+    /// </para>
+    /// <para>
+    /// The removals are looked for across every step before the unknown ids
+    /// are, because a step's needs are a set with no order of its own: deciding
+    /// between the two messages by whichever id came out of the set first would
+    /// make the same request answer differently on different runs.
+    /// </para>
+    /// <para>
+    /// This is also what keeps the stored reference index honest. Every id here
+    /// is written to a table with a foreign key onto the ingredient rows, so a
+    /// step allowed through with an id the recipe does not have would fail as a
+    /// database error rather than as a named failure.
+    /// </para>
     /// </remarks>
     private Error? DanglingReference(IReadOnlyList<Step> steps, HashSet<Guid> ingredientIds)
     {
@@ -242,20 +268,15 @@ public sealed class Recipe
 
         foreach (var step in steps)
         {
-            foreach (var referenced in step.ReferencedIngredients)
+            if (step.Uses.Any(removed.Contains))
             {
-                if (ingredientIds.Contains(referenced))
-                {
-                    continue;
-                }
-
-                return removed.Contains(referenced)
-                    ? RecipeErrors.IngredientInUse(step.SortOrder + 1)
-                    : RecipeErrors.UnknownIngredientReference;
+                return RecipeErrors.IngredientInUse(step.SortOrder + 1);
             }
         }
 
-        return null;
+        return steps.SelectMany(step => step.Uses).Any(used => !ingredientIds.Contains(used))
+            ? RecipeErrors.UnknownIngredientReference
+            : null;
     }
 
     private static bool OutOfRange(int? minutes) => minutes is < 0 or > MaxMinutes;

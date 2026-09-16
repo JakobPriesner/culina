@@ -19,7 +19,8 @@ public static class CookieSettingsExtensions
         var settings = new CookieSettings
         {
             Secure = section.Bool(nameof(CookieSettings.Secure), true),
-            SessionDays = section.Int(nameof(CookieSettings.SessionDays), 30)
+            SessionDays = section.Int(nameof(CookieSettings.SessionDays), 30),
+            RenewAfterHours = section.Int(nameof(CookieSettings.RenewAfterHours), 24)
         };
 
         settings.Validate();

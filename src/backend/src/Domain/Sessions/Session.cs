@@ -126,6 +126,20 @@ public sealed class Session
     /// <param name="now">The injected current time.</param>
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;
 
+    /// <summary>
+    /// Whether the session has sat unused long enough to be worth extending.
+    /// </summary>
+    /// <remarks>
+    /// The expiry slides, but not on every request: the row would then be
+    /// written once per page view for no gain, because a session used twice in
+    /// a minute is no more alive than one used once. Asking this first is what
+    /// keeps an authenticated request at a single indexed read.
+    /// </remarks>
+    /// <param name="now">The injected current time.</param>
+    /// <param name="idleFor">How long unused is long enough.</param>
+    public bool IsDueForRenewal(DateTimeOffset now, TimeSpan idleFor) =>
+        now - LastSeenAt >= idleFor;
+
     /// <summary>Extends the session because it was used.</summary>
     /// <param name="now">The injected current time.</param>
     /// <param name="lifetime">How long it may live without further activity.</param>

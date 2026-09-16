@@ -65,8 +65,8 @@
 <style>
   .grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0 var(--space-8);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--layout-section-gap);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -76,15 +76,15 @@
     min-width: 0;
   }
 
-  @media (max-width: 63.999rem) {
+  @media (min-width: 40rem) {
     .grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 40rem) {
+  @media (min-width: 64rem) {
     .grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 </style>

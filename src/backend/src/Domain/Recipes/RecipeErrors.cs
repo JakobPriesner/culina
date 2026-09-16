@@ -59,11 +59,17 @@ public static class RecipeErrors
         "A step refers to an ingredient that is not in this recipe.",
         ErrorType.Validation);
 
-    /// <summary>An ingredient cannot be removed while a step still mentions it.</summary>
+    /// <summary>An ingredient cannot be removed while a step still needs it.</summary>
     public static Error IngredientInUse(int stepNumber) => new(
         "recipes.ingredient_in_use",
-        $"Step {stepNumber} still refers to that ingredient. Remove the mention first.",
+        $"Step {stepNumber} still needs that ingredient. Take it off the step first.",
         ErrorType.Conflict);
+
+    /// <summary>Two ingredient lines claim the same id.</summary>
+    public static readonly Error DuplicateIngredient = new(
+        "recipes.duplicate_ingredient",
+        "Two ingredient lines have the same id. Each line needs its own.",
+        ErrorType.Validation);
 
     /// <summary>The recipe has more ingredients than anyone could cook from.</summary>
     public static readonly Error TooManyIngredients = new(

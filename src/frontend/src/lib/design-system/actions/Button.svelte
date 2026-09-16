@@ -35,6 +35,14 @@
     download?: string;
     /** Announced in place of the label when the label is only an icon. */
     label?: string;
+    /**
+     * The popover this button opens, from `Popover`'s trigger snippet.
+     *
+     * Explicit rather than spread through, because this is the whole of what a
+     * button needs to drive a popover: the browser handles the toggling, the
+     * light dismiss and the `aria-expanded` from this one attribute.
+     */
+    popovertarget?: string;
     onclick?: (event: MouseEvent) => void;
   }
 
@@ -50,6 +58,7 @@
     href,
     download,
     label,
+    popovertarget,
     onclick
   }: Props = $props();
 
@@ -89,6 +98,7 @@
     class:full
     class:loading
     {type}
+    {popovertarget}
     disabled={disabled && !loading}
     aria-disabled={inert ? 'true' : undefined}
     aria-label={label}
@@ -109,6 +119,7 @@
 
 <style>
   .button {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -118,27 +129,33 @@
     font: inherit;
     font-weight: var(--weight-medium);
     text-decoration: none;
-    white-space: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    padding-block: var(--space-2);
+    white-space: normal;
+    text-align: center;
+    letter-spacing: -0.01em;
     cursor: pointer;
     transition:
       background-color var(--duration-fast) var(--ease-out),
       border-color var(--duration-fast) var(--ease-out),
-      color var(--duration-fast) var(--ease-out);
+      color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
   }
 
   .sm {
-    height: var(--control-sm);
+    min-height: var(--control-sm);
     padding-inline: var(--space-3);
     font-size: var(--text-sm);
   }
 
   .md {
-    height: var(--control-md);
-    padding-inline: var(--space-4);
+    min-height: var(--control-md);
+    padding-inline: var(--space-6);
   }
 
   .lg {
-    height: var(--control-lg);
+    min-height: var(--control-lg);
     padding-inline: var(--space-6);
     font-size: var(--text-lg);
   }
@@ -148,12 +165,17 @@
     width: 100%;
   }
 
+  .primary,
+  .danger {
+    box-shadow: var(--shadow-card);
+  }
+
   .primary {
     background: var(--accent);
     color: var(--accent-contrast);
   }
 
-  .primary:hover {
+  .primary:hover:not([aria-disabled='true']) {
     background: var(--accent-hover);
   }
 
@@ -163,7 +185,7 @@
     color: var(--text);
   }
 
-  .secondary:hover {
+  .secondary:hover:not([aria-disabled='true']) {
     background: var(--surface-hover);
   }
 
@@ -172,7 +194,7 @@
     color: var(--text-muted);
   }
 
-  .ghost:hover {
+  .ghost:hover:not([aria-disabled='true']) {
     background: var(--surface-hover);
     color: var(--text);
   }
@@ -182,29 +204,57 @@
     color: var(--accent-contrast);
   }
 
-  .danger:hover {
+  .danger:hover:not([aria-disabled='true']) {
     background: var(--danger-hover);
   }
 
   .button[aria-disabled='true'],
   .button:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    border-color: var(--border);
+    box-shadow: none;
+  }
+
+  .label {
+    min-width: 0;
   }
 
   .icon {
+    flex-shrink: 0;
     display: inline-flex;
     width: var(--space-4);
     height: var(--space-4);
   }
 
-  /* The label stays put while the spinner appears beside it: a button that
-     swaps its text for a spinner changes width, and everything after it moves. */
-  .loading .label {
-    opacity: 0.7;
+  /* Preserve the label’s layout and accessible name while progress replaces it visually. */
+  .loading .label,
+  .loading .icon {
+    opacity: 0;
+  }
+
+  .button:active:not([aria-disabled='true']) {
+    box-shadow: none;
+  }
+  .primary:active:not([aria-disabled='true']) {
+    background: var(--accent-active);
+  }
+  .secondary:active:not([aria-disabled='true']),
+  .ghost:active:not([aria-disabled='true']) {
+    background: var(--surface-selected);
+  }
+  .icon :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .spinner {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    flex-shrink: 0;
     width: var(--space-4);
     height: var(--space-4);
     border: 2px solid currentcolor;

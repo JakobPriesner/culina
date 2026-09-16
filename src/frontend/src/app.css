@@ -5,6 +5,7 @@
 /* After the themes: on paper every one of them is ink on paper. */
 @import './lib/design-system/tokens/print.css';
 @import './lib/design-system/inputs/control.css';
+@import './lib/design-system/display/clipped.css';
 
 /*
  * Base element styles. Everything else is a component; there is no utility
@@ -35,6 +36,8 @@ body {
   font-size: var(--text-base);
   line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
+  /* User content (including unbroken names and URLs) must be able to reflow. */
+  overflow-wrap: anywhere;
 }
 
 h1,

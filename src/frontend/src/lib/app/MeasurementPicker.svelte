@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Select } from '$ds';
+
   import { m } from './i18n';
   import { preferences } from './preferences.svelte';
   import type { MeasurementSystem } from '$features/recipes/measurement';
@@ -13,26 +15,27 @@
    * wrote, so switching this and switching back leaves it exactly as it was —
    * and a German recipe shared with an American is one recipe, read two ways.
    */
-  const names: Record<MeasurementSystem, () => string> = {
-    metric: m['measurement.metric'],
-    imperial: m['measurement.imperial']
-  };
-
   const id = 'measurement-picker';
+
+  /** Hides the label for a caller that already names the control. */
+  let { compact = false }: { compact?: boolean } = $props();
+
+  const options = $derived([
+    { value: 'metric', label: m['measurement.metric']() },
+    { value: 'imperial', label: m['measurement.imperial']() }
+  ]);
 </script>
 
 <div class="field">
-  <label class="label" for={id}>{m['measurement.label']()}</label>
-  <select
+  <label class="label" class:ds-clipped={compact} for={id}>{m['measurement.label']()}</label>
+
+  <Select
     {id}
-    class="select ds-control"
+    {options}
+    inline
     value={preferences.measurementSystem}
-    onchange={(event) =>
-      preferences.setMeasurementSystem(event.currentTarget.value as MeasurementSystem)}
-  >
-    <option value="metric">{names.metric()}</option>
-    <option value="imperial">{names.imperial()}</option>
-  </select>
+    onchange={(value) => preferences.setMeasurementSystem(value as MeasurementSystem)}
+  />
 </div>
 
 <style>
@@ -45,9 +48,5 @@
   .label {
     color: var(--text-muted);
     font-size: var(--text-sm);
-  }
-
-  .select {
-    width: auto;
   }
 </style>

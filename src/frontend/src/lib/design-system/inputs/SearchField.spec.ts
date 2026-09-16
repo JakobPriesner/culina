@@ -24,6 +24,17 @@ describe('SearchField', () => {
     expect(oninput).toHaveBeenLastCalledWith('soup');
   });
 
+  it('clears with Escape and keeps keyboard focus', async () => {
+    const oninput = vi.fn();
+    renderWithProviders(SearchHarness, { props: { value: 'soup', oninput } });
+    const box = screen.getByRole('searchbox', { name: 'Search recipes' });
+    box.focus();
+    await userEvent.keyboard('{Escape}');
+    expect(box).toHaveValue('');
+    expect(box).toHaveFocus();
+    expect(oninput).toHaveBeenLastCalledWith('');
+  });
+
   it('clears, and leaves focus where the typing was', async () => {
     const oninput = vi.fn();
 

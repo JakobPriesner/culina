@@ -79,6 +79,14 @@ internal sealed record StepRow
     public int? DurationSeconds { get; init; }
 }
 
+/// <summary>The <c>step_ingredient_refs</c> row: what one step needs.</summary>
+internal sealed record StepIngredientRefRow
+{
+    public Guid StepId { get; init; }
+
+    public Guid RecipeIngredientId { get; init; }
+}
+
 /// <summary>
 /// The words each enum is stored as.
 /// </summary>

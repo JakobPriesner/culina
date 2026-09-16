@@ -41,15 +41,23 @@ internal static class SecurityHeaders
     /// <summary>
     /// The SPA document's policy. There is no <c>unsafe-inline</c> and no
     /// <c>unsafe-eval</c> anywhere — either one disables the protection the
-    /// rest of the policy provides. The single inline script the app needs (the
-    /// theme applied before first paint) carries the per-response nonce.
+    /// rest of the policy provides. The two inline blocks the app needs (the
+    /// theme applied before first paint, and the boot screen's styles) carry
+    /// the per-response nonce.
     /// </summary>
+    /// <remarks>
+    /// The nonce is named for styles as well as scripts. Without it
+    /// <c>style-src 'self'</c> blocks the inline block <em>and</em> every
+    /// <c>style</c> attribute in the document, which is how the boot screen
+    /// came to render as unstyled text in the corner in production while
+    /// looking correct under the dev server, which sets no policy at all.
+    /// </remarks>
     internal static string DocumentContentSecurityPolicy(string nonce) =>
         string.Join(
             "; ",
             "default-src 'self'",
             $"script-src 'self' 'nonce-{nonce}'",
-            "style-src 'self'",
+            $"style-src 'self' 'nonce-{nonce}'",
             "img-src 'self' data: blob:",
             "connect-src 'self'",
             "font-src 'self'",
