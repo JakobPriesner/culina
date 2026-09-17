@@ -590,7 +590,7 @@
   "import.library.searchClear": "Clear the search",
   "import.library.failed": "Their recipes could not be read. The app may be off, or the token may have expired.",
   "import.library.empty": "Nothing to bring over.",
-  "import.library.selectAll": "Everything loaded",
+  "import.library.selectAll": "All",
   "import.library.alreadyHere": "Already here",
   "import.library.more": "Show more",
   "import.library.chosen": [
@@ -625,5 +625,6 @@
   "import.source.username": "Username there",
   "import.source.password": "Password there",
   "import.source.passwordHint": "Sent once to that app to fetch a token, then dropped. It is never stored here.",
-  "import.source.openTokenPage": "Open {where} to make one"
+  "import.source.openTokenPage": "Open {where} to make one",
+  "import.library.loadingAll": "Fetching the rest…"
 }

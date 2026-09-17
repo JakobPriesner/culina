@@ -590,7 +590,7 @@
   "import.library.searchClear": "Suche zurücksetzen",
   "import.library.failed": "Ihre Rezepte konnten nicht gelesen werden. Vielleicht ist die App aus oder der Token abgelaufen.",
   "import.library.empty": "Nichts zum Herüberholen.",
-  "import.library.selectAll": "Alles Geladene",
+  "import.library.selectAll": "Alle",
   "import.library.alreadyHere": "Schon hier",
   "import.library.more": "Mehr anzeigen",
   "import.library.chosen": [
@@ -625,5 +625,6 @@
   "import.source.username": "Benutzername dort",
   "import.source.password": "Passwort dort",
   "import.source.passwordHint": "Wird einmal an diese App geschickt, um einen Token zu holen, und dann verworfen. Hier wird es nie gespeichert.",
-  "import.source.openTokenPage": "{where} öffnen und einen anlegen"
+  "import.source.openTokenPage": "{where} öffnen und einen anlegen",
+  "import.library.loadingAll": "Der Rest wird geholt…"
 }

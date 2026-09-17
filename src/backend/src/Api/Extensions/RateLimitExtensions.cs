@@ -30,6 +30,20 @@ internal static class RateLimitExtensions
     /// </remarks>
     internal const string Import = "recipe-import";
 
+    /// <summary>
+    /// Reading and importing from a library this household has connected.
+    /// </summary>
+    /// <remarks>
+    /// Its own policy rather than <see cref="Import"/>, because the thing being
+    /// guarded against is different. That one stops an account aiming this
+    /// server at addresses it chooses; this is one fixed address a member set
+    /// up with a credential. Sharing the tighter limit made the advertised
+    /// feature impossible — eighty batches to move two thousand recipes does
+    /// not fit in thirty requests an hour — and a ceiling that forbids the
+    /// feature is not a safety measure.
+    /// </remarks>
+    internal const string Source = "recipe-source";
+
     internal static IServiceCollection AddCulinaRateLimiter(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -49,6 +63,9 @@ internal static class RateLimitExtensions
 
             options.AddPolicy(Import, context =>
                 PerClient(context, limits.ImportsPerHour, TimeSpan.FromHours(1)));
+
+            options.AddPolicy(Source, context =>
+                PerClient(context, limits.SourceRequestsPerHour, TimeSpan.FromHours(1)));
 
             // A generous ceiling on everything else, so one misbehaving client
             // cannot exhaust the connection pool.

@@ -33,7 +33,15 @@
   /** Everything that could still be brought over. */
   const available = $derived(sources.recipes.filter((recipe) => recipe.alreadyHere === null));
 
-  const allChosen = $derived(available.length > 0 && chosen.length === available.length);
+  /**
+   * Ticked only when everything there is has been read and chosen.
+   *
+   * `hasMore` is part of it: a full page with more behind it is not "all", and
+   * a box that said so would be the lie this control exists to avoid.
+   */
+  const allChosen = $derived(
+    available.length > 0 && chosen.length === available.length && !sources.hasMore
+  );
 
   const someChosen = $derived(chosen.length > 0 && !allChosen);
 
@@ -43,12 +51,28 @@
     chosen = on ? [...chosen, externalId] : chosen.filter((one) => one !== externalId);
   }
 
-  function toggleAll(on: boolean) {
-    // Everything loaded, not everything there is. Selecting recipes that have
-    // not been read yet would be selecting a number rather than a list, and
-    // "select all 2,000" that quietly means "the 36 on screen" is worse than
-    // no select-all at all.
-    chosen = on ? available.map((recipe) => recipe.externalId) : [];
+  /**
+   * All of it — fetching the rest first, if there is a rest.
+   *
+   * The alternative was a box labelled after what it actually did, which is how
+   * this started: "everything loaded" is honest and useless, because the answer
+   * to "I want all of them" should not be "then scroll". So the tick goes and
+   * gets them, and says so while it does.
+   */
+  async function toggleAll(on: boolean) {
+    if (!on) {
+      chosen = [];
+
+      return;
+    }
+
+    if (sources.hasMore) {
+      await sources.loadEverything(query);
+    }
+
+    // Read after the loading, not before: `available` is derived from what has
+    // arrived, and the whole point is that more has.
+    chosen = available.map((recipe) => recipe.externalId);
   }
 
   async function search(next: string) {
@@ -104,9 +128,16 @@
         <Checkbox
           checked={allChosen}
           indeterminate={someChosen}
+          disabled={sources.loadingAll}
           label={m['import.library.selectAll']()}
-          onchange={toggleAll}
+          onchange={(on) => void toggleAll(on)}
         />
+
+        {#if sources.loadingAll}
+          <!-- Polite: it reports progress while somebody is reading the list,
+               and must not interrupt them. -->
+          <p class="loadingAll" role="status">{m['import.library.loadingAll']()}</p>
+        {/if}
       </div>
     {/if}
 
@@ -175,8 +206,17 @@
   }
 
   .all {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-3);
     padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--border);
+  }
+
+  .loadingAll {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .list {

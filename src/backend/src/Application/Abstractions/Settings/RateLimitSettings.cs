@@ -36,6 +36,27 @@ public sealed record RateLimitSettings
     /// </remarks>
     public int ImportsPerHour { get; init; } = 30;
 
+    /// <summary>
+    /// Requests allowed per hour against libraries this household has connected.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Separate from <see cref="ImportsPerHour"/>, and generous, because the
+    /// risk is different in kind rather than in degree. That limit exists to
+    /// stop an account using this server to reach addresses it picks one at a
+    /// time; a connected source is a single fixed address a member of the
+    /// household set up with a credential, visible on a screen, and the same
+    /// one for every request.
+    /// </para>
+    /// <para>
+    /// It has to be generous to be correct. Moving two thousand recipes is
+    /// twenty reads to see them and eighty batches to bring them over, and a
+    /// ceiling that makes the advertised feature impossible is not a safety
+    /// measure.
+    /// </para>
+    /// </remarks>
+    public int SourceRequestsPerHour { get; init; } = 600;
+
     /// <summary>Requests allowed per minute from one authenticated session.</summary>
     public int RequestsPerSessionPerMinute { get; init; } = 600;
 
@@ -47,6 +68,7 @@ public sealed record RateLimitSettings
         SettingsGuard.InRange(RegisterPerIpPerHour, 1, 10_000, SectionName, nameof(RegisterPerIpPerHour));
         SettingsGuard.InRange(InvitationPerIpPerHour, 1, 10_000, SectionName, nameof(InvitationPerIpPerHour));
         SettingsGuard.InRange(ImportsPerHour, 1, 10_000, SectionName, nameof(ImportsPerHour));
+        SettingsGuard.InRange(SourceRequestsPerHour, 1, 100_000, SectionName, nameof(SourceRequestsPerHour));
         SettingsGuard.InRange(RequestsPerSessionPerMinute, 10, 100_000, SectionName, nameof(RequestsPerSessionPerMinute));
     }
 }

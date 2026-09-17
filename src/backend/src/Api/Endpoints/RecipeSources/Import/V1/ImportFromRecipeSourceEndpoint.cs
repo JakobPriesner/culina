@@ -57,7 +57,7 @@ internal sealed class ImportFromRecipeSourceEndpoint : IEndpoint
                 + "`failed` — so the twelve that could not be read can be shown by name. One "
                 + "recipe failing never undoes the others: each is written in its own "
                 + "transaction.")
-            .RequireRateLimiting(RateLimitExtensions.Import)
+            .RequireRateLimiting(RateLimitExtensions.Source)
             .Produces<ImportFromSourceResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
