@@ -26,6 +26,17 @@ public sealed record PlanMealCommand(Guid HouseholdId, Guid UserId, PlanMealRequ
 /// <param name="EntryId">Which entry.</param>
 public sealed record UnplanMealCommand(Guid HouseholdId, Guid UserId, Guid EntryId);
 
+/// <summary>Moves a planned meal to another day.</summary>
+/// <param name="HouseholdId">Whose plan.</param>
+/// <param name="UserId">Who is moving it.</param>
+/// <param name="EntryId">Which entry.</param>
+/// <param name="Draft">Where it goes.</param>
+public sealed record MoveMealCommand(
+    Guid HouseholdId,
+    Guid UserId,
+    Guid EntryId,
+    MoveMealRequest Draft);
+
 /// <summary>The days a week is read as.</summary>
 internal static class PlanWeek
 {
@@ -155,6 +166,102 @@ internal sealed class PlanMealCommandHandler(
             .ConfigureAwait(false);
 
         return planned.ToResponse(monday);
+    }
+}
+
+/// <summary>
+/// Moves a planned meal to another day, and to another place in that day.
+/// </summary>
+/// <remarks>
+/// The commonest edit a plan gets: a week is agreed on Sunday and then rearranged
+/// all week. Doing it by taking the meal off and putting it back on would lose
+/// the servings it was planned for and the slot it was in, which is why this is
+/// a move rather than two writes the client stitches together.
+/// </remarks>
+internal sealed class MoveMealCommandHandler(
+    IMealPlanRepository plans,
+    IHouseholdRepository households,
+    IUnitOfWork unitOfWork)
+    : ICommandHandler<MoveMealCommand, MealPlanResponse>
+{
+    public async Task<Result<MealPlanResponse>> Handle(
+        MoveMealCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        using var tracked = UseCaseActivity.Start("Planning.MoveMeal");
+
+        // Membership is enough: the entry is already this household's, and the
+        // recipe on it was checked when it was planned. Nothing here can point
+        // the plan at a recipe it could not see before.
+        var allowed = await RecipeAccess
+            .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = await allowed.Match(
+            () => unitOfWork.InTransactionAsync(
+                token => MoveAsync(command, token),
+                cancellationToken),
+            error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+
+    private async Task<Result<MealPlanResponse>> MoveAsync(
+        MoveMealCommand command,
+        CancellationToken cancellationToken)
+    {
+        var found = await plans
+            .FindAsync(command.EntryId, command.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await found.Match(
+            entry => PlaceAsync(command, entry, cancellationToken),
+            error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
+    }
+
+    private async Task<Result<MealPlanResponse>> PlaceAsync(
+        MoveMealCommand command,
+        MealPlanEntry entry,
+        CancellationToken cancellationToken)
+    {
+        if (command.Draft.Position is < 0)
+        {
+            return PlanningErrors.InvalidPosition;
+        }
+
+        // An omitted slot keeps the one it had. That is what dragging sends:
+        // dragging a dinner onto Thursday moves a dinner.
+        var slot = command.Draft.Slot is null
+            ? Result<MealSlot>.Success(entry.Slot)
+            : PlanningWords.ToSlot(command.Draft.Slot);
+
+        return await slot.Match(
+            which => SaveAsync(command, entry, which, cancellationToken),
+            error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
+    }
+
+    private async Task<Result<MealPlanResponse>> SaveAsync(
+        MoveMealCommand command,
+        MealPlanEntry entry,
+        MealSlot slot,
+        CancellationToken cancellationToken)
+    {
+        // Last when no place was asked for, which is what the move sheet sends:
+        // it answers "which day", and the end of the day is where a meal that
+        // was not aimed at a gap belongs.
+        var sortOrder = command.Draft.Position ?? await plans
+            .NextSortOrderAsync(command.HouseholdId, command.Draft.Date, cancellationToken)
+            .ConfigureAwait(false);
+
+        var moved = entry.MoveTo(command.Draft.Date, slot, sortOrder);
+
+        await plans.MoveAsync(moved, cancellationToken).ConfigureAwait(false);
+
+        return await PlanMealCommandHandler
+            .ReadWeekAsync(plans, command.HouseholdId, moved.Date, cancellationToken)
+            .ConfigureAwait(false);
     }
 }
 

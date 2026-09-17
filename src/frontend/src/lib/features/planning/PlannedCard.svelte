@@ -15,12 +15,52 @@
   interface Props {
     meal: PlannedMeal;
     onremove: () => void;
+    /**
+     * A press on the grip, or anywhere on the card. Whether it becomes a drag
+     * is the week's business, not this card's.
+     */
+    onpress?: (event: PointerEvent) => void;
+    /** The grip, activated rather than dragged: by a click, or by a keyboard. */
+    onmove?: () => void;
+    /** Dimmed, because the real one is the one under the pointer. */
+    lifted?: boolean;
   }
 
-  let { meal, onremove }: Props = $props();
+  let { meal, onremove, onpress, onmove, lifted = false }: Props = $props();
 </script>
 
-<div class="card">
+<!-- A press anywhere on the card can become a drag, which is the whole gesture
+     on a phone. It carries no role and needs none: it is an enhancement for a
+     pointer over the grip below, which is a real button that a keyboard reaches
+     and a screen reader announces.
+
+     `dragstart` is refused because a card is a link wrapped round a picture,
+     and both of those are things a browser starts dragging by itself. Once it
+     does, it stops sending pointer events altogether and the card is left
+     behind — so the native drag has to be declined before ours can happen. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="card"
+  class:lifted
+  onpointerdown={onpress}
+  ondragstart={(event) => event.preventDefault()}
+>
+  {#if onmove}
+    <!-- The handle and the button are one control. Dragging it is the quick
+         way; pressing it opens the sheet, which is the only way for a keyboard
+         and the easier way for anybody whose Thursday is off the screen. -->
+    <IconButton label={m['plan.move.handle']({ title: meal.title })} size="sm" onclick={onmove}>
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <circle cx="9" cy="6" r="1.5" />
+        <circle cx="15" cy="6" r="1.5" />
+        <circle cx="9" cy="12" r="1.5" />
+        <circle cx="15" cy="12" r="1.5" />
+        <circle cx="9" cy="18" r="1.5" />
+        <circle cx="15" cy="18" r="1.5" />
+      </svg>
+    </IconButton>
+  {/if}
+
   <a class="body" href={resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId })}>
     {#if meal.imageId}
       <div class="thumb">
@@ -37,11 +77,13 @@
     </div>
   </a>
 
-  <IconButton label={m['plan.remove']({ title: meal.title })} size="sm" onclick={onremove}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-    </svg>
-  </IconButton>
+  <span class="remove" data-no-drag>
+    <IconButton label={m['plan.remove']({ title: meal.title })} size="sm" onclick={onremove}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+      </svg>
+    </IconButton>
+  </span>
 </div>
 
 <style>
@@ -95,8 +137,24 @@
     overflow-wrap: anywhere;
   }
 
-  .card :global(> button) {
+  .remove {
     margin-inline-start: auto;
+  }
+
+  /* Left behind while its copy is under the pointer, rather than removed: the
+     gaps a drop is aimed at are the gaps of the day as it looks right now, and
+     a day that reflows as you cross it is a day you cannot aim at. */
+  .lifted {
+    opacity: 0.4;
+  }
+
+  /* The grip is quiet until it is wanted. Always drawn, though — on a phone
+     there is no hover to reveal it with, and a control that appears only on a
+     pointer is a control a phone does not have. */
+  .card :global(> button:first-child) {
+    color: var(--text-subtle);
+    cursor: grab;
+    touch-action: manipulation;
   }
 
   .meta {

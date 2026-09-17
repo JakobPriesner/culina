@@ -35,7 +35,7 @@ export { default as Checkbox } from './inputs/Checkbox.svelte';
 export { default as Field } from './inputs/Field.svelte';
 export { default as FilePicker } from './inputs/FilePicker.svelte';
 export { default as ImageField } from './inputs/ImageField.svelte';
-export { default as RadioGroup } from './inputs/RadioGroup.svelte';
+export { default as RadioGroup, type RadioOption } from './inputs/RadioGroup.svelte';
 export { default as SearchField } from './inputs/SearchField.svelte';
 export { default as Select } from './inputs/Select.svelte';
 export { default as Stepper } from './inputs/Stepper.svelte';

@@ -187,6 +187,8 @@ public static class DependencyInjection
                 PlanMealCommandHandler>()
             .AddScoped<ICommandHandler<UnplanMealCommand, Contracts.Planning.MealPlanResponse>,
                 UnplanMealCommandHandler>()
+            .AddScoped<ICommandHandler<MoveMealCommand, Contracts.Planning.MealPlanResponse>,
+                MoveMealCommandHandler>()
             .AddScoped<IQueryHandler<GetTagsQuery, Contracts.Recipes.GetTags.Response>,
                 GetTagsQueryHandler>()
             .AddScoped<IQueryHandler<GetCookbooksQuery, Contracts.Cookbooks.CookbooksResponse>,

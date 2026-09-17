@@ -273,6 +273,31 @@ That property — *things stay where you expect them to be* — is the reason th
 two states share one component instead of being two pages that happen to show
 the same data.
 
+## Moving a planned meal
+
+The week planner's cards are picked up and put down. One store call — the entry's
+day, slot and place in that day — behind three ways of saying where it goes, so
+that no input is a lesser version of another:
+
+- **A pointer** grabs the card anywhere and lifts it after 6 px, which is what
+  leaves a click free to open the recipe.
+- **A finger** lifts it after a held moment (~350 ms). The delay is the whole
+  gesture on a phone: the same finger scrolls the week, so the drag has to wait
+  to be sure, and while one is in the air `touchmove` is refused so the page does
+  not scroll out from under it. Near either edge of the screen the week scrolls
+  itself, because seven days never fit on a phone.
+- **The grip** on each card is both the drag handle and a real button. Activated
+  rather than dragged, it opens a `Sheet` listing the week's days and the three
+  slots — the only path a keyboard or a screen reader has, and the easier one
+  whenever the day you want is off screen.
+
+Dragging never changes the slot; the sheet is the only place that does. A drop is
+optimistic and answered with an Undo toast rather than a confirmation, which is
+what `toaster` exists for. Nothing here animates: the card follows the pointer,
+and following is not a transition. The day under the pointer is outlined rather
+than filled, because today already owns the filled surface and today is a day you
+can drop on.
+
 ## Responsive layout contract
 
 Breakpoints follow the space the content needs. A tablet keeps bottom navigation
