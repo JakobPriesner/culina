@@ -23,6 +23,17 @@ const json = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
+const library = source;
+
+const theirs = (externalId: string) => ({
+  externalId,
+  title: `Recipe ${externalId}`,
+  description: null,
+  imageUrl: null,
+  totalMinutes: 30,
+  alreadyHere: null
+});
+
 const imported = (externalId: string) => ({
   externalId,
   outcome: 'imported',
@@ -103,8 +114,89 @@ describe('listing what is connected', () => {
   });
 });
 
+describe('reading more of a library', () => {
+  it('stops asking once a page has failed', async () => {
+    let asked = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        asked += 1;
+
+        if (asked === 1) {
+          return Promise.resolve(json({ items: [theirs('1')], nextPage: 'p1', total: 9 }));
+        }
+
+        return Promise.resolve(json({ code: 'import.could_not_fetch' }, 400));
+      })
+    );
+
+    await sources.browse(library);
+    await sources.more();
+
+    // The end of the list is what asks for the next page, and it stays on
+    // screen after a failure. Without a latch this is a loop: ask, fail, ask.
+    await sources.more();
+    await sources.more();
+
+    expect(asked).toBe(2);
+    expect(sources.moreFailed).toBe(true);
+  });
+
+  it('keeps the pages that worked when a later one does not', async () => {
+    let asked = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        asked += 1;
+
+        if (asked === 1) {
+          return Promise.resolve(json({ items: [theirs('1')], nextPage: 'p1', total: 9 }));
+        }
+
+        return Promise.resolve(json({ code: 'import.could_not_fetch' }, 400));
+      })
+    );
+
+    await sources.browse(library);
+    await sources.more();
+
+    // Replacing a screen of recipes somebody is reading with an error, because
+    // the page below it could not be read, loses more than it explains.
+    expect(sources.browseStatus).toBe('ready');
+    expect(sources.recipes).toHaveLength(1);
+  });
+
+  it('forgets a failure when the library is read afresh', async () => {
+    let asked = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        asked += 1;
+
+        return Promise.resolve(
+          asked === 2
+            ? json({ code: 'import.could_not_fetch' }, 400)
+            : json({ items: [theirs('1')], nextPage: 'p1', total: 9 })
+        );
+      })
+    );
+
+    await sources.browse(library);
+    await sources.more();
+
+    expect(sources.moreFailed).toBe(true);
+
+    await sources.browse(library, 'suppe');
+
+    expect(sources.moreFailed).toBe(false);
+  });
+});
+
 describe('importing', () => {
-  it('walks a big selection in batches of twenty-five', async () => {
+  it('walks a big selection in small batches, so the bar moves and the request fits', async () => {
     serverAnswers((_url, call) =>
       json({
         cookbookId: 'cb1',
@@ -113,13 +205,16 @@ describe('importing', () => {
       })
     );
 
-    const chosen = Array.from({ length: 60 }, (_, index) => String(index));
+    const chosen = Array.from({ length: 12 }, (_, index) => String(index));
 
     await sources.import(source.sourceId, chosen);
 
-    expect(asked.map((one) => one.body.externalIds.length)).toEqual([25, 25, 10]);
-    expect(sources.run?.imported).toBe(60);
-    expect(sources.run?.done).toBe(60);
+    // Small on purpose: a batch is up to twice this many round trips once
+    // photos are counted, and progress is only as smooth as the batch is
+    // little.
+    expect(asked.map((one) => one.body.externalIds.length)).toEqual([5, 5, 2]);
+    expect(sources.run?.imported).toBe(12);
+    expect(sources.run?.done).toBe(12);
     expect(sources.run?.finished).toBe(true);
   });
 
@@ -134,7 +229,7 @@ describe('importing', () => {
 
     await sources.import(
       source.sourceId,
-      Array.from({ length: 30 }, (_, index) => String(index))
+      Array.from({ length: 10 }, (_, index) => String(index))
     );
 
     // Without this, a selection imported in twenty requests would be twenty
@@ -204,13 +299,13 @@ describe('importing', () => {
 
     await sources.import(
       source.sourceId,
-      Array.from({ length: 30 }, (_, index) => String(index))
+      Array.from({ length: 10 }, (_, index) => String(index))
     );
 
     // Everything before the failed batch is already written and asking again is
     // a no-op, so losing a batch must not lose the run.
     expect(asked).toHaveLength(2);
-    expect(sources.run?.failures).toHaveLength(25);
+    expect(sources.run?.failures).toHaveLength(5);
     expect(sources.run?.imported).toBe(5);
     expect(sources.run?.finished).toBe(true);
   });

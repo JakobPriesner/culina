@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { http, request } from './client';
 import { forgetEverything } from './etagCache';
@@ -37,6 +37,72 @@ const json = (body: unknown, init: ResponseInit = {}) =>
     ...init,
     headers: { 'Content-Type': 'application/json', ...init.headers }
   });
+
+/*
+ * Captured once, at module scope. Re-reading it inside the helper would bind
+ * whatever spy the previous test left behind, and each test would wrap the last
+ * one.
+ */
+const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+
+describe('deadlines', () => {
+  /** What `AbortSignal.timeout` was asked for, which is the deadline. */
+  function watchDeadlines() {
+    const asked: number[] = [];
+
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms: number) => {
+      asked.push(ms);
+
+      return realTimeout(ms);
+    });
+
+    return asked;
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('gives an ordinary call the short deadline', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ userId: 'u1' }));
+
+    await request(() => http.GET('/api/v1/users/me'));
+
+    expect(asked).toEqual([15_000]);
+  });
+
+  it('gives a connected-library call a deadline that fits what it does', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ cookbookId: 'cb1', cookbookName: 'Tandoor', results: [] }));
+
+    await request(() =>
+      http.POST('/api/v1/recipe-sources/{sourceId}/imports', {
+        params: { path: { sourceId: 's1' } },
+        body: { externalIds: ['1'] }
+      })
+    );
+
+    // One request here is several round trips to somebody else's server plus
+    // the work of re-encoding what comes back. Fifteen seconds aborted whole
+    // batches and reported every recipe in them as unreadable.
+    expect(asked).toEqual([60_000]);
+  });
+
+  it('gives reading a connected library the same longer deadline', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ items: [], nextPage: null, total: 0 }));
+
+    await request(() =>
+      http.GET('/api/v1/recipe-sources/{sourceId}/recipes', {
+        params: { path: { sourceId: 's1' }, query: {} }
+      })
+    );
+
+    expect(asked).toEqual([60_000]);
+  });
+});
 
 const problem = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {

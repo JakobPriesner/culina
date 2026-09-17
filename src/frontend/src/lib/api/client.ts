@@ -17,6 +17,27 @@ import { err, ok, type Result } from './result';
 /** Long enough for a slow phone on a train, short enough to not look frozen. */
 const defaultTimeoutMs = 15_000;
 
+/**
+ * The deadline for calls that make the server talk to somebody else's.
+ *
+ * Everything else here is this server answering from its own database, which is
+ * fast or broken. Reading a connected recipe library is neither: one request
+ * becomes a handful of round trips to an instance that may be on the other side
+ * of a domestic upload, and then some image work. Fifteen seconds is right for
+ * a database read and simply wrong for that — it aborted whole batches of
+ * recipes and reported every one of them as unreadable.
+ */
+const sourceTimeoutMs = 60_000;
+
+/**
+ * Where those calls live.
+ *
+ * Matched by path rather than passed per call, because this is a fact about the
+ * API and the API layer is the one place allowed to know the API's shape. A
+ * caller choosing its own deadline is a caller that will forget to.
+ */
+const sourcePathPrefix = '/api/v1/recipe-sources';
+
 const http = createClient<paths>({
   // No base URL: the generated paths already carry /api/v1, and Culina is
   // always served from the same origin as its API — which is also why there is
@@ -91,9 +112,18 @@ function describe(thrown: unknown) {
  * is still cancelled when the component that started it goes away.
  */
 function withTimeout(input: Request): Promise<Response> {
-  const deadline = AbortSignal.timeout(defaultTimeoutMs);
+  const deadline = AbortSignal.timeout(deadlineFor(input.url));
 
   return fetch(input, {
     signal: input.signal ? AbortSignal.any([input.signal, deadline]) : deadline
   });
+}
+
+function deadlineFor(url: string): number {
+  try {
+    return new URL(url).pathname.startsWith(sourcePathPrefix) ? sourceTimeoutMs : defaultTimeoutMs;
+  } catch {
+    // Not a URL this can read, which is not a reason to have no deadline.
+    return defaultTimeoutMs;
+  }
 }
