@@ -33,6 +33,39 @@ public interface IRecipeLibrary
     SourceKind Kind { get; }
 
     /// <summary>
+    /// Trades a person's own sign-in for a token, where the app allows it.
+    /// </summary>
+    /// <param name="address">Which instance.</param>
+    /// <param name="username">Their name over there.</param>
+    /// <param name="password">Their password over there.</param>
+    /// <param name="cancellationToken">Cancels the exchange.</param>
+    /// <returns>The token to store, or why it could not be had.</returns>
+    /// <remarks>
+    /// <para>
+    /// Here because "make an API token first" is the step that stops people
+    /// moving their recipes at all: it is a thing they have to go and learn
+    /// before they can start. Every app worth connecting to has some way to
+    /// turn a sign-in into a token, and this is it.
+    /// </para>
+    /// <para>
+    /// The password is used once and returned to nobody. It is never stored,
+    /// never logged, and never leaves the call — what is kept is the token that
+    /// comes back, which is the same token the person would have made by hand.
+    /// </para>
+    /// <para>
+    /// An app with no such endpoint — or an instance whose accounts are all
+    /// single sign-on, where there is no password to give — returns
+    /// <see cref="ImportErrors.SignInNotPossible"/>, and the person pastes a
+    /// token instead. That path never goes away for exactly this reason.
+    /// </para>
+    /// </remarks>
+    Task<Result<string>> SignInAsync(
+        SourceAddress address,
+        string username,
+        string password,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Checks that the address and token actually work.
     /// </summary>
     /// <param name="source">The connection to test.</param>

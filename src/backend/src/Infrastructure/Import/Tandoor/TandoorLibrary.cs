@@ -38,6 +38,43 @@ internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
 
     public SourceKind Kind => SourceKind.Tandoor;
 
+    /// <summary>
+    /// Trades a Tandoor sign-in for a Tandoor token.
+    /// </summary>
+    /// <remarks>
+    /// <c>/api-token-auth/</c> is Django REST Framework's obtain-token view,
+    /// which Tandoor keeps. It answers with an existing read-write token when
+    /// the account already has one and mints a long-lived one otherwise, so
+    /// this is the same token the person would have made by hand under
+    /// Settings — not a second credential to keep track of.
+    /// </remarks>
+    public async Task<Result<string>> SignInAsync(
+        SourceAddress address,
+        string username,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+
+        var answered = await http
+            .PostFormAsync<TandoorToken>(
+                address.At("/api-token-auth/"),
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["username"] = username,
+                    ["password"] = password
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return answered.Bind(token => string.IsNullOrWhiteSpace(token.Token)
+            // It answered, and with something that is not a token. An instance
+            // whose accounts are all single sign-on lands here, and the answer
+            // is to paste one rather than to fix anything.
+            ? Result<string>.Failure(ImportErrors.SignInNotPossible)
+            : Result<string>.Success(token.Token.Trim()));
+    }
+
     public async Task<Result> TestAsync(RecipeSource source, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(source);

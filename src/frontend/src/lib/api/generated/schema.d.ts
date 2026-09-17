@@ -938,9 +938,13 @@ export interface paths {
          * Connect another app's recipe library
          * @description Remembers where another recipe app is and the token to read it with, so bringing recipes over is something you can come back to rather than do once. Nothing is imported here.
          *
+         *     Send either `token`, or `username` and `password` — one or the other, never both. A name and password are traded with that app for a token and then dropped: the password is not stored, not logged and not returned, and what is kept is the same token you would have made by hand. The token path stays because an instance whose accounts are all single sign-on has no password to give.
+         *
          *     The address and token are tried against that app before anything is stored, so a wrong one is reported while the form is still open. `address` is reduced to its scheme, host and port: a path is dropped rather than prefixed onto every later request.
          *
          *     The token is write-only. It is never returned by this or any other endpoint.
+         *
+         *     Rate limited with the import policy, which matters more here than elsewhere: a signed-in caller can make this server try a password against a host they chose.
          *
          *     Only addresses on the public internet, unless the operator has set `Import__AllowPrivateSourceAddresses` — a self-hosted recipe app is very often on the same network as this one, and that is the operator's decision to make.
          */
@@ -1945,7 +1949,11 @@ export interface components {
             /** @description Where it is: `https://recipes.example.com`. */
             address: string;
             /** @description The API token from that app. */
-            token: string;
+            token?: string | null;
+            /** @description The name that account signs in with over there. */
+            username?: string | null;
+            /** @description The password for that account. */
+            password?: string | null;
             /** @description What to call it here. Its host name, when this is left out. */
             label?: string | null;
         };

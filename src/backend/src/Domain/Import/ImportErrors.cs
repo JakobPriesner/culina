@@ -104,6 +104,23 @@ public static class ImportErrors
         "That recipe was written here.",
         ErrorType.NotFound);
 
+    /// <summary>The app will not trade a sign-in for a token.</summary>
+    /// <remarks>
+    /// Not always a misconfiguration: an instance whose accounts are all single
+    /// sign-on has no password to give, and the answer is to paste a token
+    /// rather than to fix anything.
+    /// </remarks>
+    public static readonly Error SignInNotPossible = new(
+        "import.sign_in_not_possible",
+        "That app would not sign in with a name and password. Make an API token there and paste it instead.",
+        ErrorType.Validation);
+
+    /// <summary>Exactly one way of getting in has to be given.</summary>
+    public static readonly Error AmbiguousCredentials = new(
+        "import.ambiguous_credentials",
+        "Give either a name and password or an API token, not both.",
+        ErrorType.Validation);
+
     /// <summary>More recipes were asked for in one go than one request may carry.</summary>
     public static readonly Error TooManyAtOnce = new(
         "import.too_many_at_once",

@@ -565,9 +565,9 @@
   "import.source.hint": "Vorerst Tandoor. Mealie und andere folgen.",
   "import.source.go": "Rezepte herüberholen",
   "import.source.address": "Wo sie liegt",
-  "import.source.addressHint": "Die Adresse, unter der du sie öffnest, etwa rezepte.example.com. Alles nach dem Host wird verworfen.",
+  "import.source.addressHint": "Die Adresse, unter der du diese App öffnest, etwa rezepte.example.com. Alles nach dem Host wird verworfen.",
   "import.source.token": "API-Token",
-  "import.source.tokenHint": "In der anderen App unter API-Token erstellt. Er wird hier gespeichert und nie wieder angezeigt.",
+  "import.source.tokenHint": "In dieser App unter API-Token angelegt. Er wird hier gespeichert und nie wieder angezeigt.",
   "import.source.connect": "Verbinden",
   "import.source.browse": "Durchsehen",
   "import.source.disconnect": "Trennen",
@@ -616,5 +616,14 @@
   "import.run.bringMore": "Mehr herüberholen",
   "import.origin.from": "Von {where}",
   "import.origin.fromApp": "Aus einer anderen App herübergeholt",
-  "import.sourcesFailed": "Deine verbundenen Apps konnten nicht gelesen werden."
+  "import.sourcesFailed": "Deine verbundenen Apps konnten nicht gelesen werden.",
+  "import.source.wayLabel": "Wie du hineinkommst",
+  "import.source.waySignIn": "Anmelden",
+  "import.source.waySignInHint": "Name und Passwort, die du für diese App benutzt. Einmal verwendet, um einen Token zu holen — das Passwort wird nicht gespeichert.",
+  "import.source.wayToken": "API-Token verwenden",
+  "import.source.wayTokenHint": "Falls du kein Passwort herausgeben willst oder sich diese App anders anmeldet.",
+  "import.source.username": "Benutzername dort",
+  "import.source.password": "Passwort dort",
+  "import.source.passwordHint": "Wird einmal an diese App geschickt, um einen Token zu holen, und dann verworfen. Hier wird es nie gespeichert.",
+  "import.source.openTokenPage": "{where} öffnen und einen anlegen"
 }

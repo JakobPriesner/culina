@@ -90,6 +90,53 @@ public class RecipeSourceEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Connect_ShouldRefuse_BothAWayInAtOnce()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/recipe-sources",
+            new
+            {
+                householdId,
+                kind = "tandoor",
+                address = "https://tandoor.invalid",
+                token = "tda_secret",
+                username = "ada",
+                password = "hunter2"
+            },
+            Token);
+
+        // Assert
+        // A request that says two things must not get a silent answer about
+        // which of them was believed.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "import.ambiguous_credentials",
+            response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Connect_ShouldRefuse_NeitherAWayIn()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/recipe-sources",
+            new { householdId, kind = "tandoor", address = "https://tandoor.invalid" },
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Connect_ShouldRefuse_AHouseholdTheCallerIsNotIn()
     {
         // Arrange
