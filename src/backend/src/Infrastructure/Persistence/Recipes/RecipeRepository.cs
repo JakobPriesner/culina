@@ -177,6 +177,14 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
         return version.Value;
     }
 
+    public async Task<bool> IsImageStillUsedAsync(
+        string contentHash,
+        CancellationToken cancellationToken) =>
+        await executor.ExecuteScalarAsync<bool>(
+            "select exists (select 1 from recipe_images where content_hash = @contentHash);",
+            new { contentHash },
+            cancellationToken).ConfigureAwait(false);
+
     public async Task<Result<ImageReplacement>> SetImageAsync(
         Guid recipeId,
         StoredImage image,

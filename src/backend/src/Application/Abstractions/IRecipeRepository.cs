@@ -84,6 +84,26 @@ public interface IRecipeRepository
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether any recipe still points at this stored image.
+    /// </summary>
+    /// <param name="contentHash">Which image.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// <para>
+    /// Image storage is content-addressed, so the same picture stored twice is
+    /// one file with two rows pointing at it. That used to need somebody to
+    /// upload the identical photo twice; importing a library where fifty
+    /// recipes carry the same placeholder makes it ordinary.
+    /// </para>
+    /// <para>
+    /// Asked before a file is deleted, because deleting one that another recipe
+    /// is still pointing at does not break the recipe being edited — it breaks
+    /// a different one, silently, and nothing connects the two.
+    /// </para>
+    /// </remarks>
+    Task<bool> IsImageStillUsedAsync(string contentHash, CancellationToken cancellationToken);
+
     /// <summary>The content hash of a recipe's image, for serving it.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="cancellationToken">Cancels the query.</param>

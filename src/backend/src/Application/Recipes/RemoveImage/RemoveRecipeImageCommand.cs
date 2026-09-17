@@ -41,7 +41,14 @@ internal sealed class RemoveRecipeImageCommandHandler(
                     return await removed.Match(
                         async displaced =>
                         {
-                            if (displaced.PreviousContentHash is { Length: > 0 } previous)
+                            // Only when nothing else points at it. Content-
+                            // addressed storage means one file can serve many
+                            // recipes, and an imported library where fifty
+                            // carry the same placeholder makes that ordinary
+                            // rather than a curiosity.
+                            if (displaced.PreviousContentHash is { Length: > 0 } previous
+                                && !await recipes.IsImageStillUsedAsync(previous, token)
+                                    .ConfigureAwait(false))
                             {
                                 await images.DeleteAsync(previous, token).ConfigureAwait(false);
                             }

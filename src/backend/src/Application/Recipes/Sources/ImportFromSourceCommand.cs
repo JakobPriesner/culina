@@ -52,6 +52,7 @@ internal sealed class ImportFromSourceCommandHandler(
     ICookbookRepository cookbooks,
     IHouseholdRepository households,
     IRecipeLibraries libraries,
+    IImageStore images,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<ImportFromSourceCommand, ImportFromSourceResponse>
@@ -67,6 +68,9 @@ internal sealed class ImportFromSourceCommandHandler(
     /// requests rather than eight hundred.
     /// </remarks>
     internal const int MaxBatch = 25;
+
+    /// <summary>What the image store writes, and so what a recipe row records.</summary>
+    private const string PictureContentType = "image/webp";
 
     private const string Imported = "imported";
     private const string AlreadyHere = "already_here";
@@ -232,7 +236,7 @@ internal sealed class ImportFromSourceCommandHandler(
             .ConfigureAwait(false);
 
         return await fetched.Match(
-            recipe => WriteAsync(source, shelf, recipe, userId, cancellationToken),
+            recipe => WriteAsync(source, reader, shelf, recipe, userId, cancellationToken),
             error => Task.FromResult(new ImportedRecipe
             {
                 ExternalId = externalId,
@@ -243,6 +247,7 @@ internal sealed class ImportFromSourceCommandHandler(
 
     private async Task<ImportedRecipe> WriteAsync(
         RecipeSource source,
+        IRecipeLibrary reader,
         Cookbook shelf,
         SourceRecipe theirs,
         Guid userId,
@@ -263,7 +268,7 @@ internal sealed class ImportFromSourceCommandHandler(
                     })));
 
         return await built.Match(
-            recipe => StoreAsync(source, shelf, theirs, recipe, userId, cancellationToken),
+            recipe => StoreAsync(source, reader, shelf, theirs, recipe, userId, cancellationToken),
             error => Task.FromResult(new ImportedRecipe
             {
                 ExternalId = theirs.ExternalId,
@@ -275,6 +280,7 @@ internal sealed class ImportFromSourceCommandHandler(
 
     private async Task<ImportedRecipe> StoreAsync(
         RecipeSource source,
+        IRecipeLibrary reader,
         Cookbook shelf,
         SourceRecipe theirs,
         Recipe recipe,
@@ -324,21 +330,88 @@ internal sealed class ImportFromSourceCommandHandler(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return written.Match(
-            () => new ImportedRecipe
+        return await written.Match(
+            async () =>
             {
-                ExternalId = theirs.ExternalId,
-                Title = recipe.Title.Value,
-                Outcome = Imported,
-                RecipeId = recipe.Id
+                await PictureAsync(source, reader, theirs, recipe.Id, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return new ImportedRecipe
+                {
+                    ExternalId = theirs.ExternalId,
+                    Title = recipe.Title.Value,
+                    Outcome = Imported,
+                    RecipeId = recipe.Id
+                };
             },
-            error => new ImportedRecipe
+            error => Task.FromResult(new ImportedRecipe
             {
                 ExternalId = theirs.ExternalId,
                 Title = theirs.Title,
                 Outcome = Failed,
                 Reason = error.Code
-            });
+            })).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Brings the recipe's photo over, if it can be had.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// After the recipe, outside its transaction, and returning nothing. A
+    /// photo is the one part of a recipe that is genuinely optional — a recipe
+    /// without one is the ordinary state of most recipes somebody typed — so
+    /// nothing about it may cost the recipe. A picture that is missing, too
+    /// large, slow, behind a sign-in this cannot pass, or simply not a picture
+    /// leaves a recipe that is complete in every other way.
+    /// </para>
+    /// <para>
+    /// Stored by exactly the same code an upload goes through, which decides
+    /// what the file is by decoding it and keeps its own re-encoding. Nothing
+    /// from another server is trusted about what it sent.
+    /// </para>
+    /// </remarks>
+    private async Task PictureAsync(
+        RecipeSource source,
+        IRecipeLibrary reader,
+        SourceRecipe theirs,
+        Guid recipeId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(theirs.ImageUrl))
+        {
+            return;
+        }
+
+        var fetched = await reader
+            .FetchPictureAsync(source, theirs.ImageUrl, cancellationToken)
+            .ConfigureAwait(false);
+
+        await fetched.Match(
+            content => AttachAsync(content, recipeId, cancellationToken),
+            _ => Task.CompletedTask).ConfigureAwait(false);
+    }
+
+    private async Task AttachAsync(
+        Stream content,
+        Guid recipeId,
+        CancellationToken cancellationToken)
+    {
+        await using (content.ConfigureAwait(false))
+        {
+            var stored = await images.StoreAsync(content, cancellationToken).ConfigureAwait(false);
+
+            await stored.Match(
+                image => unitOfWork.InTransactionAsync(
+                    async token => await recipes
+                        .SetImageAsync(recipeId, image, PictureContentType, time.GetUtcNow(), token)
+                        .ConfigureAwait(false),
+                    cancellationToken),
+                // A photo this could not decode is a photo the recipe does
+                // without. The file was never written, so nothing is orphaned.
+                _ => Task.FromResult(Result<ImageReplacement>.Failure(ImportErrors.NotAPicture)))
+                .ConfigureAwait(false);
+        }
     }
 
     private async Task MarkUsedAsync(RecipeSource source, CancellationToken cancellationToken)

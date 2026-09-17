@@ -89,6 +89,34 @@ public interface IRecipeLibrary
         string? query,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reads a recipe's picture, when it has one that may be fetched.
+    /// </summary>
+    /// <param name="source">Which connection.</param>
+    /// <param name="pictureUrl">What the recipe said its picture was.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The bytes, for the image store to decode; the caller disposes them.</returns>
+    /// <remarks>
+    /// <para>
+    /// Best effort, and the caller treats it that way: a recipe whose photo
+    /// could not be had is still the recipe, and arrives without one exactly as
+    /// a recipe somebody typed does.
+    /// </para>
+    /// <para>
+    /// The address in a recipe is data from the other server, not something a
+    /// person typed, which is why an implementation must refuse anything that
+    /// is not on the connection's own origin. Following it anywhere would let a
+    /// compromised — or merely odd — instance name the address this server
+    /// fetches, which is the whole thing the rest of this feature is careful
+    /// about. The cost is that an instance keeping its media on a separate
+    /// bucket or CDN imports its recipes without their pictures.
+    /// </para>
+    /// </remarks>
+    Task<Result<Stream>> FetchPictureAsync(
+        RecipeSource source,
+        string pictureUrl,
+        CancellationToken cancellationToken);
+
     /// <summary>Reads one recipe in full.</summary>
     /// <param name="source">Which connection.</param>
     /// <param name="externalId">Which recipe, as the other app identifies it.</param>

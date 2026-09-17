@@ -130,6 +130,64 @@ internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
         return read.Map(TandoorMapping.ToSource);
     }
 
+    /// <summary>
+    /// Reads a recipe's picture from the instance it came from.
+    /// </summary>
+    /// <remarks>
+    /// Tandoor writes this field either as a path on itself — the usual case,
+    /// its media directory — or as a whole address, which is what an instance
+    /// keeping its media elsewhere produces. A path is resolved against the
+    /// connection; an address is followed only if it lands back on the same
+    /// origin, because this string came out of a response rather than out of a
+    /// person, and following it anywhere would let the answer choose what this
+    /// server connects to.
+    /// </remarks>
+    public async Task<Result<Stream>> FetchPictureAsync(
+        RecipeSource source,
+        string pictureUrl,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        if (OnTheSameServer(source, pictureUrl) is not { } url)
+        {
+            return ImportErrors.UnreachableAddress;
+        }
+
+        // The token goes with it. Tandoor's media is often behind the same
+        // sign-in as its API, and sending it is safe precisely because this
+        // only ever asks the server the token belongs to.
+        return await http
+            .GetPictureAsync(url, new AuthenticationHeaderValue("Bearer", source.Secret), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The picture's address, but only if it is on the connection's own server.
+    /// </summary>
+    /// <remarks>
+    /// Internal rather than private so it can be tested directly. It is a
+    /// security rule with a handful of cases — a path, a whole address on the
+    /// same host, one on another host, a protocol-relative one — and a rule
+    /// nothing exercises by name is one that quietly stops holding.
+    /// </remarks>
+    internal static Uri? OnTheSameServer(RecipeSource source, string pictureUrl)
+    {
+        var written = pictureUrl?.Trim();
+
+        if (string.IsNullOrEmpty(written))
+        {
+            return null;
+        }
+
+        if (!Uri.TryCreate(source.Address.Origin, written, out var url))
+        {
+            return null;
+        }
+
+        return url.GetLeftPart(UriPartial.Authority) == source.Address.Value ? url : null;
+    }
+
     private static Uri First(RecipeSource source, string? query)
     {
         var search = string.IsNullOrWhiteSpace(query)

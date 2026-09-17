@@ -210,6 +210,65 @@ public class RecipeImageTests(PostgresFixture postgres)
         return buffer.ToArray();
     }
 
+    [Fact]
+    public async Task ReplacingOneRecipesPhoto_ShouldNotBreakAnotherUsingTheSameFile()
+    {
+        // Arrange
+        // Storage is content-addressed, so one picture on two recipes is two
+        // rows and one file. Importing a library where many recipes carry the
+        // same placeholder turns that from a curiosity into the normal case.
+        var (client, first) = await SeedAsync();
+        var householdId = (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        var second = (await client.PostAsync(
+                "/api/v1/recipes",
+                new { householdId, title = "Lasagne" },
+                Token))
+            .Json!.Value.GetProperty("recipeId").GetGuid();
+
+        var shared = PngBytes(500, 500);
+
+        await UploadAsync(client, first, shared, "photo.png", "image/png");
+        await UploadAsync(client, second, shared, "photo.png", "image/png");
+
+        // Act
+        await UploadAsync(client, first, PngBytes(640, 480), "other.png", "image/png");
+
+        // Assert
+        var served = await client.GetAsync($"/api/v1/recipes/{second}/image?w=800", Token);
+
+        // Deleting the displaced file would not have broken the recipe being
+        // edited. It would have broken this one, silently.
+        Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemovingOneRecipesPhoto_ShouldNotBreakAnotherUsingTheSameFile()
+    {
+        // Arrange
+        var (client, first) = await SeedAsync();
+        var householdId = (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        var second = (await client.PostAsync(
+                "/api/v1/recipes",
+                new { householdId, title = "Lasagne" },
+                Token))
+            .Json!.Value.GetProperty("recipeId").GetGuid();
+
+        var shared = PngBytes(500, 500);
+
+        await UploadAsync(client, first, shared, "photo.png", "image/png");
+        await UploadAsync(client, second, shared, "photo.png", "image/png");
+
+        // Act
+        await client.DeleteAsync($"/api/v1/recipes/{first}/image", Token);
+
+        // Assert
+        var served = await client.GetAsync($"/api/v1/recipes/{second}/image?w=800", Token);
+
+        Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+    }
+
     private static async Task<ApiResponse> UploadAsync(
         ApiClient client,
         Guid recipeId,
