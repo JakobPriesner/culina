@@ -165,8 +165,12 @@ class SourceStore {
     householdId: string;
     kind: string;
     address: string;
-    token: string;
     label?: string;
+    /** Either a token that already exists… */
+    token?: string;
+    /** …or the sign-in the server trades for one. Never both. */
+    username?: string;
+    password?: string;
   }): Promise<ConnectedSource | null> {
     this.#connecting = true;
     this.#connectError = null;
@@ -177,8 +181,13 @@ class SourceStore {
           householdId: draft.householdId,
           kind: draft.kind,
           address: draft.address,
-          token: draft.token,
-          ...(draft.label ? { label: draft.label } : {})
+          ...(draft.label ? { label: draft.label } : {}),
+          // Sent only when there is one. The server refuses a request that
+          // carries both a token and a sign-in, so neither may be padded out
+          // with an empty string.
+          ...(draft.token ? { token: draft.token } : {}),
+          ...(draft.username ? { username: draft.username } : {}),
+          ...(draft.password ? { password: draft.password } : {})
         }
       })
     );

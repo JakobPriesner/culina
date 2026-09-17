@@ -565,9 +565,9 @@
   "import.source.hint": "Tandoor for now. Mealie and others will follow.",
   "import.source.go": "Bring recipes over",
   "import.source.address": "Where it is",
-  "import.source.addressHint": "The address you open it at, like recipes.example.com. Anything after the host is ignored.",
+  "import.source.addressHint": "The address you open that app at, like recipes.example.com. Anything after the host is ignored.",
   "import.source.token": "API token",
-  "import.source.tokenHint": "Made in that app, under API tokens. It is stored here and never shown again.",
+  "import.source.tokenHint": "Made in that app under API tokens. It is stored here and never shown again.",
   "import.source.connect": "Connect",
   "import.source.browse": "Look through it",
   "import.source.disconnect": "Disconnect",
@@ -616,5 +616,14 @@
   "import.run.bringMore": "Bring more over",
   "import.origin.from": "From {where}",
   "import.origin.fromApp": "Brought over from another app",
-  "import.sourcesFailed": "Your connected apps could not be read."
+  "import.sourcesFailed": "Your connected apps could not be read.",
+  "import.source.wayLabel": "How to get in",
+  "import.source.waySignIn": "Sign in",
+  "import.source.waySignInHint": "The name and password you use for that app. Used once to fetch a token — the password is not stored.",
+  "import.source.wayToken": "Use an API token",
+  "import.source.wayTokenHint": "If you would rather not give a password, or that app signs you in through something else.",
+  "import.source.username": "Username there",
+  "import.source.password": "Password there",
+  "import.source.passwordHint": "Sent once to that app to fetch a token, then dropped. It is never stored here.",
+  "import.source.openTokenPage": "Open {where} to make one"
 }

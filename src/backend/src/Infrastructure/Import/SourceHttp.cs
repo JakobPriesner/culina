@@ -102,6 +102,52 @@ internal sealed class SourceHttp : IDisposable
         }
     }
 
+    /// <summary>
+    /// Posts a form and reads JSON back, without an <c>Authorization</c> header.
+    /// </summary>
+    /// <typeparam name="TBody">The shape expected back.</typeparam>
+    /// <param name="url">What to post to.</param>
+    /// <param name="form">The fields to send.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <remarks>
+    /// <para>
+    /// The one call in this class that carries somebody's password, and the
+    /// reason it is written separately rather than folded into
+    /// <see cref="GetAsync{TBody}"/>: there is exactly one of it, and a reader
+    /// asking "where does the password go" should find one answer.
+    /// </para>
+    /// <para>
+    /// A form rather than JSON, because that is what the endpoints this exists
+    /// for accept. Nothing about what is posted is logged — not the fields, not
+    /// their names, and not the body on a failure.
+    /// </para>
+    /// </remarks>
+    internal async Task<Result<TBody>> PostFormAsync<TBody>(
+        Uri url,
+        IReadOnlyDictionary<string, string> form,
+        CancellationToken cancellationToken)
+        where TBody : notnull
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new FormUrlEncodedContent(form)
+            };
+
+            using var response = await client
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+
+            return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
+                                            or InvalidOperationException or IOException)
+        {
+            return ImportErrors.CouldNotFetch;
+        }
+    }
+
     private async Task<Result<TBody>> SendAsync<TBody>(
         Uri url,
         AuthenticationHeaderValue authorization,
@@ -116,7 +162,19 @@ internal sealed class SourceHttp : IDisposable
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<Result<TBody>> ReadAsync<TBody>(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+        where TBody : notnull
+    {
+        // 400 as well as 401: an obtain-token endpoint answers a wrong password
+        // with a validation failure, and reporting that as "could not fetch"
+        // would send somebody to check an address that was right.
+        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+            or HttpStatusCode.BadRequest)
         {
             return ImportErrors.SourceRefused;
         }

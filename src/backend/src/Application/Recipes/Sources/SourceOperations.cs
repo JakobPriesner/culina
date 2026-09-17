@@ -49,31 +49,102 @@ internal sealed class ConnectSourceCommandHandler(
             .MemberOfAsync(households, command.Draft.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var prepared = allowed.Bind(() => Build(command));
-
-        var result = await prepared.Match(
-            source => ProveThenStoreAsync(source, cancellationToken),
+        var result = await allowed.Match(
+            () => BuildThenStoreAsync(command, cancellationToken),
             error => Task.FromResult(Result<SourceSummary>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
     }
 
-    private Result<RecipeSource> Build(ConnectSourceCommand command)
+    /// <summary>
+    /// Works out what to connect with, then connects.
+    /// </summary>
+    /// <remarks>
+    /// Two ways in, and the split is not a convenience. A token is the thing
+    /// this actually stores, but "go and make an API token first" is a task
+    /// somebody has to go and learn before they can begin, and it is where most
+    /// attempts to move a recipe library stop. So a name and password are
+    /// traded for a token here, and only the token is kept.
+    /// </remarks>
+    private async Task<Result<SourceSummary>> BuildThenStoreAsync(
+        ConnectSourceCommand command,
+        CancellationToken cancellationToken)
     {
         if (SourceKind.Parse(command.Draft.Kind) is not { } kind)
         {
             return ImportErrors.UnknownSourceKind;
         }
 
-        return SourceAddress.Create(command.Draft.Address)
-            .Bind(address => RecipeSource.Create(
-                command.Draft.HouseholdId,
-                kind,
-                command.Draft.Label,
-                address,
-                command.Draft.Token,
-                command.UserId,
-                time.GetUtcNow()));
+        var parsed = SourceAddress.Create(command.Draft.Address)
+            .Bind(address => libraries.For(kind).Map(reader => (address, reader)));
+
+        return await parsed.Match(
+            found => WithATokenAsync(command, kind, found.address, found.reader, cancellationToken),
+            error => Task.FromResult(Result<SourceSummary>.Failure(error))).ConfigureAwait(false);
+    }
+
+    private async Task<Result<SourceSummary>> WithATokenAsync(
+        ConnectSourceCommand command,
+        SourceKind kind,
+        SourceAddress address,
+        IRecipeLibrary reader,
+        CancellationToken cancellationToken)
+    {
+        var token = await TokenAsync(command, address, reader, cancellationToken)
+            .ConfigureAwait(false);
+
+        var built = token.Bind(secret => RecipeSource.Create(
+            command.Draft.HouseholdId,
+            kind,
+            command.Draft.Label,
+            address,
+            secret,
+            command.UserId,
+            time.GetUtcNow()));
+
+        return await built.Match(
+            source => ProveThenStoreAsync(source, reader, cancellationToken),
+            error => Task.FromResult(Result<SourceSummary>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The token to store: the one that was given, or one signed in for.
+    /// </summary>
+    /// <remarks>
+    /// Exactly one of the two, never both. Accepting both and preferring one
+    /// would mean a request that says two different things gets a silent answer
+    /// about which was believed.
+    /// </remarks>
+    private static async Task<Result<string>> TokenAsync(
+        ConnectSourceCommand command,
+        SourceAddress address,
+        IRecipeLibrary reader,
+        CancellationToken cancellationToken)
+    {
+        var hasToken = !string.IsNullOrWhiteSpace(command.Draft.Token);
+        var hasSignIn = !string.IsNullOrWhiteSpace(command.Draft.Username)
+            && !string.IsNullOrWhiteSpace(command.Draft.Password);
+
+        if (hasToken && hasSignIn)
+        {
+            return ImportErrors.AmbiguousCredentials;
+        }
+
+        if (hasToken)
+        {
+            return command.Draft.Token!;
+        }
+
+        if (!hasSignIn)
+        {
+            return ImportErrors.InvalidSourceToken;
+        }
+
+        // The password goes no further than this call. What comes back is the
+        // token, and the token is the only thing that is ever written down.
+        return await reader
+            .SignInAsync(address, command.Draft.Username!, command.Draft.Password!, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -88,13 +159,13 @@ internal sealed class ConnectSourceCommandHandler(
     /// </remarks>
     private async Task<Result<SourceSummary>> ProveThenStoreAsync(
         RecipeSource source,
+        IRecipeLibrary reader,
         CancellationToken cancellationToken)
     {
-        var library = libraries.For(source.Kind);
-
-        var reachable = await library.Match(
-            reader => reader.TestAsync(source, cancellationToken),
-            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+        // Still tested even when a sign-in just succeeded: signing in proves the
+        // account, and this proves the token can actually read recipes, which is
+        // the thing the connection is for.
+        var reachable = await reader.TestAsync(source, cancellationToken).ConfigureAwait(false);
 
         return await reachable.Match(
             async () => await unitOfWork.InTransactionAsync(

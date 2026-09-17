@@ -24,8 +24,30 @@ public sealed record ConnectSourceRequest
     /// </summary>
     /// <remarks>
     /// Goes in, and never comes back out. No response on this API carries it.
+    /// Send this <em>or</em> a username and password, never both.
     /// </remarks>
-    public required string Token { get; init; }
+    public string? Token { get; init; }
+
+    /// <summary>
+    /// The name that account signs in with over there.
+    /// </summary>
+    /// <remarks>
+    /// The alternative to <see cref="Token"/>, and the one most people can
+    /// actually supply: "make an API token first" is a thing somebody has to go
+    /// and learn before they can start, and it is where most attempts to move
+    /// recipes stop.
+    /// </remarks>
+    public string? Username { get; init; }
+
+    /// <summary>
+    /// The password for that account.
+    /// </summary>
+    /// <remarks>
+    /// Used once, to ask that app for a token, and then dropped. It is never
+    /// stored, never logged, and never returned. What is kept is the token that
+    /// came back — the same token the person would have made by hand.
+    /// </remarks>
+    public string? Password { get; init; }
 
     /// <summary>What to call it here. Its host name, when this is left out.</summary>
     public string? Label { get; init; }

@@ -142,3 +142,18 @@ internal sealed record TandoorNamed
 
     public string? PluralName { get; init; }
 }
+
+/// <summary>
+/// What Tandoor answers when it trades a sign-in for a token.
+/// </summary>
+/// <remarks>
+/// It returns rather more than this — an id, a scope, an expiry, a user id —
+/// and only the token is read, because only the token is kept. Note that the
+/// token Tandoor issues this way carries its full <c>read write app</c> scope
+/// and is the same one it would hand back next time: this does not mint a
+/// throwaway, and Culina never writes with it.
+/// </remarks>
+internal sealed record TandoorToken
+{
+    public string? Token { get; init; }
+}
