@@ -99,6 +99,90 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         return Result.Success();
     }
 
+    public async Task<Result<MealPlanEntry>> FindAsync(
+        Guid entryId,
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        // The household is in the where clause rather than checked afterwards:
+        // "not yours" and "not there" are the same answer, and answering them
+        // differently tells a stranger which entry ids exist.
+        var row = await executor.QuerySingleOrDefaultAsync<PlannedRow>(
+            """
+            select id, household_id, on_date, recipe_id, servings, slot, sort_order
+            from meal_plan_entries
+            where id = @entryId and household_id = @householdId;
+            """,
+            new { entryId, householdId },
+            cancellationToken).ConfigureAwait(false);
+
+        return row is null
+            ? PlanningErrors.EntryNotFound
+            : MealPlanEntry.Restore(
+                row.Id,
+                row.HouseholdId,
+                row.OnDate,
+                row.RecipeId,
+                row.Servings,
+                PlanningCodes.ToSlot(row.Slot),
+                row.SortOrder);
+    }
+
+    public async Task<Result> MoveAsync(MealPlanEntry moved, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(moved);
+
+        await executor.ExecuteAsync(
+            """
+            update meal_plan_entries
+            set on_date = @date, slot = @slot, sort_order = @key
+            where id = @id and household_id = @householdId;
+            """,
+            new
+            {
+                id = moved.Id,
+                householdId = moved.HouseholdId,
+                date = moved.Date,
+                slot = PlanningCodes.Of(moved.Slot),
+                // Doubled, so the moved entry can land between two neighbours
+                // without either of them being renumbered first. Every other
+                // entry on the day is doubled and offset by one below, which
+                // puts this exactly where the gap it was dropped into is.
+                key = moved.SortOrder * 2
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        // Renumbered from zero, so the next thing dropped onto this day is
+        // aimed at gaps that are still where they look. Everything but the
+        // moved entry counts double and odd — the gap above the meal at index
+        // j is the even number 2j, which is the key the moved entry was just
+        // given, so it slots in there without a tie to break.
+        await executor.ExecuteAsync(
+            """
+            with ordered as (
+                select id,
+                       row_number() over (
+                           order by case when id = @id then sort_order else sort_order * 2 + 1 end)
+                           - 1 as position
+                from meal_plan_entries
+                where household_id = @householdId and on_date = @date
+            )
+            update meal_plan_entries entry
+            set sort_order = ordered.position
+            from ordered
+            where entry.id = ordered.id and entry.sort_order is distinct from ordered.position;
+            """,
+            new
+            {
+                id = moved.Id,
+                householdId = moved.HouseholdId,
+                date = moved.Date
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
     public async Task<Result<DateOnly>> RemoveAsync(
         Guid entryId,
         Guid householdId,

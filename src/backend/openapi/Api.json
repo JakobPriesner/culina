@@ -3598,6 +3598,86 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Planning"
+        ],
+        "summary": "Move a planned meal",
+        "description": "Which day a meal is on is one of its own fields, so moving it is a change to the entry rather than an action on it. Omit `slot` to keep the slot it had, and `position` to put it at the end of its new day. The whole week comes back, because the week is the screen.",
+        "operationId": "moveMealV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanningMoveMealRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanningMealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/cookbooks": {
@@ -4947,6 +5027,31 @@
           }
         },
         "description": "A week of planned meals."
+      },
+      "PlanningMoveMealRequest": {
+        "required": [
+          "date"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Which day it moves to. The day it is already on is allowed.",
+            "format": "date"
+          },
+          "slot": {
+            "type": "string",
+            "description": "`breakfast`, `lunch` or `dinner`. Omit to keep the slot\n        it already had.",
+            "nullable": true
+          },
+          "position": {
+            "type": "integer",
+            "description": "Which gap in the day it was dropped into, counted from zero. Omit to put\nit last.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "description": "Moves a planned meal to another day."
       },
       "PlanningPlanMealRequest": {
         "required": [

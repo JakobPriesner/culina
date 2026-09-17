@@ -38,6 +38,46 @@ public class MealPlanEntryTests
         result.ShouldBeFailure(PlanningErrors.InvalidServings);
     }
 
+    [Fact]
+    public void MoveTo_ShouldCarryTheMealRatherThanRePlanIt()
+    {
+        // Arrange
+        var entry = MealPlanEntry
+            .Plan(CulinaIdStub, Thursday, CulinaIdStub, servings: 6, MealSlot.Lunch, 3)
+            .ShouldBeSuccess();
+
+        // Act
+        var moved = entry.MoveTo(Thursday.AddDays(2), MealSlot.Lunch, 0);
+
+        // Assert
+        // The same entry on another day: it keeps its id, so a move is one row
+        // changing rather than one disappearing and another appearing, and it
+        // keeps the servings somebody chose.
+        Assert.Equal(entry.Id, moved.Id);
+        Assert.Equal(entry.RecipeId, moved.RecipeId);
+        Assert.Equal(6m, moved.Servings);
+        Assert.Equal(Thursday.AddDays(2), moved.Date);
+        Assert.Equal(0, moved.SortOrder);
+    }
+
+    [Fact]
+    public void MoveTo_ShouldLeaveTheEntryItWasCalledOnAlone()
+    {
+        // Arrange
+        var entry = MealPlanEntry
+            .Plan(CulinaIdStub, Thursday, CulinaIdStub, servings: null, MealSlot.Dinner, 0)
+            .ShouldBeSuccess();
+
+        // Act
+        entry.MoveTo(Thursday.AddDays(1), MealSlot.Breakfast, 1);
+
+        // Assert
+        // A copy, not a mutation. An optimistic screen is holding the old one
+        // to put back if the move fails, and it has to still say Thursday.
+        Assert.Equal(Thursday, entry.Date);
+        Assert.Equal(MealSlot.Dinner, entry.Slot);
+    }
+
     private static Guid CulinaIdStub => Guid.Parse("01a09999-0000-7000-8000-000000000001");
 }
 

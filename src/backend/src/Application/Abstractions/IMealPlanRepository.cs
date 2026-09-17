@@ -35,6 +35,33 @@ public interface IMealPlanRepository
     /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result> AddAsync(MealPlanEntry entry, CancellationToken cancellationToken);
 
+    /// <summary>Reads one entry, if it is this household's.</summary>
+    /// <param name="entryId">Which entry.</param>
+    /// <param name="householdId">Whose plan it must be.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// Moving a meal needs the slot it already has, because a move that leaves
+    /// the slot out keeps it — and ownership is proved by the same read rather
+    /// than by a second one.
+    /// </remarks>
+    Task<Result<MealPlanEntry>> FindAsync(
+        Guid entryId,
+        Guid householdId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Puts an entry on its new day, and closes the gaps that leaves.
+    /// </summary>
+    /// <param name="moved">The entry as it should now be.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <remarks>
+    /// The day it lands on is renumbered from zero afterwards, so a position
+    /// is always an index and never a number a client has to guess between.
+    /// The day it left keeps its gaps: order survives them, and renumbering a
+    /// day nobody is looking at is a write for nothing.
+    /// </remarks>
+    Task<Result> MoveAsync(MealPlanEntry moved, CancellationToken cancellationToken);
+
     /// <summary>
     /// Takes a planned meal off, and says which day it was on.
     /// </summary>

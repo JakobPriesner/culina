@@ -116,6 +116,45 @@ internal sealed class PlanMealEndpoint : IEndpoint
     }
 }
 
+/// <summary>Moves a planned meal to another day.</summary>
+internal sealed class MoveMealEndpoint : IEndpoint
+{
+    public void MapEndpoint(IEndpointRouteBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        app.MapPatch($"{ApiPaths.V1}/households/{{householdId:guid}}/meal-plan/{{entryId:guid}}", async (
+                Guid householdId,
+                Guid entryId,
+                MoveMealRequest request,
+                HttpContext context,
+                ICommandHandler<MoveMealCommand, MealPlanResponse> handler,
+                CancellationToken cancellationToken) =>
+            {
+                var result = await handler
+                    .Handle(
+                        new MoveMealCommand(householdId, context.CurrentUser().UserId, entryId, request),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                return result.Match(Results.Ok, CustomResults.Problem);
+            })
+            .WithName("moveMealV1")
+            .WithTags(Tags.Planning)
+            .WithSummary("Move a planned meal")
+            .WithDescription(
+                "Which day a meal is on is one of its own fields, so moving it is a change to the "
+                + "entry rather than an action on it. Omit `slot` to keep the slot it had, and "
+                + "`position` to put it at the end of its new day. The whole week comes back, "
+                + "because the week is the screen.")
+            .Produces<MealPlanResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireAuthorization();
+    }
+}
+
 /// <summary>Takes a planned meal off the week.</summary>
 internal sealed class UnplanMealEndpoint : IEndpoint
 {

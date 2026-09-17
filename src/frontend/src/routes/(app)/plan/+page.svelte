@@ -1,9 +1,20 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+
   import { resolve } from '$app/paths';
   import { Button, EmptyState, ErrorState } from '$ds';
 
   import PlannedCard from '$features/planning/PlannedCard.svelte';
-  import { asDate, mealPlan, type MealSlot } from '$features/planning/mealPlan.svelte';
+  import MoveMealSheet from '$features/planning/MoveMealSheet.svelte';
+  import {
+    asDate,
+    gapToRestore,
+    mealPlan,
+    placeOf,
+    type MealSlot,
+    type PlannedMeal
+  } from '$features/planning/mealPlan.svelte';
+  import { WeekDrag, type Held, type Landing } from '$features/planning/weekDrag.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
@@ -19,8 +30,10 @@
    *
    * Seven days, and deliberately not a calendar. A week is the unit people
    * actually plan in — you shop at the weekend for the week that follows — and
-   * a month view is where recurrence, drag-and-drop and a second shopping list
-   * come from.
+   * a month view is where recurrence and a second shopping list come from.
+   *
+   * Meals are moved between the days by dragging them, which is the commonest
+   * edit a plan gets: a week is agreed on Sunday and then argued with all week.
    *
    * It is reached from the recipe list rather than from the navigation bar,
    * which is closed at three on purpose: a plan is a weekly thing, and anything
@@ -45,6 +58,13 @@
   /** Which shelf the picker is searching, or null for everything. */
   let narrowedTo = $state<string | null>(null);
   let busy = $state(false);
+
+  /** The meal whose move is being answered in the sheet, rather than aimed at. */
+  let moving = $state<PlannedMeal | null>(null);
+
+  const drag = new WeekDrag();
+
+  onDestroy(() => drag.stop());
 
   const monday = $derived.by(() => {
     const now = new Date();
@@ -106,6 +126,63 @@
     if (ok) {
       adding = null;
     }
+  }
+
+  /**
+   * Puts a meal on another day, and offers to put it back.
+   *
+   * Undo rather than a confirmation: a drop is cheap to reverse and expensive
+   * to interrupt, and the drop that lands a day out is common enough on a phone
+   * that the way back has to be on the screen it lands on.
+   */
+  async function move(entryId: string, to: { date: string; slot?: MealSlot; position?: number }) {
+    const before = householdId && placeOf(mealPlan.days, entryId);
+
+    if (!householdId || !before) {
+      return;
+    }
+
+    const ok = await mealPlan.move(householdId, entryId, to);
+
+    if (!ok) {
+      toaster.show({ message: m['plan.move.failed'](), tone: 'danger' });
+
+      return;
+    }
+
+    // Where it landed, read from the week that came back rather than from the
+    // one that was on screen: the server decides the order of a day, so its
+    // answer is the only one an undo can be built against.
+    const after = placeOf(mealPlan.days, entryId);
+
+    toaster.show({
+      message: m['plan.move.done']({ day: weekdays.format(dayOf(to.date)) }),
+      action: after
+        ? {
+            label: m['plan.move.undo'](),
+            run: () =>
+              void move(entryId, {
+                date: before.date,
+                slot: before.slot,
+                position: gapToRestore(before, after)
+              })
+          }
+        : undefined
+    });
+  }
+
+  /** A card let go over a day. The gaps either side of where it was are no move. */
+  function drop(held: Held, landing: Landing) {
+    const before = placeOf(mealPlan.days, held.entryId);
+
+    if (
+      before?.date === landing.date &&
+      (landing.position === before.index || landing.position === before.index + 1)
+    ) {
+      return;
+    }
+
+    void move(held.entryId, { date: landing.date, position: landing.position });
   }
 
   /**
@@ -175,24 +252,48 @@
       {/snippet}
     </ErrorState>
   {:else}
-    <ol class="week">
+    <ol class="week" class:dragging={drag.held !== null}>
       {#each mealPlan.days as day (day.date)}
-        <li class="day" class:today={day.date === today}>
+        <li
+          class="day"
+          class:today={day.date === today}
+          class:over={drag.landing?.date === day.date}
+          data-plan-day={day.date}
+        >
           <h2 class="name">
             {weekdays.format(dayOf(day.date))}
             <span class="number">{Number(day.date.slice(-2))}</span>
           </h2>
 
-          {#if day.meals.length > 0}
+          {#if day.meals.length > 0 || drag.landing?.date === day.date}
             <ul class="meals">
-              {#each day.meals as meal (meal.entryId)}
-                <li>
+              {#each day.meals as meal, index (meal.entryId)}
+                <!-- The line the card would land on. Drawn between the cards
+                     rather than around the day, because a day is the answer to
+                     "which day" and this is the answer to "where in it". -->
+                {#if drag.landing?.date === day.date && drag.landing.position === index}
+                  <li class="seam" aria-hidden="true"></li>
+                {/if}
+
+                <li data-plan-meal>
                   <PlannedCard
                     {meal}
+                    lifted={drag.held?.entryId === meal.entryId}
+                    onpress={(event) =>
+                      drag.press(
+                        event,
+                        { entryId: meal.entryId, title: meal.title, from: day.date },
+                        drop
+                      )}
+                    onmove={() => (moving = meal)}
                     onremove={() => householdId && void mealPlan.unplan(householdId, meal.entryId)}
                   />
                 </li>
               {/each}
+
+              {#if drag.landing?.date === day.date && drag.landing.position >= day.meals.length}
+                <li class="seam" aria-hidden="true"></li>
+              {/if}
             </ul>
           {/if}
 
@@ -227,6 +328,35 @@
     {/if}
   {/if}
 </Page>
+
+<!-- The card under the pointer. A copy rather than the card itself, so the day
+     it came from keeps its shape and the gaps stay where they were aimed at. -->
+{#if drag.held}
+  <div
+    class="carried"
+    aria-hidden="true"
+    style:inline-size="{drag.held.width}px"
+    style:translate="{drag.at.x}px {drag.at.y}px"
+  >
+    <span class="carried-title">{drag.held.title}</span>
+  </div>
+{/if}
+
+<MoveMealSheet
+  meal={moving}
+  days={mealPlan.days}
+  from={moving ? (placeOf(mealPlan.days, moving.entryId)?.date ?? monday) : monday}
+  onmove={(to) => {
+    const entryId = moving?.entryId;
+
+    moving = null;
+
+    if (entryId) {
+      void move(entryId, to);
+    }
+  }}
+  onclose={() => (moving = null)}
+/>
 
 {#if householdId}
   <RecipePicker
@@ -299,6 +429,19 @@
     gap: var(--space-2);
   }
 
+  /* A long press is this list's own gesture, so the callout menu iOS would
+     otherwise raise over a link is not wanted anywhere in it. */
+  .week {
+    -webkit-touch-callout: none;
+  }
+
+  /* Dragging across text selects it, on every desktop browser, and a week of
+     highlighted recipe titles is the visible result of a drag that worked. */
+  .dragging {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
   /* Day cards stay chronological; seven columns only when each day is usable. */
   .week {
     display: grid;
@@ -324,6 +467,49 @@
      it without the layout moving. */
   .today {
     background: var(--surface-accent-subtle);
+  }
+
+  /* Outlined rather than filled, because today already owns the filled one and
+     today is a day you can drop on. Inset, so the seven columns do not shift
+     by a border's width as a card crosses them. */
+  .over {
+    outline: 2px dashed var(--border-focus);
+    outline-offset: calc(-1 * var(--space-1));
+  }
+
+  /* Where it would land. Kept to the height of the gap it opens so the day does
+     not grow by a whole card as the pointer crosses it. */
+  .seam {
+    height: var(--space-1);
+    border-radius: var(--radius-full);
+    background: var(--border-focus);
+  }
+
+  /* Under the pointer, and out of everything's way: it is not in the document
+     flow, it does not take the pointer, and it is not in the accessibility
+     tree — the card it was copied from is still all three of those. */
+  .carried {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: var(--z-overlay);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-overlay);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    pointer-events: none;
+    /* Held just above and left of the fingertip, so a thumb does not cover the
+       thing it is carrying. */
+    margin: calc(-1 * var(--space-6)) 0 0 calc(-1 * var(--space-4));
+  }
+
+  .carried-title {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .name {

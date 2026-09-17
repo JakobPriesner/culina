@@ -17,6 +17,12 @@ public static class PlanningErrors
         "A plan is read a week at a time.",
         ErrorType.Validation);
 
+    /// <summary>A move asks for a position that is not an index.</summary>
+    public static readonly Error InvalidPosition = new(
+        "planning.invalid_position",
+        "A place in the day is counted from zero.",
+        ErrorType.Validation);
+
     /// <summary>No such entry, or not this household's.</summary>
     public static readonly Error EntryNotFound = new(
         "planning.entry_not_found",

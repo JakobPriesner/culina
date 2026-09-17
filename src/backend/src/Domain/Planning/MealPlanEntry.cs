@@ -84,6 +84,21 @@ public sealed class MealPlanEntry
             sortOrder);
     }
 
+    /// <summary>
+    /// The same meal, on another day.
+    /// </summary>
+    /// <param name="date">Which day it moves to.</param>
+    /// <param name="slot">Which meal of that day.</param>
+    /// <param name="sortOrder">Where it asks to sit among that day's entries.</param>
+    /// <remarks>
+    /// A copy rather than a mutation, like everything else here: an entry that
+    /// could be edited in place is an entry somebody else is holding while it
+    /// changes underneath them. What is cooked and for how many does not move
+    /// with the date — moving a meal is not re-planning it.
+    /// </remarks>
+    public MealPlanEntry MoveTo(DateOnly date, MealSlot slot, int sortOrder) =>
+        new(Id, HouseholdId, date, RecipeId, Servings, slot, sortOrder);
+
     /// <summary>Rebuilds an entry from storage.</summary>
     /// <param name="id">Its id.</param>
     /// <param name="householdId">Whose plan.</param>

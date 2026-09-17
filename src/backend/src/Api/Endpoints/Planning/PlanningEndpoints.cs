@@ -9,5 +9,6 @@ internal static class PlanningEndpoints
         services
             .AddSingleton<IEndpoint, GetMealPlanEndpoint>()
             .AddSingleton<IEndpoint, PlanMealEndpoint>()
-            .AddSingleton<IEndpoint, UnplanMealEndpoint>();
+            .AddSingleton<IEndpoint, UnplanMealEndpoint>()
+            .AddSingleton<IEndpoint, MoveMealEndpoint>();
 }

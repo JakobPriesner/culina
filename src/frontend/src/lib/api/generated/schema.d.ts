@@ -814,7 +814,11 @@ export interface paths {
         delete: operations["unplanMealV1"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Move a planned meal
+         * @description Which day a meal is on is one of its own fields, so moving it is a change to the entry rather than an action on it. Omit `slot` to keep the slot it had, and `position` to put it at the end of its new day. The whole week comes back, because the week is the screen.
+         */
+        patch: operations["moveMealV1"];
         trace?: never;
     };
     "/api/v1/cookbooks": {
@@ -1347,6 +1351,25 @@ export interface components {
             from: string;
             /** @description The seven days, in order. */
             days: components["schemas"]["PlanningPlannedDay"][];
+        };
+        /** @description Moves a planned meal to another day. */
+        PlanningMoveMealRequest: {
+            /**
+             * Format: date
+             * @description Which day it moves to. The day it is already on is allowed.
+             */
+            date: string;
+            /**
+             * @description `breakfast`, `lunch` or `dinner`. Omit to keep the slot
+             *             it already had.
+             */
+            slot?: string | null;
+            /**
+             * Format: int32
+             * @description Which gap in the day it was dropped into, counted from zero. Omit to put
+             *     it last.
+             */
+            position?: number | null;
         };
         /** @description Plans a meal. */
         PlanningPlanMealRequest: {
@@ -4910,6 +4933,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlanningMealPlanResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    moveMealV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanningMoveMealRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanningMealPlanResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */

@@ -70,3 +70,49 @@ public sealed record PlanMealRequest
     /// <summary><c>breakfast</c>, <c>lunch</c> or <c>dinner</c>. Defaults to dinner.</summary>
     public string? Slot { get; init; }
 }
+
+/// <summary>Moves a planned meal to another day.</summary>
+/// <remarks>
+/// A change to the entry, not an action on it: which day a meal is on is one
+/// of its own fields, so this is a PATCH of the entry rather than a route with
+/// a verb in it.
+/// </remarks>
+public sealed record MoveMealRequest
+{
+    /// <summary>Which day it moves to. The day it is already on is allowed.</summary>
+    public required DateOnly Date { get; init; }
+
+    /// <summary>
+    /// <c>breakfast</c>, <c>lunch</c> or <c>dinner</c>. Omit to keep the slot
+    /// it already had.
+    /// </summary>
+    /// <remarks>
+    /// Omitting it is what dragging does: dragging a dinner onto Thursday
+    /// moves a dinner, and a drag that quietly turned it into a breakfast
+    /// would be a drag nobody could aim.
+    /// </remarks>
+    public string? Slot { get; init; }
+
+    /// <summary>
+    /// Which gap in the day it was dropped into, counted from zero. Omit to put
+    /// it last.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The gaps of the day as it is on screen right now, with the meal being
+    /// moved still in it: <c>0</c> is above everything, and the number of meals
+    /// already there is below everything. Counting the gaps rather than the
+    /// final index is what makes moving a meal down the day mean the same as
+    /// moving one up — a final index has to be adjusted by whether the meal
+    /// started above or below its destination, and that adjustment is the
+    /// classic place a reorder goes one off.
+    /// </para>
+    /// <para>
+    /// A request rather than an instruction: a day is read in slot order first,
+    /// so a breakfast dropped below a dinner lands at the end of the breakfasts
+    /// rather than where the finger let go. The whole week comes back, so the
+    /// screen never keeps a position the server did not agree to.
+    /// </para>
+    /// </remarks>
+    public int? Position { get; init; }
+}
