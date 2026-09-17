@@ -8,11 +8,17 @@ export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
 /**
  * How many recipes go in one request.
  *
- * The server refuses more than 25, and matching it exactly is deliberate: a
- * smaller number here would be this client being cautious about a limit that is
- * already enforced, and a larger one would be a 400 nobody could act on.
+ * Well under the 25 the server allows, for two reasons that turned out to be
+ * the same reason. Progress is only as smooth as the batch is small — a bar
+ * that moves once per 25 recipes barely moves — and a batch is not 25 requests
+ * to the other server but up to 50 once photos are counted, plus the work of
+ * re-encoding each one. At 25 that reliably overran the client's deadline and
+ * reported the whole batch as unreadable recipes.
+ *
+ * Five is small enough to finish comfortably inside that deadline on a slow
+ * instance, and small enough that the bar moves while somebody is watching it.
  */
-const batchSize = 25;
+const batchSize = 5;
 
 /**
  * The libraries connected here, and the one being looked through.
@@ -54,6 +60,15 @@ class SourceStore {
   #total = $state<number | null>(null);
   #loadingMore = $state(false);
   #loadingAll = $state(false);
+
+  /**
+   * Whether the next page could not be read.
+   *
+   * A list that fetches itself when its end comes into view must stop by
+   * itself. Without this a dead connection is a loop: the end of the list stays
+   * on screen, asks again, fails again, and keeps asking.
+   */
+  #moreFailed = $state(false);
 
   #run = $state<ImportRun | null>(null);
 
@@ -107,6 +122,10 @@ class SourceStore {
   /** True while the rest of the library is being fetched to select all of it. */
   get loadingAll(): boolean {
     return this.#loadingAll;
+  }
+
+  get moreFailed(): boolean {
+    return this.#moreFailed;
   }
 
   /** How many they have over there, when that app says. */
@@ -243,13 +262,14 @@ class SourceStore {
     this.#total = null;
     this.#browseStatus = 'loading';
     this.#browseError = null;
+    this.#moreFailed = false;
 
     await this.#read(source, null, query);
   }
 
   /** Reads the next page of the library being looked through. */
   async more(query?: string): Promise<void> {
-    if (!this.#open || this.#nextPage === null || this.#loadingMore) {
+    if (!this.#open || this.#nextPage === null || this.#loadingMore || this.#moreFailed) {
       return;
     }
 
@@ -307,6 +327,7 @@ class SourceStore {
     this.#browseStatus = 'idle';
     this.#browseError = null;
     this.#loadingAll = false;
+    this.#moreFailed = false;
   }
 
   /**
@@ -398,8 +419,17 @@ class SourceStore {
     );
 
     if (!result.ok) {
-      this.#browseStatus = 'failed';
-      this.#browseError = result.error;
+      if (page === null) {
+        this.#browseStatus = 'failed';
+        this.#browseError = result.error;
+
+        return;
+      }
+
+      // A later page that failed leaves the earlier ones alone. Replacing a
+      // screen of recipes somebody is reading with an error, because the page
+      // below it could not be read, loses more than it explains.
+      this.#moreFailed = true;
 
       return;
     }

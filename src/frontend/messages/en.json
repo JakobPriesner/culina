@@ -592,7 +592,6 @@
   "import.library.empty": "Nothing to bring over.",
   "import.library.selectAll": "All",
   "import.library.alreadyHere": "Already here",
-  "import.library.more": "Show more",
   "import.library.chosen": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
@@ -626,5 +625,6 @@
   "import.source.password": "Password there",
   "import.source.passwordHint": "Sent once to that app to fetch a token, then dropped. It is never stored here.",
   "import.source.openTokenPage": "Open {where} to make one",
-  "import.library.loadingAll": "Fetching the rest…"
+  "import.library.loadingAll": "Fetching the rest…",
+  "import.library.moreFailed": "The rest of the library could not be read. Try the search, or come back in a moment."
 }

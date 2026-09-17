@@ -49,13 +49,15 @@ public sealed record RateLimitSettings
     /// one for every request.
     /// </para>
     /// <para>
-    /// It has to be generous to be correct. Moving two thousand recipes is
-    /// twenty reads to see them and eighty batches to bring them over, and a
-    /// ceiling that makes the advertised feature impossible is not a safety
-    /// measure.
+    /// It has to be generous to be correct, and the number is worked out rather
+    /// than felt. Recipes travel five to a request — small enough that a batch
+    /// finishes inside the client's deadline once photos are counted — so a
+    /// library of five thousand is fifty reads to see it and a thousand batches
+    /// to bring it over. A ceiling that makes the advertised feature impossible
+    /// is not a safety measure, which is what six hundred turned out to be.
     /// </para>
     /// </remarks>
-    public int SourceRequestsPerHour { get; init; } = 600;
+    public int SourceRequestsPerHour { get; init; } = 1500;
 
     /// <summary>Requests allowed per minute from one authenticated session.</summary>
     public int RequestsPerSessionPerMinute { get; init; } = 600;

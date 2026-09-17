@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Badge, Button, Checkbox, ErrorState, SearchField, Skeleton } from '$ds';
 
+  import { whenVisible } from '$shell/whenVisible';
+
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
@@ -158,12 +160,19 @@
       {/each}
     </ul>
 
-    {#if sources.hasMore}
-      <div class="more">
-        <Button loading={sources.loadingMore} onclick={() => void sources.more(query)}>
-          {m['import.library.more']()}
-        </Button>
-      </div>
+    {#if sources.hasMore && !sources.moreFailed}
+      <!-- The end of the list, drawn as the rows that are coming. Reaching them
+           is what fetches them, so there is no button to find and no moment
+           where the list looks finished when it is not. -->
+      <ul class="list" aria-hidden="true">
+        {#each [0, 1, 2] as row (row)}
+          <li class="row" {@attach whenVisible(() => void sources.more(query))}>
+            <Skeleton height="1.25rem" />
+          </li>
+        {/each}
+      </ul>
+    {:else if sources.moreFailed}
+      <p class="none" role="status">{m['import.library.moreFailed']()}</p>
     {/if}
   {/if}
 </section>
@@ -254,11 +263,6 @@
 
   .none {
     color: var(--text-muted);
-  }
-
-  .more {
-    display: flex;
-    justify-content: center;
   }
 
   .bar {
