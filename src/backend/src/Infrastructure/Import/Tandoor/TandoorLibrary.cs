@@ -1,0 +1,156 @@
+using System.Globalization;
+using System.Net.Http.Headers;
+using Application.Abstractions;
+using Domain.Import;
+using Domain.Shared;
+
+namespace Infrastructure.Import.Tandoor;
+
+/// <summary>
+/// Reads a Tandoor instance.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The first implementation of <see cref="IRecipeLibrary"/>, and the shape the
+/// next one follows: talk to one app, answer in <see cref="SourceRecipe"/>, and
+/// keep every fact about that app inside this folder.
+/// </para>
+/// <para>
+/// Two accommodations for reality. Tandoor changed its token scheme —
+/// <c>Bearer</c> on current versions, DRF's <c>Token</c> on older ones — and
+/// somebody moving out of an instance they set up in 2021 is exactly the person
+/// this feature is for, so both are tried. And its paging is a whole URL in a
+/// <c>next</c> field rather than a page number, which is carried through as an
+/// opaque token and validated against the connection's own address before it is
+/// followed: a page token is user input once it has been round-tripped through
+/// a client.
+/// </para>
+/// </remarks>
+internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
+{
+    /// <summary>How many summaries one browse asks for.</summary>
+    /// <remarks>
+    /// A screenful and a half. Small enough that the first page arrives while
+    /// somebody is still reading the heading, large enough that scrolling a
+    /// library of two thousand is not four hundred requests.
+    /// </remarks>
+    private const int PageSize = 36;
+
+    public SourceKind Kind => SourceKind.Tandoor;
+
+    public async Task<Result> TestAsync(RecipeSource source, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        // One recipe, not none: a page size of zero is a request some versions
+        // answer and others reject, and this has to prove the recipe endpoint
+        // works rather than that something answered.
+        var probe = source.Address.At("/api/recipe/?page=1&page_size=1");
+
+        var read = await ReadAsync<TandoorPage<TandoorRecipeSummary>>(source, probe, cancellationToken)
+            .ConfigureAwait(false);
+
+        return read.Match(_ => Result.Success(), Result.Failure);
+    }
+
+    public async Task<Result<SourcePage>> BrowseAsync(
+        RecipeSource source,
+        string? page,
+        string? query,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var url = Next(source, page) ?? First(source, query);
+
+        var read = await ReadAsync<TandoorPage<TandoorRecipeSummary>>(source, url, cancellationToken)
+            .ConfigureAwait(false);
+
+        return read.Map(answered => new SourcePage(
+            [.. (answered.Results ?? []).Select(TandoorMapping.ToSource)],
+            answered.Next,
+            answered.Count));
+    }
+
+    public async Task<Result<SourceRecipe>> FetchAsync(
+        RecipeSource source,
+        string externalId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        // Tandoor identifies recipes by integer, and this is the only place
+        // that knows it. An id that is not one never becomes part of a URL.
+        if (!int.TryParse(externalId, CultureInfo.InvariantCulture, out var id) || id <= 0)
+        {
+            return ImportErrors.SourceNotUnderstood;
+        }
+
+        var url = source.Address.At($"/api/recipe/{id.ToString(CultureInfo.InvariantCulture)}/");
+
+        var read = await ReadAsync<TandoorRecipe>(source, url, cancellationToken).ConfigureAwait(false);
+
+        return read.Map(TandoorMapping.ToSource);
+    }
+
+    private static Uri First(RecipeSource source, string? query)
+    {
+        var search = string.IsNullOrWhiteSpace(query)
+            ? string.Empty
+            : $"&query={Uri.EscapeDataString(query.Trim())}";
+
+        return source.Address.At(
+            $"/api/recipe/?page=1&page_size={PageSize.ToString(CultureInfo.InvariantCulture)}{search}");
+    }
+
+    /// <summary>
+    /// The page token, once it has been proved to point at this instance.
+    /// </summary>
+    /// <remarks>
+    /// Tandoor hands back a whole URL, and it goes out to a client and comes
+    /// back. Following it unchecked would be letting a caller name the address
+    /// the server fetches — with the household's token attached — which is the
+    /// one thing this whole feature is careful about. Anything not on the
+    /// connection's own origin is ignored, and the browse starts over.
+    /// </remarks>
+    private static Uri? Next(RecipeSource source, string? page)
+    {
+        if (string.IsNullOrWhiteSpace(page)
+            || !Uri.TryCreate(page.Trim(), UriKind.Absolute, out var url))
+        {
+            return null;
+        }
+
+        return url.GetLeftPart(UriPartial.Authority) == source.Address.Value ? url : null;
+    }
+
+    /// <summary>
+    /// Reads, trying the current token scheme and then the older one.
+    /// </summary>
+    /// <remarks>
+    /// Only on a refusal, and only once. A wrong token fails twice and reports
+    /// the same thing it would have reported after one attempt; a correct token
+    /// on an old instance works, where it would otherwise have looked wrong.
+    /// </remarks>
+    private async Task<Result<TBody>> ReadAsync<TBody>(
+        RecipeSource source,
+        Uri url,
+        CancellationToken cancellationToken)
+        where TBody : notnull
+    {
+        var bearer = await http
+            .GetAsync<TBody>(url, new AuthenticationHeaderValue("Bearer", source.Secret), cancellationToken)
+            .ConfigureAwait(false);
+
+        var refused = bearer.Match(_ => false, error => error == ImportErrors.SourceRefused);
+
+        if (!refused)
+        {
+            return bearer;
+        }
+
+        return await http
+            .GetAsync<TBody>(url, new AuthenticationHeaderValue("Token", source.Secret), cancellationToken)
+            .ConfigureAwait(false);
+    }
+}

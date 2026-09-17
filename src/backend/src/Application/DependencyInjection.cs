@@ -27,6 +27,7 @@ using Application.Recipes.GetNotes;
 using Application.Recipes.GetTags;
 using Application.Recipes.GetUnits;
 using Application.Recipes.Import;
+using Application.Recipes.Sources;
 using Application.Recipes.RecordCooked;
 using Application.Recipes.RemoveImage;
 using Application.Recipes.SaveNotes;
@@ -181,6 +182,17 @@ public static class DependencyInjection
                 RestoreArchiveCommandHandler>()
             .AddScoped<IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response>,
                 ImportRecipeQueryHandler>()
+
+            // Connected libraries
+            .AddScoped<ICommandHandler<ConnectSourceCommand, Contracts.Recipes.Sources.SourceSummary>,
+                ConnectSourceCommandHandler>()
+            .AddScoped<IQueryHandler<GetSourcesQuery, Contracts.Recipes.Sources.SourcesResponse>,
+                GetSourcesQueryHandler>()
+            .AddScoped<ICommandHandler<DisconnectSourceCommand>, DisconnectSourceCommandHandler>()
+            .AddScoped<IQueryHandler<BrowseSourceQuery,
+                Contracts.Recipes.Sources.SourceRecipesResponse>, BrowseSourceQueryHandler>()
+            .AddScoped<ICommandHandler<ImportFromSourceCommand,
+                Contracts.Recipes.Sources.ImportFromSourceResponse>, ImportFromSourceCommandHandler>()
             .AddScoped<IQueryHandler<GetMealPlanQuery, Contracts.Planning.MealPlanResponse>,
                 GetMealPlanQueryHandler>()
             .AddScoped<ICommandHandler<PlanMealCommand, Contracts.Planning.MealPlanResponse>,

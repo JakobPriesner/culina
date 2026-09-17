@@ -35,4 +35,78 @@ public static class ImportErrors
         "import.too_large",
         "That page is too large to read.",
         ErrorType.Validation);
+
+    /// <summary>The address of another app could not be read as an address.</summary>
+    public static readonly Error InvalidSourceAddress = new(
+        "import.invalid_source_address",
+        "That is not an address this can connect to. It looks like https://recipes.example.com.",
+        ErrorType.Validation);
+
+    /// <summary>The token was empty, or far longer than a token.</summary>
+    public static readonly Error InvalidSourceToken = new(
+        "import.invalid_source_token",
+        "That API token does not look like a token.",
+        ErrorType.Validation);
+
+    /// <summary>The name given to a connection was too long.</summary>
+    public static readonly Error InvalidSourceLabel = new(
+        "import.invalid_source_label",
+        "That name is too long for a connection.",
+        ErrorType.Validation);
+
+    /// <summary>This does not know how to read that kind of app.</summary>
+    public static readonly Error UnknownSourceKind = new(
+        "import.unknown_source_kind",
+        "This cannot read that kind of app yet.",
+        ErrorType.Validation);
+
+    /// <summary>No such connection, or not this household's to see.</summary>
+    public static Error SourceNotFound(Guid sourceId) => new(
+        "import.source_not_found",
+        $"There is no connection {sourceId}.",
+        ErrorType.NotFound);
+
+    /// <summary>The same instance is already connected to this household.</summary>
+    public static readonly Error SourceAlreadyConnected = new(
+        "import.source_already_connected",
+        "That app is already connected to this kitchen.",
+        ErrorType.Conflict);
+
+    /// <summary>
+    /// The other app answered, and said no.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="CouldNotFetch"/> on purpose, and the one import
+    /// failure that is specific: a wrong token is the single most likely thing
+    /// to go wrong when connecting, and "that did not work" would leave the
+    /// person re-checking the address they typed correctly.
+    /// </remarks>
+    public static readonly Error SourceRefused = new(
+        "import.source_refused",
+        "That app refused the token. Check that it is current and has permission to read recipes.",
+        ErrorType.Validation);
+
+    /// <summary>The other app answered with something this could not read.</summary>
+    public static readonly Error SourceNotUnderstood = new(
+        "import.source_not_understood",
+        "That app answered with something this could not read. It may be a version this does not know.",
+        ErrorType.Validation);
+
+    /// <summary>This recipe has already been brought into this kitchen.</summary>
+    public static readonly Error AlreadyImported = new(
+        "import.already_imported",
+        "That recipe has already been brought over.",
+        ErrorType.Conflict);
+
+    /// <summary>The recipe was written here rather than imported.</summary>
+    public static readonly Error NoOrigin = new(
+        "import.no_origin",
+        "That recipe was written here.",
+        ErrorType.NotFound);
+
+    /// <summary>More recipes were asked for in one go than one request may carry.</summary>
+    public static readonly Error TooManyAtOnce = new(
+        "import.too_many_at_once",
+        "That is more recipes than one request brings over. Ask for fewer.",
+        ErrorType.Validation);
 }

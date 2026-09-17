@@ -200,6 +200,22 @@
         />
       {/if}
     </form>
+
+    <!--
+      The third way in, and the heaviest — so it is offered last and as a
+      doorway rather than a form. One recipe is something you do here, in a
+      field, in ten seconds; a whole library is somewhere you go for ten
+      minutes. Putting them on one screen as equals would make the quick thing
+      feel like the start of a migration.
+    -->
+    <section class="fromAnApp" aria-labelledby="from-an-app">
+      <h2 id="from-an-app" class="subheading">{m['import.source.title']()}</h2>
+      <p class="hint">{m['import.source.hint']()}</p>
+
+      <div>
+        <Button href={resolve('/(app)/recipes/import')}>{m['import.source.go']()}</Button>
+      </div>
+    </section>
   </div>
 </Page>
 
@@ -230,5 +246,23 @@
   .continueTitle {
     font-family: var(--font-editorial);
     font-size: var(--text-xl);
+  }
+
+  .fromAnApp {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+
+  .subheading {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+  }
+
+  .hint {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 </style>

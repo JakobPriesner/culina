@@ -2,6 +2,8 @@ using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Infrastructure.Identity;
 using Infrastructure.Import;
+using Infrastructure.Import.Tandoor;
+using Infrastructure.Persistence.Import;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
@@ -51,6 +53,7 @@ public static class DependencyInjection
             .AddPersistence()
             .AddInstanceSettings()
             .AddIdentity()
+            .AddRecipeImport()
             .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton(TimeProvider.System);
     }
@@ -64,6 +67,25 @@ public static class DependencyInjection
             .AddSingleton<RegistrationSettings>()
             .AddScoped<ISettingsStore<RegistrationSettings>, PostgresSettingsStore<RegistrationSettings>>()
             .AddHostedService<InstanceSettingsLoader>();
+
+    /// <summary>
+    /// Reading other people's recipe libraries.
+    /// </summary>
+    /// <remarks>
+    /// One reader per app, and the registry that picks between them. Adding
+    /// Mealie is one class and one line here; nothing in <c>Application</c>
+    /// changes, which is what the <c>IRecipeLibrary</c> seam is for.
+    ///
+    /// The readers are singletons because they hold nothing per request — the
+    /// connection and its token arrive as arguments — and because the HTTP
+    /// client underneath them owns a connection pool that must not be rebuilt
+    /// per request.
+    /// </remarks>
+    private static IServiceCollection AddRecipeImport(this IServiceCollection services) =>
+        services
+            .AddSingleton<SourceHttp>()
+            .AddSingleton<IRecipeLibrary, TandoorLibrary>()
+            .AddSingleton<IRecipeLibraries, RecipeLibraries>();
 
     private static IServiceCollection AddIdentity(this IServiceCollection services) =>
         // Stateless and thread-safe, so one instance serves every request.
@@ -101,6 +123,8 @@ public static class DependencyInjection
             .AddScoped<ICookbookRepository, CookbookRepository>()
             .AddScoped<ITagRepository, TagRepository>()
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
+            .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()
+            .AddScoped<IRecipeOriginRepository, RecipeOriginRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.

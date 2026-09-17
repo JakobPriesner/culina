@@ -1,4 +1,5 @@
 using Contracts.Recipes;
+using Domain.Import;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -21,7 +22,8 @@ internal static class RecipeMappings
 
     /// <summary>Describes a recipe in full.</summary>
     /// <param name="recipe">The recipe to describe.</param>
-    internal static RecipeDetail Describe(this Recipe recipe)
+    /// <param name="origin">Where it came from, when it was not written here.</param>
+    internal static RecipeDetail Describe(this Recipe recipe, RecipeOrigin? origin = null)
     {
         ArgumentNullException.ThrowIfNull(recipe);
 
@@ -48,6 +50,14 @@ internal static class RecipeMappings
             Groups = [.. recipe.Groups.Select(ToContract)],
             Steps = [.. recipe.Steps.Select(step => step.ToContract(names, order))],
             Tags = recipe.Tags,
+            Origin = origin is null ? null : new RecipeProvenance
+            {
+                Kind = origin.Kind.Code,
+                SourceId = origin.SourceId,
+                ExternalId = origin.ExternalId,
+                SourceUrl = origin.SourceUrl,
+                ImportedAt = origin.ImportedAt
+            },
             CreatedBy = recipe.CreatedBy,
             CreatedAt = recipe.CreatedAt,
             UpdatedAt = recipe.UpdatedAt,

@@ -58,6 +58,15 @@ export const toRecipe = (wire: WireRecipe): Recipe => ({
   groups: wire.groups.map(toGroup),
   steps: wire.steps.map(toStep),
   tags: wire.tags,
+  origin: wire.origin
+    ? {
+        kind: wire.origin.kind,
+        sourceId: wire.origin.sourceId ?? null,
+        externalId: wire.origin.externalId,
+        sourceUrl: wire.origin.sourceUrl ?? null,
+        importedAt: wire.origin.importedAt
+      }
+    : null,
   createdBy: wire.createdBy,
   createdAt: wire.createdAt,
   updatedAt: wire.updatedAt,

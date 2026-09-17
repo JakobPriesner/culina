@@ -555,5 +555,65 @@
   "me.role.owner": "Leitung",
   "me.role.member": "Mitglied",
   "me.amounts.hint": "Gramm oder Cups – so, wie deine Küche misst.",
-  "units.piece": "Stück"
+  "units.piece": "Stück",
+  "import.title": "Rezepte herüberholen",
+  "import.lead": "Verbinde die App, in der deine Rezepte liegen, und such dir aus, was hierher soll. Sie kommen als ganz normale Rezepte an, auf einem Kochbuch, das nach ihrer Herkunft heißt.",
+  "import.backToApps": "Alle verbundenen Apps",
+  "import.oneAtATime": "Nur ein Rezept, aus einem Link oder einer Nachricht?",
+  "import.oneAtATimeLink": "Einzelnes Rezept anlegen",
+  "import.source.title": "Aus einer anderen App",
+  "import.source.hint": "Vorerst Tandoor. Mealie und andere folgen.",
+  "import.source.go": "Rezepte herüberholen",
+  "import.source.address": "Wo sie liegt",
+  "import.source.addressHint": "Die Adresse, unter der du sie öffnest, etwa rezepte.example.com. Alles nach dem Host wird verworfen.",
+  "import.source.token": "API-Token",
+  "import.source.tokenHint": "In der anderen App unter API-Token erstellt. Er wird hier gespeichert und nie wieder angezeigt.",
+  "import.source.connect": "Verbinden",
+  "import.source.browse": "Durchsehen",
+  "import.source.disconnect": "Trennen",
+  "import.source.another": "Weitere App verbinden",
+  "import.source.lastUsed": "Zuletzt am {when} Rezepte herübergeholt",
+  "import.source.neverUsed": "Noch nichts herübergeholt",
+  "import.library.title": "In {name}",
+  "import.library.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept dort",
+        "countPlural=*": "{count} Rezepte dort"
+      }
+    }
+  ],
+  "import.library.searchLabel": "Ihre Rezepte durchsuchen",
+  "import.library.searchPlaceholder": "Suchen",
+  "import.library.searchClear": "Suche zurücksetzen",
+  "import.library.failed": "Ihre Rezepte konnten nicht gelesen werden. Vielleicht ist die App aus oder der Token abgelaufen.",
+  "import.library.empty": "Nichts zum Herüberholen.",
+  "import.library.selectAll": "Alles Geladene",
+  "import.library.alreadyHere": "Schon hier",
+  "import.library.more": "Mehr anzeigen",
+  "import.library.chosen": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} ausgewählt",
+        "countPlural=*": "{count} ausgewählt"
+      }
+    }
+  ],
+  "import.library.bringOver": "Diese herüberholen",
+  "import.run.working": "Wird herübergeholt",
+  "import.run.done": "Sie sind da",
+  "import.run.label": "Herübergeholte Rezepte",
+  "import.run.of": "{done} von {total}",
+  "import.run.imported": "Herübergeholt",
+  "import.run.skipped": "Schon gehabt",
+  "import.run.failed": "Nicht lesbar",
+  "import.run.failedLead": "Diese konnten nicht gelesen werden, für sie wurde nichts angelegt:",
+  "import.run.openCookbook": "{name} öffnen",
+  "import.run.bringMore": "Mehr herüberholen",
+  "import.origin.from": "Von {where}",
+  "import.origin.fromApp": "Aus einer anderen App herübergeholt"
 }

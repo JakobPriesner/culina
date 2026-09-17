@@ -4210,6 +4210,378 @@
           }
         }
       }
+    },
+    "/api/v1/recipe-sources": {
+      "post": {
+        "tags": [
+          "RecipeSources"
+        ],
+        "summary": "Connect another app's recipe library",
+        "description": "Remembers where another recipe app is and the token to read it with, so bringing recipes over is something you can come back to rather than do once. Nothing is imported here.\n\nThe address and token are tried against that app before anything is stored, so a wrong one is reported while the form is still open. `address` is reduced to its scheme, host and port: a path is dropped rather than prefixed onto every later request.\n\nThe token is write-only. It is never returned by this or any other endpoint.\n\nOnly addresses on the public internet, unless the operator has set `Import__AllowPrivateSourceAddresses` — a self-hosted recipe app is very often on the same network as this one, and that is the operator's decision to make.",
+        "operationId": "connectRecipeSourceV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesSourcesConnectSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesSourcesSourceSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "RecipeSources"
+        ],
+        "summary": "List a household's connected recipe libraries",
+        "description": "Not paginated: a kitchen connects one or two other apps, not a hundred. Each carries when it was connected and when recipes were last brought over, which is the difference between a connection worth offering again and one somebody set up and forgot. Tokens are never included.",
+        "operationId": "getRecipeSourcesV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesSourcesSourcesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-sources/{sourceId}": {
+      "delete": {
+        "tags": [
+          "RecipeSources"
+        ],
+        "summary": "Disconnect a recipe library",
+        "description": "Puts the token away. Every recipe it brought over stays exactly where it is, and still knows which app and which id it came from — the link back is only what is lost. Idempotent: disconnecting one that is already gone also answers 204.",
+        "operationId": "disconnectRecipeSourceV1",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-sources/{sourceId}/recipes": {
+      "get": {
+        "tags": [
+          "RecipeSources"
+        ],
+        "summary": "Read a page of a connected library",
+        "description": "Summaries only — a name, a picture and a time — so that browsing two thousand recipes does not fetch two thousand recipes. The full recipe is read only for the ones actually chosen.\n\nEvery row says whether it is `alreadyHere`, and that is what makes coming back next month cheap: you see what is new rather than the whole library again.\n\n`page` is the opaque token from the previous response. It is checked against the connection's own address before it is followed, because a token that has been round-tripped through a client is user input.",
+        "operationId": "browseRecipeSourceV1",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesSourcesSourceRecipesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-sources/{sourceId}/imports": {
+      "post": {
+        "tags": [
+          "RecipeSources"
+        ],
+        "summary": "Bring recipes over from a connected library",
+        "description": "A batch of at most 25, not a whole library. The caller walks its own selection a batch at a time, which is what makes an import of eight hundred recipes show honest progress and survive a closed laptop — every batch is a complete request, and asking twice is asking once.\n\nIdempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later.\n\nEverything from one import lands on a cookbook named after where it came from and when. Pass that `cookbookId` back on every batch after the first, so a selection imported in twenty requests is one shelf rather than twenty. The shelf is what makes an import something you can look at, check, and throw away.\n\nOne line comes back per recipe asked for — `imported`, `already_here` or `failed` — so the twelve that could not be read can be shown by name. One recipe failing never undoes the others: each is written in its own transaction.",
+        "operationId": "importFromRecipeSourceV1",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesSourcesImportFromSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesSourcesImportFromSourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5826,6 +6198,19 @@
             },
             "description": "Its tags."
           },
+          "origin": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesRecipeProvenance"
+              }
+            ]
+          },
           "createdBy": {
             "type": "string",
             "description": "Who wrote it down.",
@@ -5848,6 +6233,41 @@
           }
         },
         "description": "A recipe in full."
+      },
+      "RecipesRecipeProvenance": {
+        "required": [
+          "kind",
+          "externalId",
+          "importedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "Which sort of place: `tandoor` or `web`."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "The connection it came through, when it still exists.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "externalId": {
+            "type": "string",
+            "description": "What that place called it."
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "The original, to go and look at.",
+            "nullable": true
+          },
+          "importedAt": {
+            "type": "string",
+            "description": "When it arrived.",
+            "format": "date-time"
+          }
+        },
+        "description": "Where an imported recipe came from."
       },
       "RecipesRecordCookedRequest": {
         "type": "object",
@@ -5918,6 +6338,247 @@
           }
         },
         "description": "Your notes on one recipe, in full."
+      },
+      "RecipesSourcesConnectSourceRequest": {
+        "required": [
+          "householdId",
+          "kind",
+          "address",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Which kitchen is connecting it.",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Which app. Currently only `tandoor`."
+          },
+          "address": {
+            "type": "string",
+            "description": "Where it is: `https://recipes.example.com`."
+          },
+          "token": {
+            "type": "string",
+            "description": "The API token from that app."
+          },
+          "label": {
+            "type": "string",
+            "description": "What to call it here. Its host name, when this is left out.",
+            "nullable": true
+          }
+        },
+        "description": "Asks for another app's recipe library to be connected."
+      },
+      "RecipesSourcesImportFromSourceRequest": {
+        "required": [
+          "externalIds"
+        ],
+        "type": "object",
+        "properties": {
+          "externalIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Which of their recipes, by the id the browse gave back."
+          },
+          "cookbookId": {
+            "type": "string",
+            "description": "The cookbook to put them on, from a previous batch's response.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "description": "Asks for some of their recipes to be brought over."
+      },
+      "RecipesSourcesImportFromSourceResponse": {
+        "required": [
+          "cookbookId",
+          "cookbookName",
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "cookbookId": {
+            "type": "string",
+            "description": "The cookbook everything from this import went onto.",
+            "format": "uuid"
+          },
+          "cookbookName": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesSourcesImportedRecipe"
+            },
+            "description": "One line per recipe asked for, in the order they were asked for."
+          }
+        },
+        "description": "What one batch of an import did."
+      },
+      "RecipesSourcesImportedRecipe": {
+        "required": [
+          "externalId",
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "externalId": {
+            "type": "string",
+            "description": "Which of theirs this is about."
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`imported`, `already_here`, or `failed`."
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe here, when there is one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "description": "What it is called, for showing the failures by name.",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why it failed, as an error code.",
+            "nullable": true
+          }
+        },
+        "description": "What happened to one recipe."
+      },
+      "RecipesSourcesSourceRecipeSummary": {
+        "required": [
+          "externalId",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "externalId": {
+            "type": "string",
+            "description": "What the other app calls it. Pass this back to import it."
+          },
+          "title": {
+            "type": "string",
+            "description": "Its name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Its introduction, when it has one.",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "A picture of it, over there.",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "How long it takes, when that app says.",
+            "format": "int32",
+            "nullable": true
+          },
+          "alreadyHere": {
+            "type": "string",
+            "description": "The recipe this one already is here, when it has been brought over\nbefore.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "description": "One of their recipes, as the card in the picker draws it."
+      },
+      "RecipesSourcesSourceRecipesResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesSourcesSourceRecipeSummary"
+            },
+            "description": "What is on this page."
+          },
+          "nextPage": {
+            "type": "string",
+            "description": "Pass this back as `page` for the next one, or null at the end.",
+            "nullable": true
+          },
+          "total": {
+            "type": "integer",
+            "description": "How many there are over there altogether, when that app says.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "description": "A page of somebody's library over there, ready to be chosen from."
+      },
+      "RecipesSourcesSourceSummary": {
+        "required": [
+          "sourceId",
+          "kind",
+          "label",
+          "address",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "description": "The connection's id.",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Which app it is."
+          },
+          "label": {
+            "type": "string",
+            "description": "What it is called here."
+          },
+          "address": {
+            "type": "string",
+            "description": "Where it is. Deliberately shown, so a wrong one is visible."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was connected.",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "description": "When recipes were last brought over, or null if never.",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "description": "A connected library, as its row on screen shows it."
+      },
+      "RecipesSourcesSourcesResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesSourcesSourceSummary"
+            },
+            "description": "The connections, oldest first."
+          }
+        },
+        "description": "The libraries a household has connected."
       },
       "RecipesStepContract": {
         "required": [
@@ -6748,6 +7409,9 @@
     },
     {
       "name": "Cookbooks"
+    },
+    {
+      "name": "RecipeSources"
     }
   ]
 }
