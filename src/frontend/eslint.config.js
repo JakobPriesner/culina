@@ -62,7 +62,6 @@ export default ts.config(
      */
     files: [
       'src/lib/app/Navigation.svelte',
-      'src/lib/app/LibraryNav.svelte',
       'src/routes/+layout.svelte',
       // Settings lists its categories the way the shell lists its
       // destinations: resolved once into the list, rendered from it.

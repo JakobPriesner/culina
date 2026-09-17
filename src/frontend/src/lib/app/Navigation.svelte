@@ -1,87 +1,30 @@
 <script lang="ts">
   import { page } from '$app/state';
-
-  import { afterNavigate } from '$app/navigation';
-  import { Sheet } from '$ds';
-  import LibraryNav from './LibraryNav.svelte';
-
   import { destinations } from './navigation';
   import { m } from './i18n';
   import NavIcon from './NavIcon.svelte';
 
-  /**
-   * One navigation, two placements.
-   *
-   * `top` is the navbar across the head of the page, where a pointer already
-   * is. `bottom` is the bar along the foot of a phone, where a thumb already
-   * is. The compact bar opens the collection sidebar in a sheet, keeping
-   * the same three global areas as the collection grows.
-   */
-  interface Props {
-    placement: 'top' | 'bottom';
-  }
-
-  let { placement }: Props = $props();
-
+  /** The same direct destinations: a top bar on desktop and a bottom bar on phones. */
+  let { placement }: { placement: 'top' | 'bottom' } = $props();
   const current = $derived(page.url.pathname);
-  let libraryOpen = $state(false);
-  afterNavigate(() => {
-    libraryOpen = false;
-  });
-
-  $effect(() => {
-    if (placement !== 'bottom') return;
-    const desktop = window.matchMedia('(min-width: 64rem)');
-    const dismissOnDesktop = () => {
-      if (desktop.matches) libraryOpen = false;
-    };
-    desktop.addEventListener('change', dismissOnDesktop);
-    return () => desktop.removeEventListener('change', dismissOnDesktop);
-  });
 </script>
 
 <nav class="nav {placement}" aria-label={m['nav.label']()}>
   {#each destinations as destination (destination.href)}
     {@const active = destination.match(current)}
-    {#if placement === 'bottom' && destination.icon === 'recipes'}
-      <button
-        type="button"
-        class="destination"
-        class:active
-        aria-current={active ? 'true' : undefined}
-        aria-haspopup="dialog"
-        aria-expanded={libraryOpen}
-        onclick={() => {
-          libraryOpen = true;
-        }}
+    <a
+      class="destination"
+      class:active
+      href={destination.href}
+      aria-current={active ? 'page' : undefined}
+    >
+      <span class="icon" aria-hidden="true"
+        ><NavIcon icon={destination.icon} current={active} /></span
       >
-        <span class="icon"><NavIcon icon="cookbooks" current={active} /></span>
-        <span class="label">{m['nav.library']()} <span aria-hidden="true">⌃</span></span>
-      </button>
-    {:else}
-      <a
-        class="destination"
-        class:active
-        href={destination.href}
-        aria-current={active ? 'page' : undefined}
-      >
-        <span class="icon"><NavIcon icon={destination.icon} current={active} /></span>
-        <span class="label">{destination.label()}</span>
-      </a>
-    {/if}
+      <span class="label">{destination.label()}</span>
+    </a>
   {/each}
 </nav>
-
-{#if placement === 'bottom'}
-  <Sheet bind:open={libraryOpen} title={m['library.label']()} closeLabel={m['picker.close']()}>
-    <LibraryNav
-      embedded
-      onnavigate={() => {
-        libraryOpen = false;
-      }}
-    />
-  </Sheet>
-{/if}
 
 <style>
   .nav {
@@ -163,7 +106,7 @@
      relying on colour alone or enclosing the full stacked item. */
   .bottom .icon {
     box-sizing: border-box;
-    width: calc(var(--space-6) + 2 * var(--space-4));
+    width: calc(var(--space-6) + 2 * var(--space-3));
     max-width: 100%;
     height: calc(var(--space-6) + 2 * var(--space-1));
     padding: var(--space-1);

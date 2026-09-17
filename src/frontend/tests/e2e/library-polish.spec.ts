@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { expectReflow, recipeId, responsiveData } from './support/responsive';
+import { cookbookId, expectReflow, recipeId, responsiveData } from './support/responsive';
 
 async function libraryData(page: Page, locale: 'en' | 'de' = 'en', mode = 'light') {
   await responsiveData(page, locale);
@@ -106,36 +106,25 @@ test.describe('library refinement @offline', () => {
     await libraryData(page);
     await page.goto('/');
     const navigation = page.getByRole('navigation', {
-      name: 'Recipe book'
+      name: 'Sections'
     });
     const search = page.getByRole('searchbox', { name: 'Search recipes' });
     await search.fill('orzo');
     await expect(page.locator('.count')).toHaveText('1 recipe');
-    if (!desktop) await page.getByRole('button', { name: 'Recipe book', exact: true }).click();
     await navigation.getByRole('link', { name: 'Cookbooks', exact: true }).click();
     await expect(page).toHaveURL(/\/cookbooks$/);
-    if (!desktop) {
-      await expect(page.getByRole('dialog')).not.toBeVisible();
-      await page.getByRole('button', { name: 'Recipe book', exact: true }).click();
-    }
     await expect(navigation.getByRole('link', { name: 'Cookbooks', exact: true })).toHaveAttribute(
       'aria-current',
       'page'
     );
     await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
-    await navigation.getByRole('link', { name: 'All recipes', exact: true }).click();
+    await navigation.getByRole('link', { name: 'Recipes', exact: true }).click();
     await expect(search).toHaveValue('orzo');
     await expect(page.locator('.count')).toHaveText('1 recipe');
     await search.press('Escape');
     await expect(page.locator('.count')).toHaveText('4 recipes');
     await page.getByRole('link', { name: 'Open Sunday morning pancakes' }).scrollIntoViewIfNeeded();
-    if (desktop) {
-      await expect(
-        navigation.getByRole('link', { name: 'Cookbooks', exact: true })
-      ).toBeInViewport();
-    } else {
-      await expect(page.getByRole('button', { name: 'Recipe book', exact: true })).toBeInViewport();
-    }
+    await expect(navigation.getByRole('link', { name: 'Cookbooks', exact: true })).toBeInViewport();
     const create = page.getByRole('link', { name: 'Add a recipe', exact: true });
     await expect(create).toBeInViewport({ ratio: 1 });
     await create.click();
@@ -143,56 +132,46 @@ test.describe('library refinement @offline', () => {
     await expect(page.getByRole('heading', { name: 'New recipe', exact: true })).toBeVisible();
   });
 
-  test('compact library sheet dismisses, restores focus, and adapts to desktop', async ({
+  test('every destination is one tap away and keeps its selected state', async ({
     page
   }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
     await libraryData(page);
-    await page.setViewportSize({ width: 320, height: 740 });
-    await page.goto('/shopping');
-    const launcher = page.getByRole('button', { name: 'Recipe book', exact: true });
-    const sheet = page.getByRole('dialog', { name: 'Recipe book' });
-    const appBar = page.getByRole('navigation', { name: 'Sections' });
-    await expect(appBar.getByRole('link')).toHaveCount(2);
-    await expect(appBar.getByRole('button')).toHaveCount(1);
-    await launcher.click();
-    await expect(sheet).toBeVisible();
-    await expect(launcher).toHaveAttribute('aria-expanded', 'true');
-    await page.keyboard.press('Escape');
-    await expect(sheet).not.toBeVisible();
-    await expect(launcher).toBeFocused();
-    await expect(launcher).toHaveAttribute('aria-expanded', 'false');
-    await launcher.click();
-    await sheet.getByRole('button', { name: 'Close', exact: true }).click();
-    await expect(launcher).toBeFocused();
-    await launcher.click();
-    await sheet.getByRole('link', { name: 'Cookbooks', exact: true }).click();
-    await expect(page).toHaveURL(/\/cookbooks$/);
-    await expect(sheet).not.toBeVisible();
-    await launcher.click();
-    await expect(sheet.getByRole('link', { name: 'Cookbooks', exact: true })).toHaveAttribute(
+    await page.setViewportSize({
+      width: testInfo.project.name === 'desktop' ? 1280 : 320,
+      height: 900
+    });
+    await page.goto('/');
+    const navigation = page.getByRole('navigation', { name: 'Sections' });
+    const expected = [
+      ['Recipes', '/'],
+      ['Cookbooks', '/cookbooks'],
+      ['Week', '/plan'],
+      ['Shopping', '/shopping'],
+      ['Me', '/me']
+    ] as const;
+    await expect(navigation.getByRole('link')).toHaveCount(5);
+    await expect(navigation.getByRole('button')).toHaveCount(0);
+    for (const [label, path] of expected) {
+      const link = navigation.getByRole('link', { name: label, exact: true });
+      await expect(link).toBeInViewport({ ratio: 1 });
+      await link.click();
+      await expect(page).toHaveURL(new RegExp(`${path === '/' ? '/' : path}$`));
+      await expect(link).toHaveAttribute('aria-current', 'page');
+      await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
+      await expect(page.getByRole('dialog')).not.toBeVisible();
+    }
+    await page.goBack();
+    await expect(navigation.getByRole('link', { name: 'Shopping', exact: true })).toHaveAttribute(
       'aria-current',
       'page'
     );
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await expect(sheet).not.toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Recipe book' })).toBeVisible();
+    await page.goto(`/cookbooks/${cookbookId}`);
+    await expect(navigation.getByRole('link', { name: 'Cookbooks', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    await expect(page.getByRole('navigation')).toHaveCount(1);
     await expectReflow(page);
-  });
-
-  test('planning remains reachable from collection navigation', async ({ page }, testInfo) => {
-    const desktop = testInfo.project.name === 'desktop';
-    await page.setViewportSize({ width: desktop ? 1280 : 390, height: 900 });
-    await libraryData(page);
-    await page.goto('/');
-    if (!desktop) await page.getByRole('button', { name: 'Recipe book', exact: true }).click();
-    await page
-      .getByRole('navigation', { name: 'Recipe book' })
-      .getByRole('link', { name: 'Plan the week', exact: true })
-      .click();
-    await expect(page).toHaveURL(/\/plan$/);
-    await expect(page.getByRole('heading', { name: 'This week', exact: true })).toBeVisible();
-    await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
   for (const locale of ['en', 'de'] as const) {
@@ -214,26 +193,19 @@ test.describe('library refinement @offline', () => {
             .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
             .analyze();
           expect(results.violations).toEqual([]);
-          if (width < 1024) {
-            const launcher = page.getByRole('button', {
-              name: locale === 'en' ? 'Recipe book' : 'Rezeptbuch',
-              exact: true
-            });
-            await launcher.click();
-            const sheet = page.getByRole('dialog');
-            await expect(sheet).toBeVisible();
-            await expectReflow(page);
-            expect(
-              (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
-                .violations
-            ).toEqual([]);
-            if (width === 320)
-              await page.screenshot({
-                path: testInfo.outputPath(`library-sheet-${locale}-${mode}.png`)
-              });
-            await sheet
-              .getByRole('button', { name: locale === 'en' ? 'Close' : 'Schließen', exact: true })
-              .click();
+          const navigation = page.getByRole('navigation', {
+            name: locale === 'en' ? 'Sections' : 'Bereiche'
+          });
+          await expect(navigation.getByRole('link')).toHaveCount(5);
+          for (const link of await navigation.getByRole('link').all()) {
+            await expect(link).toBeInViewport({ ratio: 1 });
+            const label = link.locator('.label');
+            const fitsOneLine = await label.evaluate(
+              (element) =>
+                element.getBoundingClientRect().height <=
+                parseFloat(getComputedStyle(element).lineHeight) + 1
+            );
+            expect(fitsOneLine, `Navigation label at ${width}px`).toBe(true);
           }
           if (locale === 'en' && [390, 1280].includes(width)) {
             await page.screenshot({

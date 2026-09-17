@@ -28,36 +28,26 @@ explains the release scope and quality contracts.
 
 ## Library and shared control polish
 
-The recipe and cookbook libraries share `PageHeader`: an editorial title, a
-short supporting line, and contextual creation actions. On desktop, `LibraryNav`
-is a short, labelled 11rem sidebar near the left edge. Week planning is a
-destination in the sidebar and compact collection sheet, separated from the
-recipe and cookbook links. It occupies its own column on recipe collection and cookbook pages, staying
-visible while scrolling without covering cards. Recipe reading, editing, cooking,
-and the planner retain their full page widths.
+The recipe and cookbook libraries share `PageHeader`: an editorial title,
+a short supporting line, and contextual creation actions. One shared navigation
+exposes Recipes, Cookbooks, Week, Shopping, and Me directly. The same order and
+route selection appear in the desktop top bar and, below 64rem, the bottom bar.
+There is no collection submenu or secondary sidebar. Cookbook detail uses the
+shared navigation too. The [research and current decision](navigation-research.md)
+explain the evidence and the explicit five-destination limit.
 
-Below 64rem, the app bar keeps three stable areas: Recipe book, Shopping, and Me.
-Library opens a scrollable sheet containing the same labelled destinations as the
-desktop sidebar. Future collection destinations extend this list without adding
-app-bar items. The sheet closes after a selection, on Escape, with its close button,
-and when resizing to the desktop layout. The current collection remains marked.
-The full Culina wordmark stays visible on phones. `NewRecipeLink` remains a
-direct link in the header on every signed-in page: a label on wide desktops and a
-labelled, titled plus control on smaller screens.
+`NewRecipeLink` remains a direct link in the header on every signed-in page,
+with a visible label from 80rem and an accessible, titled plus control below.
+The logo and main navigation retain their matched translucent backgrounds.
+Current destinations use a raised selection shadow, text emphasis, and
+`aria-current`. Every navigation item is a link, not a modal launcher.
 
-The sidebar uses flat labelled rows, a subtle column divider, and an active marker.
-The shell header and collection share the same outer alignment. The logo and
-main navigation retain their matched translucent backgrounds; the local sidebar
-does not add another floating card.
-It is navigation, not a segmented view setting. Recipe creation remains a separate
-accent-colored action. The [21-approach design comparison](library-navigation-design.md)
-records the alternatives, three finalists, user-facing tradeoffs, and selected
-adaptive layout. The recipe toolbar aligns a rounded rectangular search field
-with an equally tall `FilterChip`, using its rounded variant; the pressed state
-includes a checkmark as well as color. Count and sort information sit together
-at the trailing edge, reflowing below the controls on phones. Creation buttons
-share plus icons and rounded corners; green remains reserved for recipe creation.
-The 30-minute filter queries the API and composes with text search.
+The recipe toolbar aligns a rounded rectangular search field with an equally
+tall `FilterChip`; its pressed state includes a checkmark as well as color.
+Count and sort information sit together at the trailing edge, reflowing below
+the controls on phones. Creation buttons share plus icons and rounded corners;
+green remains reserved for recipe creation. The 30-minute filter queries the
+API and composes with text search.
 
 Library search and the quick filter survive recipe navigation within the current
 session. They reset on household changes and sign-out. Search supports Escape to
@@ -329,11 +319,10 @@ horizontal overflow clipping to make a test pass.
 The desktop header has a transparent full-width container. The brand card and
 navigation track share the same softly translucent background and blur. Only the
 controls intercept pointer events, so exposed content behind the header stays
-usable. Direct recipe creation stays in the header while collection navigation
-lives in the desktop sidebar or a sheet opened from the compact bottom bar. The sidebar offsets by the
-measured header height. Below 32rem of viewport height the header and sidebar
-return to document flow to preserve reading space. Glass surfaces are semantic
-theme tokens shared by both color modes.
+usable. Direct recipe creation stays in the header. Navigation links lead directly
+to each workflow on both desktop and mobile. Below 32rem of viewport height the
+header returns to document flow to preserve reading space. Glass surfaces use
+semantic theme tokens shared by both color modes.
 
 The shell measures bottom navigation and the resume bar to keep recipe actions
 above them. Cooking keeps only step navigation sticky; its stop action stays in
