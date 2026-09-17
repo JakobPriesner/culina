@@ -13,7 +13,6 @@
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
-  import LibraryNav from '$shell/LibraryNav.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -203,8 +202,6 @@
 <svelte:head><title>{cookbook?.name ?? m['cookbooks.title']()}</title></svelte:head>
 
 <Page>
-  <LibraryNav />
-
   {#if cookbooks.status === 'failed' && !cookbook}
     <ErrorState
       title={m['cookbooks.detail.failed']()}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  import { navigating, page } from '$app/state';
+  import { navigating } from '$app/state';
   import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
@@ -11,17 +11,13 @@
   import { connection } from './connection.svelte';
   import { m } from './i18n';
   import Navigation from './Navigation.svelte';
-  import LibraryNav from './LibraryNav.svelte';
   import NewRecipeLink from './NewRecipeLink.svelte';
 
   /**
    * The frame every signed-in page sits in.
    *
-   * Global navigation sits at the top on desktop. On phones, the bottom bar
-   * keeps global areas and opens collection navigation in a sheet. The navigation is rendered once
-   * and never re-created, so moving between sections does not rebuild it — and
-   * the slot above the bottom bar is reserved whether or not anything is in it,
-   * so the cooking bar appearing later never pushes the page.
+   * One set of destinations moves from the top on desktop to the bottom on
+   * compact screens. The dock reserves space for the cooking bar.
    */
   interface Props {
     children: Snippet;
@@ -45,18 +41,10 @@
    */
   let dockHeight = $state(0);
   let barHeight = $state(0);
-  let headerHeight = $state(0);
-  const showLibraryRail = $derived(
-    page.url.pathname === '/' ||
-      page.url.pathname === '/cookbooks' ||
-      page.url.pathname.startsWith('/cookbooks/')
-  );
 </script>
 
 <div
   class="shell"
-  class:library-view={showLibraryRail}
-  style:--header-inset="{headerHeight}px"
   style:--bar-inset="{barHeight}px"
   style:--bottom-inset="{dockHeight + barHeight}px"
 >
@@ -65,7 +53,7 @@
        every single page. -->
   <a class="skip" href="#content">{m['nav.skip']()}</a>
 
-  <header class="header" bind:clientHeight={headerHeight}>
+  <header class="header">
     {#if navigating.to}
       <span class="progress" role="progressbar" aria-label={m['app.navigating']()}></span>
     {/if}
@@ -85,14 +73,7 @@
   </header>
 
   <main class="content" id="content" tabindex="-1">
-    {#if showLibraryRail}
-      <div class="library-layout">
-        <aside class="library-rail"><LibraryNav /></aside>
-        <div class="library-content">{@render children()}</div>
-      </div>
-    {:else}
-      {@render children()}
-    {/if}
+    {@render children()}
   </main>
 
   <!-- The slot is reserved whether or not anything is in it, so the bar
@@ -193,46 +174,6 @@
     scroll-margin-top: var(--space-24);
   }
 
-  .library-rail {
-    display: none;
-  }
-  .library-content {
-    min-width: 0;
-  }
-
-  @media (min-width: 64rem) {
-    .library-view .header-inner {
-      max-width: calc(var(--layout-wide) + 11rem);
-    }
-    .library-view .brand {
-      margin-inline-start: 0;
-    }
-    .library-layout {
-      display: grid;
-      grid-template-columns: 11rem minmax(0, 1fr);
-      column-gap: var(--space-8);
-      align-items: start;
-      max-width: calc(var(--layout-wide) + 11rem);
-      margin-inline: auto;
-      padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
-    }
-    .library-content > :global(.page) {
-      padding-inline: 0;
-    }
-    .library-rail {
-      display: block;
-      border-inline-end: 1px solid var(--border);
-      position: sticky;
-      top: calc(var(--header-inset) + var(--space-4));
-      margin-block-start: var(--layout-page-space);
-      max-height: calc(100dvh - var(--header-inset) - var(--bottom-inset) - var(--space-8));
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      /* Space for keyboard outlines without clipping the compact panel. */
-      padding: var(--space-1) var(--space-3) var(--space-4) 0;
-    }
-  }
-
   .dock {
     min-width: 0;
     grid-area: dock;
@@ -330,13 +271,9 @@
 
   /* In landscape or with a keyboard open, give the content its height back. */
   @media screen and (max-height: 32rem) {
-    .header,
-    .library-rail {
+    .header {
       position: relative;
       top: auto;
-    }
-    .library-rail {
-      max-height: none;
     }
   }
 
@@ -355,20 +292,12 @@
     .skip,
     .header,
     .dock,
-    .bar,
-    .library-rail {
+    .bar {
       display: none !important;
     }
 
     .shell,
-    .content,
-    .library-view .header-inner {
-      max-width: calc(var(--layout-wide) + 11rem);
-    }
-    .library-view .brand {
-      margin-inline-start: 0;
-    }
-    .library-layout {
+    .content {
       display: block;
       min-height: 0;
       margin: 0;

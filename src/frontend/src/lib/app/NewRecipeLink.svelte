@@ -49,7 +49,7 @@
   span {
     display: none;
   }
-  @media (min-width: 64rem) {
+  @media (min-width: 80rem) {
     .new-recipe {
       padding-inline: var(--space-4);
       border-radius: var(--radius-md);

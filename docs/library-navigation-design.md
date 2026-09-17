@@ -1,5 +1,7 @@
 # Collection navigation: 21 approaches and a decision
 
+> Historical exploration. The current decision is [one direct navigation level](navigation-research.md), which supersedes the sidebar and compact-sheet implementation below.
+
 ## Goal
 
 Make Recipes and Cookbooks easy to find without making the header look like two
