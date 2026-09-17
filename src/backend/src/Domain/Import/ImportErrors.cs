@@ -121,6 +121,17 @@ public static class ImportErrors
         "Give either a name and password or an API token, not both.",
         ErrorType.Validation);
 
+    /// <summary>What was fetched for a picture is not a picture.</summary>
+    /// <remarks>
+    /// Never reaches a person. A recipe whose photo could not be had is still
+    /// the recipe, so this is the reason a picture was skipped rather than a
+    /// reason an import failed.
+    /// </remarks>
+    public static readonly Error NotAPicture = new(
+        "import.not_a_picture",
+        "That address did not answer with a picture.",
+        ErrorType.Validation);
+
     /// <summary>More recipes were asked for in one go than one request may carry.</summary>
     public static readonly Error TooManyAtOnce = new(
         "import.too_many_at_once",

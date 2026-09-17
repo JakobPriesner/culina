@@ -42,12 +42,32 @@ internal sealed class SourceHttp : IDisposable
     /// </remarks>
     private const int MaxBytes = 4 * 1024 * 1024;
 
+    /// <summary>
+    /// How long one picture may take.
+    /// </summary>
+    /// <remarks>
+    /// Shorter than <see cref="Deadline"/>, and deliberately. A batch fetches
+    /// up to twenty-five recipes and then up to twenty-five pictures, and a
+    /// picture is the part nobody is waiting for: a recipe with no photo is
+    /// still the recipe, so a slow image gives up long before a slow recipe
+    /// would.
+    /// </remarks>
+    private static readonly TimeSpan PictureDeadline = TimeSpan.FromSeconds(8);
+
     private readonly SocketsHttpHandler handler;
     private readonly HttpClient client;
+    private readonly int maxPictureBytes;
 
-    public SourceHttp(ImportSettings settings)
+    public SourceHttp(ImportSettings settings, StorageSettings storage)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(storage);
+
+        // The same ceiling an upload gets. A picture that arrives from another
+        // app is stored by exactly the same code that stores one somebody
+        // chose from their phone, so it may as well be bounded by the same
+        // number rather than a second one that can drift away from it.
+        maxPictureBytes = storage.MaxImageBytes;
 
         handler = new SocketsHttpHandler
         {
@@ -148,6 +168,109 @@ internal sealed class SourceHttp : IDisposable
         }
     }
 
+    /// <summary>
+    /// Reads a picture, and refuses anything that is not one.
+    /// </summary>
+    /// <param name="url">Where the picture is.</param>
+    /// <param name="authorization">The <c>Authorization</c> header to send.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <remarks>
+    /// <para>
+    /// Bytes, not a decoded image: what comes back goes straight to
+    /// <see cref="Application.Abstractions.IImageStore"/>, which decides what
+    /// the file actually is by decoding it and stores its own re-encoding.
+    /// Nothing here trusts the content type — it is checked only to avoid
+    /// pulling ten megabytes of HTML down before the store rejects it.
+    /// </para>
+    /// <para>
+    /// Capped while reading rather than after, for the same reason every other
+    /// read here is: a <c>Content-Length</c> is a claim, and a response with no
+    /// end must not be the end of the process.
+    /// </para>
+    /// </remarks>
+    internal async Task<Result<Stream>> GetPictureAsync(
+        Uri url,
+        AuthenticationHeaderValue authorization,
+        CancellationToken cancellationToken)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        deadline.CancelAfter(PictureDeadline);
+
+        try
+        {
+            return await ReadPictureAsync(url, authorization, deadline.Token).ConfigureAwait(false);
+        }
+        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
+                                            or InvalidOperationException or IOException)
+        {
+            return ImportErrors.CouldNotFetch;
+        }
+    }
+
+    private async Task<Result<Stream>> ReadPictureAsync(
+        Uri url,
+        AuthenticationHeaderValue authorization,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        request.Headers.Authorization = authorization;
+        request.Headers.Accept.Clear();
+        request.Headers.Accept.ParseAdd("image/*");
+
+        using var response = await client
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return ImportErrors.CouldNotFetch;
+        }
+
+        if (response.Content.Headers.ContentType?.MediaType is not { } mediaType
+            || !mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return ImportErrors.NotAPicture;
+        }
+
+        if (response.Content.Headers.ContentLength > maxPictureBytes)
+        {
+            return ImportErrors.TooLarge;
+        }
+
+        var body = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+
+        await using (body.ConfigureAwait(false))
+        {
+            var buffer = new MemoryStream();
+
+            try
+            {
+                using var capped = new CappedStream(body, maxPictureBytes);
+
+                await capped.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+
+                if (capped.Overflowed)
+                {
+                    await buffer.DisposeAsync().ConfigureAwait(false);
+
+                    return ImportErrors.TooLarge;
+                }
+            }
+            catch
+            {
+                await buffer.DisposeAsync().ConfigureAwait(false);
+
+                throw;
+            }
+
+            buffer.Position = 0;
+
+            return buffer;
+        }
+    }
+
     private async Task<Result<TBody>> SendAsync<TBody>(
         Uri url,
         AuthenticationHeaderValue authorization,
@@ -203,11 +326,21 @@ internal sealed class SourceHttp : IDisposable
                     .DeserializeAsync<TBody>(capped, Json, cancellationToken)
                     .ConfigureAwait(false);
 
+                // Asked even on success: a truncated document can still parse
+                // when it happens to end on a boundary, and what it parses to
+                // is half an answer.
+                if (capped.Overflowed)
+                {
+                    return ImportErrors.TooLarge;
+                }
+
                 return parsed is null ? ImportErrors.SourceNotUnderstood : parsed;
             }
             catch (JsonException)
             {
-                return ImportErrors.SourceNotUnderstood;
+                return capped.Overflowed
+                    ? ImportErrors.TooLarge
+                    : ImportErrors.SourceNotUnderstood;
             }
         }
     }
@@ -227,17 +360,21 @@ internal sealed class SourceHttp : IDisposable
     }
 
     /// <summary>
-    /// A stream that stops rather than grows.
+    /// A stream that stops at a limit and says that it did.
     /// </summary>
     /// <remarks>
-    /// Throwing rather than truncating, because a JSON document cut in half is
-    /// not a smaller JSON document — it is a parse failure with a misleading
-    /// message. The throw is caught where the read is, and reported as an
-    /// answer that could not be read.
+    /// It ends rather than throwing, and reports <see cref="Overflowed"/>
+    /// afterwards. An exception would have to be a type of its own to be caught
+    /// precisely, a public one to satisfy the analyzers, and documented — all
+    /// for a signal that never leaves this class. Ending is also what a reader
+    /// already copes with, so neither caller needs a second path.
     /// </remarks>
     private sealed class CappedStream(Stream inner, int limit) : Stream
     {
         private long read;
+
+        /// <summary>Whether the body had more in it than was allowed.</summary>
+        internal bool Overflowed { get; private set; }
 
         public override bool CanRead => true;
 
@@ -274,9 +411,17 @@ internal sealed class SourceHttp : IDisposable
         {
             read += taken;
 
-            return read > limit
-                ? throw new JsonException("The answer was larger than this reads.")
-                : taken;
+            if (read <= limit)
+            {
+                return taken;
+            }
+
+            Overflowed = true;
+
+            // Ends here. What has been read is not handed on: a document cut in
+            // half is not a smaller document, and both callers ask about
+            // Overflowed before they trust what they got.
+            return 0;
         }
     }
 }

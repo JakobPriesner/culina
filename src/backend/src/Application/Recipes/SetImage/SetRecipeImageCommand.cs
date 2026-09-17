@@ -84,19 +84,39 @@ internal sealed class SetRecipeImageCommandHandler(
             cancellationToken).ConfigureAwait(false);
 
     /// <summary>
-    /// Removes the file the new image displaced, unless it is the same file.
+    /// Removes the file the new image displaced, unless somebody still wants it.
     /// </summary>
     /// <remarks>
-    /// Storage is content-addressed, so re-uploading the same photo produces
-    /// the same hash — deleting it would delete the image that was just
-    /// attached.
+    /// <para>
+    /// Two ways it can still be wanted. It may be the file that was just
+    /// attached — storage is content-addressed, so re-uploading the same photo
+    /// produces the same hash, and deleting it would delete the new image.
+    /// </para>
+    /// <para>
+    /// Or another recipe may point at it, which the same content addressing
+    /// makes possible and importing a library makes ordinary: fifty recipes
+    /// carrying one placeholder are fifty rows and one file. Deleting it there
+    /// would not break the recipe being edited — it would break the other
+    /// forty-nine, with nothing to connect the two events.
+    /// </para>
     /// </remarks>
     private async Task DeleteDisplacedAsync(
         ImageReplacement displaced,
         string currentHash,
         CancellationToken cancellationToken)
     {
-        if (displaced.PreviousContentHash is { Length: > 0 } previous && previous != currentHash)
+        if (displaced.PreviousContentHash is not { Length: > 0 } previous || previous == currentHash)
+        {
+            return;
+        }
+
+        // Asked inside the caller's transaction, after the row that pointed at
+        // it is gone — so the answer is about who is left.
+        var wanted = await recipes
+            .IsImageStillUsedAsync(previous, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!wanted)
         {
             await images.DeleteAsync(previous, cancellationToken).ConfigureAwait(false);
         }

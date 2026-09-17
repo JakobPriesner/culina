@@ -107,7 +107,16 @@ public sealed record SourceRecipeSummary
     /// <summary>Its introduction, when it has one.</summary>
     public string? Description { get; init; }
 
-    /// <summary>A picture of it, over there.</summary>
+    /// <summary>
+    /// A picture of it, over there.
+    /// </summary>
+    /// <remarks>
+    /// Reported, but deliberately not drawn in the picker. A browser loading it
+    /// would be asking that server directly, with no token — and media behind a
+    /// sign-in is common enough that a grid of broken pictures is the likelier
+    /// outcome than a grid of photos. The picture is fetched by this server,
+    /// with the token, when the recipe is actually brought over.
+    /// </remarks>
     public string? ImageUrl { get; init; }
 
     /// <summary>How long it takes, when that app says.</summary>

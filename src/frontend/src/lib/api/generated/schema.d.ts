@@ -1016,6 +1016,8 @@ export interface paths {
          *
          *     Everything from one import lands on a cookbook named after where it came from and when. Pass that `cookbookId` back on every batch after the first, so a selection imported in twenty requests is one shelf rather than twenty. The shelf is what makes an import something you can look at, check, and throw away.
          *
+         *     A recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.
+         *
          *     One line comes back per recipe asked for — `imported`, `already_here` or `failed` — so the twelve that could not be read can be shown by name. One recipe failing never undoes the others: each is written in its own transaction.
          */
         post: operations["importFromRecipeSourceV1"];
