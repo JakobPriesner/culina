@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Button, Card, Divider } from '$ds';
+  import { Button, Card, Divider, ErrorState } from '$ds';
 
   import { session } from '$features/auth/session.svelte';
   import ConnectSource from '$features/import/ConnectSource.svelte';
@@ -8,6 +8,7 @@
   import SourceLibrary from '$features/import/SourceLibrary.svelte';
   import { sources } from '$features/import/stores/sources.svelte';
   import type { ConnectedSource } from '$features/import/types';
+  import { explain } from '$shell/explain';
   import { formatDate, m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
 
@@ -88,6 +89,23 @@
         <h1 class="heading">{m['import.title']()}</h1>
         <p class="lead">{m['import.lead']()}</p>
       </header>
+
+      {#if sources.status === 'failed'}
+        <!-- Without this the page is a heading and a footer link: neither the
+             list nor the connect form shows, and there is nothing to press. -->
+        <ErrorState
+          title={m['import.sourcesFailed']()}
+          body={sources.error ? explain(sources.error) : m['import.sourcesFailed']()}
+          requestIdLabel={m['error.reference']()}
+          requestId={sources.error?.requestId}
+        >
+          {#snippet action()}
+            <Button onclick={() => householdId && void sources.relist(householdId)}>
+              {m['error.retry']()}
+            </Button>
+          {/snippet}
+        </ErrorState>
+      {/if}
 
       {#if sources.items.length > 0}
         <ul class="apps">

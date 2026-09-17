@@ -27,6 +27,22 @@ class SourceStore {
   #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
+  /**
+   * Which household's connections have been asked for.
+   *
+   * Deliberately **not** `$state`. `list` is called from an `$effect`, and an
+   * effect tracks every reactive value read while it runs — so a `list` that
+   * read `#items` to decide whether to show a skeleton would depend on the very
+   * thing it is about to write, and re-trigger itself forever. That is not a
+   * slow page: it is a request per answer until the server starts refusing
+   * them. The same trap `cookbooks.svelte.ts` and `units.svelte.ts` document.
+   *
+   * Keyed by household rather than a bare flag, so switching kitchens still
+   * reloads — and claimed before the request, so two components mounting
+   * together ask once.
+   */
+  #listedFor: string | null = null;
+
   #connecting = $state(false);
   #connectError = $state<AppError | null>(null);
 
@@ -102,7 +118,12 @@ class SourceStore {
 
   /** What this household has connected. */
   async list(householdId: string): Promise<void> {
-    this.#status = this.#items.length > 0 ? 'ready' : 'loading';
+    if (this.#listedFor === householdId) {
+      return;
+    }
+
+    this.#listedFor = householdId;
+    this.#status = 'loading';
     this.#error = null;
 
     const result = await request(() =>
@@ -110,6 +131,12 @@ class SourceStore {
     );
 
     if (!result.ok) {
+      // The guard is deliberately *not* released here. `list` asks at most
+      // once per household, full stop — a failure that quietly re-armed it
+      // would make the method mean two different things depending on how the
+      // last call went, which is exactly the ambiguity this whole guard
+      // exists to remove. Asking again is `relist`, and only a person
+      // pressing something calls it.
       this.#status = 'failed';
       this.#error = result.error;
 
@@ -118,6 +145,13 @@ class SourceStore {
 
     this.#items = result.value.items.map(toSource);
     this.#status = 'ready';
+  }
+
+  /** Asks again after a failure. */
+  async relist(householdId: string): Promise<void> {
+    this.#listedFor = null;
+
+    await this.list(householdId);
   }
 
   /**
@@ -285,6 +319,7 @@ class SourceStore {
 
   reset(): void {
     this.#items = [];
+    this.#listedFor = null;
     this.#status = 'idle';
     this.#error = null;
     this.#connecting = false;

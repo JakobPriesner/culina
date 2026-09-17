@@ -31,8 +31,10 @@ const imported = (externalId: string) => ({
   reason: null
 });
 
-/** Every import request this test saw, in order. */
-let asked: { url: string; body: { externalIds: string[]; cookbookId?: string } }[] = [];
+/** Every import request this test saw, in order, and how many reads there were. */
+let asked: { url: string; body: { externalIds: string[]; cookbookId?: string } }[] & {
+  gets: number;
+} = Object.assign([], { gets: 0 });
 
 function serverAnswers(reply: (url: string, call: number) => Response | Promise<Response>) {
   let call = 0;
@@ -46,6 +48,10 @@ function serverAnswers(reply: (url: string, call: number) => Response | Promise<
         asked.push({ url, body: await input.clone().json() });
       }
 
+      if (input.method === 'GET') {
+        asked.gets += 1;
+      }
+
       call += 1;
 
       return reply(url, call);
@@ -55,7 +61,46 @@ function serverAnswers(reply: (url: string, call: number) => Response | Promise<
 
 beforeEach(() => {
   sources.reset();
-  asked = [];
+  asked = Object.assign([], { gets: 0 });
+});
+
+describe('listing what is connected', () => {
+  it('asks once per household, however many times it is called', async () => {
+    serverAnswers(() => json({ items: [] }));
+
+    await sources.list('h1');
+    await sources.list('h1');
+    await sources.list('h1');
+
+    // The guard that keeps the page's `$effect` from re-triggering itself.
+    // Its absence is not a slow page: it is a request per answer until the
+    // rate limiter starts refusing them.
+    expect(asked.gets).toBe(1);
+  });
+
+  it('asks again when the kitchen changes', async () => {
+    serverAnswers(() => json({ items: [] }));
+
+    await sources.list('h1');
+    await sources.list('h2');
+
+    expect(asked.gets).toBe(2);
+  });
+
+  it('lets a retry ask again after a failure', async () => {
+    serverAnswers(() => json({ code: 'server.unavailable', detail: 'Nope' }, 503));
+
+    await sources.list('h1');
+    await sources.list('h1');
+
+    // The second call is the effect, and it must change nothing. Only an
+    // explicit retry may ask again.
+    expect(asked.gets).toBe(1);
+
+    await sources.relist('h1');
+
+    expect(asked.gets).toBe(2);
+  });
 });
 
 describe('importing', () => {
