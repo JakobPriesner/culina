@@ -555,5 +555,65 @@
   "me.role.owner": "Owner",
   "me.role.member": "Member",
   "me.amounts.hint": "Grams or cups — however your kitchen measures.",
-  "units.piece": "piece"
+  "units.piece": "piece",
+  "import.title": "Bring your recipes over",
+  "import.lead": "Connect the app you keep your recipes in and pick what you want here. They arrive as ordinary recipes, on a cookbook named after where they came from.",
+  "import.backToApps": "All connected apps",
+  "import.oneAtATime": "Just one recipe, from a link or a message?",
+  "import.oneAtATimeLink": "Add a single recipe",
+  "import.source.title": "From another app",
+  "import.source.hint": "Tandoor for now. Mealie and others will follow.",
+  "import.source.go": "Bring recipes over",
+  "import.source.address": "Where it is",
+  "import.source.addressHint": "The address you open it at, like recipes.example.com. Anything after the host is ignored.",
+  "import.source.token": "API token",
+  "import.source.tokenHint": "Made in that app, under API tokens. It is stored here and never shown again.",
+  "import.source.connect": "Connect",
+  "import.source.browse": "Look through it",
+  "import.source.disconnect": "Disconnect",
+  "import.source.another": "Connect another app",
+  "import.source.lastUsed": "Last brought recipes over on {when}",
+  "import.source.neverUsed": "Nothing brought over yet",
+  "import.library.title": "In {name}",
+  "import.library.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} recipe there",
+        "countPlural=*": "{count} recipes there"
+      }
+    }
+  ],
+  "import.library.searchLabel": "Search their recipes",
+  "import.library.searchPlaceholder": "Search",
+  "import.library.searchClear": "Clear the search",
+  "import.library.failed": "Their recipes could not be read. The app may be off, or the token may have expired.",
+  "import.library.empty": "Nothing to bring over.",
+  "import.library.selectAll": "Everything loaded",
+  "import.library.alreadyHere": "Already here",
+  "import.library.more": "Show more",
+  "import.library.chosen": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} chosen",
+        "countPlural=*": "{count} chosen"
+      }
+    }
+  ],
+  "import.library.bringOver": "Bring these over",
+  "import.run.working": "Bringing them over",
+  "import.run.done": "They are here",
+  "import.run.label": "Recipes brought over",
+  "import.run.of": "{done} of {total}",
+  "import.run.imported": "Brought over",
+  "import.run.skipped": "Already had",
+  "import.run.failed": "Could not read",
+  "import.run.failedLead": "These could not be read, and nothing was written for them:",
+  "import.run.openCookbook": "Open {name}",
+  "import.run.bringMore": "Bring more over",
+  "import.origin.from": "From {where}",
+  "import.origin.fromApp": "Brought over from another app"
 }

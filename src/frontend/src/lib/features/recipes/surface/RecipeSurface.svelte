@@ -17,6 +17,21 @@
   import { ingredientsOf, type Ingredient, type Recipe, type Step } from '../types';
 
   /**
+   * The host of the original, for the "from …" line.
+   *
+   * The host and not the whole address: "chefkoch.de" is the fact worth showing
+   * and a 140-character URL with tracking parameters on the end is the same
+   * fact, unreadable. An address that will not parse simply has no line.
+   */
+  const hostOf = (url: string): string => {
+    try {
+      return new URL(url).host.replace(/^www\./, '');
+    } catch {
+      return url;
+    }
+  };
+
+  /**
    * The one surface the product is built around.
    *
    * Reading and cooking are the same component at two weightings, not two
@@ -274,6 +289,25 @@
       </p>
     {/if}
 
+    <!-- Where it started. Deliberately the quietest line on the page: this is
+         an ordinary recipe now, and anything louder would make "imported" into
+         a second kind of recipe. Reading only — at the hob, where it came from
+         is the least useful fact on the screen. -->
+    {#if recipe.origin && !cooking}
+      <p class="origin">
+        {#if recipe.origin.sourceUrl}
+          <!-- Off site, and the one link on this page that is: resolve() is for
+               this app's own routes, and there is nothing here to resolve. -->
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+          <a href={recipe.origin.sourceUrl} rel="noreferrer nofollow" target="_blank">
+            {m['import.origin.from']({ where: hostOf(recipe.origin.sourceUrl) })}
+          </a>
+        {:else}
+          {m['import.origin.fromApp']()}
+        {/if}
+      </p>
+    {/if}
+
     <!-- Paper only. On screen the servings control says this, and says it
          better because it can be changed; on paper there is nothing to say it
          at all, and the amounts below have to be accounted for. -->
@@ -470,6 +504,12 @@
     margin-top: var(--space-3);
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  .origin {
+    margin-top: var(--space-2);
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
   }
 
   .shelves-label {

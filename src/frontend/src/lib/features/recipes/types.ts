@@ -89,6 +89,21 @@ export interface IngredientMatch {
   readonly missing: number;
 }
 
+/**
+ * Where a recipe came from, when it was not written here.
+ *
+ * Null for most recipes. An imported recipe is an ordinary recipe in every
+ * other respect — edited, cooked, scaled and planned like one somebody typed —
+ * and this is the only thing that says otherwise.
+ */
+export interface RecipeOrigin {
+  readonly kind: string;
+  readonly sourceId: string | null;
+  readonly externalId: string;
+  readonly sourceUrl: string | null;
+  readonly importedAt: string;
+}
+
 export interface Recipe {
   readonly id: string;
   readonly householdId: string;
@@ -104,6 +119,7 @@ export interface Recipe {
   readonly groups: readonly IngredientGroup[];
   readonly steps: readonly Step[];
   readonly tags: readonly string[];
+  readonly origin: RecipeOrigin | null;
   readonly createdBy: string;
   readonly createdAt: string;
   readonly updatedAt: string;

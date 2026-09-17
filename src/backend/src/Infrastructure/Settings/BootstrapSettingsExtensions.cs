@@ -25,5 +25,6 @@ public static class BootstrapSettingsExtensions
             .AddCookieSettings(configuration)
             .AddPasswordHashingSettings(configuration)
             .AddRateLimitSettings(configuration)
-            .AddForwardedHeadersSettings(configuration);
+            .AddForwardedHeadersSettings(configuration)
+            .AddImportSettings(configuration);
 }

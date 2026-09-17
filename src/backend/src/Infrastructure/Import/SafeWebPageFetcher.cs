@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using Application.Abstractions;
 using Domain.Import;
 using Domain.Shared;
@@ -73,7 +72,9 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.All,
             ConnectTimeout = TimeSpan.FromSeconds(5),
-            ConnectCallback = ConnectToACheckedAddressAsync
+            // Never private, whatever the operator allows for a connected
+            // source: this address came from a text box anyone can type in.
+            ConnectCallback = CheckedConnections.To(allowPrivate: false)
         };
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
@@ -199,49 +200,6 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
             }
 
             return ImportErrors.TooLarge;
-        }
-    }
-
-    /// <summary>
-    /// Resolves the host, refuses everything that is not the open internet, and
-    /// connects to the address it checked.
-    /// </summary>
-    /// <remarks>
-    /// Connecting to the <em>checked address</em> rather than to the host name
-    /// is the entire point. Validating a name and then handing the name to the
-    /// socket leaves a window in which the name can resolve to something else,
-    /// and that window is DNS rebinding.
-    /// </remarks>
-    private static async ValueTask<Stream> ConnectToACheckedAddressAsync(
-        SocketsHttpConnectionContext context,
-        CancellationToken cancellationToken)
-    {
-        var host = context.DnsEndPoint.Host;
-
-        var addresses = IPAddress.TryParse(host, out var literal)
-            ? [literal]
-            : await Dns.GetHostAddressesAsync(host, cancellationToken).ConfigureAwait(false);
-
-        var allowed = Array.Find(addresses, PublicAddress.IsPublic)
-            ?? throw new InvalidOperationException("The address is not on the public internet.");
-
-#pragma warning disable CA2000 // The stream returned below owns the socket.
-        var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
-#pragma warning restore CA2000
-
-        try
-        {
-            await socket
-                .ConnectAsync(new IPEndPoint(allowed, context.DnsEndPoint.Port), cancellationToken)
-                .ConfigureAwait(false);
-
-            return new NetworkStream(socket, ownsSocket: true);
-        }
-        catch
-        {
-            socket.Dispose();
-
-            throw;
         }
     }
 

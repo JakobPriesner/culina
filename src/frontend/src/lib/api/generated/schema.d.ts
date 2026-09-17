@@ -921,6 +921,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipe-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's connected recipe libraries
+         * @description Not paginated: a kitchen connects one or two other apps, not a hundred. Each carries when it was connected and when recipes were last brought over, which is the difference between a connection worth offering again and one somebody set up and forgot. Tokens are never included.
+         */
+        get: operations["getRecipeSourcesV1"];
+        put?: never;
+        /**
+         * Connect another app's recipe library
+         * @description Remembers where another recipe app is and the token to read it with, so bringing recipes over is something you can come back to rather than do once. Nothing is imported here.
+         *
+         *     The address and token are tried against that app before anything is stored, so a wrong one is reported while the form is still open. `address` is reduced to its scheme, host and port: a path is dropped rather than prefixed onto every later request.
+         *
+         *     The token is write-only. It is never returned by this or any other endpoint.
+         *
+         *     Only addresses on the public internet, unless the operator has set `Import__AllowPrivateSourceAddresses` — a self-hosted recipe app is very often on the same network as this one, and that is the operator's decision to make.
+         */
+        post: operations["connectRecipeSourceV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-sources/{sourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a recipe library
+         * @description Puts the token away. Every recipe it brought over stays exactly where it is, and still knows which app and which id it came from — the link back is only what is lost. Idempotent: disconnecting one that is already gone also answers 204.
+         */
+        delete: operations["disconnectRecipeSourceV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-sources/{sourceId}/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a page of a connected library
+         * @description Summaries only — a name, a picture and a time — so that browsing two thousand recipes does not fetch two thousand recipes. The full recipe is read only for the ones actually chosen.
+         *
+         *     Every row says whether it is `alreadyHere`, and that is what makes coming back next month cheap: you see what is new rather than the whole library again.
+         *
+         *     `page` is the opaque token from the previous response. It is checked against the connection's own address before it is followed, because a token that has been round-tripped through a client is user input.
+         */
+        get: operations["browseRecipeSourceV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-sources/{sourceId}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring recipes over from a connected library
+         * @description A batch of at most 25, not a whole library. The caller walks its own selection a batch at a time, which is what makes an import of eight hundred recipes show honest progress and survive a closed laptop — every batch is a complete request, and asking twice is asking once.
+         *
+         *     Idempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later.
+         *
+         *     Everything from one import lands on a cookbook named after where it came from and when. Pass that `cookbookId` back on every batch after the first, so a selection imported in twenty requests is one shelf rather than twenty. The shelf is what makes an import something you can look at, check, and throw away.
+         *
+         *     One line comes back per recipe asked for — `imported`, `already_here` or `failed` — so the twelve that could not be read can be shown by name. One recipe failing never undoes the others: each is written in its own transaction.
+         */
+        post: operations["importFromRecipeSourceV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1752,6 +1852,7 @@ export interface components {
             steps: components["schemas"]["RecipesStepContract"][];
             /** @description Its tags. */
             tags: string[];
+            origin?: (null) | components["schemas"]["RecipesRecipeProvenance"];
             /**
              * Format: uuid
              * @description Who wrote it down.
@@ -1772,6 +1873,25 @@ export interface components {
              * @description The entity version, for If-Match on an update.
              */
             version: number;
+        };
+        /** @description Where an imported recipe came from. */
+        RecipesRecipeProvenance: {
+            /** @description Which sort of place: `tandoor` or `web`. */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description The connection it came through, when it still exists.
+             */
+            sourceId?: string | null;
+            /** @description What that place called it. */
+            externalId: string;
+            /** @description The original, to go and look at. */
+            sourceUrl?: string | null;
+            /**
+             * Format: date-time
+             * @description When it arrived.
+             */
+            importedAt: string;
         };
         /** @description That you cooked this. */
         RecipesRecordCookedRequest: {
@@ -1812,6 +1932,123 @@ export interface components {
             overall?: string | null;
             /** @description Notes attached to individual steps. */
             steps: components["schemas"]["RecipesGetNotesStepNote"][];
+        };
+        /** @description Asks for another app's recipe library to be connected. */
+        RecipesSourcesConnectSourceRequest: {
+            /**
+             * Format: uuid
+             * @description Which kitchen is connecting it.
+             */
+            householdId: string;
+            /** @description Which app. Currently only `tandoor`. */
+            kind: string;
+            /** @description Where it is: `https://recipes.example.com`. */
+            address: string;
+            /** @description The API token from that app. */
+            token: string;
+            /** @description What to call it here. Its host name, when this is left out. */
+            label?: string | null;
+        };
+        /** @description Asks for some of their recipes to be brought over. */
+        RecipesSourcesImportFromSourceRequest: {
+            /** @description Which of their recipes, by the id the browse gave back. */
+            externalIds: string[];
+            /**
+             * Format: uuid
+             * @description The cookbook to put them on, from a previous batch's response.
+             */
+            cookbookId?: string | null;
+        };
+        /** @description What one batch of an import did. */
+        RecipesSourcesImportFromSourceResponse: {
+            /**
+             * Format: uuid
+             * @description The cookbook everything from this import went onto.
+             */
+            cookbookId: string;
+            /** @description What it is called. */
+            cookbookName: string;
+            /** @description One line per recipe asked for, in the order they were asked for. */
+            results: components["schemas"]["RecipesSourcesImportedRecipe"][];
+        };
+        /** @description What happened to one recipe. */
+        RecipesSourcesImportedRecipe: {
+            /** @description Which of theirs this is about. */
+            externalId: string;
+            /** @description `imported`, `already_here`, or `failed`. */
+            outcome: string;
+            /**
+             * Format: uuid
+             * @description The recipe here, when there is one.
+             */
+            recipeId?: string | null;
+            /** @description What it is called, for showing the failures by name. */
+            title?: string | null;
+            /** @description Why it failed, as an error code. */
+            reason?: string | null;
+        };
+        /** @description One of their recipes, as the card in the picker draws it. */
+        RecipesSourcesSourceRecipeSummary: {
+            /** @description What the other app calls it. Pass this back to import it. */
+            externalId: string;
+            /** @description Its name. */
+            title: string;
+            /** @description Its introduction, when it has one. */
+            description?: string | null;
+            /** @description A picture of it, over there. */
+            imageUrl?: string | null;
+            /**
+             * Format: int32
+             * @description How long it takes, when that app says.
+             */
+            totalMinutes?: number | null;
+            /**
+             * Format: uuid
+             * @description The recipe this one already is here, when it has been brought over
+             *     before.
+             */
+            alreadyHere?: string | null;
+        };
+        /** @description A page of somebody's library over there, ready to be chosen from. */
+        RecipesSourcesSourceRecipesResponse: {
+            /** @description What is on this page. */
+            items: components["schemas"]["RecipesSourcesSourceRecipeSummary"][];
+            /** @description Pass this back as `page` for the next one, or null at the end. */
+            nextPage?: string | null;
+            /**
+             * Format: int32
+             * @description How many there are over there altogether, when that app says.
+             */
+            total?: number | null;
+        };
+        /** @description A connected library, as its row on screen shows it. */
+        RecipesSourcesSourceSummary: {
+            /**
+             * Format: uuid
+             * @description The connection's id.
+             */
+            sourceId: string;
+            /** @description Which app it is. */
+            kind: string;
+            /** @description What it is called here. */
+            label: string;
+            /** @description Where it is. Deliberately shown, so a wrong one is visible. */
+            address: string;
+            /**
+             * Format: date-time
+             * @description When it was connected.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When recipes were last brought over, or null if never.
+             */
+            lastUsedAt?: string | null;
+        };
+        /** @description The libraries a household has connected. */
+        RecipesSourcesSourcesResponse: {
+            /** @description The connections, oldest first. */
+            items: components["schemas"]["RecipesSourcesSourceSummary"][];
         };
         /** @description One instruction. */
         RecipesStepContract: {
@@ -5385,6 +5622,276 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRecipeSourcesV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesSourcesSourcesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    connectRecipeSourceV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesSourcesConnectSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesSourcesSourceSummary"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    disconnectRecipeSourceV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    browseRecipeSourceV1: {
+        parameters: {
+            query?: {
+                page?: string;
+                query?: string;
+            };
+            header?: never;
+            path: {
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesSourcesSourceRecipesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    importFromRecipeSourceV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesSourcesImportFromSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesSourcesImportFromSourceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -59,6 +59,17 @@ public sealed record RecipeDetail
     /// <summary>Its tags.</summary>
     public required IReadOnlyList<string> Tags { get; init; }
 
+    /// <summary>
+    /// Where it came from, when it was not written here.
+    /// </summary>
+    /// <remarks>
+    /// Null for most recipes, which is the ordinary case. It is part of the
+    /// recipe rather than a second request because it is one line of text under
+    /// a title, and a page that had to ask twice to draw one line would ask
+    /// once and skip it.
+    /// </remarks>
+    public RecipeProvenance? Origin { get; init; }
+
     /// <summary>Who wrote it down.</summary>
     public required Guid CreatedBy { get; init; }
 

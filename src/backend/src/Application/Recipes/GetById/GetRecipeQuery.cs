@@ -2,6 +2,7 @@ using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Telemetry;
 using Contracts.Recipes;
+using Domain.Import;
 using Domain.Shared;
 
 namespace Application.Recipes.GetById;
@@ -13,6 +14,7 @@ public sealed record GetRecipeQuery(Guid RecipeId, Guid UserId);
 
 internal sealed class GetRecipeQueryHandler(
     IRecipeRepository recipes,
+    IRecipeOriginRepository origins,
     IHouseholdRepository households)
     : IQueryHandler<GetRecipeQuery, RecipeDetail>
 {
@@ -28,6 +30,21 @@ internal sealed class GetRecipeQueryHandler(
             .VisibleAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        return tracked.Record(found.Map(recipe => recipe.Describe()));
+        var described = await found.Match(
+            async recipe =>
+            {
+                // Read here and not in the repository: provenance belongs to a
+                // minority of recipes, and folding it into the aggregate would
+                // make every recipe carry a table most of them have no row in.
+                var origin = await origins
+                    .FindAsync(recipe.Id, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return Result<RecipeDetail>.Success(
+                    recipe.Describe(origin.Match(value => value, _ => (RecipeOrigin?)null)));
+            },
+            error => Task.FromResult(Result<RecipeDetail>.Failure(error))).ConfigureAwait(false);
+
+        return tracked.Record(described);
     }
 }
