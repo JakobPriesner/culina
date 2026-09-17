@@ -615,5 +615,6 @@
   "import.run.openCookbook": "{name} öffnen",
   "import.run.bringMore": "Mehr herüberholen",
   "import.origin.from": "Von {where}",
-  "import.origin.fromApp": "Aus einer anderen App herübergeholt"
+  "import.origin.fromApp": "Aus einer anderen App herübergeholt",
+  "import.sourcesFailed": "Deine verbundenen Apps konnten nicht gelesen werden."
 }
