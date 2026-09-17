@@ -44,6 +44,29 @@ function libraryHolds(items: ReturnType<typeof theirs>[], total = items.length) 
   );
 }
 
+/** A library that arrives a page at a time, like a real one. */
+function libraryHoldsPages(pages: ReturnType<typeof theirs>[][], total: number) {
+  let asked = 0;
+
+  const fetched = vi.fn(() => {
+    const items = pages[asked] ?? [];
+    const nextPage = asked < pages.length - 1 ? `page-${asked + 1}` : null;
+
+    asked += 1;
+
+    return Promise.resolve(
+      new Response(JSON.stringify({ items, nextPage, total }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    );
+  });
+
+  vi.stubGlobal('fetch', fetched);
+
+  return fetched;
+}
+
 beforeEach(() => {
   sources.reset();
 });
@@ -89,8 +112,15 @@ describe('looking through somebody else’s library', () => {
     expect(chosen).toHaveBeenCalledWith(['1']);
   });
 
-  it('selects everything loaded, and never what has not been read', async () => {
-    libraryHolds([theirs('1', 'Zwiebelkuchen'), theirs('2', 'Linsensuppe', 'r9')], 2000);
+  it('fetches the rest of the library before selecting all of it', async () => {
+    const fetched = libraryHoldsPages(
+      [
+        [theirs('1', 'Zwiebelkuchen'), theirs('2', 'Linsensuppe')],
+        [theirs('3', 'Gulasch'), theirs('4', 'Rouladen', 'r9')],
+        [theirs('5', 'Knödel')]
+      ],
+      5
+    );
 
     await sources.browse(source);
 
@@ -98,11 +128,72 @@ describe('looking through somebody else’s library', () => {
 
     renderWithProviders(SourceLibrary, { props: { source, onimport: chosen } });
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Everything loaded' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'All' }));
     await userEvent.click(screen.getByRole('button', { name: 'Bring these over' }));
 
-    // Two thousand over there, one that can still be brought over here. A
-    // "select all" that quietly means something else is worse than none.
+    // Three reads: the first page, then the two it went and got. "All" that
+    // meant "the page you can see" is the lie this control exists to avoid.
+    expect(fetched).toHaveBeenCalledTimes(3);
+
+    // Everything except the one already here.
+    expect(chosen).toHaveBeenCalledWith(['1', '2', '3', '5']);
+  });
+
+  it('does not claim everything is chosen while there is more to read', async () => {
+    libraryHoldsPages([[theirs('1', 'Zwiebelkuchen')], [theirs('2', 'Linsensuppe')]], 2);
+
+    await sources.browse(source);
+
+    renderWithProviders(SourceLibrary, { props: { source, onimport: () => {} } });
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Zwiebelkuchen' }));
+
+    // Every loaded recipe is ticked, and the box still must not say "all".
+    expect(screen.getByRole('checkbox', { name: 'All' })).not.toBeChecked();
+  });
+
+  it('stops asking when a page fails, and selects what did arrive', async () => {
+    let asked = 0;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        asked += 1;
+
+        if (asked === 1) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ items: [theirs('1', 'Zwiebelkuchen')], nextPage: 'p1', total: 9 }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } }
+            )
+          );
+        }
+
+        return Promise.resolve(
+          new Response(JSON.stringify({ code: 'import.could_not_fetch', detail: 'Nope' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        );
+      })
+    );
+
+    await sources.browse(source);
+
+    const chosen = vi.fn();
+
+    renderWithProviders(SourceLibrary, { props: { source, onimport: chosen } });
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'All' }));
+
+    // Exactly two: the page that worked and the one that did not. A failure
+    // leaves the page token where it was, so without the guard this would ask
+    // the identical question until the ceiling stopped it.
+    expect(asked).toBe(2);
+
+    // A half-read library is better than none, and the failure is on screen.
+    await userEvent.click(screen.getByRole('button', { name: 'Bring these over' }));
+
     expect(chosen).toHaveBeenCalledWith(['1']);
   });
 

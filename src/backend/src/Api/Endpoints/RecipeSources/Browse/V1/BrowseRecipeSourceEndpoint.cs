@@ -42,7 +42,7 @@ internal sealed class BrowseRecipeSourceEndpoint : IEndpoint
                 + "the connection's own address before it is followed, because a token that has "
                 + "been round-tripped through a client is user input.")
             .WithRepeatableQueryParameters(["page", "query"], [])
-            .RequireRateLimiting(RateLimitExtensions.Import)
+            .RequireRateLimiting(RateLimitExtensions.Source)
             .Produces<SourceRecipesResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

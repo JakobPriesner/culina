@@ -28,13 +28,17 @@ namespace Infrastructure.Import.Tandoor;
 /// </remarks>
 internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
 {
-    /// <summary>How many summaries one browse asks for.</summary>
+    /// <summary>
+    /// How many summaries one browse asks for.
+    /// </summary>
     /// <remarks>
-    /// A screenful and a half. Small enough that the first page arrives while
-    /// somebody is still reading the heading, large enough that scrolling a
-    /// library of two thousand is not four hundred requests.
+    /// Tandoor's recipe list refuses more than a hundred, so this is as much as
+    /// it will give. A summary is a name and a couple of numbers, so a hundred
+    /// of them is a small answer — and the number that matters is how many
+    /// round trips "select all" costs on a library of two thousand: twenty
+    /// rather than the fifty-six a screenful-sized page would take.
     /// </remarks>
-    private const int PageSize = 36;
+    private const int PageSize = 100;
 
     public SourceKind Kind => SourceKind.Tandoor;
 

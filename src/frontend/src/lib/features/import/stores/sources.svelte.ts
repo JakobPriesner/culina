@@ -53,6 +53,7 @@ class SourceStore {
   #nextPage = $state<string | null>(null);
   #total = $state<number | null>(null);
   #loadingMore = $state(false);
+  #loadingAll = $state(false);
 
   #run = $state<ImportRun | null>(null);
 
@@ -101,6 +102,11 @@ class SourceStore {
 
   get loadingMore(): boolean {
     return this.#loadingMore;
+  }
+
+  /** True while the rest of the library is being fetched to select all of it. */
+  get loadingAll(): boolean {
+    return this.#loadingAll;
   }
 
   /** How many they have over there, when that app says. */
@@ -254,6 +260,45 @@ class SourceStore {
     this.#loadingMore = false;
   }
 
+  /**
+   * Reads the rest of the library, so "all" can mean all of it.
+   *
+   * Selecting only what happens to be on screen and calling it "all" is a
+   * select-all that lies, and the honest fix is not a longer label — it is
+   * to go and get the rest. A library of two thousand is twenty reads at a
+   * hundred a page, which is a wait worth showing rather than avoiding.
+   *
+   * Stops at the first page that fails, leaving whatever arrived before it
+   * selectable: the failure is already on screen, and a half-read library is
+   * better than none.
+   */
+  async loadEverything(query?: string): Promise<void> {
+    if (this.#loadingAll || !this.#open) {
+      return;
+    }
+
+    this.#loadingAll = true;
+
+    // A ceiling, not an expectation. The loop's real end is `hasMore` going
+    // false; this is what stops a server that keeps handing back a next page
+    // from turning a tick into an afternoon.
+    const mostPages = 200;
+
+    for (let page = 0; page < mostPages && this.#nextPage !== null; page += 1) {
+      const asked = this.#nextPage;
+
+      await this.more(query);
+
+      // The same token twice means it is not advancing, and asking again would
+      // be asking the identical question forever.
+      if (this.#nextPage === asked) {
+        break;
+      }
+    }
+
+    this.#loadingAll = false;
+  }
+
   closeLibrary(): void {
     this.#open = null;
     this.#recipes = [];
@@ -261,6 +306,7 @@ class SourceStore {
     this.#total = null;
     this.#browseStatus = 'idle';
     this.#browseError = null;
+    this.#loadingAll = false;
   }
 
   /**

@@ -22,6 +22,7 @@ public static class RateLimitSettingsExtensions
             LoginPerAccountPerMinute = section.Int(nameof(RateLimitSettings.LoginPerAccountPerMinute), 5),
             RegisterPerIpPerHour = section.Int(nameof(RateLimitSettings.RegisterPerIpPerHour), 5),
             InvitationPerIpPerHour = section.Int(nameof(RateLimitSettings.InvitationPerIpPerHour), 10),
+            SourceRequestsPerHour = section.Int(nameof(RateLimitSettings.SourceRequestsPerHour), 600),
             RequestsPerSessionPerMinute = section.Int(
                 nameof(RateLimitSettings.RequestsPerSessionPerMinute),
                 600)
