@@ -51,7 +51,26 @@ public enum RecipeSort
     /// The order a cookbook was built in. Only legal with a cookbook, and the
     /// default when there is one.
     /// </summary>
-    CookbookOrder = 5
+    CookbookOrder = 5,
+
+    /// <summary>
+    /// What this person would most likely want to cook, now.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A sort and not a second collection, for the same reason a cookbook is a
+    /// view of the library rather than one of its own: every filter above
+    /// composes with it for free, so "what should I cook?" and "I have
+    /// twenty-five minutes and some chicken" are one feature rather than two
+    /// that can disagree.
+    /// </para>
+    /// <para>
+    /// Scored as of the current day rather than the current instant, so the
+    /// order is stable for as long as somebody is looking at it and a cursor
+    /// still means something on the second page.
+    /// </para>
+    /// </remarks>
+    Suggested = 6
 }
 
 /// <summary>
@@ -89,6 +108,10 @@ public sealed record RecipePage(
 /// <param name="YieldKind">Of what.</param>
 /// <param name="Tags">Its tag slugs.</param>
 /// <param name="CookCount">How often the caller has made it.</param>
+/// <param name="LastCookedAt">
+/// When the caller last made it, or null if they never have. Read in the same
+/// scan as the count, which the cook log's index already serves.
+/// </param>
 /// <param name="UpdatedAt">When it last changed.</param>
 /// <param name="MatchedIngredients">How many named ingredients it uses.</param>
 /// <param name="IngredientCount">How many ingredients it has in total.</param>
@@ -104,6 +127,7 @@ public sealed record RecipeSearchRow(
     string YieldKind,
     IReadOnlyList<string> Tags,
     int CookCount,
+    DateTimeOffset? LastCookedAt,
     DateTimeOffset UpdatedAt,
     int MatchedIngredients,
     int IngredientCount,

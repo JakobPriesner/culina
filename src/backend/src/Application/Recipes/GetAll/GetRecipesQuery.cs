@@ -94,6 +94,7 @@ internal static class RecipeListMappings
         YieldKind = row.YieldKind,
         Tags = row.Tags,
         CookCount = row.CookCount,
+        LastCookedAt = row.LastCookedAt,
         UpdatedAt = row.UpdatedAt,
         // Omitted entirely when the caller named no ingredients, so a plain
         // browse is not cluttered with "uses 0 of 0".

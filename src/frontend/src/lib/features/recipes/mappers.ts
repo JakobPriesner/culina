@@ -6,7 +6,10 @@ import type {
   Recipe,
   RecipeSummary,
   Step,
-  StepSegment
+  StepSegment,
+  Suggestion,
+  SuggestionReasonCode,
+  YieldKind
 } from './types';
 
 /**
@@ -23,6 +26,7 @@ type WireGroup = components['schemas']['RecipesIngredientGroupContract'];
 type WireIngredient = components['schemas']['RecipesIngredientContract'];
 type WireStep = components['schemas']['RecipesStepContract'];
 type WireSegment = components['schemas']['RecipesStepSegmentContract'];
+type WireSuggestion = components['schemas']['SuggestionsGetAllSuggestion'];
 
 export const toSummary = (wire: WireSummary): RecipeSummary => ({
   id: wire.recipeId,
@@ -30,9 +34,10 @@ export const toSummary = (wire: WireSummary): RecipeSummary => ({
   imageId: wire.imageId ?? null,
   totalMinutes: wire.totalMinutes ?? null,
   yieldAmount: wire.yieldAmount,
-  yieldKind: wire.yieldKind,
+  yieldKind: wire.yieldKind as YieldKind,
   tags: wire.tags,
   cookCount: wire.cookCount,
+  lastCookedAt: wire.lastCookedAt ?? null,
   updatedAt: wire.updatedAt,
   match: wire.ingredientMatch
     ? {
@@ -40,6 +45,25 @@ export const toSummary = (wire: WireSummary): RecipeSummary => ({
         requested: wire.ingredientMatch.requested,
         missing: wire.ingredientMatch.missing
       }
+    : null
+});
+
+export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
+  id: wire.recipeId,
+  title: wire.title,
+  imageId: wire.imageId ?? null,
+  totalMinutes: wire.totalMinutes ?? null,
+  yieldAmount: wire.yieldAmount,
+  yieldKind: wire.yieldKind as YieldKind,
+  tags: wire.tags,
+  cookCount: wire.cookCount,
+  lastCookedAt: wire.lastCookedAt ?? null,
+  updatedAt: wire.updatedAt,
+  // A suggestion is not a search result: nobody named an ingredient, so there
+  // is nothing to report a match against.
+  match: null,
+  reason: wire.reason
+    ? { code: wire.reason.code as SuggestionReasonCode, subject: wire.reason.subject ?? null }
     : null
 });
 

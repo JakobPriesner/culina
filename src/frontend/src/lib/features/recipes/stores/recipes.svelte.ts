@@ -26,7 +26,14 @@ export interface RecipeFilters {
    * it.
    */
   readonly cookbookId?: string;
-  readonly sort?: 'recent' | 'title' | 'quickest' | 'match';
+  /**
+   * How to order the page.
+   *
+   * 'suggested' ranks the whole collection for whoever is asking — a sort over
+   * the one collection rather than a second collection, which is what lets it
+   * compose with every filter above it.
+   */
+  readonly sort?: 'recent' | 'title' | 'quickest' | 'match' | 'suggested';
 }
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';

@@ -29,6 +29,10 @@ internal static class RecipeSearchSql
         // Oldest first: a cookbook reads like a table of contents, and the
         // order somebody built it in is the order they meant.
         RecipeSort.CookbookOrder => "added_to_cookbook_at asc, id asc",
+        // Highest score first, and the score is a function of the day rather
+        // than of the instant — so the second page resumes the same order the
+        // first one was cut from.
+        RecipeSort.Suggested => "suggestion_score desc, id desc",
         _ => "updated_at desc, id desc"
     };
 
@@ -54,6 +58,7 @@ internal static class RecipeSearchSql
             + "< (-cast(@k0 as int), cast(@k1 as float8), cast(@k2 as timestamptz), @cursorId)",
         RecipeSort.CookbookOrder =>
             "(added_to_cookbook_at, id) > (cast(@k0 as timestamptz), @cursorId)",
+        RecipeSort.Suggested => "(suggestion_score, id) < (cast(@k0 as numeric), @cursorId)",
         _ => "(updated_at, id) < (cast(@k0 as timestamptz), @cursorId)"
     };
 
@@ -82,6 +87,7 @@ internal static class RecipeSearchSql
                 RecipeCursor.Key(row.UpdatedAt)
             ],
             RecipeSort.CookbookOrder => [RecipeCursor.Key(row.AddedToCookbookAt ?? row.UpdatedAt)],
+            RecipeSort.Suggested => [RecipeCursor.Key(row.SuggestionScore)],
             _ => [RecipeCursor.Key(row.UpdatedAt)]
         };
     }

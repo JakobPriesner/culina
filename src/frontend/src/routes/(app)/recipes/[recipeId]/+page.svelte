@@ -7,6 +7,7 @@
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
+  import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
@@ -130,6 +131,8 @@
     />
 
     <PersonalNotePanel {recipeId} />
+
+    <SimilarRecipes {recipeId} />
   {:else}
     <div class="loading" aria-busy="true" aria-label={m['recipes.list.loading']()}>
       <Skeleton width="60%" height="2.5em" />

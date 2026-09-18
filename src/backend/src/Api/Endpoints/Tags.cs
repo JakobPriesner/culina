@@ -30,4 +30,6 @@ internal static class Tags
     internal const string Cookbooks = "Cookbooks";
 
     internal const string RecipeSources = "RecipeSources";
+
+    internal const string Suggestions = "Suggestions";
 }

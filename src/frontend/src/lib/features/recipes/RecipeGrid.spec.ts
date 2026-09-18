@@ -19,6 +19,7 @@ const recipe = (id: string): RecipeSummary => ({
   yieldKind: 'servings',
   tags: [],
   cookCount: 0,
+  lastCookedAt: null,
   updatedAt: '2026-09-12T00:00:00Z',
   match: null
 });

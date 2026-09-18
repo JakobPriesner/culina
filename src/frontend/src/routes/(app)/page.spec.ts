@@ -1,0 +1,199 @@
+import { screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import LibraryPage from './+page.svelte';
+import { session } from '$features/auth/session.svelte';
+import { libraryView } from '$features/recipes/stores/libraryView.svelte';
+import { recipes } from '$features/recipes/stores/recipes.svelte';
+import { suggestions } from '$features/recipes/stores/suggestions.svelte';
+import { renderWithProviders } from '$lib/test/render';
+import { toaster } from '$shell/toaster.svelte';
+
+/*
+ * The library, rendered, because two of the things this page can now get wrong
+ * only exist once a real `$effect` is running.
+ *
+ * The first is the loop: a store that guarded itself with `$state` would make
+ * the effect that called it re-trigger itself, and the page would ask the same
+ * question until the session rate limiter started answering 429. A store test
+ * cannot see that — nothing about the call in isolation is wrong, it is the
+ * pairing with the effect that is.
+ *
+ * The second is the order the page claims to be in. A list whose order changed
+ * without saying so is the thing that makes people stop trusting an app.
+ */
+const household = 'h1';
+
+const summary = (id: string, title: string) => ({
+  recipeId: id,
+  title,
+  imageId: null,
+  totalMinutes: 25,
+  yieldAmount: 4,
+  yieldKind: 'servings',
+  tags: [],
+  cookCount: 0,
+  lastCookedAt: null,
+  updatedAt: '2026-09-18T00:00:00Z',
+  ingredientMatch: null
+});
+
+const suggestion = (
+  id: string,
+  title: string,
+  reason: { code: string; subject: string | null } | null
+) => ({ ...summary(id, title), reason });
+
+const json = (body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+/** One server, answering both of the page's questions by URL. */
+function serverAnswers(reasoned: { code: string; subject: string | null } | null) {
+  const fetched = vi.fn((input: Request) =>
+    Promise.resolve(
+      input.url.includes('/suggestions')
+        ? json({ items: [suggestion('r1', 'Linsensuppe', reasoned)] })
+        : json({
+            items: [summary('r1', 'Linsensuppe'), summary('r2', 'Omelette')],
+            nextCursor: null,
+            total: 2
+          })
+    )
+  );
+
+  vi.stubGlobal('fetch', fetched);
+
+  return fetched;
+}
+
+/** Lets every queued effect and the request it made settle. */
+const settle = async () => {
+  for (let turn = 0; turn < 6; turn += 1) {
+    await new Promise((resume) => setTimeout(resume, 0));
+  }
+};
+
+beforeEach(() => {
+  recipes.reset();
+  suggestions.reset();
+  libraryView.reset();
+
+  for (const toast of [...toaster.toasts]) {
+    toaster.dismiss(toast.id);
+  }
+
+  vi.spyOn(session, 'activeHouseholdId', 'get').mockReturnValue(household);
+});
+
+describe('opening the library', () => {
+  it('asks for the list and for one suggestion, once each', async () => {
+    const fetched = serverAnswers({ code: 'rediscovery', subject: null });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // Two. Not "a reasonable number": every extra call is an effect that
+    // re-triggered itself, and the next one after that is the rate limiter.
+    expect(fetched).toHaveBeenCalledTimes(2);
+    expect(fetched.mock.calls.filter(([r]) => r.url.includes('/suggestions'))).toHaveLength(1);
+  });
+
+  it('leads with the suggestion, and says why', async () => {
+    serverAnswers({ code: 'ingredient', subject: 'Aubergine' });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // The panel was always here. What changed is that the recipe in it is an
+    // answer rather than the first one that happened to have a photograph — and
+    // the eyebrow is what makes it read as one.
+    expect(await screen.findByText(/Aubergine/)).toBeInTheDocument();
+  });
+
+  it('names the order it is in', async () => {
+    serverAnswers({ code: 'rediscovery', subject: null });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    expect(screen.getByText('Sorted for tonight')).toBeInTheDocument();
+  });
+
+  it('keeps the old order, and says so, before the ranking has anything to say', async () => {
+    // A kitchen with no history gets the app it has always had. Nothing guesses
+    // a threshold: a reason exists exactly when one term of the score actually
+    // dominated, which is the same thing as "there is enough history here".
+    serverAnswers(null);
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    expect(screen.getByText('Newest first')).toBeInTheDocument();
+    expect(screen.queryByText('Sorted for tonight')).not.toBeInTheDocument();
+  });
+
+  it('offers no order control until there is a second order worth having', async () => {
+    serverAnswers(null);
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    expect(screen.queryByText('For tonight')).not.toBeInTheDocument();
+  });
+
+  it('hides a suggestion when told to, and offers the undo', async () => {
+    // The only negative signal the ranking cannot derive from something another
+    // feature already records, so it has to be sayable — and reversible, since
+    // "not tonight" is a small decision and a confirmation dialog would make it
+    // feel like a large one.
+    const fetched = serverAnswers({ code: 'affinity', subject: null });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    await userEvent.click(screen.getByRole('button', { name: /Linsensuppe/ }));
+    await settle();
+
+    const dismissals = fetched.mock.calls
+      .map(([request]) => request)
+      .filter((request) => request.url.includes('suggestion-dismissal'));
+
+    expect(dismissals).toHaveLength(1);
+    expect(dismissals[0]?.method).toBe('PUT');
+
+    // Asserted on the toaster rather than on the screen: the toast outlet lives
+    // in the app shell, so a page rendered on its own has nowhere to draw one.
+    // What matters here is that the page asked for an undoable message.
+    const toast = toaster.toasts.at(-1);
+
+    expect(toast?.action?.label).toBe('Undo');
+
+    // And that the undo actually reaches the server.
+    toast?.action?.run();
+    await settle();
+
+    expect(
+      fetched.mock.calls
+        .map(([request]) => request)
+        .filter((request) => request.url.includes('suggestion-dismissal'))
+        .map((request) => request.method)
+    ).toEqual(['PUT', 'DELETE']);
+  });
+
+  it('asks the server for the suggested order once it is in it', async () => {
+    const fetched = serverAnswers({ code: 'affinity', subject: null });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const listed = fetched.mock.calls
+      .map(([request]) => request.url)
+      .filter((url) => url.includes('/recipes'));
+
+    expect(listed.some((url) => url.includes('sort=suggested'))).toBe(true);
+  });
+});

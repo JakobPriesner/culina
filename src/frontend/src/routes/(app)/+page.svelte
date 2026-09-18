@@ -6,9 +6,12 @@
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { libraryView } from '$features/recipes/stores/libraryView.svelte';
+  import { suggestions } from '$features/recipes/stores/suggestions.svelte';
+  import { reasonLineFor } from '$features/recipes/suggestionReason';
   import PageHeader from '$shell/PageHeader.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
+  import { toaster } from '$shell/toaster.svelte';
   import Page from '$shell/Page.svelte';
 
   /**
@@ -25,12 +28,80 @@
 
   const householdId = $derived(session.activeHouseholdId);
 
+  /**
+   * A few suggestions, for the panel at the top. Asked once per household.
+   *
+   * More than the one it shows, so that dismissing the leader reveals the next
+   * instead of emptying the panel — and, because the order control only appears
+   * once the ranking has something to say, so that one dismissal cannot drop the
+   * whole page back to "newest first".
+   */
+  const featuredQuery = { limit: 3 } as const;
+
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
   const filtered = $derived(applied.trim().length > 0 || libraryView.quick);
 
-  /** A photographed recipe gives the unfiltered library a visual starting point. */
+  /** The one suggestion the top of the page is built around. */
+  const topSuggestion = $derived(suggestions.for(householdId, featuredQuery)[0]);
+
+  /**
+   * Whether the ranking has anything true to say about this kitchen yet.
+   *
+   * Used instead of counting cook-log entries against a threshold, and it is
+   * the better signal: a reason exists exactly when one term of the score
+   * actually dominated, which is the same thing as "there is enough history
+   * here for the order to mean something". A brand-new kitchen gets the app it
+   * has always had, and nothing had to guess a number.
+   */
+  const ranks = $derived(topSuggestion?.reason != null);
+
+  const order = $derived(libraryView.order ?? (ranks ? 'suggested' : 'recent'));
+
+  /**
+   * Whether the order is settled enough to ask for a list in it.
+   *
+   * The list is not fetched until the suggestion question has come back, either
+   * way. Listing first and re-listing when the answer arrives works, and it is
+   * wrong: the page settles, somebody starts reading it, and then it silently
+   * rearranges itself under them. One small request first is the cheaper of the
+   * two costs, and the skeleton was already going to be on screen for it.
+   *
+   * A failed suggestion counts as settled — it means "recently updated", which
+   * is the order the app has always had.
+   */
+  const settled = $derived(!householdId || suggestions.answered(householdId, featuredQuery));
+
+  /**
+   * Which list is on screen.
+   *
+   * Built once, because the first page, the next page and the retry all have to
+   * ask for the same thing — three copies of this object is three ways for a
+   * "load more" to append rows from a different list than the one above it.
+   */
+  const filters = $derived({
+    query: applied,
+    maxMinutes: libraryView.quick ? 30 : undefined,
+    sort: order === 'suggested' ? ('suggested' as const) : undefined
+  });
+
+  /**
+   * What leads the page.
+   *
+   * The panel has always been here; what filled it was the first recipe with a
+   * photograph, which is an accident rather than an answer. Now it is the best
+   * suggestion, with the reason as its eyebrow — so the page reads as
+   * contextual rather than promotional, and needs no section header claiming to
+   * recommend anything. It falls back to the photograph exactly as before when
+   * there is nothing honest to say.
+   */
   const featured = $derived(
-    !filtered ? recipes.items.find((recipe) => recipe.imageId !== null) : undefined
+    filtered
+      ? undefined
+      : (topSuggestion ?? recipes.items.find((recipe) => recipe.imageId !== null))
+  );
+
+  const featuredReason = $derived(
+    featured && featured.id === topSuggestion?.id ? reasonLineFor(topSuggestion) : null
   );
   const library = $derived(
     featured ? recipes.items.filter((recipe) => recipe.id !== featured.id) : recipes.items
@@ -58,10 +129,13 @@
 
   $effect(() => {
     if (householdId) {
-      void recipes.list(householdId, {
-        query: applied,
-        maxMinutes: libraryView.quick ? 30 : undefined
-      });
+      void suggestions.ask(householdId, featuredQuery);
+    }
+  });
+
+  $effect(() => {
+    if (householdId && settled) {
+      void recipes.list(householdId, filters);
     }
   });
 
@@ -81,6 +155,42 @@
     libraryView.query = '';
   }
 
+  /**
+   * "Not this one."
+   *
+   * Optimistic, and answered with an Undo toast rather than a confirmation —
+   * the same shape as moving a planned meal, because a dismissal is a small
+   * reversible decision and a dialog would make it feel like a large one. The
+   * panel refills from the next answer rather than jumping to whatever was
+   * second, so nothing moves under the thumb that just tapped.
+   */
+  async function hide(recipeId: string) {
+    const failure = await suggestions.dismiss(recipeId);
+
+    if (failure) {
+      toaster.show({ message: m['suggestions.dismissFailed'](), tone: 'danger' });
+
+      return;
+    }
+
+    toaster.show({
+      message: m['suggestions.dismissed'](),
+      tone: 'success',
+      action: {
+        label: m['suggestions.restore'](),
+        run: () => void restore(recipeId)
+      }
+    });
+  }
+
+  async function restore(recipeId: string) {
+    await suggestions.restore(recipeId);
+
+    if (householdId) {
+      void suggestions.ask(householdId, featuredQuery);
+    }
+  }
+
   function resetFilters() {
     clear();
     libraryView.quick = false;
@@ -90,10 +200,7 @@
     recipes.clearError();
 
     if (householdId) {
-      void recipes.list(householdId, {
-        query: applied,
-        maxMinutes: libraryView.quick ? 30 : undefined
-      });
+      void recipes.list(householdId, filters);
     }
   }
 
@@ -105,10 +212,7 @@
    */
   function more() {
     if (householdId) {
-      void recipes.loadMore(householdId, {
-        query: applied,
-        maxMinutes: libraryView.quick ? 30 : undefined
-      });
+      void recipes.loadMore(householdId, filters);
     }
   }
 </script>
@@ -131,6 +235,33 @@
           onclear={clear}
         />
       </div>
+      {#if ranks}
+        <!-- Only once the ranking has something true to say. Before that the
+             choice would be between one real order and one that is not yet an
+             order at all. -->
+        <FilterChip
+          shape="rounded"
+          selected={order === 'suggested'}
+          onclick={() => (libraryView.order = order === 'suggested' ? 'recent' : 'suggested')}
+        >
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 3.6 14.3 9l5.7.4-4.4 3.7 1.4 5.6L12 15.8 7 18.7l1.4-5.6L4 9.4 9.7 9Z"
+                stroke-linejoin="round"
+              />
+            </svg>
+          {/snippet}
+          {m['recipes.sort.suggested']()}
+        </FilterChip>
+      {/if}
+
       <FilterChip
         shape="rounded"
         selected={libraryView.quick}
@@ -153,7 +284,7 @@
 
     <div class="collection-summary" aria-live="polite" aria-atomic="true">
       <p class="count">
-        {#if recipes.status === 'loading' || recipes.status === 'idle'}
+        {#if !settled || recipes.status === 'loading' || recipes.status === 'idle'}
           {m['recipes.list.loading']()}
         {:else if recipes.status === 'ready'}
           {m['recipes.list.count']({ count: recipes.total })}
@@ -164,7 +295,11 @@
           >{m['recipes.filter.reset']()}</Button
         >
       {:else if recipes.status === 'ready' && recipes.items.length > 0}
-        <p class="collection-note">{m['recipes.list.recent']()}</p>
+        <!-- The order is always named. A list whose order changed without
+             saying so is the thing that makes people stop trusting an app. -->
+        <p class="collection-note">
+          {order === 'suggested' ? m['recipes.list.suggested']() : m['recipes.list.recent']()}
+        </p>
       {/if}
     </div>
   </div>
@@ -211,12 +346,16 @@
     </EmptyState>
   {:else}
     {#if featured}
-      <FeaturedRecipe recipe={featured} />
+      <FeaturedRecipe
+        recipe={featured}
+        reason={featuredReason}
+        ondismiss={featured.id === topSuggestion?.id ? () => void hide(featured.id) : undefined}
+      />
     {/if}
 
     <RecipeGrid
       recipes={library}
-      loading={recipes.status === 'loading' && recipes.items.length === 0}
+      loading={!settled || (recipes.status === 'loading' && recipes.items.length === 0)}
       onmore={autoLoads ? more : undefined}
     />
 

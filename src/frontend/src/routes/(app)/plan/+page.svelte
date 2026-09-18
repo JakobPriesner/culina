@@ -55,6 +55,18 @@
   let adding = $state<string | null>(null);
   let slot = $state<MealSlot>('dinner');
 
+  /**
+   * What is already on this week.
+   *
+   * Passed to the picker so nothing on the plan is offered again: a household
+   * that has already agreed to cook the lasagne on Tuesday does not want it
+   * suggested for Thursday as well. The picker also uses it to mark a recipe
+   * as taken when somebody searches for one by name.
+   */
+  const plannedThisWeek = $derived([
+    ...new Set(mealPlan.days.flatMap((day) => day.meals.map((meal) => meal.recipeId)))
+  ]);
+
   /** Which shelf the picker is searching, or null for everything. */
   let narrowedTo = $state<string | null>(null);
   let busy = $state(false);
@@ -364,6 +376,8 @@
     {householdId}
     title={m['plan.pick.title']()}
     cookbookId={narrowedTo ?? undefined}
+    suggestFor={slot}
+    taken={plannedThisWeek}
     onpick={(recipe) => void pick(recipe)}
     onclose={() => (adding = null)}
   >

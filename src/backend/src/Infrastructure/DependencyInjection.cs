@@ -12,10 +12,12 @@ using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Planning;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Shopping;
+using Infrastructure.Persistence.Suggestions;
 using Infrastructure.Persistence.Tags;
 using Infrastructure.Persistence.Users;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
+using Domain.Suggestions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -130,6 +132,16 @@ public static class DependencyInjection
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()
             .AddScoped<IRecipeOriginRepository, RecipeOriginRepository>()
+            // The ranking weights are code, not operator configuration: a
+            // self-hosted app whose suggestions drift per installation is one
+            // where two people comparing notes cannot reproduce each other's
+            // behaviour and a bug report is untriageable. A singleton rather
+            // than a static so a test can hold nine weights still and sweep the
+            // tenth.
+            .AddSingleton(RankingWeights.Default)
+            .AddScoped<SuggestionReader>()
+            .AddScoped<ISuggestionRanker, SuggestionRanker>()
+            .AddScoped<ISuggestionFeedback, SuggestionFeedbackRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.

@@ -97,6 +97,7 @@ internal static class GetRecipesRequestExtensions
             ("totalMinutes", _, _) => RecipeSort.ShortestFirst,
             ("-cookCount", _, _) => RecipeSort.MostCooked,
             ("relevance", _, _) => RecipeSort.Relevance,
+            ("suggested", _, _) => RecipeSort.Suggested,
             ("cookbookOrder", true, _) => RecipeSort.CookbookOrder,
             ("cookbookOrder", false, _) => new FieldError(
                 "sort",
@@ -106,7 +107,7 @@ internal static class GetRecipesRequestExtensions
                 "sort",
                 "request.unknown_parameter",
                 "Sort must be one of '-updatedAt', 'title', 'totalMinutes', '-cookCount', 'relevance', "
-                + "'cookbookOrder'.")
+                + "'suggested', 'cookbookOrder'.")
         };
 
     /// <summary>Reads an optional cookbook to read inside.</summary>
