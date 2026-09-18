@@ -132,7 +132,48 @@ public static class ImportErrors
         "That address did not answer with a picture.",
         ErrorType.Validation);
 
-    /// <summary>More recipes were asked for in one go than one request may carry.</summary>
+    /// <summary>
+    /// A recipe could not be brought over, and the reason is this app's fault.
+    /// </summary>
+    /// <remarks>
+    /// The catch-all an import reports when writing a recipe threw rather than
+    /// returned. It is one line in the result and nothing more: a defect in one
+    /// recipe must not end the run the other three hundred are part of.
+    /// </remarks>
+    public static readonly Error CouldNotImport = new(
+        "import.could_not_import",
+        "That recipe could not be brought over.",
+        ErrorType.Failure);
+
+    /// <summary>
+    /// No such import to follow: unknown, finished long ago, or somebody
+    /// else's.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The three are one answer on purpose. An import is remembered for a while
+    /// after it ends and then forgotten, and a caller learns nothing from being
+    /// told which of those happened.
+    /// </para>
+    /// <para>
+    /// The sentence carries no id, unlike its neighbours, because this one is
+    /// read by a person: it is what a screen shows when the stream it was
+    /// following has gone. It says the two things worth acting on — the recipes
+    /// may already be on the shelf, and asking again is safe.
+    /// </para>
+    /// </remarks>
+    public static readonly Error ImportNotFound = new(
+        "import.import_not_found",
+        "That import is no longer being followed. It may have finished a while ago, or this server may have restarted since — the recipes it had already brought over are on its cookbook, and asking for the rest again is safe.",
+        ErrorType.NotFound);
+
+    /// <summary>An import was asked for with nothing in it.</summary>
+    public static readonly Error NothingToImport = new(
+        "import.nothing_to_import",
+        "Choose at least one recipe to bring over.",
+        ErrorType.Validation);
+
+    /// <summary>More recipes were asked for in one go than one import may carry.</summary>
     public static readonly Error TooManyAtOnce = new(
         "import.too_many_at_once",
         "That is more recipes than one request brings over. Ask for fewer.",

@@ -1,82 +1,64 @@
 using System.Globalization;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
-using Application.Cookbooks;
 using Application.Telemetry;
 using Contracts.Recipes.Sources;
 using Domain.Cookbooks;
 using Domain.Import;
-using Domain.Recipes;
 using Domain.Shared;
 
 namespace Application.Recipes.Sources;
 
-/// <summary>Brings some of another app's recipes over.</summary>
+/// <summary>Asks for some of another app's recipes to be brought over.</summary>
 /// <param name="SourceId">Which connection.</param>
 /// <param name="UserId">Who is importing.</param>
-/// <param name="Draft">Which recipes, and the shelf they are landing on.</param>
+/// <param name="Draft">Which recipes.</param>
 public sealed record ImportFromSourceCommand(
     Guid SourceId,
     Guid UserId,
     ImportFromSourceRequest Draft);
 
 /// <summary>
-/// Brings a batch of recipes over, one at a time and independently.
+/// Accepts an import, and hands it to the worker.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A batch rather than a library, and no job queue behind it. Moving eight
-/// hundred recipes is a long operation with an uncertain outcome, which usually
-/// argues for a background worker — a table of jobs, a poller, a status
-/// endpoint, and a new way for the system to be half-finished. It is not needed
-/// here, because the request is already idempotent: the database refuses a
-/// second origin for the same recipe, so asking twice is asking once.
+/// This does everything that can fail quickly and nothing that takes time: it
+/// checks the connection is this household's, that the app is one this can
+/// read, and makes the shelf the recipes will land on. Then it queues the run
+/// and answers. Fetching four hundred recipes from somebody else's server is
+/// not work a request should be holding a connection open for — that is what
+/// made the old client-driven batching necessary, and what the worker replaces.
 /// </para>
 /// <para>
-/// That one property is what lets the client walk its own selection a batch at
-/// a time. Progress is real rather than estimated, because a batch that came
-/// back is a batch that is done. A closed laptop loses nothing. And a person
-/// who comes back next month sees only what is new, by exactly the same
-/// mechanism.
-/// </para>
-/// <para>
-/// Every recipe is written in a transaction of its own, on purpose. One recipe
-/// that cannot be read must not undo the forty that could — a batch is a
-/// convenience, not a unit of meaning.
+/// Nothing here is a promise that every recipe arrives. The promise is that the
+/// import exists, has a name, and can be watched — and that asking for the same
+/// selection again is safe, because a recipe that arrived has an origin row and
+/// comes back as <c>already_here</c> rather than a second copy.
 /// </para>
 /// </remarks>
 internal sealed class ImportFromSourceCommandHandler(
     IRecipeSourceRepository sources,
-    IRecipeOriginRepository origins,
-    IRecipeRepository recipes,
-    ICookbookRepository cookbooks,
     IHouseholdRepository households,
+    ICookbookRepository cookbooks,
     IRecipeLibraries libraries,
-    IImageStore images,
     IUnitOfWork unitOfWork,
+    ImportRuns runs,
     TimeProvider time)
-    : ICommandHandler<ImportFromSourceCommand, ImportFromSourceResponse>
+    : ICommandHandler<ImportFromSourceCommand, ImportStartedResponse>
 {
     /// <summary>
-    /// How many recipes one request brings over.
+    /// How many recipes one import may carry.
     /// </summary>
     /// <remarks>
-    /// Each one is a round trip to somebody else's server, so this is a
-    /// ceiling on how long a request can hold a connection open as much as it
-    /// is on how much work it does. Small enough that a batch finishes inside
-    /// any proxy's timeout, large enough that eight hundred recipes is thirty
-    /// requests rather than eight hundred.
+    /// Not a batch size any more — the whole selection arrives in one request
+    /// and the work happens afterwards — so this is only a ceiling on how much
+    /// one person can queue at a time. A library of a thousand recipes is
+    /// already a big library; somebody with more imports twice.
     /// </remarks>
-    internal const int MaxBatch = 25;
+    internal const int MostInOneImport = 1000;
 
-    /// <summary>What the image store writes, and so what a recipe row records.</summary>
-    private const string PictureContentType = "image/webp";
-
-    private const string Imported = "imported";
-    private const string AlreadyHere = "already_here";
-    private const string Failed = "failed";
-
-    public async Task<Result<ImportFromSourceResponse>> Handle(
+    public async Task<Result<ImportStartedResponse>> Handle(
         ImportFromSourceCommand command,
         CancellationToken cancellationToken)
     {
@@ -84,10 +66,18 @@ internal sealed class ImportFromSourceCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Sources.Import");
 
-        if (command.Draft.ExternalIds.Count > MaxBatch)
+        var asked = command.Draft.ExternalIds;
+
+        if (asked.Count == 0)
         {
             return tracked.Record(
-                Result<ImportFromSourceResponse>.Failure(ImportErrors.TooManyAtOnce));
+                Result<ImportStartedResponse>.Failure(ImportErrors.NothingToImport));
+        }
+
+        if (asked.Count > MostInOneImport)
+        {
+            return tracked.Record(
+                Result<ImportStartedResponse>.Failure(ImportErrors.TooManyAtOnce));
         }
 
         var found = await SourceAccess
@@ -95,59 +85,60 @@ internal sealed class ImportFromSourceCommandHandler(
             .ConfigureAwait(false);
 
         var result = await found.Match(
-            source => RunAsync(source, command, cancellationToken),
-            error => Task.FromResult(Result<ImportFromSourceResponse>.Failure(error)))
+            source => StartAsync(source, command, cancellationToken),
+            error => Task.FromResult(Result<ImportStartedResponse>.Failure(error)))
             .ConfigureAwait(false);
 
         return tracked.Record(result);
     }
 
-    private async Task<Result<ImportFromSourceResponse>> RunAsync(
+    /// <summary>
+    /// Refuses what cannot be read, then makes the shelf and queues the run.
+    /// </summary>
+    /// <remarks>
+    /// The reader is resolved here as well as in the worker, so an app this
+    /// cannot read is a refusal the caller sees rather than four hundred failed
+    /// lines on a stream.
+    /// </remarks>
+    private Task<Result<ImportStartedResponse>> StartAsync(
+        RecipeSource source,
+        ImportFromSourceCommand command,
+        CancellationToken cancellationToken) =>
+        libraries.For(source.Kind).Match(
+            _ => QueueAsync(source, command, cancellationToken),
+            error => Task.FromResult(Result<ImportStartedResponse>.Failure(error)));
+
+    private async Task<Result<ImportStartedResponse>> QueueAsync(
         RecipeSource source,
         ImportFromSourceCommand command,
         CancellationToken cancellationToken)
     {
-        return await libraries.For(source.Kind).Match(
-            reader => BringOverAsync(source, reader, command, cancellationToken),
-            error => Task.FromResult(Result<ImportFromSourceResponse>.Failure(error)))
-            .ConfigureAwait(false);
-    }
+        var shelf = await ShelfAsync(source, command.UserId, cancellationToken).ConfigureAwait(false);
 
-    private async Task<Result<ImportFromSourceResponse>> BringOverAsync(
-        RecipeSource source,
-        IRecipeLibrary reader,
-        ImportFromSourceCommand command,
-        CancellationToken cancellationToken)
-    {
-        var shelf = await ShelfAsync(source, command, cancellationToken).ConfigureAwait(false);
+        return shelf.Map(cookbook =>
+        {
+            var run = new ImportRun(
+                source.Id,
+                command.UserId,
+                cookbook.Id,
+                cookbook.Name.Value,
+                command.Draft.ExternalIds,
+                time.GetUtcNow());
 
-        return await shelf.Match(
-            async cookbook =>
+            runs.Start(run);
+
+            return new ImportStartedResponse
             {
-                List<ImportedRecipe> results = [];
-
-                foreach (var externalId in command.Draft.ExternalIds)
-                {
-                    results.Add(await OneAsync(
-                            source, reader, cookbook, externalId, command.UserId, cancellationToken)
-                        .ConfigureAwait(false));
-                }
-
-                await MarkUsedAsync(source, cancellationToken).ConfigureAwait(false);
-
-                return Result<ImportFromSourceResponse>.Success(new ImportFromSourceResponse
-                {
-                    CookbookId = cookbook.Id,
-                    CookbookName = cookbook.Name.Value,
-                    Results = results
-                });
-            },
-            error => Task.FromResult(Result<ImportFromSourceResponse>.Failure(error)))
-            .ConfigureAwait(false);
+                ImportId = run.Id,
+                CookbookId = cookbook.Id,
+                CookbookName = cookbook.Name.Value,
+                Total = run.Total
+            };
+        });
     }
 
     /// <summary>
-    /// The shelf everything in this import lands on, made once.
+    /// The shelf everything in this import lands on, made before it starts.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -158,33 +149,22 @@ internal sealed class ImportFromSourceCommandHandler(
     /// is something you can open, look through, show somebody, and throw away.
     /// </para>
     /// <para>
-    /// And it costs no new concept. Cookbooks already exist, already have a
-    /// page, already carry a cover and a count. An import is simply a cookbook
-    /// that filled itself.
+    /// Made in the request rather than by the worker, so the answer that
+    /// accepts an import already says where to find it. That is what lets
+    /// somebody walk away from the screen thirty seconds in.
     /// </para>
     /// </remarks>
     private async Task<Result<Cookbook>> ShelfAsync(
         RecipeSource source,
-        ImportFromSourceCommand command,
+        Guid userId,
         CancellationToken cancellationToken)
     {
-        if (command.Draft.CookbookId is { } existing)
-        {
-            // Every batch after the first passes the shelf back, so an import
-            // of twenty requests lands on one shelf rather than twenty.
-            var found = await CookbookAccess
-                .VisibleAsync(cookbooks, households, existing, command.UserId, cancellationToken)
-                .ConfigureAwait(false);
-
-            return found.Map(shelf => shelf.Cookbook);
-        }
-
         var now = time.GetUtcNow();
 
         return await CookbookName.Create(ShelfName(source, now)).Match(
             async name => await unitOfWork.InTransactionAsync(
                     async token => await Cookbook
-                        .Create(source.HouseholdId, name, ShelfDescription(source), command.UserId, now)
+                        .Create(source.HouseholdId, name, ShelfDescription(source), userId, now)
                         .Match(
                             async cookbook =>
                             {
@@ -198,235 +178,6 @@ internal sealed class ImportFromSourceCommandHandler(
                     cancellationToken)
                 .ConfigureAwait(false),
             error => Task.FromResult(Result<Cookbook>.Failure(error))).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// One recipe: fetched, translated, written, and remembered.
-    /// </summary>
-    /// <remarks>
-    /// Never returns a failure. Every outcome is a line in the response,
-    /// because the caller is importing four hundred of these and needs to know
-    /// which twelve did not work — not to be told that the whole thing did not.
-    /// </remarks>
-    private async Task<ImportedRecipe> OneAsync(
-        RecipeSource source,
-        IRecipeLibrary reader,
-        Cookbook shelf,
-        string externalId,
-        Guid userId,
-        CancellationToken cancellationToken)
-    {
-        var here = await origins
-            .AlreadyHereAsync(source.HouseholdId, source.Kind, [externalId], cancellationToken)
-            .ConfigureAwait(false);
-
-        if (here.TryGetValue(externalId, out var mine))
-        {
-            // Not a failure, and it must not be counted as one. Re-running an
-            // import is the ordinary way to catch up on what is new.
-            return new ImportedRecipe
-            {
-                ExternalId = externalId,
-                Outcome = AlreadyHere,
-                RecipeId = mine
-            };
-        }
-
-        var fetched = await reader.FetchAsync(source, externalId, cancellationToken)
-            .ConfigureAwait(false);
-
-        return await fetched.Match(
-            recipe => WriteAsync(source, reader, shelf, recipe, userId, cancellationToken),
-            error => Task.FromResult(new ImportedRecipe
-            {
-                ExternalId = externalId,
-                Outcome = Failed,
-                Reason = error.Code
-            })).ConfigureAwait(false);
-    }
-
-    private async Task<ImportedRecipe> WriteAsync(
-        RecipeSource source,
-        IRecipeLibrary reader,
-        Cookbook shelf,
-        SourceRecipe theirs,
-        Guid userId,
-        CancellationToken cancellationToken)
-    {
-        var now = time.GetUtcNow();
-
-        var built = SourceRecipeMapping.ToDetails(theirs)
-            .Bind(details => SourceRecipeMapping.ToGroups(theirs)
-                .Bind(groups => SourceRecipeMapping.ToSteps(theirs)
-                    .Bind(steps =>
-                    {
-                        var recipe = Recipe.Create(source.HouseholdId, details.Title, userId, now);
-
-                        return recipe.Describe(details, now)
-                            .Bind(() => recipe.SetContents(groups, steps, now))
-                            .Map(() => recipe);
-                    })));
-
-        return await built.Match(
-            recipe => StoreAsync(source, reader, shelf, theirs, recipe, userId, cancellationToken),
-            error => Task.FromResult(new ImportedRecipe
-            {
-                ExternalId = theirs.ExternalId,
-                Title = theirs.Title,
-                Outcome = Failed,
-                Reason = error.Code
-            })).ConfigureAwait(false);
-    }
-
-    private async Task<ImportedRecipe> StoreAsync(
-        RecipeSource source,
-        IRecipeLibrary reader,
-        Cookbook shelf,
-        SourceRecipe theirs,
-        Recipe recipe,
-        Guid userId,
-        CancellationToken cancellationToken)
-    {
-        var now = time.GetUtcNow();
-
-        // One transaction per recipe: the recipe, where it came from, and the
-        // shelf it is on are one fact, and a recipe that exists without its
-        // origin would be imported again on the next run.
-        var written = await unitOfWork.InTransactionAsync(
-                async token =>
-                {
-                    var stored = await recipes.AddAsync(recipe, token).ConfigureAwait(false);
-
-                    return await stored.Match(
-                        async () =>
-                        {
-                            var remembered = await origins.AddAsync(
-                                    new RecipeOrigin(
-                                        recipe.Id,
-                                        source.HouseholdId,
-                                        source.Kind,
-                                        source.Id,
-                                        theirs.ExternalId,
-                                        theirs.SourceUrl,
-                                        now),
-                                    token)
-                                .ConfigureAwait(false);
-
-                            return await remembered.Match(
-                                async () =>
-                                {
-                                    await cookbooks
-                                        .AddRecipeAsync(shelf.Id, recipe.Id, userId, now, token)
-                                        .ConfigureAwait(false);
-                                    await cookbooks.TouchAsync(shelf.Id, now, token)
-                                        .ConfigureAwait(false);
-
-                                    return Result.Success();
-                                },
-                                error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
-                        },
-                        error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        return await written.Match(
-            async () =>
-            {
-                await PictureAsync(source, reader, theirs, recipe.Id, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return new ImportedRecipe
-                {
-                    ExternalId = theirs.ExternalId,
-                    Title = recipe.Title.Value,
-                    Outcome = Imported,
-                    RecipeId = recipe.Id
-                };
-            },
-            error => Task.FromResult(new ImportedRecipe
-            {
-                ExternalId = theirs.ExternalId,
-                Title = theirs.Title,
-                Outcome = Failed,
-                Reason = error.Code
-            })).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Brings the recipe's photo over, if it can be had.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// After the recipe, outside its transaction, and returning nothing. A
-    /// photo is the one part of a recipe that is genuinely optional — a recipe
-    /// without one is the ordinary state of most recipes somebody typed — so
-    /// nothing about it may cost the recipe. A picture that is missing, too
-    /// large, slow, behind a sign-in this cannot pass, or simply not a picture
-    /// leaves a recipe that is complete in every other way.
-    /// </para>
-    /// <para>
-    /// Stored by exactly the same code an upload goes through, which decides
-    /// what the file is by decoding it and keeps its own re-encoding. Nothing
-    /// from another server is trusted about what it sent.
-    /// </para>
-    /// </remarks>
-    private async Task PictureAsync(
-        RecipeSource source,
-        IRecipeLibrary reader,
-        SourceRecipe theirs,
-        Guid recipeId,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(theirs.ImageUrl))
-        {
-            return;
-        }
-
-        var fetched = await reader
-            .FetchPictureAsync(source, theirs.ImageUrl, cancellationToken)
-            .ConfigureAwait(false);
-
-        await fetched.Match(
-            content => AttachAsync(content, recipeId, cancellationToken),
-            _ => Task.CompletedTask).ConfigureAwait(false);
-    }
-
-    private async Task AttachAsync(
-        Stream content,
-        Guid recipeId,
-        CancellationToken cancellationToken)
-    {
-        await using (content.ConfigureAwait(false))
-        {
-            var stored = await images.StoreAsync(content, cancellationToken).ConfigureAwait(false);
-
-            await stored.Match(
-                image => unitOfWork.InTransactionAsync(
-                    async token => await recipes
-                        .SetImageAsync(recipeId, image, PictureContentType, time.GetUtcNow(), token)
-                        .ConfigureAwait(false),
-                    cancellationToken),
-                // A photo this could not decode is a photo the recipe does
-                // without. The file was never written, so nothing is orphaned.
-                _ => Task.FromResult(Result<ImageReplacement>.Failure(ImportErrors.NotAPicture)))
-                .ConfigureAwait(false);
-        }
-    }
-
-    private async Task MarkUsedAsync(RecipeSource source, CancellationToken cancellationToken)
-    {
-        source.Used(time.GetUtcNow());
-
-        await unitOfWork.InTransactionAsync(
-                async token =>
-                {
-                    await sources.SaveAsync(source, token).ConfigureAwait(false);
-
-                    return true;
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
     }
 
     /// <summary>

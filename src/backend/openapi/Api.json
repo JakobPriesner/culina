@@ -4506,7 +4506,7 @@
           "RecipeSources"
         ],
         "summary": "Bring recipes over from a connected library",
-        "description": "A batch of at most 25, not a whole library. The caller walks its own selection a batch at a time, which is what makes an import of eight hundred recipes show honest progress and survive a closed laptop — every batch is a complete request, and asking twice is asking once.\n\nIdempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later.\n\nEverything from one import lands on a cookbook named after where it came from and when. Pass that `cookbookId` back on every batch after the first, so a selection imported in twenty requests is one shelf rather than twenty. The shelf is what makes an import something you can look at, check, and throw away.\n\nA recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.\n\nOne line comes back per recipe asked for — `imported`, `already_here` or `failed` — so the twelve that could not be read can be shown by name. One recipe failing never undoes the others: each is written in its own transaction.",
+        "description": "Names the whole selection, and comes back as soon as the import has an id and a shelf — usually in milliseconds. The recipes arrive afterwards, brought over by a background worker a few at a time. Follow it at `/recipe-sources/{sourceId}/imports/{importId}/events`, which is where every outcome is reported.\n\nThe import belongs to the server, not to the tab that asked for it. Nobody has to stay and watch: a closed laptop costs the progress display and nothing else.\n\nIdempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later, and why an import that was interrupted can simply be asked for again.\n\nEverything from one import lands on a cookbook named after where it came from and when, and this answer says which — so the way out of the screen exists before the first recipe does. The shelf is what makes an import something you can look at, check, and throw away.\n\nA recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.\n\nOne recipe failing never undoes the others: each is written in its own transaction, and reported on its own line.",
         "operationId": "importFromRecipeSourceV1",
         "parameters": [
           {
@@ -4530,12 +4530,12 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK",
+          "202": {
+            "description": "Accepted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecipesSourcesImportFromSourceResponse"
+                  "$ref": "#/components/schemas/RecipesSourcesImportStartedResponse"
                 }
               }
             }
@@ -4572,6 +4572,68 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-sources/{sourceId}/imports/{importId}/events": {
+      "get": {
+        "tags": [
+          "RecipeSources"
+        ],
+        "summary": "Follow an import that is running",
+        "description": "Server-sent events: one per recipe finished, in the order they finished, and a last one with no recipe on it saying the run is over.\n\nIt replays before it waits. Every event carries an id, and a reconnect that sends `Last-Event-ID` picks up from exactly there — a connection that dropped in the middle loses nothing and repeats nothing. A stream opened for the first time is the same thing with nothing to skip, which is what makes following an import from another device work.\n\nA silent stream sends an event with no recipe on it every fifteen seconds. A recipe can take a while, and a connection that says nothing for minutes is one a proxy will close.\n\nOnly the person who started an import may follow it, and a run is forgotten half an hour after it ends — both are 404, because neither is worth telling a stranger apart.",
+        "operationId": "watchRecipeImportV1",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "importId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesSourcesImportEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6383,6 +6445,44 @@
         },
         "description": "Asks for another app's recipe library to be connected."
       },
+      "RecipesSourcesImportEvent": {
+        "required": [
+          "done",
+          "total",
+          "finished"
+        ],
+        "type": "object",
+        "properties": {
+          "recipe": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesSourcesImportedRecipe"
+              }
+            ]
+          },
+          "done": {
+            "type": "integer",
+            "description": "How many of the selection have been tried, including this one.",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "description": "How many were asked for.",
+            "format": "int32"
+          },
+          "finished": {
+            "type": "boolean",
+            "description": "True on the last event, and only then."
+          }
+        },
+        "description": "One line of an import's progress, as the stream sends it."
+      },
       "RecipesSourcesImportFromSourceRequest": {
         "required": [
           "externalIds"
@@ -6395,42 +6495,40 @@
               "type": "string"
             },
             "description": "Which of their recipes, by the id the browse gave back."
-          },
-          "cookbookId": {
-            "type": "string",
-            "description": "The cookbook to put them on, from a previous batch's response.",
-            "format": "uuid",
-            "nullable": true
           }
         },
         "description": "Asks for some of their recipes to be brought over."
       },
-      "RecipesSourcesImportFromSourceResponse": {
+      "RecipesSourcesImportStartedResponse": {
         "required": [
+          "importId",
           "cookbookId",
           "cookbookName",
-          "results"
+          "total"
         ],
         "type": "object",
         "properties": {
+          "importId": {
+            "type": "string",
+            "description": "Which import. Stream it at `imports/{importId}/events`.",
+            "format": "uuid"
+          },
           "cookbookId": {
             "type": "string",
-            "description": "The cookbook everything from this import went onto.",
+            "description": "The cookbook everything from this import is going onto.",
             "format": "uuid"
           },
           "cookbookName": {
             "type": "string",
             "description": "What it is called."
           },
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RecipesSourcesImportedRecipe"
-            },
-            "description": "One line per recipe asked for, in the order they were asked for."
+          "total": {
+            "type": "integer",
+            "description": "How many recipes were asked for.",
+            "format": "int32"
           }
         },
-        "description": "What one batch of an import did."
+        "description": "An import that has been accepted and is now running."
       },
       "RecipesSourcesImportedRecipe": {
         "required": [

@@ -1,3 +1,5 @@
+import type { AppError } from '$api';
+
 /**
  * Bringing a whole library over from another app.
  *
@@ -37,13 +39,27 @@ export interface SourceRecipe {
   readonly alreadyHere: string | null;
 }
 
-/** What happened to one recipe in one batch. */
+/** What happened to one recipe in one import. */
 export interface ImportOutcome {
   readonly externalId: string;
   readonly outcome: 'imported' | 'already_here' | 'failed';
   readonly recipeId: string | null;
   readonly title: string | null;
   readonly reason: string | null;
+}
+
+/**
+ * One line of an import's progress, as the stream sends it.
+ *
+ * A recipe finished, or — when there is no recipe on it — either the run being
+ * over or a tick saying it is still going. The counts come from the server on
+ * every event, so a reader that missed one is still right.
+ */
+export interface ImportEvent {
+  readonly recipe: ImportOutcome | null;
+  readonly done: number;
+  readonly total: number;
+  readonly finished: boolean;
 }
 
 /**
@@ -62,4 +78,13 @@ export interface ImportRun {
   readonly cookbookId: string | null;
   readonly cookbookName: string | null;
   readonly finished: boolean;
+  /**
+   * Why this page stopped following the import, if it did.
+   *
+   * Usually not a failure of the import itself: the server brings the recipes
+   * over whatever this tab can see. Which it is comes from the error — a run
+   * the server no longer has is a different sentence from a network that went
+   * away — so it is kept here rather than reduced to a flag.
+   */
+  readonly lost: AppError | null;
 }

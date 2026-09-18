@@ -3,11 +3,58 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { sources } from './sources.svelte';
 
 /*
- * The store is where an import is actually orchestrated, so the things it can
- * get wrong are the things somebody moving eight hundred recipes would notice:
- * a batch that goes to the wrong shelf, a count that does not add up, and a
- * failure that takes the whole run down with it.
+ * The store no longer does the importing — the server does — so what it can get
+ * wrong is what it makes of the stream: a count that does not add up, a
+ * dropped connection reported as a finished import, and a refusal to start
+ * shown as a run that never moves.
  */
+
+/**
+ * Stands in for the streamed response, so a test can be the server.
+ *
+ * A real `ReadableStream` behind a real `Response`, because that is what the
+ * reader in `$api/events` consumes — a hand-written double of the parser would
+ * only prove that the double agrees with itself.
+ */
+class FakeStream {
+  static last: FakeStream | null = null;
+
+  readonly response: Response;
+
+  #push!: ReadableStreamDefaultController<Uint8Array>;
+  #encoder = new TextEncoder();
+
+  constructor(readonly headers: Headers) {
+    const body = new ReadableStream<Uint8Array>({
+      start: (controller) => {
+        this.#push = controller;
+      }
+    });
+
+    this.response = new Response(body, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' }
+    });
+
+    FakeStream.last = this;
+  }
+
+  /** One event, framed the way the server frames it. */
+  send(event: { recipe?: unknown; done: number; total: number; finished?: boolean }) {
+    const data = JSON.stringify({ finished: false, ...event });
+
+    this.#push.enqueue(this.#encoder.encode(`data: ${data}\nid: ${event.done}\n\n`));
+  }
+
+  /** What the caller asked to resume from, if anything. */
+  get resumedFrom(): string | null {
+    return this.headers.get('Last-Event-ID');
+  }
+}
+
+/** Lets the reader's promises run before a test looks at what they did. */
+const settle = () => vi.waitFor(() => expect(FakeStream.last).not.toBeNull());
+
 const source = {
   sourceId: 's1',
   kind: 'tandoor' as const,
@@ -42,6 +89,42 @@ const imported = (externalId: string) => ({
   reason: null
 });
 
+/**
+ * Answers the POST that starts an import, and the GET that follows it.
+ *
+ * `streamed` decides what the follow gets: a stream to push events into, or a
+ * refusal — which is the case that matters most, because a stream that is
+ * refused is the difference between "still going" and "gone".
+ */
+function importServer(options: { start?: Response; streamed?: () => Response } = {}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: Request | string, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.url;
+      const method = typeof input === 'string' ? (init?.method ?? 'GET') : input.method;
+
+      if (url.includes('/events')) {
+        const headers = new Headers(init?.headers);
+
+        return options.streamed?.() ?? new FakeStream(headers).response;
+      }
+
+      if (method === 'POST' && url.includes('/imports')) {
+        asked.push({ url, body: await (input as Request).clone().json() });
+      }
+
+      return options.start ?? json(started(3));
+    })
+  );
+}
+
+const started = (total: number) => ({
+  importId: 'i1',
+  cookbookId: 'cb1',
+  cookbookName: 'recipes.example.com · 17 September 2026',
+  total
+});
+
 /** Every import request this test saw, in order, and how many reads there were. */
 let asked: { url: string; body: { externalIds: string[]; cookbookId?: string } }[] & {
   gets: number;
@@ -73,6 +156,7 @@ function serverAnswers(reply: (url: string, call: number) => Response | Promise<
 beforeEach(() => {
   sources.reset();
   asked = Object.assign([], { gets: 0 });
+  FakeStream.last = null;
 });
 
 describe('listing what is connected', () => {
@@ -196,128 +280,160 @@ describe('reading more of a library', () => {
 });
 
 describe('importing', () => {
-  it('walks a big selection in small batches, so the bar moves and the request fits', async () => {
-    serverAnswers((_url, call) =>
-      json({
-        cookbookId: 'cb1',
-        cookbookName: 'recipes.example.com · 17 September 2026',
-        results: asked[call - 1]!.body.externalIds.map(imported)
-      })
-    );
-
+  it('asks for the whole selection at once, and follows what the server does with it', async () => {
     const chosen = Array.from({ length: 12 }, (_, index) => String(index));
 
-    await sources.import(source.sourceId, chosen);
+    importServer({ start: json(started(chosen.length)) });
 
-    // Small on purpose: a batch is up to twice this many round trips once
-    // photos are counted, and progress is only as smooth as the batch is
-    // little.
-    expect(asked.map((one) => one.body.externalIds.length)).toEqual([5, 5, 2]);
-    expect(sources.run?.imported).toBe(12);
-    expect(sources.run?.done).toBe(12);
-    expect(sources.run?.finished).toBe(true);
+    await sources.import(source.sourceId, chosen);
+    await settle();
+
+    // One request that names the work, rather than twelve that do it: the
+    // pacing is the server's business now, and nothing is lost by closing the
+    // tab a second later.
+    expect(asked).toHaveLength(1);
+    expect(asked[0]!.body.externalIds).toEqual(chosen);
   });
 
-  it('puts every batch on the shelf the first one made', async () => {
-    serverAnswers((_url, call) =>
-      json({
-        cookbookId: 'cb1',
-        cookbookName: 'Tandoor',
-        results: asked[call - 1]!.body.externalIds.map(imported)
-      })
-    );
+  it('knows the shelf before the first recipe arrives', async () => {
+    importServer();
 
-    await sources.import(
-      source.sourceId,
-      Array.from({ length: 10 }, (_, index) => String(index))
-    );
+    await sources.import(source.sourceId, ['1', '2', '3']);
 
-    // Without this, a selection imported in twenty requests would be twenty
-    // cookbooks — and the one thing that makes an import reviewable is that it
-    // is one shelf.
-    expect(asked[0]!.body.cookbookId).toBeUndefined();
-    expect(asked[1]!.body.cookbookId).toBe('cb1');
+    // The whole reason somebody may walk away from this screen: the way back
+    // exists from the beginning.
     expect(sources.run?.cookbookId).toBe('cb1');
+    expect(sources.run?.total).toBe(3);
+    expect(sources.run?.done).toBe(0);
+  });
+
+  it('counts each recipe as the stream reports it', async () => {
+    importServer({ start: json(started(2)) });
+
+    await sources.import(source.sourceId, ['1', '2']);
+    await settle();
+
+    FakeStream.last!.send({ recipe: imported('1'), done: 1, total: 2 });
+
+    await vi.waitFor(() => expect(sources.run?.done).toBe(1));
+    expect(sources.run?.finished).toBe(false);
+
+    FakeStream.last!.send({ recipe: imported('2'), done: 2, total: 2 });
+    FakeStream.last!.send({ done: 2, total: 2, finished: true });
+
+    await vi.waitFor(() => expect(sources.run?.finished).toBe(true));
+    expect(sources.run?.imported).toBe(2);
   });
 
   it('counts what was already here as skipped rather than failed', async () => {
-    serverAnswers(() =>
-      json({
-        cookbookId: 'cb1',
-        cookbookName: 'Tandoor',
-        results: [
-          imported('1'),
-          { externalId: '2', outcome: 'already_here', recipeId: 'r9', title: null, reason: null }
-        ]
-      })
-    );
+    importServer({ start: json(started(2)) });
 
     await sources.import(source.sourceId, ['1', '2']);
+    await settle();
+
+    FakeStream.last!.send({ recipe: imported('1'), done: 1, total: 2 });
+    FakeStream.last!.send({
+      recipe: { externalId: '2', outcome: 'already_here', recipeId: 'r9' },
+      done: 2,
+      total: 2
+    });
 
     // Re-running an import is the ordinary way to catch up on what is new, and
-    // reporting that as two failures would make it look broken.
+    // reporting that as a failure would make it look broken.
+    await vi.waitFor(() => expect(sources.run?.done).toBe(2));
     expect(sources.run?.imported).toBe(1);
     expect(sources.run?.skipped).toBe(1);
     expect(sources.run?.failures).toEqual([]);
   });
 
   it('keeps the failures by name, so they can be shown rather than counted', async () => {
-    serverAnswers(() =>
-      json({
-        cookbookId: 'cb1',
-        cookbookName: 'Tandoor',
-        results: [
-          imported('1'),
-          {
-            externalId: '2',
-            outcome: 'failed',
-            recipeId: null,
-            title: 'Oma’s Kuchen',
-            reason: 'import.could_not_fetch'
-          }
-        ]
-      })
-    );
+    importServer({ start: json(started(2)) });
+
+    await sources.import(source.sourceId, ['1', '2']);
+    await settle();
+
+    FakeStream.last!.send({
+      recipe: {
+        externalId: '2',
+        outcome: 'failed',
+        title: 'Oma’s Kuchen',
+        reason: 'import.could_not_fetch'
+      },
+      done: 1,
+      total: 2
+    });
+
+    await vi.waitFor(() => expect(sources.run?.failures).toEqual(['Oma’s Kuchen']));
+  });
+
+  it('ignores the ticks that only keep the connection open', async () => {
+    importServer({ start: json(started(2)) });
+
+    await sources.import(source.sourceId, ['1', '2']);
+    await settle();
+
+    FakeStream.last!.send({ recipe: imported('1'), done: 1, total: 2 });
+    FakeStream.last!.send({ done: 1, total: 2 });
+
+    await vi.waitFor(() => expect(sources.run?.done).toBe(1));
+    expect(sources.run?.imported).toBe(1);
+  });
+
+  it('says why it stopped following, rather than calling the import finished', async () => {
+    importServer({
+      start: json(started(2)),
+      streamed: () => json({ code: 'import.import_not_found', detail: 'That import is gone.' }, 404)
+    });
 
     await sources.import(source.sourceId, ['1', '2']);
 
-    expect(sources.run?.failures).toEqual(['Oma’s Kuchen']);
+    // A refusal is an answer: it is reported at once rather than retried, and
+    // it carries the reason, because "the connection went" and "that import is
+    // gone" are two situations and only one is worth waiting through.
+    await vi.waitFor(() => expect(sources.run?.lost?.code).toBe('import.import_not_found'));
+    expect(sources.run?.finished).toBe(false);
+    expect(sources.importing).toBe(false);
   });
 
-  it('carries on after a batch that failed outright', async () => {
-    serverAnswers((url, call) => {
-      if (call === 1) {
-        return json({ code: 'import.could_not_fetch', detail: 'Nope' }, 400);
-      }
+  it('picks the stream back up from where it stopped, not from the beginning', async () => {
+    importServer({ start: json(started(3)) });
 
-      return json({
-        cookbookId: 'cb1',
-        cookbookName: 'Tandoor',
-        results: asked[call - 1]!.body.externalIds.map(imported)
-      });
-    });
+    await sources.import(source.sourceId, ['1', '2', '3']);
+    await settle();
 
-    await sources.import(
-      source.sourceId,
-      Array.from({ length: 10 }, (_, index) => String(index))
-    );
+    FakeStream.last!.send({ recipe: imported('1'), done: 1, total: 3 });
+    FakeStream.last!.send({ recipe: imported('2'), done: 2, total: 3 });
 
-    // Everything before the failed batch is already written and asking again is
-    // a no-op, so losing a batch must not lose the run.
-    expect(asked).toHaveLength(2);
-    expect(sources.run?.failures).toHaveLength(5);
-    expect(sources.run?.imported).toBe(5);
-    expect(sources.run?.finished).toBe(true);
+    await vi.waitFor(() => expect(sources.run?.done).toBe(2));
+
+    const first = FakeStream.last;
+
+    sources.reconnect();
+
+    await vi.waitFor(() => expect(FakeStream.last).not.toBe(first));
+
+    // The server numbers every event with how many outcomes it has sent, so
+    // this asks for what is missing and nothing else — the two already counted
+    // are neither repeated nor forgotten.
+    expect(FakeStream.last!.resumedFrom).toBe('2');
+    expect(sources.run?.imported).toBe(2);
+    expect(sources.run?.lost).toBeNull();
+  });
+
+  it('shows a refusal to start beside the selection, rather than as a run', async () => {
+    importServer({ start: json({ code: 'import.too_many_at_once', detail: 'Nope' }, 400) });
+
+    await sources.import(source.sourceId, ['1', '2']);
+
+    // Nothing was started, so there is nothing to watch — and the selection is
+    // still on screen to be asked for again.
+    expect(sources.run).toBeNull();
+    expect(sources.importError?.code).toBe('import.too_many_at_once');
+    expect(FakeStream.last).toBeNull();
   });
 
   it('refuses to start a second run while one is going', async () => {
-    serverAnswers((_url, call) =>
-      json({
-        cookbookId: 'cb1',
-        cookbookName: 'Tandoor',
-        results: asked[call - 1]!.body.externalIds.map(imported)
-      })
-    );
+    importServer({ start: json(started(1)) });
 
     const first = sources.import(source.sourceId, ['1']);
     const second = sources.import(source.sourceId, ['2']);

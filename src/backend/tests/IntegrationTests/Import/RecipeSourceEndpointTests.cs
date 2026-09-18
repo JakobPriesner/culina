@@ -23,6 +23,8 @@ public class RecipeSourceEndpointTests(PostgresFixture postgres)
 {
     private const string Password = "correct horse battery staple";
 
+    private static readonly string[] OneRecipe = ["17"];
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -172,7 +174,7 @@ public class RecipeSourceEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Import_ShouldRefuse_MoreThanOneBatch()
+    public async Task Import_ShouldRefuse_MoreRecipesThanOneImportCarries()
     {
         // Arrange
         using var client = await SignedInAsync();
@@ -180,16 +182,72 @@ public class RecipeSourceEndpointTests(PostgresFixture postgres)
         // Act
         var response = await client.PostAsync(
             $"/api/v1/recipe-sources/{Guid.NewGuid()}/imports",
-            new { externalIds = Enumerable.Range(1, 26).Select(one => one.ToString()).ToArray() },
+            new { externalIds = Enumerable.Range(1, 1001).Select(one => one.ToString()).ToArray() },
             Token);
 
         // Assert
         // Checked before the connection is even looked up: the ceiling bounds
-        // the work a request can ask for, so it has to be the first thing read.
+        // the work one person can queue, so it has to be the first thing read.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(
             "import.too_many_at_once",
             response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Import_ShouldRefuse_AnEmptySelection()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+
+        // Act
+        var response = await client.PostAsync(
+            $"/api/v1/recipe-sources/{Guid.NewGuid()}/imports",
+            new { externalIds = Array.Empty<string>() },
+            Token);
+
+        // Assert
+        // An import of nothing would still make a cookbook to put nothing on.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "import.nothing_to_import",
+            response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Import_ShouldNotStart_ForAConnectionThatIsNotThisHouseholds()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+
+        // Act
+        var response = await client.PostAsync(
+            $"/api/v1/recipe-sources/{Guid.NewGuid()}/imports",
+            new { externalIds = OneRecipe },
+            Token);
+
+        // Assert
+        // Being able to import through somebody else's connection would be
+        // being able to read their Tandoor.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Watch_ShouldNotExist_ForAnImportNobodyStarted()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+
+        // Act
+        var response = await client.GetAsync(
+            $"/api/v1/recipe-sources/{Guid.NewGuid()}/imports/{Guid.NewGuid()}/events",
+            Token);
+
+        // Assert
+        // A run that never was, one that has been forgotten, and one that is
+        // somebody else's are one answer: a stranger learns nothing from the
+        // difference, and neither does a stale tab.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

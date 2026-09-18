@@ -1,24 +1,15 @@
-import { http, request, type AppError } from '$api';
+import { http, request, watch, type AppError, type Stream } from '$api';
 import { registerStore } from '$shell/stores';
 
-import type { ConnectedSource, ImportOutcome, ImportRun, SourceRecipe } from '../types';
+import type {
+  ConnectedSource,
+  ImportEvent,
+  ImportOutcome,
+  ImportRun,
+  SourceRecipe
+} from '../types';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
-
-/**
- * How many recipes go in one request.
- *
- * Well under the 25 the server allows, for two reasons that turned out to be
- * the same reason. Progress is only as smooth as the batch is small — a bar
- * that moves once per 25 recipes barely moves — and a batch is not 25 requests
- * to the other server but up to 50 once photos are counted, plus the work of
- * re-encoding each one. At 25 that reliably overran the client's deadline and
- * reported the whole batch as unreadable recipes.
- *
- * Five is small enough to finish comfortably inside that deadline on a slow
- * instance, and small enough that the bar moves while somebody is watching it.
- */
-const batchSize = 5;
 
 /**
  * The libraries connected here, and the one being looked through.
@@ -74,6 +65,18 @@ class SourceStore {
 
   /** Set while a run is going, so a second tap cannot start a second one. */
   #importing = $state(false);
+
+  /** Why an import could not be started. Not why one went badly. */
+  #importError = $state<AppError | null>(null);
+
+  /**
+   * The stream of the run being followed, and which run it is.
+   *
+   * Deliberately not `$state`: nothing renders them, and the import they follow
+   * carries on whether or not this tab is listening.
+   */
+  #stream: Stream | null = null;
+  #following: { sourceId: string; importId: string } | null = null;
 
   get items(): readonly ConnectedSource[] {
     return this.#items;
@@ -139,6 +142,11 @@ class SourceStore {
 
   get importing(): boolean {
     return this.#importing;
+  }
+
+  /** The refusal that stopped an import from starting, if there was one. */
+  get importError(): AppError | null {
+    return this.#importError;
   }
 
   /** What this household has connected. */
@@ -263,6 +271,7 @@ class SourceStore {
     this.#browseStatus = 'loading';
     this.#browseError = null;
     this.#moreFailed = false;
+    this.#importError = null;
 
     await this.#read(source, null, query);
   }
@@ -331,12 +340,13 @@ class SourceStore {
   }
 
   /**
-   * Brings a selection over, a batch at a time.
+   * Asks for a selection to be brought over, and follows it.
    *
-   * The progress is real: a batch that came back is a batch that is done, so
-   * nothing here is estimated and nothing has to be reconciled afterwards. The
-   * cookbook from the first batch is passed back into every batch after it, so
-   * a selection imported in twenty requests lands on one shelf.
+   * The request names the work and comes back at once; the recipes arrive
+   * afterwards, brought over by the server and reported one at a time over a
+   * stream. So the import is not this tab's to finish: the answer already says
+   * which cookbook everything is landing on, and closing the laptop costs the
+   * progress bar and nothing else.
    */
   async import(sourceId: string, externalIds: readonly string[]): Promise<void> {
     if (this.#importing || externalIds.length === 0) {
@@ -344,53 +354,65 @@ class SourceStore {
     }
 
     this.#importing = true;
+    this.#importError = null;
+
+    const result = await request(() =>
+      http.POST('/api/v1/recipe-sources/{sourceId}/imports', {
+        params: { path: { sourceId } },
+        body: { externalIds: [...externalIds] }
+      })
+    );
+
+    if (!result.ok) {
+      // Nothing was started, so there is no run to show — the selection is
+      // still on screen and the refusal belongs beside the button that made it.
+      this.#importing = false;
+      this.#importError = result.error;
+
+      return;
+    }
+
     this.#run = {
-      total: externalIds.length,
+      total: result.value.total,
       done: 0,
       imported: 0,
       skipped: 0,
       failures: [],
-      cookbookId: null,
-      cookbookName: null,
-      finished: false
+      cookbookId: result.value.cookbookId,
+      cookbookName: result.value.cookbookName,
+      finished: false,
+      lost: null
     };
 
-    for (let taken = 0; taken < externalIds.length; taken += batchSize) {
-      const batch = externalIds.slice(taken, taken + batchSize);
+    this.#following = { sourceId, importId: result.value.importId };
 
-      const result = await request(() =>
-        http.POST('/api/v1/recipe-sources/{sourceId}/imports', {
-          params: { path: { sourceId } },
-          body: {
-            externalIds: [...batch],
-            ...(this.#run?.cookbookId ? { cookbookId: this.#run.cookbookId } : {})
-          }
-        })
-      );
+    this.#listen();
+  }
 
-      if (!result.ok) {
-        // The batch is lost, not the run: everything before it is already
-        // written, and asking for the same ids again is a no-op. So the failed
-        // batch is counted and the rest goes on.
-        this.#record(batch.map(asFailure), null, null);
-
-        continue;
-      }
-
-      this.#record(
-        result.value.results.map(toOutcome),
-        result.value.cookbookId,
-        result.value.cookbookName
-      );
+  /**
+   * Picks the stream back up after it was lost.
+   *
+   * From where it stopped rather than from the beginning: the server numbers
+   * every event with how many outcomes it has sent, which is exactly `done`, so
+   * asking to resume from there is asking for what this tab is missing and
+   * nothing else. The counts on screen stay as they are.
+   */
+  reconnect(): void {
+    if (!this.#following || this.#run === null || this.#run.finished) {
+      return;
     }
 
-    this.#run = this.#run === null ? null : { ...this.#run, finished: true };
-    this.#importing = false;
+    this.#run = { ...this.#run, lost: null };
+
+    this.#listen();
   }
 
   /** Clears a finished run, so the flow can be started again. */
   forgetRun(): void {
+    this.#stopListening();
     this.#run = null;
+    this.#following = null;
+    this.#importError = null;
   }
 
   reset(): void {
@@ -400,7 +422,10 @@ class SourceStore {
     this.#error = null;
     this.#connecting = false;
     this.#connectError = null;
+    this.#stopListening();
     this.#run = null;
+    this.#following = null;
+    this.#importError = null;
     this.#importing = false;
     this.closeLibrary();
   }
@@ -440,26 +465,82 @@ class SourceStore {
     this.#browseStatus = 'ready';
   }
 
-  #record(results: readonly ImportOutcome[], cookbookId: string | null, name: string | null): void {
+  #listen(): void {
+    const following = this.#following;
+
+    if (!following) {
+      return;
+    }
+
+    this.#stopListening();
+    this.#importing = true;
+
+    this.#stream = watch<ImportEventWire>(
+      `/api/v1/recipe-sources/${following.sourceId}/imports/${following.importId}/events`,
+      {
+        message: (event) => this.#apply(toEvent(event)),
+        failed: (error) => {
+          // What stopped is this tab's view, not necessarily the import — so
+          // the run is kept, the reason is shown, and looking again is offered.
+          // Which of the two it was is the error's to say, not this method's.
+          this.#stopListening();
+          this.#run = this.#run && { ...this.#run, lost: error };
+        }
+      },
+      // Where to resume: the server numbers each event with the number of
+      // outcomes it has sent, which is the count already on screen.
+      this.#run === null || this.#run.done === 0 ? null : String(this.#run.done)
+    );
+  }
+
+  #stopListening(): void {
+    this.#stream?.close();
+    this.#stream = null;
+    this.#importing = false;
+  }
+
+  /**
+   * Folds one event into the run.
+   *
+   * `done` is taken from the event rather than counted here, so a stream that
+   * dropped and resumed cannot leave the bar disagreeing with the server about
+   * how far along it is.
+   */
+  #apply(event: ImportEvent): void {
     const run = this.#run;
 
     if (!run) {
       return;
     }
 
+    if (event.finished) {
+      this.#stopListening();
+      this.#run = { ...run, done: event.done, finished: true };
+
+      return;
+    }
+
+    if (!event.recipe) {
+      // A tick that says nothing has finished yet, sent so the connection
+      // survives a slow recipe.
+      this.#run = { ...run, done: event.done };
+
+      return;
+    }
+
+    const outcome = event.recipe;
+
     this.#run = {
       ...run,
-      done: run.done + results.length,
-      imported: run.imported + results.filter((one) => one.outcome === 'imported').length,
-      skipped: run.skipped + results.filter((one) => one.outcome === 'already_here').length,
-      failures: [
-        ...run.failures,
-        ...results
-          .filter((one) => one.outcome === 'failed')
-          .map((one) => one.title ?? one.externalId)
-      ],
-      cookbookId: run.cookbookId ?? cookbookId,
-      cookbookName: run.cookbookName ?? name
+      done: event.done,
+      imported: run.imported + (outcome.outcome === 'imported' ? 1 : 0),
+      // Not a failure, and never counted as one: re-running an import is the
+      // ordinary way to catch up on what is new.
+      skipped: run.skipped + (outcome.outcome === 'already_here' ? 1 : 0),
+      failures:
+        outcome.outcome === 'failed'
+          ? [...run.failures, outcome.title ?? outcome.externalId]
+          : run.failures
     };
   }
 }
@@ -494,13 +575,23 @@ const toRecipe = (wire: {
   alreadyHere: wire.alreadyHere ?? null
 });
 
-const toOutcome = (wire: {
+interface ImportedRecipeWire {
   externalId: string;
   outcome: string;
   recipeId?: string | null;
   title?: string | null;
   reason?: string | null;
-}): ImportOutcome => ({
+}
+
+/** One event as the stream sends it. */
+interface ImportEventWire {
+  recipe?: ImportedRecipeWire | null;
+  done: number;
+  total: number;
+  finished: boolean;
+}
+
+const toOutcome = (wire: ImportedRecipeWire): ImportOutcome => ({
   externalId: wire.externalId,
   outcome: wire.outcome as ImportOutcome['outcome'],
   recipeId: wire.recipeId ?? null,
@@ -508,12 +599,11 @@ const toOutcome = (wire: {
   reason: wire.reason ?? null
 });
 
-const asFailure = (externalId: string): ImportOutcome => ({
-  externalId,
-  outcome: 'failed',
-  recipeId: null,
-  title: null,
-  reason: null
+const toEvent = (wire: ImportEventWire): ImportEvent => ({
+  recipe: wire.recipe ? toOutcome(wire.recipe) : null,
+  done: wire.done,
+  total: wire.total,
+  finished: wire.finished
 });
 
 export const sources = new SourceStore();

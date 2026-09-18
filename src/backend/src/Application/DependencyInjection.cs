@@ -192,7 +192,15 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<BrowseSourceQuery,
                 Contracts.Recipes.Sources.SourceRecipesResponse>, BrowseSourceQueryHandler>()
             .AddScoped<ICommandHandler<ImportFromSourceCommand,
-                Contracts.Recipes.Sources.ImportFromSourceResponse>, ImportFromSourceCommandHandler>()
+                Contracts.Recipes.Sources.ImportStartedResponse>, ImportFromSourceCommandHandler>()
+            .AddScoped<IQueryHandler<WatchImportQuery, ImportProgress>, WatchImportQueryHandler>()
+            // One recipe's worth of work, resolved once per recipe: an import
+            // runs them in parallel and a unit of work is a connection.
+            .AddScoped<RecipeImporter>()
+            // Singletons: an import outlives the request that asked for it, and
+            // the runs a watcher reconnects to are the ones this process holds.
+            .AddSingleton<ImportRuns>()
+            .AddSingleton<SourceImportRunner>()
             .AddScoped<IQueryHandler<GetMealPlanQuery, Contracts.Planning.MealPlanResponse>,
                 GetMealPlanQueryHandler>()
             .AddScoped<ICommandHandler<PlanMealCommand, Contracts.Planning.MealPlanResponse>,

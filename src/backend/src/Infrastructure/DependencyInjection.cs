@@ -85,7 +85,11 @@ public static class DependencyInjection
         services
             .AddSingleton<SourceHttp>()
             .AddSingleton<IRecipeLibrary, TandoorLibrary>()
-            .AddSingleton<IRecipeLibraries, RecipeLibraries>();
+            .AddSingleton<IRecipeLibraries, RecipeLibraries>()
+            // The background process that actually brings the recipes over. The
+            // work it does is registered in Application; this is the lifetime
+            // it runs on.
+            .AddHostedService<ImportWorker>();
 
     private static IServiceCollection AddIdentity(this IServiceCollection services) =>
         // Stateless and thread-safe, so one instance serves every request.
