@@ -48,3 +48,48 @@
   outline: 2px solid var(--border-focus);
   outline-offset: 3px;
 }
+
+/*
+ * A control the size of the thing it holds.
+ *
+ * A recipe's title is not a form field with a title in it — it is the title,
+ * and on the page that reads the recipe back it is set in the editorial face at
+ * display size. Typing it into a 16px box the same shape as "Cooking minutes"
+ * is what makes an editor feel like an admin screen: everything the same size
+ * means nothing is more important than anything else.
+ *
+ * The height is left to the content so a long title wraps instead of scrolling
+ * sideways inside its own box.
+ */
+.ds-control.display {
+  height: auto;
+  min-height: var(--control-lg);
+  padding-block: var(--space-2);
+  font-family: var(--font-editorial);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.025em;
+}
+
+/*
+ * A field that only looks like one once you go near it.
+ *
+ * For the places where the control sits inside something it is not the point
+ * of — a step's name, which is empty on nearly every step and reads as the
+ * step's heading when it is not. Drawn as text at rest, as a field on hover,
+ * and always as a field while it has focus, so nothing that can be typed into
+ * is ever invisible to somebody using the keyboard.
+ */
+.ds-control.quiet {
+  border-color: transparent;
+  background: transparent;
+}
+
+.ds-control.quiet:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+
+.ds-control.quiet:focus-visible {
+  background: var(--surface-raised);
+}

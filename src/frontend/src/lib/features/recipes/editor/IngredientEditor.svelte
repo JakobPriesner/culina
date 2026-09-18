@@ -137,106 +137,118 @@
 </script>
 
 <div class="editor">
-  <ul class="list">
-    {#each ingredients as ingredient, index (index)}
-      <li class="row" class:open={editing === index}>
-        {#if editing === index}
-          <IngredientFields
-            id="ingredient-{index}"
-            label={m['editor.editIngredient']({ name: ingredient.name })}
-            value={editingDraft}
-            onchange={correct}
-            onsubmit={close}
-            {householdId}
-            {language}
-          />
-        {:else}
-          <span class="amount">{shown(ingredient)}</span>
-
-          <div class="name">
-            <span class="written"
-              >{ingredient.name}{#if ingredient.note}<span class="note">, {ingredient.note}</span
-                >{/if}</span
-            >
-
-            {#if ingredient.id}
-              {@const inSteps = usage.get(ingredient.id) ?? []}
-
-              <span class="where">
-                {#if inSteps.length > 0}
-                  <!-- A preposition rather than "Step", so the line is
-                       grammatical whether there is one number or four. -->
-                  {m['editor.usedInSteps']()}
-                  {#each inSteps as number, at (number)}
-                    {#if at > 0},
-                    {/if}<button
-                      type="button"
-                      class="jump"
-                      aria-label={m['editor.goToStep']({ number })}
-                      onclick={() => goTo(number)}>{number}</button
-                    >
-                  {/each}
-                {:else}
-                  {m['editor.notUsedInAStep']()}
-                {/if}
-              </span>
-            {/if}
-          </div>
-        {/if}
-
-        <div class="controls">
-          <IconButton
-            label={editing === index
-              ? m['editor.doneWithIngredient']({ name: ingredient.name })
-              : m['editor.editIngredient']({ name: ingredient.name })}
-            size="sm"
-            onclick={() => open(index)}
-          >
+  <div class="panel" class:filled={ingredients.length > 0}>
+    {#if ingredients.length > 0}
+      <ul class="list">
+        {#each ingredients as ingredient, index (index)}
+          <li class="row" class:open={editing === index}>
             {#if editing === index}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="m5 13 4 4 10-10" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            {:else}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path
-                  d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+              <div class="fields">
+                <IngredientFields
+                  id="ingredient-{index}"
+                  label={m['editor.editIngredient']({ name: ingredient.name })}
+                  value={editingDraft}
+                  onchange={correct}
+                  onsubmit={close}
+                  {householdId}
+                  {language}
                 />
-              </svg>
+              </div>
+            {:else}
+              <span class="amount">{shown(ingredient)}</span>
+
+              <div class="name">
+                <span class="written"
+                  >{ingredient.name}{#if ingredient.note}<span class="note"
+                      >, {ingredient.note}</span
+                    >{/if}</span
+                >
+
+                {#if ingredient.id}
+                  {@const inSteps = usage.get(ingredient.id) ?? []}
+
+                  <span class="where">
+                    {#if inSteps.length > 0}
+                      <!-- A preposition rather than "Step", so the line is
+                           grammatical whether there is one number or four. -->
+                      {m['editor.usedInSteps']()}
+                      {#each inSteps as number, at (number)}
+                        {#if at > 0},
+                        {/if}<button
+                          type="button"
+                          class="jump"
+                          aria-label={m['editor.goToStep']({ number })}
+                          onclick={() => goTo(number)}>{number}</button
+                        >
+                      {/each}
+                    {:else}
+                      {m['editor.notUsedInAStep']()}
+                    {/if}
+                  </span>
+                {/if}
+              </div>
             {/if}
-          </IconButton>
 
-          <IconButton
-            label={m['editor.removeIngredient']({ name: ingredient.name })}
-            size="sm"
-            onclick={() => remove(index)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-            </svg>
-          </IconButton>
-        </div>
-      </li>
-    {/each}
-  </ul>
+            <div class="controls">
+              <IconButton
+                label={editing === index
+                  ? m['editor.doneWithIngredient']({ name: ingredient.name })
+                  : m['editor.editIngredient']({ name: ingredient.name })}
+                size="sm"
+                onclick={() => open(index)}
+              >
+                {#if editing === index}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m5 13 4 4 10-10" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                {:else}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                      d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                {/if}
+              </IconButton>
 
-  <!-- Enter adds the ingredient and puts the cursor back on the amount, so a
-       whole list can be typed without ever reaching for the mouse. -->
-  <div class="add">
-    <IngredientFields
-      id="add-ingredient"
-      label={m['editor.newIngredient']()}
-      value={adding}
-      onchange={(draft) => (adding = draft)}
-      onsubmit={add}
-      {householdId}
-      {language}
-    />
+              <IconButton
+                label={m['editor.removeIngredient']({ name: ingredient.name })}
+                size="sm"
+                onclick={() => remove(index)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+                </svg>
+              </IconButton>
+            </div>
+          </li>
+        {/each}
+      </ul>
+    {:else}
+      <!-- Said once, where the first line will go. An empty list with nothing
+           but four blank fields under it is a form; this is a recipe that has
+           not been shopped for yet. -->
+      <p class="none">{m['editor.ingredientsEmpty']()}</p>
+    {/if}
 
-    <Button variant="secondary" size="sm" onclick={add} disabled={!adding.name.trim()}>
-      {m['editor.addIngredient']()}
-    </Button>
+    <!-- Enter adds the ingredient and puts the cursor back on the amount, so a
+         whole list can be typed without ever reaching for the mouse. -->
+    <div class="add">
+      <IngredientFields
+        id="add-ingredient"
+        label={m['editor.newIngredient']()}
+        value={adding}
+        onchange={(draft) => (adding = draft)}
+        onsubmit={add}
+        {householdId}
+        {language}
+      />
+
+      <Button variant="secondary" size="sm" onclick={add} disabled={!adding.name.trim()}>
+        {m['editor.addIngredient']()}
+      </Button>
+    </div>
   </div>
 
   <p class="hint">{m['editor.ingredientHint']()}</p>
@@ -248,10 +260,39 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
+  /*
+   * A hairline enclosure, not a card.
+   *
+   * The list and the line being added to it are one thing, and nothing else on
+   * the page says so: a run of rows and a row of fields a gap apart look
+   * exactly like two unrelated blocks. The same enclosure the settings screens
+   * use, for the same reason and with the same restraint — a border, never a
+   * shadow, because a shadow would lift the ingredients off the page as if they
+   * were a separate document from the method below them.
+   */
+  .panel {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+  }
+
+  /*
+   * One grid for the whole list, not one per row.
+   *
+   * A row that sizes its own amount column leaves every name starting somewhere
+   * different — "1 Päckchen Vanillezucker" pushes its name three characters
+   * past "125 g Butter" — and the list reads as a ragged pile rather than a
+   * written-out recipe. The same arrangement, and the same reasoning, as the
+   * list on the page that reads the recipe back.
+   */
   .list {
+    display: grid;
+    grid-template-columns: minmax(5rem, max-content) minmax(0, 1fr) auto;
+    column-gap: var(--space-4);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -259,10 +300,22 @@
 
   .row {
     display: grid;
-    grid-template-columns: minmax(4rem, auto) minmax(0, 1fr) auto;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
     align-items: center;
-    gap: var(--space-3);
-    padding-block: var(--space-1);
+    padding: var(--space-2) var(--space-4);
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  /* The line between two rows belongs to the list rather than to a row: whether
+     a row has a neighbour is not something the row knows. */
+  .row + .row,
+  .panel.filled .add {
+    border-top: 1px solid var(--border);
+  }
+
+  .row:hover {
+    background: var(--surface-hover);
   }
 
   .name {
@@ -292,10 +345,18 @@
     color: var(--accent);
   }
 
+  /* The row being corrected keeps its place in the list and is marked rather
+     than moved: the fields open where the line was, so the eye does not have to
+     find it again. */
   .row.open {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
-    padding-block: var(--space-3);
+    padding-block: var(--space-4);
+    background: var(--surface-sunken);
+  }
+
+  .row.open .fields {
+    min-width: 0;
   }
 
   .add {
@@ -303,11 +364,40 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
     gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .none {
+    padding: var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .controls {
     display: flex;
     gap: var(--space-1);
+  }
+
+  /*
+   * The row's own controls, which are only the row's business while you are on
+   * it.
+   *
+   * Eight ingredients means sixteen icon buttons down the right-hand edge, and
+   * a list that reads as a toolbar rather than as a recipe. They fade in for the
+   * pointer that is on the row and for the keyboard that has reached it — and
+   * on a touch screen, where there is no hovering and nothing to reveal them,
+   * they simply stay.
+   */
+  @media (hover: hover) {
+    .row:not(.open) .controls {
+      opacity: 0;
+      transition: opacity var(--duration-fast) var(--ease-out);
+    }
+
+    .row:hover .controls,
+    .row:focus-within .controls {
+      opacity: 1;
+    }
   }
 
   .amount {
@@ -322,14 +412,15 @@
 
   .hint {
     margin: 0;
-    color: var(--text-muted);
+    padding-inline: var(--space-1);
+    color: var(--text-subtle);
     font-size: var(--text-xs);
   }
 
   /* Keep the written name readable when quantity and actions would consume
      the row, including a narrow editor with enlarged text. */
   @container ingredient-editor (width < 24rem) {
-    .row:not(.open) {
+    .list {
       grid-template-columns: minmax(0, 1fr) auto;
     }
 
@@ -356,6 +447,14 @@
     .add,
     .row.open {
       grid-template-columns: 1fr;
+    }
+
+    /* Sized to its own words rather than stretched across the panel: the
+       button is disabled until there is a name to add, and a full-width grey
+       slab is the heaviest thing that can be said with a control nobody can
+       press yet. */
+    .add :global(.button) {
+      justify-self: start;
     }
 
     .row.open .controls {

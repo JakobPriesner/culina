@@ -18,6 +18,15 @@
    */
   interface Props {
     label: string;
+    /**
+     * Whether to print the caption above the frame.
+     *
+     * Off where a heading already says the same word: a section called "Photo"
+     * with a caption called "Photo" under it is the form talking to itself. The
+     * label is still what the file picker announces, so nothing is lost by not
+     * drawing it.
+     */
+    showLabel?: boolean;
     /** What the empty template says. One line, under the outline. */
     hint: string;
     chooseLabel: string;
@@ -42,6 +51,7 @@
 
   let {
     label,
+    showLabel = true,
     hint,
     chooseLabel,
     replaceLabel,
@@ -62,7 +72,9 @@
 </script>
 
 <div class="field">
-  <p class="label">{label}</p>
+  {#if showLabel}
+    <p class="label">{label}</p>
+  {/if}
 
   <div class="frame">
     {#if src}
