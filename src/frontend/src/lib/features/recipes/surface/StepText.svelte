@@ -1,15 +1,20 @@
 <script lang="ts">
   import type { Scaling } from './scaled.svelte';
+  import StepInline from './StepInline.svelte';
+  import { parseStep } from './stepMarkdown';
   import type { Step } from '../types';
 
   /**
-   * One step, with its ingredients written into the sentence at the scaled
-   * amount.
+   * One step, written as Markdown, with its ingredients written into the
+   * sentence at the scaled amount.
    *
    * "Melt **180 g butter** in the pan" — not "Melt 200 g butter" beside an
    * ingredient list that says 180. Getting that wrong is the single most common
    * bug in recipe apps, and it is impossible here because the step stores a
    * reference rather than the words.
+   *
+   * The Markdown is parsed over those references rather than around them, so
+   * emphasis and lists never cost a step its scaling. See `stepMarkdown.ts`.
    */
   interface Props {
     step: Step;
@@ -27,35 +32,42 @@
   }
 
   let { step, scaling, interactive = true, onhighlight }: Props = $props();
+
+  const blocks = $derived(parseStep(step.segments));
 </script>
 
-<p class="text">
-  {#each step.segments as segment, index (index)}
-    {#if segment.kind === 'text'}{segment.text}{:else if interactive}<button
-        class="ingredient"
-        type="button"
-        onmouseenter={() => onhighlight?.(segment.ingredientId)}
-        onmouseleave={() => onhighlight?.(null)}
-        onfocus={() => onhighlight?.(segment.ingredientId)}
-        onblur={() => onhighlight?.(null)}
-        >{scaling.show(segment.quantity).text} {segment.name}</button
-      >{:else}<strong class="ingredient-plain"
-        >{scaling.show(segment.quantity).text} {segment.name}</strong
-      >{/if}
-  {/each}
-</p>
+{#each blocks as block, index (index)}
+  {#if block.kind === 'paragraph'}
+    <p class="text">
+      <StepInline nodes={block.children} {scaling} {interactive} {onhighlight} />
+    </p>
+  {:else if block.ordered}
+    <ol class="list">
+      {#each block.items as item, position (position)}
+        <li><StepInline nodes={item} {scaling} {interactive} {onhighlight} /></li>
+      {/each}
+    </ol>
+  {:else}
+    <ul class="list">
+      {#each block.items as item, position (position)}
+        <li><StepInline nodes={item} {scaling} {interactive} {onhighlight} /></li>
+      {/each}
+    </ul>
+  {/if}
+{/each}
 
 <style>
   /*
-   * The line breaks in a step are the cook's own. A step written as three
-   * lines — bake, rest, slice — is three lines because somebody meant it to
-   * be, and collapsing them into a paragraph loses the shape of the
-   * instruction. Imported steps depend on this too: a Tandoor instruction is
-   * Markdown rendered with a line break per newline, so its newlines arrive
-   * here meaning exactly that.
+   * The line breaks inside a paragraph are the cook's own. A step written as
+   * three lines — bake, rest, slice — is three lines because somebody meant it
+   * to be, and collapsing them into one loses the shape of the instruction.
+   * Imported steps depend on this too: a Tandoor instruction is Markdown
+   * rendered with a line break per newline, so its newlines arrive here meaning
+   * exactly that. A *blank* line is the one that starts a new paragraph, which
+   * is what Markdown says it is.
    *
-   * It makes the whitespace in this file's markup significant, which is why
-   * the references above are written without a break inside them.
+   * It makes the whitespace inside a paragraph significant, which is why
+   * `StepInline` is written without breaks between its tags.
    */
   .text {
     line-height: var(--leading-relaxed);
@@ -63,48 +75,22 @@
   }
 
   /*
-   * A button, not a span: pointing at an ingredient lights it up in the list,
-   * and a keyboard has to be able to do the same thing. Styled as text because
-   * it is text — the underline says it responds without making a sentence look
-   * like a toolbar.
+   * A list inside a step is nearly always a list of things to do in order, so
+   * it is set as prose with markers rather than as a stack of rows: indented
+   * enough to read as a list, not so much that it leaves the sentence behind.
+   *
+   * No margins of its own, here or on the paragraphs: a step body is a column
+   * with a gap, and every block a step renders is one of its items — as the
+   * step's number and the list of what it needs already are. A margin on top
+   * would be added to that gap rather than replacing it.
    */
-  .ingredient {
-    padding: 0;
-    border: none;
-    background: none;
-    color: inherit;
-    font: inherit;
-    font-weight: var(--weight-semibold);
-    text-decoration: underline;
-    text-decoration-color: var(--border-strong);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.2em;
-    cursor: pointer;
+  .list {
+    margin: 0;
+    padding-left: var(--space-6);
+    line-height: var(--leading-relaxed);
   }
 
-  .ingredient:hover {
-    text-decoration-color: var(--accent);
-  }
-
-  .ingredient-plain {
-    font-weight: var(--weight-semibold);
-  }
-
-  /*
-   * On paper an ingredient reference is simply the words it stands for. It is
-   * a button on screen because pointing at it lights up the line it came from,
-   * and there is nothing to point at on a sheet of paper.
-   */
-  @media print {
-    .ingredient {
-      display: inline;
-      padding: 0;
-      border: 0;
-      background: none;
-      color: inherit;
-      font: inherit;
-      font-weight: var(--weight-medium);
-      text-decoration: none;
-    }
+  .list li + li {
+    margin-top: var(--space-1);
   }
 </style>

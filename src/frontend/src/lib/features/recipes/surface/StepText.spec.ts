@@ -35,10 +35,13 @@ describe('StepText', () => {
       props: { step: step([{ kind: 'text', text: 'Bake.\nRest.\n\nSlice.' }]), scaling }
     });
 
-    // Three lines because somebody meant three lines. An imported Tandoor step
-    // arrives this way too: its instruction is Markdown rendered with a line
-    // break per newline.
-    expect(container.querySelector('p')?.textContent).toBe('Bake.\nRest.\n\nSlice.');
+    // Two lines in the first paragraph because somebody meant two lines, and a
+    // second paragraph because a blank line is what starts one. An imported
+    // Tandoor step arrives this way too: its instruction is Markdown rendered
+    // with a line break per newline.
+    const paragraphs = [...container.querySelectorAll('p')].map((one) => one.textContent);
+
+    expect(paragraphs).toEqual(['Bake.\nRest.', 'Slice.']);
   });
 
   it.each([true, false])(
@@ -63,5 +66,49 @@ describe('StepText', () => {
     });
 
     expect(container.querySelector('p')?.textContent).toBe('Melt 200 g butter in.');
+  });
+
+  it('renders the step as Markdown, references and all', () => {
+    const { container } = render(StepText, {
+      props: {
+        step: step([
+          { kind: 'text', text: 'Melt **' },
+          butter,
+          { kind: 'text', text: '** slowly.' }
+        ]),
+        scaling
+      }
+    });
+
+    expect(container.querySelector('strong button')?.textContent).toBe('200 g butter');
+    expect(container.querySelector('p')?.textContent).toBe('Melt 200 g butter slowly.');
+  });
+
+  it('sets a list as a list', () => {
+    const { container } = render(StepText, {
+      props: { step: step([{ kind: 'text', text: '- salt\n- pepper' }]), scaling }
+    });
+
+    expect([...container.querySelectorAll('ul li')].map((one) => one.textContent)).toEqual([
+      'salt',
+      'pepper'
+    ]);
+  });
+
+  it('leaves a link inert where the whole step is the control', () => {
+    const markdown = { kind: 'text' as const, text: 'see [the source](https://example.com)' };
+
+    const live = render(StepText, { props: { step: step([markdown]), scaling } });
+
+    expect(live.container.querySelector('a')?.getAttribute('href')).toBe('https://example.com');
+
+    const cooking = render(StepText, {
+      props: { step: step([markdown]), scaling, interactive: false }
+    });
+
+    // No anchor and no button inside the step button — both are invalid there.
+    expect(cooking.container.querySelector('a')).toBeNull();
+    expect(cooking.container.querySelector('button')).toBeNull();
+    expect(cooking.container.querySelector('p')?.textContent).toBe('see the source');
   });
 });
