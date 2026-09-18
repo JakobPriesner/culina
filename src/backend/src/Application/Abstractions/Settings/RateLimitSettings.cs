@@ -59,6 +59,18 @@ public sealed record RateLimitSettings
     /// </remarks>
     public int SourceRequestsPerHour { get; init; } = 1500;
 
+    /// <summary>
+    /// Reads of shared recipes allowed per minute from one address.
+    /// </summary>
+    /// <remarks>
+    /// Not a guess-the-token defence — 256 bits is not walked at any rate —
+    /// but the only endpoint that serves a household's content to an
+    /// anonymous caller, and the one place where a limit is the difference
+    /// between a link and a feed. Generous enough for a page and its photo
+    /// several times over, on a shared connection.
+    /// </remarks>
+    public int SharedRecipesPerIpPerMinute { get; init; } = 120;
+
     /// <summary>Requests allowed per minute from one authenticated session.</summary>
     public int RequestsPerSessionPerMinute { get; init; } = 600;
 
@@ -71,6 +83,7 @@ public sealed record RateLimitSettings
         SettingsGuard.InRange(InvitationPerIpPerHour, 1, 10_000, SectionName, nameof(InvitationPerIpPerHour));
         SettingsGuard.InRange(ImportsPerHour, 1, 10_000, SectionName, nameof(ImportsPerHour));
         SettingsGuard.InRange(SourceRequestsPerHour, 1, 100_000, SectionName, nameof(SourceRequestsPerHour));
+        SettingsGuard.InRange(SharedRecipesPerIpPerMinute, 1, 100_000, SectionName, nameof(SharedRecipesPerIpPerMinute));
         SettingsGuard.InRange(RequestsPerSessionPerMinute, 10, 100_000, SectionName, nameof(RequestsPerSessionPerMinute));
     }
 }

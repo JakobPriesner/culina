@@ -1,5 +1,5 @@
 import { clampYield } from '../scaling';
-import type { Recipe } from '../types';
+import type { RecipeReading } from '../types';
 
 /**
  * The chosen yield lives in the URL.
@@ -12,7 +12,7 @@ import type { Recipe } from '../types';
 const key = 'yield';
 
 /** Reads it back, refusing anything that is not a usable number. */
-export function yieldFrom(url: URL, recipe: Recipe | null): number {
+export function yieldFrom(url: URL, recipe: RecipeReading | null): number {
   const raw = url.searchParams.get(key);
   const parsed = raw === null ? Number.NaN : Number(raw);
 
@@ -29,7 +29,7 @@ export function yieldFrom(url: URL, recipe: Recipe | null): number {
  * The recipe's own yield is left out rather than written as `?yield=4`: a link
  * to a recipe should be the plain link unless somebody deliberately scaled it.
  */
-export function urlAtYield(url: URL, value: number, recipe: Recipe | null): string {
+export function urlAtYield(url: URL, value: number, recipe: RecipeReading | null): string {
   const next = new URL(url);
 
   if (recipe && value === recipe.yieldAmount) {

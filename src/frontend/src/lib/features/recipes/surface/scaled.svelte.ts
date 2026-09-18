@@ -1,7 +1,7 @@
 import { formatQuantity, type QuantityText } from '../formatQuantity';
 import { quantityLabels as labels } from '../quantityLabels';
 import { factorFor, scaleQuantity, trustedFactorRange } from '../scaling';
-import type { Recipe, Quantity } from '../types';
+import type { Quantity, RecipeReading } from '../types';
 import { wordYield } from '../yieldWords';
 import { preferences } from '$shell/preferences.svelte';
 
@@ -13,7 +13,7 @@ import { preferences } from '$shell/preferences.svelte';
  * apps and the whole reason a step stores a reference rather than the words
  * "200 g butter".
  */
-export function createScaling(recipe: () => Recipe | null, target: () => number) {
+export function createScaling(recipe: () => RecipeReading | null, target: () => number) {
   const factor = $derived.by(() => {
     const current = recipe();
 

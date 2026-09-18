@@ -132,23 +132,15 @@ export interface IngredientMatch {
 }
 
 /**
- * Where a recipe came from, when it was not written here.
+ * A recipe as it is read.
  *
- * Null for most recipes. An imported recipe is an ordinary recipe in every
- * other respect — edited, cooked, scaled and planned like one somebody typed —
- * and this is the only thing that says otherwise.
+ * Everything the page draws and nothing about whose kitchen it is. The split
+ * exists because a link hands a stranger exactly this much — so the surface
+ * asks for exactly this much, and the fields a visitor must never see cannot be
+ * reached from the one component that renders both.
  */
-export interface RecipeOrigin {
-  readonly kind: string;
-  readonly sourceId: string | null;
-  readonly externalId: string;
-  readonly sourceUrl: string | null;
-  readonly importedAt: string;
-}
-
-export interface Recipe {
+export interface RecipeReading {
   readonly id: string;
-  readonly householdId: string;
   readonly title: string;
   readonly description: string | null;
   readonly language: RecipeLanguage;
@@ -163,10 +155,23 @@ export interface Recipe {
   readonly groups: readonly IngredientGroup[];
   readonly steps: readonly Step[];
   readonly tags: readonly string[];
-  readonly origin: RecipeOrigin | null;
+  /**
+   * Where it was originally published, when it was not written here.
+   *
+   * Null for most recipes, and the whole of what the app keeps about an import:
+   * an imported recipe is an ordinary recipe in every other respect — edited,
+   * cooked, scaled and planned like one somebody typed — and one credit under
+   * the title is all that ever said otherwise.
+   */
+  readonly sourceUrl: string | null;
+  readonly updatedAt: string;
+}
+
+/** The same recipe, to the household that keeps it. */
+export interface Recipe extends RecipeReading {
+  readonly householdId: string;
   readonly createdBy: string;
   readonly createdAt: string;
-  readonly updatedAt: string;
   /** Sent back as `If-Match` on a write, so two editors cannot clobber. */
   readonly version: number;
 }
@@ -177,10 +182,10 @@ export interface Recipe {
  * Flat, because the groups are a detail of how it was typed: what the surface
  * shows is one list, or one list per step.
  */
-export const everyIngredient = (recipe: Recipe): readonly Ingredient[] =>
+export const everyIngredient = (recipe: RecipeReading): readonly Ingredient[] =>
   recipe.groups.flatMap((group) => group.ingredients);
 
 /** The same, for lookups by id. */
-export function ingredientsOf(recipe: Recipe): Map<string, Ingredient> {
+export function ingredientsOf(recipe: RecipeReading): Map<string, Ingredient> {
   return new Map(everyIngredient(recipe).map((one) => [one.id, one] as const));
 }

@@ -5,7 +5,7 @@
   import { targetYieldForAmount, yieldLabel } from '../scaling';
   import { wordYield } from '../yieldWords';
   import { parseIngredientLine } from '../editor/parseIngredientLine';
-  import type { Recipe } from '../types';
+  import type { RecipeReading } from '../types';
 
   /**
    * "I have 600 g of flour" — the whole recipe reshapes around it.
@@ -19,7 +19,7 @@
    */
   interface Props {
     open: boolean;
-    recipe: Recipe;
+    recipe: RecipeReading;
     onapply: (targetYield: number) => void;
   }
 

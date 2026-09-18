@@ -4,6 +4,7 @@ import type {
   Ingredient,
   IngredientGroup,
   Recipe,
+  RecipeReading,
   RecipeSummary,
   Step,
   StepSegment,
@@ -27,6 +28,7 @@ type WireIngredient = components['schemas']['RecipesIngredientContract'];
 type WireStep = components['schemas']['RecipesStepContract'];
 type WireSegment = components['schemas']['RecipesStepSegmentContract'];
 type WireSuggestion = components['schemas']['SuggestionsGetAllSuggestion'];
+type WireShared = components['schemas']['RecipesGetSharedResponse'];
 
 export const toSummary = (wire: WireSummary): RecipeSummary => ({
   id: wire.recipeId,
@@ -85,19 +87,43 @@ export const toRecipe = (wire: WireRecipe): Recipe => ({
   groups: wire.groups.map(toGroup),
   steps: wire.steps.map(toStep),
   tags: wire.tags,
-  origin: wire.origin
-    ? {
-        kind: wire.origin.kind,
-        sourceId: wire.origin.sourceId ?? null,
-        externalId: wire.origin.externalId,
-        sourceUrl: wire.origin.sourceUrl ?? null,
-        importedAt: wire.origin.importedAt
-      }
-    : null,
+  sourceUrl: wire.origin?.sourceUrl ?? null,
   createdBy: wire.createdBy,
   createdAt: wire.createdAt,
   updatedAt: wire.updatedAt,
   version: wire.version
+});
+
+/**
+ * A shared recipe, which is a reading and nothing more.
+ *
+ * The id it is given is the token out of the link, because on this page that is
+ * genuinely what identifies the recipe — there is no other name for it here,
+ * and it is what the photograph is fetched under.
+ */
+export const toSharedRecipe = (token: string, wire: WireShared): RecipeReading => ({
+  id: token,
+  title: wire.title,
+  description: wire.description ?? null,
+  language: wire.language,
+  yieldAmount: wire.yieldAmount,
+  yieldKind: wire.yieldKind,
+  yieldLabel: wire.yieldLabel ?? null,
+  prepMinutes: wire.prepMinutes ?? null,
+  cookMinutes: wire.cookMinutes ?? null,
+  totalMinutes: wire.totalMinutes ?? null,
+  // The surface only asks whether there is a picture; where it lives is the
+  // page's business, and on this page it lives under the token.
+  imageId: wire.hasImage ? token : null,
+  groups: wire.groups.map(toGroup),
+  steps: wire.steps.map(toStep),
+  tags: wire.tags,
+  // Only the address travels: which library it came from and when it was
+  // fetched are facts about somebody's setup, and are not on the wire here.
+  sourceUrl: wire.sourceUrl ?? null,
+  // A visitor cannot see when it last changed, and the surface does not draw
+  // it — but the type asks, so it is the one thing here that is a placeholder.
+  updatedAt: ''
 });
 
 const toGroup = (wire: WireGroup): IngredientGroup => ({

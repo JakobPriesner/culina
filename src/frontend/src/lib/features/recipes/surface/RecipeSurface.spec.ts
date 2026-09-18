@@ -24,7 +24,7 @@ const recipe: Recipe = {
   totalMinutes: 25,
   imageId: null,
   tags: ['Weeknight'],
-  origin: null,
+  sourceUrl: null,
   createdBy: 'u1',
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
@@ -147,10 +147,27 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('spinbutton', { name: 'Cake' })).toBeInTheDocument();
   });
 
-  it('offers to start cooking', () => {
-    render();
+  it('offers to start cooking when the page says cooking is on offer', () => {
+    render({ onstartcooking: () => {} });
 
     expect(screen.getByRole('button', { name: 'Start cooking' })).toBeInTheDocument();
+  });
+
+  it('draws no action bar at all when the page offers nothing', () => {
+    // What somebody following a share link gets: they cannot cook, shop,
+    // shelve or re-share a recipe that is not theirs, and an empty bar floating
+    // over the last step is worse than no bar.
+    const { container } = render();
+
+    expect(screen.queryByRole('button', { name: 'Start cooking' })).not.toBeInTheDocument();
+    expect(container.querySelector('.foot')).toBeNull();
+  });
+
+  it('draws the bar as soon as the page offers one thing', () => {
+    const { container } = render({ onshare: () => {} });
+
+    expect(container.querySelector('.foot')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
   });
 
   it('offers the way back into the editor, as a real link', () => {

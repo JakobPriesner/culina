@@ -1,5 +1,6 @@
 using Application.Abstractions.Messaging;
 using Application.Archive;
+using Application.Cookbooks;
 using Application.Cooking.CookPhoto;
 using Application.CookSessions;
 using Application.Households.ChangeMemberRole;
@@ -14,9 +15,9 @@ using Application.Households.RedeemInvitation;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
-using Application.Cookbooks;
 using Application.Planning;
 using Application.Recipes.Create;
+using Application.Recipes.CreateShare;
 using Application.Recipes.Delete;
 using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
@@ -24,14 +25,18 @@ using Application.Recipes.GetCookLog;
 using Application.Recipes.GetImage;
 using Application.Recipes.GetIngredients;
 using Application.Recipes.GetNotes;
+using Application.Recipes.GetShare;
+using Application.Recipes.GetShared;
+using Application.Recipes.GetSharedImage;
 using Application.Recipes.GetTags;
 using Application.Recipes.GetUnits;
 using Application.Recipes.Import;
-using Application.Recipes.Sources;
 using Application.Recipes.RecordCooked;
 using Application.Recipes.RemoveImage;
+using Application.Recipes.RevokeShare;
 using Application.Recipes.SaveNotes;
 using Application.Recipes.SetImage;
+using Application.Recipes.Sources;
 using Application.Recipes.UndoCooked;
 using Application.Recipes.Update;
 using Application.Registration.GetPolicy;
@@ -174,6 +179,14 @@ public static class DependencyInjection
                 SetRecipeImageCommandHandler>()
             .AddScoped<ICommandHandler<RemoveRecipeImageCommand>, RemoveRecipeImageCommandHandler>()
             .AddScoped<IQueryHandler<GetRecipeImageQuery, ImageDelivery>, GetRecipeImageQueryHandler>()
+            .AddScoped<IQueryHandler<GetShareQuery, Contracts.Recipes.Share.Response>,
+                GetShareQueryHandler>()
+            .AddScoped<ICommandHandler<CreateShareCommand, Contracts.Recipes.Share.Response>,
+                CreateShareCommandHandler>()
+            .AddScoped<ICommandHandler<RevokeShareCommand>, RevokeShareCommandHandler>()
+            .AddScoped<IQueryHandler<GetSharedRecipeQuery, Contracts.Recipes.GetShared.Response>,
+                GetSharedRecipeQueryHandler>()
+            .AddScoped<IQueryHandler<GetSharedImageQuery, ImageDelivery>, GetSharedImageQueryHandler>()
             .AddScoped<ICommandHandler<SetCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
                 SetCookPhotoCommandHandler>()
             .AddScoped<ICommandHandler<RemoveCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,

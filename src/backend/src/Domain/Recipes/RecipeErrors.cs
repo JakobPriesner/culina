@@ -100,4 +100,18 @@ public static class RecipeErrors
         "recipes.invalid_duration",
         "A time must be between zero and one week.",
         ErrorType.Validation);
+
+    /// <summary>
+    /// The recipe is not shared, or the link is not one we issued.
+    /// </summary>
+    /// <remarks>
+    /// The same error for "this recipe has no link", "that token is not ours"
+    /// and "that link was taken back", because the caller who gets it is
+    /// usually a stranger and the three answers together are a way to sort real
+    /// tokens from invented ones.
+    /// </remarks>
+    public static readonly Error ShareNotFound = new(
+        "recipes.share_not_found",
+        "That link does not lead to a recipe. It may have been taken back.",
+        ErrorType.NotFound);
 }

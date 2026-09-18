@@ -10,5 +10,12 @@
  */
 export const publicRoutes = ['/', '/login'] as const;
 
-/** Route prefixes that must never be crawled, listed for robots.txt. */
-export const privateRoutePrefixes = ['/api/', '/recipes/', '/shopping', '/me'] as const;
+/**
+ * Route prefixes that must never be crawled, listed for robots.txt.
+ *
+ * `/shared/` is here although it needs no session: a share link is sent to one
+ * person, not published, and a crawler that found one in a mail archive would
+ * otherwise put somebody's recipe in a search index at an address nobody can
+ * guess but everybody can then read.
+ */
+export const privateRoutePrefixes = ['/api/', '/recipes/', '/shared/', '/shopping', '/me'] as const;
