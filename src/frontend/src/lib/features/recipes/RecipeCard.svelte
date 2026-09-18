@@ -32,34 +32,19 @@
   const eyebrow = $derived(recipe.tags[0] ?? null);
 </script>
 
-<article
-  class="recipe"
-  class:without-photo={!recipe.imageId}
-  class:pending
-  aria-busy={pending || undefined}
->
-  <!-- Photographed recipes lead with their image; written recipes have their own paper treatment. -->
-  {#if recipe.imageId}
-    <div class="photo">
-      <Image
-        src={imageUrl(recipe.id, 400)}
-        srcset={imageSrcset(recipe.id)}
-        sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw"
-        alt=""
-        ratio={4 / 3}
-      />
-    </div>
-  {:else}
-    <div class="recipe-mark" aria-hidden="true">
-      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3">
-        <path
-          d="M5 17h22M7 20a9 9 0 0 0 18 0M12 12c-3-3 3-4 0-7m8 7c-3-3 3-4 0-7"
-          stroke-linecap="round"
-        />
-      </svg>
-      <span class="rule"></span>
-    </div>
-  {/if}
+<article class="recipe" class:pending aria-busy={pending || undefined}>
+  <!-- Every recipe leads with the same box, photographed or not: an unphotographed
+       one gets the placeholder rather than a card of its own shape, so a grid of
+       both reads as one grid. -->
+  <div class="photo">
+    <Image
+      src={recipe.imageId ? imageUrl(recipe.id, 400) : undefined}
+      srcset={recipe.imageId ? imageSrcset(recipe.id) : undefined}
+      sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw"
+      alt=""
+      ratio={4 / 3}
+    />
+  </div>
 
   {#if eyebrow}
     <p class="eyebrow">{eyebrow}</p>
@@ -100,43 +85,8 @@
     padding-bottom: var(--space-4);
   }
 
-  .without-photo {
-    min-height: 17rem;
-    padding: var(--space-6);
-    border: 1px solid var(--border);
-    background: var(--surface-raised);
-    border-radius: var(--radius-lg);
-    justify-content: flex-end;
-    transition:
-      border-color var(--duration-fast) var(--ease-out),
-      box-shadow var(--duration-fast) var(--ease-out);
-  }
-
-  .without-photo:hover,
-  .without-photo:focus-within {
-    border-color: var(--border-strong);
-    box-shadow: var(--shadow-card);
-  }
   .pending {
     border-bottom: 2px dashed var(--border-strong);
-  }
-  .recipe-mark {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    margin-bottom: auto;
-    padding-bottom: var(--space-6);
-    color: var(--accent);
-  }
-  .recipe-mark svg {
-    width: var(--space-8);
-    height: var(--space-8);
-    flex-shrink: 0;
-  }
-  .rule {
-    flex: 1;
-    height: 1px;
-    background: var(--border);
   }
   .details {
     display: flex;
