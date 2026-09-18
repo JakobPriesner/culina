@@ -129,6 +129,28 @@ describe('resolving the session', () => {
     // what must not happen is three boots asking six times.
     expect(send).toHaveBeenCalledTimes(2);
   });
+
+  it('does not ask again once it has an answer', async () => {
+    await session.resolve();
+    send.mockClear();
+
+    // Every navigation resolves the session, and a hover preloads one. Asking
+    // the server who is signed in on each of them is two requests for an answer
+    // that cannot have changed.
+    await session.resolve();
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('asks again while it still could not ask', async () => {
+    serverAnswers(() => json({ code: 'server.unavailable', detail: 'Later.' }, 503));
+    await session.resolve();
+
+    serverAnswers(signedIn);
+    await session.resolve();
+
+    expect(session.status).toBe('authenticated');
+  });
 });
 
 describe('the active household', () => {
