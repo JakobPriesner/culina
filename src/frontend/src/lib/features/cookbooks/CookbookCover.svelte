@@ -40,6 +40,11 @@
          been photographed", and it still gives the card something to be. -->
     <p class="empty">{name.trim().slice(0, 1) || '·'}</p>
   {:else}
+    <!--
+      The tiles are unrounded so the four of them read as one picture cut into
+      quarters rather than four photographs laid side by side. Only the outside
+      is curved, and the cover itself does that by clipping.
+    -->
     {#each shown as recipeId (recipeId)}
       <div class="tile">
         <Image
@@ -48,6 +53,7 @@
           sizes="(min-width: 64rem) 10rem, 22vw"
           alt=""
           fill
+          rounded={false}
         />
       </div>
     {/each}
