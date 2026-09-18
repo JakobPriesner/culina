@@ -111,8 +111,23 @@
     pointer-events: none;
   }
 
+  /* The page fading out under the pills instead of being cut in half at the
+     top edge. A gradient and not a blur: what passes under here is a centred
+     column on a flat background, so a full-width backdrop-filter would spend
+     every scroll frame blurring the gutters on either side of it. */
+  .header::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: calc(100% + var(--space-8));
+    background: linear-gradient(to bottom, var(--surface) 35%, transparent);
+  }
+
   /* Three floating groups share one row: brand, destinations, library tools. */
   .header-inner {
+    /* Positioned, so the pills paint above the scrim rather than under it. */
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -274,6 +289,11 @@
     .header {
       position: relative;
       top: auto;
+    }
+
+    /* Not sticky here, so nothing ever passes under it. */
+    .header::before {
+      display: none;
     }
   }
 
