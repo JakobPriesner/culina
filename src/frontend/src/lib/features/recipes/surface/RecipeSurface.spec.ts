@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import RecipeSurface from './RecipeSurface.svelte';
@@ -17,6 +18,7 @@ const recipe: Recipe = {
   language: 'en',
   yieldAmount: 2,
   yieldKind: 'servings',
+  yieldLabel: null,
   prepMinutes: 10,
   cookMinutes: 15,
   totalMinutes: 25,
@@ -41,6 +43,7 @@ const recipe: Recipe = {
   steps: [
     {
       id: 's1',
+      title: null,
       durationSeconds: null,
       // Butter is named in the sentence; salt is only ever needed, which is the
       // half a step's words cannot say.
@@ -58,6 +61,7 @@ const recipe: Recipe = {
     },
     {
       id: 's2',
+      title: null,
       durationSeconds: null,
       uses: [flour],
       segments: [
@@ -114,6 +118,33 @@ describe('reading a recipe', () => {
     render();
 
     expect(screen.queryByText(/Times are for/)).not.toBeInTheDocument();
+  });
+
+  it('numbers a step that has no name of its own', () => {
+    render();
+
+    expect(steps().getByText('Step 1')).toBeInTheDocument();
+  });
+
+  it('calls a step what the recipe calls it, instead of numbering it', () => {
+    // The whole point: in a layered recipe, "Step 2" is the least useful thing
+    // that could be written above the sentence.
+    render({
+      recipe: {
+        ...recipe,
+        steps: [{ ...recipe.steps[0]!, title: 'Prepare the base' }, recipe.steps[1]!]
+      }
+    });
+
+    expect(steps().getByText('Prepare the base')).toBeInTheDocument();
+    expect(steps().queryByText('Step 1')).not.toBeInTheDocument();
+  });
+
+  it('says what the recipe makes in the recipe’s own word', () => {
+    render({ recipe: { ...recipe, yieldAmount: 1, yieldLabel: 'Cake' }, servings: 1 });
+
+    // The stepper is renamed too, so the control and the wording agree.
+    expect(screen.getByRole('spinbutton', { name: 'Cake' })).toBeInTheDocument();
   });
 
   it('offers to start cooking', () => {
@@ -175,6 +206,114 @@ describe('what a step needs', () => {
     });
 
     expect(steps().queryByText('Get out')).not.toBeInTheDocument();
+  });
+});
+
+describe('how the ingredients are arranged', () => {
+  // The choice is remembered on the device, so one test's click would
+  // otherwise be the next test's starting position.
+  afterEach(() => localStorage.clear());
+
+  const chooseByStep = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'By step' }));
+  };
+
+  it('puts them all in one place to begin with', () => {
+    render();
+
+    expect(ingredients().getByText('300 g')).toBeInTheDocument();
+  });
+
+  it('adds the same thing up wherever the recipe asked for it', () => {
+    render({
+      recipe: {
+        ...recipe,
+        groups: [
+          {
+            id: 'g1',
+            name: null,
+            ingredients: [
+              { id: butter, quantity: { value: 200, unit: 'g' }, name: 'butter', note: null },
+              { id: 'i-butter-2', quantity: { value: 50, unit: 'g' }, name: 'butter', note: null }
+            ]
+          }
+        ]
+      }
+    });
+
+    // One block of butter, because that is what the shop sells and what the
+    // cook has to weigh.
+    expect(ingredients().getByText('250 g')).toBeInTheDocument();
+    expect(ingredients().getAllByText(/butter/)).toHaveLength(1);
+  });
+
+  it('moves each step’s ingredients beside the step when asked', async () => {
+    render();
+    await chooseByStep();
+
+    // By its number, not its position: the ingredients beside a step are list
+    // items of their own now, so counting them is counting the wrong thing.
+    const stepTwo = steps().getByText('Step 2').closest('li')!;
+
+    // The note is what tells the two apart: the gathering line under a step
+    // never carried one, and the list in the column does.
+    expect(within(stepTwo).getByText(/sifted/)).toBeInTheDocument();
+    expect(ingredients().queryByText('300 g')).not.toBeInTheDocument();
+  });
+
+  it('drops the step’s own gathering line, which the column has become', async () => {
+    render();
+    await chooseByStep();
+
+    expect(steps().queryByText('Get out')).not.toBeInTheDocument();
+  });
+
+  it('keeps an ingredient no step asks for, rather than losing it', async () => {
+    render({
+      recipe: {
+        ...recipe,
+        steps: recipe.steps.map((step) => ({
+          ...step,
+          uses: step.uses.filter((id) => id !== salt)
+        }))
+      }
+    });
+    await chooseByStep();
+
+    // Nothing else on the page would mention it, and an ingredient that
+    // disappears because nobody wrote it into a sentence is a recipe the app
+    // has quietly changed.
+    expect(ingredients().getByText('salt')).toBeInTheDocument();
+    expect(ingredients().getByText('Not tied to a step')).toBeInTheDocument();
+  });
+
+  it('remembers the arrangement, because it is how this person reads', async () => {
+    const first = render();
+
+    await chooseByStep();
+    first.unmount();
+
+    render();
+
+    expect(screen.getByRole('button', { name: 'By step' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('offers no choice while cooking, where one step is the whole arrangement', () => {
+    render({ emphasis: 'cook' });
+
+    expect(screen.queryByRole('button', { name: 'By step' })).not.toBeInTheDocument();
+  });
+
+  it('cooks the same way whichever arrangement was chosen', async () => {
+    const { rerender } = render();
+
+    await chooseByStep();
+    await rerender({ recipe, servings: 2, emphasis: 'cook', currentStep: 0 });
+
+    // The panel has contracted to the current step, exactly as it does for a
+    // reader who never touched the switch.
+    expect(ingredients().getByText(/butter/)).toBeInTheDocument();
+    expect(ingredients().queryByText(/sifted/)).not.toBeInTheDocument();
   });
 });
 

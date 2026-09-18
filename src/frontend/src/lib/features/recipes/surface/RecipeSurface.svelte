@@ -3,18 +3,29 @@
 
   import { resolve } from '$app/paths';
 
-  import { Button, Image } from '$ds';
+  import { Button, Image, SegmentedControl } from '$ds';
 
   import { m } from '$shell/i18n';
+  import {
+    recallIngredientsView,
+    rememberIngredientsView,
+    type IngredientsView
+  } from './ingredientsView';
   import { createScaling } from './scaled.svelte';
   import ScaleToAmountSheet from './ScaleToAmountSheet.svelte';
-  import IngredientRow from './IngredientRow.svelte';
+  import IngredientList from './IngredientList.svelte';
   import ServingsControl from './ServingsControl.svelte';
   import StepNeeds from './StepNeeds.svelte';
   import StepText from './StepText.svelte';
   import { imageSrcset, imageUrl } from '../recipeImage';
   import { metaLineFor } from '../recipeMeta';
-  import { ingredientsOf, type Ingredient, type Recipe, type Step } from '../types';
+  import {
+    everyIngredient,
+    ingredientsOf,
+    type Ingredient,
+    type Recipe,
+    type Step
+  } from '../types';
 
   /**
    * The host of the original, for the "from …" line.
@@ -50,6 +61,19 @@
    * A later change that moves the servings control or the ingredient region
    * between the two weightings breaks the product's defining interaction. If
    * you need to move one, move it in both.
+   *
+   * The ingredient region has two arrangements, and the switch beside its
+   * heading picks between them:
+   *
+   * - `combined` — the whole list in one place, the same thing added up
+   *   wherever the recipe asked for it. What you read before you shop.
+   * - `perStep` — each step's ingredients beside that step, in the column the
+   *   list would otherwise fill. What you read with a pan in your hand.
+   *
+   * Cooking is `perStep` taken to its conclusion — one step, and only what it
+   * needs — so it neither offers the switch nor obeys it. That is also why the
+   * region stays in the same place in all three: they are one arrangement at
+   * three widths of attention, not three layouts.
    */
   interface Props {
     recipe: Recipe;
@@ -103,12 +127,22 @@
   let highlighted = $state<string | null>(null);
   let scalingByAmount = $state(false);
 
+  let view = $state<IngredientsView>(recallIngredientsView());
+
+  const chooseView = (chosen: string) => {
+    view = chosen === 'perStep' ? 'perStep' : 'combined';
+    rememberIngredientsView(view);
+  };
+
   const scaling = createScaling(
     () => recipe,
     () => servings
   );
 
   const cooking = $derived(emphasis === 'cook');
+
+  /** Cooking has already contracted the region to one step; it cannot do both. */
+  const perStep = $derived(view === 'perStep' && !cooking);
 
   const byId = $derived(ingredientsOf(recipe));
 
@@ -119,25 +153,32 @@
    * rendering as a hole. The order is the recipe's own, because that is the
    * order the ingredient list beside it is already in.
    */
-  const needsOf = (step: Step): Ingredient[] =>
-    step.uses.map((id) => byId.get(id)).filter((one) => one !== undefined);
+  const needsOf = (step: Step | undefined): Ingredient[] =>
+    (step?.uses ?? []).map((id) => byId.get(id)).filter((one) => one !== undefined);
 
-  /** Only what the current step needs, once cooking. */
-  const stepIngredients = $derived(new Set(recipe.steps[currentStep]?.uses ?? []));
+  /** Every ingredient the recipe has, groups flattened, in its own order. */
+  const written = $derived(everyIngredient(recipe));
 
-  const groups = $derived(
-    recipe.groups.map((group) => ({
-      ...group,
-      ingredients: cooking
-        ? group.ingredients.filter((one) => stepIngredients.has(one.id))
-        : group.ingredients
-    }))
-  );
+  /** Everything some step asks for, which is very nearly always everything. */
+  const claimed = $derived(new Set(recipe.steps.flatMap((step) => step.uses)));
 
-  const anyIngredients = $derived(groups.some((group) => group.ingredients.length > 0));
+  /**
+   * What the panel under the heading holds — three answers to three questions.
+   *
+   * Cooking asks "what is in my hands now", so it is the current step's list.
+   * `perStep` has already put every claimed ingredient beside the step that
+   * claims it, so what is left there is what no step mentions: the jar of
+   * something that belongs to the whole dish, which would otherwise vanish off
+   * the page altogether. Reading the combined list asks "what does this recipe
+   * need", and the answer to that is all of it.
+   */
+  const panel = $derived.by(() => {
+    if (cooking) {
+      return needsOf(recipe.steps[currentStep]);
+    }
 
-  /** Named groups get a heading; a single unnamed group is just a list. */
-  const showGroupNames = $derived(recipe.groups.some((group) => group.name));
+    return perStep ? written.filter((one) => !claimed.has(one.id)) : written;
+  });
 
   let stepList = $state<HTMLOListElement>();
 
@@ -223,7 +264,7 @@
   });
 </script>
 
-<article class="surface" class:cooking>
+<article class="surface" class:cooking class:perStep>
   <!--
     The photo comes first while reading and disappears while cooking: it is what
     makes you choose the recipe, and it is dead weight once you are standing at
@@ -236,8 +277,9 @@
         srcset={imageSrcset(recipe.id)}
         sizes="(min-width: 72rem) 72rem, 100vw"
         alt=""
-        ratio={16 / 9}
         loading="eager"
+        fill
+        rounded={false}
       />
     </div>
   {/if}
@@ -265,6 +307,7 @@
         totalMinutes: recipe.totalMinutes,
         yieldAmount: recipe.yieldAmount,
         yieldKind: recipe.yieldKind,
+        yieldLabel: recipe.yieldLabel,
         tags: recipe.tags,
         cookCount: 0,
         lastCookedAt: null,
@@ -316,6 +359,7 @@
     <ServingsControl
       value={servings}
       kind={recipe.yieldKind}
+      label={recipe.yieldLabel}
       base={recipe.yieldAmount}
       onchange={(value) => onservings?.(value)}
     />
@@ -340,34 +384,58 @@
     <!-- Same position in both weightings; contracts to the current step's
          ingredients when cooking. -->
     <section class="ingredients" aria-label={m['recipe.ingredients']()}>
-      <h2 class="section">{m['recipe.ingredients']()}</h2>
+      <!-- The switch sits on the heading's own line, and stays put when the
+           arrangement changes: the head keeps the width of the ingredient
+           column even where the section has grown past it. -->
+      <div class="section-head">
+        <h2 class="section">{m['recipe.ingredients']()}</h2>
 
-      {#if anyIngredients}
-        {#each groups as group (group.id ?? 'default')}
-          {#if group.ingredients.length > 0}
-            {#if showGroupNames && group.name}
-              <h3 class="group">{group.name}</h3>
-            {/if}
+        <!-- Nothing to choose while cooking, where one step is the whole
+             arrangement. -->
+        {#if !cooking && written.length > 0}
+          <SegmentedControl
+            label={m['recipe.ingredientsView.label']()}
+            selected={view}
+            segments={[
+              { id: 'combined', label: m['recipe.ingredientsView.combined']() },
+              { id: 'perStep', label: m['recipe.ingredientsView.perStep']() }
+            ]}
+            onselect={chooseView}
+          />
+        {/if}
+      </div>
 
-            <ul class="list">
-              {#each group.ingredients as ingredient (ingredient.id)}
-                <IngredientRow {ingredient} {scaling} highlighted={highlighted === ingredient.id} />
-              {/each}
-            </ul>
-          {/if}
-        {/each}
-      {:else}
+      {#if panel.length > 0}
+        <!-- Said only where it needs saying. In the combined list this is the
+             list; beside the steps it is the handful the steps never named, and
+             a reader who is not told that will wonder what happened to the
+             rest. -->
+        {#if perStep}
+          <p class="leftovers">{m['recipe.notInAnyStep']()}</p>
+        {/if}
+
+        <IngredientList ingredients={panel} {scaling} {highlighted} />
+      {:else if !perStep}
         <!-- Two different emptinesses. While cooking the list is filtered to
              what this step needs, so "none written down" would be a lie about a
-             recipe that has seven. -->
+             recipe that has seven. Beside the steps there is a third: every
+             ingredient is accounted for, and the right thing to say is
+             nothing. -->
         <p class="empty">
           {cooking ? m['recipe.noneThisStep']() : m['recipe.noIngredients']()}
         </p>
+      {:else if written.length === 0}
+        <p class="empty">{m['recipe.noIngredients']()}</p>
       {/if}
     </section>
 
     <section class="steps" aria-label={m['recipe.steps']()}>
-      <h2 class="section">{m['recipe.steps']()}</h2>
+      <!-- The same wrapper the ingredients heading sits in, so the two
+           headings line up across the columns whether or not this one has a
+           control beside it. -->
+      <div class="section-head">
+        <h2 class="section">{m['recipe.steps']()}</h2>
+      </div>
 
       {#if recipe.steps.length > 0}
         <ol class="list" bind:this={stepList}>
@@ -375,6 +443,15 @@
             {@const needs = needsOf(step)}
 
             <li class="step" class:current={cooking && index === currentStep}>
+              <!-- Beside the step, in the column the whole list would
+                   otherwise fill — which is the arrangement's entire point:
+                   what step two needs is level with step two. -->
+              {#if perStep && needs.length > 0}
+                <div class="step-needs">
+                  <IngredientList ingredients={needs} {scaling} {highlighted} />
+                </div>
+              {/if}
+
               <!--
                 While cooking the whole step is the control, because the gesture
                 that matters is "next". While reading it is text, so that the
@@ -388,18 +465,22 @@
                   aria-current={index === currentStep ? 'step' : undefined}
                   onclick={() => onstep?.(index)}
                 >
-                  <span class="number">{m['recipe.step']({ number: index + 1 })}</span>
+                  <span class="number">{step.title ?? m['recipe.step']({ number: index + 1 })}</span
+                  >
                   <StepText {step} {scaling} interactive={false} />
                 </button>
               {:else}
                 <div class="step-body">
-                  <span class="number">{m['recipe.step']({ number: index + 1 })}</span>
+                  <span class="number">{step.title ?? m['recipe.step']({ number: index + 1 })}</span
+                  >
                   <StepText {step} {scaling} onhighlight={(id) => (highlighted = id)} />
 
                   <!-- Reading is planning: this is the step's own gathering
                        list, at the amounts on screen. Cooking is doing, and
-                       there the panel to the left has already become it. -->
-                  {#if needs.length > 0}
+                       there the panel to the left has already become it — as
+                       has the column beside this step, once the reader has
+                       asked for the ingredients by step. -->
+                  {#if !perStep && needs.length > 0}
                     <StepNeeds ingredients={needs} {scaling} />
                   {/if}
                 </div>
@@ -525,8 +606,18 @@
     display: none;
   }
 
+  /* A 16:9 box, capped so that on a wide screen the photograph does not take
+     the whole first screenful. The cap shrinks the box rather than cutting the
+     picture off at the bottom: what is worth looking at in a photograph of
+     dinner is in the middle of it, so the crop has to come off both ends. */
   .hero {
+    display: grid;
+    aspect-ratio: 16 / 9;
     max-height: 24rem;
+    /* Stated, not left auto: a max-height transfers through an aspect ratio
+       into a max-width, and an auto width would obey it — the box would go
+       narrow instead of short. */
+    width: 100%;
     overflow: hidden;
     border-radius: var(--radius-lg);
   }
@@ -597,17 +688,149 @@
     font-size: var(--text-sm);
   }
 
+  /*
+   * The width of the ingredient column, named once.
+   *
+   * Three things have to agree on it or the page stops lining up: the body's
+   * own columns, the column each step reserves for its ingredients, and the
+   * heading row that carries the switch. It is declared here rather than in
+   * the token scale because it is this page's proportion, not the app's.
+   */
   .body {
+    --ingredients-column: 20rem;
+    /* The card's inset, named because four rules have to agree on it — two
+       surfaces, and the heading that has to line up with one of them. */
+    --card-padding: clamp(1rem, 2vw, 1.5rem);
     display: grid;
-    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    grid-template-columns: minmax(0, var(--ingredients-column)) minmax(0, 1fr);
     gap: var(--layout-section-gap);
     align-items: start;
   }
 
+  /*
+   * Only the list gets a surface.
+   *
+   * It is the thing you keep glancing back at and have to find again
+   * mid-sentence, and the panel is what makes it findable — a shape the eye
+   * returns to rather than a column it has to re-locate. The method is prose:
+   * read straight down, once, and the longest thing on the page. Drawing a
+   * panel around that boxes in something nobody was going to lose, and doubles
+   * the page's furniture to say it.
+   *
+   * The rule holds in both arrangements, which is what makes the surface mean
+   * something: wherever it is, it is what you need out. Beside the steps it
+   * travels with them — see `.perStep .step-needs`.
+   */
   .ingredients {
-    padding: clamp(1rem, 2vw, 1.5rem);
+    padding: var(--card-padding);
     background: var(--surface-sunken);
     border-radius: var(--radius-lg);
+  }
+
+  /*
+   * The method has no box, so its heading carries the inset the panel's box
+   * gives the heading beside it. Without it the two headings sit a card's
+   * padding apart, which is the kind of misalignment that is invisible in a
+   * component and obvious on the page. The block only: the inline edge has to
+   * stay level with the step text underneath it.
+   */
+  .steps > .section-head {
+    padding-block-start: var(--card-padding);
+    min-height: calc(var(--control-lg) + var(--card-padding));
+  }
+
+  /*
+   * The list stays on screen while the method scrolls past it.
+   *
+   * A recipe's steps are long and its ingredients are the thing you keep
+   * glancing back at — "how much of the wine goes in here" is asked at step
+   * four, where the list left the screen at step one. Sticking it is what
+   * makes the two columns behave like a spread in a cookbook rather than two
+   * documents that happen to be side by side.
+   *
+   * `align-items: start` on the grid is what makes this work at all: a
+   * stretched grid item fills its row and has nowhere to travel. If that ever
+   * comes off, this silently stops sticking.
+   *
+   * The offset is the one the steps already scroll to — far enough down that
+   * the app's floating header is not sitting on top of it.
+   */
+  .ingredients {
+    position: sticky;
+    top: var(--space-24);
+    /*
+     * Never taller than the room it has. A list of thirty ingredients would
+     * otherwise be pinned by its top with its own last lines permanently below
+     * the fold and no way to reach them — so past that height the panel
+     * scrolls inside itself, and the page keeps scrolling once it runs out.
+     */
+    max-height: calc(100dvh - var(--space-24) - var(--bottom-inset) - var(--space-8));
+    overflow-y: auto;
+  }
+
+  /*
+   * Beside the steps, the two columns are shared rather than owned.
+   *
+   * The panel keeps its column and its card — it is still where "Zutaten" is
+   * answered — and the method's heading stays level with it, so the page opens
+   * on the same two words in the same places as it does in the other
+   * arrangement. What changes underneath: the list has been dealt out to the
+   * steps, so each row below the headings has to reach across both columns.
+   *
+   * `display: contents` is what lets it. The steps section stops being a box
+   * and its heading and its list become items of the grid above, which is the
+   * only way a row of that list can start in the panel's column while the
+   * heading above it stays in the method's.
+   */
+  .perStep .steps {
+    display: contents;
+  }
+
+  .perStep .steps > .section-head {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .perStep .steps > .list,
+  .perStep .steps > .empty {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .perStep .steps > .list {
+    display: grid;
+    grid-template-columns: subgrid;
+  }
+
+  /* Nothing to follow: what is left in the panel is the heading and whatever
+     no step asked for, and the rest is already level with the step that needs
+     it. */
+  .perStep .ingredients {
+    grid-column: 1;
+    grid-row: 1;
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    /* Capped, not stretched: the switch then sits in the same place whether
+       the section is the column or the whole width of the page. */
+    max-width: var(--ingredients-column);
+    /*
+     * One height for both headings, whether or not a switch is sitting beside
+     * this one. Without it the control makes its own row taller and its
+     * heading rides down the middle of it, half a line below the heading in
+     * the next column — the kind of misalignment that is invisible in a
+     * component and obvious on the page.
+     */
+    min-height: var(--control-lg);
+    margin-bottom: var(--space-3);
   }
 
   .section {
@@ -619,9 +842,16 @@
     margin-bottom: var(--space-3);
   }
 
-  .group {
-    margin-top: var(--space-4);
-    font-size: var(--text-base);
+  .section-head .section {
+    margin-bottom: 0;
+  }
+
+  .leftovers {
+    margin-bottom: var(--space-2);
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .list {
@@ -638,6 +868,43 @@
     scroll-margin-block: var(--space-24) calc(var(--bottom-inset) + var(--space-24));
     padding-block: var(--space-6);
     border-top: 1px solid var(--border);
+  }
+
+  /*
+   * The step and what it needs, on one row.
+   *
+   * The body's own two tracks, borrowed rather than restated, so the
+   * ingredients stay under the heading that names them and the method stays
+   * where it was. The text column is placed explicitly because a step that
+   * needs nothing has no first cell to push it across.
+   */
+  .perStep .step {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: start;
+  }
+
+  /*
+   * The surface belongs to the ingredients, not to the row.
+   *
+   * The section spans both columns here so a step and its ingredients can
+   * share one — but a background running under the whole row would put the
+   * method on a panel too, and the method is prose: read straight down, once.
+   * So the card moves in one level and onto the left, where it carries on down
+   * the page from the panel at the top of that column. The same material in
+   * the same column means the same thing in both arrangements: this is what
+   * you need out.
+   */
+  .perStep .step-needs {
+    grid-column: 1;
+    padding: var(--card-padding);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-lg);
+  }
+
+  .perStep .step-body {
+    grid-column: 2;
   }
 
   .step-body {
@@ -719,10 +986,54 @@
     position: static;
   }
 
-  @media (width < 64rem) {
+  /*
+   * `screen and`, because a sheet of A4 is narrower than this and is not a
+   * phone: paper wants the two columns, and had to spend the whole print block
+   * undoing these rules to get them back.
+   */
+  @media screen and (width < 64rem) {
     .body {
       grid-template-columns: 1fr;
       gap: var(--space-8);
+    }
+
+    /* One column: the list is above the steps rather than beside them, and
+       something stuck to the top of the screen there is not a companion, it is
+       a lid. */
+    .ingredients {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+
+    /* Nothing left to share, so the section is a section again and a step is
+       a step with its ingredients under it. */
+    .perStep .steps {
+      display: block;
+    }
+
+    /* Stacked, so there is no heading in the next column to line up with. */
+    .steps > .section-head {
+      padding-block-start: 0;
+      min-height: var(--control-lg);
+    }
+
+    .perStep .step {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* Under the step rather than beside it, because that is the room there is
+       — and under it rather than over it, so the step's own number still
+       introduces the step. It lands exactly where the gathering line it
+       replaced used to sit. */
+    .perStep .step-needs {
+      order: 1;
+    }
+
+    .section-head {
+      max-width: none;
     }
   }
 
@@ -865,9 +1176,29 @@
       align-items: start;
     }
 
-    .ingredients {
+    .perStep .step {
+      gap: 8mm;
+    }
+
+    /* Ink, not three grey blocks. */
+    .ingredients,
+    .perStep .step-needs {
       padding: 0;
       background: none;
+    }
+
+    .section-head {
+      min-height: 0;
+    }
+
+    .steps > .section-head {
+      padding-block-start: 0;
+    }
+
+    .ingredients {
+      position: static;
+      max-height: none;
+      overflow: visible;
     }
 
     .steps .list {

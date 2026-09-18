@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Scaling } from './scaled.svelte';
-  import type { Ingredient } from '../types';
+  import type { IngredientLine } from '../ingredientLines';
 
   /**
    * One line of the ingredient list.
@@ -8,32 +8,35 @@
    * The amount is its own element so it can be highlighted when it changes —
    * the number morphs in place rather than the row being replaced, which is
    * what lets the eye see *what* changed when the servings move.
+   *
+   * Its two columns come from the list around it rather than from the row, so
+   * that every name starts at the same place. See `IngredientList`.
    */
   interface Props {
-    ingredient: Ingredient;
+    line: IngredientLine;
     scaling: Scaling;
     /** Lit while the step that uses it is being read. */
     highlighted?: boolean;
   }
 
-  let { ingredient, scaling, highlighted = false }: Props = $props();
+  let { line, scaling, highlighted = false }: Props = $props();
 
-  const amount = $derived(scaling.amountFor(ingredient));
+  const amount = $derived(scaling.amountFor(line));
 </script>
 
-<li class="row" class:highlighted data-ingredient={ingredient.id}>
+<li class="row" class:highlighted>
   <span class="amount">{amount.text}</span>
 
   <span class="name">
-    {ingredient.name}{#if ingredient.note}<span class="note">, {ingredient.note}</span>{/if}
+    {line.name}{#if line.note}<span class="note">, {line.note}</span>{/if}
   </span>
 </li>
 
 <style>
   .row {
     display: grid;
-    grid-template-columns: minmax(5rem, auto) 1fr;
-    gap: var(--space-4);
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
     padding-block: var(--space-2);
     border-radius: var(--radius-sm);
     transition: background-color var(--duration-base) var(--ease-out);
@@ -54,20 +57,8 @@
     white-space: nowrap;
   }
 
-  .note {
-    color: var(--text-muted);
-  }
-
-  /* The amount column is sized for a thumb to land beside on a screen. On
-     paper the eye does the work, and the two halves read better close. */
   @media print {
     .row {
-      /* A floor, not `auto`: each row is its own grid, so a column that sizes
-         to its content leaves every amount a different width and the names
-         ragged down the page. Narrower than the screen's, which is sized for a
-         thumb to land beside. */
-      grid-template-columns: minmax(3.75rem, auto) 1fr;
-      gap: var(--space-2);
       padding-block: 1mm;
     }
 
@@ -75,5 +66,9 @@
       background: none;
       box-shadow: none;
     }
+  }
+
+  .note {
+    color: var(--text-muted);
   }
 </style>
