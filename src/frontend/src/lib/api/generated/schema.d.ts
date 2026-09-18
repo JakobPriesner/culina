@@ -625,6 +625,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipes/{recipeId}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a recipe's share link
+         * @description 404 when the recipe is not shared, which is the ordinary answer. The token is returned rather than a whole address: which origin Culina is reached at is the browser's fact, not the server's.
+         */
+        get: operations["getRecipeShareV1"];
+        /**
+         * Share a recipe by link
+         * @description Anyone holding the returned link may read this one recipe without an account. Idempotent: a recipe already shared keeps the link it has.
+         */
+        put: operations["createRecipeShareV1"];
+        post?: never;
+        /**
+         * Stop sharing a recipe
+         * @description Every link that was sent stops working immediately. Sharing again afterwards mints a new one, so a link that was taken back stays dead.
+         */
+        delete: operations["revokeRecipeShareV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/shared-recipes/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a shared recipe
+         * @description No account needed: the token in the path is the whole of the authorisation. The recipe comes without its household, its author or its version — everything the page draws and nothing about whose kitchen it is.
+         */
+        get: operations["getSharedRecipeV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/shared-recipes/{token}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a shared recipe's image
+         * @description Widths 400, 800 and 1600, as for any recipe image. Private and revalidated: the address carries a credential, so only the reader's own browser may keep it.
+         */
+        get: operations["getSharedRecipeImageV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cook-sessions": {
         parameters: {
             query?: never;
@@ -1105,6 +1173,60 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/searches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The searches this household has saved
+         * @description Oldest first, so the row of chips beside the search field keeps the order they were made in. Not paged: a kitchen keeps a handful of these and they are drawn on one line.
+         *
+         *     Each carries the four values `GET /recipes` takes as `query`, `tag`, `maxMinutes` and `sort`, so applying one is assigning them rather than translating anything.
+         */
+        get: operations["getSavedSearchesV1"];
+        put?: never;
+        /**
+         * Save a search
+         * @description A name over the filters the library is showing. At least one of `query`, `tags`, `maxMinutes` and `sort` must be set — a search asking for nothing is the library, which is the screen it would be applied from.
+         *
+         *     Names are unique within a household, because two chips with one label are two things nobody can tell apart.
+         */
+        post: operations["createSavedSearchV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/searches/{searchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Forget a saved search
+         * @description The name and the filters only. Nothing it found is touched — a saved search is a question, and forgetting one deletes no food. Idempotent: deleting one that is already gone also answers 204.
+         */
+        delete: operations["deleteSavedSearchV1"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename a saved search, or point it at different filters
+         * @description The name and the filters together: renaming a search and pointing it at what you are looking at now are the same gesture from the same sheet, and two requests for one gesture is two ways for half of it to fail.
+         *
+         *     No `If-Match`, unlike a recipe or a cookbook. The one edit anybody makes is "save what I am looking at now over what I saved before", which is a deliberate overwrite rather than a clash — a precondition would exist only so that the answer to it could be to overwrite anyway.
+         */
+        patch: operations["updateSavedSearchV1"];
         trace?: never;
     };
 }
@@ -1802,6 +1924,55 @@ export interface components {
             /** @description What it says. */
             body: string;
         };
+        /** @description A recipe as whoever follows the link sees it. */
+        RecipesGetSharedResponse: {
+            /** @description What it is called. */
+            title: string;
+            /** @description A short introduction, if there is one. */
+            description?: string | null;
+            /**
+             * @description The language the title and steps are written in.
+             * @enum {string}
+             */
+            language: "en" | "de";
+            /**
+             * Format: double
+             * @description How many it makes.
+             */
+            yieldAmount: number;
+            /**
+             * @description `servings` or `pieces`.
+             * @enum {string}
+             */
+            yieldKind: "servings" | "pieces";
+            /** @description The recipe's own word for what it makes, shown exactly as written. */
+            yieldLabel?: string | null;
+            /**
+             * Format: int32
+             * @description Hands-on time.
+             */
+            prepMinutes?: number | null;
+            /**
+             * Format: int32
+             * @description Time in the oven or on the hob.
+             */
+            cookMinutes?: number | null;
+            /**
+             * Format: int32
+             * @description Prep plus cook, or null when neither is known.
+             */
+            totalMinutes?: number | null;
+            /** @description Whether there is a photograph to fetch. */
+            hasImage: boolean;
+            /** @description Its ingredient groups, in order. */
+            groups: components["schemas"]["RecipesIngredientGroupContract"][];
+            /** @description Its steps, in order. */
+            steps: components["schemas"]["RecipesStepContract"][];
+            /** @description Its tags. */
+            tags: string[];
+            /** @description The address it was imported from, when it was imported. */
+            sourceUrl?: string | null;
+        };
         /** @description The tags a household's recipes carry. */
         RecipesGetTagsResponse: {
             /** @description The tags, most used first. */
@@ -2027,6 +2198,16 @@ export interface components {
             overall?: string | null;
             /** @description Notes attached to individual steps. */
             steps: components["schemas"]["RecipesGetNotesStepNote"][];
+        };
+        /** @description The link that publishes one recipe. */
+        RecipesShareResponse: {
+            /** @description The secret that goes in the link. */
+            token: string;
+            /**
+             * Format: date-time
+             * @description When the recipe was first published.
+             */
+            createdAt: string;
         };
         /** @description Asks for another app's recipe library to be connected. */
         RecipesSourcesConnectSourceRequest: {
@@ -2262,6 +2443,73 @@ export interface components {
             requireInvitation: boolean;
             /** @description Whether this instance has been set up yet. */
             hasAccounts: boolean;
+        };
+        /** @description Saves a search. */
+        SearchesCreateSavedSearchRequest: {
+            /**
+             * Format: uuid
+             * @description Whose kitchen it is for.
+             */
+            householdId: string;
+            /** @description What to call it. */
+            name: string;
+            criteria: components["schemas"]["SearchesSearchCriteriaContract"];
+        };
+        /** @description One saved search. */
+        SearchesSavedSearchDetail: {
+            /**
+             * Format: uuid
+             * @description The saved search's id.
+             */
+            searchId: string;
+            /**
+             * Format: uuid
+             * @description Which household owns it.
+             */
+            householdId: string;
+            /** @description What it is called. */
+            name: string;
+            criteria: components["schemas"]["SearchesSearchCriteriaContract"];
+            /**
+             * Format: uuid
+             * @description Whose search it was.
+             */
+            createdBy: string;
+            /**
+             * Format: date-time
+             * @description When it was saved.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When it last changed.
+             */
+            updatedAt: string;
+        };
+        /** @description A household's saved searches. */
+        SearchesSavedSearchesResponse: {
+            /** @description The searches, oldest first, so the row of chips stops moving. */
+            items: components["schemas"]["SearchesSavedSearchDetail"][];
+        };
+        /** @description What a saved search asks the library for. */
+        SearchesSearchCriteriaContract: {
+            /** @description The words that were in the search box, or omit. */
+            query?: string | null;
+            /** @description Tag slugs a recipe must all carry. */
+            tags?: string[];
+            /**
+             * Format: int32
+             * @description The longest a recipe may take, or omit for any length.
+             */
+            maxMinutes?: number | null;
+            /** @description The order to read in, or omit for whatever the library would choose. */
+            sort?: string | null;
+        };
+        /** @description Renames a saved search, and rewrites what it asks for. */
+        SearchesUpdateSavedSearchRequest: {
+            /** @description The new name. */
+            name: string;
+            criteria: components["schemas"]["SearchesSearchCriteriaContract"];
         };
         /** @description The caller's active sessions. */
         SessionsGetAllResponse: {
@@ -4795,6 +5043,224 @@ export interface operations {
             };
         };
     };
+    getRecipeShareV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesShareResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createRecipeShareV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesShareResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revokeRecipeShareV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSharedRecipeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetSharedResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSharedRecipeImageV1: {
+        parameters: {
+            query?: {
+                w?: number;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/webp": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     startCookSessionV1: {
         parameters: {
             query?: never;
@@ -6254,6 +6720,206 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSavedSearchesV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchesSavedSearchesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createSavedSearchV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchesCreateSavedSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchesSavedSearchDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteSavedSearchV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                searchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateSavedSearchV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                searchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchesUpdateSavedSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchesSavedSearchDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
