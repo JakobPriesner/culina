@@ -139,7 +139,7 @@ internal sealed class RestoreArchiveCommandHandler(
             return ArchiveErrors.NotAnArchive;
         }
 
-        var measure = kind.Bind(one => Yield.Create(entry.YieldAmount, one));
+        var measure = kind.Bind(one => Yield.Create(entry.YieldAmount, one, entry.YieldLabel));
         var groups = BuildGroups(entry);
 
         return measure.Bind(yields => groups.Bind(built =>
@@ -203,7 +203,7 @@ internal sealed class RestoreArchiveCommandHandler(
                 .Select(position => order[position].Id)
                 .ToList();
 
-            Step.Create(null, at, segments, uses, step.DurationSeconds)
+            Step.Create(null, at, segments, uses, step.DurationSeconds, step.Title)
                 .Match(built => steps.Add(built), _ => { });
         }
 

@@ -1701,6 +1701,8 @@ export interface components {
              * @enum {string}
              */
             yieldKind: "servings" | "pieces";
+            /** @description The recipe's own word for what it makes — "Cake", "Gläser", "Blech". */
+            yieldLabel?: string | null;
             /** @description Its tags. */
             tags: string[];
             /**
@@ -1917,6 +1919,8 @@ export interface components {
              * @enum {string}
              */
             yieldKind: "servings" | "pieces";
+            /** @description The recipe's own word for what it makes — "Cake", "Gläser", "Blech". */
+            yieldLabel?: string | null;
             /**
              * Format: int32
              * @description Hands-on time.
@@ -2171,6 +2175,8 @@ export interface components {
              * @description The step's id. Omit to create a new one.
              */
             stepId?: string | null;
+            /** @description What this step is called — "Prepare the base". */
+            title?: string | null;
             /** @description Its text, split into words and ingredient references. */
             segments: components["schemas"]["RecipesStepSegmentContract"][];
             /**
@@ -2229,6 +2235,8 @@ export interface components {
              * @enum {string}
              */
             yieldKind: "servings" | "pieces";
+            /** @description The recipe's own word for what it makes — "Cake", "Gläser", "Blech". */
+            yieldLabel?: string | null;
             /**
              * Format: int32
              * @description Hands-on time.
@@ -2450,6 +2458,8 @@ export interface components {
             yieldAmount: number;
             /** @description `servings` or `pieces`. */
             yieldKind: string;
+            /** @description The recipe's own word for what it makes — "Cake", "Gläser", "Blech". */
+            yieldLabel?: string | null;
             /** @description Its tags. */
             tags: string[];
             /**

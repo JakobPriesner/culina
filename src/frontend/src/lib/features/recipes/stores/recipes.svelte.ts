@@ -246,6 +246,7 @@ class RecipeStore {
             language: next.language,
             yieldAmount: next.yieldAmount,
             yieldKind: next.yieldKind,
+            yieldLabel: next.yieldLabel ?? undefined,
             prepMinutes: next.prepMinutes ?? undefined,
             cookMinutes: next.cookMinutes ?? undefined,
             groups: toWireGroups(next.groups),

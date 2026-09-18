@@ -28,6 +28,7 @@ public sealed record UpdateRecipeCommand(
 /// <param name="Language">The language code.</param>
 /// <param name="YieldAmount">How many it makes.</param>
 /// <param name="YieldKind">Of what.</param>
+/// <param name="YieldLabel">The recipe's own word for it, or null.</param>
 /// <param name="PrepMinutes">Hands-on time.</param>
 /// <param name="CookMinutes">Time in the oven or on the hob.</param>
 /// <param name="Tags">Its tags.</param>
@@ -37,6 +38,7 @@ public sealed record RecipeDraft(
     string Language,
     decimal YieldAmount,
     string YieldKind,
+    string? YieldLabel,
     int? PrepMinutes,
     int? CookMinutes,
     IReadOnlyList<string> Tags);

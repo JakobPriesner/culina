@@ -23,6 +23,8 @@ internal sealed record SuggestionRowData
 
     public string YieldKind { get; init; } = "servings";
 
+    public string? YieldLabel { get; init; }
+
     public string[] Tags { get; init; } = [];
 
     public int CookCount { get; init; }
@@ -109,6 +111,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                 end as total_minutes,
                 r.yield_amount,
                 r.yield_kind,
+                r.yield_label,
                 r.updated_at,
                 coalesce(
                     array(
@@ -208,6 +211,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
             row.TotalMinutes,
             row.YieldAmount,
             row.YieldKind,
+            row.YieldLabel,
             row.Tags,
             row.CookCount,
             row.LastCookedAt,

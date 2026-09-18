@@ -23,6 +23,12 @@ public static class RecipeErrors
         "A recipe must make more than nothing, and less than a thousand of it.",
         ErrorType.Validation);
 
+    /// <summary>The recipe's own word for its yield is too long.</summary>
+    public static readonly Error InvalidYieldLabel = new(
+        "recipes.invalid_yield_label",
+        "What a recipe makes is a word, not a sentence: at most 40 characters.",
+        ErrorType.Validation);
+
     /// <summary>An amount is negative or implausibly large.</summary>
     public static readonly Error InvalidQuantity = new(
         "recipes.invalid_quantity",
@@ -51,6 +57,12 @@ public static class RecipeErrors
     public static readonly Error InvalidStepText = new(
         "recipes.invalid_step_text",
         "A step needs text of at most 4000 characters.",
+        ErrorType.Validation);
+
+    /// <summary>A step's title is too long.</summary>
+    public static readonly Error InvalidStepTitle = new(
+        "recipes.invalid_step_title",
+        "A step's title names it in at most 120 characters. The instruction goes in the step.",
         ErrorType.Validation);
 
     /// <summary>A step refers to an ingredient this recipe does not have.</summary>

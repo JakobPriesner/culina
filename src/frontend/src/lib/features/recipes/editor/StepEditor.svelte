@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, IconButton } from '$ds';
+  import { Button, IconButton, TextInput } from '$ds';
 
   import { m } from '$shell/i18n';
   import MentionField from './MentionField.svelte';
@@ -22,6 +22,11 @@
    *
    * Reordering is buttons, not drag. Drag alone cannot be done with a keyboard,
    * and a recipe is rearranged rarely enough that two arrows are no hardship.
+   *
+   * The number above each step is a field. A step in a short recipe is "step 3"
+   * and the placeholder says so; a step in a layered one is "prepare the base",
+   * and typing that over the number is the whole of naming it. Empty is not a
+   * name, so clearing the field gives the number back.
    */
   interface Props {
     steps: readonly Step[];
@@ -41,12 +46,20 @@
     );
   }
 
+  function retitle(index: number, title: string) {
+    onchange(
+      steps.map((step, candidate) =>
+        candidate === index ? { ...step, title: title.trim() ? title : null } : step
+      )
+    );
+  }
+
   function setUses(index: number, uses: string[]) {
     onchange(steps.map((step, candidate) => (candidate === index ? { ...step, uses } : step)));
   }
 
   function add() {
-    onchange([...steps, { id: null, segments: [], uses: [], durationSeconds: null }]);
+    onchange([...steps, { id: null, title: null, segments: [], uses: [], durationSeconds: null }]);
   }
 
   function remove(index: number) {
@@ -73,7 +86,16 @@
     {#each steps as step, index (step.id ?? index)}
       <li class="step">
         <div class="controls">
-          <span class="number">{m['editor.stepLabel']({ number: index + 1 })}</span>
+          <div class="name">
+            <TextInput
+              id="step-{index}-title"
+              label={m['editor.stepTitle']({ number: index + 1 })}
+              placeholder={m['editor.stepTitlePlaceholder']({ number: index + 1 })}
+              maxlength={120}
+              value={step.title ?? ''}
+              oninput={(title) => retitle(index, title)}
+            />
+          </div>
 
           <IconButton
             label={m['editor.moveStepUp']({ number: index + 1 })}
@@ -155,11 +177,10 @@
     margin-bottom: var(--space-1);
   }
 
-  .number {
+  /* The title takes the room the number used to, and the three buttons keep
+     theirs: a step is named far more often than it is moved. */
+  .name {
     flex: 1;
-    color: var(--text-subtle);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    min-width: 0;
   }
 </style>

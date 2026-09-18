@@ -20,6 +20,14 @@
     maxlength?: number;
     /** Bound by a caller that needs to move focus here. */
     element?: HTMLInputElement;
+    /**
+     * The accessible name, for the places where there is no visible label.
+     *
+     * The same escape hatch <code>TextArea</code> has, and for the same kind of
+     * reason: a step's title sits where its number used to, and a
+     * <code>&lt;label&gt;</code> above it would print the word twice.
+     */
+    label?: string;
     oninput?: (value: string) => void;
   }
 
@@ -36,6 +44,7 @@
     inputmode,
     maxlength,
     element = $bindable(),
+    label,
     oninput
   }: Props = $props();
 </script>
@@ -52,6 +61,7 @@
   {inputmode}
   {maxlength}
   bind:value
+  aria-label={label}
   aria-describedby={describedBy}
   aria-invalid={invalid ? 'true' : undefined}
   oninput={(event) => oninput?.(event.currentTarget.value)}

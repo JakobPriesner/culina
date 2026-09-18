@@ -647,5 +647,14 @@
   "recipes.sort.suggested": "Für heute Abend",
   "suggestions.deck.previous": "Vorheriger Vorschlag",
   "suggestions.deck.next": "Nächster Vorschlag",
-  "suggestions.deck.position": "{at} von {of}"
+  "suggestions.deck.position": "{at} von {of}",
+  "recipe.ingredientsView.label": "Wie die Zutaten stehen",
+  "recipe.ingredientsView.combined": "Alles",
+  "recipe.ingredientsView.perStep": "Pro Schritt",
+  "recipe.notInAnyStep": "Keinem Schritt zugeordnet",
+  "recipes.meta.yieldLabel": "{count} {label}",
+  "editor.yieldLabel": "Wovon",
+  "editor.yieldLabelHint": "Leer lassen für Portionen. Schreib „Kuchen“, „Gläser“, „Blech“ — dann steht das da.",
+  "editor.stepTitle": "Wie Schritt {number} heißt",
+  "editor.stepTitlePlaceholder": "Schritt {number}"
 }

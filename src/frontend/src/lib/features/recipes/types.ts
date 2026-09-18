@@ -53,6 +53,14 @@ export type StepSegment =
 
 export interface Step {
   readonly id: string | null;
+  /**
+   * What this step is called, or null to be called by its number.
+   *
+   * Null on nearly every step. A recipe with a base, a filling and a glaze is
+   * the one that wants names, and there "Step 2" is the least useful thing that
+   * could be written above the sentence.
+   */
+  readonly title: string | null;
   readonly segments: readonly StepSegment[];
   /**
    * Everything the step needs, in the recipe's own ingredient order.
@@ -75,6 +83,8 @@ export interface RecipeSummary {
   readonly totalMinutes: number | null;
   readonly yieldAmount: number;
   readonly yieldKind: YieldKind;
+  /** The recipe's own word for what it makes, or null for the usual one. */
+  readonly yieldLabel: string | null;
   readonly tags: readonly string[];
   /** How many times this person has made it. */
   readonly cookCount: number;
@@ -144,6 +154,8 @@ export interface Recipe {
   readonly language: RecipeLanguage;
   readonly yieldAmount: number;
   readonly yieldKind: YieldKind;
+  /** The recipe's own word for what it makes, or null for the usual one. */
+  readonly yieldLabel: string | null;
   readonly prepMinutes: number | null;
   readonly cookMinutes: number | null;
   readonly totalMinutes: number | null;
@@ -159,9 +171,16 @@ export interface Recipe {
   readonly version: number;
 }
 
-/** Every ingredient in the recipe, flattened, for lookups by id. */
+/**
+ * Every ingredient in the recipe, in the order it was written.
+ *
+ * Flat, because the groups are a detail of how it was typed: what the surface
+ * shows is one list, or one list per step.
+ */
+export const everyIngredient = (recipe: Recipe): readonly Ingredient[] =>
+  recipe.groups.flatMap((group) => group.ingredients);
+
+/** The same, for lookups by id. */
 export function ingredientsOf(recipe: Recipe): Map<string, Ingredient> {
-  return new Map(
-    recipe.groups.flatMap((group) => group.ingredients.map((one) => [one.id, one] as const))
-  );
+  return new Map(everyIngredient(recipe).map((one) => [one.id, one] as const));
 }

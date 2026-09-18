@@ -78,6 +78,16 @@ public sealed record ArchivedRecipe
     /// <summary><c>servings</c> or <c>pieces</c>.</summary>
     public required string YieldKind { get; init; }
 
+    /// <summary>
+    /// The recipe's own word for what it makes, when it has one.
+    /// </summary>
+    /// <remarks>
+    /// Absent from an archive written before a recipe could say so, and such a
+    /// file must still restore — so it is neither required nor a new format
+    /// version, for the same reason <see cref="ArchivedStep.Uses"/> is not.
+    /// </remarks>
+    public string? YieldLabel { get; init; }
+
     /// <summary>Hands-on minutes.</summary>
     public int? PrepMinutes { get; init; }
 
@@ -123,16 +133,18 @@ public sealed record ArchivedIngredient(decimal? Quantity, string? Unit, string 
 /// order — the same positions <see cref="ArchivedSegment"/> uses, and for the
 /// same reason.
 /// </param>
+/// <param name="Title">What the step is called, or null to be called by number.</param>
 /// <remarks>
-/// <c>Uses</c> has a default because an archive written before per-step
-/// ingredients existed simply omits it, and such a file must still restore. For
-/// the same reason it did not warrant a new format version: a reader that does
-/// not know the field ignores it, and one that does gets null.
+/// <c>Uses</c> and <c>Title</c> have defaults because an archive written before
+/// either existed simply omits it, and such a file must still restore. For the
+/// same reason neither warranted a new format version: a reader that does not
+/// know the field ignores it, and one that does gets null.
 /// </remarks>
 public sealed record ArchivedStep(
     IReadOnlyList<ArchivedSegment> Segments,
     int? DurationSeconds,
-    IReadOnlyList<int>? Uses = null);
+    IReadOnlyList<int>? Uses = null,
+    string? Title = null);
 
 /// <summary>
 /// A piece of a step.

@@ -36,6 +36,7 @@ const unsaved: Ingredient = {
 
 const step = (uses: string[], mentions: string[] = []): Step => ({
   id: 's1',
+  title: null,
   segments: [
     { kind: 'text', text: 'Combine.' },
     ...mentions.map(

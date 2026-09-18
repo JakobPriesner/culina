@@ -5971,6 +5971,11 @@
             "type": "string",
             "description": "`servings` or `pieces`."
           },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The recipe's own word for what it makes — \"Cake\", \"Gläser\", \"Blech\".",
+            "nullable": true
+          },
           "tags": {
             "type": "array",
             "items": {
@@ -6442,6 +6447,11 @@
             ],
             "type": "string",
             "description": "`servings` or `pieces`."
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The recipe's own word for what it makes — \"Cake\", \"Gläser\", \"Blech\".",
+            "nullable": true
           },
           "prepMinutes": {
             "type": "integer",
@@ -6928,6 +6938,11 @@
             "format": "uuid",
             "nullable": true
           },
+          "title": {
+            "type": "string",
+            "description": "What this step is called — \"Prepare the base\".",
+            "nullable": true
+          },
           "segments": {
             "type": "array",
             "items": {
@@ -7038,6 +7053,11 @@
             ],
             "type": "string",
             "description": "`servings` or `pieces`."
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The recipe's own word for what it makes — \"Cake\", \"Gläser\", \"Blech\".",
+            "nullable": true
           },
           "prepMinutes": {
             "type": "integer",
@@ -7495,6 +7515,11 @@
           "yieldKind": {
             "type": "string",
             "description": "`servings` or `pieces`."
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The recipe's own word for what it makes — \"Cake\", \"Gläser\", \"Blech\".",
+            "nullable": true
           },
           "tags": {
             "type": "array",

@@ -27,6 +27,7 @@ internal static class SuggestionMappings
             TotalMinutes = scored.Recipe.TotalMinutes,
             YieldAmount = scored.Recipe.YieldAmount,
             YieldKind = scored.Recipe.YieldKind,
+            YieldLabel = scored.Recipe.YieldLabel,
             Tags = scored.Recipe.Tags,
             CookCount = scored.Recipe.CookCount,
             LastCookedAt = scored.Recipe.LastCookedAt,

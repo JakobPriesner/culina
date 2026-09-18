@@ -145,6 +145,7 @@
         // is the silent linking this editor deliberately stopped doing.
         steps: pasted.steps.map((text) => ({
           id: null,
+          title: null,
           segments: [{ kind: 'text' as const, text }],
           uses: [],
           durationSeconds: null

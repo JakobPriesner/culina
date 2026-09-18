@@ -157,6 +157,30 @@ public class RecipeImageTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Served_ShouldStandTheRightWayUp_WhenTheCameraSaidSoInATag()
+    {
+        // Arrange
+        // A phone photographing a plate from above writes the pixels landscape
+        // and adds "turn this a quarter" beside them. Culina throws every tag
+        // away on re-encode, so unless the turn has already been made in the
+        // pixels, what is served is the dish on its side — and a frame that
+        // centres it only centres it sideways.
+        var (client, recipeId) = await SeedAsync();
+
+        await UploadAsync(client, recipeId, HeldUpright(), "plate.jpg", "image/jpeg");
+
+        // Act
+        var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
+
+        // Assert
+        using var decoded = Image.Load(served.Bytes.Span);
+
+        Assert.True(
+            decoded.Height > decoded.Width,
+            $"Served {decoded.Width}x{decoded.Height}; the upright photograph came back on its side.");
+    }
+
+    [Fact]
     public async Task Upload_ShouldRefuseAnImageTooLargeToDecode_WithoutDecodingIt()
     {
         // Arrange
@@ -177,6 +201,28 @@ public class RecipeImageTests(PostgresFixture postgres)
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("recipes.image_too_many_pixels", response.ProblemCode);
+    }
+
+    /// <summary>
+    /// A photograph taken upright, stored the way a camera stores one: wide
+    /// pixels, plus the tag that says to turn them.
+    /// </summary>
+    private static byte[] HeldUpright()
+    {
+        using var image = new Image<Rgba32>(200, 100);
+        using var buffer = new MemoryStream();
+
+        var exif = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
+
+        // 6: rotate a quarter turn clockwise to display.
+        exif.SetValue(
+            SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation,
+            (ushort)6);
+
+        image.Metadata.ExifProfile = exif;
+        image.Save(buffer, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
+
+        return buffer.ToArray();
     }
 
     /// <summary>A small photograph that says where it was taken.</summary>

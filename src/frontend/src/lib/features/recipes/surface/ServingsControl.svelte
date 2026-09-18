@@ -4,6 +4,7 @@
   import { m } from '$shell/i18n';
   import { yieldLabel } from '../scaling';
   import type { YieldKind } from '../types';
+  import { yieldNoun } from '../yieldWords';
 
   /**
    * How many this is being made for.
@@ -18,12 +19,19 @@
   interface Props {
     value: number;
     kind: YieldKind;
+    /**
+     * The recipe's own word for what it makes, when it has one.
+     *
+     * It renames the control and nothing else. How far the stepper counts stays
+     * with the kind, because "one cake" says nothing about what one more is.
+     */
+    label: string | null;
     /** The recipe's own yield, which decides a sensible step for pieces. */
     base: number;
     onchange?: (value: number) => void;
   }
 
-  let { value = $bindable(), kind, base, onchange }: Props = $props();
+  let { value = $bindable(), kind, label, base, onchange }: Props = $props();
 
   const step = $derived(kind === 'pieces' ? stepForPieces(base) : 1);
 
@@ -69,7 +77,7 @@
   onstep={move}
   min={step}
   max={kind === 'pieces' ? 240 : 24}
-  label={kind === 'pieces' ? m['recipe.pieces.label']() : m['recipe.servings.label']()}
+  label={yieldNoun({ yieldKind: kind, yieldLabel: label })}
   decreaseLabel={kind === 'pieces' ? m['recipe.pieces.fewer']() : m['recipe.servings.fewer']()}
   increaseLabel={kind === 'pieces' ? m['recipe.pieces.more']() : m['recipe.servings.more']()}
   {onchange}

@@ -318,6 +318,89 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         tags = Array.Empty<string>()
     };
 
+    [Fact]
+    public async Task Update_ShouldKeepTheRecipesOwnWordsForItsYieldAndItsSteps()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, InItsOwnWords());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var body = saved.Json!.Value;
+
+        // The word replaces the wording and nothing else: the kind is still
+        // what the servings control counts by.
+        Assert.Equal("Cake", body.GetProperty("yieldLabel").GetString());
+        Assert.Equal("servings", body.GetProperty("yieldKind").GetString());
+
+        var steps = body.GetProperty("steps");
+        Assert.Equal("Prepare the base", steps[0].GetProperty("title").GetString());
+        // A step that was never named stays unnamed rather than inheriting one.
+        Assert.Equal(JsonValueKind.Null, steps[1].GetProperty("title").ValueKind);
+    }
+
+    [Fact]
+    public async Task Update_ShouldForgetTheRecipesOwnWords_WhenTheyAreClearedAgain()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        var named = await PutAsync(client, recipe.Id, recipe.ETag, InItsOwnWords());
+
+        // Act
+        // Emptied, not omitted — which is what an author clearing both fields
+        // sends, and it has to mean "back to the usual wording".
+        var cleared = await PutAsync(
+            client,
+            recipe.Id,
+            named.Headers.ETag!.ToString(),
+            InItsOwnWords(yieldLabel: "   ", stepTitle: ""));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
+        var body = cleared.Json!.Value;
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("yieldLabel").ValueKind);
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("steps")[0].GetProperty("title").ValueKind);
+    }
+
+    [Fact]
+    public async Task Update_ShouldRefuseAYieldWordLongEnoughToBeASentence()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(
+            client,
+            recipe.Id,
+            recipe.ETag,
+            InItsOwnWords(yieldLabel: new string('x', 41)));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
+    }
+
+    private static object InItsOwnWords(string? yieldLabel = "Cake", string? stepTitle = "Prepare the base") => new
+    {
+        title = "Lemon cake",
+        language = "en",
+        yieldAmount = 1,
+        yieldKind = "servings",
+        yieldLabel,
+        groups = new[] { new { name = (string?)null, ingredients = new object[] { new { name = "flour" } } } },
+        steps = new object[]
+        {
+            new { title = stepTitle, segments = new object[] { new { type = "text", value = "Rub the butter in." } } },
+            new { segments = new object[] { new { type = "text", value = "Bake." } } }
+        },
+        tags = Array.Empty<string>()
+    };
+
     private static object FullRecipe(Guid butterId) => new
     {
         title = "Bolognese",

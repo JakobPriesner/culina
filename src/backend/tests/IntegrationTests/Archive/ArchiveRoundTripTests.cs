@@ -85,6 +85,13 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
         var oil = ingredients.Single(one => one.GetProperty("name").GetString() == "olive oil");
 
         Assert.Equal(oil.GetProperty("ingredientId").GetGuid(), needed);
+
+        // Everything the recipe called by its own name it is still called: a
+        // kitchen that leaves with its archive leaves with its own words too.
+        Assert.Equal("bowls", copy.GetProperty("yieldLabel").GetString());
+        Assert.Equal(
+            "Boil the orzo",
+            copy.GetProperty("steps").EnumerateArray().First().GetProperty("title").GetString());
     }
 
     [Fact]
@@ -191,6 +198,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
                 title = "Lemon orzo",
                 language = "en",
                 yieldAmount = 2,
+                yieldLabel = "bowls",
                 yieldKind = "servings",
                 groups = new[]
                 {
@@ -208,6 +216,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
                 {
                     new
                     {
+                        title = "Boil the orzo",
                         segments = new object[]
                         {
                             new { type = "text", value = "Boil " },

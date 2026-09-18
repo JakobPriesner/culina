@@ -43,6 +43,7 @@ internal static class RecipeMappings
             Language = RecipeWords.Of(recipe.Language),
             YieldAmount = recipe.Yield.Amount,
             YieldKind = RecipeWords.Of(recipe.Yield.Kind),
+            YieldLabel = recipe.Yield.Label,
             PrepMinutes = recipe.PrepMinutes,
             CookMinutes = recipe.CookMinutes,
             TotalMinutes = recipe.TotalMinutes,
@@ -87,6 +88,7 @@ internal static class RecipeMappings
         IReadOnlyList<Guid> order) => new()
         {
             StepId = step.Id,
+            Title = step.Title,
             DurationSeconds = step.DurationSeconds,
             Segments = [.. step.Segments.Select(segment => segment.ToContract(ingredients))],
 

@@ -1,6 +1,7 @@
 import { m } from '$shell/i18n';
 
 import type { RecipeSummary } from './types';
+import { wordYield } from './yieldWords';
 
 /**
  * The one line of facts under a recipe's title.
@@ -17,11 +18,7 @@ export function metaLineFor(recipe: RecipeSummary): string {
     parts.push(m['recipes.meta.minutes']({ count: recipe.totalMinutes }));
   }
 
-  parts.push(
-    recipe.yieldKind === 'pieces'
-      ? m['recipes.meta.pieces']({ count: recipe.yieldAmount })
-      : m['recipes.meta.servings']({ count: recipe.yieldAmount })
-  );
+  parts.push(wordYield(recipe.yieldAmount, recipe));
 
   // Only once it has actually been cooked. "Made 0×" is noise on every recipe
   // nobody has got to yet.

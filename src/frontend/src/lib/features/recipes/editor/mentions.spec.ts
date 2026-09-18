@@ -17,6 +17,7 @@ const list = [butter, oil, oliveOil];
 
 const step = (segments: Step['segments']): Step => ({
   id: null,
+  title: null,
   segments,
   uses: [],
   durationSeconds: null

@@ -1,8 +1,8 @@
 import { formatQuantity, type QuantityText } from '../formatQuantity';
 import { quantityLabels as labels } from '../quantityLabels';
 import { factorFor, scaleQuantity, trustedFactorRange } from '../scaling';
-import type { Ingredient, Recipe, Quantity } from '../types';
-import { m } from '$shell/i18n';
+import type { Recipe, Quantity } from '../types';
+import { wordYield } from '../yieldWords';
 import { preferences } from '$shell/preferences.svelte';
 
 /**
@@ -54,9 +54,7 @@ export function createScaling(recipe: () => Recipe | null, target: () => number)
         return '';
       }
 
-      return current.yieldKind === 'pieces'
-        ? m['recipes.meta.pieces']({ count: current.yieldAmount })
-        : m['recipes.meta.servings']({ count: current.yieldAmount });
+      return wordYield(current.yieldAmount, current);
     },
 
     /**
@@ -76,15 +74,13 @@ export function createScaling(recipe: () => Recipe | null, target: () => number)
 
       const amount = Math.round(current.yieldAmount * factor * 100) / 100;
 
-      return current.yieldKind === 'pieces'
-        ? m['recipes.meta.pieces']({ count: amount })
-        : m['recipes.meta.servings']({ count: amount });
+      return wordYield(amount, current);
     },
 
     show,
 
-    /** The same, for an ingredient. */
-    amountFor: (ingredient: Ingredient): QuantityText => show(ingredient.quantity)
+    /** The same, for anything that carries an amount. */
+    amountFor: (of: { readonly quantity: Quantity }): QuantityText => show(of.quantity)
   };
 }
 

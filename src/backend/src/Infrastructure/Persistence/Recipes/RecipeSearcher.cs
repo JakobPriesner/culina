@@ -21,6 +21,8 @@ internal sealed record RecipeSearchRowData
 
     public string YieldKind { get; init; } = "servings";
 
+    public string? YieldLabel { get; init; }
+
     public string[] Tags { get; init; } = [];
 
     public int CookCount { get; init; }
@@ -125,6 +127,7 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
             end as total_minutes,
             r.yield_amount,
             r.yield_kind,
+            r.yield_label,
             r.updated_at,
             coalesce(
                 array(
@@ -342,6 +345,7 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
         data.TotalMinutes,
         data.YieldAmount,
         data.YieldKind,
+        data.YieldLabel,
         data.Tags,
         data.CookCount,
         data.LastCookedAt,

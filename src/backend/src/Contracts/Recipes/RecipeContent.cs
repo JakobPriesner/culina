@@ -41,6 +41,16 @@ public sealed record StepContract
     /// <summary>The step's id. Omit to create a new one.</summary>
     public Guid? StepId { get; init; }
 
+    /// <summary>
+    /// What this step is called — "Prepare the base".
+    /// </summary>
+    /// <remarks>
+    /// Null for most steps, and a client must then label the step by its
+    /// position. It is a name for this one step, not a heading over the ones
+    /// that follow it.
+    /// </remarks>
+    public string? Title { get; init; }
+
     /// <summary>Its text, split into words and ingredient references.</summary>
     public required IReadOnlyList<StepSegmentContract> Segments { get; init; }
 
