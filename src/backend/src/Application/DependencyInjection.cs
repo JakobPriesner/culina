@@ -40,6 +40,7 @@ using Application.Recipes.Sources;
 using Application.Recipes.UndoCooked;
 using Application.Recipes.Update;
 using Application.Registration.GetPolicy;
+using Application.Searches;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -245,6 +246,15 @@ public static class DependencyInjection
             // Suggestions
             .AddScoped<IQueryHandler<GetSuggestionsQuery, Contracts.Suggestions.GetAll.Response>,
                 GetSuggestionsQueryHandler>()
-            .AddScoped<ICommandHandler<DismissSuggestionCommand>, DismissSuggestionCommandHandler>();
+            .AddScoped<ICommandHandler<DismissSuggestionCommand>, DismissSuggestionCommandHandler>()
+
+            // Saved searches
+            .AddScoped<IQueryHandler<GetSavedSearchesQuery, Contracts.Searches.SavedSearchesResponse>,
+                GetSavedSearchesQueryHandler>()
+            .AddScoped<ICommandHandler<CreateSavedSearchCommand, Contracts.Searches.SavedSearchDetail>,
+                CreateSavedSearchCommandHandler>()
+            .AddScoped<ICommandHandler<UpdateSavedSearchCommand, Contracts.Searches.SavedSearchDetail>,
+                UpdateSavedSearchCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteSavedSearchCommand>, DeleteSavedSearchCommandHandler>();
     }
 }

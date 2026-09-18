@@ -2,14 +2,16 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, EmptyState, ErrorState, SearchField } from '$ds';
+  import { Button, EmptyState, ErrorState } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
   import type { CookbookRules } from '$features/cookbooks/types';
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
+  import LibraryToolbar from '$features/recipes/filters/LibraryToolbar.svelte';
   import { createRecipeStore } from '$features/recipes/stores/recipes.svelte';
+  import { effectiveSort, RecipeQuery } from '$features/recipes/stores/libraryView.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -38,9 +40,15 @@
    */
   const shelf = createRecipeStore();
 
-  let search = $state('');
-  let applied = $state('');
-  let debounce: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * What this shelf is being asked for.
+   *
+   * Its own, not the library's: the collection behind this page is looking at
+   * everything, and sharing one question would leave the library filtered to a
+   * shelf when somebody navigates back. The same class either way, so a shelf
+   * can be sorted and narrowed exactly as the library can.
+   */
+  const view = new RecipeQuery();
 
   let renaming = $state(false);
   let saving = $state(false);
@@ -53,7 +61,36 @@
   const automatic = $derived(cookbook?.kind === 'smart');
 
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
-  const filtered = $derived(applied.trim().length > 0);
+  const filtered = $derived(view.filtered);
+
+  /**
+   * A shelf is read in the order it was built, until somebody says otherwise.
+   *
+   * `ranks` is false here rather than plumbed through: "for tonight" ranks the
+   * whole library, and offering it inside a shelf would promise an order over
+   * the shelf that it does not mean.
+   */
+  const context = $derived({
+    searching: view.query.trim().length > 0,
+    ranks: false,
+    inACookbook: true
+  });
+
+  const order = $derived(effectiveSort(view.sort, context));
+
+  /**
+   * Which list is on screen.
+   *
+   * Built once, so the first page, the next page and the retry cannot ask for
+   * three different things.
+   */
+  const filters = $derived({
+    query: view.query,
+    tags: view.tags,
+    maxMinutes: view.maxMinutes ?? undefined,
+    cookbookId,
+    sort: order
+  });
 
   const autoLoads = $derived(shelf.hasMore && !shelf.moreFailed);
 
@@ -68,36 +105,23 @@
 
   $effect(() => {
     if (householdId && cookbookId) {
-      void shelf.list(householdId, { query: applied, cookbookId });
+      void shelf.list(householdId, filters);
     }
   });
 
-  $effect(() => () => clearTimeout(debounce));
-
-  function type(value: string) {
-    search = value;
-    clearTimeout(debounce);
-
-    // The same 250 ms the collection uses. Two search boxes that debounced
-    // differently would feel like two different apps.
-    debounce = setTimeout(() => (applied = value), 250);
-  }
-
   function clear() {
-    search = '';
-    clearTimeout(debounce);
-    applied = '';
+    view.clear();
   }
 
   function more() {
     if (householdId && cookbookId) {
-      void shelf.loadMore(householdId, { query: applied, cookbookId });
+      void shelf.loadMore(householdId, filters);
     }
   }
 
   function reload() {
     if (householdId && cookbookId) {
-      void shelf.list(householdId, { query: applied, cookbookId });
+      void shelf.list(householdId, filters);
       void cookbooks.load(cookbookId);
     }
   }
@@ -276,22 +300,21 @@
         </Button>
       </div>
 
-      <div class="collection-tools">
-        {#if shelf.status === 'ready'}
-          <p class="count">{m['cookbooks.card.count']({ count: shelf.total })}</p>
-        {/if}
-
-        <div class="search">
-          <SearchField
-            id="cookbook-search"
-            value={search}
-            label={m['cookbooks.search']()}
-            placeholder={m['cookbooks.search']()}
-            clearLabel={m['recipes.list.clearSearch']()}
-            oninput={type}
-            onclear={clear}
-          />
-        </div>
+      <div class="tools">
+        <LibraryToolbar
+          id="cookbook-search"
+          householdId={householdId ?? ''}
+          {view}
+          {context}
+          searchLabel={m['cookbooks.search']()}
+          searchPlaceholder={m['cookbooks.search']()}
+        >
+          {#snippet summary()}
+            {#if shelf.status === 'ready'}
+              <p class="count">{m['cookbooks.card.count']({ count: shelf.total })}</p>
+            {/if}
+          {/snippet}
+        </LibraryToolbar>
       </div>
     </header>
 
@@ -432,22 +455,12 @@
     gap: var(--space-3);
   }
 
-  .collection-tools {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
+  .tools {
     width: 100%;
   }
 
   .count {
     color: var(--text-muted);
     font-size: var(--text-sm);
-  }
-
-  .search {
-    flex: 1 1 16rem;
-    max-width: 26rem;
   }
 </style>

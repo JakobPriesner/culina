@@ -2977,6 +2977,39 @@ cookbook is a *saved search*, and the rule editor's three fields are three of
 the chips the parser already produces. Making the overlay able to save itself
 as a shelf is one button and no new concepts.
 
+**Amended after building it.** Saving a search is *not* making a smart
+cookbook, and the reason is concrete rather than philosophical. A cookbook
+card carries a recipe count and a cover mosaic, and both are computed per card
+from `SmartShelfSql.Matches` against the shelf's rule columns. Tags,
+ingredients and a time ceiling are cheap predicates there. **Free text is not**
+— it is the four-lane relevance engine of §8, and putting it in a shelf rule
+would mean running that engine once per cookbook on the cookbooks page, or
+maintaining a second, cheaper definition of "matches" that would immediately
+disagree with the first. That is exactly the drift `SmartShelfSql` was written
+to prevent.
+
+So the two stayed separate, and the separation turned out to be honest rather
+than merely convenient: **a shelf is a curation** — a set, countable, drawable,
+shoppable — **and a search is a lens** — ordered, fuzzy, and only meaningful
+while you are looking through it. A saved search is its own small household
+resource (`/api/v1/searches`, migration `0016`) holding exactly what the
+library's toolbar holds: `query`, `tags`, `maxMinutes`, `sort`. Saving is a
+copy rather than a translation, which is the only thing that makes a saved
+search reopen as the search that was saved.
+
+The connection survives as one door between them, and it only opens one way:
+a saved search whose dimensions a shelf *can* hold — tags, a time limit —
+offers "make a cookbook from it", which opens the ordinary `CookbookSheet`
+prefilled. A search that is only words does not offer it, and says why. Nothing
+is dropped silently.
+
+One order is deliberately not storable: `cookbookOrder` needs a cookbook to be
+an order of, and a saved search is applied from the library. `SearchOrders`
+lists the six that are, and an integration test holds `GET /recipes` to
+accepting every one of them — which is what stops the two vocabularies drifting
+the way `RecipeFilters.sort` had already drifted (`culina-v2-5l6`: the client
+declared `match`, and the API answered 400).
+
 ### 18.9 Client state
 
 ```typescript

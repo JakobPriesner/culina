@@ -1,11 +1,17 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { resolve } from '$app/paths';
-  import { Button, EmptyState, ErrorState, FilterChip, SearchField } from '$ds';
+  import { Button, EmptyState, ErrorState } from '$ds';
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
   import SuggestionDeck from '$features/recipes/SuggestionDeck.svelte';
+  import LibraryToolbar from '$features/recipes/filters/LibraryToolbar.svelte';
+  import { sortLabel } from '$features/recipes/filters/labels';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
-  import { libraryView } from '$features/recipes/stores/libraryView.svelte';
+  import { effectiveSort, libraryView } from '$features/recipes/stores/libraryView.svelte';
+  import type { SavedSearch } from '$features/recipes/stores/savedSearches.svelte';
+  import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
+  import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
+  import type { CookbookRules } from '$features/cookbooks/types';
   import { suggestions } from '$features/recipes/stores/suggestions.svelte';
   import type { Suggestion } from '$features/recipes/types';
   import PageHeader from '$shell/PageHeader.svelte';
@@ -17,16 +23,16 @@
   /**
    * Everything the household can cook.
    *
-   * The search is debounced rather than fired per keystroke, and a refetch
-   * keeps the list that is already on screen — the old answer is almost always
-   * still the right one, and replacing it with a skeleton loses your place.
+   * The toolbar owns the search box, the filters and the debounce; this page
+   * owns what to do with the answer. A refetch keeps the list that is already
+   * on screen — the old answer is almost always still the right one, and
+   * replacing it with a skeleton loses your place.
    */
-  let search = $state(untrack(() => libraryView.query));
-  const applied = $derived(libraryView.query);
-
-  let debounce: ReturnType<typeof setTimeout> | undefined;
-
   const householdId = $derived(session.activeHouseholdId);
+
+  /** The shelf a saved search has proposed, while its sheet is open. */
+  let shelving = $state<{ name: string; rules: CookbookRules } | null>(null);
+  let shelvingBusy = $state(false);
 
   /**
    * The shortlist at the top of the page. Asked once per household.
@@ -41,7 +47,7 @@
   const featuredQuery = { limit: 5 } as const;
 
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
-  const filtered = $derived(applied.trim().length > 0 || libraryView.quick);
+  const filtered = $derived(libraryView.filtered);
 
   /** The answer to "what should I cook?", best first, whatever the page is showing. */
   const shortlist = $derived(suggestions.for(householdId, featuredQuery));
@@ -59,7 +65,19 @@
    */
   const ranks = $derived(topSuggestion?.reason != null);
 
-  const order = $derived(libraryView.order ?? (ranks ? 'suggested' : 'recent'));
+  /**
+   * What the toolbar needs in order to decide an order nobody has chosen.
+   *
+   * `ranks` is the same signal the suggested chip used: the ranking may only
+   * take over once it has something true to say about this kitchen.
+   */
+  const context = $derived({
+    searching: libraryView.query.trim().length > 0,
+    ranks,
+    inACookbook: false
+  });
+
+  const order = $derived(effectiveSort(libraryView.sort, context));
 
   /**
    * Whether the order is settled enough to ask for a list in it.
@@ -83,9 +101,14 @@
    * "load more" to append rows from a different list than the one above it.
    */
   const filters = $derived({
-    query: applied,
-    maxMinutes: libraryView.quick ? 30 : undefined,
-    sort: order === 'suggested' ? ('suggested' as const) : undefined
+    query: libraryView.query,
+    tags: libraryView.tags,
+    maxMinutes: libraryView.maxMinutes ?? undefined,
+    // Always explicit, so that the order the page names above the grid is the
+    // order it actually asked for. The server would pick the same one from an
+    // absent `sort`, but a label worked out separately from the request is a
+    // label that can be wrong.
+    sort: order
   });
 
   /**
@@ -145,11 +168,7 @@
 
   $effect(() => {
     if (householdId) {
-      untrack(() => {
-        clearTimeout(debounce);
-        libraryView.forHousehold(householdId);
-        search = libraryView.query;
-      });
+      untrack(() => libraryView.forHousehold(householdId));
     }
   });
 
@@ -164,22 +183,6 @@
       void recipes.list(householdId, filters);
     }
   });
-
-  $effect(() => () => clearTimeout(debounce));
-
-  function type(value: string) {
-    search = value;
-    clearTimeout(debounce);
-
-    // Long enough that a word is finished, short enough that it feels live.
-    debounce = setTimeout(() => (libraryView.query = value), 250);
-  }
-
-  function clear() {
-    search = '';
-    clearTimeout(debounce);
-    libraryView.query = '';
-  }
 
   /**
    * "Not this one."
@@ -218,8 +221,48 @@
   }
 
   function resetFilters() {
-    clear();
-    libraryView.quick = false;
+    libraryView.clear();
+  }
+
+  /**
+   * A saved search, made into a shelf.
+   *
+   * The two are different things — a search is a lens, ordered and fuzzy; a
+   * shelf is a curation that can be counted, drawn and taken to the shop — and
+   * this is the one door between them. Only what a shelf can actually ask for
+   * crosses: the tags and the time limit. The words stay behind, and the sheet
+   * says so rather than quietly dropping them.
+   */
+  function promote(search: SavedSearch) {
+    shelving = {
+      name: search.name,
+      rules: { tags: [...search.tags], ingredients: [], maxMinutes: search.maxMinutes }
+    };
+  }
+
+  async function makeCookbook(
+    name: string,
+    description: string | null,
+    rules: CookbookRules | null
+  ) {
+    if (!householdId || !rules) {
+      return;
+    }
+
+    shelvingBusy = true;
+
+    const made = await cookbooks.create(householdId, name, description ?? undefined, rules);
+
+    shelvingBusy = false;
+
+    if (made) {
+      shelving = null;
+      toaster.show({ message: m['saved.promoted']({ name }) });
+
+      return;
+    }
+
+    toaster.show({ message: m['cookbooks.add.failed'](), tone: 'danger' });
   }
 
   function retry() {
@@ -248,87 +291,37 @@
 <Page>
   <PageHeader title={m['recipes.title']()} subtitle={m['recipes.collection.subtitle']()} />
 
-  <div class="collection-toolbar">
-    <div class="collection-tools">
-      <div class="search">
-        <SearchField
-          id="recipe-search"
-          value={search}
-          label={m['recipes.list.searchLabel']()}
-          placeholder={m['recipes.list.searchPlaceholder']()}
-          clearLabel={m['recipes.list.clearSearch']()}
-          oninput={type}
-          onclear={clear}
-        />
-      </div>
-      {#if ranks}
-        <!-- Only once the ranking has something true to say. Before that the
-             choice would be between one real order and one that is not yet an
-             order at all. -->
-        <FilterChip
-          shape="rounded"
-          selected={order === 'suggested'}
-          onclick={() => (libraryView.order = order === 'suggested' ? 'recent' : 'suggested')}
-        >
-          {#snippet icon()}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 3.6 14.3 9l5.7.4-4.4 3.7 1.4 5.6L12 15.8 7 18.7l1.4-5.6L4 9.4 9.7 9Z"
-                stroke-linejoin="round"
-              />
-            </svg>
-          {/snippet}
-          {m['recipes.sort.suggested']()}
-        </FilterChip>
-      {/if}
-
-      <FilterChip
-        shape="rounded"
-        selected={libraryView.quick}
-        onclick={() => (libraryView.quick = !libraryView.quick)}
-      >
-        {#snippet icon()}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" stroke-linecap="round" />
-          </svg>
-        {/snippet}
-        {m['recipes.filter.quick']()}
-      </FilterChip>
-    </div>
-
-    <div class="collection-summary" aria-live="polite" aria-atomic="true">
-      <p class="count">
-        {#if !settled || recipes.status === 'loading' || recipes.status === 'idle'}
-          {m['recipes.list.loading']()}
-        {:else if recipes.status === 'ready'}
-          {m['recipes.list.count']({ count: recipes.total })}
-        {/if}
-      </p>
-      {#if filtered}
-        <Button size="sm" variant="ghost" onclick={resetFilters}
-          >{m['recipes.filter.reset']()}</Button
-        >
-      {:else if recipes.status === 'ready' && recipes.items.length > 0}
-        <!-- The order is always named. A list whose order changed without
-             saying so is the thing that makes people stop trusting an app. -->
-        <p class="collection-note">
-          {order === 'suggested' ? m['recipes.list.suggested']() : m['recipes.list.recent']()}
+  <LibraryToolbar
+    id="recipe-search"
+    householdId={householdId ?? ''}
+    view={libraryView}
+    {context}
+    searchLabel={m['recipes.list.searchLabel']()}
+    searchPlaceholder={m['recipes.list.searchPlaceholder']()}
+    savable
+    onpromote={promote}
+  >
+    {#snippet summary()}
+      <div class="collection-summary" aria-live="polite" aria-atomic="true">
+        <p class="count">
+          {#if !settled || recipes.status === 'loading' || recipes.status === 'idle'}
+            {m['recipes.list.loading']()}
+          {:else if recipes.status === 'ready'}
+            {m['recipes.list.count']({ count: recipes.total })}
+          {/if}
         </p>
-      {/if}
-    </div>
-  </div>
+        {#if filtered}
+          <Button size="sm" variant="ghost" onclick={resetFilters}>
+            {m['recipes.filter.reset']()}
+          </Button>
+        {:else if recipes.status === 'ready' && recipes.items.length > 0}
+          <!-- The order is always named. A list whose order changed without
+               saying so is the thing that makes people stop trusting an app. -->
+          <p class="collection-note">{sortLabel(order)}</p>
+        {/if}
+      </div>
+    {/snippet}
+  </LibraryToolbar>
 
   {#if recipes.status === 'failed'}
     <ErrorState
@@ -393,35 +386,22 @@
   {/if}
 </Page>
 
+<!-- A saved search, offered as a shelf. The same sheet the cookbooks page
+     uses, so a cookbook made this way is made exactly like every other one. -->
+<CookbookSheet
+  open={shelving !== null}
+  householdId={householdId ?? ''}
+  preset={shelving}
+  saving={shelvingBusy}
+  onsave={(name, description, rules) => void makeCookbook(name, description, rules)}
+  onclose={() => (shelving = null)}
+/>
+
 <style>
-  .collection-toolbar {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-3) var(--space-6);
-    padding-block: var(--space-4);
-    margin-bottom: var(--space-6);
-    border-block: 1px solid var(--border);
-  }
-  .collection-tools {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    flex: 1 1 28rem;
-    min-width: 0;
-  }
-  .search {
-    flex: 1 1 14rem;
-    max-width: 28rem;
-    min-width: 0;
-  }
   .collection-summary {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: var(--space-1);
-    margin-inline-start: auto;
+    align-items: center;
+    gap: var(--space-3);
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
@@ -434,14 +414,8 @@
     font-size: var(--text-xs);
   }
   @media (max-width: 40rem) {
-    .search {
-      flex-basis: 100%;
-      max-width: none;
-    }
     .collection-summary {
       width: 100%;
-      flex-direction: row;
-      align-items: center;
       justify-content: space-between;
     }
   }

@@ -4,6 +4,8 @@ import { registerStore } from '$shell/stores';
 import { toRecipe, toSummary, toWireGroups, toWireSteps } from '../mappers';
 import type { Recipe, RecipeSummary } from '../types';
 
+import { toWireSort, type RecipeSort } from './libraryView.svelte';
+
 /**
  * The recipes a household has, and the one being looked at.
  *
@@ -29,11 +31,12 @@ export interface RecipeFilters {
   /**
    * How to order the page.
    *
-   * 'suggested' ranks the whole collection for whoever is asking — a sort over
-   * the one collection rather than a second collection, which is what lets it
-   * compose with every filter above it.
+   * The app's own words; `toWireSort` is the one place they meet the query
+   * string's. 'suggested' ranks the whole collection for whoever is asking — a
+   * sort over the one collection rather than a second collection, which is what
+   * lets it compose with every filter above it.
    */
-  readonly sort?: 'recent' | 'title' | 'quickest' | 'match' | 'suggested';
+  readonly sort?: RecipeSort;
 }
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
@@ -353,7 +356,7 @@ class RecipeStore {
             ingredient: filters.ingredients?.length ? [...filters.ingredients] : undefined,
             maxMinutes: filters.maxMinutes,
             cookbookId: filters.cookbookId,
-            sort: filters.sort,
+            sort: filters.sort ? toWireSort(filters.sort) : undefined,
             cursor: cursor ?? undefined,
             limit: pageSize
           }
