@@ -49,4 +49,15 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
         value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
     internal static string Key(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// A relevance score, round-tripped exactly.
+    /// </summary>
+    /// <remarks>
+    /// "R" rather than a fixed number of decimal places: a cursor that rounds
+    /// its own sort key is a cursor that can skip the row after it, or return
+    /// that row twice, and either one looks like a paging bug nobody can
+    /// reproduce.
+    /// </remarks>
+    internal static string Key(double value) => value.ToString("R", CultureInfo.InvariantCulture);
 }

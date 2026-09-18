@@ -90,6 +90,13 @@ and the process exits non-zero: a half-migrated database must not serve traffic.
 restarts in a second or two, and engineering around that would cost more than it
 returns.
 
+**One upgrade takes longer than the rest.** The migration that adds recipe
+search builds a search document for every recipe you already have, inside its
+own transaction, so that the first search after the upgrade is answered from a
+complete index rather than an empty one. Budget roughly two seconds per five
+hundred recipes — about nine for a library of two thousand. Nothing else in the
+upgrade is affected, and it happens exactly once.
+
 ## Backing up
 
 Three things, and all three are needed:

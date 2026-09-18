@@ -31,6 +31,12 @@ internal sealed record RecipeSearchRowData
     public int TotalCount { get; init; }
 
     public DateTimeOffset? AddedToCookbookAt { get; init; }
+
+    /// <summary>Which kind of evidence put this row here. Lower is stronger.</summary>
+    public int Tier { get; init; }
+
+    /// <summary>How well it fits, within its tier.</summary>
+    public double Score { get; init; }
 }
 
 /// <summary>
@@ -49,12 +55,43 @@ internal sealed record RecipeSearchRowData
 /// want to use up, and the ranking does the rest — which is precisely why it
 /// cannot go stale.
 /// </para>
+/// <para>
+/// Free text is answered from <c>recipe_search_documents</c> rather than by
+/// scanning the recipe tables, through the lanes in
+/// <see cref="RecipeSearchLanes"/>. The join is a left join on purpose: a
+/// recipe whose document is somehow missing still lists, still filters and
+/// still pages, and is only unfindable by words until the next write rebuilds
+/// it.
+/// </para>
 /// </remarks>
 /// <param name="executor">Runs the SQL.</param>
 internal sealed class RecipeSearcher(DbExecutor executor)
 {
     /// <summary>A hard ceiling, enforced here and not only in the endpoint.</summary>
     internal const int MaxLimit = 100;
+
+    /// <summary>
+    /// How alike two words have to be before one counts as the other misspelt.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A constant rather than a setting. It is a relevance parameter, not an
+    /// operational one: changing it changes which results people see, so it
+    /// belongs in a commit next to the test case that moved it rather than in
+    /// an environment variable nobody reviews.
+    /// </para>
+    /// <para>
+    /// Half, and the number is not a guess. Trigram similarity counts shared
+    /// three-letter windows, and a single transposed or missing letter in the
+    /// middle of a word destroys three of them at once: "Bolgnese" scores
+    /// 0.58 against "Bolognese" and "Bolognäse" scores 0.54, so anything
+    /// stricter refuses both of the misspellings this was built to survive.
+    /// The cost of being generous is contained by where it lands — a match
+    /// found only this way is two tiers down, below everything the query
+    /// actually names.
+    /// </para>
+    /// </remarks>
+    private const double FuzzyThreshold = 0.5d;
 
     private static readonly string Projection = $$"""
         select
@@ -77,9 +114,16 @@ internal sealed class RecipeSearcher(DbExecutor executor)
                 '{}') as tags,
             (select count(*) from cook_log_entries c
              where c.recipe_id = r.id and c.user_id = @userId) as cook_count,
-            (select count(*) from recipe_ingredients ri
-             join ingredient_groups g on g.id = ri.group_id
-             where g.recipe_id = r.id) as ingredient_count,
+            -- From the document, which counted them when the recipe was
+            -- written. The subquery is the fallback for a document that has
+            -- gone missing, and coalesce only reaches it when one has: counting
+            -- ingredients per row was 620 ms over two thousand recipes, and it
+            -- was the most expensive thing in this query long before search
+            -- was rewritten.
+            coalesce(d.ingredient_count, (
+                select count(*) from recipe_ingredients ri
+                join ingredient_groups g on g.id = ri.group_id
+                where g.recipe_id = r.id)) as ingredient_count,
             (select count(*) from unnest(@ingredients::text[]) as wanted
              where exists (
                  select 1 from recipe_ingredients ri
@@ -87,16 +131,19 @@ internal sealed class RecipeSearcher(DbExecutor executor)
                  where g.recipe_id = r.id and ri.name ilike '%' || wanted || '%'))
                 as matched_ingredients,
             (select cr.added_at from cookbook_recipes cr
-             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as added_to_cookbook_at
-        from recipes r
+             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as added_to_cookbook_at,
+            q.has_text,
+            {{RecipeSearchLanes.Evidence}}
+        from q
+        cross join recipes r
+        left join recipe_search_documents d on d.recipe_id = r.id
+        {{RecipeSearchLanes.LanguageJoin}}
         where r.household_id = @householdId
-          and (@query is null or (
-                r.title ilike @queryLike
-                or r.description ilike @queryLike
-                or exists (
-                    select 1 from recipe_ingredients ri
-                    join ingredient_groups g on g.id = ri.group_id
-                    where g.recipe_id = r.id and ri.name ilike @queryLike)))
+          -- Words are answered by the search document, in four lanes, rather
+          -- than by three LIKE scans over the recipe tables. The lanes are
+          -- named in RecipeSearchLanes because the tier below has to know
+          -- which of them fired.
+          and (@query::text is null or not q.has_text or ({{RecipeSearchLanes.Predicate}}))
           and (@tagCount = 0 or (
                 select count(distinct t.slug) from recipe_tags rt
                 join tags t on t.id = rt.tag_id
@@ -135,11 +182,16 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         // One extra row tells us whether there is a next page without a second
         // count query.
         var sql = $"""
-            with matching as ({Projection}),
+            with q as ({RecipeSearchLanes.QueryCte}),
+            matching as ({Projection}),
             ranked as (
-                select *, ingredient_count - matched_ingredients as extra_ingredients
+                select *,
+                    ingredient_count - matched_ingredients as extra_ingredients,
+                    {RecipeSearchLanes.Tier} as tier,
+                    {RecipeSearchLanes.StructuralFit} as structural_fit
                 from matching),
-            counted as (select *, count(*) over () as total_count from ranked)
+            scored as (select *, {RecipeSearchLanes.Score} as score from ranked),
+            counted as (select *, count(*) over () as total_count from scored)
             select * from counted
             {(resume is null ? string.Empty : $"where {resume}")}
             order by {RecipeSearchSql.OrderBy(search.Sort)}
@@ -165,16 +217,18 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         // count of distinct slugs: ?tag=quick&tag=quick would otherwise ask for
         // two of a tag a recipe can only carry once, and match nothing.
         var tags = search.Tags.Distinct(StringComparer.Ordinal).ToArray();
+        var ingredients = search.Ingredients.ToArray();
 
         return new
         {
             householdId = search.HouseholdId,
             userId = search.UserId,
             query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim(),
-            queryLike = $"%{search.Query?.Trim()}%",
+            fuzzyThreshold = FuzzyThreshold,
             tags,
             tagCount = tags.Length,
-            ingredients = search.Ingredients.ToArray(),
+            ingredients,
+            ingredientCount = ingredients.Length,
             maxMinutes = search.MaxMinutes,
             cookbookId = search.CookbookId,
             ruleTags = search.Rules?.Tags.Distinct(StringComparer.Ordinal).ToArray() ?? [],
@@ -195,7 +249,7 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         bool hasMore,
         List<RecipeSearchRowData> page) =>
         hasMore && page.Count > 0
-            ? new RecipeCursor(sort, RecipeSearchSql.KeysOf(sort, ToRow(page[^1])), page[^1].Id).Encode()
+            ? new RecipeCursor(sort, RecipeSearchSql.KeysOf(sort, page[^1]), page[^1].Id).Encode()
             : null;
 
     private static RecipeSearchRow ToRow(RecipeSearchRowData data) => new(

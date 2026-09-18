@@ -73,17 +73,27 @@ sub-resource" pattern, not a verb route: redeeming *creates a redemption*.
 | Parameter | Meaning |
 | --- | --- |
 | `householdId` | **required** — scopes the query. |
-| `query` | Free text over title, description and ingredient names. |
+| `query` | Free text over the title, tags, ingredient names, description and step text. Tolerant of typos (`Bolgnese`), of German spelling variants (`Bolognäse`, `Muesli`, `Musli`), of inflection in both directions (`Tomate` ↔ `Tomaten`) and of compounds (`Hähnchen` finds `Hähnchenbrustfilet`). |
 | `tag` | Slug. Repeatable; repeated values are ANDed. |
 | `maxMinutes` | Total time ceiling. "I have 25 minutes." |
 | `ingredient` | Repeatable. Ranks by how many match and how few extras are needed. |
-| `sort` | `-updatedAt` (default), `title`, `totalMinutes`, `-cookCount`, `relevance` (implied when `query` or `ingredient` is present), `cookbookOrder` (only with `cookbookId`, and the default when there is one). |
+| `sort` | `-updatedAt`, `title`, `totalMinutes`, `-cookCount`, `relevance`, `cookbookOrder` (only with `cookbookId`). An explicit value always wins; with none, `query` or `ingredient` means `relevance`, a `cookbookId` alone means `cookbookOrder`, and everything else means `-updatedAt`. |
 | `cookbookId` | Only what is on that cookbook — its rows if somebody fills it, its rules if it fills itself. Every other filter still applies, ANDed. |
 | `cursor`, `limit` | Cursor paging. `limit` default 24, max 100. |
 
 Unknown or duplicated parameters are rejected with `400` by
 `QueryParameterGuardMiddleware`. A silently ignored filter returns wrong data
 that looks right.
+
+**How `relevance` orders.** A tier first, then a score inside it. The tier is
+what kind of evidence put a recipe on the page — an exact title, a word of the
+title, a compound or near-miss of one, a tag, an ingredient, the method — and it
+is compared before anything else, so a recipe that merely resembles the query
+can never climb past one the query names. The score inside a tier weighs how
+much of the title the query accounts for, how much of the query the recipe
+accounts for, the full-text rank, and how well the recipe fits any `ingredient`
+values. Neither number is exposed: they are how a page is ordered and how its
+cursor resumes, not a fact about a recipe.
 
 With `ingredient`, each item additionally carries:
 

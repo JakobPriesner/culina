@@ -23,6 +23,14 @@ Everything below is the first release, still being assembled.
   order a shop is walked, with per-household corrections that are remembered.
 - Households: shared recipes and a shared list, with personal notes that stay
   personal. Invitations are made, copied and taken back from the app.
+- Search that survives how people actually type. A typo (`Bolgnese`), a German
+  word spelt the other two ways (`Bolognäse`, `Muesli`), a singular where the
+  recipe says plural (`Tomate` for `Tomaten`) and a compound noun (`Hähnchen`
+  for `Hähnchenbrustfilet`) all find what they meant, and step text is searched
+  as well as titles and ingredients. Results are ordered by what was asked
+  rather than by what was edited last: an exact title first, then the words of
+  one, then a near miss, then a tag or an ingredient, then the method — an
+  order that holds whatever the scoring inside it is later tuned to.
 - German and English throughout, compiled at build time.
 - An installable PWA that opens with no network, and keeps a recipe you have
   opened readable without one.

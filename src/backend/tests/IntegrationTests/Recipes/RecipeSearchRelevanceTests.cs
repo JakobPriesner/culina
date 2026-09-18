@@ -1,0 +1,607 @@
+using System.Globalization;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
+using Infrastructure.Persistence;
+using IntegrationTests.Fixtures;
+
+namespace IntegrationTests.Recipes;
+
+/// <summary>
+/// What search is supposed to find, stated as queries somebody would type.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A curated relevance set rather than a learned one. Eight users produce a few
+/// hundred noisy clicks a month, most of them for the same twenty recipes and
+/// all of them confounded by position bias; forty queries whose answers a
+/// person wrote down are a better instrument, because they fail by name and
+/// they fail in CI.
+/// </para>
+/// <para>
+/// The library below is deliberately awkward. It holds three recipes that all
+/// answer to "Bolognese", compounds that no stemmer will ever split, a recipe
+/// that says <em>Tomate</em> where the query says <em>Tomaten</em>, and one
+/// title carrying an umlaut that people spell three different ways. Every one
+/// of those is a query the old <c>ilike '%q%'</c> search returned nothing for.
+/// </para>
+/// </remarks>
+[Collection(RequiresDatabase.Name)]
+public class RecipeSearchRelevanceTests(PostgresFixture postgres)
+{
+    private const string Password = "correct horse battery staple";
+
+    /// <summary>
+    /// One case: a query, and what a person said it should find.
+    /// </summary>
+    /// <param name="Query">What is typed.</param>
+    /// <param name="Class">Which kind of query this is, for the report.</param>
+    /// <param name="Top">Titles that must be the first results, in this order.</param>
+    /// <param name="TopSet">Titles that must be the first results, in any order.</param>
+    /// <param name="Contains">Titles that must appear somewhere.</param>
+    /// <param name="Excludes">Titles that must not appear at all.</param>
+    /// <param name="NotInTop">Titles that must not be among the first three.</param>
+    /// <param name="Count">The exact number of results, when that is the point.</param>
+    private sealed record Golden(
+        string Query,
+        string Class,
+        string[]? Top = null,
+        string[]? TopSet = null,
+        string[]? Contains = null,
+        string[]? Excludes = null,
+        string[]? NotInTop = null,
+        int? Count = null);
+
+    private static readonly Golden[] GoldenSet =
+    [
+        // ── Known item, exact and partial ───────────────────────────────────
+        new("Spaghetti Bolognese", "known-item exact", Top: ["Spaghetti Bolognese"]),
+        new("Kartoffelgratin", "known-item exact", Top: ["Kartoffelgratin"]),
+        new("spaghetti bolognese", "known-item exact", Top: ["Spaghetti Bolognese"]),
+        new("Bolognese", "known-item partial",
+            TopSet: ["Spaghetti Bolognese", "Lasagne Bolognese"],
+            Contains: ["Bolognese-Sauce auf Vorrat"],
+            NotInTop: ["Gemüselasagne"]),
+        new("Curry", "known-item partial",
+            Contains: ["Süßkartoffelcurry", "Chicken Curry"]),
+
+        // ── Misspelled: a genuine typo, and the same word spelt differently ──
+        new("Bolgnese", "typo", Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
+        new("Bolognäse", "typo", Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
+        new("Kartoffelgratn", "typo", Contains: ["Kartoffelgratin"]),
+
+        // ── The same word, written the three ways German writes it ──────────
+        new("Müsliriegel", "spelling variant", Top: ["Müsliriegel"]),
+        new("Muesliriegel", "spelling variant", Top: ["Müsliriegel"]),
+        new("Musliriegel", "spelling variant", Top: ["Müsliriegel"]),
+        new("Süßkartoffelcurry", "spelling variant", Top: ["Süßkartoffelcurry"]),
+        new("Suesskartoffelcurry", "spelling variant", Top: ["Süßkartoffelcurry"]),
+
+        // ── Morphology: what the stemmer is for, in both directions ─────────
+        new("Tomaten", "morphology", Top: ["Tomatensuppe"]),
+        // Tomatensuppe's ingredient list says "Tomate", singular. The old
+        // search could only find a substring, so the plural found nothing.
+        new("Tomate", "morphology", Contains: ["Tomatensuppe", "Spaghetti Bolognese"]),
+        new("Zwiebeln", "morphology", Contains: ["Zwiebelkuchen", "Tomatensuppe"]),
+
+        // ── Compounds: what the stemmer will never do, and trigram does ─────
+        new("Hähnchen", "compound", Contains: ["Hähnchenbrustfilet mit Reis"]),
+        new("Haehnchen", "compound", Contains: ["Hähnchenbrustfilet mit Reis"]),
+        new("Hahnchen", "compound", Contains: ["Hähnchenbrustfilet mit Reis"]),
+        new("Kartoffel", "compound", Contains: ["Kartoffelgratin", "Süßkartoffelcurry"]),
+        new("Lasagne", "compound",
+            Top: ["Lasagne Bolognese"],
+            Contains: ["Gemüselasagne"]),
+        new("Müsli", "compound", Contains: ["Müsliriegel"]),
+
+        // ── Where a word is decides how much it counts ──────────────────────
+        // Zwiebelkuchen is named after it; Tomatensuppe merely contains one.
+        new("Zwiebel", "field weighting",
+            Top: ["Zwiebelkuchen"],
+            Contains: ["Tomatensuppe"]),
+        new("Reis", "field weighting", Top: ["Hähnchenbrustfilet mit Reis"]),
+        new("Sauce", "field weighting", Top: ["Bolognese-Sauce auf Vorrat"]),
+
+        // ── Ingredients and tags are searched, and rank below titles ────────
+        new("Hackfleisch", "ingredient",
+            Contains: ["Spaghetti Bolognese", "Lasagne Bolognese", "Bolognese-Sauce auf Vorrat"]),
+        new("Kokosmilch", "ingredient", Contains: ["Süßkartoffelcurry"]),
+        new("vegetarisch", "tag",
+            Contains: ["Gemüselasagne", "Kartoffelgratin", "Tomatensuppe"],
+            Excludes: ["Spaghetti Bolognese"]),
+        new("italienisch", "tag",
+            Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
+
+        // ── Steps are searched, which they never used to be ─────────────────
+        new("abgelöscht", "step text", Contains: ["Spaghetti Bolognese"]),
+
+        // ── Nothing matches, and nothing is invented ────────────────────────
+        new("Schnitzel", "no result", Count: 0),
+        new("qwertzuiop", "no result", Count: 0)
+    ];
+
+    [Fact]
+    public async Task Search_ShouldAnswerTheGoldenSet()
+    {
+        // Arrange
+        var world = await SeedAsync();
+        var report = new StringBuilder();
+        var failures = 0;
+
+        // Act
+        foreach (var group in GoldenSet.GroupBy(one => one.Class))
+        {
+            var failed = 0;
+
+            foreach (var golden in group)
+            {
+                var titles = Titles(await SearchAsync(world, golden.Query));
+                var problem = Check(golden, titles);
+
+                if (problem is null)
+                {
+                    continue;
+                }
+
+                failed++;
+                failures++;
+                report.Append(CultureInfo.InvariantCulture, $"\n  ✗ “{golden.Query}” — {problem}");
+                report.Append(CultureInfo.InvariantCulture, $"\n      got: {string.Join(" · ", titles)}");
+            }
+
+            report.Insert(0, string.Empty);
+            report.Append(CultureInfo.InvariantCulture,
+                $"\n  {group.Key,-20} {group.Count() - failed}/{group.Count()}");
+        }
+
+        // Assert
+        Assert.True(failures == 0, $"{failures} of {GoldenSet.Length} golden queries failed:{report}");
+    }
+
+    /// <summary>
+    /// The invariant that makes the ranking explainable: an exact title is
+    /// never outranked by something that merely resembles the query.
+    /// </summary>
+    /// <remarks>
+    /// Asserted over every query in the set rather than case by case, because
+    /// it is a property of the ordering and not of any one query. It is what
+    /// stops a future weight change from quietly letting three weak signals
+    /// outvote one strong one.
+    /// </remarks>
+    [Fact]
+    public async Task Search_ShouldNeverRankAResemblanceAboveTheRecipeThatIsNamed()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act & Assert
+        foreach (var golden in GoldenSet.Where(one => one.Top is { Length: > 0 }))
+        {
+            var titles = Titles(await SearchAsync(world, golden.Query));
+
+            Assert.True(
+                titles.Count > 0 && titles[0] == golden.Top![0],
+                $"“{golden.Query}” should lead with “{golden.Top![0]}” but returned: "
+                + string.Join(" · ", titles));
+        }
+    }
+
+    [Fact]
+    public async Task Search_ShouldRankByRelevance_WithoutBeingAskedTo()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        // No sort parameter at all. Asking a question is asking to be answered
+        // best first; before this, a search fell back to "most recently edited"
+        // and typing "Bolognese" returned whichever one had last been touched.
+        var titles = Titles(await SearchAsync(world, "Bolognese"));
+
+        // Assert
+        Assert.Equal(3, titles.Count);
+        Assert.Equal("Bolognese-Sauce auf Vorrat", titles[^1]);
+    }
+
+    [Fact]
+    public async Task Search_ShouldFindARecipe_InTheSameBreathAsSavingIt()
+    {
+        // Arrange
+        // The search document is written inside the recipe's own transaction,
+        // so there is no window in which a recipe exists and cannot be found.
+        // An index that lags its source is an index that is occasionally wrong
+        // with nothing to say so.
+        var world = await SeedAsync();
+
+        // Act
+        await SaveAsync(world, "Ofengemüse mit Feta", "de", 15, 30,
+            [("Paprika", null), ("Feta", null)], ["ofen", "vegetarisch"], "In den Ofen damit.");
+
+        // Assert
+        Assert.Equal(["Ofengemüse mit Feta"], Titles(await SearchAsync(world, "Ofengemüse")));
+        Assert.Equal(["Ofengemüse mit Feta"], Titles(await SearchAsync(world, "Feta")));
+    }
+
+    [Fact]
+    public async Task Search_ShouldForgetTheOldTitle_WhenARecipeIsRenamed()
+    {
+        // Arrange
+        var world = await SeedAsync();
+        var recipeId = await SaveAsync(world, "Pfannkuchen", "de", 10, 10,
+            [("Mehl", null)], [], "Backen.");
+
+        // Act
+        await RenameAsync(world, recipeId, "Kaiserschmarrn");
+
+        // Assert
+        // A document that only ever grew would keep answering to a name the
+        // recipe no longer has, which is the failure mode of every index that
+        // is appended to rather than replaced.
+        Assert.Empty(Titles(await SearchAsync(world, "Pfannkuchen")));
+        Assert.Equal(["Kaiserschmarrn"], Titles(await SearchAsync(world, "Kaiserschmarrn")));
+    }
+
+    [Fact]
+    public async Task Search_ShouldTreatALikeMetacharacterAsInert()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        // The lanes build LIKE patterns by concatenation, so a query carrying a
+        // metacharacter would otherwise be a wildcard nobody asked for. They are
+        // removed by the fold that every string already passes through, rather
+        // than escaped at each call site, which is the version that gets
+        // forgotten once and is then a way to read the whole library.
+        var plain = Titles(await SearchAsync(world, "Bolognese"));
+        var withPercent = Titles(await SearchAsync(world, "Bolognese%"));
+        var withUnderscore = Titles(await SearchAsync(world, "Bolo_nese"));
+
+        // Assert
+        Assert.NotEmpty(plain);
+        Assert.Equal(plain, withPercent);
+        // "Bolo_nese" folds to two words and finds less, never more: the
+        // underscore is a separator, never a single-character wildcard.
+        Assert.True(withUnderscore.Count <= plain.Count);
+        Assert.DoesNotContain("Gemüselasagne", withUnderscore, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task Search_ShouldReadAContentlessQuery_AsNoQueryAtAll()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        // "%" and "..." carry nothing to search for once folded, and an empty
+        // string is a prefix of every title. Rather than let that fall out of
+        // the LIKE by accident — or return nothing, which would be a different
+        // answer to the same non-question — a query with no content behaves
+        // exactly like an empty search box.
+        var everything = Titles(await SearchAsync(world, string.Empty));
+        var punctuation = Titles(await SearchAsync(world, "%"));
+        var dots = Titles(await SearchAsync(world, "..."));
+
+        // Assert
+        Assert.NotEmpty(everything);
+        Assert.Equal(everything, punctuation);
+        Assert.Equal(everything, dots);
+    }
+
+    [Fact]
+    public async Task Search_ShouldKeepPaging_StableAcrossRelevance()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var first = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&query=Tomaten&limit=2",
+            Token);
+        var cursor = first.Json!.Value.GetProperty("nextCursor").GetString();
+        var second = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&query=Tomaten&limit=2&cursor={Uri.EscapeDataString(cursor!)}",
+            Token);
+
+        // Assert
+        // The relevance cursor carries the tier and the score, so the second
+        // page resumes exactly where the first ended rather than re-ranking.
+        var page1 = Titles(first);
+        var page2 = Titles(second);
+
+        Assert.Equal(2, page1.Count);
+        Assert.NotEmpty(page2);
+        Assert.Empty(page1.Intersect(page2, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Indexing_ShouldProduceADocument_ForEveryRecipeInTheLibrary()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        var session = postgres.NewSession();
+        await using var _ = session.ConfigureAwait(false);
+        var executor = new DbExecutor(session);
+
+        // Act
+        // recipe_search_input is the one definition of what is searchable about
+        // a recipe: the per-recipe write, the migration's backfill and every
+        // future re-index are the same INSERT over it. If it produced nothing
+        // for some shape of recipe, an upgrade would leave that recipe
+        // permanently unfindable and nothing would have said so.
+        var recipes = await executor.ExecuteScalarAsync<long>(
+            "select count(*) from recipes;", null, Token);
+
+        var documents = await executor.ExecuteScalarAsync<long>(
+            "select count(*) from recipe_search_documents;", null, Token);
+
+        var buildable = await executor.ExecuteScalarAsync<long>(
+            """
+            select count(*) from recipe_search_input
+            where document is not null and fuzzy_text <> '' and title_ae <> '';
+            """,
+            null,
+            Token);
+
+        var current = await executor.ExecuteScalarAsync<long>(
+            """
+            select count(*) from recipe_search_documents
+            where analyzer_version = culina_search_analyzer_version();
+            """,
+            null,
+            Token);
+
+        // Assert
+        Assert.Equal(11, recipes);
+        Assert.Equal(recipes, documents);
+        Assert.Equal(recipes, buildable);
+        Assert.Equal(recipes, current);
+    }
+
+    [Fact]
+    public async Task Search_ShouldStillListARecipe_WhenItsDocumentIsMissing()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        await postgres.ExecuteAsync(
+            """
+            delete from recipe_search_documents
+            where recipe_id in (select id from recipes where title = 'Zwiebelkuchen');
+            """,
+            Token);
+
+        // Act
+        var all = Titles(await SearchAsync(world, string.Empty));
+        var byWord = Titles(await SearchAsync(world, "Zwiebelkuchen"));
+
+        // Assert
+        // A document that has somehow gone missing costs the recipe its words,
+        // never its place in the library. The join is a left join for exactly
+        // this: a recipe vanishing from the collection is a far worse failure
+        // than one that cannot be found by typing, and "this cannot happen" is
+        // a poor reason to let it.
+        //
+        // The other onion recipes still answer, which is the fuzzy lane doing
+        // its job — and they answer from the bottom, because a recipe reached
+        // only by resemblance is two tiers below one the query names.
+        Assert.Contains("Zwiebelkuchen", all, StringComparer.Ordinal);
+        Assert.DoesNotContain("Zwiebelkuchen", byWord, StringComparer.Ordinal);
+    }
+
+    private static string? Check(Golden golden, List<string> titles)
+    {
+        if (golden.Count is { } expected && titles.Count != expected)
+        {
+            return $"expected {expected} results, got {titles.Count}";
+        }
+
+        if (golden.Top is { } top && !titles.Take(top.Length).SequenceEqual(top, StringComparer.Ordinal))
+        {
+            return $"expected to lead with {string.Join(" · ", top)}";
+        }
+
+        if (golden.TopSet is { } set
+            && !titles.Take(set.Length).OrderBy(one => one, StringComparer.Ordinal)
+                .SequenceEqual(set.OrderBy(one => one, StringComparer.Ordinal), StringComparer.Ordinal))
+        {
+            return $"expected the first {set.Length} to be {string.Join(" · ", set)}";
+        }
+
+        if (golden.Contains?.FirstOrDefault(one => !titles.Contains(one, StringComparer.Ordinal)) is { } missing)
+        {
+            return $"“{missing}” is missing";
+        }
+
+        if (golden.Excludes?.FirstOrDefault(one => titles.Contains(one, StringComparer.Ordinal)) is { } unwanted)
+        {
+            return $"“{unwanted}” should not be here";
+        }
+
+        var top3 = titles.Take(3).ToList();
+
+        return golden.NotInTop?.FirstOrDefault(one => top3.Contains(one, StringComparer.Ordinal)) is { } intruder
+            ? $"“{intruder}” should not be in the first three"
+            : null;
+    }
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    private static Task<ApiResponse> SearchAsync(World world, string query) =>
+        world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&query={Uri.EscapeDataString(query)}",
+            Token);
+
+    private static List<string> Titles(ApiResponse response) =>
+        [.. response.Json!.Value.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("title").GetString()!)];
+
+    private sealed record World(ApiClient Client, Guid HouseholdId);
+
+    private async Task<World> SeedAsync()
+    {
+        await postgres.ResetAsync(Token);
+
+        var client = postgres.Api.NewApiClient();
+        await client.PostAsync(
+            "/api/v1/users",
+            new { email = "ada@example.com", displayName = "Ada", password = Password },
+            Token);
+        await client.PostAsync(
+            "/api/v1/sessions",
+            new { email = "ada@example.com", password = Password },
+            Token);
+
+        var householdId = (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+
+        var world = new World(client, householdId);
+
+        await SaveAsync(world, "Spaghetti Bolognese", "de", 15, 30,
+            [("Hackfleisch", "g"), ("passierte Tomaten", "ml"), ("Zwiebel", null), ("Spaghetti", "g")],
+            ["pasta", "italienisch"],
+            "Hackfleisch anbraten und mit Rotwein abgelöscht köcheln lassen.");
+
+        await SaveAsync(world, "Lasagne Bolognese", "de", 30, 60,
+            [("Hackfleisch", "g"), ("Tomaten", "g"), ("Lasagneplatten", null), ("Béchamel", "ml")],
+            ["pasta", "italienisch", "ofen"],
+            "Schichten und backen.");
+
+        await SaveAsync(world, "Bolognese-Sauce auf Vorrat", "de", 20, 100,
+            [("Hackfleisch", "g"), ("Tomaten", "g")],
+            ["sauce"],
+            "Lange köcheln lassen.");
+
+        await SaveAsync(world, "Gemüselasagne", "de", 25, 45,
+            [("Zucchini", null), ("Tomaten", "g"), ("Béchamel", "ml")],
+            ["pasta", "vegetarisch"],
+            "Schichten und backen.");
+
+        await SaveAsync(world, "Hähnchenbrustfilet mit Reis", "de", 10, 20,
+            [("Hähnchenbrust", "g"), ("Reis", "g"), ("Zitrone", null)],
+            ["schnell"],
+            "Braten und servieren.");
+
+        await SaveAsync(world, "Kartoffelgratin", "de", 20, 40,
+            [("Kartoffeln", "g"), ("Sahne", "ml"), ("Käse", "g")],
+            ["auflauf", "vegetarisch"],
+            "In die Form und in den Ofen.");
+
+        await SaveAsync(world, "Süßkartoffelcurry", "de", 15, 20,
+            [("Süßkartoffel", "g"), ("Kokosmilch", "ml"), ("Ingwer", null)],
+            ["vegan"],
+            "Alles köcheln lassen.");
+
+        await SaveAsync(world, "Müsliriegel", "de", 15, 10,
+            [("Haferflocken", "g"), ("Honig", "g")],
+            ["snack"],
+            "Pressen und backen.");
+
+        // Singular, on purpose: the query people type is "Tomaten".
+        await SaveAsync(world, "Tomatensuppe", "de", 10, 20,
+            [("Tomate", null), ("Zwiebel", null), ("Brühe", "ml")],
+            ["vegetarisch", "suppe"],
+            "Pürieren.");
+
+        await SaveAsync(world, "Zwiebelkuchen", "de", 30, 60,
+            [("Zwiebeln", "g"), ("Speck", "g"), ("Hefeteig", null)],
+            ["ofen"],
+            "Belegen und backen.");
+
+        // English, in a German library: a household writes both.
+        await SaveAsync(world, "Chicken Curry", "en", 15, 25,
+            [("chicken breast", "g"), ("coconut milk", "ml")],
+            ["asian"],
+            "Simmer until done.");
+
+        return world;
+    }
+
+    private static async Task<Guid> SaveAsync(
+        World world,
+        string title,
+        string language,
+        int? prep,
+        int? cook,
+        (string Name, string? Unit)[] ingredients,
+        string[] tags,
+        string step)
+    {
+        var created = await world.Client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId = world.HouseholdId, title },
+            Token);
+
+        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                title,
+                language,
+                yieldAmount = 4,
+                yieldKind = "servings",
+                prepMinutes = prep,
+                cookMinutes = cook,
+                groups = new[]
+                {
+                    new
+                    {
+                        name = (string?)null,
+                        ingredients = ingredients
+                            .Select(line => new { name = line.Name, unit = line.Unit })
+                            .ToArray()
+                    }
+                },
+                steps = new[]
+                {
+                    new { segments = new[] { new { type = "text", value = step } } }
+                },
+                tags
+            })
+        };
+
+        request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(read.ETag!));
+
+        await world.Client.SendAsync(request, Token);
+
+        return recipeId;
+    }
+
+    private static async Task RenameAsync(World world, Guid recipeId, string title)
+    {
+        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var body = read.Json!.Value;
+
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                title,
+                language = "de",
+                yieldAmount = body.GetProperty("yieldAmount").GetDecimal(),
+                yieldKind = body.GetProperty("yieldKind").GetString(),
+                groups = new[]
+                {
+                    new
+                    {
+                        name = (string?)null,
+                        ingredients = new[] { new { name = "Mehl", unit = (string?)null } }
+                    }
+                },
+                steps = new[]
+                {
+                    new { segments = new[] { new { type = "text", value = "Backen." } } }
+                },
+                tags = Array.Empty<string>()
+            })
+        };
+
+        request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(read.ETag!));
+
+        await world.Client.SendAsync(request, Token);
+    }
+}

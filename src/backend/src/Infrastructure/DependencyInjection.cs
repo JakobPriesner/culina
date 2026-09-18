@@ -114,6 +114,7 @@ public static class DependencyInjection
             .AddScoped<IInvitationRepository, InvitationRepository>()
             .AddScoped<TagWriter>()
             .AddScoped<RecipeSearcher>()
+            .AddScoped<SearchDocumentWriter>()
             .AddScoped<IRecipeRepository, RecipeRepository>()
             .AddScoped<IPersonalNoteRepository, PersonalNoteRepository>()
             .AddScoped<ICookLogRepository, CookLogRepository>()

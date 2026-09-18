@@ -39,12 +39,23 @@ internal static class GetRecipesRequestExtensions
             return cookbookFailure!;
         }
 
-        return ToSort(query["sort"], cookbookId is not null).Map(sort => new RecipeSearch(
+        var text = query["query"].ToString();
+        var ingredients = query["ingredient"]
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .ToArray();
+
+        // Asking a question is asking to be answered best first. Without this a
+        // search fell back to "most recently edited", so typing "Bolognese"
+        // into a library with three of them returned whichever one somebody had
+        // last fixed a typo in.
+        var ranked = !string.IsNullOrWhiteSpace(text) || ingredients.Length > 0;
+
+        return ToSort(query["sort"], cookbookId is not null, ranked).Map(sort => new RecipeSearch(
             householdId,
             userId,
-            query["query"],
+            text,
             [.. query["tag"].Where(value => !string.IsNullOrWhiteSpace(value))!],
-            [.. query["ingredient"].Where(value => !string.IsNullOrWhiteSpace(value))!],
+            ingredients!,
             maxMinutes,
             cookbookId,
             // Resolved by the handler, which is the only thing that can read a
@@ -59,30 +70,44 @@ internal static class GetRecipesRequestExtensions
     /// How to order the page.
     /// </summary>
     /// <remarks>
-    /// Reading a cookbook defaults to the order it was built in, because that
-    /// is the order somebody meant. Asking for that order without naming a
-    /// cookbook is rejected rather than quietly ignored: a filter that does
-    /// nothing returns the wrong data looking right.
+    /// <para>
+    /// An explicit sort always wins. Where none is given the question decides:
+    /// words or ingredients are a request to be ranked by them, a cookbook with
+    /// no question is read in the order somebody built it, and everything else
+    /// is the collection, most recently touched first.
+    /// </para>
+    /// <para>
+    /// Relevance is checked before the cookbook default on purpose. Searching
+    /// inside a shelf and being handed its table of contents is the wrong
+    /// answer to a question that was plainly asked.
+    /// </para>
+    /// <para>
+    /// Asking for cookbook order without naming a cookbook is rejected rather
+    /// than quietly ignored: a filter that does nothing returns the wrong data
+    /// looking right.
+    /// </para>
     /// </remarks>
-    private static Result<RecipeSort> ToSort(string? value, bool inACookbook) => (value, inACookbook) switch
-    {
-        (null or "", true) => RecipeSort.CookbookOrder,
-        (null or "" or "-updatedAt", _) => RecipeSort.RecentFirst,
-        ("title", _) => RecipeSort.Title,
-        ("totalMinutes", _) => RecipeSort.ShortestFirst,
-        ("-cookCount", _) => RecipeSort.MostCooked,
-        ("relevance", _) => RecipeSort.Relevance,
-        ("cookbookOrder", true) => RecipeSort.CookbookOrder,
-        ("cookbookOrder", false) => new FieldError(
-            "sort",
-            "request.unknown_parameter",
-            "Sort 'cookbookOrder' needs a 'cookbookId' to be an order of."),
-        _ => new FieldError(
-            "sort",
-            "request.unknown_parameter",
-            "Sort must be one of '-updatedAt', 'title', 'totalMinutes', '-cookCount', 'relevance', "
-            + "'cookbookOrder'.")
-    };
+    private static Result<RecipeSort> ToSort(string? value, bool inACookbook, bool ranked) =>
+        (value, inACookbook, ranked) switch
+        {
+            (null or "", _, true) => RecipeSort.Relevance,
+            (null or "", true, _) => RecipeSort.CookbookOrder,
+            (null or "" or "-updatedAt", _, _) => RecipeSort.RecentFirst,
+            ("title", _, _) => RecipeSort.Title,
+            ("totalMinutes", _, _) => RecipeSort.ShortestFirst,
+            ("-cookCount", _, _) => RecipeSort.MostCooked,
+            ("relevance", _, _) => RecipeSort.Relevance,
+            ("cookbookOrder", true, _) => RecipeSort.CookbookOrder,
+            ("cookbookOrder", false, _) => new FieldError(
+                "sort",
+                "request.unknown_parameter",
+                "Sort 'cookbookOrder' needs a 'cookbookId' to be an order of."),
+            _ => new FieldError(
+                "sort",
+                "request.unknown_parameter",
+                "Sort must be one of '-updatedAt', 'title', 'totalMinutes', '-cookCount', 'relevance', "
+                + "'cookbookOrder'.")
+        };
 
     /// <summary>Reads an optional cookbook to read inside.</summary>
     private static bool TryReadCookbook(IQueryCollection query, out Guid? value, out Error? failure)
