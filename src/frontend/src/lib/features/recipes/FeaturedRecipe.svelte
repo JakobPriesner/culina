@@ -33,9 +33,18 @@
      * thing as a meaningful non-click, so "not this" has to be sayable.
      */
     ondismiss?: () => void;
+    /**
+     * Whether this is the panel already on screen at first paint.
+     *
+     * True for the leader and false for everything behind it in the deck. The
+     * photograph here is the largest image the app ever asks for, and five of
+     * them fetched eagerly to look at one is four downloads spent on a swipe
+     * that most evenings never happens.
+     */
+    priority?: boolean;
   }
 
-  let { recipe, reason = null, ondismiss }: Props = $props();
+  let { recipe, reason = null, ondismiss, priority = false }: Props = $props();
 
   const headingId = $props.id();
 </script>
@@ -67,7 +76,7 @@
       srcset={imageSrcset(recipe.id)}
       sizes="(min-width: 80rem) 44rem, (min-width: 64rem) 55vw, 100vw"
       alt=""
-      loading="eager"
+      loading={priority ? 'eager' : 'lazy'}
       fill
       rounded={false}
     />
@@ -80,7 +89,6 @@
     display: grid;
     grid-template-columns: minmax(18rem, 0.8fr) minmax(0, 1.2fr);
     min-height: 18rem;
-    margin-bottom: var(--space-8);
     overflow: hidden;
     border-radius: var(--radius-lg);
     background: var(--surface-feature);

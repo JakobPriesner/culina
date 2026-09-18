@@ -2,12 +2,12 @@
   import { untrack } from 'svelte';
   import { resolve } from '$app/paths';
   import { Button, EmptyState, ErrorState, FilterChip, SearchField } from '$ds';
-  import FeaturedRecipe from '$features/recipes/FeaturedRecipe.svelte';
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
+  import SuggestionDeck from '$features/recipes/SuggestionDeck.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { libraryView } from '$features/recipes/stores/libraryView.svelte';
   import { suggestions } from '$features/recipes/stores/suggestions.svelte';
-  import { reasonLineFor } from '$features/recipes/suggestionReason';
+  import type { Suggestion } from '$features/recipes/types';
   import PageHeader from '$shell/PageHeader.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
@@ -29,20 +29,24 @@
   const householdId = $derived(session.activeHouseholdId);
 
   /**
-   * A few suggestions, for the panel at the top. Asked once per household.
+   * The shortlist at the top of the page. Asked once per household.
    *
-   * More than the one it shows, so that dismissing the leader reveals the next
-   * instead of emptying the panel — and, because the order control only appears
-   * once the ranking has something to say, so that one dismissal cannot drop the
-   * whole page back to "newest first".
+   * Five, which is the server's own default and about as many answers as
+   * anybody holds in their head while deciding what to eat. It was three when
+   * the panel showed one and the other two were only there so that dismissing
+   * the leader revealed the next instead of emptying it; now every one of them
+   * is walked past, and a shortlist you reach the end of in two swipes is not
+   * one. Twelve is the ceiling and would be a feed.
    */
-  const featuredQuery = { limit: 3 } as const;
+  const featuredQuery = { limit: 5 } as const;
 
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
   const filtered = $derived(applied.trim().length > 0 || libraryView.quick);
 
-  /** The one suggestion the top of the page is built around. */
-  const topSuggestion = $derived(suggestions.for(householdId, featuredQuery)[0]);
+  /** The answer to "what should I cook?", best first, whatever the page is showing. */
+  const shortlist = $derived(suggestions.for(householdId, featuredQuery));
+
+  const topSuggestion = $derived(shortlist[0]);
 
   /**
    * Whether the ranking has anything true to say about this kitchen yet.
@@ -88,23 +92,45 @@
    * What leads the page.
    *
    * The panel has always been here; what filled it was the first recipe with a
-   * photograph, which is an accident rather than an answer. Now it is the best
-   * suggestion, with the reason as its eyebrow — so the page reads as
-   * contextual rather than promotional, and needs no section header claiming to
-   * recommend anything. It falls back to the photograph exactly as before when
-   * there is nothing honest to say.
+   * photograph, which is an accident rather than an answer. Then it was the
+   * best suggestion, with the reason as its eyebrow. Now it is the whole
+   * shortlist, one at a time, because "not tonight, what else?" is the ordinary
+   * reply to a suggestion and the only way to say it was to say "never again".
+   *
+   * The photograph is still the fallback, and it is handed over as a suggestion
+   * with no reason — which is exactly what it is: something shown with nothing
+   * to say about why. The deck then draws it as the panel has always looked,
+   * with the fixed eyebrow and nothing to walk.
    */
-  const featured = $derived(
-    filtered
+  const fallback = $derived(
+    filtered || shortlist.length > 0
       ? undefined
-      : (topSuggestion ?? recipes.items.find((recipe) => recipe.imageId !== null))
+      : recipes.items.find((recipe) => recipe.imageId !== null)
   );
 
-  const featuredReason = $derived(
-    featured && featured.id === topSuggestion?.id ? reasonLineFor(topSuggestion) : null
+  const lead = $derived<readonly Suggestion[]>(
+    filtered
+      ? []
+      : shortlist.length > 0
+        ? shortlist
+        : fallback
+          ? [{ ...fallback, reason: null }]
+          : []
   );
+
+  /**
+   * The grid, minus everything the panel is holding.
+   *
+   * The whole shortlist, not just the one on screen. Hiding only the visible
+   * panel was right when the panel could not change; now a swipe would push one
+   * recipe into the grid and pull another out of it, and the page would
+   * rearrange itself below the thumb every time somebody looked at the next
+   * idea. A set chosen once is a grid that sits still.
+   */
   const library = $derived(
-    featured ? recipes.items.filter((recipe) => recipe.id !== featured.id) : recipes.items
+    lead.length > 0
+      ? recipes.items.filter((recipe) => !lead.some((one) => one.id === recipe.id))
+      : recipes.items
   );
 
   /**
@@ -345,11 +371,10 @@
       {/snippet}
     </EmptyState>
   {:else}
-    {#if featured}
-      <FeaturedRecipe
-        recipe={featured}
-        reason={featuredReason}
-        ondismiss={featured.id === topSuggestion?.id ? () => void hide(featured.id) : undefined}
+    {#if lead.length > 0}
+      <SuggestionDeck
+        items={lead}
+        ondismiss={shortlist.length > 0 ? (recipeId) => void hide(recipeId) : undefined}
       />
     {/if}
 

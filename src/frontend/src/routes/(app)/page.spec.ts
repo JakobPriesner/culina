@@ -184,6 +184,48 @@ describe('opening the library', () => {
     ).toEqual(['PUT', 'DELETE']);
   });
 
+  it('keeps the grid still while the panel is walked', async () => {
+    // The panel used to hold one recipe that could not change, so hiding that
+    // one from the grid below was enough. A shortlist that is walked is not:
+    // hiding only the visible panel would push one recipe into the grid and
+    // pull another out of it on every swipe, and the page would rearrange
+    // itself under the thumb that was only looking at the next idea.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        Promise.resolve(
+          input.url.includes('/suggestions')
+            ? json({
+                items: [
+                  suggestion('r1', 'Linsensuppe', { code: 'affinity', subject: null }),
+                  suggestion('r2', 'Omelette', { code: 'rediscovery', subject: null })
+                ]
+              })
+            : json({
+                items: [
+                  summary('r1', 'Linsensuppe'),
+                  summary('r2', 'Omelette'),
+                  summary('r3', 'Ratatouille')
+                ],
+                nextCursor: null,
+                total: 3
+              })
+        )
+      )
+    );
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // Both shortlisted recipes are in the panel, as headings, and neither is
+    // also a card below it. The grid starts where the shortlist stops.
+    expect(screen.getByRole('heading', { name: 'Linsensuppe' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Omelette' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Linsensuppe/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Omelette/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Ratatouille/ })).toBeInTheDocument();
+  });
+
   it('asks the server for the suggested order once it is in it', async () => {
     const fetched = serverAnswers({ code: 'affinity', subject: null });
 
