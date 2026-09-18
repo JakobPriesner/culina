@@ -83,6 +83,14 @@ class SessionStore {
 
   /** Resolves the session, at most once per boot. */
   resolve(): Promise<void> {
+    // Already answered. The guard in the app layout runs on every navigation —
+    // including the ones a hover speculatively preloads — and asking the server
+    // who is signed in again each time is two requests for an answer that has
+    // not changed since boot. `refresh()` is how a caller says it has.
+    if (this.#status === 'authenticated' || this.#status === 'anonymous') {
+      return Promise.resolve();
+    }
+
     this.#resolving ??= this.#load().finally(() => {
       this.#resolving = null;
     });
