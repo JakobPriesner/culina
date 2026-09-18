@@ -37,6 +37,7 @@ export { default as FilePicker } from './inputs/FilePicker.svelte';
 export { default as ImageField } from './inputs/ImageField.svelte';
 export { default as RadioGroup, type RadioOption } from './inputs/RadioGroup.svelte';
 export { default as SearchField } from './inputs/SearchField.svelte';
+export { default as SegmentedControl, type Segment } from './inputs/SegmentedControl.svelte';
 export { default as Select } from './inputs/Select.svelte';
 export { default as Stepper } from './inputs/Stepper.svelte';
 export { default as Switch } from './inputs/Switch.svelte';
