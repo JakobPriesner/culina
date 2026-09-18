@@ -64,11 +64,12 @@ internal static class SourceRecipeMapping
 
     /// <summary>The ingredients, grouped as they were grouped over there.</summary>
     /// <param name="source">The recipe over there.</param>
-    internal static Result<IReadOnlyList<IngredientGroup>> ToGroups(SourceRecipe source)
+    internal static Result<ImportedIngredients> ToGroups(SourceRecipe source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         List<IngredientGroup> groups = [];
+        List<Guid?> landed = [];
         var taken = 0;
 
         foreach (var group in source.Groups)
@@ -84,14 +85,18 @@ internal static class SourceRecipeMapping
 
                 // Dropped rather than failed: an ingredient with no name is a
                 // blank row somebody left behind over there, and it is not
-                // worth refusing their recipe over.
-                ToIngredient(line, ingredients.Count).Match(
+                // worth refusing their recipe over. Recorded either way, so a
+                // step that points at the row after it still points at the row
+                // after it.
+                landed.Add(ToIngredient(line, ingredients.Count).Match(
                     ingredient =>
                     {
                         ingredients.Add(ingredient);
                         taken += 1;
+
+                        return (Guid?)ingredient.Id;
                     },
-                    _ => { });
+                    _ => null));
             }
 
             // An empty group would be a heading with nothing under it.
@@ -126,31 +131,46 @@ internal static class SourceRecipeMapping
         IReadOnlyList<IngredientGroup> filled =
             groups.Count == 0 ? [IngredientGroup.Implicit()] : groups;
 
-        return Result<IReadOnlyList<IngredientGroup>>.Success(filled);
+        return Result<ImportedIngredients>.Success(new ImportedIngredients(filled, landed));
     }
 
     /// <summary>
-    /// The steps, as plain words.
+    /// The steps, with the references the other app made kept as references.
     /// </summary>
     /// <param name="source">The recipe over there.</param>
+    /// <param name="landed">
+    /// Where each of the source's ingredients ended up, from
+    /// <see cref="ToGroups"/>.
+    /// </param>
     /// <remarks>
-    /// Text and nothing else. This app links a step to an ingredient when
-    /// somebody types <c>@</c>, and matching "Mehl" in a sentence against an
+    /// <para>
+    /// A step is linked to an ingredient only where the other app linked it.
+    /// Nothing here reads the words: matching "Mehl" in a sentence against an
     /// ingredient called "Mehl, gesiebt" is exactly the silent guessing the
     /// editor deliberately stopped doing — done here, it would be wrong
     /// invisibly, eight hundred times.
+    /// </para>
+    /// <para>
+    /// A reference that was made over there is not a guess, though. It is the
+    /// same fact this app stores, written by the same person, and carrying it
+    /// across is what keeps the amounts in an imported step moving with the
+    /// servings.
+    /// </para>
     /// </remarks>
-    internal static Result<IReadOnlyList<Step>> ToSteps(SourceRecipe source)
+    internal static Result<IReadOnlyList<Step>> ToSteps(
+        SourceRecipe source,
+        IReadOnlyList<Guid?> landed)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(landed);
 
         List<Step> steps = [];
 
         foreach (var step in source.Steps.Take(Recipe.MaxSteps))
         {
-            var text = Shorten(step.Text, Step.MaxTextLength);
+            var segments = Fit(Trim(ToSegments(step, landed)), Step.MaxTextLength);
 
-            if (text is null)
+            if (segments.Count == 0)
             {
                 continue;
             }
@@ -158,7 +178,7 @@ internal static class SourceRecipeMapping
             var made = Step.Create(
                 id: null,
                 steps.Count,
-                [new TextSegment(text)],
+                segments,
                 uses: [],
                 Seconds(step.Seconds));
 
@@ -178,6 +198,108 @@ internal static class SourceRecipeMapping
         }
 
         return Result<IReadOnlyList<Step>>.Success(steps);
+    }
+
+    /// <summary>
+    /// One step's segments, with each reference resolved to a real ingredient.
+    /// </summary>
+    /// <remarks>
+    /// A reference that resolves to nothing is dropped rather than written out
+    /// as words. It points at a row this app did not keep — one with no name,
+    /// or one past the ingredient limit — and a sentence missing a noun reads
+    /// better than one naming something the list does not contain.
+    /// </remarks>
+    private static List<StepSegment> ToSegments(SourceStep step, IReadOnlyList<Guid?> landed)
+    {
+        List<StepSegment> segments = [];
+
+        foreach (var segment in step.Segments)
+        {
+            switch (segment)
+            {
+                case SourceTextSegment text when text.Value.Length > 0:
+                    segments.Add(new TextSegment(text.Value));
+                    break;
+
+                case SourceIngredientReference reference
+                    when reference.Index >= 0
+                        && reference.Index < landed.Count
+                        && landed[reference.Index] is { } ingredientId:
+                    segments.Add(new IngredientSegment(ingredientId));
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return segments;
+    }
+
+    /// <summary>
+    /// The step's segments with the whitespace at its two ends removed.
+    /// </summary>
+    /// <remarks>
+    /// The two ends only. A space between two words is still a space when one
+    /// of the words is a reference to an ingredient.
+    /// </remarks>
+    private static List<StepSegment> Trim(List<StepSegment> segments)
+    {
+        if (segments is [TextSegment first, ..])
+        {
+            segments[0] = new TextSegment(first.Value.TrimStart());
+        }
+
+        if (segments is [.., TextSegment last])
+        {
+            segments[^1] = new TextSegment(last.Value.TrimEnd());
+        }
+
+        return [.. segments.Where(segment => segment is not TextSegment { Value.Length: 0 })];
+    }
+
+    /// <summary>
+    /// As much of the step as the column holds.
+    /// </summary>
+    /// <remarks>
+    /// Measured in the stored form, because that is what the limit is on and a
+    /// reference costs far more stored than it does written. Shortened rather
+    /// than refused, for the same reason everything else here is: a step of
+    /// four thousand characters is an outlier, and one is not worth losing the
+    /// recipe over.
+    /// </remarks>
+    private static List<StepSegment> Fit(List<StepSegment> segments, int limit)
+    {
+        List<StepSegment> kept = [];
+
+        foreach (var segment in segments)
+        {
+            kept.Add(segment);
+
+            if (StepText.Serialise(kept).Length <= limit)
+            {
+                continue;
+            }
+
+            kept.RemoveAt(kept.Count - 1);
+
+            if (segment is TextSegment text
+                && Shorten(text.Value, limit - StepText.Serialise(kept).Length) is { } cut)
+            {
+                kept.Add(new TextSegment(cut));
+            }
+
+            break;
+        }
+
+        // A literal "[[" in the words grows by a character when it is stored,
+        // so the cut above can still land a hair over the line.
+        while (kept.Count > 0 && StepText.Serialise(kept).Length > limit)
+        {
+            kept.RemoveAt(kept.Count - 1);
+        }
+
+        return kept;
     }
 
     private static Result<RecipeIngredient> ToIngredient(SourceIngredient line, int sortOrder)
@@ -271,3 +393,17 @@ internal static class SourceRecipeMapping
         return string.IsNullOrEmpty(right) ? left : $"{left}, {right}";
     }
 }
+
+/// <summary>
+/// The recipe's ingredient list, and a way back to the other app's.
+/// </summary>
+/// <param name="Groups">The list as this app will have it.</param>
+/// <param name="Landed">
+/// One entry for each of the source's ingredients, in the source's own order:
+/// the id of the line it became, or null where the row was dropped. It is what
+/// turns "the third ingredient over there" — which is all a step's reference
+/// ever says — into one of this recipe's own ingredients.
+/// </param>
+internal sealed record ImportedIngredients(
+    IReadOnlyList<IngredientGroup> Groups,
+    IReadOnlyList<Guid?> Landed);

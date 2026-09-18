@@ -81,10 +81,48 @@ public sealed record SourceIngredientGroup(string? Name, IReadOnlyList<SourceIng
 /// <param name="Note">What to do to it first: "finely chopped".</param>
 public sealed record SourceIngredient(decimal? Amount, string? Unit, string Name, string? Note);
 
-/// <summary>One instruction.</summary>
-/// <param name="Text">What to do.</param>
+/// <summary>
+/// One instruction, as words and references to the recipe's own ingredients.
+/// </summary>
+/// <remarks>
+/// Segments rather than a string, because the apps worth connecting to already
+/// know which ingredient a sentence is talking about. Tandoor writes
+/// <c>{{ ingredients[0] }}</c> in a step so that the amount in the sentence
+/// scales with the servings; this app stores the same idea as an
+/// <see cref="Recipes.IngredientSegment"/>. Flattening it to "200 g Mehl" on
+/// the way through would import the words and throw away the reason they were
+/// written that way.
+/// </remarks>
+/// <param name="Segments">What to do, in order.</param>
 /// <param name="Seconds">How long it takes, when the other app said.</param>
-public sealed record SourceStep(string Text, int? Seconds);
+public sealed record SourceStep(IReadOnlyList<SourceStepSegment> Segments, int? Seconds)
+{
+    /// <summary>A step that is nothing but words.</summary>
+    /// <param name="text">What to do.</param>
+    /// <param name="seconds">How long it takes, when the other app said.</param>
+    public SourceStep(string text, int? seconds)
+        : this([new SourceTextSegment(text)], seconds)
+    {
+    }
+}
+
+/// <summary>One piece of a step's instruction.</summary>
+public abstract record SourceStepSegment;
+
+/// <summary>Literal words.</summary>
+/// <param name="Value">The text.</param>
+public sealed record SourceTextSegment(string Value) : SourceStepSegment;
+
+/// <summary>
+/// The step pointing at one of the recipe's ingredients.
+/// </summary>
+/// <param name="Index">
+/// Which one, counted through <see cref="SourceRecipe.Ingredients"/> from zero.
+/// A position rather than a name, because that is what the other app gave us:
+/// Tandoor's own references are positional, and looking one up by name here
+/// would be guessing at something we were told exactly.
+/// </param>
+public sealed record SourceIngredientReference(int Index) : SourceStepSegment;
 
 /// <summary>
 /// One page of somebody's library, on the way to being chosen from.

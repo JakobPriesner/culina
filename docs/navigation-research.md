@@ -42,9 +42,9 @@ collection menu on every visit.
 
 ## Selected structure
 
-**Recipes · Cookbooks · Week · Shopping · Me**
+**Recipes · Cookbooks · Week · Shopping · Settings**
 
-German: **Rezepte · Kochbücher · Woche · Einkauf · Ich**.
+German: **Rezepte · Kochbücher · Woche · Einkauf · Settings**.
 
 All five are normal links. The same order appears in the desktop top navigation
 and the compact bottom navigation. Each destination keeps its selected state on

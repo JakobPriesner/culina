@@ -3,7 +3,7 @@ import { resolve } from '$app/paths';
 import { m } from './i18n';
 
 /** The five stable workflows, in the same order on desktop and mobile. */
-export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping' | 'me';
+export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping' | 'settings';
 
 export interface Destination {
   readonly href: string;
@@ -45,7 +45,7 @@ export const destinations: readonly Destination[] = [
   },
   {
     href: resolve('/(app)/me'),
-    icon: 'me',
+    icon: 'settings',
     label: m['nav.me'],
     match: startsWith('/me')
   }

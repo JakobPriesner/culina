@@ -131,7 +131,7 @@ public class SourceRecipeMappingTests
         var groups = SourceRecipeMapping.ToGroups(Recipe(ingredients: []));
 
         // Assert
-        Assert.Single(groups.Match(value => value, error => throw Failed(error.Code)));
+        Assert.Single(groups.Match(value => value.Groups, error => throw Failed(error.Code)));
     }
 
     [Fact]
@@ -144,15 +144,88 @@ public class SourceRecipeMappingTests
         };
 
         // Act
-        var steps = SourceRecipeMapping.ToSteps(theirs)
-            .Match(value => value, error => throw Failed(error.Code));
+        var steps = Steps(theirs);
 
         // Assert
         // "Mehl" appears in the sentence and in the ingredient list, and it is
-        // still not linked: guessing that would be wrong invisibly, eight
-        // hundred times.
+        // still not linked: nothing over there said they were the same thing,
+        // and guessing would be wrong invisibly, eight hundred times.
         Assert.Empty(steps[0].Uses);
         Assert.Equal(120, steps[0].DurationSeconds);
+    }
+
+    [Fact]
+    public void ToSteps_ShouldLinkTheIngredientTheOtherAppItselfLinked()
+    {
+        // Arrange
+        // Not a guess. Somebody wrote "{{ ingredients[0] }}" over there, which
+        // is the same fact this app stores as a reference, and carrying it
+        // across is what keeps the amount moving with the servings.
+        var theirs = Recipe(ingredients: [new SourceIngredient(200m, "g", "Mehl", null)]) with
+        {
+            Steps = [new SourceStep([new SourceTextSegment("Das "), new SourceIngredientReference(0)], null)]
+        };
+
+        // Act
+        var ingredients = SourceRecipeMapping.ToGroups(theirs)
+            .Match(value => value, error => throw Failed(error.Code));
+        var steps = SourceRecipeMapping.ToSteps(theirs, ingredients.Landed)
+            .Match(value => value, error => throw Failed(error.Code));
+
+        // Assert
+        var flour = ingredients.Groups.SelectMany(group => group.Ingredients).Single();
+
+        Assert.Equal(
+            [new TextSegment("Das "), new IngredientSegment(flour.Id)],
+            steps[0].Segments);
+
+        // And the step needs it, which is what a shopping list reads.
+        Assert.Equal([flour.Id], steps[0].Uses);
+    }
+
+    [Fact]
+    public void ToSteps_ShouldCountPastARowThatWasDropped()
+    {
+        // Arrange
+        // The first row has no name, so it is not an ingredient here — but it
+        // was one over there, and the reference counts it.
+        var theirs = Recipe(ingredients:
+        [
+            new SourceIngredient(1m, "g", "   ", null),
+            new SourceIngredient(200m, "g", "Mehl", null)
+        ]) with
+        {
+            Steps = [new SourceStep([new SourceIngredientReference(1)], null)]
+        };
+
+        // Act
+        var ingredients = SourceRecipeMapping.ToGroups(theirs)
+            .Match(value => value, error => throw Failed(error.Code));
+        var steps = SourceRecipeMapping.ToSteps(theirs, ingredients.Landed)
+            .Match(value => value, error => throw Failed(error.Code));
+
+        // Assert
+        var flour = ingredients.Groups.SelectMany(group => group.Ingredients).Single();
+
+        Assert.Equal([new IngredientSegment(flour.Id)], steps[0].Segments);
+    }
+
+    [Fact]
+    public void ToSteps_ShouldDropAReferenceToARowThisAppDidNotKeep()
+    {
+        // Arrange
+        var theirs = Recipe(ingredients: [new SourceIngredient(1m, "g", "   ", null)]) with
+        {
+            Steps = [new SourceStep([new SourceTextSegment("Das "), new SourceIngredientReference(0)], null)]
+        };
+
+        // Act
+        var steps = Steps(theirs);
+
+        // Assert
+        // A sentence missing a noun reads better than one naming an ingredient
+        // the list does not contain.
+        Assert.Equal([new TextSegment("Das")], steps[0].Segments);
     }
 
     [Fact]
@@ -162,8 +235,7 @@ public class SourceRecipeMappingTests
         var theirs = Recipe() with { Steps = [new SourceStep("  ", null), new SourceStep("Backen.", null)] };
 
         // Act
-        var steps = SourceRecipeMapping.ToSteps(theirs)
-            .Match(value => value, error => throw Failed(error.Code));
+        var steps = Steps(theirs);
 
         // Assert
         Assert.Single(steps);
@@ -183,10 +255,18 @@ public class SourceRecipeMappingTests
     }
 
     private static RecipeIngredient Single(
-        Domain.Shared.Result<IReadOnlyList<IngredientGroup>> groups) =>
-        groups.Match(
-            value => value.SelectMany(group => group.Ingredients).Single(),
+        Domain.Shared.Result<ImportedIngredients> ingredients) =>
+        ingredients.Match(
+            value => value.Groups.SelectMany(group => group.Ingredients).Single(),
             error => throw Failed(error.Code));
+
+    /// <summary>The steps, made the way the import makes them.</summary>
+    private static IReadOnlyList<Step> Steps(SourceRecipe theirs) =>
+        SourceRecipeMapping.ToGroups(theirs)
+            .Match(
+                ingredients => SourceRecipeMapping.ToSteps(theirs, ingredients.Landed),
+                error => throw Failed(error.Code))
+            .Match(value => value, error => throw Failed(error.Code));
 
     private static InvalidOperationException Failed(string code) => new($"Unexpected failure: {code}");
 

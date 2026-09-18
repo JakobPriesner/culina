@@ -23,7 +23,7 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
 
         using var tracked = UseCaseActivity.Start("Recipes.Import");
 
-        if (!Uri.TryCreate(query.Url?.Trim(), UriKind.Absolute, out var address))
+        if (!Uri.TryCreate(query.Url.Trim(), UriKind.Absolute, out var address))
         {
             return tracked.Record(Result<Response>.Failure(ImportErrors.UnreachableAddress));
         }
