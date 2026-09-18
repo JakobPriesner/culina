@@ -8,7 +8,12 @@ namespace Infrastructure.Persistence.Recipes;
 /// <param name="executor">Runs the SQL inside the request's transaction.</param>
 /// <param name="tags">Resolves tag slugs to rows.</param>
 /// <param name="searcher">Runs the search projection.</param>
-internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, RecipeSearcher searcher)
+/// <param name="documents">Keeps the search document in step with the recipe.</param>
+internal sealed class RecipeRepository(
+    DbExecutor executor,
+    TagWriter tags,
+    RecipeSearcher searcher,
+    SearchDocumentWriter documents)
     : IRecipeRepository
 {
     public Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken) =>
@@ -375,5 +380,12 @@ internal sealed class RecipeRepository(DbExecutor executor, TagWriter tags, Reci
         }
 
         await tags.LinkAsync(recipe, cancellationToken).ConfigureAwait(false);
+
+        // Last, and inside this same transaction: the document is built by the
+        // database from the rows above, so it has to be built after they are
+        // there and before anybody else can see them. Both write paths reach
+        // this method, which is why the index cannot be forgotten on one of
+        // them — and an architecture test says so.
+        await documents.WriteAsync(recipe.Id, cancellationToken).ConfigureAwait(false);
     }
 }

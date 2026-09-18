@@ -88,6 +88,7 @@ CORS policy anywhere. `make` with no target lists every command.
 | [`docs/api.md`](docs/api.md) | The full v1 HTTP surface |
 | [`docs/design-system.md`](docs/design-system.md) | Tokens, theming, component inventory |
 | [`docs/scaling-rules.md`](docs/scaling-rules.md) | How portions scale, and how amounts are rounded |
+| [`docs/search-design.md`](docs/search-design.md) | Search: retrieval, query understanding, ranking and the interaction |
 | [`docs/deployment.md`](docs/deployment.md) | The image, the pipeline, and why they are shaped that way |
 | [`docs/operations.md`](docs/operations.md) | Installing, upgrading, backup and restore |
 | [`docs/configuration.md`](docs/configuration.md) | Every environment variable and what breaks without it |
