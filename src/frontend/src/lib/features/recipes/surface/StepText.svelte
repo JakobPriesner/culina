@@ -38,8 +38,7 @@
         onmouseleave={() => onhighlight?.(null)}
         onfocus={() => onhighlight?.(segment.ingredientId)}
         onblur={() => onhighlight?.(null)}
-        >{scaling.show(segment.quantity).text}
-        {segment.name}</button
+        >{scaling.show(segment.quantity).text} {segment.name}</button
       >{:else}<strong class="ingredient-plain"
         >{scaling.show(segment.quantity).text} {segment.name}</strong
       >{/if}
@@ -47,8 +46,20 @@
 </p>
 
 <style>
+  /*
+   * The line breaks in a step are the cook's own. A step written as three
+   * lines — bake, rest, slice — is three lines because somebody meant it to
+   * be, and collapsing them into a paragraph loses the shape of the
+   * instruction. Imported steps depend on this too: a Tandoor instruction is
+   * Markdown rendered with a line break per newline, so its newlines arrive
+   * here meaning exactly that.
+   *
+   * It makes the whitespace in this file's markup significant, which is why
+   * the references above are written without a break inside them.
+   */
   .text {
     line-height: var(--leading-relaxed);
+    white-space: pre-wrap;
   }
 
   /*

@@ -147,7 +147,7 @@ test.describe('library refinement @offline', () => {
       ['Cookbooks', '/cookbooks'],
       ['Week', '/plan'],
       ['Shopping', '/shopping'],
-      ['Me', '/me']
+      ['Settings', '/me']
     ] as const;
     await expect(navigation.getByRole('link')).toHaveCount(5);
     await expect(navigation.getByRole('button')).toHaveCount(0);

@@ -1,3 +1,4 @@
+using Domain.Import;
 using Infrastructure.Import.Tandoor;
 
 namespace IntegrationTests.Import;
@@ -88,7 +89,7 @@ public class TandoorMappingTests
         // Assert
         // The header carried only its ingredients, and those have been taken.
         var step = Assert.Single(recipe.Steps);
-        Assert.Equal("Alles schichten.", step.Text);
+        Assert.Equal("Alles schichten.", Words(step));
 
         // Minutes over there, seconds here, because a step can be "rest 30
         // seconds".
@@ -180,6 +181,10 @@ public class TandoorMappingTests
         Assert.Empty(recipe.Groups);
         Assert.Empty(recipe.Steps);
     }
+
+    /// <summary>What a step says, references aside.</summary>
+    private static string Words(SourceStep step) =>
+        string.Concat(step.Segments.OfType<SourceTextSegment>().Select(segment => segment.Value));
 
     private static TandoorRecipe Recipe(params TandoorIngredient[] ingredients) =>
         new()
