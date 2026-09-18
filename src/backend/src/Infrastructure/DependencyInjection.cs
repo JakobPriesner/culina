@@ -12,6 +12,7 @@ using Infrastructure.Persistence.Import;
 using Infrastructure.Persistence.Migrations;
 using Infrastructure.Persistence.Planning;
 using Infrastructure.Persistence.Recipes;
+using Infrastructure.Persistence.Searches;
 using Infrastructure.Persistence.Shopping;
 using Infrastructure.Persistence.Suggestions;
 using Infrastructure.Persistence.Tags;
@@ -129,6 +130,7 @@ public static class DependencyInjection
             .AddSingleton<IWebPageFetcher, SafeWebPageFetcher>()
             .AddScoped<IMealPlanRepository, MealPlanRepository>()
             .AddScoped<ICookbookRepository, CookbookRepository>()
+            .AddScoped<ISavedSearchRepository, SavedSearchRepository>()
             .AddScoped<ITagRepository, TagRepository>()
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()

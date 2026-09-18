@@ -18,13 +18,29 @@
     householdId: string;
     /** The cookbook being edited, or null when making a new one. */
     cookbook?: CookbookDetail | null;
+    /**
+     * What a new cookbook should start out asking for.
+     *
+     * Set when something else proposed the shelf — a saved search being turned
+     * into one. It only ever fills a new cookbook: an existing one's own rules
+     * always win, because they are what is on the screen being edited.
+     */
+    preset?: { readonly name: string; readonly rules: CookbookRules } | null;
     /** True while the write is in flight. */
     saving?: boolean;
     onsave: (name: string, description: string | null, rules: CookbookRules | null) => void;
     onclose: () => void;
   }
 
-  let { open, householdId, cookbook = null, saving = false, onsave, onclose }: Props = $props();
+  let {
+    open,
+    householdId,
+    cookbook = null,
+    preset = null,
+    saving = false,
+    onsave,
+    onclose
+  }: Props = $props();
 
   const noRules: CookbookRules = { tags: [], ingredients: [], maxMinutes: null };
 
@@ -38,10 +54,12 @@
   // a different cookbook.
   $effect(() => {
     if (open) {
-      name = cookbook?.name ?? '';
+      name = cookbook?.name ?? preset?.name ?? '';
       description = cookbook?.description ?? '';
-      smart = cookbook?.kind === 'smart';
-      rules = cookbook?.rules ?? noRules;
+      // A preset only ever describes a shelf that fills itself: it exists
+      // because a saved search asked for one.
+      smart = cookbook !== null ? cookbook.kind === 'smart' : preset !== null;
+      rules = cookbook?.rules ?? preset?.rules ?? noRules;
     }
   });
 

@@ -90,16 +90,23 @@ beforeEach(() => {
 });
 
 describe('opening the library', () => {
-  it('asks for the list and for one suggestion, once each', async () => {
+  it('asks each of its three questions exactly once', async () => {
     const fetched = serverAnswers({ code: 'rediscovery', subject: null });
 
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Two. Not "a reasonable number": every extra call is an effect that
-    // re-triggered itself, and the next one after that is the rate limiter.
-    expect(fetched).toHaveBeenCalledTimes(2);
-    expect(fetched.mock.calls.filter(([r]) => r.url.includes('/suggestions'))).toHaveLength(1);
+    // Three, and one of each. Not "a reasonable number": every extra call is an
+    // effect that re-triggered itself, and the next one after that is the rate
+    // limiter. The third is the saved searches, which the toolbar draws as
+    // chips and so cannot wait until something is opened — unlike the tag
+    // vocabulary, which is only read when the filter panel is.
+    const asked = (part: string) => fetched.mock.calls.filter(([r]) => r.url.includes(part)).length;
+
+    expect(fetched).toHaveBeenCalledTimes(3);
+    expect(asked('/suggestions')).toBe(1);
+    expect(asked('/searches')).toBe(1);
+    expect(asked('/recipes?')).toBe(1);
   });
 
   it('leads with the suggestion, and says why', async () => {
@@ -120,7 +127,10 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    expect(screen.getByText('Sorted for tonight')).toBeInTheDocument();
+    // Scoped to the note, because the filter panel ticks the very same words —
+    // which is the point: the line above the grid and the control that sets it
+    // cannot describe the list differently.
+    expect(screen.getByText('For tonight', { selector: '.collection-note' })).toBeInTheDocument();
   });
 
   it('keeps the old order, and says so, before the ranking has anything to say', async () => {
@@ -132,8 +142,12 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    expect(screen.getByText('Newest first')).toBeInTheDocument();
-    expect(screen.queryByText('Sorted for tonight')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Recently updated', { selector: '.collection-note' })
+    ).toBeInTheDocument();
+
+    // And the ranking is not even offered as an order yet.
+    expect(screen.queryByText('For tonight')).not.toBeInTheDocument();
   });
 
   it('offers no order control until there is a second order worth having', async () => {

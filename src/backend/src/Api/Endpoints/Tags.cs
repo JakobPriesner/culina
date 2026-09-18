@@ -42,4 +42,6 @@ internal static class Tags
     internal const string RecipeSources = "RecipeSources";
 
     internal const string Suggestions = "Suggestions";
+
+    internal const string Searches = "Searches";
 }
