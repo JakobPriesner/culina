@@ -40,3 +40,6 @@ data/
 #   the frontend client is generated from this file and CI fails on drift.
 # src/frontend/src/lib/api/generated/  — generated but committed, so a type
 #   error shows up at review time rather than at build time.
+
+# Claude Code worktrees are checkouts of this repo, not content of it.
+.claude/worktrees/
