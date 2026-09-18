@@ -71,7 +71,10 @@ export default ts.config(
       // chosen yield into its own URL — both already resolved, which the rule
       // cannot follow through a variable.
       'src/routes/(auth)/**',
-      'src/routes/(app)/recipes/**'
+      'src/routes/(app)/recipes/**',
+      // A shared recipe reflects its yield the same way, into the URL it is
+      // already on.
+      'src/routes/(public)/**'
     ],
     rules: { 'svelte/no-navigation-without-resolve': 'off' }
   },

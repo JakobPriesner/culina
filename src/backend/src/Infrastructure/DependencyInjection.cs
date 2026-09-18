@@ -1,14 +1,15 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
+using Domain.Suggestions;
 using Infrastructure.Identity;
 using Infrastructure.Import;
 using Infrastructure.Import.Tandoor;
-using Infrastructure.Persistence.Import;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
+using Infrastructure.Persistence.Import;
 using Infrastructure.Persistence.Migrations;
-using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Planning;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Shopping;
@@ -17,7 +18,6 @@ using Infrastructure.Persistence.Tags;
 using Infrastructure.Persistence.Users;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
-using Domain.Suggestions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -122,6 +122,7 @@ public static class DependencyInjection
             .AddScoped<RecipeSearcher>()
             .AddScoped<SearchDocumentWriter>()
             .AddScoped<IRecipeRepository, RecipeRepository>()
+            .AddScoped<IRecipeShareRepository, RecipeShareRepository>()
             .AddScoped<IPersonalNoteRepository, PersonalNoteRepository>()
             .AddScoped<ICookLogRepository, CookLogRepository>()
             .AddScoped<ICookSessionRepository, CookSessionRepository>()

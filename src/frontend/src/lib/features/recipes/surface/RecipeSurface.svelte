@@ -23,7 +23,7 @@
     everyIngredient,
     ingredientsOf,
     type Ingredient,
-    type Recipe,
+    type RecipeReading,
     type Step
   } from '../types';
 
@@ -76,7 +76,7 @@
    * three widths of attention, not three layouts.
    */
   interface Props {
-    recipe: Recipe;
+    recipe: RecipeReading;
     /** `read` is the whole recipe; `cook` weights it towards the current step. */
     emphasis?: 'read' | 'cook';
     /** Which step is being cooked, when cooking. */
@@ -89,6 +89,17 @@
     onaddtolist?: () => void;
     /** Opens the sheet that says which cookbooks this recipe is on. */
     onaddtocookbook?: () => void;
+    /** Opens the sheet that hands out, and takes back, the link to this recipe. */
+    onshare?: () => void;
+    /**
+     * Where the photograph is, when it is not at the recipe's own address.
+     *
+     * The one thing the surface cannot work out for itself. Whoever follows a
+     * share link holds a token and no recipe id, so their copy of this page
+     * fetches the picture from somewhere else entirely — and that is the whole
+     * of the difference between their page and the household's.
+     */
+    photo?: { readonly src: string; readonly srcset: string };
     /**
      * Whether to offer the way back into the editor.
      *
@@ -118,6 +129,8 @@
     onstartcooking,
     onaddtolist,
     onaddtocookbook,
+    onshare,
+    photo,
     editable = false,
     cookbooks = [],
     onstopcooking,
@@ -140,6 +153,17 @@
   );
 
   const cooking = $derived(emphasis === 'cook');
+
+  /**
+   * Whether the bar has anything on it.
+   *
+   * A visitor following a share link is offered none of the four — they cannot
+   * cook, shop, shelve or re-share somebody else's recipe — and an empty bar
+   * floating over the last step is worse than no bar.
+   */
+  const hasActions = $derived(
+    cooking || Boolean(onstartcooking ?? onaddtolist ?? onaddtocookbook ?? onshare)
+  );
 
   /** Cooking has already contracted the region to one step; it cannot do both. */
   const perStep = $derived(view === 'perStep' && !cooking);
@@ -273,8 +297,8 @@
   {#if recipe.imageId && !cooking}
     <div class="hero">
       <Image
-        src={imageUrl(recipe.id, 1600)}
-        srcset={imageSrcset(recipe.id)}
+        src={photo?.src ?? imageUrl(recipe.id, 1600)}
+        srcset={photo?.srcset ?? imageSrcset(recipe.id)}
         sizes="(min-width: 72rem) 72rem, 100vw"
         alt=""
         loading="eager"
@@ -337,13 +361,13 @@
          an ordinary recipe now, and anything louder would make "imported" into
          a second kind of recipe. Reading only — at the hob, where it came from
          is the least useful fact on the screen. -->
-    {#if recipe.origin?.sourceUrl && !cooking}
+    {#if recipe.sourceUrl && !cooking}
       <p class="origin">
         <!-- Off site, and the one link on this page that is: resolve() is for
              this app's own routes, and there is nothing here to resolve. -->
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-        <a href={recipe.origin.sourceUrl} rel="noreferrer nofollow" target="_blank">
-          {m['import.origin.from']({ where: hostOf(recipe.origin.sourceUrl) })}
+        <a href={recipe.sourceUrl} rel="noreferrer nofollow" target="_blank">
+          {m['import.origin.from']({ where: hostOf(recipe.sourceUrl) })}
         </a>
       </p>
     {/if}
@@ -500,11 +524,12 @@
     onapply={(value) => onservings?.(value)}
   />
 
-  <footer class="foot">
-    {#if cooking}
-      <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
-    {:else}
-      <!--
+  {#if hasActions}
+    <footer class="foot">
+      {#if cooking}
+        <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
+      {:else}
+        <!--
         Three actions of two ranks, never three of three. The two supporting
         ones share one look, so the accented "Start cooking" is the only thing
         on the bar asking to be pressed.
@@ -515,59 +540,90 @@
         the accessible name — which is what `label` is doing here, and why it
         is passed on every width rather than only on the narrow one.
       -->
-      {#if onaddtocookbook}
-        <Button size="lg" label={m['cookbooks.add.action']()} onclick={onaddtocookbook}>
-          {#snippet icon()}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <!-- A book, closed, spine to the left. -->
-              <path
-                d="M6.5 3.5H17a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"
-              />
-              <path d="M8 3.5v17" />
-            </svg>
-          {/snippet}
+        {#if onaddtocookbook}
+          <Button size="lg" label={m['cookbooks.add.action']()} onclick={onaddtocookbook}>
+            {#snippet icon()}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <!-- A book, closed, spine to the left. -->
+                <path
+                  d="M6.5 3.5H17a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"
+                />
+                <path d="M8 3.5v17" />
+              </svg>
+            {/snippet}
 
-          {m['cookbooks.add.action']()}
-        </Button>
+            {m['cookbooks.add.action']()}
+          </Button>
+        {/if}
+
+        {#if onshare}
+          <Button size="lg" label={m['recipe.share.action']()} onclick={onshare}>
+            {#snippet icon()}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <!-- Three nodes and the two threads between them: the shape every
+                   platform's share control has settled on, so nobody has to
+                   learn what this one means. -->
+                <circle cx="18" cy="5" r="2.5" />
+                <circle cx="6" cy="12" r="2.5" />
+                <circle cx="18" cy="19" r="2.5" />
+                <path d="M8.2 10.8 15.8 6.4" />
+                <path d="m8.2 13.2 7.6 4.4" />
+              </svg>
+            {/snippet}
+
+            {m['recipe.share.action']()}
+          </Button>
+        {/if}
+
+        {#if onaddtolist}
+          <Button size="lg" label={m['shopping.addToList']()} onclick={onaddtolist}>
+            {#snippet icon()}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <!-- The same basket the shopping tab is marked with. -->
+                <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
+                <path d="M9 8 12 3l3 5" />
+              </svg>
+            {/snippet}
+
+            {m['shopping.addToList']()}
+          </Button>
+        {/if}
+
+        <!-- Takes whatever the icons leave: it is the action the page exists to
+           offer, and a target's size should say so. Conditional like the rest,
+           because a reader following a link cannot cook here — cooking keeps a
+           session, and they have none. -->
+        {#if onstartcooking}
+          <span class="advance">
+            <Button variant="primary" size="lg" full onclick={onstartcooking}>
+              {m['recipe.startCooking']()}
+            </Button>
+          </span>
+        {/if}
       {/if}
-
-      {#if onaddtolist}
-        <Button size="lg" label={m['shopping.addToList']()} onclick={onaddtolist}>
-          {#snippet icon()}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <!-- The same basket the shopping tab is marked with. -->
-              <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
-              <path d="M9 8 12 3l3 5" />
-            </svg>
-          {/snippet}
-
-          {m['shopping.addToList']()}
-        </Button>
-      {/if}
-
-      <!-- Takes whatever the two icons leave: it is the action the page exists
-           to offer, and a target's size should say so. -->
-      <span class="advance">
-        <Button variant="primary" size="lg" full onclick={onstartcooking}>
-          {m['recipe.startCooking']()}
-        </Button>
-      </span>
-    {/if}
-  </footer>
+    </footer>
+  {/if}
 </article>
 
 <style>
@@ -755,17 +811,20 @@
    * The offset is the one the steps already scroll to — far enough down that
    * the app's floating header is not sitting on top of it.
    */
+  /*
+   * No height limit, deliberately.
+   *
+   * Capping the panel to the viewport and letting it scroll inside itself
+   * reads as a bug long before it helps: an overlay scrollbar is invisible
+   * until it is touched, so a fifteen-line list on an ordinary laptop is just
+   * a card with its end cut off — and that is the common recipe, not the rare
+   * one. A list taller than the screen keeps its top pinned instead, which is
+   * the half you glance back at, and shows its end once the steps beside it
+   * run out. Whole and occasionally clipped beats tidy and apparently broken.
+   */
   .ingredients {
     position: sticky;
     top: var(--space-24);
-    /*
-     * Never taller than the room it has. A list of thirty ingredients would
-     * otherwise be pinned by its top with its own last lines permanently below
-     * the fold and no way to reach them — so past that height the panel
-     * scrolls inside itself, and the page keeps scrolling once it runs out.
-     */
-    max-height: calc(100dvh - var(--space-24) - var(--bottom-inset) - var(--space-8));
-    overflow-y: auto;
   }
 
   /*
@@ -809,8 +868,6 @@
     grid-column: 1;
     grid-row: 1;
     position: static;
-    max-height: none;
-    overflow: visible;
   }
 
   .section-head {
@@ -1002,8 +1059,6 @@
        a lid. */
     .ingredients {
       position: static;
-      max-height: none;
-      overflow: visible;
     }
 
     /* Nothing left to share, so the section is a section again and a step is
@@ -1059,8 +1114,15 @@
      * letters at 200% text rather than taking the line below, which is what
      * there is room for.
      */
+    /*
+     * The basis is what keeps the bar on one row on the narrowest phone in
+     * use. Three icon-only controls and their gaps take 10.5rem of a 360px
+     * screen's 19.5rem, so a tenth rem here is the difference between one row
+     * and two — and two rows of sticky bar is a third of a kitchen screen.
+     * It is a basis, not a width: everywhere wider, this still takes the rest.
+     */
     .advance {
-      flex: 1 1 10rem;
+      flex: 1 1 9rem;
     }
 
     /* Icon only: the words stay as the accessible name, set on the button. */
@@ -1197,8 +1259,6 @@
 
     .ingredients {
       position: static;
-      max-height: none;
-      overflow: visible;
     }
 
     .steps .list {

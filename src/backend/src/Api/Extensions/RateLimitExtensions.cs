@@ -21,6 +21,15 @@ internal static class RateLimitExtensions
     internal const string Invitation = "auth-invitation";
 
     /// <summary>
+    /// Reading a recipe someone published behind a link.
+    /// </summary>
+    /// <remarks>
+    /// The only anonymous read of a household's content, so it gets a ceiling
+    /// of its own rather than sharing the global one with signed-in traffic.
+    /// </remarks>
+    internal const string SharedRecipe = "shared-recipe";
+
+    /// <summary>
     /// Importing, which is the one thing that makes the server fetch.
     /// </summary>
     /// <remarks>
@@ -60,6 +69,9 @@ internal static class RateLimitExtensions
 
             options.AddPolicy(Invitation, context =>
                 PerClient(context, limits.InvitationPerIpPerHour, TimeSpan.FromHours(1)));
+
+            options.AddPolicy(SharedRecipe, context =>
+                PerClient(context, limits.SharedRecipesPerIpPerMinute, TimeSpan.FromMinutes(1)));
 
             options.AddPolicy(Import, context =>
                 PerClient(context, limits.ImportsPerHour, TimeSpan.FromHours(1)));

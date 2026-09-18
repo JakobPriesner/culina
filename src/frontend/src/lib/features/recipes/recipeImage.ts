@@ -34,3 +34,16 @@ export const attemptUrl = (recipeId: string, entryId: string, width: ImageWidth)
 
 export const attemptSrcset = (recipeId: string, entryId: string): string =>
   imageWidths.map((width) => `${attemptUrl(recipeId, entryId, width)} ${width}w`).join(', ');
+
+/**
+ * The same photograph, for whoever followed a link to it.
+ *
+ * A second address rather than a second parameter on `imageUrl`: a visitor
+ * holds a token and no recipe id, and the id-addressed image stays behind the
+ * membership check it has always had.
+ */
+export const sharedImageUrl = (token: string, width: ImageWidth): string =>
+  `${base}/api/v1/shared-recipes/${encodeURIComponent(token)}/image?w=${width}`;
+
+export const sharedImageSrcset = (token: string): string =>
+  imageWidths.map((width) => `${sharedImageUrl(token, width)} ${width}w`).join(', ');

@@ -17,6 +17,16 @@ internal static class Tags
 
     internal const string Recipes = "Recipes";
 
+    /// <summary>
+    /// What a link hands a stranger, kept apart from <see cref="Recipes"/>.
+    /// </summary>
+    /// <remarks>
+    /// A tag of its own because the distinction is worth seeing in the
+    /// generated client: everything under <c>Recipes</c> needs a session, and
+    /// these two reads are the only ones that do not.
+    /// </remarks>
+    internal const string SharedRecipes = "SharedRecipes";
+
     internal const string Planning = "Planning";
 
     internal const string Settings = "Settings";

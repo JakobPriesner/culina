@@ -1,14 +1,15 @@
 using Api.Endpoints;
+using Api.Endpoints.Cookbooks;
 using Api.Endpoints.CookSessions;
 using Api.Endpoints.Households;
 using Api.Endpoints.Invitations;
-using Api.Endpoints.Cookbooks;
-using Api.Endpoints.RecipeSources;
 using Api.Endpoints.Planning;
 using Api.Endpoints.Recipes;
+using Api.Endpoints.RecipeSources;
 using Api.Endpoints.Registration;
 using Api.Endpoints.Sessions;
 using Api.Endpoints.Settings;
+using Api.Endpoints.SharedRecipes;
 using Api.Endpoints.Shopping;
 using Api.Endpoints.Suggestions;
 using Api.Endpoints.Users;
@@ -36,6 +37,7 @@ internal static class EndpointExtensions
             .AddSettingsEndpoints()
             .AddRegistrationEndpoints()
             .AddRecipesEndpoints()
+            .AddSharedRecipesEndpoints()
             .AddCookSessionEndpoints()
             .AddShoppingEndpoints()
             .AddPlanningEndpoints()

@@ -2,6 +2,7 @@ using Contracts.Recipes;
 using Domain.Import;
 using Domain.Recipes;
 using Domain.Shared;
+using SharedRecipe = Contracts.Recipes.GetShared.Response;
 
 namespace Application.Recipes;
 
@@ -63,6 +64,38 @@ internal static class RecipeMappings
             CreatedAt = recipe.CreatedAt,
             UpdatedAt = recipe.UpdatedAt,
             Version = recipe.Version
+        };
+    }
+
+    /// <summary>Describes a recipe for whoever follows its link.</summary>
+    /// <param name="recipe">The recipe to describe.</param>
+    /// <param name="origin">Where it came from, when it was not written here.</param>
+    /// <remarks>
+    /// Projected from <c>Describe</c> rather than built beside it. The
+    /// two readings must agree about every amount and every word of every step,
+    /// and the only way to guarantee that is for one of them to be the other
+    /// with the private fields taken off.
+    /// </remarks>
+    internal static SharedRecipe Publish(this Recipe recipe, RecipeOrigin? origin = null)
+    {
+        var detail = recipe.Describe(origin);
+
+        return new SharedRecipe
+        {
+            Title = detail.Title,
+            Description = detail.Description,
+            Language = detail.Language,
+            YieldAmount = detail.YieldAmount,
+            YieldKind = detail.YieldKind,
+            YieldLabel = detail.YieldLabel,
+            PrepMinutes = detail.PrepMinutes,
+            CookMinutes = detail.CookMinutes,
+            TotalMinutes = detail.TotalMinutes,
+            HasImage = detail.ImageId is not null,
+            Groups = detail.Groups,
+            Steps = detail.Steps,
+            Tags = detail.Tags,
+            SourceUrl = detail.Origin?.SourceUrl
         };
     }
 
