@@ -2807,6 +2807,287 @@
         }
       }
     },
+    "/api/v1/recipes/{recipeId}/share": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read a recipe's share link",
+        "description": "404 when the recipe is not shared, which is the ordinary answer. The token is returned rather than a whole address: which origin Culina is reached at is the browser's fact, not the server's.",
+        "operationId": "getRecipeShareV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesShareResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Share a recipe by link",
+        "description": "Anyone holding the returned link may read this one recipe without an account. Idempotent: a recipe already shared keeps the link it has.",
+        "operationId": "createRecipeShareV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesShareResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Stop sharing a recipe",
+        "description": "Every link that was sent stops working immediately. Sharing again afterwards mints a new one, so a link that was taken back stays dead.",
+        "operationId": "revokeRecipeShareV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shared-recipes/{token}": {
+      "get": {
+        "tags": [
+          "SharedRecipes"
+        ],
+        "summary": "Read a shared recipe",
+        "description": "No account needed: the token in the path is the whole of the authorisation. The recipe comes without its household, its author or its version — everything the page draws and nothing about whose kitchen it is.",
+        "operationId": "getSharedRecipeV1",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetSharedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shared-recipes/{token}/image": {
+      "get": {
+        "tags": [
+          "SharedRecipes"
+        ],
+        "summary": "Read a shared recipe's image",
+        "description": "Widths 400, 800 and 1600, as for any recipe image. Private and revalidated: the address carries a credential, so only the reader's own browser may keep it.",
+        "operationId": "getSharedRecipeImageV1",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "w",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cook-sessions": {
       "post": {
         "tags": [
@@ -4866,6 +5147,263 @@
           }
         }
       }
+    },
+    "/api/v1/searches": {
+      "get": {
+        "tags": [
+          "Searches"
+        ],
+        "summary": "The searches this household has saved",
+        "description": "Oldest first, so the row of chips beside the search field keeps the order they were made in. Not paged: a kitchen keeps a handful of these and they are drawn on one line.\n\nEach carries the four values `GET /recipes` takes as `query`, `tag`, `maxMinutes` and `sort`, so applying one is assigning them rather than translating anything.",
+        "operationId": "getSavedSearchesV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchesSavedSearchesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Searches"
+        ],
+        "summary": "Save a search",
+        "description": "A name over the filters the library is showing. At least one of `query`, `tags`, `maxMinutes` and `sort` must be set — a search asking for nothing is the library, which is the screen it would be applied from.\n\nNames are unique within a household, because two chips with one label are two things nobody can tell apart.",
+        "operationId": "createSavedSearchV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchesCreateSavedSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchesSavedSearchDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/searches/{searchId}": {
+      "patch": {
+        "tags": [
+          "Searches"
+        ],
+        "summary": "Rename a saved search, or point it at different filters",
+        "description": "The name and the filters together: renaming a search and pointing it at what you are looking at now are the same gesture from the same sheet, and two requests for one gesture is two ways for half of it to fail.\n\nNo `If-Match`, unlike a recipe or a cookbook. The one edit anybody makes is \"save what I am looking at now over what I saved before\", which is a deliberate overwrite rather than a clash — a precondition would exist only so that the answer to it could be to overwrite anyway.",
+        "operationId": "updateSavedSearchV1",
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchesUpdateSavedSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchesSavedSearchDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Searches"
+        ],
+        "summary": "Forget a saved search",
+        "description": "The name and the filters only. Nothing it found is touched — a saved search is a question, and forgetting one deletes no food. Idempotent: deleting one that is already gone also answers 204.",
+        "operationId": "deleteSavedSearchV1",
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6185,6 +6723,105 @@
         },
         "description": "A note attached to one step."
       },
+      "RecipesGetSharedResponse": {
+        "required": [
+          "title",
+          "language",
+          "yieldAmount",
+          "yieldKind",
+          "hasImage",
+          "groups",
+          "steps",
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "description": {
+            "type": "string",
+            "description": "A short introduction, if there is one.",
+            "nullable": true
+          },
+          "language": {
+            "enum": [
+              "en",
+              "de"
+            ],
+            "type": "string",
+            "description": "The language the title and steps are written in."
+          },
+          "yieldAmount": {
+            "type": "number",
+            "description": "How many it makes.",
+            "format": "double"
+          },
+          "yieldKind": {
+            "enum": [
+              "servings",
+              "pieces"
+            ],
+            "type": "string",
+            "description": "`servings` or `pieces`."
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The recipe's own word for what it makes, shown exactly as written.",
+            "nullable": true
+          },
+          "prepMinutes": {
+            "type": "integer",
+            "description": "Hands-on time.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "type": "integer",
+            "description": "Time in the oven or on the hob.",
+            "format": "int32",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "Prep plus cook, or null when neither is known.",
+            "format": "int32",
+            "nullable": true
+          },
+          "hasImage": {
+            "type": "boolean",
+            "description": "Whether there is a photograph to fetch."
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesIngredientGroupContract"
+            },
+            "description": "Its ingredient groups, in order."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesStepContract"
+            },
+            "description": "Its steps, in order."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its tags."
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "The address it was imported from, when it was imported.",
+            "nullable": true
+          }
+        },
+        "description": "A recipe as whoever follows the link sees it."
+      },
       "RecipesGetTagsResponse": {
         "required": [
           "items"
@@ -6638,6 +7275,25 @@
           }
         },
         "description": "Your notes on one recipe, in full."
+      },
+      "RecipesShareResponse": {
+        "required": [
+          "token",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The secret that goes in the link."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the recipe was first published.",
+            "format": "date-time"
+          }
+        },
+        "description": "The link that publishes one recipe."
       },
       "RecipesSourcesConnectSourceRequest": {
         "required": [
@@ -7117,6 +7773,138 @@
           }
         },
         "description": "What a sign-up form needs to know before it draws itself."
+      },
+      "SearchesCreateSavedSearchRequest": {
+        "required": [
+          "householdId",
+          "name",
+          "criteria"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Whose kitchen it is for.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What to call it."
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/SearchesSearchCriteriaContract"
+          }
+        },
+        "description": "Saves a search."
+      },
+      "SearchesSavedSearchDetail": {
+        "required": [
+          "searchId",
+          "householdId",
+          "name",
+          "criteria",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "searchId": {
+            "type": "string",
+            "description": "The saved search's id.",
+            "format": "uuid"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "Which household owns it.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/SearchesSearchCriteriaContract"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Whose search it was.",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When it was saved.",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When it last changed.",
+            "format": "date-time"
+          }
+        },
+        "description": "One saved search."
+      },
+      "SearchesSavedSearchesResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SearchesSavedSearchDetail"
+            },
+            "description": "The searches, oldest first, so the row of chips stops moving."
+          }
+        },
+        "description": "A household's saved searches."
+      },
+      "SearchesSearchCriteriaContract": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The words that were in the search box, or omit.",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tag slugs a recipe must all carry."
+          },
+          "maxMinutes": {
+            "type": "integer",
+            "description": "The longest a recipe may take, or omit for any length.",
+            "format": "int32",
+            "nullable": true
+          },
+          "sort": {
+            "type": "string",
+            "description": "The order to read in, or omit for whatever the library would choose.",
+            "nullable": true
+          }
+        },
+        "description": "What a saved search asks the library for."
+      },
+      "SearchesUpdateSavedSearchRequest": {
+        "required": [
+          "name",
+          "criteria"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The new name."
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/SearchesSearchCriteriaContract"
+          }
+        },
+        "description": "Renames a saved search, and rewrites what it asks for."
       },
       "SessionsGetAllResponse": {
         "required": [
@@ -7875,6 +8663,9 @@
       "name": "Recipes"
     },
     {
+      "name": "SharedRecipes"
+    },
+    {
       "name": "CookSessions"
     },
     {
@@ -7891,6 +8682,9 @@
     },
     {
       "name": "Suggestions"
+    },
+    {
+      "name": "Searches"
     }
   ]
 }
