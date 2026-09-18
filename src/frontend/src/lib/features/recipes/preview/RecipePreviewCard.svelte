@@ -11,8 +11,10 @@
   let { recipe, favourite, onopen, onfavourite }: Props = $props();
 </script>
 
-<article class="recipe" class:without-photo={!recipe.image}>
-  {#if recipe.image}<Image src={recipe.image} alt="" ratio={4 / 3} />{/if}
+<article class="recipe">
+  <!-- Always the same box: a recipe without a photo gets the placeholder rather
+       than a card of its own shape. -->
+  <Image src={recipe.image} alt="" ratio={4 / 3} />
   <div class="copy">
     <span class="tag">{recipe.tag}</span>
     <h3><button class="open" onclick={onopen}>{recipe.title}</button></h3>
@@ -121,8 +123,5 @@
     border-radius: var(--radius-full);
     background: var(--surface-raised);
     box-shadow: var(--shadow-card);
-  }
-  .without-photo .copy {
-    padding-right: var(--space-12);
   }
 </style>

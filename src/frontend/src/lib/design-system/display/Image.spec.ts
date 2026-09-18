@@ -17,6 +17,13 @@ describe('Image', () => {
     expect(replacement).toHaveClass('loaded');
   });
 
+  it('draws the placeholder when there is no photo at all', () => {
+    const view = renderWithProviders(Image, { props: { alt: '' } });
+
+    expect(view.container.querySelector('img')).toBeNull();
+    expect(view.container.querySelector('.fallback')).toBeInTheDocument();
+  });
+
   it('keeps a decorative fallback out of the accessibility tree', async () => {
     const view = renderWithProviders(Image, { props: { src: '/missing.webp', alt: '' } });
     await fireEvent.error(view.container.querySelector('img')!);

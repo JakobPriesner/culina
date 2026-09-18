@@ -9,9 +9,14 @@
    *
    * The backdrop is a warm tint rather than grey: a food photo fading in over
    * grey looks like a broken image for the moment before it lands.
+   *
+   * A missing photo is drawn as the same tinted box with a mark in it that a
+   * failed one is, so a recipe nobody has photographed sits in a grid beside
+   * the ones that have been without the grid changing shape around it.
    */
   interface Props {
-    src: string;
+    /** Absent when there is no photo, which draws the placeholder. */
+    src?: string;
     /** What the photo shows. Empty string when it is purely decorative. */
     alt: string;
     /** Width over height, e.g. 4 / 3. */
@@ -42,7 +47,7 @@
 </script>
 
 <div class="frame" class:rounded class:fill style:aspect-ratio={fill ? undefined : ratio}>
-  {#if failedSource === src}
+  {#if !src || failedSource === src}
     <div
       class="fallback"
       role={alt ? 'img' : undefined}

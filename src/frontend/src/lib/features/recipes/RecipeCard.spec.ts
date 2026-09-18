@@ -75,6 +75,13 @@ describe('a recipe in the list', () => {
     expect(screen.getByText('You have everything')).toBeInTheDocument();
   });
 
+  it('shows the placeholder rather than a card of its own shape when there is no photo', () => {
+    const { container } = renderWithProviders(RecipeCard, { props: { recipe: recipe() } });
+
+    expect(container.querySelector('.photo')).toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
+  });
+
   it('marks itself busy while a change to it is in flight', () => {
     const { container } = renderWithProviders(RecipeCard, {
       props: { recipe: recipe(), pending: true }
