@@ -645,5 +645,8 @@
   "suggestions.restore": "Rückgängig",
   "recipes.list.suggested": "Für heute Abend sortiert",
   "recipes.sort.recent": "Zuletzt geändert",
-  "recipes.sort.suggested": "Für heute Abend"
+  "recipes.sort.suggested": "Für heute Abend",
+  "suggestions.deck.previous": "Vorheriger Vorschlag",
+  "suggestions.deck.next": "Nächster Vorschlag",
+  "suggestions.deck.position": "{at} von {of}"
 }

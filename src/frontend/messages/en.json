@@ -645,5 +645,8 @@
   "suggestions.restore": "Undo",
   "recipes.list.suggested": "Sorted for tonight",
   "recipes.sort.recent": "Recently updated",
-  "recipes.sort.suggested": "For tonight"
+  "recipes.sort.suggested": "For tonight",
+  "suggestions.deck.previous": "Previous suggestion",
+  "suggestions.deck.next": "Next suggestion",
+  "suggestions.deck.position": "{at} of {of}"
 }
