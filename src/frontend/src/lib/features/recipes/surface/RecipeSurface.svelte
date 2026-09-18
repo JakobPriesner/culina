@@ -294,18 +294,14 @@
          an ordinary recipe now, and anything louder would make "imported" into
          a second kind of recipe. Reading only — at the hob, where it came from
          is the least useful fact on the screen. -->
-    {#if recipe.origin && !cooking}
+    {#if recipe.origin?.sourceUrl && !cooking}
       <p class="origin">
-        {#if recipe.origin.sourceUrl}
-          <!-- Off site, and the one link on this page that is: resolve() is for
-               this app's own routes, and there is nothing here to resolve. -->
-          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-          <a href={recipe.origin.sourceUrl} rel="noreferrer nofollow" target="_blank">
-            {m['import.origin.from']({ where: hostOf(recipe.origin.sourceUrl) })}
-          </a>
-        {:else}
-          {m['import.origin.fromApp']()}
-        {/if}
+        <!-- Off site, and the one link on this page that is: resolve() is for
+             this app's own routes, and there is nothing here to resolve. -->
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+        <a href={recipe.origin.sourceUrl} rel="noreferrer nofollow" target="_blank">
+          {m['import.origin.from']({ where: hostOf(recipe.origin.sourceUrl) })}
+        </a>
       </p>
     {/if}
 
