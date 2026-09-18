@@ -83,6 +83,7 @@
 
 <ImageField
   label={m['editor.photo']()}
+  showLabel={false}
   hint={m['editor.photoHint']()}
   chooseLabel={m['editor.photoChoose']()}
   replaceLabel={m['editor.photoReplace']()}

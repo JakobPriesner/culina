@@ -27,12 +27,19 @@
     householdId: string;
     onimport: (parsed: ParsedRecipe) => void;
     busy?: boolean;
+    /**
+     * Whether the box is open, readable by the page around it.
+     *
+     * The page offers a second way in beside this one, and two invitations
+     * either side of an open editor is one invitation too many — so the caller
+     * has to be able to see that this one has been taken.
+     */
+    open?: boolean;
   }
 
-  let { householdId, onimport, busy = false }: Props = $props();
+  let { householdId, onimport, busy = false, open = $bindable(false) }: Props = $props();
 
   let text = $state('');
-  let open = $state(false);
   let url = $state('');
   let reading = $state(false);
   let failure = $state<string | null>(null);

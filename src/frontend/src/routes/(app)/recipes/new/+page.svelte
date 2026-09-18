@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { http, request } from '$api';
-  import { Button, Card, Field, TextInput } from '$ds';
+  import { Button, Field, TextInput } from '$ds';
   import FormFailure from '$features/auth/FormFailure.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import {
@@ -18,6 +18,7 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
+  import PageHeader from '$shell/PageHeader.svelte';
   import { onDestroy, onMount } from 'svelte';
 
   /**
@@ -26,8 +27,19 @@
    * A recipe with just a title is valid and saveable — it is the placeholder
    * for "I want to write this down later". The forty-field form is the reason
    * most recipes never get written down at all.
+   *
+   * So the page has one rank and then another, and never three things of equal
+   * weight. The title field is the page: set in the editorial face at the size
+   * it will be read at, in the one panel on the screen, with the only accented
+   * button under it. Pasting a block of text and bringing a whole library over
+   * are the other two ways in, and they sit below as two quiet doors — a door
+   * being the honest shape for them, since both lead somewhere rather than
+   * happening here.
    */
   let title = $state('');
+
+  /** Whether the pasting box has been opened, which takes over the page. */
+  let pasting = $state(false);
 
   const submission = createSubmission();
 
@@ -168,55 +180,85 @@
 <svelte:head><title>{m['editor.new']()}</title></svelte:head>
 
 <Page width="reading">
+  <PageHeader
+    title={continuing ? m['editor.newAnother']() : m['editor.new']()}
+    subtitle={m['editor.titleHint']()}
+  />
+
   <div class="stack">
     {#if continuing}
-      <Card href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: continuing.recipeId })}>
-        <p class="continueLabel">{m['editor.continueDraftLabel']()}</p>
-        <p class="continueTitle">{continuing.title}</p>
-      </Card>
+      <!-- Above the field rather than beside it: somebody who left a recipe
+           half-written is here to finish it far more often than to start a
+           second one, and the row says which recipe rather than making them
+           remember. -->
+      <a
+        class="resume"
+        href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: continuing.recipeId })}
+      >
+        <span class="resume-text">
+          <span class="resume-label">{m['editor.continueDraftLabel']()}</span>
+          <span class="resume-title">{continuing.title}</span>
+        </span>
+
+        <span class="resume-arrow" aria-hidden="true">→</span>
+      </a>
     {/if}
 
-    <form class="form" onsubmit={submit} novalidate>
-      <h1 class="heading">{continuing ? m['editor.newAnother']() : m['editor.new']()}</h1>
-
+    <form class="start" onsubmit={submit} novalidate>
       <FormFailure failure={submission.failure} />
 
-      <Field label={m['editor.title']()} hint={m['editor.titleHint']()}>
+      <Field label={m['editor.title']()}>
         {#snippet children({ id, describedBy, invalid })}
-          <TextInput {id} {describedBy} {invalid} bind:value={title} />
+          <TextInput
+            {id}
+            {describedBy}
+            {invalid}
+            size="display"
+            placeholder={m['editor.titlePlaceholder']()}
+            bind:value={title}
+          />
         {/snippet}
       </Field>
 
-      <div>
-        <Button type="submit" variant="primary" size="lg" loading={submission.showingProgress}>
-          {m['editor.create']()}
-        </Button>
-      </div>
+      <Button type="submit" variant="primary" size="lg" loading={submission.showingProgress}>
+        {m['editor.create']()}
+      </Button>
+    </form>
 
-      {#if session.activeHouseholdId}
+    {#if session.activeHouseholdId}
+      {#if pasting}
         <PasteImport
+          bind:open={pasting}
           householdId={session.activeHouseholdId}
           busy={submission.showingProgress}
           onimport={(parsed) => void start(title.trim() || parsed.title, parsed)}
         />
+      {:else}
+        <!--
+          The other two ways in, and both heavier than typing a name — so they
+          are offered second, as doors rather than as forms. Putting all three
+          on one screen as equals would make the ten-second thing feel like the
+          beginning of a migration.
+        -->
+        <section class="others" aria-labelledby="other-ways">
+          <h2 class="others-title" id="other-ways">{m['editor.otherWays']()}</h2>
+
+          <div class="ways">
+            <!-- The whole tile is the control, so there is one label to read
+                 rather than a heading, a sentence and a button repeating it. -->
+            <button type="button" class="way" onclick={() => (pasting = true)}>
+              <span class="way-title">{m['import.paste.title']()}</span>
+              <span class="way-body">{m['import.paste.hint']()}</span>
+            </button>
+
+            <a class="way" href={resolve('/(app)/recipes/import')}>
+              <span class="way-title">{m['import.source.title']()}</span>
+              <span class="way-body">{m['import.source.hint']()}</span>
+            </a>
+          </div>
+        </section>
       {/if}
-    </form>
-
-    <!--
-      The third way in, and the heaviest — so it is offered last and as a
-      doorway rather than a form. One recipe is something you do here, in a
-      field, in ten seconds; a whole library is somewhere you go for ten
-      minutes. Putting them on one screen as equals would make the quick thing
-      feel like the start of a migration.
-    -->
-    <section class="fromAnApp" aria-labelledby="from-an-app">
-      <h2 id="from-an-app" class="subheading">{m['import.source.title']()}</h2>
-      <p class="hint">{m['import.source.hint']()}</p>
-
-      <div>
-        <Button href={resolve('/(app)/recipes/import')}>{m['import.source.go']()}</Button>
-      </div>
-    </section>
+    {/if}
   </div>
 </Page>
 
@@ -224,46 +266,160 @@
   .stack {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--layout-section-gap);
+    min-width: 0;
   }
 
-  .form {
+  /*
+   * The one panel on the page, so the eye has somewhere to land.
+   *
+   * A card is not the default wrapper for a block of content, and this is not
+   * decoration: it is the difference between "here is a form" and "start
+   * here". Everything below it is deliberately outside.
+   */
+  .start {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
   }
 
-  .heading {
-    font-family: var(--font-editorial);
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-regular);
+  .start :global(.field) {
+    width: 100%;
   }
 
-  .continueLabel {
-    font-size: var(--text-sm);
-    color: var(--text-muted);
+  .resume {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
+    color: inherit;
+    text-decoration: none;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
   }
 
-  .continueTitle {
-    font-family: var(--font-editorial);
-    font-size: var(--text-xl);
+  .resume:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-hover);
   }
 
-  .fromAnApp {
+  .resume-text {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--border);
+    gap: var(--space-1);
+    min-width: 0;
   }
 
-  .subheading {
+  .resume-label {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .resume-title {
+    font-family: var(--font-editorial);
     font-size: var(--text-lg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .resume-arrow {
+    flex: none;
+    color: var(--text-subtle);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .resume:hover .resume-arrow {
+    color: var(--accent);
+    transform: translateX(var(--space-1));
+  }
+
+  .others {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  /* Sentence case, not capitals. A caption set in letterspaced capitals is
+     louder than the sentence inside the tile it introduces, and two lines of it
+     on a phone is the loudest thing on a page whose whole argument is that
+     starting a recipe is easy. */
+  .others-title {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
     font-weight: var(--weight-medium);
   }
 
-  .hint {
+  .ways {
+    display: grid;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  /* Quiet at rest and edged on hover: two doors beside a lit one, which is the
+     whole of what these are. */
+  .way {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .way:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+  }
+
+  .way-title {
+    font-weight: var(--weight-medium);
+  }
+
+  .way-body {
     color: var(--text-muted);
     font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  /* The page's one action, across the thumb's reach. Wide enough and it sizes
+     to its own words again, where a button the width of a column would be a
+     banner. */
+  @media (max-width: 30rem) {
+    .start :global(.button) {
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 40rem) {
+    .ways {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
   }
 </style>
