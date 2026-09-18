@@ -1,5 +1,8 @@
 using Application.Abstractions;
+using Dapper;
+using Domain.Suggestions;
 using Infrastructure.Persistence.Cookbooks;
+using Infrastructure.Persistence.Suggestions;
 
 namespace Infrastructure.Persistence.Recipes;
 
@@ -21,6 +24,11 @@ internal sealed record RecipeSearchRowData
     public string[] Tags { get; init; } = [];
 
     public int CookCount { get; init; }
+
+    public DateTimeOffset? LastCookedAt { get; init; }
+
+    /// <summary>Zero for every sort but <see cref="RecipeSort.Suggested"/>.</summary>
+    public decimal SuggestionScore { get; init; }
 
     public DateTimeOffset UpdatedAt { get; init; }
 
@@ -65,7 +73,9 @@ internal sealed record RecipeSearchRowData
 /// </para>
 /// </remarks>
 /// <param name="executor">Runs the SQL.</param>
-internal sealed class RecipeSearcher(DbExecutor executor)
+/// <param name="time">The clock the suggested order is ranked against.</param>
+/// <param name="weights">What each term of the suggested order is worth.</param>
+internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, RankingWeights weights)
 {
     /// <summary>A hard ceiling, enforced here and not only in the endpoint.</summary>
     internal const int MaxLimit = 100;
@@ -93,7 +103,18 @@ internal sealed class RecipeSearcher(DbExecutor executor)
     /// </remarks>
     private const double FuzzyThreshold = 0.5d;
 
-    private static readonly string Projection = $$"""
+    /// <summary>
+    /// The projection, built once per shape rather than per request.
+    /// </summary>
+    /// <remarks>
+    /// Two constant strings, because only the suggested order pays for the
+    /// scoring join and only a plain browse should pay for neither.
+    /// </remarks>
+    private static readonly string ScoredProjection = Projection(scored: true);
+
+    private static readonly string PlainProjection = Projection(scored: false);
+
+    private static string Projection(bool scored) => $$"""
         select
             r.id,
             r.title,
@@ -112,8 +133,12 @@ internal sealed class RecipeSearcher(DbExecutor executor)
                     where rt.recipe_id = r.id
                     order by t.slug),
                 '{}') as tags,
-            (select count(*) from cook_log_entries c
-             where c.recipe_id = r.id and c.user_id = @userId) as cook_count,
+            -- One scan for both facts rather than two over the same index:
+            -- cook_log_recipe_user_idx is (recipe_id, user_id, made_at desc),
+            -- so the count and the latest entry come out of one lookup.
+            coalesce(mine.cook_count, 0) as cook_count,
+            mine.last_cooked_at,
+            {{(scored ? "coalesce(s.score, 0)" : "0::numeric")}} as suggestion_score,
             -- From the document, which counted them when the recipe was
             -- written. The subquery is the fallback for a document that has
             -- gone missing, and coalesce only reaches it when one has: counting
@@ -137,8 +162,18 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         from q
         cross join recipes r
         left join recipe_search_documents d on d.recipe_id = r.id
+        left join lateral (
+            select count(*) as cook_count, max(c.made_at) as last_cooked_at
+            from cook_log_entries c
+            where c.recipe_id = r.id and c.user_id = @userId
+        ) mine on true
+        {{(scored ? "left join suggestion_scores s on s.recipe_id = r.id" : string.Empty)}}
         {{RecipeSearchLanes.LanguageJoin}}
         where r.household_id = @householdId
+          -- Hidden from the suggested order and from nowhere else: the recipe
+          -- is still the household's, still searchable and still on its
+          -- shelves. "Stop suggesting this" is not "delete this".
+          {{(scored ? "and not coalesce(s.dismissed, false)" : string.Empty)}}
           -- Words are answered by the search document, in four lanes, rather
           -- than by three LIKE scans over the recipe tables. The lanes are
           -- named in RecipeSearchLanes because the tier below has to know
@@ -178,12 +213,18 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         var limit = Math.Clamp(search.Limit, 1, MaxLimit);
         var cursor = RecipeCursor.Decode(search.Cursor, search.Sort);
         var resume = cursor is null ? null : RecipeSearchSql.ResumePredicate(search.Sort);
+        var scored = search.Sort == RecipeSort.Suggested;
+
+        // Joined in only when it is what the order asks for. Ninety lines of
+        // common table expressions on every plain browse would be work done to
+        // multiply by zero.
+        var scoring = scored ? $"{SuggestionScoringSql.Ctes},\n            " : string.Empty;
 
         // One extra row tells us whether there is a next page without a second
         // count query.
         var sql = $"""
-            with q as ({RecipeSearchLanes.QueryCte}),
-            matching as ({Projection}),
+            with {scoring}q as ({RecipeSearchLanes.QueryCte}),
+            matching as ({(scored ? ScoredProjection : PlainProjection)}),
             ranked as (
                 select *,
                     ingredient_count - matched_ingredients as extra_ingredients,
@@ -200,7 +241,7 @@ internal sealed class RecipeSearcher(DbExecutor executor)
 
         var rows = await executor.QueryAsync<RecipeSearchRowData>(
             sql,
-            Parameters(search, cursor),
+            Parameters(search, cursor, scored),
             cancellationToken).ConfigureAwait(false);
 
         var page = rows.Take(limit).ToList();
@@ -211,7 +252,7 @@ internal sealed class RecipeSearcher(DbExecutor executor)
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
 
-    private static object Parameters(RecipeSearch search, RecipeCursor? cursor)
+    private DynamicParameters Parameters(RecipeSearch search, RecipeCursor? cursor, bool scored)
     {
         // Counted after de-duplication, because the clause compares this to a
         // count of distinct slugs: ?tag=quick&tag=quick would otherwise ask for
@@ -219,7 +260,7 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         var tags = search.Tags.Distinct(StringComparer.Ordinal).ToArray();
         var ingredients = search.Ingredients.ToArray();
 
-        return new
+        var parameters = new DynamicParameters(new
         {
             householdId = search.HouseholdId,
             userId = search.UserId,
@@ -238,7 +279,49 @@ internal sealed class RecipeSearcher(DbExecutor executor)
             k0 = KeyAt(cursor, 0),
             k1 = KeyAt(cursor, 1),
             k2 = KeyAt(cursor, 2)
-        };
+        });
+
+        if (scored)
+        {
+            // The same occasion the suggestion endpoint builds, minus the parts
+            // a library listing cannot know: no slot, nothing to resemble,
+            // nothing on screen to avoid. Browse also turns the exploration
+            // jitter off, because a jittered order is not one a cursor can
+            // resume.
+            parameters.AddDynamicParams(
+                SuggestionScoringSql.Parameters(
+                    new SuggestionContext(
+                        search.HouseholdId,
+                        search.UserId,
+                        SuggestionPurpose.Browse,
+                        Today(),
+                        Slot: null,
+                        search.MaxMinutes,
+                        search.Tags,
+                        search.Ingredients,
+                        LikeRecipeId: null,
+                        Exclude: [],
+                        search.Limit),
+                    weights));
+        }
+
+        return parameters;
+    }
+
+    /// <summary>
+    /// The day being ranked for, not the instant.
+    /// </summary>
+    /// <remarks>
+    /// Every decayed term is a function of this, so two requests on the same day
+    /// score identically — which is what lets a cursor resume the order it was
+    /// cut from, and what stops the list reordering under somebody who is still
+    /// reading it.
+    /// </remarks>
+    private DateTimeOffset Today()
+    {
+        var now = time.GetUtcNow();
+
+        return new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
     }
 
     private static string KeyAt(RecipeCursor? cursor, int index) =>
@@ -261,6 +344,7 @@ internal sealed class RecipeSearcher(DbExecutor executor)
         data.YieldKind,
         data.Tags,
         data.CookCount,
+        data.LastCookedAt,
         data.UpdatedAt,
         data.MatchedIngredients,
         data.IngredientCount,

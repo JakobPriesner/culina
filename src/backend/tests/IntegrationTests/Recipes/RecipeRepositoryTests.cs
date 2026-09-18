@@ -7,6 +7,7 @@ using Infrastructure.Persistence;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Users;
+using Domain.Suggestions;
 using IntegrationTests.Fixtures;
 using TestSupport;
 
@@ -279,7 +280,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             new RecipeRepository(
                 executor,
                 new TagWriter(executor),
-                new RecipeSearcher(executor),
+                new RecipeSearcher(executor, TimeProvider.System, RankingWeights.Default),
                 new SearchDocumentWriter(executor)),
             new UserRepository(executor),
             new HouseholdRepository(executor));

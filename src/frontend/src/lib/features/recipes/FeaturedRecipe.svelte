@@ -10,22 +10,55 @@
 
   interface Props {
     recipe: RecipeSummary;
+    /**
+     * Why this one is here, when something can honestly say.
+     *
+     * The panel already had an eyebrow, filled with a fixed line because the
+     * recipe underneath it was picked by an accident of photography. Now the
+     * recipe is an answer, and the eyebrow is what makes it read as one —
+     * contextual rather than promotional, with no section header claiming to
+     * recommend anything.
+     *
+     * Falls back to the fixed line, so a suggestion nothing can explain looks
+     * exactly like the panel always did.
+     */
+    reason?: string | null;
+    /**
+     * Stops this one being suggested, when it is a suggestion.
+     *
+     * Absent on the panel's old behaviour, where the recipe was picked by an
+     * accident of photography and there was nothing to disagree with. It is the
+     * only negative signal the ranking cannot derive from something another
+     * feature already records — with a household this size there is no such
+     * thing as a meaningful non-click, so "not this" has to be sayable.
+     */
+    ondismiss?: () => void;
   }
 
-  let { recipe }: Props = $props();
+  let { recipe, reason = null, ondismiss }: Props = $props();
 
   const headingId = $props.id();
 </script>
 
 <section class="feature" aria-labelledby={headingId}>
   <div class="copy">
-    <p class="eyebrow">{m['recipes.featured.eyebrow']()}</p>
+    <p class="eyebrow">{reason ?? m['recipes.featured.eyebrow']()}</p>
     <h2 id={headingId}>{recipe.title}</h2>
     <p class="meta">{metaLineFor(recipe)}</p>
-    <a class="feature-link" href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}>
-      {m['recipes.featured.open']()}
-      <span aria-hidden="true">→</span>
-    </a>
+    <div class="actions">
+      <a class="feature-link" href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}>
+        {m['recipes.featured.open']()}
+        <span aria-hidden="true">→</span>
+      </a>
+
+      {#if ondismiss}
+        <!-- Quiet, and named for a screen reader: five buttons all reading
+             "Dismiss" is five buttons nobody can tell apart. -->
+        <button type="button" class="dismiss" onclick={ondismiss}>
+          {m['suggestions.dismiss']({ title: recipe.title })}
+        </button>
+      {/if}
+    </div>
   </div>
 
   <div class="photo">
@@ -61,6 +94,30 @@
     justify-content: center;
     gap: var(--space-3);
     padding: var(--space-6) var(--space-8);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-6);
+  }
+
+  .dismiss {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    opacity: 0.75;
+    font: inherit;
+    font-size: var(--text-xs);
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .dismiss:hover {
+    opacity: 1;
+    text-decoration: underline;
   }
 
   .eyebrow {

@@ -41,6 +41,8 @@ using Application.Sessions.SignIn;
 using Application.Settings.GetRegistration;
 using Application.Settings.UpdateRegistration;
 using Application.Shopping;
+using Application.Suggestions.Dismiss;
+using Application.Suggestions.GetAll;
 using Application.Users.GetCurrent;
 using Application.Users.GetPreferences;
 using Application.Users.Register;
@@ -225,6 +227,11 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RemoveRecipeFromCookbookCommand>,
                 RemoveRecipeFromCookbookCommandHandler>()
             .AddScoped<IQueryHandler<GetRecipeCookbooksQuery, Contracts.Cookbooks.RecipeCookbooksResponse>,
-                GetRecipeCookbooksQueryHandler>();
+                GetRecipeCookbooksQueryHandler>()
+
+            // Suggestions
+            .AddScoped<IQueryHandler<GetSuggestionsQuery, Contracts.Suggestions.GetAll.Response>,
+                GetSuggestionsQueryHandler>()
+            .AddScoped<ICommandHandler<DismissSuggestionCommand>, DismissSuggestionCommandHandler>();
     }
 }

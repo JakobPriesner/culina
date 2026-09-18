@@ -267,6 +267,7 @@
         yieldKind: recipe.yieldKind,
         tags: recipe.tags,
         cookCount: 0,
+        lastCookedAt: null,
         updatedAt: recipe.updatedAt,
         match: null
       })}

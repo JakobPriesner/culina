@@ -628,5 +628,22 @@
   "import.library.loadingAll": "Fetching the rest…",
   "import.library.moreFailed": "The rest of the library could not be read. Try the search, or come back in a moment.",
   "import.run.lost": "This page has stopped following the import.",
-  "import.run.lookAgain": "Look again"
+  "import.run.lookAgain": "Look again",
+  "suggestions.reason.affinity": "One you keep coming back to",
+  "suggestions.reason.rediscovery": "You haven't made this in a while",
+  "suggestions.reason.tag": "You often cook {subject}",
+  "suggestions.reason.ingredient": "You cook a lot with {subject}",
+  "suggestions.reason.season": "Your kitchen cooks this at this time of year",
+  "suggestions.reason.slot": "Usually how you eat at this time",
+  "suggestions.reason.household": "{subject} cooks this often",
+  "suggestions.reason.fresh": "New in your book",
+  "suggestions.reason.similar": "Close to the one you are reading",
+  "suggestions.similar.title": "Close to this one",
+  "suggestions.dismiss": "Stop suggesting {title}",
+  "suggestions.dismissed": "We will stop suggesting that.",
+  "suggestions.dismissFailed": "That could not be hidden. It is still in your suggestions.",
+  "suggestions.restore": "Undo",
+  "recipes.list.suggested": "Sorted for tonight",
+  "recipes.sort.recent": "Recently updated",
+  "recipes.sort.suggested": "For tonight"
 }

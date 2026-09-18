@@ -78,8 +78,40 @@ export interface RecipeSummary {
   readonly tags: readonly string[];
   /** How many times this person has made it. */
   readonly cookCount: number;
+  /** When this person last made it, or null. What "not since April" is written from. */
+  readonly lastCookedAt: string | null;
   readonly updatedAt: string;
   readonly match: IngredientMatch | null;
+}
+
+/**
+ * Why a recipe was suggested.
+ *
+ * Null whenever no single signal decided the ranking, and that is an ordinary
+ * answer meaning show nothing. The server sends a code and at most a subject,
+ * never a sentence: the wording is the client's because the client is what
+ * knows which of two languages the person reads.
+ */
+export type SuggestionReasonCode =
+  | 'affinity'
+  | 'rediscovery'
+  | 'tag'
+  | 'ingredient'
+  | 'season'
+  | 'slot'
+  | 'household'
+  | 'fresh'
+  | 'similar';
+
+export interface SuggestionReason {
+  readonly code: SuggestionReasonCode;
+  /** The tag, ingredient or person it is about, when it is about something nameable. */
+  readonly subject: string | null;
+}
+
+/** One suggested recipe, and why. */
+export interface Suggestion extends RecipeSummary {
+  readonly reason: SuggestionReason | null;
 }
 
 /** How well a recipe fits what you said you have. */

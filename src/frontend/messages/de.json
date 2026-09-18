@@ -628,5 +628,22 @@
   "import.library.loadingAll": "Der Rest wird geholt…",
   "import.library.moreFailed": "Der Rest der Sammlung konnte nicht gelesen werden. Versuch die Suche oder komm gleich wieder.",
   "import.run.lost": "Diese Seite verfolgt den Import nicht mehr.",
-  "import.run.lookAgain": "Noch einmal nachsehen"
+  "import.run.lookAgain": "Noch einmal nachsehen",
+  "suggestions.reason.affinity": "Eins, zu dem du immer wieder zurückkommst",
+  "suggestions.reason.rediscovery": "Das hast du länger nicht gekocht",
+  "suggestions.reason.tag": "Du kochst oft {subject}",
+  "suggestions.reason.ingredient": "Du kochst viel mit {subject}",
+  "suggestions.reason.season": "Bei euch ein Essen für diese Jahreszeit",
+  "suggestions.reason.slot": "So esst ihr um diese Zeit meistens",
+  "suggestions.reason.household": "{subject} kocht das oft",
+  "suggestions.reason.fresh": "Neu in eurem Buch",
+  "suggestions.reason.similar": "Nah an dem, was du gerade liest",
+  "suggestions.similar.title": "Nah an diesem hier",
+  "suggestions.dismiss": "{title} nicht mehr vorschlagen",
+  "suggestions.dismissed": "Das schlagen wir nicht mehr vor.",
+  "suggestions.dismissFailed": "Das konnte nicht ausgeblendet werden. Es ist weiter in deinen Vorschlägen.",
+  "suggestions.restore": "Rückgängig",
+  "recipes.list.suggested": "Für heute Abend sortiert",
+  "recipes.sort.recent": "Zuletzt geändert",
+  "recipes.sort.suggested": "Für heute Abend"
 }

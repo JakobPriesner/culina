@@ -77,7 +77,7 @@ sub-resource" pattern, not a verb route: redeeming *creates a redemption*.
 | `tag` | Slug. Repeatable; repeated values are ANDed. |
 | `maxMinutes` | Total time ceiling. "I have 25 minutes." |
 | `ingredient` | Repeatable. Ranks by how many match and how few extras are needed. |
-| `sort` | `-updatedAt`, `title`, `totalMinutes`, `-cookCount`, `relevance`, `cookbookOrder` (only with `cookbookId`). An explicit value always wins; with none, `query` or `ingredient` means `relevance`, a `cookbookId` alone means `cookbookOrder`, and everything else means `-updatedAt`. |
+| `sort` | `-updatedAt`, `title`, `totalMinutes`, `-cookCount`, `relevance`, `suggested`, `cookbookOrder` (only with `cookbookId`). An explicit value always wins; with none, `query` or `ingredient` means `relevance`, a `cookbookId` alone means `cookbookOrder`, and everything else means `-updatedAt`. |
 | `cookbookId` | Only what is on that cookbook — its rows if somebody fills it, its rules if it fills itself. Every other filter still applies, ANDed. |
 | `cursor`, `limit` | Cursor paging. `limit` default 24, max 100. |
 
@@ -126,6 +126,79 @@ rounding (`scaling-rules.md`).
 
 On write, `PUT /recipes/{id}` accepts the same segment shape and the server
 re-serialises it to tokens — so the token format stays a persistence detail.
+
+### `sort=suggested`
+
+Ranks the whole collection for whoever is asking: how much they cook this recipe
+and things like it, how recently the **household** ate it, how long it has been
+since they last did, what the plan says about the meal it suits, how much of a
+project it is on a weekday, what everyone else cooks, and how new it is. Every
+other filter still applies, so "what should I cook?" and "I have twenty-five
+minutes and some chicken" are one feature rather than two that can disagree.
+
+**Scored against the day, not the instant.** Two requests on one day produce the
+same order, which is what makes the cursor mean something on the second page —
+and what stops the list rearranging under somebody who is still reading it.
+
+A recipe this person has dismissed is not in this order. It is still in every
+other one, still searchable and still on its shelves: hiding a recipe from your
+own suggestions is not the same sentence as deleting it.
+
+## Suggestions
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/suggestions?householdId=…` | A bounded set with a reason for each, best first. Not paged. |
+| `PUT` | `/recipes/{recipeId}/suggestion-dismissal` | Stop suggesting this to me. `204`, idempotent. |
+| `DELETE` | `/recipes/{recipeId}/suggestion-dismissal` | Undo that. `204`, and `204` when it was never hidden. |
+
+### `GET /suggestions` query parameters
+
+| Parameter | Meaning |
+| --- | --- |
+| `householdId` | **required** — scopes the question. |
+| `purpose` | `decide` (default) or `like`. Ranking the whole collection is a sort on the collection, so `browse` is deliberately not nameable here. |
+| `slot` | `breakfast`, `lunch` or `dinner`. |
+| `maxMinutes` | A ceiling on total time. A filter, never a preference. |
+| `tag`, `ingredient` | Repeatable. The caller's constraints, honoured exactly. |
+| `likeRecipeId` | Recipes resembling this one. Implies `purpose=like`. |
+| `exclude` | Repeatable. What the caller already has on screen or already planned. |
+| `limit` | 1–12, default 5. Out of range is rejected rather than clamped — asking for fifty is a client that thinks this is the recipe list. |
+
+**Deliberately not paged, and not wrapped in a cursor envelope.** The paging
+envelope exists for collections that page; a thing with no next page should not
+claim one. Past a dozen the honest answer is the recipe list, ranked.
+
+**Context is supplied here rather than stored on a recipe.** Whether something
+is breakfast is a fact about the occasion and about how this household plans,
+not a property of the food — so a recipe has no `mealType` column and should not
+get one.
+
+**`likeRecipeId` compares ingredients and tags, not who else cooked what.** With
+two to eight people, the co-occurrence between any two recipes is zero or a
+coincidence; "uses eleven of the same twelve ingredients" is neither, and it can
+be explained.
+
+### Why a recipe was suggested
+
+```json
+{ "recipeId": "…", "title": "Linsensuppe", "cookCount": 9,
+  "lastCookedAt": "2026-04-12T18:30:00Z",
+  "reason": { "code": "ingredient", "subject": "Aubergine" } }
+```
+
+`code` is one of `affinity`, `rediscovery`, `tag`, `ingredient`, `season`,
+`slot`, `household`, `fresh`, `similar`. `subject` is the tag, ingredient name
+or member's display name it is about, when it is about something nameable.
+
+**`reason` is `null` whenever no single signal decided the ranking**, and that
+is an ordinary answer meaning *show nothing*. The reason is whichever term
+actually dominated the score, never a sentence composed to suit a recipe that
+was picked for other reasons — an invented explanation, caught once, discredits
+every one that was true.
+
+A code and at most a subject, never prose: the wording belongs to the client,
+because that is what knows which of two languages the reader reads.
 
 ## Cookbooks
 

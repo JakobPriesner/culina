@@ -51,6 +51,17 @@ public sealed record RecipeSummary
     /// <summary>How many times the caller has made it.</summary>
     public required int CookCount { get; init; }
 
+    /// <summary>
+    /// When the caller last made it, or null if they never have.
+    /// </summary>
+    /// <remarks>
+    /// Read in the same scan as the count, which the cook log's index already
+    /// serves, so it costs nothing. It is what lets a card say "last in March"
+    /// rather than only "7 times" — and what a suggestion's rediscovery reason
+    /// is rendered from, instead of the server sending prose.
+    /// </remarks>
+    public DateTimeOffset? LastCookedAt { get; init; }
+
     /// <summary>When it last changed.</summary>
     public required DateTimeOffset UpdatedAt { get; init; }
 

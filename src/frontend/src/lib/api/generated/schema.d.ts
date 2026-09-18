@@ -1055,6 +1055,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest recipes for an occasion
+         * @description A small, bounded set with a reason for each, best first. Deliberately not paged: ranking the whole collection is `GET /recipes?sort=suggested`, which pages and composes with every other filter.
+         *
+         *     Context is supplied here rather than stored on a recipe, because whether something is breakfast is a fact about the occasion and about how this household plans, not a property of the food. `slot`, `maxMinutes`, `tag` and `ingredient` are the caller's constraints and are honoured exactly; `exclude` is what the caller already has on screen.
+         *
+         *     `likeRecipeId` asks for recipes resembling one, by shared ingredients and tags rather than by who else cooked them — with this many people, co-occurrence between two recipes is noise, and 'uses eleven of the same twelve ingredients' is not.
+         *
+         *     `reason` is null whenever no single signal decided the ranking. That is an ordinary answer and means show nothing: an invented explanation discredits the ones that were true.
+         */
+        get: operations["getSuggestionsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{recipeId}/suggestion-dismissal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Stop suggesting a recipe to me
+         * @description Person-owned, like a note or the cook log. Hiding a recipe from your suggestions says nothing about anybody else in the household and does not touch the recipe itself, which stays in the collection and in every search.
+         *
+         *     It expires, so "not tonight" does not quietly become "never again". This is the only signal the ranking cannot derive from something another feature already records — with a household this size there is no such thing as a meaningful non-click, so the one negative signal has to be asked for.
+         */
+        put: operations["dismissSuggestionV1"];
+        post?: never;
+        /**
+         * Suggest a recipe to me again
+         * @description The undo behind the toast, so it is as forgiving as the dismissal: `204`, and `204` again when the recipe was never hidden.
+         */
+        delete: operations["restoreSuggestionV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1656,6 +1708,11 @@ export interface components {
              * @description How many times the caller has made it.
              */
             cookCount: number;
+            /**
+             * Format: date-time
+             * @description When the caller last made it, or null if they never have.
+             */
+            lastCookedAt?: string | null;
             /**
              * Format: date-time
              * @description When it last changed.
@@ -2361,6 +2418,70 @@ export interface components {
              * @enum {string|null}
              */
             section?: "produce" | "dairy_eggs" | "meat_fish" | "bakery" | "dry_goods" | "canned_jars" | "frozen" | "spices_baking" | "drinks" | "household" | "other" | null;
+        };
+        /** @description A handful of recipes for one occasion. */
+        SuggestionsGetAllResponse: {
+            /** @description The suggestions, best first. */
+            items: components["schemas"]["SuggestionsGetAllSuggestion"][];
+        };
+        /** @description One recipe, and why it is here. */
+        SuggestionsGetAllSuggestion: {
+            /**
+             * Format: uuid
+             * @description The recipe's id.
+             */
+            recipeId: string;
+            /** @description What it is called. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Its hero image, if it has one.
+             */
+            imageId?: string | null;
+            /**
+             * Format: int32
+             * @description Prep plus cook, or null when neither is known.
+             */
+            totalMinutes?: number | null;
+            /**
+             * Format: double
+             * @description How many it makes.
+             */
+            yieldAmount: number;
+            /** @description `servings` or `pieces`. */
+            yieldKind: string;
+            /** @description Its tags. */
+            tags: string[];
+            /**
+             * Format: int32
+             * @description How many times the caller has made it.
+             */
+            cookCount: number;
+            /**
+             * Format: date-time
+             * @description When the caller last made it, or null.
+             */
+            lastCookedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When the recipe last changed.
+             */
+            updatedAt: string;
+            reason?: (null) | components["schemas"]["SuggestionsGetAllSuggestionReasonView"];
+        };
+        /** @description Why a recipe was suggested. */
+        SuggestionsGetAllSuggestionReasonView: {
+            /**
+             * @description One of `affinity`, `rediscovery`, `tag`,
+             *     `ingredient`, `season`, `slot`, `household`,
+             *     `fresh`, `similar`. Branch on it.
+             */
+            code: string;
+            /**
+             * @description What the reason is about — a tag, an ingredient name, or a member's
+             *     display name — when it is about something nameable.
+             */
+            subject?: string | null;
         };
         /** @description One household the user belongs to. */
         UsersGetCurrentHouseholdMembership: {
@@ -5978,6 +6099,139 @@ export interface operations {
                 content: {
                     "text/event-stream": components["schemas"]["RecipesSourcesImportEvent"];
                 };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSuggestionsV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+                purpose?: string;
+                slot?: string;
+                maxMinutes?: number;
+                likeRecipeId?: string;
+                limit?: number;
+                tag?: string[];
+                ingredient?: string[];
+                exclude?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestionsGetAllResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    dismissSuggestionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    restoreSuggestionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unauthorized */
             401: {

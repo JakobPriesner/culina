@@ -4644,6 +4644,228 @@
           }
         }
       }
+    },
+    "/api/v1/suggestions": {
+      "get": {
+        "tags": [
+          "Suggestions"
+        ],
+        "summary": "Suggest recipes for an occasion",
+        "description": "A small, bounded set with a reason for each, best first. Deliberately not paged: ranking the whole collection is `GET /recipes?sort=suggested`, which pages and composes with every other filter.\n\nContext is supplied here rather than stored on a recipe, because whether something is breakfast is a fact about the occasion and about how this household plans, not a property of the food. `slot`, `maxMinutes`, `tag` and `ingredient` are the caller's constraints and are honoured exactly; `exclude` is what the caller already has on screen.\n\n`likeRecipeId` asks for recipes resembling one, by shared ingredients and tags rather than by who else cooked them — with this many people, co-occurrence between two recipes is noise, and 'uses eleven of the same twelve ingredients' is not.\n\n`reason` is null whenever no single signal decided the ranking. That is an ordinary answer and means show nothing: an invented explanation discredits the ones that were true.",
+        "operationId": "getSuggestionsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "purpose",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxMinutes",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "likeRecipeId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "ingredient",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "exclude",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionsGetAllResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipes/{recipeId}/suggestion-dismissal": {
+      "put": {
+        "tags": [
+          "Suggestions"
+        ],
+        "summary": "Stop suggesting a recipe to me",
+        "description": "Person-owned, like a note or the cook log. Hiding a recipe from your suggestions says nothing about anybody else in the household and does not touch the recipe itself, which stays in the collection and in every search.\n\nIt expires, so \"not tonight\" does not quietly become \"never again\". This is the only signal the ranking cannot derive from something another feature already records — with a household this size there is no such thing as a meaningful non-click, so the one negative signal has to be asked for.",
+        "operationId": "dismissSuggestionV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Suggestions"
+        ],
+        "summary": "Suggest a recipe to me again",
+        "description": "The undo behind the toast, so it is as forgiving as the dismissal: `204`, and `204` again when the recipe was never hidden.",
+        "operationId": "restoreSuggestionV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5760,6 +5982,12 @@
             "type": "integer",
             "description": "How many times the caller has made it.",
             "format": "int32"
+          },
+          "lastCookedAt": {
+            "type": "string",
+            "description": "When the caller last made it, or null if they never have.",
+            "format": "date-time",
+            "nullable": true
           },
           "updatedAt": {
             "type": "string",
@@ -7210,6 +7438,121 @@
         },
         "description": "A change to one line."
       },
+      "SuggestionsGetAllResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuggestionsGetAllSuggestion"
+            },
+            "description": "The suggestions, best first."
+          }
+        },
+        "description": "A handful of recipes for one occasion."
+      },
+      "SuggestionsGetAllSuggestion": {
+        "required": [
+          "recipeId",
+          "title",
+          "yieldAmount",
+          "yieldKind",
+          "tags",
+          "cookCount",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe's id.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Its hero image, if it has one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "Prep plus cook, or null when neither is known.",
+            "format": "int32",
+            "nullable": true
+          },
+          "yieldAmount": {
+            "type": "number",
+            "description": "How many it makes.",
+            "format": "double"
+          },
+          "yieldKind": {
+            "type": "string",
+            "description": "`servings` or `pieces`."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its tags."
+          },
+          "cookCount": {
+            "type": "integer",
+            "description": "How many times the caller has made it.",
+            "format": "int32"
+          },
+          "lastCookedAt": {
+            "type": "string",
+            "description": "When the caller last made it, or null.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When the recipe last changed.",
+            "format": "date-time"
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/SuggestionsGetAllSuggestionReasonView"
+              }
+            ]
+          }
+        },
+        "description": "One recipe, and why it is here."
+      },
+      "SuggestionsGetAllSuggestionReasonView": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "One of `affinity`, `rediscovery`, `tag`,\n`ingredient`, `season`, `slot`, `household`,\n`fresh`, `similar`. Branch on it."
+          },
+          "subject": {
+            "type": "string",
+            "description": "What the reason is about — a tag, an ingredient name, or a member's\ndisplay name — when it is about something nameable.",
+            "nullable": true
+          }
+        },
+        "description": "Why a recipe was suggested."
+      },
       "UsersGetCurrentHouseholdMembership": {
         "required": [
           "householdId",
@@ -7520,6 +7863,9 @@
     },
     {
       "name": "RecipeSources"
+    },
+    {
+      "name": "Suggestions"
     }
   ]
 }

@@ -60,4 +60,15 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
     /// reproduce.
     /// </remarks>
     internal static string Key(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// A suggestion score, round-tripped exactly.
+    /// </summary>
+    /// <remarks>
+    /// The same rule one type along. "G" is decimal's round-trip format, and
+    /// the scoring already rounds to six places before this sees one — so the
+    /// cursor carries the number the order was cut on rather than a number near
+    /// it.
+    /// </remarks>
+    internal static string Key(decimal value) => value.ToString("G", CultureInfo.InvariantCulture);
 }

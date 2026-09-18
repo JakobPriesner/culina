@@ -14,6 +14,7 @@ const recipe = (over: Partial<RecipeSummary> = {}): RecipeSummary => ({
   yieldKind: 'servings',
   tags: ['Weeknight'],
   cookCount: 0,
+  lastCookedAt: null,
   updatedAt: '2026-09-12T00:00:00Z',
   match: null,
   ...over
