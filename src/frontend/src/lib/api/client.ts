@@ -23,9 +23,13 @@ const defaultTimeoutMs = 15_000;
  * Everything else here is this server answering from its own database, which is
  * fast or broken. Reading a connected recipe library is neither: one request
  * becomes a handful of round trips to an instance that may be on the other side
- * of a domestic upload, and then some image work. Fifteen seconds is right for
- * a database read and simply wrong for that — it aborted whole batches of
- * recipes and reported every one of them as unreadable.
+ * of a domestic upload. Fifteen seconds is right for a database read and simply
+ * wrong for that — it aborted whole pages of somebody's library and reported
+ * every recipe in them as unreadable.
+ *
+ * Bringing the recipes over is no longer one of these calls: that request only
+ * starts an import and the recipes arrive over a stream, which has no deadline
+ * because it is not a request that is waiting for an answer.
  */
 const sourceTimeoutMs = 60_000;
 

@@ -183,6 +183,12 @@
   <div class="bar">
     <p class="chosen" role="status">{m['import.library.chosen']({ count: chosen.length })}</p>
 
+    {#if sources.importError}
+      <!-- The selection is still on screen, so the refusal goes next to the
+           button rather than replacing everything with an error page. -->
+      <p class="refused" role="alert">{explain(sources.importError)}</p>
+    {/if}
+
     <Button variant="primary" onclick={() => onimport([...chosen])}>
       {m['import.library.bringOver']()}
     </Button>
@@ -279,6 +285,11 @@
     border-radius: var(--radius-lg);
     background: var(--surface-raised);
     box-shadow: var(--shadow-card);
+  }
+
+  .refused {
+    color: var(--text-danger);
+    font-size: var(--text-sm);
   }
 
   .chosen {

@@ -51,9 +51,9 @@
   "me.appearance": "Darstellung",
   "me.household": "Haushalt",
   "me.theme": "Darstellung",
-  "me.title": "Ich",
+  "me.title": "Settings",
   "nav.label": "Bereiche",
-  "nav.me": "Ich",
+  "nav.me": "Settings",
   "nav.plan": "Woche",
   "nav.recipes": "Rezepte",
   "nav.shopping": "Einkauf",
@@ -626,5 +626,7 @@
   "import.source.passwordHint": "Wird einmal an diese App geschickt, um einen Token zu holen, und dann verworfen. Hier wird es nie gespeichert.",
   "import.source.openTokenPage": "{where} öffnen und einen anlegen",
   "import.library.loadingAll": "Der Rest wird geholt…",
-  "import.library.moreFailed": "Der Rest der Sammlung konnte nicht gelesen werden. Versuch die Suche oder komm gleich wieder."
+  "import.library.moreFailed": "Der Rest der Sammlung konnte nicht gelesen werden. Versuch die Suche oder komm gleich wieder.",
+  "import.run.lost": "Diese Seite verfolgt den Import nicht mehr.",
+  "import.run.lookAgain": "Noch einmal nachsehen"
 }

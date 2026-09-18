@@ -1010,17 +1010,45 @@ export interface paths {
         put?: never;
         /**
          * Bring recipes over from a connected library
-         * @description A batch of at most 25, not a whole library. The caller walks its own selection a batch at a time, which is what makes an import of eight hundred recipes show honest progress and survive a closed laptop — every batch is a complete request, and asking twice is asking once.
+         * @description Names the whole selection, and comes back as soon as the import has an id and a shelf — usually in milliseconds. The recipes arrive afterwards, brought over by a background worker a few at a time. Follow it at `/recipe-sources/{sourceId}/imports/{importId}/events`, which is where every outcome is reported.
          *
-         *     Idempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later.
+         *     The import belongs to the server, not to the tab that asked for it. Nobody has to stay and watch: a closed laptop costs the progress display and nothing else.
          *
-         *     Everything from one import lands on a cookbook named after where it came from and when. Pass that `cookbookId` back on every batch after the first, so a selection imported in twenty requests is one shelf rather than twenty. The shelf is what makes an import something you can look at, check, and throw away.
+         *     Idempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later, and why an import that was interrupted can simply be asked for again.
+         *
+         *     Everything from one import lands on a cookbook named after where it came from and when, and this answer says which — so the way out of the screen exists before the first recipe does. The shelf is what makes an import something you can look at, check, and throw away.
          *
          *     A recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.
          *
-         *     One line comes back per recipe asked for — `imported`, `already_here` or `failed` — so the twelve that could not be read can be shown by name. One recipe failing never undoes the others: each is written in its own transaction.
+         *     One recipe failing never undoes the others: each is written in its own transaction, and reported on its own line.
          */
         post: operations["importFromRecipeSourceV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-sources/{sourceId}/imports/{importId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Follow an import that is running
+         * @description Server-sent events: one per recipe finished, in the order they finished, and a last one with no recipe on it saying the run is over.
+         *
+         *     It replays before it waits. Every event carries an id, and a reconnect that sends `Last-Event-ID` picks up from exactly there — a connection that dropped in the middle loses nothing and repeats nothing. A stream opened for the first time is the same thing with nothing to skip, which is what makes following an import from another device work.
+         *
+         *     A silent stream sends an event with no recipe on it every fifteen seconds. A recipe can take a while, and a connection that says nothing for minutes is one a proxy will close.
+         *
+         *     Only the person who started an import may follow it, and a run is forgotten half an hour after it ends — both are 404, because neither is worth telling a stranger apart.
+         */
+        get: operations["watchRecipeImportV1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1959,27 +1987,46 @@ export interface components {
             /** @description What to call it here. Its host name, when this is left out. */
             label?: string | null;
         };
+        /** @description One line of an import's progress, as the stream sends it. */
+        RecipesSourcesImportEvent: {
+            recipe?: (null) | components["schemas"]["RecipesSourcesImportedRecipe"];
+            /**
+             * Format: int32
+             * @description How many of the selection have been tried, including this one.
+             */
+            done: number;
+            /**
+             * Format: int32
+             * @description How many were asked for.
+             */
+            total: number;
+            /** @description True on the last event, and only then. */
+            finished: boolean;
+        };
         /** @description Asks for some of their recipes to be brought over. */
         RecipesSourcesImportFromSourceRequest: {
             /** @description Which of their recipes, by the id the browse gave back. */
             externalIds: string[];
-            /**
-             * Format: uuid
-             * @description The cookbook to put them on, from a previous batch's response.
-             */
-            cookbookId?: string | null;
         };
-        /** @description What one batch of an import did. */
-        RecipesSourcesImportFromSourceResponse: {
+        /** @description An import that has been accepted and is now running. */
+        RecipesSourcesImportStartedResponse: {
             /**
              * Format: uuid
-             * @description The cookbook everything from this import went onto.
+             * @description Which import. Stream it at `imports/{importId}/events`.
+             */
+            importId: string;
+            /**
+             * Format: uuid
+             * @description The cookbook everything from this import is going onto.
              */
             cookbookId: string;
             /** @description What it is called. */
             cookbookName: string;
-            /** @description One line per recipe asked for, in the order they were asked for. */
-            results: components["schemas"]["RecipesSourcesImportedRecipe"][];
+            /**
+             * Format: int32
+             * @description How many recipes were asked for.
+             */
+            total: number;
         };
         /** @description What happened to one recipe. */
         RecipesSourcesImportedRecipe: {
@@ -5864,13 +5911,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Accepted */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecipesSourcesImportFromSourceResponse"];
+                    "application/json": components["schemas"]["RecipesSourcesImportStartedResponse"];
                 };
             };
             /** @description Bad Request */
@@ -5902,6 +5949,47 @@ export interface operations {
             };
             /** @description Too Many Requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    watchRecipeImportV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: string;
+                importId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["RecipesSourcesImportEvent"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

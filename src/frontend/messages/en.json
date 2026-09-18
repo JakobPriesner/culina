@@ -51,9 +51,9 @@
   "me.appearance": "Appearance",
   "me.household": "Household",
   "me.theme": "Theme",
-  "me.title": "Me",
+  "me.title": "Settings",
   "nav.label": "Sections",
-  "nav.me": "Me",
+  "nav.me": "Settings",
   "nav.plan": "Week",
   "nav.recipes": "Recipes",
   "nav.shopping": "Shopping",
@@ -626,5 +626,7 @@
   "import.source.passwordHint": "Sent once to that app to fetch a token, then dropped. It is never stored here.",
   "import.source.openTokenPage": "Open {where} to make one",
   "import.library.loadingAll": "Fetching the rest…",
-  "import.library.moreFailed": "The rest of the library could not be read. Try the search, or come back in a moment."
+  "import.library.moreFailed": "The rest of the library could not be read. Try the search, or come back in a moment.",
+  "import.run.lost": "This page has stopped following the import.",
+  "import.run.lookAgain": "Look again"
 }

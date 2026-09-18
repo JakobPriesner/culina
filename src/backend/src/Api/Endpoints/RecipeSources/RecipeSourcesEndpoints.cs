@@ -3,6 +3,7 @@ using Api.Endpoints.RecipeSources.Connect.V1;
 using Api.Endpoints.RecipeSources.Disconnect.V1;
 using Api.Endpoints.RecipeSources.GetAll.V1;
 using Api.Endpoints.RecipeSources.Import.V1;
+using Api.Endpoints.RecipeSources.Watch.V1;
 
 namespace Api.Endpoints.RecipeSources;
 
@@ -23,5 +24,6 @@ internal static class RecipeSourcesEndpoints
             .AddSingleton<IEndpoint, GetRecipeSourcesEndpoint>()
             .AddSingleton<IEndpoint, DisconnectRecipeSourceEndpoint>()
             .AddSingleton<IEndpoint, BrowseRecipeSourceEndpoint>()
-            .AddSingleton<IEndpoint, ImportFromRecipeSourceEndpoint>();
+            .AddSingleton<IEndpoint, ImportFromRecipeSourceEndpoint>()
+            .AddSingleton<IEndpoint, WatchRecipeImportEndpoint>();
 }

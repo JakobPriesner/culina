@@ -142,45 +142,64 @@ public sealed record ImportFromSourceRequest
     /// Which of their recipes, by the id the browse gave back.
     /// </summary>
     /// <remarks>
-    /// A batch rather than the whole library, and a small one. The client walks
-    /// its own selection a batch at a time, which is what makes an import of
-    /// eight hundred recipes show honest progress, survive a closed laptop, and
-    /// need no job queue behind it: every batch is a complete, idempotent
-    /// request.
+    /// The whole selection, in one request. It names the work rather than doing
+    /// it: the answer comes back as soon as the import has a name and a shelf,
+    /// and the recipes arrive afterwards, over the stream.
     /// </remarks>
     public required IReadOnlyList<string> ExternalIds { get; init; }
-
-    /// <summary>
-    /// The cookbook to put them on, from a previous batch's response.
-    /// </summary>
-    /// <remarks>
-    /// Left out on the first batch, which makes one; passed back on every batch
-    /// after it, so a selection imported in twenty requests lands on one shelf
-    /// rather than twenty.
-    /// </remarks>
-    public Guid? CookbookId { get; init; }
 }
 
-/// <summary>What one batch of an import did.</summary>
-public sealed record ImportFromSourceResponse
+/// <summary>An import that has been accepted and is now running.</summary>
+/// <remarks>
+/// Everything a caller needs to follow it and to leave: the id of the stream to
+/// listen on, and the shelf the recipes are landing on whether or not anybody
+/// is still watching.
+/// </remarks>
+public sealed record ImportStartedResponse
 {
+    /// <summary>Which import. Stream it at <c>imports/{importId}/events</c>.</summary>
+    public required Guid ImportId { get; init; }
+
     /// <summary>
-    /// The cookbook everything from this import went onto.
+    /// The cookbook everything from this import is going onto.
     /// </summary>
     /// <remarks>
-    /// The whole of "what just happened, and how do I undo it". Four hundred
-    /// recipes arriving into a library is invisible; four hundred recipes on a
-    /// shelf called "From Tandoor, 17 September" is a thing you can look at,
-    /// share, and delete.
+    /// Known before the first recipe is fetched, which is what lets the screen
+    /// offer the way out of it from the beginning. Four hundred recipes
+    /// arriving into a library is invisible; four hundred recipes on a shelf
+    /// called "From Tandoor, 17 September" is a thing you can look at, share,
+    /// and delete.
     /// </remarks>
     public required Guid CookbookId { get; init; }
 
     /// <summary>What it is called.</summary>
     public required string CookbookName { get; init; }
 
-    /// <summary>One line per recipe asked for, in the order they were asked for.</summary>
-    public required IReadOnlyList<ImportedRecipe> Results { get; init; }
+    /// <summary>How many recipes were asked for.</summary>
+    public required int Total { get; init; }
 }
+
+/// <summary>One line of an import's progress, as the stream sends it.</summary>
+/// <remarks>
+/// One event per recipe finished, in the order they finished, and one last
+/// event with no recipe on it saying the run is over. Every event carries the
+/// running count, so a client that joined late or missed one is still right.
+/// </remarks>
+public sealed record ImportEvent
+{
+    /// <summary>What happened to one recipe, or null on the last event.</summary>
+    public ImportedRecipe? Recipe { get; init; }
+
+    /// <summary>How many of the selection have been tried, including this one.</summary>
+    public required int Done { get; init; }
+
+    /// <summary>How many were asked for.</summary>
+    public required int Total { get; init; }
+
+    /// <summary>True on the last event, and only then.</summary>
+    public required bool Finished { get; init; }
+}
+
 
 /// <summary>What happened to one recipe.</summary>
 public sealed record ImportedRecipe

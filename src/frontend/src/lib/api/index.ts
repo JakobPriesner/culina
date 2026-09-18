@@ -7,6 +7,7 @@
  * remember CSRF, conditional requests and the shape of a failure.
  */
 export { http, request } from './client';
+export { watch, type Stream } from './events';
 export { ErrorCodes, type AppError, type FieldProblem } from './problem';
 export { err, ok, type Err, type Ok, type Result } from './result';
 export { handleSessionExpiry } from './session';
