@@ -175,6 +175,7 @@ internal sealed class ExportArchiveQueryHandler(
             Language = RecipeWords.Of(recipe.Language),
             YieldAmount = recipe.Yield.Amount,
             YieldKind = RecipeWords.Of(recipe.Yield.Kind),
+            YieldLabel = recipe.Yield.Label,
             PrepMinutes = recipe.PrepMinutes,
             CookMinutes = recipe.CookMinutes,
             Tags = [.. recipe.Tags],
@@ -228,7 +229,8 @@ internal sealed class ExportArchiveQueryHandler(
                 })
             ],
             step.DurationSeconds,
-            [.. step.Uses.Where(order.ContainsKey).Select(id => order[id]).Order()]);
+            [.. step.Uses.Where(order.ContainsKey).Select(id => order[id]).Order()],
+            step.Title);
     }
 
     private async Task<ArchivedImage?> ToArchivedImageAsync(

@@ -647,5 +647,14 @@
   "recipes.sort.suggested": "For tonight",
   "suggestions.deck.previous": "Previous suggestion",
   "suggestions.deck.next": "Next suggestion",
-  "suggestions.deck.position": "{at} of {of}"
+  "suggestions.deck.position": "{at} of {of}",
+  "recipe.ingredientsView.label": "How the ingredients are shown",
+  "recipe.ingredientsView.combined": "All",
+  "recipe.ingredientsView.perStep": "By step",
+  "recipe.notInAnyStep": "Not tied to a step",
+  "recipes.meta.yieldLabel": "{count} {label}",
+  "editor.yieldLabel": "Of what",
+  "editor.yieldLabelHint": "Leave it empty for portions. Write “Cake”, “jars”, “tray” and the recipe says that instead.",
+  "editor.stepTitle": "What step {number} is called",
+  "editor.stepTitlePlaceholder": "Step {number}"
 }

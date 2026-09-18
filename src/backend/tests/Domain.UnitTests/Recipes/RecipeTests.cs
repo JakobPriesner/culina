@@ -321,6 +321,93 @@ public class RecipeTests
     }
 
     [Fact]
+    public void Step_ShouldTakeATitle_SoALayeredRecipeCanNameItsParts()
+    {
+        // Arrange & Act
+        var step = Step.Create(
+            null,
+            0,
+            [new TextSegment("Rub the butter into the flour.")],
+            [],
+            null,
+            "  Prepare the base  ").ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal("Prepare the base", step.Title);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Step_ShouldReadABlankTitleAsNoTitle_SoClearingTheFieldGivesTheNumberBack(
+        string? title)
+    {
+        // Arrange & Act
+        var step = Step.Create(null, 0, [new TextSegment("Bake.")], [], null, title)
+            .ShouldBeSuccess();
+
+        // Assert
+        Assert.Null(step.Title);
+    }
+
+    [Fact]
+    public void Step_ShouldRejectATitleLongEnoughToBeTheInstruction()
+    {
+        // Arrange & Act
+        var result = Step.Create(
+            null,
+            0,
+            [new TextSegment("Bake.")],
+            [],
+            null,
+            new string('x', Step.MaxTitleLength + 1));
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.InvalidStepTitle);
+    }
+
+    [Fact]
+    public void Yield_ShouldTakeARecipesOwnWord_SoACakeIsNotFourPortions()
+    {
+        // Arrange & Act
+        var measure = Yield.Create(1m, YieldKind.Servings, "  Cake  ").ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal("Cake", measure.Label);
+        // The word replaces the wording and nothing else: the kind still says
+        // how the servings control counts.
+        Assert.Equal(YieldKind.Servings, measure.Kind);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Yield_ShouldReadABlankWordAsNoWord_SoAnEmptiedFieldIsNotAYieldOfNothing(
+        string? label)
+    {
+        // Arrange & Act
+        var measure = Yield.Create(4m, YieldKind.Servings, label).ShouldBeSuccess();
+
+        // Assert
+        Assert.Null(measure.Label);
+    }
+
+    [Fact]
+    public void Yield_ShouldRejectAWordLongEnoughToBeASentence()
+    {
+        // Arrange & Act
+        var result = Yield.Create(
+            4m,
+            YieldKind.Servings,
+            new string('x', Yield.MaxLabelLength + 1));
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.InvalidYieldLabel);
+    }
+
+    [Fact]
     public void Ingredient_ShouldKeepThePreparationOutOfTheName_SoShoppingCanMerge()
     {
         // Arrange & Act

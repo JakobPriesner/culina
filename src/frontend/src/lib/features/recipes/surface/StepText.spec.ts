@@ -27,7 +27,7 @@ const butter = {
 };
 
 const step = (segments: Step['segments']): Step =>
-  ({ id: 's1', segments, uses: [], durationSeconds: null }) as Step;
+  ({ id: 's1', title: null, segments, uses: [], durationSeconds: null }) as Step;
 
 describe('StepText', () => {
   it('keeps the line breaks the step was written with', () => {

@@ -9,6 +9,7 @@
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
   import { withoutIngredients } from '$features/recipes/editor/stepUsage';
+  import { yieldNoun } from '$features/recipes/yieldWords';
   import { ErrorCodes, type AppError } from '$api';
   import { forget, recall, remember } from '$features/recipes/editor/journal';
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
@@ -379,6 +380,27 @@
               inputmode="numeric"
               value={String(current.yieldAmount)}
               oninput={(value) => change({ yieldAmount: Number(value) || 1 })}
+            />
+          {/snippet}
+        </Field>
+
+        <!-- Placeholdered with the word the recipe would use anyway, which is
+             the whole explanation of what this field is for: it is already
+             showing the answer, and typing over it is how you change it. -->
+        <Field
+          label={m['editor.yieldLabel']()}
+          hint={m['editor.yieldLabelHint']()}
+          optionalText={m['editor.optional']()}
+        >
+          {#snippet children({ id, describedBy, invalid })}
+            <TextInput
+              {id}
+              {describedBy}
+              {invalid}
+              maxlength={40}
+              placeholder={yieldNoun({ yieldKind: current.yieldKind, yieldLabel: null })}
+              value={current.yieldLabel ?? ''}
+              oninput={(value) => change({ yieldLabel: value.trim() ? value : null })}
             />
           {/snippet}
         </Field>

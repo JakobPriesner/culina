@@ -78,7 +78,7 @@ internal sealed class RecipeRepository(
         var reader = await executor.QueryMultipleAsync(
             """
             select id, household_id, title, description, language as recipe_language,
-                   yield_amount, yield_kind, prep_minutes, cook_minutes, image_id,
+                   yield_amount, yield_kind, yield_label, prep_minutes, cook_minutes, image_id,
                    created_by, created_at, updated_at, version
             from recipes where id = @recipeId;
 
@@ -91,7 +91,7 @@ internal sealed class RecipeRepository(
             where g.recipe_id = @recipeId
             order by i.sort_order;
 
-            select id, recipe_id, sort_order, body, duration_seconds
+            select id, recipe_id, sort_order, title, body, duration_seconds
             from steps where recipe_id = @recipeId order by sort_order;
 
             select r.step_id, r.recipe_ingredient_id
@@ -138,11 +138,11 @@ internal sealed class RecipeRepository(
         await executor.ExecuteAsync(
             """
             insert into recipes (id, household_id, title, description, language, yield_amount,
-                                 yield_kind, prep_minutes, cook_minutes, image_id, created_by,
-                                 created_at, updated_at, version)
+                                 yield_kind, yield_label, prep_minutes, cook_minutes, image_id,
+                                 created_by, created_at, updated_at, version)
             values (@id, @householdId, @title, @description, @language, @yieldAmount,
-                    @yieldKind, @prepMinutes, @cookMinutes, @imageId, @createdBy,
-                    @createdAt, @updatedAt, 1);
+                    @yieldKind, @yieldLabel, @prepMinutes, @cookMinutes, @imageId,
+                    @createdBy, @createdAt, @updatedAt, 1);
             """,
             Parameters(recipe),
             cancellationToken).ConfigureAwait(false);
@@ -164,6 +164,7 @@ internal sealed class RecipeRepository(
             update recipes
             set title = @title, description = @description, language = @language,
                 yield_amount = @yieldAmount, yield_kind = @yieldKind,
+                yield_label = @yieldLabel,
                 prep_minutes = @prepMinutes, cook_minutes = @cookMinutes,
                 image_id = @imageId, updated_at = @updatedAt, version = version + 1
             where id = @id and version = @expectedVersion
@@ -286,6 +287,7 @@ internal sealed class RecipeRepository(
         language = RecipeCodes.Of(recipe.Language),
         yieldAmount = recipe.Yield.Amount,
         yieldKind = RecipeCodes.Of(recipe.Yield.Kind),
+        yieldLabel = recipe.Yield.Label,
         prepMinutes = recipe.PrepMinutes,
         cookMinutes = recipe.CookMinutes,
         imageId = recipe.ImageId,
@@ -351,14 +353,15 @@ internal sealed class RecipeRepository(
         {
             await executor.ExecuteAsync(
                 """
-                insert into steps (id, recipe_id, sort_order, body, duration_seconds)
-                values (@id, @recipeId, @sortOrder, @body, @durationSeconds);
+                insert into steps (id, recipe_id, sort_order, title, body, duration_seconds)
+                values (@id, @recipeId, @sortOrder, @title, @body, @durationSeconds);
                 """,
                 new
                 {
                     id = step.Id,
                     recipeId = recipe.Id,
                     sortOrder = step.SortOrder,
+                    title = step.Title,
                     body = StepText.Serialise(step.Segments),
                     durationSeconds = step.DurationSeconds
                 },

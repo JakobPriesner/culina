@@ -5,6 +5,7 @@ import type { Step } from '../types';
 
 const step = (uses: string[], segments: Step['segments'] = []): Step => ({
   id: null,
+  title: null,
   segments,
   uses,
   durationSeconds: null

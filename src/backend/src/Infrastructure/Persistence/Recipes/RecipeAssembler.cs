@@ -44,7 +44,12 @@ internal static class RecipeAssembler
                 recipe.Title,
                 row.Description,
                 RecipeCodes.ToLanguage(row.RecipeLanguage),
-                Unwrap(Yield.Create(row.YieldAmount, RecipeCodes.ToYieldKind(row.YieldKind)), "yield"),
+                Unwrap(
+                    Yield.Create(
+                        row.YieldAmount,
+                        RecipeCodes.ToYieldKind(row.YieldKind),
+                        row.YieldLabel),
+                    "yield"),
                 row.PrepMinutes,
                 row.CookMinutes,
                 tagSlugs),
@@ -96,7 +101,8 @@ internal static class RecipeAssembler
                 row.SortOrder,
                 Unwrap(StepText.Parse(row.Body), "step text"),
                 uses.GetValueOrDefault(row.Id, []),
-                row.DurationSeconds),
+                row.DurationSeconds,
+                row.Title),
             "step");
 
     private static void Expect(Result result, string what) =>

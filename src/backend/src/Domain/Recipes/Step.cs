@@ -18,15 +18,25 @@ public sealed class Step
     /// <summary>The longest timer a step may start: one day.</summary>
     public const int MaxDurationSeconds = 86_400;
 
+    /// <summary>The longest a step's title may be.</summary>
+    /// <remarks>
+    /// A tenth of the text it heads. A title long enough to hold the
+    /// instruction is a second copy of the instruction, and the two would
+    /// disagree by the third edit.
+    /// </remarks>
+    public const int MaxTitleLength = 120;
+
     private Step(
         Guid id,
         int sortOrder,
+        string? title,
         IReadOnlyList<StepSegment> segments,
         IReadOnlySet<Guid> uses,
         int? durationSeconds)
     {
         Id = id;
         SortOrder = sortOrder;
+        Title = title;
         Segments = segments;
         Uses = uses;
         DurationSeconds = durationSeconds;
@@ -37,6 +47,17 @@ public sealed class Step
 
     /// <summary>Where it appears.</summary>
     public int SortOrder { get; }
+
+    /// <summary>
+    /// What this step is called, when it is called anything.
+    /// </summary>
+    /// <remarks>
+    /// Null for most steps, and that is the ordinary case: a step in a short
+    /// recipe is "step 3" and naming it would be ceremony. A recipe with a
+    /// base, a filling and a glaze is the other case, and there the number is
+    /// the least useful thing that could be written above the sentence.
+    /// </remarks>
+    public string? Title { get; }
 
     /// <summary>Its text, split into words and ingredient references.</summary>
     public IReadOnlyList<StepSegment> Segments { get; }
@@ -73,12 +94,14 @@ public sealed class Step
     /// <param name="segments">Its text.</param>
     /// <param name="uses">What it needs; the mentions are added to it.</param>
     /// <param name="durationSeconds">How long it takes, if it waits.</param>
+    /// <param name="title">What it is called, or null to be called by number.</param>
     public static Result<Step> Create(
         Guid? id,
         int sortOrder,
         IReadOnlyList<StepSegment> segments,
         IReadOnlyCollection<Guid> uses,
-        int? durationSeconds)
+        int? durationSeconds,
+        string? title = null)
     {
         ArgumentNullException.ThrowIfNull(segments);
         ArgumentNullException.ThrowIfNull(uses);
@@ -88,6 +111,15 @@ public sealed class Step
         if (length == 0 || length > MaxTextLength)
         {
             return RecipeErrors.InvalidStepText;
+        }
+
+        // Blank is not a name, so it is the absence of one — the same reading
+        // an emptied field gets everywhere else in a recipe.
+        var named = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+
+        if (named?.Length > MaxTitleLength)
+        {
+            return RecipeErrors.InvalidStepTitle;
         }
 
         if (durationSeconds is <= 0 or > MaxDurationSeconds)
@@ -108,6 +140,6 @@ public sealed class Step
 
         used.UnionWith(StepText.ReferencedIngredients(segments));
 
-        return new Step(id ?? CulinaId.New(), sortOrder, segments, used, durationSeconds);
+        return new Step(id ?? CulinaId.New(), sortOrder, named, segments, used, durationSeconds);
     }
 }

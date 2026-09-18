@@ -106,6 +106,7 @@ public sealed record RecipePage(
 /// <param name="TotalMinutes">Prep plus cook, or null.</param>
 /// <param name="YieldAmount">How many it makes.</param>
 /// <param name="YieldKind">Of what.</param>
+/// <param name="YieldLabel">The recipe's own word for it, or null for the usual one.</param>
 /// <param name="Tags">Its tag slugs.</param>
 /// <param name="CookCount">How often the caller has made it.</param>
 /// <param name="LastCookedAt">
@@ -125,6 +126,7 @@ public sealed record RecipeSearchRow(
     int? TotalMinutes,
     decimal YieldAmount,
     string YieldKind,
+    string? YieldLabel,
     IReadOnlyList<string> Tags,
     int CookCount,
     DateTimeOffset? LastCookedAt,

@@ -34,6 +34,17 @@ public sealed record Suggestion
     /// <summary><c>servings</c> or <c>pieces</c>.</summary>
     public required string YieldKind { get; init; }
 
+    /// <summary>
+    /// The recipe's own word for what it makes — "Cake", "Gläser", "Blech".
+    /// </summary>
+    /// <remarks>
+    /// Null for nearly every recipe, and a client must then word the yield from
+    /// <c>yieldKind</c> in the reader's language. When it is set it replaces
+    /// that word and is shown exactly as written — it is one person's noun in
+    /// one person's language, so nothing here pluralises or translates it.
+    /// </remarks>
+    public string? YieldLabel { get; init; }
+
     /// <summary>Its tags.</summary>
     public required IReadOnlyList<string> Tags { get; init; }
 

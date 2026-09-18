@@ -92,6 +92,7 @@ internal static class RecipeListMappings
         TotalMinutes = row.TotalMinutes,
         YieldAmount = row.YieldAmount,
         YieldKind = row.YieldKind,
+        YieldLabel = row.YieldLabel,
         Tags = row.Tags,
         CookCount = row.CookCount,
         LastCookedAt = row.LastCookedAt,

@@ -12,6 +12,7 @@ const recipe = (over: Partial<RecipeSummary> = {}): RecipeSummary => ({
   totalMinutes: 25,
   yieldAmount: 4,
   yieldKind: 'servings',
+  yieldLabel: null,
   tags: ['Weeknight'],
   cookCount: 0,
   lastCookedAt: null,

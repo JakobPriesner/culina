@@ -16,6 +16,7 @@ const suggestion = (reason: SuggestionReason | null): Suggestion => ({
   totalMinutes: 40,
   yieldAmount: 4,
   yieldKind: 'servings',
+  yieldLabel: null,
   tags: [],
   cookCount: 3,
   lastCookedAt: null,

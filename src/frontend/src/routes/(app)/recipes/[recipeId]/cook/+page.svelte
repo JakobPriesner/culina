@@ -160,6 +160,17 @@
 
   const stepTimer = $derived(timers.timers.find((timer) => timer.stepIndex === currentStep));
   const duration = $derived(recipes.detail?.steps[currentStep]?.durationSeconds ?? null);
+
+  /**
+   * What the timer is called once it has left the step behind.
+   *
+   * A timer outlives the screen it was started from — it shows in the bar with
+   * four others — so it takes the step's own name when there is one. "Proving"
+   * is findable among five running timers in a way "Step 3" is not.
+   */
+  const stepName = $derived(
+    recipes.detail?.steps[currentStep]?.title ?? m['recipe.step']({ number: currentStep + 1 })
+  );
 </script>
 
 <svelte:head>
@@ -197,8 +208,7 @@
           durationSeconds={duration}
           timer={stepTimer}
           secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
-          onstart={() =>
-            timers.start(currentStep, duration, m['recipe.step']({ number: currentStep + 1 }))}
+          onstart={() => timers.start(currentStep, duration, stepName)}
           ondismiss={() => timers.dismiss(currentStep)}
         />
       {/if}

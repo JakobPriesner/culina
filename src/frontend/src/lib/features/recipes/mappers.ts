@@ -35,6 +35,7 @@ export const toSummary = (wire: WireSummary): RecipeSummary => ({
   totalMinutes: wire.totalMinutes ?? null,
   yieldAmount: wire.yieldAmount,
   yieldKind: wire.yieldKind as YieldKind,
+  yieldLabel: wire.yieldLabel ?? null,
   tags: wire.tags,
   cookCount: wire.cookCount,
   lastCookedAt: wire.lastCookedAt ?? null,
@@ -55,6 +56,7 @@ export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
   totalMinutes: wire.totalMinutes ?? null,
   yieldAmount: wire.yieldAmount,
   yieldKind: wire.yieldKind as YieldKind,
+  yieldLabel: wire.yieldLabel ?? null,
   tags: wire.tags,
   cookCount: wire.cookCount,
   lastCookedAt: wire.lastCookedAt ?? null,
@@ -75,6 +77,7 @@ export const toRecipe = (wire: WireRecipe): Recipe => ({
   language: wire.language,
   yieldAmount: wire.yieldAmount,
   yieldKind: wire.yieldKind,
+  yieldLabel: wire.yieldLabel ?? null,
   prepMinutes: wire.prepMinutes ?? null,
   cookMinutes: wire.cookMinutes ?? null,
   totalMinutes: wire.totalMinutes ?? null,
@@ -114,6 +117,7 @@ const toIngredient = (wire: WireIngredient): Ingredient => ({
 
 const toStep = (wire: WireStep): Step => ({
   id: wire.stepId ?? null,
+  title: wire.title ?? null,
   segments: wire.segments.map(toSegment),
   uses: wire.uses ?? [],
   durationSeconds: wire.durationSeconds ?? null
@@ -153,6 +157,7 @@ export const toWireGroups = (groups: readonly IngredientGroup[]): WireGroup[] =>
 export const toWireSteps = (steps: readonly Step[]): WireStep[] =>
   steps.map((step) => ({
     stepId: step.id ?? undefined,
+    title: step.title ?? undefined,
     durationSeconds: step.durationSeconds ?? undefined,
     uses: [...step.uses],
     segments: step.segments.map((segment) =>

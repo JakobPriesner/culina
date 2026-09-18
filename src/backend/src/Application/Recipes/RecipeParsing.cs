@@ -27,7 +27,8 @@ internal static class RecipeParsing
                 Labelled(title, "title"),
                 Ignoring(language),
                 Ignoring(kind))
-            .Bind(() => kind.Bind(yieldKind => Yield.Create(draft.YieldAmount, yieldKind)))
+            .Bind(() => kind.Bind(yieldKind =>
+                Yield.Create(draft.YieldAmount, yieldKind, draft.YieldLabel)))
             .Bind(measure => title.Bind(value => language.Map(code => new RecipeDetails(
                 value,
                 draft.Description,
@@ -64,7 +65,8 @@ internal static class RecipeParsing
             sortOrder,
             [.. step.Segments.Select(ToSegment)],
             step.Uses ?? [],
-            step.DurationSeconds);
+            step.DurationSeconds,
+            step.Title);
 
     private static Result<IngredientGroup> ToGroup(IngredientGroupContract group, int sortOrder) =>
         group.Ingredients.Select(ToIngredient).Collect()

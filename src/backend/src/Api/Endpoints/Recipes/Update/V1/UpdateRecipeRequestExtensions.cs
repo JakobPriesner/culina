@@ -20,6 +20,7 @@ internal static class UpdateRecipeRequestExtensions
                 request.Language,
                 request.YieldAmount,
                 request.YieldKind,
+                request.YieldLabel,
                 request.PrepMinutes,
                 request.CookMinutes,
                 request.Tags),

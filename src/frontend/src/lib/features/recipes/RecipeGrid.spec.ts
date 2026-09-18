@@ -17,6 +17,7 @@ const recipe = (id: string): RecipeSummary => ({
   totalMinutes: 25,
   yieldAmount: 4,
   yieldKind: 'servings',
+  yieldLabel: null,
   tags: [],
   cookCount: 0,
   lastCookedAt: null,

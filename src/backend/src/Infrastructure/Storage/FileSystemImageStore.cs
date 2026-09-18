@@ -180,6 +180,15 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
 
         using (image)
         {
+            // A phone writes a photograph taken upright as landscape pixels
+            // plus an orientation tag, and that tag is the only thing saying
+            // which way up it goes. The re-encoding drops every tag — which is
+            // the entire point of it, for the one that says where the kitchen
+            // is — so the rotation has to be turned into pixels first. Without
+            // this, a photograph held upright is served on its side, and no
+            // amount of centring it in the frame puts the dish back in the
+            // middle.
+            image.Mutate(context => context.AutoOrient());
 
             var renditions = await RenderAsync(image, cancellationToken).ConfigureAwait(false);
             var hash = Convert.ToHexStringLower(SHA256.HashData(renditions[^1].Bytes));

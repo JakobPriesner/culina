@@ -20,6 +20,8 @@ internal sealed record RecipeRow
 
     public string YieldKind { get; init; } = "servings";
 
+    public string? YieldLabel { get; init; }
+
     public int? PrepMinutes { get; init; }
 
     public int? CookMinutes { get; init; }
@@ -73,6 +75,8 @@ internal sealed record StepRow
     public Guid RecipeId { get; init; }
 
     public int SortOrder { get; init; }
+
+    public string? Title { get; init; }
 
     public string Body { get; init; } = string.Empty;
 
