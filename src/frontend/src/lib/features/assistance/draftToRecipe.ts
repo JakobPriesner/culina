@@ -1,5 +1,3 @@
-import { toSegments } from '$features/recipes/editor/mentions';
-
 import type { Ingredient, Recipe, Step } from '$features/recipes/types';
 import type { components } from '$api/generated/schema';
 
@@ -72,11 +70,6 @@ export const anyAccepted = (accepted: Accepted): boolean => Object.values(accept
  * rather than six of each.
  */
 export function toPatch(draft: Draft, accepted: Accepted, current: Recipe): Partial<Recipe> {
-  // Whichever list the steps are about to sit beside: the new one when it was
-  // accepted, the one already there when it was not. Worked out before the
-  // patch because the steps are linked against it.
-  const ingredients = accepted.ingredients ? toIngredients(draft) : currentIngredients(current);
-
   return {
     ...(accepted.title && draft.title ? { title: draft.title } : {}),
     ...(accepted.description && draft.description ? { description: draft.description } : {}),
@@ -93,14 +86,15 @@ export function toPatch(draft: Draft, accepted: Accepted, current: Recipe): Part
         }
       : {}),
     ...(accepted.ingredients
-      ? { groups: [{ id: current.groups[0]?.id ?? null, name: null, ingredients }] }
+      ? {
+          groups: [
+            { id: current.groups[0]?.id ?? null, name: null, ingredients: toIngredients(draft) }
+          ]
+        }
       : {}),
-    ...(accepted.steps ? { steps: toSteps(draft, ingredients) } : {})
+    ...(accepted.steps ? { steps: toSteps(draft) } : {})
   };
 }
-
-const currentIngredients = (recipe: Recipe): Ingredient[] =>
-  recipe.groups.flatMap((group) => [...group.ingredients]);
 
 /**
  * The draft's lines, flattened into the one group the editor shows.
@@ -109,20 +103,12 @@ const currentIngredients = (recipe: Recipe): Ingredient[] =>
  * heading the person cannot see or move is a heading they cannot delete either.
  * What the model split into "for the sauce" and "for the topping" arrives in
  * that order, which is most of what the split was saying.
- *
- * Each line is given an id here rather than left blank for the server to fill
- * in, which is the difference between an improved recipe that keeps Culina's
- * second promise and one that quietly breaks it. A step refers to an ingredient
- * by id, so a list with no ids yet is a list no step can name — and accepting
- * new ingredients and new steps together, which is the ordinary thing to do,
- * would produce a recipe whose steps had lost every scalable amount. The server
- * takes the id it is given (`id ?? CulinaId.New()`), so minting it one step
- * earlier costs nothing and keeps the links.
  */
 function toIngredients(draft: Draft): Ingredient[] {
   return draft.groups.flatMap((group) =>
     group.ingredients.map((line) => ({
-      id: crypto.randomUUID(),
+      // No id: these are new lines, and the server allocates them on save.
+      id: '',
       quantity: { value: line.quantity ?? null, unit: line.unit ?? null },
       name: line.name,
       note: line.note ?? null
@@ -131,71 +117,26 @@ function toIngredients(draft: Draft): Ingredient[] {
 }
 
 /**
- * The draft's steps, with their ingredient references put back.
+ * The draft's steps, as words.
  *
- * A model answers in sentences, so a step arrives as words. Culina's second
- * promise is that a step knows which ingredients it uses — that is what lets an
- * amount inside a sentence scale — and a set of steps that had lost every link
- * would be a worse recipe than the one being improved.
+ * Not linked to the ingredients they name, although it is tempting and
+ * although the names are right there. The paste-import path next door says why
+ * it does not do this either: "guessing which ones were meant is the silent
+ * linking this editor deliberately stopped doing." A link that is wrong shows a
+ * scaled amount inside a sentence that was never about that ingredient, which
+ * is worse than no link at all — and the person is about to read every one of
+ * these steps anyway, where an `@` costs them one keystroke.
  *
- * So the names are found again here, deterministically, against the list that
- * is about to exist. Longest first, and only on a word boundary, so "oil" does
- * not match inside "olive oil" or inside "boiling".
+ * The cost is real: a recipe whose steps are replaced loses the links its old
+ * steps had. That is the same trade a pasted recipe makes, and it is the
+ * editor's rule rather than this feature's to change.
  */
-function toSteps(draft: Draft, ingredients: readonly Ingredient[]): Step[] {
+function toSteps(draft: Draft): Step[] {
   return draft.steps.map((step) => ({
     id: null,
     title: step.title ?? null,
-    segments: toSegments(withMentions(step.text, ingredients), ingredients),
+    segments: [{ kind: 'text' as const, text: step.text }],
     durationSeconds: step.durationSeconds ?? null,
     uses: []
   }));
 }
-
-/** The marker `toSegments` reads a mention from. */
-const marker = '@';
-
-/**
- * Marks each ingredient name found in a sentence, for `toSegments` to read.
- *
- * Reusing that function rather than matching here a second time: it already
- * knows how a mention is spelled and which name wins when two overlap, and two
- * answers to that question is one more than the app can have.
- */
-export function withMentions(text: string, ingredients: readonly Ingredient[]): string {
-  const names = ingredients
-    .map((one) => one.name)
-    .filter((name) => name.length > 1)
-    .sort((a, b) => b.length - a.length);
-
-  let marked = '';
-  let index = 0;
-
-  outer: while (index < text.length) {
-    if (isWordStart(text, index)) {
-      for (const name of names) {
-        if (matchesAt(text, index, name) && isWordEnd(text, index + name.length)) {
-          marked += marker + text.slice(index, index + name.length);
-          index += name.length;
-
-          continue outer;
-        }
-      }
-    }
-
-    marked += text[index];
-    index += 1;
-  }
-
-  return marked;
-}
-
-const isLetter = (character: string | undefined): boolean =>
-  character !== undefined && /[\p{L}\p{N}]/u.test(character);
-
-const isWordStart = (text: string, index: number): boolean => !isLetter(text[index - 1]);
-
-const isWordEnd = (text: string, index: number): boolean => !isLetter(text[index]);
-
-const matchesAt = (text: string, index: number, name: string): boolean =>
-  text.slice(index, index + name.length).toLocaleLowerCase() === name.toLocaleLowerCase();

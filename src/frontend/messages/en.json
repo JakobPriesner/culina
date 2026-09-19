@@ -839,5 +839,15 @@
   "assist.minutes": "{count} min",
   "assist.lines": "{count} lines",
   "assist.stepCount": "{count} steps",
-  "assist.warning": "Written by a model. Read it before you keep it."
+  "assist.warning": "Written by a model. Read it before you keep it.",
+  "assist.idea.title": "Describe it instead",
+  "assist.idea.hint": "Say roughly what you want to cook and the assistant writes a first draft.",
+  "assist.idea.label": "What do you feel like?",
+  "assist.idea.placeholder": "something with the aubergines and feta I have",
+  "assist.idea.write": "Write it",
+  "assist.idea.cancel": "Not now",
+  "assist.idea.working": "Writing a draft…",
+  "assist.idea.review": "The assistant's draft",
+  "assist.idea.keep": "Keep this",
+  "assist.idea.again": "Ask again"
 }

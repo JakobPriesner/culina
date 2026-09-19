@@ -12,11 +12,15 @@
     type LastDraft
   } from '$features/recipes/editor/lastDraft';
   import PasteImport from '$features/recipes/editor/PasteImport.svelte';
+  import IdeaDraft from '$features/assistance/IdeaDraft.svelte';
+  import { drafts } from '$features/assistance/stores/drafts.svelte';
+  import { acceptEverything, toPatch, type Draft } from '$features/assistance/draftToRecipe';
   import type { ParsedRecipe } from '$features/recipes/editor/parseRecipeText';
   import { toRecipe } from '$features/recipes/mappers';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
+  import { preferences } from '$shell/preferences.svelte';
   import Page from '$shell/Page.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
   import { onDestroy, onMount } from 'svelte';
@@ -40,6 +44,7 @@
 
   /** Whether the pasting box has been opened, which takes over the page. */
   let pasting = $state(false);
+  let describing = $state(false);
 
   const submission = createSubmission();
 
@@ -175,6 +180,54 @@
       await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: created }));
     }
   }
+
+  /**
+   * The same road as a pasted recipe: create with a title, then fill it in.
+   *
+   * Deliberately not a review dialog first. There is nothing to compare an
+   * assistant's draft against on this screen — the recipe does not exist yet —
+   * and a dialog asking somebody to approve a recipe they have not read is a
+   * dialog they will dismiss. The editor is the review: it opens with the draft
+   * in it, unsaved changes are the norm there, and deleting a recipe they did
+   * not want is one action away.
+   */
+  async function startFromDraft(written: Draft): Promise<void> {
+    const householdId = session.activeHouseholdId;
+
+    if (!householdId) {
+      return;
+    }
+
+    let created: string | null = null;
+    const named = written.title?.trim() || title.trim() || m['import.paste.untitled']();
+
+    const ok = await submission.run(async () => {
+      const outcome = await recipes.create(householdId, named);
+
+      if ('code' in outcome) {
+        return outcome;
+      }
+
+      created = outcome.id;
+
+      return recipes.update({
+        ...outcome,
+        ...toPatch(written, acceptEverything(written), outcome)
+      });
+    });
+
+    drafts.dismiss();
+
+    if (ok && created) {
+      const userId = session.user?.userId;
+
+      if (userId) {
+        rememberLastDraft(userId, householdId, created, named);
+      }
+
+      await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: created }));
+    }
+  }
 </script>
 
 <svelte:head><title>{m['editor.new']()}</title></svelte:head>
@@ -233,6 +286,16 @@
           busy={submission.showingProgress}
           onimport={(parsed) => void start(title.trim() || parsed.title, parsed)}
         />
+      {:else if describing}
+        <IdeaDraft
+          householdId={session.activeHouseholdId}
+          language={preferences.locale}
+          onwritten={(written) => void startFromDraft(written)}
+          oncancel={() => {
+            describing = false;
+            drafts.dismiss();
+          }}
+        />
       {:else}
         <!--
           The other two ways in, and both heavier than typing a name — so they
@@ -255,6 +318,15 @@
               <span class="way-title">{m['import.source.title']()}</span>
               <span class="way-body">{m['import.source.hint']()}</span>
             </a>
+
+            <!-- Third, and only where an assistant is connected. On every
+                 other instance this door is not shut — it is not there. -->
+            {#if session.user?.assistance.draft}
+              <button type="button" class="way" onclick={() => (describing = true)}>
+                <span class="way-title">{m['assist.idea.title']()}</span>
+                <span class="way-body">{m['assist.idea.hint']()}</span>
+              </button>
+            {/if}
           </div>
         </section>
       {/if}
