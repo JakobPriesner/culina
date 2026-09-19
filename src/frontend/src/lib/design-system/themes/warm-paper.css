@@ -17,6 +17,7 @@
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
   --surface-accent-subtle: var(--c-olive-100);
+  --surface-highlight: var(--c-olive-200);
   --surface-hover: var(--c-sand-100);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
@@ -66,6 +67,7 @@
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-sand-800);
   --surface-accent-subtle: var(--c-olive-800);
+  --surface-highlight: var(--c-olive-700);
   --surface-hover: var(--c-sand-800);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
