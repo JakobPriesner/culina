@@ -743,5 +743,20 @@
   "editor.stepsEmpty": "Noch keine Zubereitung. Der erste Schritt kommt hier darunter.",
   "editor.otherWays": "Oder von etwas ausgehen, das du schon hast",
   "recipe.moreActions": "Weitere Aktionen",
-  "shopping.progress": "{done} von {total} erledigt"
+  "shopping.progress": "{done} von {total} erledigt",
+  "me.members.title": "Wer hier kocht",
+  "me.members.body": "Alle, die hier Rezepte lesen, schreiben und auf die Einkaufsliste setzen können.",
+  "me.members.joined": "Dabei seit {when}",
+  "me.members.you": "Du",
+  "me.members.failed": "Wer hier kocht, konnte nicht geladen werden.",
+  "me.members.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Mitglied",
+        "countPlural=*": "{count} Mitglieder"
+      }
+    }
+  ]
 }
