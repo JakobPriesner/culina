@@ -43,10 +43,24 @@
   border-color: var(--danger);
 }
 
+/*
+ * The ring sits on the field's own edge, not three pixels outside it.
+ *
+ * The app's default focus treatment is a detached ring, which is right for the
+ * things that have no edge of their own — a card, a link, a tile. A field has
+ * one, and a second ring floating outside it reads as two outlines that failed
+ * to line up rather than as one control with focus. Here the outline continues
+ * the border it shares a colour with, and the two are one edge.
+ *
+ * The radius is restated because the app's default focus rule rounds to
+ * `--radius-sm`, and without this a field would change shape as it was tabbed
+ * into.
+ */
 .ds-control:focus-visible {
   border-color: var(--border-focus);
   outline: 2px solid var(--border-focus);
-  outline-offset: 3px;
+  outline-offset: 0;
+  border-radius: var(--radius-md);
 }
 
 /*
