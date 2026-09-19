@@ -65,8 +65,15 @@
     top: calc(100% - var(--space-1));
     max-height: 14rem;
     overflow-y: auto;
+    /* Gutter for a bar that takes width, padding for an overlay bar that does
+       not and is painted over the end of every suggestion instead. See
+       RecipePicker for why both are needed. */
+    scrollbar-gutter: stable;
+    /* The list hangs over the page; scrolling past its end must not take the
+       page with it and move the field the list belongs to. */
+    overscroll-behavior: contain;
     margin: 0;
-    padding: var(--space-1);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
     list-style: none;
     background: var(--surface-overlay);
     border: 1px solid var(--border);

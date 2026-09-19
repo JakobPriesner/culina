@@ -167,8 +167,33 @@
     padding: var(--space-2) var(--space-6) var(--space-6);
     min-height: 0;
     overflow-y: auto;
+    /* The gutter stops the body sliding sideways when its content outgrows
+       the panel, on the machines where the bar takes width. Where it is an
+       overlay it takes none and is painted over the content instead, which the
+       body's own inline padding already holds clear. */
+    scrollbar-gutter: stable;
     scroll-padding-block: var(--space-2);
     overscroll-behavior: contain;
+  }
+
+  /*
+   * A body whose content manages its own height stops being the scroller.
+   *
+   * Set by a feature that puts something pinned above a scrolling list — a
+   * search field above results. Without it the body and the list are both
+   * capped and both scroll, which on a short viewport is two bars ten pixels
+   * apart, with the wheel going to whichever the pointer is over.
+   */
+  .body:has(> :global([data-fills-dialog])) {
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  .body > :global([data-fills-dialog]) {
+    min-height: 0;
+    flex: 1;
   }
 
   .footer {

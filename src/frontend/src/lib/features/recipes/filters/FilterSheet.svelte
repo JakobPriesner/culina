@@ -179,6 +179,14 @@
        the time filter off the sheet. */
     max-height: 14rem;
     overflow-y: auto;
+    /* Gutter for a bar that takes width, padding for an overlay bar that does
+       not and is painted over the tags instead. See RecipePicker for why both
+       are needed. */
+    scrollbar-gutter: stable;
+    padding-inline-end: var(--space-2);
+    /* A bounded list inside a sheet that also scrolls: without this, reaching
+       the end of the tags carries on and scrolls the sheet behind them. */
+    overscroll-behavior: contain;
   }
 
   .empty {

@@ -170,7 +170,10 @@
     display: flex;
     gap: var(--space-3);
     margin: 0;
-    padding: 0 0 var(--space-1);
+    /* A scroll container clips at its padding box, so without room on every
+       side the focus ring on the first and last attempt is cut off. The same
+       padding the similar-recipes shelf needs, for the same reason. */
+    padding: var(--space-1);
     list-style: none;
     overflow-x: auto;
     scroll-snap-type: x proximity;
