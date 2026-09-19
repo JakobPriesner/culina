@@ -118,9 +118,6 @@ export function fromWireSort(wire: string | null | undefined): RecipeSort | null
  */
 export const timeCeilings = [15, 30, 45, 60] as const;
 
-/** The ceiling the old "Quick" chip meant, kept as the shortcut it was. */
-export const quickCeiling = 30;
-
 /**
  * What the library is being asked for.
  *
@@ -147,15 +144,6 @@ export class RecipeQuery {
    * even on a day the ranking would have offered to take over.
    */
   sort = $state<RecipeSort | null>(null);
-
-  /** The old "quick" chip, which was always a 30-minute ceiling. */
-  get quick(): boolean {
-    return this.maxMinutes === quickCeiling;
-  }
-
-  set quick(on: boolean) {
-    this.maxMinutes = on ? quickCeiling : null;
-  }
 
   /**
    * How many filters are on, for the number on the panel's trigger.
