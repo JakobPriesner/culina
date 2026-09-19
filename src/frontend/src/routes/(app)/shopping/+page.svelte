@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, EmptyState, ErrorState } from '$ds';
+  import { Button, EmptyState, ErrorState, ProgressBar } from '$ds';
   import IngredientFields, {
     emptyDraft,
     toIngredient,
@@ -49,6 +49,14 @@
 
   /** Nothing left to find, but the trolley is not empty: a finished shop. */
   const finished = $derived(shopping.toBuy.length === 0 && shopping.bought.length > 0);
+
+  /**
+   * Whether the page is far enough along to say how far along it is.
+   *
+   * A bar over an empty list is a bar at nought per cent, which is a graphic
+   * of nothing. It appears with the first line and goes with the last.
+   */
+  const started = $derived(shopping.status === 'ready' && shopping.items.length > 0);
 
   $effect(() => {
     if (householdId) {
@@ -159,8 +167,53 @@
     <!-- Beside the title rather than among the fields below it: both fill the
          list, but one line and twelve are different enough acts that putting
          their controls together makes the wrong one easy to hit. -->
-    <Button onclick={() => (picking = true)}>+ {m['shopping.addRecipe']()}</Button>
+    <Button onclick={() => (picking = true)}>
+      {#snippet icon()}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <!-- The same closed book the cookbooks tab is marked with, with the
+               plus that means "one of these, onto the list". -->
+          <path d="M6.5 3.5H17a1 1 0 0 1 1 1v7.2" />
+          <path d="M18 17.5v3" />
+          <path d="M4.5 6.5v11a2 2 0 0 0 2 2H14" />
+          <path d="M8 3.5v16" />
+          <path d="M16.5 19h3" />
+        </svg>
+      {/snippet}
+
+      {m['shopping.addRecipe']()}
+    </Button>
   </header>
+
+  <!--
+    How much of the shop is done, as a shape rather than as a sentence.
+
+    The sentence above is the number a shopper wants — what is left — and it is
+    the one worth reading. This is the one worth glancing at: halfway down a
+    long aisle, "am I nearly finished" is answered by a bar in the corner of the
+    eye without anybody having to count what is struck through at the bottom of
+    the page.
+  -->
+  {#if started}
+    <div class="progress">
+      <ProgressBar
+        value={shopping.bought.length}
+        max={shopping.items.length}
+        label={m['shopping.title']()}
+        valueText={m['shopping.progress']({
+          done: shopping.bought.length,
+          total: shopping.items.length
+        })}
+      />
+    </div>
+  {/if}
 
   <div class="adding">
     <!-- Enter adds the line and puts the cursor back on the amount, so a whole
@@ -226,7 +279,16 @@
   {:else}
     {#each shopping.toBuy as group (group.section)}
       <section class="section">
-        <h2 class="heading-row"><span class="label">{nameOf(group.section)}</span></h2>
+        <!-- Stuck to the top of the screen while its own lines scroll past.
+
+             A shopping list is walked, not read: the label is what says which
+             part of the shop the next six lines are in, and a label that has
+             scrolled off is a list of words with no aisle attached. The offset
+             is the one the app's own floating header already claims. -->
+        <h2 class="heading-row sticky">
+          <span class="label">{nameOf(group.section)}</span>
+          <span class="count">{group.items.length}</span>
+        </h2>
 
         <ul class="list">
           {#each group.items as item (item.itemId)}
@@ -249,7 +311,7 @@
 
     {#if shopping.bought.length > 0}
       <section class="section bought">
-        <h2 class="heading-row">
+        <h2 class="heading-row sticky">
           <span class="label">{m['shopping.bought']({ count: shopping.bought.length })}</span>
 
           <!-- Next to what it clears. At the top of the page it was an action
@@ -316,15 +378,29 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     margin-top: var(--space-2);
+    font-variant-numeric: tabular-nums;
   }
 
+  .progress {
+    margin-block: var(--space-6) var(--space-4);
+  }
+
+  /*
+   * A panel, not a band between two rules.
+   *
+   * Three fields and a button with a hairline above and below them is the shape
+   * of a form somebody has been sent to fill in. The same material the
+   * ingredient list is drawn on says the other thing: this belongs to the list
+   * under it, and it is where lines come from.
+   */
   .adding {
     container: shopping-entry / inline-size;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding-block: var(--space-6);
-    border-block: 1px solid var(--border);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
     margin-bottom: var(--space-8);
   }
 
@@ -361,12 +437,39 @@
     margin-bottom: var(--space-3);
   }
 
+  /*
+   * Opaque, because lines pass underneath it.
+   *
+   * Bled out to the page's gutter and back so that a row travelling under the
+   * heading disappears at the edge of the screen rather than at the edge of the
+   * text — and so the rule under it reaches the same edges the rows do.
+   */
+  .sticky {
+    position: sticky;
+    top: var(--space-24);
+    /* Above the lines it covers and below the app's own header, which one
+       section's heading passes under as the next one pushes it up. Sharing the
+       header's layer put an aisle name across the navigation. */
+    z-index: 1;
+    margin-inline: calc(var(--layout-gutter) * -1);
+    padding: var(--space-2) var(--layout-gutter);
+    background: var(--surface);
+  }
+
   .label {
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-muted);
+  }
+
+  /* How many lines are in this part of the shop, which is how you know whether
+     to expect the aisle to take a minute or five. */
+  .count {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
   }
 
   .finished {
