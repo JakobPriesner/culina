@@ -849,5 +849,9 @@
   "assist.idea.working": "Writing a draft…",
   "assist.idea.review": "The assistant's draft",
   "assist.idea.keep": "Keep this",
-  "assist.idea.again": "Ask again"
+  "assist.idea.again": "Ask again",
+  "assist.draw": "Draw one",
+  "assist.draw.working": "Drawing…",
+  "assist.draw.failed": "The assistant could not draw one. Try again in a moment.",
+  "assist.draw.note": "Drawn by a model. It is not a photograph of what you cooked."
 }

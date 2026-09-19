@@ -849,5 +849,9 @@
   "assist.idea.working": "Entwurf wird geschrieben…",
   "assist.idea.review": "Der Entwurf des Assistenten",
   "assist.idea.keep": "Übernehmen",
-  "assist.idea.again": "Nochmal fragen"
+  "assist.idea.again": "Nochmal fragen",
+  "assist.draw": "Eines zeichnen",
+  "assist.draw.working": "Wird gezeichnet…",
+  "assist.draw.failed": "Der Assistent konnte keines zeichnen. Versuch es gleich nochmal.",
+  "assist.draw.note": "Von einem Modell gezeichnet. Es ist kein Foto von dem, was du gekocht hast."
 }

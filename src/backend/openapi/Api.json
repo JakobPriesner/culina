@@ -2635,6 +2635,87 @@
           }
         }
       },
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Draw a recipe image",
+        "description": "POST and PUT mean different things on this one sub-resource, and the difference is who made the picture. PUT replaces it with bytes you are sending; POST asks the assistant to make one, so it carries no body.\n\nWhat comes back goes through exactly the same path an upload does — decoded to find out what it is, re-encoded to WebP at three widths — so a drawn image is an ordinary recipe photo in every respect afterwards.\n\n404 when this instance has no assistant or drawing is switched off. 400 when the connected provider cannot draw at all, which is the case for a model running on your own hardware. 429 when the month's budget is spent.",
+        "operationId": "drawRecipeImageV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesRecipeDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "Recipes"

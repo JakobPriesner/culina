@@ -17,10 +17,12 @@ using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
 using Application.Planning;
+using Application.Recipes;
 using Application.Recipes.Create;
 using Application.Recipes.CreateShare;
 using Application.Recipes.Delete;
 using Application.Recipes.Drafts;
+using Application.Recipes.DrawImage;
 using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
 using Application.Recipes.GetCookLog;
@@ -168,6 +170,9 @@ public static class DependencyInjection
 
             // The assistant
             .AddScoped<AssistantRun>()
+            .AddScoped<RecipeImageWriter>()
+            .AddScoped<ICommandHandler<DrawRecipeImageCommand, Contracts.Recipes.RecipeDetail>,
+                DrawRecipeImageCommandHandler>()
             .AddScoped<ICommandHandler<ComposeRecipeDraftCommand,
                 Contracts.Recipes.Drafts.Response>, ComposeRecipeDraftCommandHandler>()
 
