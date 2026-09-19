@@ -839,5 +839,15 @@
   "assist.minutes": "{count} Min.",
   "assist.lines": "{count} Zeilen",
   "assist.stepCount": "{count} Schritte",
-  "assist.warning": "Von einem Modell geschrieben. Lies es, bevor du es behältst."
+  "assist.warning": "Von einem Modell geschrieben. Lies es, bevor du es behältst.",
+  "assist.idea.title": "Lieber beschreiben",
+  "assist.idea.hint": "Sag ungefähr, was du kochen willst, und der Assistent schreibt einen ersten Entwurf.",
+  "assist.idea.label": "Worauf hast du Lust?",
+  "assist.idea.placeholder": "irgendwas mit den Auberginen und dem Feta, die ich habe",
+  "assist.idea.write": "Schreib es",
+  "assist.idea.cancel": "Jetzt nicht",
+  "assist.idea.working": "Entwurf wird geschrieben…",
+  "assist.idea.review": "Der Entwurf des Assistenten",
+  "assist.idea.keep": "Übernehmen",
+  "assist.idea.again": "Nochmal fragen"
 }

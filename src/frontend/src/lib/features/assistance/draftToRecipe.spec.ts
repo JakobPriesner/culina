@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { acceptNothing, toPatch, withMentions, type Accepted, type Draft } from './draftToRecipe';
+import { acceptNothing, toPatch, type Accepted, type Draft } from './draftToRecipe';
 
 import type { Ingredient, Recipe } from '$features/recipes/types';
 
@@ -60,33 +60,6 @@ const draft = (overrides: Partial<Draft> = {}): Draft => ({
   ...overrides
 });
 
-describe('marking ingredient names in a step', () => {
-  it('finds the longest name first, so "olive oil" is one ingredient not two', () => {
-    const marked = withMentions('Heat the olive oil.', [
-      ingredient('oil'),
-      ingredient('olive oil')
-    ]);
-
-    expect(marked).toBe('Heat the @olive oil.');
-  });
-
-  it('only matches a whole word, so "oil" is not found inside "boiling"', () => {
-    const marked = withMentions('Bring to a boiling point.', [ingredient('oil')]);
-
-    expect(marked).toBe('Bring to a boiling point.');
-  });
-
-  it('matches whatever case the sentence used', () => {
-    const marked = withMentions('Onion goes in first.', [ingredient('onion')]);
-
-    expect(marked).toBe('@Onion goes in first.');
-  });
-
-  it('leaves a sentence alone when it names nothing in the list', () => {
-    expect(withMentions('Season and serve.', [ingredient('onion')])).toBe('Season and serve.');
-  });
-});
-
 describe('accepting parts of a draft', () => {
   const accepting = (parts: Partial<Accepted>): Accepted => ({ ...acceptNothing(), ...parts });
 
@@ -113,23 +86,26 @@ describe('accepting parts of a draft', () => {
     expect(patch.cookMinutes).toBe(20);
   });
 
-  it('links accepted steps against the accepted ingredients', () => {
+  it('leaves accepted steps as words, linking nothing by itself', () => {
     const patch = toPatch(draft(), accepting({ ingredients: true, steps: true }), recipe());
 
-    // "olive oil" is in the new list, so it becomes a reference the app can
-    // scale. "onion" is not, so it stays as words.
+    // Both ingredient names are in the sentence, and neither becomes a link.
+    // The editor stopped guessing which mention was meant on the paste path,
+    // and this is the same guess — a wrong link shows a scaled amount inside a
+    // sentence that was never about that ingredient.
     const step = first(patch.steps);
-    expect(step.segments.map((segment) => segment.kind)).toContain('ingredient');
-    expect(step.segments.filter((one) => one.kind === 'ingredient')).toHaveLength(1);
+    expect(step.segments.map((segment) => segment.kind)).toEqual(['text']);
+    expect(step.segments[0]).toEqual({
+      kind: 'text',
+      text: 'Heat the olive oil and add the onion.'
+    });
   });
 
-  it('links accepted steps against the existing ingredients when the list was not accepted', () => {
+  it('replaces only the steps when the ingredients were left alone', () => {
     const patch = toPatch(draft(), accepting({ steps: true }), recipe());
 
-    // Both names are in the recipe as it stands, so both are found — which is
-    // the point of choosing the list the steps will actually sit beside.
     expect(patch.groups).toBeUndefined();
-    expect(first(patch.steps).segments.filter((one) => one.kind === 'ingredient')).toHaveLength(2);
+    expect(patch.steps).toHaveLength(1);
   });
 
   it('flattens the draft groups into the one list the editor shows', () => {
