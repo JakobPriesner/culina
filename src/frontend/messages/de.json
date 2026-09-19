@@ -742,5 +742,6 @@
   "editor.loading": "Rezept wird geöffnet",
   "editor.ingredientsEmpty": "Noch nichts aufgeschrieben. Die erste Zeile kommt hier darunter.",
   "editor.stepsEmpty": "Noch keine Zubereitung. Der erste Schritt kommt hier darunter.",
-  "editor.otherWays": "Oder von etwas ausgehen, das du schon hast"
+  "editor.otherWays": "Oder von etwas ausgehen, das du schon hast",
+  "recipe.moreActions": "Weitere Aktionen"
 }
