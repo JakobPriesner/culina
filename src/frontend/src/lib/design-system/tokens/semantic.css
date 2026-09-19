@@ -18,6 +18,11 @@
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
   --surface-accent-subtle: var(--c-olive-100);
+  /* The one row the reader is pointing at, right now. Louder than
+     `--surface-accent-subtle`, which marks a lasting choice on the page's own
+     ground: this has to carry across a sunken card, and only while a finger or
+     a cursor is on something else entirely. */
+  --surface-highlight: var(--c-olive-200);
   --surface-hover: var(--c-sand-100);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);

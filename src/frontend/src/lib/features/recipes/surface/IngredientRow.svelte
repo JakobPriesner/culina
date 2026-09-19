@@ -34,6 +34,7 @@
 
 <style>
   .row {
+    position: relative;
     display: grid;
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
@@ -45,8 +46,32 @@
   /* Lit, not boxed: the row keeps its place in the list and the eye is drawn
      to it without the layout moving a pixel. */
   .highlighted {
-    background: var(--surface-accent-subtle);
-    box-shadow: 0 0 0 var(--space-2) var(--surface-accent-subtle);
+    background: var(--surface-highlight);
+    box-shadow: 0 0 0 var(--space-2) var(--surface-highlight);
+  }
+
+  /*
+   * A mark down the edge, because a tint alone cannot be relied on here.
+   *
+   * The list sits on a sunken card, and in a warm palette the distance between
+   * a card and a tint on that card is small in light mode however the tint is
+   * chosen — the previous one landed at a contrast ratio of 1.03, which is to
+   * say nothing visibly happened at all. The accent is the one colour the theme
+   * contract already proves carries against the page, so the answer that holds
+   * in both modes is a line of it rather than a louder wash.
+   *
+   * Absolutely placed, so a row that lights up does not move the row below it,
+   * and out at the halo's own edge so that the mark reads as the edge of the
+   * lit band rather than as something inside the row.
+   */
+  .highlighted::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(-1 * var(--space-2));
+    width: 2px;
+    border-radius: var(--radius-full);
+    background: var(--accent);
   }
 
   .amount {
@@ -65,6 +90,10 @@
     .highlighted {
       background: none;
       box-shadow: none;
+    }
+
+    .highlighted::before {
+      display: none;
     }
   }
 

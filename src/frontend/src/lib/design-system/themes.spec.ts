@@ -34,6 +34,8 @@ const requiredContrast = [
   { foreground: '--text', background: '--surface-hover', minimum: forText },
   { foreground: '--text', background: '--surface-selected', minimum: forText },
   { foreground: '--text', background: '--surface-accent-subtle', minimum: forText },
+  { foreground: '--text', background: '--surface-highlight', minimum: forText },
+  { foreground: '--text-muted', background: '--surface-highlight', minimum: forText },
   { foreground: '--text', background: '--danger-subtle', minimum: forText },
   { foreground: '--text', background: '--success-subtle', minimum: forText },
   { foreground: '--text', background: '--warning-subtle', minimum: forText },
