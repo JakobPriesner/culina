@@ -37,7 +37,7 @@ public class AssistantRunTests
     {
         // Arrange
         var world = new World();
-        world.Settings.DraftEnabled = false;
+        world.Settings.Uses = [Use(Capability.Draft, AssistantKind.OpenAi, on: false)];
 
         // Act
         var result = await world.ComposeAsync();
@@ -127,8 +127,7 @@ public class AssistantRunTests
     {
         // Arrange
         var world = new World(provider: AssistantKind.Ollama);
-        world.Settings.BaseUrl = "http://localhost:11434";
-        world.Settings.DrawEnabled = true;
+        world.Settings.Uses = [Use(Capability.Draw, AssistantKind.Ollama)];
 
         // Act
         var result = await world.DrawAsync();
@@ -137,6 +136,88 @@ public class AssistantRunTests
         // Refused by the settings rather than by the adapter: Ollama cannot
         // draw, so the capability is not allowed however the switch is left.
         result.ShouldBeFailure(AssistanceErrors.Disabled);
+        Assert.Equal(0, world.Assistant.Calls);
+    }
+
+    [Fact]
+    public async Task ComposeAsync_ShouldCallTheProviderThisJobWasPointedAt()
+    {
+        // Arrange
+        // Two connected, and the job points at the second.
+        var world = new World();
+        world.Settings.Connections =
+        [
+            new AssistanceConnection { Provider = "openai", ProtectedApiKey = "protected:one" },
+            new AssistanceConnection { Provider = "gemini", ProtectedApiKey = "protected:two" }
+        ];
+        world.Settings.Uses = [Use(Capability.Draft, AssistantKind.Gemini)];
+        world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
+
+        // Act
+        await world.ComposeAsync();
+
+        // Assert
+        // The reason for any of this: each job reaches the provider it was
+        // pointed at rather than whichever one happened to be first.
+        Assert.Equal(AssistantKind.Gemini, Assert.Single(world.Ledger.Reservations).Provider);
+        Assert.Equal("two", world.Assistant.LastConnection!.ApiKey);
+    }
+
+    [Fact]
+    public async Task ComposeAsync_ShouldUseTheChosenModel_AndTheDefaultWhenNoneWasChosen()
+    {
+        // Arrange
+        var world = new World();
+        world.Settings.Uses = [Use(Capability.Draft, AssistantKind.OpenAi, model: "cheap-one")];
+        world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
+
+        // Act
+        await world.ComposeAsync();
+
+        // Assert
+        Assert.Equal("cheap-one", world.Assistant.LastConnection!.Model);
+
+        // Arrange again, with nothing chosen.
+        var second = new World();
+        second.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
+
+        // Act
+        await second.ComposeAsync();
+
+        // Assert
+        // Empty means "whatever is current for this job", which the registry
+        // answers — not a name this build was shipped believing.
+        Assert.Equal("openai-default-draft", second.Assistant.LastConnection!.Model);
+    }
+
+    [Fact]
+    public async Task ComposeAsync_ShouldUseTheProvidersOwnAddress_WhenNobodyOverrodeIt()
+    {
+        // Arrange
+        var world = new World();
+        world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
+
+        // Act
+        await world.ComposeAsync();
+
+        // Assert
+        Assert.Equal("https://openai.example.com", world.Assistant.LastConnection!.BaseUrl);
+    }
+
+    [Fact]
+    public async Task ComposeAsync_ShouldRefuse_WhenTheKeyRingCannotReadTheStoredKey()
+    {
+        // Arrange
+        var world = new World();
+        world.Protector.KeysLost = true;
+
+        // Act
+        var result = await world.ComposeAsync();
+
+        // Assert
+        // A key ring lost and restored empty leaves intact ciphertext nobody
+        // can read. That is "no assistant is configured", not a crash.
+        result.ShouldBeFailure(AssistanceErrors.NotConfigured);
         Assert.Equal(0, world.Assistant.Calls);
     }
 
@@ -150,7 +231,20 @@ public class AssistantRunTests
         Assert.Equal(new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), start);
     }
 
-    /// <summary>The run, and the three things it talks to.</summary>
+    private static CapabilityUse Use(
+        Capability capability,
+        AssistantKind provider,
+        bool on = true,
+        string model = "") =>
+        new()
+        {
+            Capability = capability.Code,
+            Enabled = on,
+            Provider = provider.Code,
+            Model = model
+        };
+
+    /// <summary>The run, and the things it talks to.</summary>
     private sealed class World
     {
         internal World(bool connected = true, AssistantKind? provider = null)
@@ -160,10 +254,18 @@ public class AssistantRunTests
             Settings = new AssistanceSettings
             {
                 Enabled = connected,
-                Provider = kind.Code,
-                ProtectedApiKey = connected && kind.NeedsApiKey ? "protected" : string.Empty,
-                ComposeModel = "gpt-4o-mini",
-                DrawModel = "gpt-image-1"
+                Connections = connected
+                    ?
+                    [
+                        new AssistanceConnection
+                        {
+                            Provider = kind.Code,
+                            ProtectedApiKey = kind.NeedsApiKey ? "protected:secret" : string.Empty,
+                            BaseUrl = kind.NeedsAddress ? "http://localhost:11434" : string.Empty
+                        }
+                    ]
+                    : [],
+                Uses = [Use(Capability.Draft, kind), Use(Capability.Draw, kind)]
             };
 
             Assistant = new FakeAssistant(kind);
@@ -175,9 +277,12 @@ public class AssistantRunTests
 
         internal FakeAssistanceLedger Ledger { get; } = new();
 
+        internal FakeSecretProtector Protector { get; } = new();
+
         private AssistantRun Run => new(
             Settings,
             new FakeAssistants(Assistant),
+            Protector,
             Ledger,
             new FakeModelPrices(),
             TimeProvider.System);

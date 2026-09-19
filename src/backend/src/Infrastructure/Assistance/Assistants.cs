@@ -24,4 +24,15 @@ internal sealed class Assistants(IEnumerable<IAssistant> assistants) : IAssistan
             ? Result<IAssistant>.Success(assistant)
             : AssistanceErrors.UnknownProvider;
     }
+
+    public string HomeOf(AssistantKind kind) => AssistantDefaults.Home(kind);
+
+    public string DefaultModelFor(AssistantKind kind, Capability capability)
+    {
+        ArgumentNullException.ThrowIfNull(capability);
+
+        return capability == Capability.Draw
+            ? AssistantDefaults.DrawModel(kind)
+            : AssistantDefaults.ComposeModel(kind);
+    }
 }

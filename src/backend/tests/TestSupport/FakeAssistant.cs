@@ -30,6 +30,16 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
     /// <summary>The last thing it was asked to compose.</summary>
     public Composition? LastComposition { get; private set; }
 
+    /// <summary>
+    /// The connection it was last called with.
+    /// </summary>
+    /// <remarks>
+    /// The only way to assert the thing several providers at once is for: that
+    /// each job reached the provider and model it was pointed at, rather than
+    /// whichever one happened to be first.
+    /// </remarks>
+    public Connected? LastConnection { get; private set; }
+
     /// <summary>The last thing it was asked to draw.</summary>
     public Drawing? LastDrawing { get; private set; }
 
@@ -61,10 +71,12 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
     }
 
     public Task<Result<Composed>> ComposeAsync(
+        Connected @using,
         Composition request,
         CancellationToken cancellationToken)
     {
         LastComposition = request;
+        LastConnection = @using;
         Calls++;
 
         return Task.FromResult(compositions.Count > 0
@@ -72,9 +84,13 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
             : Result<Composed>.Failure(AssistanceErrors.Unavailable));
     }
 
-    public Task<Result<Drawn>> DrawAsync(Drawing request, CancellationToken cancellationToken)
+    public Task<Result<Drawn>> DrawAsync(
+        Connected @using,
+        Drawing request,
+        CancellationToken cancellationToken)
     {
         LastDrawing = request;
+        LastConnection = @using;
         Calls++;
 
         return Task.FromResult(drawings.Count > 0
@@ -88,4 +104,11 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
 public sealed class FakeAssistants(FakeAssistant assistant) : IAssistants
 {
     public Result<IAssistant> For(AssistantKind kind) => Result<IAssistant>.Success(assistant);
+
+    /// <summary>A recognisable address, so a test can assert which was used.</summary>
+    public string HomeOf(AssistantKind kind) => $"https://{kind?.Code}.example.com";
+
+    /// <summary>A recognisable name, for the same reason.</summary>
+    public string DefaultModelFor(AssistantKind kind, Capability capability) =>
+        $"{kind?.Code}-default-{capability?.Code}";
 }

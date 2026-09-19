@@ -2767,30 +2767,25 @@ export interface components {
             /** @description The CSRF token to send in `X-Culina-CSRF` on every unsafe request. */
             csrfToken: string;
         };
-        /** @description The model this instance talks to, and what it is allowed to do. */
-        SettingsGetAssistanceResponse: {
-            /** @description Whether the assistant is on. */
-            enabled: boolean;
-            /** @description Which provider: `gemini` or `openai`. */
+        /** @description One provider, and whether it is ready to be used. */
+        SettingsGetAssistanceConnectionContract: {
+            /** @description `gemini`, `openai` or `ollama`. */
             provider: string;
             /** @description Whether a key has been entered. Never the key. */
             apiKeyConfigured: boolean;
-            /** @description Whether the connection has everything this provider needs. */
-            connected: boolean;
-            /** @description Where the provider is, when it is not where it usually is. */
+            /** @description Where the provider is, or empty for its own address. */
             baseUrl: string;
-            /** @description The model that writes recipes. */
-            composeModel: string;
-            /** @description The model that draws pictures. */
-            drawModel: string;
-            /** @description Whether it may rewrite a recipe somebody already has. */
-            improveEnabled: boolean;
-            /** @description Whether it may write one from an idea. */
-            draftEnabled: boolean;
-            /** @description Whether it may read one out of a photograph or a block of text. */
-            readEnabled: boolean;
-            /** @description Whether it may draw a picture. */
-            drawEnabled: boolean;
+            /** @description Whether this connection has everything its provider needs. */
+            usable: boolean;
+        };
+        /** @description The models this instance can talk to, and which of them does what. */
+        SettingsGetAssistanceResponse: {
+            /** @description Whether the assistant is on at all. */
+            enabled: boolean;
+            /** @description The providers this instance has been given, in a fixed order. */
+            connections: components["schemas"]["SettingsGetAssistanceConnectionContract"][];
+            /** @description Which provider and model does each job. */
+            uses: components["schemas"]["SettingsGetAssistanceUseContract"][];
             /**
              * Format: double
              * @description What the instance may spend in a month, or null for no ceiling.
@@ -2879,6 +2874,19 @@ export interface components {
             /** @description What it went on. */
             byCapability: components["schemas"]["SettingsGetAssistanceUsageCapabilityUsageContract"][];
         };
+        /** @description What does one job. */
+        SettingsGetAssistanceUseContract: {
+            /** @description `improve`, `draft`, `read` or `draw`. */
+            capability: string;
+            /** @description Whether this job is offered at all. */
+            enabled: boolean;
+            /** @description Which provider does it, or empty if none was chosen. */
+            provider: string;
+            /** @description Which of its models, or empty for the current default. */
+            model: string;
+            /** @description The model that will actually be used when none is chosen. */
+            defaultModel: string;
+        };
         /** @description Who may create an account on this instance. */
         SettingsGetRegistrationResponse: {
             /** @description Whether anyone may create an account. */
@@ -2891,28 +2899,34 @@ export interface components {
              */
             maxUsers: number;
         };
-        /** @description The assistant configuration to apply. */
-        SettingsUpdateAssistanceRequest: {
-            /** @description Whether the assistant is on. */
-            enabled: boolean;
-            /** @description Which provider: `gemini` or `openai`. */
+        /** @description One provider, and whether it is ready to be used. */
+        SettingsUpdateAssistanceConnectionContract: {
+            /** @description `gemini`, `openai` or `ollama`. */
+            provider: string;
+            /** @description Whether a key has been entered. Never the key. */
+            apiKeyConfigured: boolean;
+            /** @description Where the provider is, or empty for its own address. */
+            baseUrl: string;
+            /** @description Whether this connection has everything its provider needs. */
+            usable: boolean;
+        };
+        /** @description One provider to connect, or to keep connected. */
+        SettingsUpdateAssistanceConnectionRequest: {
+            /** @description `gemini`, `openai` or `ollama`. */
             provider: string;
             /** @description A new API key, or null to keep the one already stored. */
             apiKey?: string | null;
-            /** @description Where the provider is, or empty for its usual address. */
+            /** @description Where the provider is, or empty for its own address. */
             baseUrl: string;
-            /** @description The model that writes recipes. */
-            composeModel: string;
-            /** @description The model that draws pictures. */
-            drawModel: string;
-            /** @description Whether it may rewrite a recipe somebody already has. */
-            improveEnabled: boolean;
-            /** @description Whether it may write one from an idea. */
-            draftEnabled: boolean;
-            /** @description Whether it may read one out of a photograph or a block of text. */
-            readEnabled: boolean;
-            /** @description Whether it may draw a picture. */
-            drawEnabled: boolean;
+        };
+        /** @description The assistant configuration to apply. */
+        SettingsUpdateAssistanceRequest: {
+            /** @description Whether the assistant is on at all. */
+            enabled: boolean;
+            /** @description The providers to keep. Anything left out is disconnected. */
+            connections: components["schemas"]["SettingsUpdateAssistanceConnectionRequest"][];
+            /** @description Which provider and model does each job. */
+            uses: components["schemas"]["SettingsUpdateAssistanceUseRequest"][];
             /**
              * Format: double
              * @description What the instance may spend in a month, or null for no ceiling.
@@ -2924,30 +2938,14 @@ export interface components {
              */
             personalBudget?: number | null;
         };
-        /** @description The model this instance talks to, and what it is allowed to do. */
+        /** @description The models this instance can talk to, and which of them does what. */
         SettingsUpdateAssistanceResponse: {
-            /** @description Whether the assistant is on. */
+            /** @description Whether the assistant is on at all. */
             enabled: boolean;
-            /** @description Which provider: `gemini` or `openai`. */
-            provider: string;
-            /** @description Whether a key has been entered. Never the key. */
-            apiKeyConfigured: boolean;
-            /** @description Whether the connection has everything this provider needs. */
-            connected: boolean;
-            /** @description Where the provider is, when it is not where it usually is. */
-            baseUrl: string;
-            /** @description The model that writes recipes. */
-            composeModel: string;
-            /** @description The model that draws pictures. */
-            drawModel: string;
-            /** @description Whether it may rewrite a recipe somebody already has. */
-            improveEnabled: boolean;
-            /** @description Whether it may write one from an idea. */
-            draftEnabled: boolean;
-            /** @description Whether it may read one out of a photograph or a block of text. */
-            readEnabled: boolean;
-            /** @description Whether it may draw a picture. */
-            drawEnabled: boolean;
+            /** @description The providers this instance has been given, in a fixed order. */
+            connections: components["schemas"]["SettingsUpdateAssistanceConnectionContract"][];
+            /** @description Which provider and model does each job. */
+            uses: components["schemas"]["SettingsUpdateAssistanceUseContract"][];
             /**
              * Format: double
              * @description What the instance may spend in a month, or null for no ceiling.
@@ -2958,6 +2956,30 @@ export interface components {
              * @description What one person may spend of it, or null for no share.
              */
             personalBudget?: number | null;
+        };
+        /** @description What does one job. */
+        SettingsUpdateAssistanceUseContract: {
+            /** @description `improve`, `draft`, `read` or `draw`. */
+            capability: string;
+            /** @description Whether this job is offered at all. */
+            enabled: boolean;
+            /** @description Which provider does it, or empty if none was chosen. */
+            provider: string;
+            /** @description Which of its models, or empty for the current default. */
+            model: string;
+            /** @description The model that will actually be used when none is chosen. */
+            defaultModel: string;
+        };
+        /** @description What should do one job. */
+        SettingsUpdateAssistanceUseRequest: {
+            /** @description `improve`, `draft`, `read` or `draw`. */
+            capability: string;
+            /** @description Whether this job is offered at all. */
+            enabled: boolean;
+            /** @description Which provider does it. */
+            provider: string;
+            /** @description Which of its models, or empty for the current default. */
+            model: string;
         };
         /** @description The registration policy to apply. */
         SettingsUpdateRegistrationRequest: {

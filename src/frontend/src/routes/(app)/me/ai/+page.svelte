@@ -1,85 +1,97 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  import { Button, Disclosure, Field, SegmentedControl, Switch, TextInput } from '$ds';
+  import { Badge, Button, Disclosure, Field, Select, Switch, TextInput } from '$ds';
   import { explain } from '$shell/explain';
-  import { m } from '$shell/i18n';
-  import { formatNumber } from '$shell/i18n';
+  import { formatNumber, m } from '$shell/i18n';
 
   import { assistance } from '$features/assistance/stores/assistance.svelte';
-  import { providerFacts, type Assistance, type Provider } from '$features/assistance/types';
+  import {
+    capabilities,
+    providerFacts,
+    providers,
+    providersFor,
+    type Assistance,
+    type Capability,
+    type Connection,
+    type Provider,
+    type Use
+  } from '$features/assistance/types';
 
   import SettingsRow from '../SettingsRow.svelte';
   import SettingsSection from '../SettingsSection.svelte';
 
   /**
-   * Connecting a model, and seeing what it has cost.
+   * Which models this instance can talk to, and which of them does what.
    *
-   * The first screen in Culina that configures the *instance* rather than the
-   * person looking at it, which is why the category is only in the rail for an
-   * administrator. It sits under `/me` anyway rather than in an admin area of
-   * its own: there is exactly one such screen, and inventing a second top-level
-   * section of the app to hold one page would be furniture with nothing in it.
+   * Two lists rather than one form, because they answer different questions and
+   * change at different rates. A provider is connected once; which provider does
+   * a job is changed whenever somebody reads that a new model is better at it.
+   * Flattening them into "the assistant's settings" is what made this a single
+   * global choice — and a single global choice meant picking the provider that
+   * was least bad at everything.
    *
-   * The API key is the one control here that is not a plain field, and it has to
-   * be. No endpoint returns it, so there is nothing to put in a box — a box that
-   * rendered empty would read as "no key", and saving the form would then look
-   * like it had wiped one. So the row states whether a key is set and offers to
-   * replace it, and only then is there a field at all.
+   * The providers list shows every provider this build knows, connected or not,
+   * so adding one is filling a row in rather than finding a button.
    *
-   * Everything is one form with one Save. Settings screens that save on every
-   * keystroke are right for a theme and wrong for this: a half-typed model name
-   * is a broken assistant, and a key pasted in two goes would be sent to the
-   * server in two goes.
+   * The API key is the one control that is not a plain field, and it has to be.
+   * No endpoint returns it, so there is nothing to put in a box — a box rendered
+   * empty would read as "no key", and saving would then look like it had wiped
+   * one.
    */
 
   let draft = $state<Assistance | null>(null);
-
-  /**
-   * Three states, matching what the endpoint distinguishes: `undefined` leaves
-   * the stored key alone, `''` removes it, and a value replaces it.
-   */
-  let apiKey = $state<string | undefined>(undefined);
   let saved = $state(false);
-
-  const facts = $derived(draft ? providerFacts[draft.provider] : null);
-
-  const segments = $derived([
-    { id: 'gemini', label: m['ai.provider.gemini']() },
-    { id: 'openai', label: m['ai.provider.openai']() },
-    { id: 'ollama', label: m['ai.provider.ollama']() }
-  ]);
 
   onMount(async () => {
     await assistance.load();
 
-    draft = assistance.settings ? { ...assistance.settings } : null;
+    draft = assistance.settings ? structuredClone($state.snapshot(assistance.settings)) : null;
   });
 
-  function edit(patch: Partial<Assistance>): void {
-    if (draft) {
-      draft = { ...draft, ...patch };
-      saved = false;
-    }
+  function editConnection(provider: Provider, patch: Partial<Connection>): void {
+    if (!draft) return;
+
+    draft.connections = draft.connections.map((one) =>
+      one.provider === provider ? { ...one, ...patch } : one
+    );
+    saved = false;
   }
 
-  /**
-   * Switching provider carries the models over but not their meaning.
-   *
-   * A model name is provider-specific, so keeping `gpt-4o-mini` selected after
-   * switching to Ollama would be a setting that is silently wrong. Cleared, so
-   * the placeholder shows what a sensible name looks like for the new one.
-   */
-  function chooseProvider(id: string): void {
-    const provider = id as Provider;
+  function editUse(capability: Capability, patch: Partial<Use>): void {
+    if (!draft) return;
 
-    edit({
+    draft.uses = draft.uses.map((one) =>
+      one.capability === capability ? { ...one, ...patch } : one
+    );
+    saved = false;
+  }
+
+  const connectionFor = (provider: Provider): Connection =>
+    draft?.connections.find((one) => one.provider === provider) ?? {
       provider,
-      composeModel: '',
-      drawModel: '',
-      drawEnabled: providerFacts[provider].canDraw ? draft?.drawEnabled : false
-    });
-  }
+      apiKeyConfigured: false,
+      baseUrl: '',
+      usable: false
+    };
+
+  const useFor = (capability: Capability): Use =>
+    draft?.uses.find((one) => one.capability === capability) ?? {
+      capability,
+      enabled: false,
+      provider: '',
+      model: '',
+      defaultModel: ''
+    };
+
+  /** The providers this job could be given to, plus "not offered". */
+  const choicesFor = (capability: Capability) => [
+    { value: '', label: m['ai.job.none']() },
+    ...providersFor(capability).map((provider) => ({
+      value: provider,
+      label: m[`ai.provider.${provider}`]()
+    }))
+  ];
 
   function budget(value: string): number | null {
     const parsed = Number(value.replace(',', '.'));
@@ -90,43 +102,68 @@
   async function save(): Promise<void> {
     if (!draft) return;
 
-    const failure = await assistance.save(draft, apiKey);
+    const failure = await assistance.save($state.snapshot(draft) as Assistance);
 
     if (!failure) {
-      draft = assistance.settings ? { ...assistance.settings } : draft;
-      apiKey = undefined;
+      draft = assistance.settings ? structuredClone($state.snapshot(assistance.settings)) : draft;
       saved = true;
     }
   }
 
   const money = (value: number): string => formatNumber(value, { maximumFractionDigits: 2 });
+
+  /** Whether any job is given to a provider that sends data off the machine. */
+  const anythingHosted = $derived(
+    (draft?.uses ?? []).some(
+      (use) => use.provider !== '' && providerFacts[use.provider].needsApiKey
+    )
+  );
 </script>
 
 <svelte:head><title>{m['me.ai']()}</title></svelte:head>
 
-{#if draft && facts}
-  <!-- Bound once, because a snippet is its own function and the narrowing
-       from the `{#if}` above does not reach inside one. -->
+{#if draft}
   {@const it = draft}
-  <SettingsSection title={m['ai.connection']()} description={m['ai.connection.hint']()}>
-    <SettingsRow label={m['ai.provider']()} group>
-      <SegmentedControl
-        {segments}
-        selected={it.provider}
-        label={m['ai.provider']()}
-        onselect={chooseProvider}
-      />
-    </SettingsRow>
 
-    {#if facts.needsApiKey}
-      <SettingsRow label={m['ai.apiKey']()} description={m['ai.apiKey.hint']()}>
-        {#if apiKey === undefined}
+  <SettingsSection title={m['ai.connections']()} description={m['ai.connections.hint']()}>
+    {#each providers as provider (provider)}
+      {@const facts = providerFacts[provider]}
+      {@const connection = connectionFor(provider)}
+
+      <SettingsRow
+        label={m[`ai.provider.${provider}`]()}
+        description={facts.needsApiKey ? m['ai.apiKey.hint']() : m['ai.address.required']()}
+      >
+        <Badge tone={connection.usable ? 'success' : 'neutral'}>
+          {connection.usable ? m['ai.connected']() : m['ai.notConnected']()}
+        </Badge>
+
+        {#if !facts.needsApiKey}
+          <!-- The address is the connection here, not an override of one. -->
+          <Field label={m['ai.address']()}>
+            {#snippet children({ id, describedBy, invalid })}
+              <TextInput
+                {id}
+                {describedBy}
+                {invalid}
+                type="url"
+                placeholder={facts.addressHint}
+                value={connection.baseUrl}
+                oninput={(value) => editConnection(provider, { baseUrl: value })}
+              />
+            {/snippet}
+          </Field>
+        {:else if connection.apiKey === undefined}
           <!-- No field, because there is nothing to show in one. -->
           <span class="state">
-            {it.apiKeyConfigured ? m['ai.apiKey.set']() : m['ai.apiKey.none']()}
+            {connection.apiKeyConfigured ? m['ai.apiKey.set']() : m['ai.apiKey.none']()}
           </span>
-          <Button variant="secondary" size="sm" onclick={() => (apiKey = '')}>
-            {m['ai.apiKey.replace']()}
+          <Button
+            variant="secondary"
+            size="sm"
+            onclick={() => editConnection(provider, { apiKey: '' })}
+          >
+            {connection.apiKeyConfigured ? m['ai.apiKey.replace']() : m['ai.apiKey.add']()}
           </Button>
         {:else}
           <Field label={m['ai.apiKey']()}>
@@ -138,157 +175,118 @@
                 type="password"
                 autocomplete="off"
                 placeholder={m['ai.apiKey.placeholder']()}
-                bind:value={() => apiKey ?? '', (value) => (apiKey = value)}
+                value={connection.apiKey ?? ''}
+                oninput={(value) => editConnection(provider, { apiKey: value })}
               />
             {/snippet}
           </Field>
-          <Button variant="ghost" size="sm" onclick={() => (apiKey = undefined)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => editConnection(provider, { apiKey: undefined })}
+          >
             {m['ai.apiKey.cancel']()}
           </Button>
         {/if}
       </SettingsRow>
-    {/if}
+    {/each}
+  </SettingsSection>
 
-    {#if facts.needsAddress}
-      <!-- Only where it is the connection rather than an override of one. A
-           model on your own machine is wherever you put it; Google's and
-           OpenAI's addresses are not a deployment decision, and asking for
-           them made connecting look like more work than it is. -->
-      <SettingsRow label={m['ai.address']()} description={m['ai.address.required']()}>
-        <Field label={m['ai.address']()}>
+  <!-- Said plainly, before anybody turns anything on. -->
+  <p class="privacy">{anythingHosted ? m['ai.privacy.mixed']() : m['ai.privacy.local']()}</p>
+
+  <SettingsSection title={m['ai.jobs']()} description={m['ai.jobs.hint']()}>
+    {#each capabilities as capability (capability)}
+      {@const use = useFor(capability)}
+
+      <SettingsRow label={m[`ai.${capability}`]()} description={m[`ai.${capability}.hint`]()}>
+        <Field label={m['ai.job.provider']()}>
           {#snippet children({ id, describedBy, invalid })}
-            <TextInput
+            <Select
               {id}
               {describedBy}
               {invalid}
-              type="url"
-              placeholder={facts.addressHint}
-              value={it.baseUrl}
-              oninput={(value) => edit({ baseUrl: value })}
+              inline
+              value={use.provider}
+              options={choicesFor(capability)}
+              onchange={(value) =>
+                editUse(capability, {
+                  provider: value as Provider | '',
+                  // Choosing a provider is switching the job on; choosing
+                  // "not offered" is switching it off. One gesture, because
+                  // there is no state where both answers are interesting.
+                  enabled: value !== ''
+                })}
             />
           {/snippet}
         </Field>
       </SettingsRow>
-    {/if}
-
-    <SettingsRow label={m['ai.enabled']()} description={m['ai.enabled.hint']()}>
-      <Switch
-        checked={it.enabled}
-        label={m['ai.enabled']()}
-        onchange={(checked) => edit({ enabled: checked })}
-      />
-    </SettingsRow>
+    {/each}
   </SettingsSection>
 
-  <!-- Said plainly, before anybody turns anything on, because it is the one
-       thing about this feature somebody might not expect. -->
-  <p class="privacy">
-    {facts.needsApiKey
-      ? m['ai.privacy.hosted']({ provider: m[`ai.provider.${it.provider}`]() })
-      : m['ai.privacy.local']()}
-  </p>
-
-  <!-- No section heading: the disclosure already says the word, and a title
-       above a summary saying the same thing is one of them too many. -->
   <SettingsSection bare>
     <Disclosure summary={m['ai.advanced']()}>
       <div class="advanced">
         <p class="note">{m['ai.advanced.hint']()}</p>
 
-        {#if !facts.needsAddress}
-          <Field
-            label={m['ai.address']()}
-            hint={m['ai.address.optional']({ provider: m[`ai.provider.${it.provider}`]() })}
-          >
-            {#snippet children({ id, describedBy, invalid })}
-              <TextInput
-                {id}
-                {describedBy}
-                {invalid}
-                type="url"
-                placeholder={facts.addressHint}
-                value={it.baseUrl}
-                oninput={(value) => edit({ baseUrl: value })}
-              />
-            {/snippet}
-          </Field>
-        {/if}
+        {#each providers as provider (provider)}
+          {#if providerFacts[provider].needsApiKey}
+            <Field
+              label={`${m[`ai.provider.${provider}`]()} — ${m['ai.address']()}`}
+              hint={m['ai.address.optional']({ provider: m[`ai.provider.${provider}`]() })}
+            >
+              {#snippet children({ id, describedBy, invalid })}
+                <TextInput
+                  {id}
+                  {describedBy}
+                  {invalid}
+                  type="url"
+                  placeholder={providerFacts[provider].addressHint}
+                  value={connectionFor(provider).baseUrl}
+                  oninput={(value) => editConnection(provider, { baseUrl: value })}
+                />
+              {/snippet}
+            </Field>
+          {/if}
+        {/each}
 
-        <!-- Empty means the default for this provider, which the placeholder
-             shows. Pinning a model is a real need and an uncommon one. -->
-        <Field label={m['ai.composeModel']()} hint={m['ai.models.default']()}>
-          {#snippet children({ id, describedBy, invalid })}
-            <TextInput
-              {id}
-              {describedBy}
-              {invalid}
-              placeholder={facts.composeHint}
-              value={it.composeModel}
-              oninput={(value) => edit({ composeModel: value })}
-            />
-          {/snippet}
-        </Field>
+        {#each capabilities as capability (capability)}
+          {@const use = useFor(capability)}
 
-        {#if facts.canDraw}
-          <Field label={m['ai.drawModel']()} hint={m['ai.models.default']()}>
-            {#snippet children({ id, describedBy, invalid })}
-              <TextInput
-                {id}
-                {describedBy}
-                {invalid}
-                placeholder={facts.drawHint}
-                value={it.drawModel}
-                oninput={(value) => edit({ drawModel: value })}
-              />
-            {/snippet}
-          </Field>
-        {/if}
+          {#if use.provider !== ''}
+            <Field
+              label={`${m[`ai.${capability}`]()} — ${m['ai.job.model']()}`}
+              hint={m['ai.models.default']()}
+            >
+              {#snippet children({ id, describedBy, invalid })}
+                <TextInput
+                  {id}
+                  {describedBy}
+                  {invalid}
+                  placeholder={use.defaultModel}
+                  value={use.model}
+                  oninput={(value) => editUse(capability, { model: value })}
+                />
+              {/snippet}
+            </Field>
+          {/if}
+        {/each}
       </div>
     </Disclosure>
   </SettingsSection>
 
-  <SettingsSection title={m['ai.capabilities']()} description={m['ai.capabilities.hint']()}>
-    <SettingsRow label={m['ai.improve']()} description={m['ai.improve.hint']()}>
+  <SettingsSection title={m['ai.budget']()} description={m['ai.budget.hint']()}>
+    <SettingsRow label={m['ai.enabled']()} description={m['ai.enabled.hint']()}>
       <Switch
-        checked={it.improveEnabled}
-        label={m['ai.improve']()}
-        onchange={(checked) => edit({ improveEnabled: checked })}
+        checked={it.enabled}
+        label={m['ai.enabled']()}
+        onchange={(checked) => {
+          it.enabled = checked;
+          saved = false;
+        }}
       />
     </SettingsRow>
 
-    <SettingsRow label={m['ai.draft']()} description={m['ai.draft.hint']()}>
-      <Switch
-        checked={it.draftEnabled}
-        label={m['ai.draft']()}
-        onchange={(checked) => edit({ draftEnabled: checked })}
-      />
-    </SettingsRow>
-
-    <SettingsRow label={m['ai.read']()} description={m['ai.read.hint']()}>
-      <Switch
-        checked={it.readEnabled}
-        label={m['ai.read']()}
-        onchange={(checked) => edit({ readEnabled: checked })}
-      />
-    </SettingsRow>
-
-    <!-- Absent rather than disabled for a provider that cannot draw: a switch
-         that exists and can never be turned on is a question with one answer. -->
-    {#if facts.canDraw}
-      <SettingsRow label={m['ai.draw']()} description={m['ai.draw.hint']()}>
-        <Switch
-          checked={it.drawEnabled}
-          label={m['ai.draw']()}
-          onchange={(checked) => edit({ drawEnabled: checked })}
-        />
-      </SettingsRow>
-    {/if}
-  </SettingsSection>
-
-  <SettingsSection
-    title={m['ai.budget']()}
-    description={facts.needsApiKey ? m['ai.budget.hint']() : m['ai.budget.free']()}
-  >
     <SettingsRow label={m['ai.budget.monthly']()}>
       <Field label={m['ai.budget.monthly']()}>
         {#snippet children({ id, describedBy, invalid })}
@@ -299,7 +297,10 @@
             inputmode="decimal"
             placeholder={m['ai.budget.none']()}
             value={it.monthlyBudget?.toString() ?? ''}
-            oninput={(value) => edit({ monthlyBudget: budget(value) })}
+            oninput={(value) => {
+              it.monthlyBudget = budget(value);
+              saved = false;
+            }}
           />
         {/snippet}
       </Field>
@@ -315,7 +316,10 @@
             inputmode="decimal"
             placeholder={m['ai.budget.none']()}
             value={it.personalBudget?.toString() ?? ''}
-            oninput={(value) => edit({ personalBudget: budget(value) })}
+            oninput={(value) => {
+              it.personalBudget = budget(value);
+              saved = false;
+            }}
           />
         {/snippet}
       </Field>
@@ -358,7 +362,7 @@
     </SettingsSection>
 
     {#if usage.byPerson.length === 0}
-      <p class="quiet">{m['ai.usage.none']()}</p>
+      <p class="note">{m['ai.usage.none']()}</p>
     {:else}
       <!-- A table, not a chart. Six rows of numbers on a family instance are
            six rows of numbers; a dashboard would be decoration. -->
@@ -383,26 +387,12 @@
     {/if}
 
     {#if usage.unpriced > 0}
-      <p class="quiet">{m['ai.usage.unpriced']({ count: usage.unpriced })}</p>
+      <p class="note">{m['ai.usage.unpriced']({ count: usage.unpriced })}</p>
     {/if}
   {/if}
 {/if}
 
 <style>
-  .advanced {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    padding-top: var(--space-3);
-  }
-
-  .note {
-    max-width: var(--measure);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    line-height: var(--leading-normal);
-  }
-
   .state {
     color: var(--text-muted);
     font-size: var(--text-sm);
@@ -428,7 +418,7 @@
     line-height: var(--leading-normal);
   }
 
-  .quiet {
+  .note {
     max-width: var(--measure);
     color: var(--text-muted);
     font-size: var(--text-sm);
@@ -445,6 +435,13 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
+  }
+
+  .advanced {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding-top: var(--space-3);
   }
 
   table {

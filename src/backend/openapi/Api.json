@@ -8632,65 +8632,59 @@
         },
         "description": "Who signed in, and the token their requests must echo."
       },
-      "SettingsGetAssistanceResponse": {
+      "SettingsGetAssistanceConnectionContract": {
         "required": [
-          "enabled",
           "provider",
           "apiKeyConfigured",
-          "connected",
           "baseUrl",
-          "composeModel",
-          "drawModel",
-          "improveEnabled",
-          "draftEnabled",
-          "readEnabled",
-          "drawEnabled"
+          "usable"
         ],
         "type": "object",
         "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the assistant is on."
-          },
           "provider": {
             "type": "string",
-            "description": "Which provider: `gemini` or `openai`."
+            "description": "`gemini`, `openai` or `ollama`."
           },
           "apiKeyConfigured": {
             "type": "boolean",
             "description": "Whether a key has been entered. Never the key."
           },
-          "connected": {
-            "type": "boolean",
-            "description": "Whether the connection has everything this provider needs."
-          },
           "baseUrl": {
             "type": "string",
-            "description": "Where the provider is, when it is not where it usually is."
+            "description": "Where the provider is, or empty for its own address."
           },
-          "composeModel": {
-            "type": "string",
-            "description": "The model that writes recipes."
-          },
-          "drawModel": {
-            "type": "string",
-            "description": "The model that draws pictures."
-          },
-          "improveEnabled": {
+          "usable": {
             "type": "boolean",
-            "description": "Whether it may rewrite a recipe somebody already has."
-          },
-          "draftEnabled": {
+            "description": "Whether this connection has everything its provider needs."
+          }
+        },
+        "description": "One provider, and whether it is ready to be used."
+      },
+      "SettingsGetAssistanceResponse": {
+        "required": [
+          "enabled",
+          "connections",
+          "uses"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
             "type": "boolean",
-            "description": "Whether it may write one from an idea."
+            "description": "Whether the assistant is on at all."
           },
-          "readEnabled": {
-            "type": "boolean",
-            "description": "Whether it may read one out of a photograph or a block of text."
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceConnectionContract"
+            },
+            "description": "The providers this instance has been given, in a fixed order."
           },
-          "drawEnabled": {
-            "type": "boolean",
-            "description": "Whether it may draw a picture."
+          "uses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceUseContract"
+            },
+            "description": "Which provider and model does each job."
           },
           "monthlyBudget": {
             "type": "number",
@@ -8705,7 +8699,7 @@
             "nullable": true
           }
         },
-        "description": "The model this instance talks to, and what it is allowed to do."
+        "description": "The models this instance can talk to, and which of them does what."
       },
       "SettingsGetAssistanceUsageCapabilityUsageContract": {
         "required": [
@@ -8829,6 +8823,39 @@
         },
         "description": "What the assistant has cost this month."
       },
+      "SettingsGetAssistanceUseContract": {
+        "required": [
+          "capability",
+          "enabled",
+          "provider",
+          "model",
+          "defaultModel"
+        ],
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "description": "`improve`, `draft`, `read` or `draw`."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this job is offered at all."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Which provider does it, or empty if none was chosen."
+          },
+          "model": {
+            "type": "string",
+            "description": "Which of its models, or empty for the current default."
+          },
+          "defaultModel": {
+            "type": "string",
+            "description": "The model that will actually be used when none is chosen."
+          }
+        },
+        "description": "What does one job."
+      },
       "SettingsGetRegistrationResponse": {
         "required": [
           "openRegistration",
@@ -8853,27 +8880,44 @@
         },
         "description": "Who may create an account on this instance."
       },
-      "SettingsUpdateAssistanceRequest": {
+      "SettingsUpdateAssistanceConnectionContract": {
         "required": [
-          "enabled",
           "provider",
+          "apiKeyConfigured",
           "baseUrl",
-          "composeModel",
-          "drawModel",
-          "improveEnabled",
-          "draftEnabled",
-          "readEnabled",
-          "drawEnabled"
+          "usable"
         ],
         "type": "object",
         "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Whether the assistant is on."
-          },
           "provider": {
             "type": "string",
-            "description": "Which provider: `gemini` or `openai`."
+            "description": "`gemini`, `openai` or `ollama`."
+          },
+          "apiKeyConfigured": {
+            "type": "boolean",
+            "description": "Whether a key has been entered. Never the key."
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Where the provider is, or empty for its own address."
+          },
+          "usable": {
+            "type": "boolean",
+            "description": "Whether this connection has everything its provider needs."
+          }
+        },
+        "description": "One provider, and whether it is ready to be used."
+      },
+      "SettingsUpdateAssistanceConnectionRequest": {
+        "required": [
+          "provider",
+          "baseUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "`gemini`, `openai` or `ollama`."
           },
           "apiKey": {
             "type": "string",
@@ -8882,31 +8926,36 @@
           },
           "baseUrl": {
             "type": "string",
-            "description": "Where the provider is, or empty for its usual address."
-          },
-          "composeModel": {
-            "type": "string",
-            "description": "The model that writes recipes."
-          },
-          "drawModel": {
-            "type": "string",
-            "description": "The model that draws pictures."
-          },
-          "improveEnabled": {
+            "description": "Where the provider is, or empty for its own address."
+          }
+        },
+        "description": "One provider to connect, or to keep connected."
+      },
+      "SettingsUpdateAssistanceRequest": {
+        "required": [
+          "enabled",
+          "connections",
+          "uses"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
             "type": "boolean",
-            "description": "Whether it may rewrite a recipe somebody already has."
+            "description": "Whether the assistant is on at all."
           },
-          "draftEnabled": {
-            "type": "boolean",
-            "description": "Whether it may write one from an idea."
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsUpdateAssistanceConnectionRequest"
+            },
+            "description": "The providers to keep. Anything left out is disconnected."
           },
-          "readEnabled": {
-            "type": "boolean",
-            "description": "Whether it may read one out of a photograph or a block of text."
-          },
-          "drawEnabled": {
-            "type": "boolean",
-            "description": "Whether it may draw a picture."
+          "uses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsUpdateAssistanceUseRequest"
+            },
+            "description": "Which provider and model does each job."
           },
           "monthlyBudget": {
             "type": "number",
@@ -8926,62 +8975,28 @@
       "SettingsUpdateAssistanceResponse": {
         "required": [
           "enabled",
-          "provider",
-          "apiKeyConfigured",
-          "connected",
-          "baseUrl",
-          "composeModel",
-          "drawModel",
-          "improveEnabled",
-          "draftEnabled",
-          "readEnabled",
-          "drawEnabled"
+          "connections",
+          "uses"
         ],
         "type": "object",
         "properties": {
           "enabled": {
             "type": "boolean",
-            "description": "Whether the assistant is on."
+            "description": "Whether the assistant is on at all."
           },
-          "provider": {
-            "type": "string",
-            "description": "Which provider: `gemini` or `openai`."
+          "connections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsUpdateAssistanceConnectionContract"
+            },
+            "description": "The providers this instance has been given, in a fixed order."
           },
-          "apiKeyConfigured": {
-            "type": "boolean",
-            "description": "Whether a key has been entered. Never the key."
-          },
-          "connected": {
-            "type": "boolean",
-            "description": "Whether the connection has everything this provider needs."
-          },
-          "baseUrl": {
-            "type": "string",
-            "description": "Where the provider is, when it is not where it usually is."
-          },
-          "composeModel": {
-            "type": "string",
-            "description": "The model that writes recipes."
-          },
-          "drawModel": {
-            "type": "string",
-            "description": "The model that draws pictures."
-          },
-          "improveEnabled": {
-            "type": "boolean",
-            "description": "Whether it may rewrite a recipe somebody already has."
-          },
-          "draftEnabled": {
-            "type": "boolean",
-            "description": "Whether it may write one from an idea."
-          },
-          "readEnabled": {
-            "type": "boolean",
-            "description": "Whether it may read one out of a photograph or a block of text."
-          },
-          "drawEnabled": {
-            "type": "boolean",
-            "description": "Whether it may draw a picture."
+          "uses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsUpdateAssistanceUseContract"
+            },
+            "description": "Which provider and model does each job."
           },
           "monthlyBudget": {
             "type": "number",
@@ -8996,7 +9011,68 @@
             "nullable": true
           }
         },
-        "description": "The model this instance talks to, and what it is allowed to do."
+        "description": "The models this instance can talk to, and which of them does what."
+      },
+      "SettingsUpdateAssistanceUseContract": {
+        "required": [
+          "capability",
+          "enabled",
+          "provider",
+          "model",
+          "defaultModel"
+        ],
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "description": "`improve`, `draft`, `read` or `draw`."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this job is offered at all."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Which provider does it, or empty if none was chosen."
+          },
+          "model": {
+            "type": "string",
+            "description": "Which of its models, or empty for the current default."
+          },
+          "defaultModel": {
+            "type": "string",
+            "description": "The model that will actually be used when none is chosen."
+          }
+        },
+        "description": "What does one job."
+      },
+      "SettingsUpdateAssistanceUseRequest": {
+        "required": [
+          "capability",
+          "enabled",
+          "provider",
+          "model"
+        ],
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "description": "`improve`, `draft`, `read` or `draw`."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this job is offered at all."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Which provider does it."
+          },
+          "model": {
+            "type": "string",
+            "description": "Which of its models, or empty for the current default."
+          }
+        },
+        "description": "What should do one job."
       },
       "SettingsUpdateRegistrationRequest": {
         "required": [

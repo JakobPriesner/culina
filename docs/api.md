@@ -294,7 +294,7 @@ body: it generates a clean client and stays greppable.
 | `GET` | `/settings/registration` | Instance settings. Admin only. |
 | `PUT` | `/settings/registration` | `openRegistration`, `requireInvitation`, `maxUsers`. |
 | `GET` | `/settings/assistance` | How the assistant is set up. Admin only. Never returns the API key — `apiKeyConfigured` says whether there is one. |
-| `PUT` | `/settings/assistance` | `apiKey` has three states: omit to keep the stored key, empty string to remove it, a value to replace it. |
+| `PUT` | `/settings/assistance` | `connections` and `uses` together, because a use pointing at a connection that did not save is a state nobody should reach. Each connection's `apiKey` has three states: omit to keep the stored key, empty string to remove it, a value to replace it. |
 | `GET` | `/settings/assistance/usage` | This calendar month's tokens and spend, by person and by capability. Admin only. |
 
 ## The assistant

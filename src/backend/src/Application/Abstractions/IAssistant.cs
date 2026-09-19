@@ -20,6 +20,13 @@ namespace Application.Abstractions;
 /// Drawing is the one that is genuinely different work, so it is the one that
 /// is genuinely a second method.
 /// </para>
+/// <para>
+/// Every call is told which connection and which model to use rather than
+/// reading them from the settings. An adapter that reached into the settings
+/// could serve exactly one connection, which is what stopped this instance
+/// having a cheap model for tidying wording and a good one for reading a
+/// photograph.
+/// </para>
 /// </remarks>
 public interface IAssistant
 {
@@ -27,15 +34,38 @@ public interface IAssistant
     AssistantKind Kind { get; }
 
     /// <summary>Asks for a recipe.</summary>
+    /// <param name="using">Where to reach the provider, and which model.</param>
     /// <param name="request">What to do, and what to do it to.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
-    Task<Result<Composed>> ComposeAsync(Composition request, CancellationToken cancellationToken);
+    Task<Result<Composed>> ComposeAsync(
+        Connected @using,
+        Composition request,
+        CancellationToken cancellationToken);
 
     /// <summary>Asks for a picture.</summary>
+    /// <param name="using">Where to reach the provider, and which model.</param>
     /// <param name="request">What to draw.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
-    Task<Result<Drawn>> DrawAsync(Drawing request, CancellationToken cancellationToken);
+    Task<Result<Drawn>> DrawAsync(
+        Connected @using,
+        Drawing request,
+        CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// One provider, ready to be called.
+/// </summary>
+/// <remarks>
+/// Resolved before it gets here: the key is already decrypted, the address is
+/// already either the override or the provider's own, and the model is already
+/// either the chosen one or the current default. Adapters therefore know
+/// nothing about encryption, about settings, or about what a default is — they
+/// know how to talk to one provider.
+/// </remarks>
+/// <param name="ApiKey">The credential, in the clear. Empty where none is needed.</param>
+/// <param name="BaseUrl">Where to send the request.</param>
+/// <param name="Model">Which model to ask.</param>
+public sealed record Connected(string ApiKey, string BaseUrl, string Model);
 
 /// <summary>
 /// A request for a recipe, with the instruction kept apart from the material.

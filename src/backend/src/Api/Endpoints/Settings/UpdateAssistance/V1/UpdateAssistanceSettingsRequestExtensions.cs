@@ -12,15 +12,10 @@ internal static class UpdateAssistanceSettingsRequestExtensions
 
         return new UpdateAssistanceSettingsCommand(
             request.Enabled,
-            request.Provider,
-            request.ApiKey,
-            request.BaseUrl,
-            request.ComposeModel,
-            request.DrawModel,
-            request.ImproveEnabled,
-            request.DraftEnabled,
-            request.ReadEnabled,
-            request.DrawEnabled,
+            [.. request.Connections.Select(one =>
+                new ConnectionEdit(one.Provider, one.ApiKey, one.BaseUrl))],
+            [.. request.Uses.Select(one =>
+                new UseEdit(one.Capability, one.Enabled, one.Provider, one.Model))],
             request.MonthlyBudget,
             request.PersonalBudget);
     }

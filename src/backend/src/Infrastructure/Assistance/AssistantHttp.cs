@@ -175,17 +175,17 @@ internal sealed class AssistantHttp : IDisposable
     };
 
     /// <summary>
-    /// Where the provider is: what was configured, or its usual address.
+    /// Where to send it.
     /// </summary>
-    /// <param name="configured">The override from settings, possibly empty.</param>
-    /// <param name="fallback">The provider's own address.</param>
+    /// <param name="origin">The provider's address, already resolved.</param>
     /// <param name="path">The path to call, without a leading slash.</param>
-    internal static Uri Address(string configured, string fallback, string path)
-    {
-        var origin = configured.Length > 0 ? configured : fallback;
-
-        return new Uri(new Uri(origin.TrimEnd('/') + "/"), path);
-    }
+    /// <remarks>
+    /// No fallback here any more. Which address a provider has is a question
+    /// with one answer per connection, and answering it in the adapter meant
+    /// the adapter could only ever serve one.
+    /// </remarks>
+    internal static Uri Address(string origin, string path) =>
+        new(new Uri(origin.TrimEnd('/') + "/"), path);
 
     public void Dispose()
     {

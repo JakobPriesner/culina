@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Application.Abstractions;
-using Application.Abstractions.Settings;
 using Domain.Assistance;
 using Domain.Shared;
 using Microsoft.Extensions.Logging;
@@ -32,11 +31,9 @@ namespace Infrastructure.Assistance;
 /// the same reason — a model on your own machine is wherever you put it.
 /// </para>
 /// </remarks>
-/// <param name="settings">The live instance settings.</param>
 /// <param name="http">The shared client.</param>
 /// <param name="logger">Records what the runner refused, and why.</param>
 internal sealed class OllamaAssistant(
-    AssistanceSettings settings,
     AssistantHttp http,
     ILogger<OllamaAssistant> logger) : IAssistant
 {
@@ -51,19 +48,16 @@ internal sealed class OllamaAssistant(
     public AssistantKind Kind => AssistantKind.Ollama;
 
     public async Task<Result<Composed>> ComposeAsync(
+        Connected @using,
         Composition request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
-
-        if (settings.BaseUrl.Length is 0)
-        {
-            return AssistanceErrors.NotConfigured;
-        }
 
         var payload = new
         {
-            model = settings.ComposeModel.Or(AssistantDefaults.ComposeModel(Kind)),
+            model = @using.Model,
             messages = new object[]
             {
                 new { role = "system", content = request.Instruction },
@@ -85,7 +79,7 @@ internal sealed class OllamaAssistant(
         };
 
         var answered = await http.PostAsync<OllamaReply>(
-                AssistantHttp.Address(settings.BaseUrl, UsualAddress, "api/chat"),
+                AssistantHttp.Address(@using.BaseUrl, "api/chat"),
                 payload,
                 // Nothing to authorise. Said out loud rather than left as an
                 // empty lambda nobody can explain.
@@ -106,7 +100,10 @@ internal sealed class OllamaAssistant(
     /// on under a different provider and left on. A named refusal rather than a
     /// call that fails somewhere inside the runner.
     /// </remarks>
-    public Task<Result<Drawn>> DrawAsync(Drawing request, CancellationToken cancellationToken) =>
+    public Task<Result<Drawn>> DrawAsync(
+        Connected @using,
+        Drawing request,
+        CancellationToken cancellationToken) =>
         Task.FromResult(Result<Drawn>.Failure(AssistanceErrors.DrawingNotSupported));
 
     private Result<Composed> Read(OllamaReply reply)

@@ -50,11 +50,17 @@ connected is the app exactly as it was before any of this existed — the button
 are absent, not greyed out. Culina has to work completely without it, and it
 does.
 
-Three providers: **Ollama**, for a model on your own hardware, where the
-assistant costs nothing per recipe and nothing leaves the machine; **Gemini**
-and **OpenAI** for a hosted one, where recipe text and photographs are sent to
-that company to be read, and where the settings screen tracks tokens and spend
-per person and refuses requests once you have hit the monthly ceiling you set.
+Three providers — **Ollama** for a model on your own hardware, **Gemini** and
+**OpenAI** for a hosted one — and you can connect all of them and give each job
+to whichever suits it. Reading a cookbook photograph wants good vision; tidying
+wording wants something cheap you will ask twenty times an evening; drawing
+wants a provider that draws at all, which a local model does not.
+
+A job given to Ollama costs nothing per recipe and sends nothing off the
+machine. A job given to Gemini or OpenAI sends that recipe's text, or the
+photograph you pointed it at, to that company to be read — and the settings
+screen tracks tokens and spend per person, and refuses requests once you have
+hit the monthly ceiling you set.
 
 ## Stack
 
