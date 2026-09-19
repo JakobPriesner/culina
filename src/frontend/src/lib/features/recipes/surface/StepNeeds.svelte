@@ -6,10 +6,12 @@
   /**
    * What to get out for one step.
    *
-   * The sentence above it says what to *do*; this says what to have in front of
+   * The sentence below it says what to *do*; this says what to have in front of
    * you before doing it, which is a different question and the one you ask
-   * while the pan is still cold. It is more than the sentence names on purpose:
-   * "combine everything and knead" needs five things and says none of them.
+   * while the pan is still cold. Above the sentence rather than after it for
+   * exactly that reason: it is read first, in the order the step is actually
+   * carried out. It is more than the sentence names on purpose: "combine
+   * everything and knead" needs five things and says none of them.
    *
    * Plain text, not controls. One button per ingredient per step would put
    * forty tab stops between the reader and the end of the method, to say

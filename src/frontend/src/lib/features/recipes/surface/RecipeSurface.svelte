@@ -497,9 +497,14 @@
                 <div class="step-body">
                   <span class="number">{step.title ?? m['recipe.step']({ number: index + 1 })}</span
                   >
-                  <StepText {step} {scaling} onhighlight={(id) => (highlighted = id)} />
 
-                  <!-- Reading is planning: this is the step's own gathering
+                  <!-- Under the step's own title and above its words, because
+                       that is the order the step is carried out in: get these
+                       out, then do this. At the end it was an afterthought to
+                       a sentence already read, and the whole point of it is to
+                       be read first.
+
+                       Reading is planning: this is the step's own gathering
                        list, at the amounts on screen. Cooking is doing, and
                        there the panel to the left has already become it — as
                        has the column beside this step, once the reader has
@@ -507,6 +512,8 @@
                   {#if !perStep && needs.length > 0}
                     <StepNeeds ingredients={needs} {scaling} />
                   {/if}
+
+                  <StepText {step} {scaling} onhighlight={(id) => (highlighted = id)} />
                 </div>
               {/if}
             </li>
@@ -1081,8 +1088,10 @@
 
     /* Under the step rather than beside it, because that is the room there is
        — and under it rather than over it, so the step's own number still
-       introduces the step. It lands exactly where the gathering line it
-       replaced used to sit. */
+       introduces the step. The one place the two arrangements disagree about
+       where "what this step needs" sits: a card between a step's title and its
+       words would have to be a child of the step body, and here it is a cell
+       of the row beside it. */
     .perStep .step-needs {
       order: 1;
     }
