@@ -58,8 +58,15 @@ function getStandaloneSvg(size = 512, shape = 'circle') {
     A bowl with rising steam in the Culina dark olive seal.
     Scalable vector icon used as modern SVG favicon and PWA brand mark.
 
-    Ground: --c-olive-800 / 900 gradient (#34432c to #1d2618)
-    Mark: --c-sand-50 (#fdfbf7) warm porcelain paper tone
+    Literal colours, not token names: this file is fetched by the browser as an
+    image and never sees the app's stylesheet. Ground is the olive 800/900 pair
+    (#34432c to #1d2618); the mark is sand 50 (#fdfbf7), the warm porcelain
+    paper tone.
+
+    Keep the token names themselves out of this comment. XML forbids a double
+    hyphen inside a comment, every one of those names begins with two, and the
+    whole document fails to parse over it. That is not a warning anywhere: the
+    browser simply has no icon.
   -->
   <defs>
     <linearGradient id="culina-grad" x1="20%" y1="0%" x2="80%" y2="100%">
