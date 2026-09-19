@@ -63,7 +63,7 @@ internal sealed class OllamaAssistant(
 
         var payload = new
         {
-            model = settings.ComposeModel,
+            model = settings.ComposeModel.Or(AssistantDefaults.ComposeModel(Kind)),
             messages = new object[]
             {
                 new { role = "system", content = request.Instruction },

@@ -7,12 +7,33 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Assistance;
 
-/// <summary>Talks to Google's Gemini models.</summary>
+/// <summary>
+/// Talks to Google's Gemini models, over the Interactions API.
+/// </summary>
 /// <remarks>
+/// <para>
+/// The Interactions API rather than <c>generateContent</c>, which Google now
+/// calls the legacy generate-content API. It is pinned to a revision with the
+/// <c>Api-Revision</c> header, which is the whole reason that header exists:
+/// the shape changed under everybody in May 2026 — <c>steps</c> replaced
+/// <c>outputs</c>, and <c>response_format</c> absorbed
+/// <c>response_mime_type</c> — and an unpinned client is one that will do that
+/// again without warning.
+/// </para>
+/// <para>
+/// One thing is genuinely weaker here than with the other two providers, and it
+/// is worth naming rather than hiding: Interactions has no separate system-
+/// instruction field, so the instruction and the untrusted material travel as
+/// two <em>content parts</em> of one input rather than as two different kinds of
+/// message. They are still never concatenated, and the instruction is still
+/// always first, but a model that decides to read part two as an instruction has
+/// less standing in its way than OpenAI's system role gives.
+/// </para>
+/// <para>
 /// The settings are read per call rather than captured in the constructor: they
-/// are a mutable singleton an administrator can change without a restart, and
-/// an adapter holding the key it was built with would keep using a key that had
-/// been rotated.
+/// are a mutable singleton an administrator can change without a restart, and an
+/// adapter holding the key it was built with would keep using a rotated one.
+/// </para>
 /// </remarks>
 /// <param name="settings">The live instance settings.</param>
 /// <param name="protector">Decrypts the stored key.</param>
@@ -24,7 +45,14 @@ internal sealed class GeminiAssistant(
     AssistantHttp http,
     ILogger<GeminiAssistant> logger) : IAssistant
 {
-    private const string Home = "https://generativelanguage.googleapis.com";
+    /// <summary>
+    /// The shape of the API this was written against.
+    /// </summary>
+    /// <remarks>
+    /// Sent on every request. Raising it is a deliberate act with a changelog to
+    /// read first, which is exactly what it should be.
+    /// </remarks>
+    private const string Revision = "2026-05-20";
 
     public AssistantKind Kind => AssistantKind.Gemini;
 
@@ -41,24 +69,17 @@ internal sealed class GeminiAssistant(
 
         var payload = new
         {
-            systemInstruction = new { parts = new[] { new { text = request.Instruction } } },
-            contents = new[] { new { role = "user", parts = Parts(request) } },
-            generationConfig = new
+            model = settings.ComposeModel.Or(AssistantDefaults.ComposeModel(Kind)),
+            input = Input(request),
+            response_format = new
             {
-                responseMimeType = "application/json",
-                responseSchema = RecipeSchema.Definition
+                type = "text",
+                mime_type = "application/json",
+                schema = RecipeSchema.Definition
             }
         };
 
-        var answered = await http.PostAsync<GeminiReply>(
-                AssistantHttp.Address(
-                    settings.BaseUrl,
-                    Home,
-                    $"v1beta/models/{settings.ComposeModel}:generateContent"),
-                payload,
-                message => message.Headers.Add("x-goog-api-key", key),
-                cancellationToken)
-            .ConfigureAwait(false);
+        var answered = await PostAsync(payload, key, cancellationToken).ConfigureAwait(false);
 
         return answered.Bind(Read);
     }
@@ -74,54 +95,58 @@ internal sealed class GeminiAssistant(
             return AssistanceErrors.NotConfigured;
         }
 
+        // The same endpoint. An image model answers with an image part where a
+        // text model answers with a text one, which is the point of the steps
+        // being typed.
         var payload = new
         {
-            contents = new[]
-            {
-                new { role = "user", parts = new object[] { new { text = request.Subject } } }
-            },
-            generationConfig = new { responseModalities = new[] { "IMAGE" } }
+            model = settings.DrawModel.Or(AssistantDefaults.DrawModel(Kind)),
+            input = new object[] { new { type = "text", text = request.Subject } }
         };
 
-        var answered = await http.PostAsync<GeminiReply>(
-                AssistantHttp.Address(
-                    settings.BaseUrl,
-                    Home,
-                    $"v1beta/models/{settings.DrawModel}:generateContent"),
-                payload,
-                message => message.Headers.Add("x-goog-api-key", key),
-                cancellationToken)
-            .ConfigureAwait(false);
+        var answered = await PostAsync(payload, key, cancellationToken).ConfigureAwait(false);
 
         return answered.Bind(ReadPicture);
     }
 
+    private Task<Result<GeminiReply>> PostAsync(
+        object payload,
+        string key,
+        CancellationToken cancellationToken) =>
+        http.PostAsync<GeminiReply>(
+            AssistantHttp.Address(settings.BaseUrl, AssistantDefaults.Home(Kind), "v1beta/interactions"),
+            payload,
+            message =>
+            {
+                message.Headers.Add("x-goog-api-key", key);
+                message.Headers.Add("Api-Revision", Revision);
+            },
+            cancellationToken);
+
     /// <summary>
-    /// The instruction and the material, in different parts of the request.
+    /// The instruction and the material, as separate parts of one input.
     /// </summary>
     /// <remarks>
-    /// The instruction is in <c>systemInstruction</c> and never here. What this
-    /// builds is only ever the untrusted half: what somebody pasted, typed or
-    /// photographed. They are never concatenated, which is the whole defence.
+    /// Never joined into one string, and the instruction is always first. See
+    /// the note on this class: two parts is what this API offers in place of a
+    /// system role, and it is weaker.
     /// </remarks>
-    private static object[] Parts(Composition request)
+    private static object[] Input(Composition request)
     {
-        List<object> parts = [];
+        List<object> parts = [new { type = "text", text = request.Instruction }];
 
         if (request.Material is { Length: > 0 } material)
         {
-            parts.Add(new { text = material });
+            parts.Add(new { type = "text", text = material });
         }
 
         if (!request.Picture.IsEmpty)
         {
             parts.Add(new
             {
-                inlineData = new
-                {
-                    mimeType = request.PictureMediaType ?? "image/jpeg",
-                    data = Convert.ToBase64String(request.Picture.Span)
-                }
+                type = "image",
+                mime_type = request.PictureMediaType ?? "image/jpeg",
+                data = Convert.ToBase64String(request.Picture.Span)
             });
         }
 
@@ -130,9 +155,9 @@ internal sealed class GeminiAssistant(
 
     private Result<Composed> Read(GeminiReply reply)
     {
-        if (Text(reply) is not { Length: > 0 } json)
+        if (Part(reply, "text")?.Text is not { Length: > 0 } json)
         {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Candidates is [var refused, ..] ? refused.FinishReason : null);
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Status);
 
             return AssistanceErrors.UnusableAnswer;
         }
@@ -156,14 +181,9 @@ internal sealed class GeminiAssistant(
 
     private Result<Drawn> ReadPicture(GeminiReply reply)
     {
-        var data = reply.Candidates?
-            .SelectMany(candidate => candidate.Content?.Parts ?? [])
-            .Select(part => part.InlineData?.Data)
-            .FirstOrDefault(value => value is { Length: > 0 });
-
-        if (data is null)
+        if (Part(reply, "image")?.Data is not { Length: > 0 } data)
         {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Candidates is [var refused, ..] ? refused.FinishReason : null);
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Status);
 
             return AssistanceErrors.UnusableAnswer;
         }
@@ -173,14 +193,23 @@ internal sealed class GeminiAssistant(
             Usage(reply, pictures: 1));
     }
 
-    private static string? Text(GeminiReply reply) => reply.Candidates?
-        .SelectMany(candidate => candidate.Content?.Parts ?? [])
-        .Select(part => part.Text)
-        .FirstOrDefault(value => value is { Length: > 0 });
+    /// <summary>
+    /// The first part of that type the model produced.
+    /// </summary>
+    /// <remarks>
+    /// Only <c>model_output</c> steps. A timeline can also carry the input back
+    /// and, once tools are in play, function calls — and reading the echo of
+    /// what was sent as if it were the answer is the kind of mistake that looks
+    /// like it works.
+    /// </remarks>
+    private static GeminiPart? Part(GeminiReply reply, string type) => reply.Steps?
+        .Where(step => step.Type == "model_output")
+        .SelectMany(step => step.Content ?? [])
+        .FirstOrDefault(part => part.Type == type);
 
     private static ModelUsage Usage(GeminiReply reply, int pictures) => new(
-        reply.UsageMetadata?.PromptTokenCount ?? 0,
-        reply.UsageMetadata?.CandidatesTokenCount ?? 0,
+        reply.Usage?.PromptTokens ?? 0,
+        reply.Usage?.CompletionTokens ?? 0,
         pictures);
 
     /// <summary>
@@ -195,48 +224,46 @@ internal sealed class GeminiAssistant(
         settings.HasApiKey ? protector.Unprotect(settings.ProtectedApiKey) : null;
 }
 
-/// <summary>What Gemini answers with.</summary>
+/// <summary>What the Interactions API answers with.</summary>
 internal sealed record GeminiReply
 {
-    public IReadOnlyList<GeminiCandidate>? Candidates { get; init; }
+    public IReadOnlyList<GeminiStep>? Steps { get; init; }
 
-    public GeminiUsage? UsageMetadata { get; init; }
+    /// <summary>Set when the interaction wants something before it can finish.</summary>
+    public string? Status { get; init; }
+
+    public GeminiUsage? Usage { get; init; }
 }
 
-/// <summary>One answer.</summary>
-internal sealed record GeminiCandidate
+/// <summary>One step of the interaction.</summary>
+internal sealed record GeminiStep
 {
-    public GeminiContent? Content { get; init; }
+    /// <summary><c>model_output</c>, <c>user_input</c>, <c>function_call</c>.</summary>
+    public string? Type { get; init; }
 
-    public string? FinishReason { get; init; }
+    public IReadOnlyList<GeminiPart>? Content { get; init; }
 }
 
-/// <summary>The parts of one answer.</summary>
-internal sealed record GeminiContent
-{
-    public IReadOnlyList<GeminiPart>? Parts { get; init; }
-}
-
-/// <summary>One part: words, or a picture.</summary>
+/// <summary>One piece of a step: words, or a picture.</summary>
 internal sealed record GeminiPart
 {
+    /// <summary><c>text</c> or <c>image</c>.</summary>
+    public string? Type { get; init; }
+
     public string? Text { get; init; }
 
-    public GeminiInlineData? InlineData { get; init; }
-}
-
-/// <summary>A picture, base64-encoded.</summary>
-internal sealed record GeminiInlineData
-{
     public string? MimeType { get; init; }
 
+    /// <summary>A picture, base64-encoded.</summary>
     public string? Data { get; init; }
 }
 
-/// <summary>What the call consumed, as Gemini counts it.</summary>
+/// <summary>What the call consumed.</summary>
 internal sealed record GeminiUsage
 {
-    public int PromptTokenCount { get; init; }
+    public int PromptTokens { get; init; }
 
-    public int CandidatesTokenCount { get; init; }
+    public int CompletionTokens { get; init; }
+
+    public int TotalTokens { get; init; }
 }

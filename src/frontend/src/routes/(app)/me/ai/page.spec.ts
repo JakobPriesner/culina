@@ -109,6 +109,31 @@ describe('the assistant settings page', () => {
     expect(screen.getByRole('switch', { name: 'Improve a recipe' })).toBeInTheDocument();
   });
 
+  it('does not ask for an address for a provider that has one of its own', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // Connecting is choosing a provider and pasting a key. Google's address is
+    // not a deployment decision, and a box for it made that look like work.
+    expect(screen.queryByText('Where your model is running.')).not.toBeInTheDocument();
+
+    // It is still reachable, for the gateway case — just not in the way.
+    expect(screen.getByText('Advanced')).toBeInTheDocument();
+  });
+
+  it('asks for an address for a local model, where it is the connection', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ollama' }));
+
+    expect(screen.getByText('Where your model is running.')).toBeInTheDocument();
+  });
+
   it('says what leaves the server, and says it differently for a local model', async () => {
     serverAnswers();
 

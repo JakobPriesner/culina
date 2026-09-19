@@ -31,9 +31,15 @@ interface ProviderFacts {
   canDraw: boolean;
   /** What to put in the address box when it is empty, as a hint only. */
   addressHint: string;
-  /** A model that is a sensible starting point, as a hint only. */
+  /**
+   * The model used when nobody picks one.
+   *
+   * A hint in the form rather than a value: the server holds the same default
+   * and applies it, so an empty box means "whatever is current" rather than
+   * "whatever this build was shipped believing".
+   */
   composeHint: string;
-  /** A picture model that is a sensible starting point, as a hint only. */
+  /** The same, for pictures. */
   drawHint: string;
 }
 
@@ -43,16 +49,16 @@ export const providerFacts: Record<Provider, ProviderFacts> = {
     needsAddress: false,
     canDraw: true,
     addressHint: 'https://generativelanguage.googleapis.com',
-    composeHint: 'gemini-2.5-flash',
-    drawHint: 'gemini-2.5-flash-image'
+    composeHint: 'gemini-3-flash-preview',
+    drawHint: 'gemini-3.1-flash-image-preview'
   },
   openai: {
     needsApiKey: true,
     needsAddress: false,
     canDraw: true,
     addressHint: 'https://api.openai.com',
-    composeHint: 'gpt-4o-mini',
-    drawHint: 'gpt-image-1'
+    composeHint: 'gpt-6-astra',
+    drawHint: 'gpt-image-2.5-flare'
   },
   ollama: {
     needsApiKey: false,

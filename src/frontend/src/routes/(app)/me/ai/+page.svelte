@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  import { Button, Field, SegmentedControl, Switch, TextInput } from '$ds';
+  import { Button, Disclosure, Field, SegmentedControl, Switch, TextInput } from '$ds';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { formatNumber } from '$shell/i18n';
@@ -149,24 +149,27 @@
       </SettingsRow>
     {/if}
 
-    <SettingsRow
-      label={m['ai.address']()}
-      description={facts.needsAddress ? m['ai.address.required']() : m['ai.address.hint']()}
-    >
-      <Field label={m['ai.address']()}>
-        {#snippet children({ id, describedBy, invalid })}
-          <TextInput
-            {id}
-            {describedBy}
-            {invalid}
-            type="url"
-            placeholder={facts.addressHint}
-            value={it.baseUrl}
-            oninput={(value) => edit({ baseUrl: value })}
-          />
-        {/snippet}
-      </Field>
-    </SettingsRow>
+    {#if facts.needsAddress}
+      <!-- Only where it is the connection rather than an override of one. A
+           model on your own machine is wherever you put it; Google's and
+           OpenAI's addresses are not a deployment decision, and asking for
+           them made connecting look like more work than it is. -->
+      <SettingsRow label={m['ai.address']()} description={m['ai.address.required']()}>
+        <Field label={m['ai.address']()}>
+          {#snippet children({ id, describedBy, invalid })}
+            <TextInput
+              {id}
+              {describedBy}
+              {invalid}
+              type="url"
+              placeholder={facts.addressHint}
+              value={it.baseUrl}
+              oninput={(value) => edit({ baseUrl: value })}
+            />
+          {/snippet}
+        </Field>
+      </SettingsRow>
+    {/if}
 
     <SettingsRow label={m['ai.enabled']()} description={m['ai.enabled.hint']()}>
       <Switch
@@ -185,38 +188,63 @@
       : m['ai.privacy.local']()}
   </p>
 
-  <SettingsSection title={m['ai.models']()} description={m['ai.models.hint']()}>
-    <SettingsRow label={m['ai.composeModel']()}>
-      <Field label={m['ai.composeModel']()}>
-        {#snippet children({ id, describedBy, invalid })}
-          <TextInput
-            {id}
-            {describedBy}
-            {invalid}
-            placeholder={facts.composeHint}
-            value={it.composeModel}
-            oninput={(value) => edit({ composeModel: value })}
-          />
-        {/snippet}
-      </Field>
-    </SettingsRow>
+  <!-- No section heading: the disclosure already says the word, and a title
+       above a summary saying the same thing is one of them too many. -->
+  <SettingsSection bare>
+    <Disclosure summary={m['ai.advanced']()}>
+      <div class="advanced">
+        <p class="note">{m['ai.advanced.hint']()}</p>
 
-    {#if facts.canDraw}
-      <SettingsRow label={m['ai.drawModel']()}>
-        <Field label={m['ai.drawModel']()}>
+        {#if !facts.needsAddress}
+          <Field
+            label={m['ai.address']()}
+            hint={m['ai.address.optional']({ provider: m[`ai.provider.${it.provider}`]() })}
+          >
+            {#snippet children({ id, describedBy, invalid })}
+              <TextInput
+                {id}
+                {describedBy}
+                {invalid}
+                type="url"
+                placeholder={facts.addressHint}
+                value={it.baseUrl}
+                oninput={(value) => edit({ baseUrl: value })}
+              />
+            {/snippet}
+          </Field>
+        {/if}
+
+        <!-- Empty means the default for this provider, which the placeholder
+             shows. Pinning a model is a real need and an uncommon one. -->
+        <Field label={m['ai.composeModel']()} hint={m['ai.models.default']()}>
           {#snippet children({ id, describedBy, invalid })}
             <TextInput
               {id}
               {describedBy}
               {invalid}
-              placeholder={facts.drawHint}
-              value={it.drawModel}
-              oninput={(value) => edit({ drawModel: value })}
+              placeholder={facts.composeHint}
+              value={it.composeModel}
+              oninput={(value) => edit({ composeModel: value })}
             />
           {/snippet}
         </Field>
-      </SettingsRow>
-    {/if}
+
+        {#if facts.canDraw}
+          <Field label={m['ai.drawModel']()} hint={m['ai.models.default']()}>
+            {#snippet children({ id, describedBy, invalid })}
+              <TextInput
+                {id}
+                {describedBy}
+                {invalid}
+                placeholder={facts.drawHint}
+                value={it.drawModel}
+                oninput={(value) => edit({ drawModel: value })}
+              />
+            {/snippet}
+          </Field>
+        {/if}
+      </div>
+    </Disclosure>
   </SettingsSection>
 
   <SettingsSection title={m['ai.capabilities']()} description={m['ai.capabilities.hint']()}>
@@ -361,6 +389,20 @@
 {/if}
 
 <style>
+  .advanced {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding-top: var(--space-3);
+  }
+
+  .note {
+    max-width: var(--measure);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
   .state {
     color: var(--text-muted);
     font-size: var(--text-sm);

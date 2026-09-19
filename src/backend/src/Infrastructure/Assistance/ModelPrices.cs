@@ -46,17 +46,20 @@ internal sealed class ModelPrices : IModelPrices
     /// </remarks>
     private static readonly (string Prefix, Price Price)[] Text =
     [
-        // Longest first: gemini-2.5-flash-lite must not be read as
-        // gemini-2.5-flash.
+        // Longest prefix first, always: gemini-3.1-flash-lite must not be read
+        // as gemini-3.1-flash.
+        ("gemini-3.1-flash-lite", new Price(0.10m, 0.40m)),
+        ("gemini-3.1-pro", new Price(1.25m, 10.00m)),
+        ("gemini-3.1-flash", new Price(0.30m, 2.50m)),
+        ("gemini-3-flash", new Price(0.30m, 2.50m)),
+        ("gemini-3-pro", new Price(1.25m, 10.00m)),
         ("gemini-2.5-flash-lite", new Price(0.10m, 0.40m)),
         ("gemini-2.5-flash", new Price(0.30m, 2.50m)),
         ("gemini-2.5-pro", new Price(1.25m, 10.00m)),
-        ("gemini-2.0-flash-lite", new Price(0.075m, 0.30m)),
-        ("gemini-2.0-flash", new Price(0.10m, 0.40m)),
+        ("gpt-6-astra", new Price(1.25m, 10.00m)),
         ("gpt-4o-mini", new Price(0.15m, 0.60m)),
         ("gpt-4o", new Price(2.50m, 10.00m)),
         ("gpt-4.1-mini", new Price(0.40m, 1.60m)),
-        ("gpt-4.1-nano", new Price(0.10m, 0.40m)),
         ("gpt-4.1", new Price(2.00m, 8.00m))
     ];
 
@@ -71,10 +74,15 @@ internal sealed class ModelPrices : IModelPrices
     /// </remarks>
     private static readonly (string Prefix, decimal Each)[] Pictures =
     [
+        ("gpt-image-2.5-sunburst", 0.08m),
+        ("gpt-image-2.5-flare", 0.04m),
+        ("gpt-image-2", 0.04m),
+        ("gpt-image-1-mini", 0.01m),
         ("gpt-image-1", 0.04m),
-        ("imagen-4", 0.04m),
-        ("imagen-3", 0.03m),
-        ("gemini-2.5-flash-image", 0.039m)
+        ("gemini-3.1-flash-image", 0.039m),
+        ("gemini-3-pro-image", 0.08m),
+        ("gemini-2.5-flash-image", 0.039m),
+        ("imagen-4", 0.04m)
     ];
 
     /// <summary>

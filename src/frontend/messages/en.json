@@ -860,5 +860,9 @@
   "assist.photo.label": "A photo of a recipe",
   "assist.photo.reading": "Reading the photo…",
   "assist.photo.tooLarge": "That photo is too large. 10 MB is the limit.",
-  "assist.photo.note": "It copies out what it can read and leaves gaps rather than guessing."
+  "assist.photo.note": "It copies out what it can read and leaves gaps rather than guessing.",
+  "ai.advanced": "Advanced",
+  "ai.advanced.hint": "Only if you run a gateway in front of the provider, or need a particular model.",
+  "ai.models.default": "Chosen for you",
+  "ai.address.optional": "Leave empty for {provider}'s own address."
 }
