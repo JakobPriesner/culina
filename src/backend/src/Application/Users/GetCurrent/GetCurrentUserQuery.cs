@@ -1,6 +1,8 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Settings;
 using Application.Telemetry;
+using Domain.Assistance;
 using Domain.Households;
 using Domain.Shared;
 using Domain.Users;
@@ -14,7 +16,8 @@ public sealed record GetCurrentUserQuery(Guid UserId);
 
 internal sealed class GetCurrentUserQueryHandler(
     IUserRepository users,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    AssistanceSettings assistance)
     : IQueryHandler<GetCurrentUserQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -37,7 +40,8 @@ internal sealed class GetCurrentUserQueryHandler(
                     .IsAdminAsync(user.Id, cancellationToken)
                     .ConfigureAwait(false);
 
-                return Result<Response>.Success(user.ToGetCurrentResponse(isAdmin, memberships));
+                return Result<Response>.Success(
+                    user.ToGetCurrentResponse(isAdmin, memberships, assistance));
             },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
@@ -51,10 +55,12 @@ internal static class CurrentUserMappings
     internal static Response ToGetCurrentResponse(
         this User user,
         bool isAdmin,
-        IReadOnlyList<Household> households)
+        IReadOnlyList<Household> households,
+        AssistanceSettings assistance)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(households);
+        ArgumentNullException.ThrowIfNull(assistance);
 
         return new Response
         {
@@ -64,9 +70,29 @@ internal static class CurrentUserMappings
             IsAdmin = isAdmin,
             CreatedAt = user.CreatedAt,
             Households = [.. households.Select(household => household.ToMembership(user.Id))],
+            Assistance = assistance.ToAvailability(),
             Version = user.Version
         };
     }
+
+    /// <summary>What the assistant may be asked for, as the client needs it.</summary>
+    /// <param name="settings">The live instance settings.</param>
+    /// <remarks>
+    /// Asked of <c>Allows</c> rather than read off the four switches, so this
+    /// says the same thing the server will say when the request arrives — on,
+    /// connected, allowed here, and possible for this provider. A client told a
+    /// capability was available and then refused would be a client showing a
+    /// button that does not work.
+    /// </remarks>
+    private static Contracts.Users.GetCurrent.AssistanceAvailability ToAvailability(
+        this AssistanceSettings settings) =>
+        new()
+        {
+            Improve = settings.Allows(Capability.Improve),
+            Draft = settings.Allows(Capability.Draft),
+            Read = settings.Allows(Capability.Read),
+            Draw = settings.Allows(Capability.Draw)
+        };
 
     private static Contracts.Users.GetCurrent.HouseholdMembership ToMembership(
         this Household household,

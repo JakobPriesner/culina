@@ -1177,6 +1177,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipe-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the assistant for a recipe
+         * @description A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.
+         *
+         *     `kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and its language, and changing only how it reads.
+         *
+         *     404 when this instance has no assistant, or has that capability switched off; the two are one answer because a caller learns nothing from being told which. 429 when the month's budget is spent.
+         *
+         *     The answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.
+         */
+        post: operations["composeRecipeDraftV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suggestions": {
         parameters: {
             query?: never;
@@ -1829,6 +1855,88 @@ export interface components {
             householdId: string;
             /** @description What to call it. */
             title: string;
+        };
+        /** @description A heading and the lines under it. */
+        RecipesDraftsDraftGroupContract: {
+            /** @description The heading, or null for the implicit first group. */
+            name?: string | null;
+            /** @description Its lines, in order. */
+            ingredients: components["schemas"]["RecipesDraftsDraftIngredientContract"][];
+        };
+        /** @description One ingredient line. */
+        RecipesDraftsDraftIngredientContract: {
+            /**
+             * Format: double
+             * @description How much, or null when the recipe does not say.
+             */
+            quantity?: number | null;
+            /** @description In what, or null. */
+            unit?: string | null;
+            /** @description The shoppable noun. */
+            name: string;
+            /** @description The preparation. */
+            note?: string | null;
+        };
+        /** @description One instruction. */
+        RecipesDraftsDraftStepContract: {
+            /** @description What this step is called, when it is called anything. */
+            title?: string | null;
+            /** @description What to do. */
+            text: string;
+            /**
+             * Format: int32
+             * @description How long it waits, when it waits.
+             */
+            durationSeconds?: number | null;
+        };
+        /** @description Asks the assistant for a recipe. */
+        RecipesDraftsRequest: {
+            /** @description What is being asked for: `idea`, `text` or `revision`. */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description Whose kitchen it is for.
+             */
+            householdId: string;
+            /** @description The material, for `idea` and `text`. */
+            material?: string | null;
+            /**
+             * Format: uuid
+             * @description Which recipe to rewrite, for `revision`.
+             */
+            recipeId?: string | null;
+            /** @description The language to answer in: `en` or `de`. */
+            language?: string | null;
+        };
+        /** @description A recipe the assistant wrote. Not saved, and not a recipe yet. */
+        RecipesDraftsResponse: {
+            /** @description What the assistant called it. */
+            title?: string | null;
+            /** @description A sentence or two about it. */
+            description?: string | null;
+            /**
+             * Format: double
+             * @description How many it makes.
+             */
+            yieldAmount?: number | null;
+            /** @description What it makes: servings, or a cake. */
+            yieldLabel?: string | null;
+            /**
+             * Format: int32
+             * @description Minutes of hands-on work.
+             */
+            prepMinutes?: number | null;
+            /**
+             * Format: int32
+             * @description Minutes of cooking.
+             */
+            cookMinutes?: number | null;
+            /** @description The ingredient groups, in order. */
+            groups: components["schemas"]["RecipesDraftsDraftGroupContract"][];
+            /** @description The steps, in order. */
+            steps: components["schemas"]["RecipesDraftsDraftStepContract"][];
+            /** @description What to file it under. */
+            tags: string[];
         };
         /** @description How well a recipe fits what you have. */
         RecipesGetAllIngredientMatch: {
@@ -2975,6 +3083,17 @@ export interface components {
              */
             subject?: string | null;
         };
+        /** @description Which assistant capabilities are switched on. */
+        UsersGetCurrentAssistanceAvailability: {
+            /** @description Rewriting a recipe somebody already has. */
+            improve: boolean;
+            /** @description Writing one from an idea. */
+            draft: boolean;
+            /** @description Reading one out of a photograph or a block of text. */
+            read: boolean;
+            /** @description Drawing a picture. */
+            draw: boolean;
+        };
         /** @description One household the user belongs to. */
         UsersGetCurrentHouseholdMembership: {
             /**
@@ -3007,6 +3126,7 @@ export interface components {
             createdAt: string;
             /** @description The households they belong to. */
             households: components["schemas"]["UsersGetCurrentHouseholdMembership"][];
+            assistance: components["schemas"]["UsersGetCurrentAssistanceAvailability"];
             /**
              * Format: int64
              * @description The entity version, for If-Match on an update.
@@ -6948,6 +7068,75 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    composeRecipeDraftV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesDraftsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesDraftsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

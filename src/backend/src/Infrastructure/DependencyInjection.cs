@@ -96,6 +96,7 @@ public static class DependencyInjection
             .AddSingleton<IAssistant, OpenAiAssistant>()
             .AddSingleton<IAssistant, OllamaAssistant>()
             .AddSingleton<IAssistants, Assistants>()
+            .AddSingleton<IModelPrices, ModelPrices>()
             .AddScoped<IAssistanceLedger, AssistanceLedger>();
 
     /// <summary>

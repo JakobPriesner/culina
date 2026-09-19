@@ -13,7 +13,7 @@ public class UseCaseActivityTests
     public void Record_ShouldMarkTheSpanFailedWithTheErrorCode_WhenTheHandlerFails()
     {
         // Arrange
-        using var listener = ListenToCulinaSpans(out var finished);
+        using var listener = ListenFor("Recipes.Create", out var finished);
 
         // Act
         using (var tracked = UseCaseActivity.Start("Recipes.Create"))
@@ -34,7 +34,7 @@ public class UseCaseActivityTests
     public void Record_ShouldLeaveTheSpanUnset_WhenTheHandlerSucceeds()
     {
         // Arrange
-        using var listener = ListenToCulinaSpans(out var finished);
+        using var listener = ListenFor("Recipes.GetById", out var finished);
 
         // Act
         using (var tracked = UseCaseActivity.Start("Recipes.GetById"))
@@ -51,7 +51,7 @@ public class UseCaseActivityTests
     public void Record_ShouldReturnTheResultUnchanged_SoItCanBeUsedInline()
     {
         // Arrange
-        using var listener = ListenToCulinaSpans(out _);
+        using var listener = ListenFor("Recipes.GetById", out _);
         var result = Result<string>.Success("ready");
 
         // Act
@@ -66,11 +66,11 @@ public class UseCaseActivityTests
     public void Tag_ShouldAttachTheValueToTheSpan_WhenTheHandlerAddsContext()
     {
         // Arrange
-        using var listener = ListenToCulinaSpans(out var finished);
+        using var listener = ListenFor("Recipes.Tagged", out var finished);
         var recipeId = Guid.CreateVersion7();
 
         // Act
-        using (var tracked = UseCaseActivity.Start("Recipes.Create"))
+        using (var tracked = UseCaseActivity.Start("Recipes.Tagged"))
         {
             tracked.Tag("culina.recipe_id", recipeId);
             tracked.Record(Result.Success());
@@ -81,9 +81,30 @@ public class UseCaseActivityTests
         Assert.Equal(recipeId, span.GetTagItem("culina.recipe_id"));
     }
 
-    private static ActivityListener ListenToCulinaSpans(out List<Activity> finished)
+    /// <summary>
+    /// Collects the spans this test starts, and nobody else's.
+    /// </summary>
+    /// <param name="named">The name the test gives its own span.</param>
+    /// <param name="finished">Where the spans land.</param>
+    /// <remarks>
+    /// <para>
+    /// An <see cref="ActivityListener"/> is process-wide: it hears every span
+    /// from the Culina source, including ones started by handler tests running
+    /// in parallel. Filtering by name is what makes <c>Assert.Single</c> a
+    /// statement about this test rather than about how much of the suite
+    /// happened to be running beside it.
+    /// </para>
+    /// <para>
+    /// Locked, for the same reason. The callback fires on whichever thread
+    /// stopped the span, and a <c>List&lt;T&gt;</c> appended from two of them
+    /// does not merely interleave — it corrupts.
+    /// </para>
+    /// </remarks>
+    private static ActivityListener ListenFor(string named, out List<Activity> finished)
     {
         var collected = new List<Activity>();
+        var gate = new Lock();
+
         finished = collected;
 
         var listener = new ActivityListener
@@ -91,7 +112,18 @@ public class UseCaseActivityTests
             ShouldListenTo = source => source.Name == CulinaTelemetry.Name,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
                 ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = collected.Add
+            ActivityStopped = span =>
+            {
+                if (span.DisplayName != named)
+                {
+                    return;
+                }
+
+                lock (gate)
+                {
+                    collected.Add(span);
+                }
+            }
         };
 
         ActivitySource.AddActivityListener(listener);
