@@ -63,6 +63,10 @@
     grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-3);
+    /* The floor for something a thumb has to hit while a trolley is moving.
+       The tick inside the row is already that tall; this is what stops two
+       lines of short words from landing closer together than that. */
+    min-height: var(--control-sm);
     /* Bled out to the gutter and back so the hover lands on the whole line
        rather than on the words: the line is the target, not the text. */
     margin-inline: calc(var(--space-3) * -1);
