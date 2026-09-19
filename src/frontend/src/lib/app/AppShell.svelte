@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  import { navigating } from '$app/state';
+  import { navigating, page } from '$app/state';
   import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
@@ -10,6 +10,7 @@
   import Brand from './Brand.svelte';
   import { connection } from './connection.svelte';
   import { m } from './i18n';
+  import { offersNewRecipe } from './navigation';
   import Navigation from './Navigation.svelte';
   import NewRecipeLink from './NewRecipeLink.svelte';
 
@@ -41,6 +42,9 @@
    */
   let dockHeight = $state(0);
   let barHeight = $state(0);
+
+  /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
+  const creating = $derived(offersNewRecipe(page.url.pathname));
 </script>
 
 <div
@@ -63,9 +67,11 @@
 
       <div class="wide-only"><Navigation placement="top" /></div>
 
-      <div class="library-controls">
-        <NewRecipeLink />
-      </div>
+      {#if creating}
+        <div class="library-controls">
+          <NewRecipeLink />
+        </div>
+      {/if}
       {#if !connection.online}
         <div class="status"><p class="offline">{m['connection.offline']()}</p></div>
       {/if}
@@ -124,7 +130,10 @@
     background: linear-gradient(to bottom, var(--surface) 35%, transparent);
   }
 
-  /* Three floating groups share one row: brand, destinations, library tools. */
+  /* Three floating groups share one row: brand, destinations, and — on the
+     library alone — the way to write a new recipe. The third column is declared
+     whether or not anything is in it, so the destinations stay centred on every
+     page rather than sliding across as the page changes. */
   .header-inner {
     /* Positioned, so the pills paint above the scrim rather than under it. */
     position: relative;
