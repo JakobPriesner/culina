@@ -1,6 +1,6 @@
 using Application.Abstractions;
-using Domain.Suggestions;
 using Contracts.Suggestions.GetAll;
+using Domain.Suggestions;
 
 namespace Application.Suggestions;
 
