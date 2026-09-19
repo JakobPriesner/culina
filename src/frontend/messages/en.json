@@ -882,5 +882,8 @@
   "ai.connected": "Ready",
   "ai.cannotDraw": "{provider} does not draw pictures.",
   "ai.privacy.mixed": "Recipe text and photographs are sent to the provider each job uses. Jobs given to Ollama send nothing anywhere.",
-  "ai.apiKey.add": "Add a key"
+  "ai.apiKey.add": "Add a key",
+  "ai.job.model.any": "Chosen for you",
+  "ai.models.unreachable": "{provider} did not answer, so its models could not be listed. Check the key and the address.",
+  "ai.models.typed": "Type the model name"
 }

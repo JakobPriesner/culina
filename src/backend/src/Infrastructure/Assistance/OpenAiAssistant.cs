@@ -108,6 +108,52 @@ internal sealed class OpenAiAssistant(
         return answered.Bind(ReadPicture);
     }
 
+    public async Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
+        Connected @using,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(@using);
+
+        var listed = await http.GetAsync<OpenAiModelList>(
+                AssistantHttp.Address(@using.BaseUrl, "v1/models"),
+                message => Authorize(message, @using.ApiKey),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return listed.Map(list => (IReadOnlyList<ModelInfo>)
+        [
+            .. (list.Data ?? [])
+                .Select(model => model.Id ?? string.Empty)
+                .Where(Usable)
+                .Select(id => new ModelInfo(id, id, Draws(id)))
+                .OrderBy(model => model.Id, StringComparer.Ordinal)
+        ]);
+    }
+
+    /// <summary>
+    /// What is left after the models that cannot write a recipe.
+    /// </summary>
+    /// <remarks>
+    /// This listing is everything the account can reach — embeddings, speech,
+    /// transcription, moderation, the lot — and there is no field saying which
+    /// is which. Filtering by name is crude and is the only thing available;
+    /// erring towards keeping a model means an odd entry in a list, where
+    /// erring the other way means a model somebody wanted is missing.
+    /// </remarks>
+    private static bool Usable(string id) =>
+        id.Length > 0
+        && !id.Contains("embedding", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("moderation", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("whisper", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("tts", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("audio", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("realtime", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether it draws, which OpenAI says in the name and nowhere else.</summary>
+    private static bool Draws(string id) =>
+        id.Contains("image", StringComparison.OrdinalIgnoreCase)
+        || id.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase);
+
     private static void Authorize(HttpRequestMessage message, string key) =>
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
 
@@ -203,6 +249,18 @@ internal sealed class OpenAiAssistant(
         reply.Usage?.OutputTokens ?? 0,
         Pictures: 0);
 
+}
+
+/// <summary>What the models listing answers with.</summary>
+internal sealed record OpenAiModelList
+{
+    public IReadOnlyList<OpenAiModel>? Data { get; init; }
+}
+
+/// <summary>One model the account can reach.</summary>
+internal sealed record OpenAiModel
+{
+    public string? Id { get; init; }
 }
 
 /// <summary>What the Responses API answers with.</summary>

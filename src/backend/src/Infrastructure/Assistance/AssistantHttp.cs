@@ -121,6 +121,38 @@ internal sealed class AssistantHttp : IDisposable
         }
     }
 
+    /// <summary>Reads JSON, or says why it could not.</summary>
+    /// <typeparam name="TBody">The shape expected back.</typeparam>
+    /// <param name="url">What to ask for.</param>
+    /// <param name="authorize">Puts the credential on the request.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    internal async Task<Result<TBody>> GetAsync<TBody>(
+        Uri url,
+        Action<HttpRequestMessage> authorize,
+        CancellationToken cancellationToken)
+        where TBody : notnull
+    {
+        ArgumentNullException.ThrowIfNull(authorize);
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            authorize(request);
+
+            using var response = await client
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+
+            return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
+                                            or InvalidOperationException or IOException)
+        {
+            return AssistanceErrors.Unavailable;
+        }
+    }
+
     private static async Task<Result<TBody>> ReadAsync<TBody>(
         HttpResponseMessage response,
         CancellationToken cancellationToken)

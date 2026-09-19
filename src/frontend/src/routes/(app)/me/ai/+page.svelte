@@ -93,6 +93,34 @@
     }))
   ];
 
+  const offeredBy = (provider: Provider | '') =>
+    provider === '' ? undefined : assistance.models.find((one) => one.provider === provider);
+
+  /**
+   * The models this job may be given, as the provider listed them.
+   *
+   * Filtered by what the job needs: drawing sees only the models that draw, and
+   * the other three see only the ones that do not. An empty first entry keeps
+   * "whatever Culina currently defaults to" reachable, which is what most
+   * instances should stay on.
+   */
+  function modelsFor(capability: Capability, use: Use) {
+    const listed = offeredBy(use.provider);
+
+    if (!listed?.reachable) {
+      return null;
+    }
+
+    const wanted = listed.models.filter((model) =>
+      capability === 'draw' ? model.canDraw : !model.canDraw
+    );
+
+    return [
+      { value: '', label: `${m['ai.job.model.any']()} — ${use.defaultModel}` },
+      ...wanted.map((model) => ({ value: model.id, label: model.label }))
+    ];
+  }
+
   function budget(value: string): number | null {
     const parsed = Number(value.replace(',', '.'));
 
@@ -195,9 +223,17 @@
   <!-- Said plainly, before anybody turns anything on. -->
   <p class="privacy">{anythingHosted ? m['ai.privacy.mixed']() : m['ai.privacy.local']()}</p>
 
+  {#each assistance.models.filter((one) => !one.reachable) as listed (listed.provider)}
+    <p class="failure" role="alert">
+      {m['ai.models.unreachable']({ provider: m[`ai.provider.${listed.provider}`]() })}
+    </p>
+  {/each}
+
   <SettingsSection title={m['ai.jobs']()} description={m['ai.jobs.hint']()}>
     {#each capabilities as capability (capability)}
       {@const use = useFor(capability)}
+
+      {@const choices = modelsFor(capability, use)}
 
       <SettingsRow label={m[`ai.${capability}`]()} description={m[`ai.${capability}.hint`]()}>
         <Field label={m['ai.job.provider']()}>
@@ -215,11 +251,49 @@
                   // Choosing a provider is switching the job on; choosing
                   // "not offered" is switching it off. One gesture, because
                   // there is no state where both answers are interesting.
-                  enabled: value !== ''
+                  enabled: value !== '',
+                  // The old model belonged to the old provider. Carrying it
+                  // over would name something the new one has never heard of.
+                  model: ''
                 })}
             />
           {/snippet}
         </Field>
+
+        {#if use.provider !== ''}
+          {#if choices}
+            <Field label={m['ai.job.model']()}>
+              {#snippet children({ id, describedBy, invalid })}
+                <Select
+                  {id}
+                  {describedBy}
+                  {invalid}
+                  inline
+                  value={use.model}
+                  options={choices}
+                  onchange={(value) => editUse(capability, { model: value })}
+                />
+              {/snippet}
+            </Field>
+          {:else}
+            <!-- The provider did not answer, so there is no list to choose
+                 from. A text box is what this was before lists existed, and
+                 it still works — an unreachable provider costs the
+                 convenience, not the ability to configure anything. -->
+            <Field label={m['ai.job.model']()}>
+              {#snippet children({ id, describedBy, invalid })}
+                <TextInput
+                  {id}
+                  {describedBy}
+                  {invalid}
+                  placeholder={use.defaultModel || m['ai.models.typed']()}
+                  value={use.model}
+                  oninput={(value) => editUse(capability, { model: value })}
+                />
+              {/snippet}
+            </Field>
+          {/if}
+        {/if}
       </SettingsRow>
     {/each}
   </SettingsSection>
@@ -244,28 +318,6 @@
                   placeholder={providerFacts[provider].addressHint}
                   value={connectionFor(provider).baseUrl}
                   oninput={(value) => editConnection(provider, { baseUrl: value })}
-                />
-              {/snippet}
-            </Field>
-          {/if}
-        {/each}
-
-        {#each capabilities as capability (capability)}
-          {@const use = useFor(capability)}
-
-          {#if use.provider !== ''}
-            <Field
-              label={`${m[`ai.${capability}`]()} — ${m['ai.job.model']()}`}
-              hint={m['ai.models.default']()}
-            >
-              {#snippet children({ id, describedBy, invalid })}
-                <TextInput
-                  {id}
-                  {describedBy}
-                  {invalid}
-                  placeholder={use.defaultModel}
-                  value={use.model}
-                  oninput={(value) => editUse(capability, { model: value })}
                 />
               {/snippet}
             </Field>

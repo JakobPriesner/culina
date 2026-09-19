@@ -1,7 +1,13 @@
 import { http, request, type AppError } from '$api';
 import { registerStore } from '$shell/stores';
 
-import { toAssistance, type Assistance, type Usage } from '../types';
+import {
+  toAssistance,
+  toProviderModels,
+  type Assistance,
+  type ProviderModels,
+  type Usage
+} from '../types';
 
 import type { components } from '$api/generated/schema';
 
@@ -21,6 +27,7 @@ type UsageWire = components['schemas']['SettingsGetAssistanceUsageResponse'];
 class AssistanceStore {
   #settings = $state<Assistance | null>(null);
   #usage = $state<Usage | null>(null);
+  #models = $state<ProviderModels[]>([]);
   #loading = $state(false);
   #saving = $state(false);
   #error = $state<AppError | null>(null);
@@ -31,6 +38,17 @@ class AssistanceStore {
 
   get usage(): Usage | null {
     return this.#usage;
+  }
+
+  /**
+   * What each connected provider offers.
+   *
+   * Empty until it has been asked, and empty for a provider that did not
+   * answer — the picker then falls back to a text box, so an unreachable
+   * provider costs the convenience rather than the ability to configure it.
+   */
+  get models(): ProviderModels[] {
+    return this.#models;
   }
 
   get loading(): boolean {
@@ -50,9 +68,10 @@ class AssistanceStore {
     this.#loading = true;
     this.#error = null;
 
-    const [settings, usage] = await Promise.all([
+    const [settings, usage, models] = await Promise.all([
       request(() => http.GET('/api/v1/settings/assistance')),
-      request(() => http.GET('/api/v1/settings/assistance/usage'))
+      request(() => http.GET('/api/v1/settings/assistance/usage')),
+      request(() => http.GET('/api/v1/settings/assistance/models'))
     ]);
 
     if (settings.ok) {
@@ -65,6 +84,12 @@ class AssistanceStore {
     // not stop somebody connecting a model.
     if (usage.ok) {
       this.#usage = toUsage(usage.value);
+    }
+
+    // Likewise. Without the lists the model pickers become text boxes, which
+    // is how this worked before and is still usable.
+    if (models.ok) {
+      this.#models = toProviderModels(models.value);
     }
 
     this.#loading = false;
@@ -122,9 +147,19 @@ class AssistanceStore {
     return outcome.error;
   }
 
+  /** Asks the providers again, after a key or address has changed. */
+  async refreshModels(): Promise<void> {
+    const models = await request(() => http.GET('/api/v1/settings/assistance/models'));
+
+    if (models.ok) {
+      this.#models = toProviderModels(models.value);
+    }
+  }
+
   reset(): void {
     this.#settings = null;
     this.#usage = null;
+    this.#models = [];
     this.#loading = false;
     this.#saving = false;
     this.#error = null;

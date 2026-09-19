@@ -402,6 +402,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/assistance/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List what each connected provider offers
+         * @description Instance administrator only. Asks every connected provider what models it has, so choosing one is choosing from a list rather than typing a name correctly.
+         *
+         *     A provider that does not answer is a row with `reachable: false` and the reason, not a failure — one unreachable provider must not cost the other two. It is also the first place a wrong key shows up, which is most of why the reason is carried.
+         *
+         *     `canDraw` is the adapter reading the model's name, because none of the three providers states it. Only providers that are connected appear at all.
+         */
+        get: operations["getAssistanceModelsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/registration/policy": {
         parameters: {
             query?: never;
@@ -2778,6 +2802,31 @@ export interface components {
             /** @description Whether this connection has everything its provider needs. */
             usable: boolean;
         };
+        /** @description One model. */
+        SettingsGetAssistanceModelsModelContract: {
+            /** @description What to store as the model name. */
+            id: string;
+            /** @description What to show, where the provider says something nicer. */
+            label: string;
+            /** @description Whether it makes pictures. */
+            canDraw: boolean;
+        };
+        /** @description One provider's models, or the reason there are none. */
+        SettingsGetAssistanceModelsProviderModelsContract: {
+            /** @description `gemini`, `openai` or `ollama`. */
+            provider: string;
+            /** @description Whether the provider answered. */
+            reachable: boolean;
+            /** @description Why it did not, when it did not. */
+            problem?: string | null;
+            /** @description What it offers, newest naming and all. */
+            models: components["schemas"]["SettingsGetAssistanceModelsModelContract"][];
+        };
+        /** @description What each connected provider currently offers. */
+        SettingsGetAssistanceModelsResponse: {
+            /** @description One entry per provider that is connected. */
+            providers: components["schemas"]["SettingsGetAssistanceModelsProviderModelsContract"][];
+        };
         /** @description The models this instance can talk to, and which of them does what. */
         SettingsGetAssistanceResponse: {
             /** @description Whether the assistant is on at all. */
@@ -4585,6 +4634,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettingsGetAssistanceUsageResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAssistanceModelsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetAssistanceModelsResponse"];
                 };
             };
             /** @description Unauthorized */

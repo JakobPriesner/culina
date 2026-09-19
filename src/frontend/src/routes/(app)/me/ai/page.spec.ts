@@ -46,6 +46,27 @@ const configured = {
   personalBudget: null
 };
 
+const offered = {
+  providers: [
+    {
+      provider: 'gemini',
+      reachable: true,
+      problem: null,
+      models: [
+        { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', canDraw: false },
+        { id: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2', canDraw: true }
+      ]
+    },
+    {
+      provider: 'openai',
+      reachable: true,
+      problem: null,
+      models: [{ id: 'gpt-6-astra', label: 'gpt-6-astra', canDraw: false }]
+    },
+    { provider: 'ollama', reachable: false, problem: 'assistance.unavailable', models: [] }
+  ]
+};
+
 const emptyUsage = {
   since: '2026-09-01T00:00:00Z',
   totalCost: 0,
@@ -58,7 +79,7 @@ const emptyUsage = {
   byCapability: []
 };
 
-function serverAnswers(settings: object = configured) {
+function serverAnswers(settings: object = configured, models: object = offered) {
   const json = (body: object) =>
     new Response(JSON.stringify(body), {
       status: 200,
@@ -68,7 +89,10 @@ function serverAnswers(settings: object = configured) {
   const fetched = vi.fn((input: unknown) => {
     const url = String(input instanceof Request ? input.url : input);
 
-    return Promise.resolve(url.includes('/usage') ? json(emptyUsage) : json(settings));
+    if (url.includes('/usage')) return Promise.resolve(json(emptyUsage));
+    if (url.includes('/models')) return Promise.resolve(json(models));
+
+    return Promise.resolve(json(settings));
   });
 
   vi.stubGlobal('fetch', fetched);
@@ -92,6 +116,23 @@ const settle = async () => {
  */
 const rowFor = (label: string) =>
   screen.getByText(label, { selector: '.label' }).closest('.row') as HTMLElement;
+
+/**
+ * The nth select in a row, or a failed test.
+ *
+ * A job row has two: the provider first, then the model. Indexing is never
+ * merely assumed, because an off-by-one here would silently assert about the
+ * wrong control.
+ */
+function picker(row: HTMLElement, nth: number): HTMLElement {
+  const found = within(row).getAllByRole('combobox')[nth];
+
+  if (found === undefined) {
+    throw new Error(`Expected at least ${nth + 1} selects in this row.`);
+  }
+
+  return found;
+}
 
 beforeEach(() => {
   assistance.reset();
@@ -150,7 +191,8 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    const drawing = within(rowFor('Draw a picture')).getByRole('combobox');
+    // The first combobox in the row is the provider; the second is the model.
+    const drawing = picker(rowFor('Draw a picture'), 0);
     const offered = within(drawing)
       .getAllByRole('option')
       .map((option) => option.textContent?.trim());
@@ -210,6 +252,101 @@ describe('the assistant settings page', () => {
     expect(body.connections.every((one: { apiKey?: string }) => one.apiKey === undefined)).toBe(
       true
     );
+  });
+
+  it('offers the models its provider listed, filtered to what the job needs', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // "Read a photograph" is given to Gemini, which listed one text model and
+    // one image model. Only the text one can do this job.
+    const reading = picker(rowFor('Read a photograph'), 1);
+    const labels = within(reading)
+      .getAllByRole('option')
+      .map((option) => option.textContent?.trim());
+
+    expect(labels).toContain('Gemini 3 Flash');
+    expect(labels).not.toContain('Nano Banana 2');
+  });
+
+  it('offers only drawing models to the drawing job', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const drawing = picker(rowFor('Draw a picture'), 1);
+    const labels = within(drawing)
+      .getAllByRole('option')
+      .map((option) => option.textContent?.trim());
+
+    expect(labels).toContain('Nano Banana 2');
+    expect(labels).not.toContain('Gemini 3 Flash');
+  });
+
+  it('sends the chosen model, not just the provider', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const reading = picker(rowFor('Read a photograph'), 1);
+    await userEvent.selectOptions(reading, 'gemini-3-flash-preview');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await settle();
+
+    const write = fetched.mock.calls
+      .map(([input]) => input)
+      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
+
+    const body = JSON.parse(await write!.clone().text());
+    const read = body.uses.find((one: { capability: string }) => one.capability === 'read');
+
+    expect(read.provider).toBe('gemini');
+    expect(read.model).toBe('gemini-3-flash-preview');
+  });
+
+  it('forgets the model when the provider changes, because it belonged to the old one', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const row = rowFor('Read a photograph');
+    await userEvent.selectOptions(picker(row, 1), 'gemini-3-flash-preview');
+    await userEvent.selectOptions(picker(row, 0), 'openai');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await settle();
+
+    const write = fetched.mock.calls
+      .map(([input]) => input)
+      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
+
+    const body = JSON.parse(await write!.clone().text());
+    const read = body.uses.find((one: { capability: string }) => one.capability === 'read');
+
+    // Carrying it over would name a Gemini model at OpenAI.
+    expect(read.provider).toBe('openai');
+    expect(read.model).toBe('');
+  });
+
+  it('falls back to a text box for a provider that could not be listed', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // Ollama did not answer, and "Improve a recipe" is given to it. One combobox
+    // — the provider — and a text box for the model, which is how this worked
+    // before lists existed.
+    const row = rowFor('Improve a recipe');
+    expect(within(row).getAllByRole('combobox')).toHaveLength(1);
+    expect(within(row).getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
   });
 
   it('says nothing leaves the machine when every job is local', async () => {

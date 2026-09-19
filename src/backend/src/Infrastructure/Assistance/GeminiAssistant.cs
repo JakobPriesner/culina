@@ -98,6 +98,66 @@ internal sealed class GeminiAssistant(
         return answered.Bind(ReadPicture);
     }
 
+    public async Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
+        Connected @using,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(@using);
+
+        var listed = await http.GetAsync<GeminiModelList>(
+                AssistantHttp.Address(@using.BaseUrl, "v1beta/models"),
+                message =>
+                {
+                    message.Headers.Add("x-goog-api-key", @using.ApiKey);
+                    message.Headers.Add("Api-Revision", Revision);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return listed.Map(list => (IReadOnlyList<ModelInfo>)
+        [
+            .. (list.Models ?? [])
+                .Where(Generative)
+                .Select(model => new ModelInfo(Named(model), Labelled(model), Draws(model)))
+                .OrderBy(model => model.Id, StringComparer.Ordinal)
+        ]);
+    }
+
+    /// <summary>
+    /// Whether this is a model that makes something, rather than one that
+    /// measures.
+    /// </summary>
+    /// <remarks>
+    /// The list carries embedding and token-counting models too, and offering
+    /// those as a choice for "write me a recipe" would be offering something
+    /// that cannot answer.
+    /// </remarks>
+    private static bool Generative(GeminiModel model) =>
+        model.SupportedGenerationMethods is null
+        || model.SupportedGenerationMethods.Any(method =>
+            method.Contains("generate", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Whether it draws.
+    /// </summary>
+    /// <remarks>
+    /// Read from the name, because nothing in the listing says so. Google names
+    /// every one of its image models with "image" in it, which is a convention
+    /// rather than a guarantee — and being wrong costs a failed call with a
+    /// clear error rather than a wrong recipe.
+    /// </remarks>
+    private static bool Draws(GeminiModel model) =>
+        Named(model).Contains("image", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The id to send, without the <c>models/</c> the listing prefixes.</summary>
+    private static string Named(GeminiModel model) =>
+        (model.Name ?? string.Empty).StartsWith("models/", StringComparison.Ordinal)
+            ? model.Name![7..]
+            : model.Name ?? string.Empty;
+
+    private static string Labelled(GeminiModel model) =>
+        string.IsNullOrWhiteSpace(model.DisplayName) ? Named(model) : model.DisplayName;
+
     private Task<Result<GeminiReply>> PostAsync(
         Connected @using,
         object payload,
@@ -201,6 +261,23 @@ internal sealed class GeminiAssistant(
         reply.Usage?.CompletionTokens ?? 0,
         pictures);
 
+}
+
+/// <summary>What the models listing answers with.</summary>
+internal sealed record GeminiModelList
+{
+    public IReadOnlyList<GeminiModel>? Models { get; init; }
+}
+
+/// <summary>One model Google offers.</summary>
+internal sealed record GeminiModel
+{
+    /// <summary>Prefixed <c>models/</c> in the listing, not in a request.</summary>
+    public string? Name { get; init; }
+
+    public string? DisplayName { get; init; }
+
+    public IReadOnlyList<string>? SupportedGenerationMethods { get; init; }
 }
 
 /// <summary>What the Interactions API answers with.</summary>

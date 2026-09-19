@@ -106,6 +106,36 @@ internal sealed class OllamaAssistant(
         CancellationToken cancellationToken) =>
         Task.FromResult(Result<Drawn>.Failure(AssistanceErrors.DrawingNotSupported));
 
+    /// <summary>
+    /// What has been pulled onto that machine.
+    /// </summary>
+    /// <remarks>
+    /// The one provider where the list is short, honest and entirely the
+    /// administrator's doing: it is what they have downloaded. Nothing in it
+    /// draws, because Ollama serves language and vision models.
+    /// </remarks>
+    public async Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
+        Connected @using,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(@using);
+
+        var listed = await http.GetAsync<OllamaModelList>(
+                AssistantHttp.Address(@using.BaseUrl, "api/tags"),
+                _ => { },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return listed.Map(list => (IReadOnlyList<ModelInfo>)
+        [
+            .. (list.Models ?? [])
+                .Select(model => model.Model ?? model.Name ?? string.Empty)
+                .Where(id => id.Length > 0)
+                .Select(id => new ModelInfo(id, id, CanDraw: false))
+                .OrderBy(model => model.Id, StringComparer.Ordinal)
+        ]);
+    }
+
     private Result<Composed> Read(OllamaReply reply)
     {
         if (reply.Message?.Content is not { Length: > 0 } json)
@@ -134,6 +164,22 @@ internal sealed class OllamaAssistant(
 
     private static ModelUsage Usage(OllamaReply reply) =>
         new(reply.PromptEvalCount, reply.EvalCount, Pictures: 0);
+}
+
+/// <summary>What has been pulled onto the machine.</summary>
+internal sealed record OllamaModelList
+{
+    public IReadOnlyList<OllamaModel>? Models { get; init; }
+}
+
+/// <summary>One pulled model.</summary>
+internal sealed record OllamaModel
+{
+    /// <summary>The tag as it is shown, e.g. <c>llama3.2:latest</c>.</summary>
+    public string? Name { get; init; }
+
+    /// <summary>The same thing under the name newer versions use.</summary>
+    public string? Model { get; init; }
 }
 
 /// <summary>What Ollama's chat endpoint answers with.</summary>

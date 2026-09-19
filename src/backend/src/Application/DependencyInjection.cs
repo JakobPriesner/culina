@@ -49,6 +49,7 @@ using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
 using Application.Settings.GetAssistance;
+using Application.Settings.GetAssistanceModels;
 using Application.Settings.GetAssistanceUsage;
 using Application.Settings.GetRegistration;
 using Application.Settings.UpdateAssistance;
@@ -167,6 +168,8 @@ public static class DependencyInjection
                 UpdateAssistanceSettingsCommandHandler>()
             .AddScoped<IQueryHandler<GetAssistanceUsageQuery,
                 Contracts.Settings.GetAssistanceUsage.Response>, GetAssistanceUsageQueryHandler>()
+            .AddScoped<IQueryHandler<GetAssistanceModelsQuery,
+                Contracts.Settings.GetAssistanceModels.Response>, GetAssistanceModelsQueryHandler>()
 
             // The assistant
             .AddScoped<AssistantRun>()

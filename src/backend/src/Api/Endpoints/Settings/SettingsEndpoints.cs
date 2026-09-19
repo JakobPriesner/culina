@@ -1,4 +1,5 @@
 using Api.Endpoints.Settings.GetAssistance.V1;
+using Api.Endpoints.Settings.GetAssistanceModels.V1;
 using Api.Endpoints.Settings.GetAssistanceUsage.V1;
 using Api.Endpoints.Settings.GetRegistration.V1;
 using Api.Endpoints.Settings.UpdateAssistance.V1;
@@ -15,5 +16,6 @@ internal static class SettingsEndpoints
             .AddSingleton<IEndpoint, UpdateRegistrationSettingsEndpoint>()
             .AddSingleton<IEndpoint, GetAssistanceSettingsEndpoint>()
             .AddSingleton<IEndpoint, UpdateAssistanceSettingsEndpoint>()
-            .AddSingleton<IEndpoint, GetAssistanceUsageEndpoint>();
+            .AddSingleton<IEndpoint, GetAssistanceUsageEndpoint>()
+            .AddSingleton<IEndpoint, GetAssistanceModelsEndpoint>();
 }

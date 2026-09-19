@@ -50,7 +50,36 @@ public interface IAssistant
         Connected @using,
         Drawing request,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// What this provider currently offers.
+    /// </summary>
+    /// <param name="using">Where to reach it. The model on it is ignored.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <remarks>
+    /// So that choosing a model is choosing from a list rather than typing a
+    /// name correctly. The alternative — a text box — asks an administrator to
+    /// know what their provider released this month, and silently does nothing
+    /// useful when they get a character wrong.
+    /// </remarks>
+    Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
+        Connected @using,
+        CancellationToken cancellationToken);
 }
+
+/// <summary>One model a provider offers.</summary>
+/// <param name="Id">What to send as the model name.</param>
+/// <param name="Label">What to show, where the provider says something nicer.</param>
+/// <param name="CanDraw">
+/// Whether it makes pictures.
+/// </param>
+/// <remarks>
+/// <see cref="CanDraw"/> is the adapter's best reading rather than a fact the
+/// providers state plainly — none of the three has a field that says "this one
+/// draws". It decides which list a job's picker offers, and being wrong about
+/// it costs a failed call and a clear error, not a wrong recipe.
+/// </remarks>
+public sealed record ModelInfo(string Id, string Label, bool CanDraw);
 
 /// <summary>
 /// One provider, ready to be called.
