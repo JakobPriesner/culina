@@ -643,7 +643,15 @@ export interface paths {
          * @description The upload is decoded to find out what it is — never trusted by content type or extension — and re-encoded to WebP at three widths. The bytes that are served are always Culina's own re-encoding, which strips EXIF (food photos carry GPS coordinates) and neutralises a file that is valid in two formats at once.
          */
         put: operations["setRecipeImageV1"];
-        post?: never;
+        /**
+         * Draw a recipe image
+         * @description POST and PUT mean different things on this one sub-resource, and the difference is who made the picture. PUT replaces it with bytes you are sending; POST asks the assistant to make one, so it carries no body.
+         *
+         *     What comes back goes through exactly the same path an upload does — decoded to find out what it is, re-encoded to WebP at three widths — so a drawn image is an ordinary recipe photo in every respect afterwards.
+         *
+         *     404 when this instance has no assistant or drawing is switched off. 400 when the connected provider cannot draw at all, which is the case for a model running on your own hardware. 429 when the month's budget is spent.
+         */
+        post: operations["drawRecipeImageV1"];
         /** Remove a recipe image */
         delete: operations["removeRecipeImageV1"];
         options?: never;
@@ -5331,6 +5339,73 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    drawRecipeImageV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesRecipeDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -2,6 +2,7 @@ using Api.Endpoints.Recipes.CookPhoto.V1;
 using Api.Endpoints.Recipes.Create.V1;
 using Api.Endpoints.Recipes.CreateShare.V1;
 using Api.Endpoints.Recipes.Delete.V1;
+using Api.Endpoints.Recipes.DrawImage.V1;
 using Api.Endpoints.Recipes.GetAll.V1;
 using Api.Endpoints.Recipes.GetById.V1;
 using Api.Endpoints.Recipes.GetCookLog.V1;
@@ -42,6 +43,7 @@ internal static class RecipesEndpoints
             .AddSingleton<IEndpoint, RecordCookedEndpoint>()
             .AddSingleton<IEndpoint, UndoCookedEndpoint>()
             .AddSingleton<IEndpoint, SetRecipeImageEndpoint>()
+            .AddSingleton<IEndpoint, DrawRecipeImageEndpoint>()
             .AddSingleton<IEndpoint, RemoveRecipeImageEndpoint>()
             .AddSingleton<IEndpoint, GetRecipeImageEndpoint>()
             .AddSingleton<IEndpoint, SetCookPhotoEndpoint>()
