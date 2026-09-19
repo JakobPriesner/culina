@@ -165,7 +165,14 @@
     /* Against the screen rather than against where it ends up, so that moving
        the panel can never change its size and one measurement stays true. */
     max-width: calc(100dvw - 2 * var(--space-4));
-    overflow: auto;
+    /*
+     * Only the axis `place()` actually manages. The height is capped there, in
+     * viewport pixels; the width is capped above, in CSS. `overflow: auto` on
+     * both axes meant content wider than the cap grew a horizontal bar under
+     * the panel instead of wrapping.
+     */
+    overflow-x: clip;
+    overflow-y: auto;
     overscroll-behavior: contain;
   }
 </style>

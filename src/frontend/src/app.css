@@ -85,6 +85,53 @@ img {
   border-radius: var(--radius-sm);
 }
 
+/*
+ * One scrollbar for the whole app, in the app's own colours.
+ *
+ * The platform default is a grey rail with a blue-grey thumb, which on a cream
+ * surface is the loudest thing on the page and belongs to some other
+ * application. `color-scheme` above only picks light or dark; it cannot make
+ * the bar warm.
+ *
+ * Two branches, because no engine implements both: `scrollbar-width` and
+ * `scrollbar-color` are the standard (Firefox, Chrome 121+), and
+ * `::-webkit-scrollbar` covers Safari and older Chrome. Where both are
+ * understood the standard properties win, so the pair never doubles up.
+ *
+ * The universal selector is deliberate: a scroll container can appear anywhere,
+ * and a bar that is themed in most places and raw in one is worse than one
+ * that is raw everywhere. The two rows that hide their bar on purpose set
+ * `scrollbar-width: none` on a class, which outranks this.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Drawn through a transparent border so the thumb is a floating lozenge with
+   air around it rather than a bar wedged against the content. */
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+  background-clip: padding-box;
+}
+
 /* Anyone who asks for less motion gets none, rather than a slower version of
    the same thing. */
 @media (prefers-reduced-motion: reduce) {

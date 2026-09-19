@@ -152,7 +152,7 @@
 </script>
 
 <Sheet {open} {title} {footer} closeLabel={m['picker.close']()} {onclose}>
-  <div class="picker">
+  <div class="picker" data-fills-dialog>
     <SearchField
       id="{id}-search"
       label={m['picker.search']()}
@@ -199,14 +199,36 @@
     gap: var(--space-4);
   }
 
+  /*
+   * The list is the only thing that scrolls, so the search field stays put
+   * while the results move under it — the field is what you are using when
+   * the list is long, and it must not scroll away from the list it filters.
+   *
+   * `data-fills-dialog` on the wrapper tells the sheet to hand its height over
+   * rather than scroll as well. Capping the list here instead would put a
+   * second bar beside the sheet's own on a short viewport.
+   */
   .results {
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    flex: 1;
     margin: 0;
-    padding: 0;
+    /*
+     * Two mechanisms, because they cover different machines. `scrollbar-gutter`
+     * reserves the bar's width where the bar takes width — Windows, Linux,
+     * macOS set to *Show scroll bars: Always* — and so also stops the rows
+     * shifting sideways the moment the list grows past its cap. It does
+     * nothing at all where the bar is an overlay (macOS by default, iPadOS,
+     * Android), because an overlay bar occupies no layout space; there it is
+     * simply painted on top of whatever is under it. The padding is what keeps
+     * the ends of the lines out from under it there.
+     */
+    padding: 0 var(--space-2) 0 0;
+    scrollbar-gutter: stable;
     list-style: none;
-    max-height: 50dvh;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .results button {
