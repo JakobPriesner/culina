@@ -24,7 +24,8 @@ internal sealed class CreateRecipeEndpoint : IEndpoint
                         new CreateRecipeCommand(
                             request.HouseholdId,
                             request.Title,
-                            context.CurrentUser().UserId),
+                            context.CurrentUser().UserId,
+                            request.DraftId),
                         cancellationToken)
                     .ConfigureAwait(false);
 

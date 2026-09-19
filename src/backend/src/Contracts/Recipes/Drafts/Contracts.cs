@@ -60,6 +60,17 @@ public sealed record Request
 /// </remarks>
 public sealed record Response
 {
+    /// <summary>
+    /// This draft's own id.
+    /// </summary>
+    /// <remarks>
+    /// Sent back when the draft is turned into a recipe, so the recipe can
+    /// record that it started as one. Every ask makes a new id, which is what
+    /// keeps the "once per household" rule on provenance meaningful: asking
+    /// twice makes two drafts and could make two recipes.
+    /// </remarks>
+    public required Guid DraftId { get; init; }
+
     /// <summary>What the assistant called it.</summary>
     public string? Title { get; init; }
 

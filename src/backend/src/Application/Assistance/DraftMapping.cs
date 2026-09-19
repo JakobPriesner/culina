@@ -52,6 +52,9 @@ internal static class DraftMapping
 
         return new Response
         {
+            // New every time. Two asks are two drafts, and could become two
+            // recipes, so they must not share an external id.
+            DraftId = Guid.CreateVersion7(),
             Title = Trimmed(draft.Title),
             Description = Trimmed(draft.Description),
             YieldAmount = draft.YieldAmount is > 0 ? draft.YieldAmount : null,

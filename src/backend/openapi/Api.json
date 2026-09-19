@@ -6864,6 +6864,12 @@
           "title": {
             "type": "string",
             "description": "What to call it."
+          },
+          "draftId": {
+            "type": "string",
+            "description": "The assistant draft this recipe is being made from, when it is.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "description": "A new recipe."
@@ -6979,12 +6985,18 @@
       },
       "RecipesDraftsResponse": {
         "required": [
+          "draftId",
           "groups",
           "steps",
           "tags"
         ],
         "type": "object",
         "properties": {
+          "draftId": {
+            "type": "string",
+            "description": "This draft's own id.",
+            "format": "uuid"
+          },
           "title": {
             "type": "string",
             "description": "What the assistant called it.",

@@ -48,6 +48,7 @@ const recipe = (overrides: Partial<Recipe> = {}): Recipe =>
   }) as Recipe;
 
 const draft = (overrides: Partial<Draft> = {}): Draft => ({
+  draftId: '00000000-0000-0000-0000-000000000001',
   title: 'Better soup',
   description: 'A tidier one.',
   yieldAmount: 6,

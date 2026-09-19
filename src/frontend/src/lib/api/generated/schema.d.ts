@@ -1887,6 +1887,11 @@ export interface components {
             householdId: string;
             /** @description What to call it. */
             title: string;
+            /**
+             * Format: uuid
+             * @description The assistant draft this recipe is being made from, when it is.
+             */
+            draftId?: string | null;
         };
         /** @description A heading and the lines under it. */
         RecipesDraftsDraftGroupContract: {
@@ -1942,6 +1947,11 @@ export interface components {
         };
         /** @description A recipe the assistant wrote. Not saved, and not a recipe yet. */
         RecipesDraftsResponse: {
+            /**
+             * Format: uuid
+             * @description This draft's own id.
+             */
+            draftId: string;
             /** @description What the assistant called it. */
             title?: string | null;
             /** @description A sentence or two about it. */

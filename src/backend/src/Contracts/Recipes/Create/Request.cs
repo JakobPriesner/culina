@@ -15,4 +15,15 @@ public sealed record Request
 
     /// <summary>What to call it.</summary>
     public required string Title { get; init; }
+
+    /// <summary>
+    /// The assistant draft this recipe is being made from, when it is.
+    /// </summary>
+    /// <remarks>
+    /// Omitted by every other caller, and the only way a recipe comes to know
+    /// it was drafted rather than typed. Recorded as provenance in exactly the
+    /// same place an imported recipe records where it came from — which is why
+    /// it is a field here rather than an endpoint of its own.
+    /// </remarks>
+    public Guid? DraftId { get; init; }
 }
