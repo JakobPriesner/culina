@@ -2,12 +2,12 @@ using Application.Abstractions;
 using Domain.Households;
 using Domain.Recipes;
 using Domain.Shared;
+using Domain.Suggestions;
 using Domain.Users;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Users;
-using Domain.Suggestions;
 using IntegrationTests.Fixtures;
 using TestSupport;
 
