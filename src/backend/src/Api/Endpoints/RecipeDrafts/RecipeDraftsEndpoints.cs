@@ -1,4 +1,5 @@
 using Api.Endpoints.RecipeDrafts.Compose.V1;
+using Api.Endpoints.RecipeDrafts.FromPhotograph.V1;
 
 namespace Api.Endpoints.RecipeDrafts;
 
@@ -6,5 +7,7 @@ namespace Api.Endpoints.RecipeDrafts;
 internal static class RecipeDraftsEndpoints
 {
     internal static IServiceCollection AddRecipeDraftsEndpoints(this IServiceCollection services) =>
-        services.AddSingleton<IEndpoint, ComposeRecipeDraftEndpoint>();
+        services
+            .AddSingleton<IEndpoint, ComposeRecipeDraftEndpoint>()
+            .AddSingleton<IEndpoint, ReadRecipeDraftEndpoint>();
 }

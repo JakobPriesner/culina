@@ -853,5 +853,12 @@
   "assist.draw": "Eines zeichnen",
   "assist.draw.working": "Wird gezeichnet…",
   "assist.draw.failed": "Der Assistent konnte keines zeichnen. Versuch es gleich nochmal.",
-  "assist.draw.note": "Von einem Modell gezeichnet. Es ist kein Foto von dem, was du gekocht hast."
+  "assist.draw.note": "Von einem Modell gezeichnet. Es ist kein Foto von dem, was du gekocht hast.",
+  "assist.photo.title": "Seite abfotografieren",
+  "assist.photo.hint": "Halt die Kamera auf eine Kochbuchseite oder Karte, und der Assistent tippt sie ab.",
+  "assist.photo.choose": "Foto auswählen",
+  "assist.photo.label": "Ein Foto eines Rezepts",
+  "assist.photo.reading": "Das Foto wird gelesen…",
+  "assist.photo.tooLarge": "Das Foto ist zu groß. 10 MB sind das Maximum.",
+  "assist.photo.note": "Er überträgt, was lesbar ist, und lässt Lücken, statt zu raten."
 }

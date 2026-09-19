@@ -853,5 +853,12 @@
   "assist.draw": "Draw one",
   "assist.draw.working": "Drawing…",
   "assist.draw.failed": "The assistant could not draw one. Try again in a moment.",
-  "assist.draw.note": "Drawn by a model. It is not a photograph of what you cooked."
+  "assist.draw.note": "Drawn by a model. It is not a photograph of what you cooked.",
+  "assist.photo.title": "Photograph a page",
+  "assist.photo.hint": "Point your camera at a cookbook page or a card and the assistant types it out.",
+  "assist.photo.choose": "Choose a photo",
+  "assist.photo.label": "A photo of a recipe",
+  "assist.photo.reading": "Reading the photo…",
+  "assist.photo.tooLarge": "That photo is too large. 10 MB is the limit.",
+  "assist.photo.note": "It copies out what it can read and leaves gaps rather than guessing."
 }

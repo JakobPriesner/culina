@@ -13,6 +13,7 @@
   } from '$features/recipes/editor/lastDraft';
   import PasteImport from '$features/recipes/editor/PasteImport.svelte';
   import IdeaDraft from '$features/assistance/IdeaDraft.svelte';
+  import PhotographDraft from '$features/assistance/PhotographDraft.svelte';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { acceptEverything, toPatch, type Draft } from '$features/assistance/draftToRecipe';
   import type { ParsedRecipe } from '$features/recipes/editor/parseRecipeText';
@@ -45,6 +46,7 @@
   /** Whether the pasting box has been opened, which takes over the page. */
   let pasting = $state(false);
   let describing = $state(false);
+  let photographing = $state(false);
 
   const submission = createSubmission();
 
@@ -296,6 +298,13 @@
             drafts.dismiss();
           }}
         />
+      {:else if photographing}
+        <PhotographDraft
+          householdId={session.activeHouseholdId}
+          language={preferences.locale}
+          onread={(written) => void startFromDraft(written)}
+          oncancel={() => (photographing = false)}
+        />
       {:else}
         <!--
           The other two ways in, and both heavier than typing a name — so they
@@ -325,6 +334,13 @@
               <button type="button" class="way" onclick={() => (describing = true)}>
                 <span class="way-title">{m['assist.idea.title']()}</span>
                 <span class="way-body">{m['assist.idea.hint']()}</span>
+              </button>
+            {/if}
+
+            {#if session.user?.assistance.read}
+              <button type="button" class="way" onclick={() => (photographing = true)}>
+                <span class="way-title">{m['assist.photo.title']()}</span>
+                <span class="way-body">{m['assist.photo.hint']()}</span>
               </button>
             {/if}
           </div>

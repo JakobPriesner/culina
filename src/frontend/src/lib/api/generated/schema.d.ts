@@ -1211,6 +1211,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipe-drafts/photographs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a recipe out of a photograph
+         * @description A cookbook page, a card, a screenshot. What comes back is the same draft the other kinds return — nothing is created, and it is shown for correction.
+         *
+         *     The assistant is told to transcribe rather than improve, and to leave a gap where the source is unreadable rather than guessing: a plausible number invented for a blurred corner is the one failure of this capability somebody would not catch.
+         *
+         *     404 when this instance has no assistant or the capability is off. 429 when the month's budget is spent.
+         */
+        post: operations["readRecipeDraftV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suggestions": {
         parameters: {
             query?: never;
@@ -7162,6 +7186,80 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RecipesDraftsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesDraftsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    readRecipeDraftV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+                language?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    file: components["schemas"]["IFormFile"];
+                };
             };
         };
         responses: {
