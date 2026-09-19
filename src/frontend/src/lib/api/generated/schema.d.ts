@@ -348,6 +348,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/assistance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read how the assistant is set up
+         * @description Instance administrator only.
+         *
+         *     The API key is never returned. `apiKeyConfigured` says whether one has been entered, which is the only thing about it a screen needs to know.
+         */
+        get: operations["getAssistanceSettingsV1"];
+        /**
+         * Change how the assistant is set up
+         * @description Instance administrator only. Takes effect on the next request, with no restart.
+         *
+         *     `apiKey` has three states, and the difference matters: omit it to keep the key already stored, send an empty string to remove it, and send a value to replace it. It is never returned by any endpoint, so a form has nothing to put in the box and omitting it is what saving an unrelated change looks like.
+         *
+         *     Turning the assistant on without a key stores it as off — there is nothing for it to be on with.
+         */
+        put: operations["updateAssistanceSettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/assistance/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read what the assistant has cost this month
+         * @description Instance administrator only.
+         *
+         *     The calendar month in UTC, because that is how a provider bills and a figure measured over a different period could not be reconciled with the invoice.
+         *
+         *     `unpriced` counts calls made with a model this app has no price for. Their tokens are in the totals and their cost is not, because a number nobody can check against a bill is worse than an empty cell.
+         */
+        get: operations["getAssistanceUsageV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/registration/policy": {
         parameters: {
             query?: never;
@@ -2563,6 +2617,118 @@ export interface components {
             /** @description The CSRF token to send in `X-Culina-CSRF` on every unsafe request. */
             csrfToken: string;
         };
+        /** @description The model this instance talks to, and what it is allowed to do. */
+        SettingsGetAssistanceResponse: {
+            /** @description Whether the assistant is on. */
+            enabled: boolean;
+            /** @description Which provider: `gemini` or `openai`. */
+            provider: string;
+            /** @description Whether a key has been entered. Never the key. */
+            apiKeyConfigured: boolean;
+            /** @description Whether the connection has everything this provider needs. */
+            connected: boolean;
+            /** @description Where the provider is, when it is not where it usually is. */
+            baseUrl: string;
+            /** @description The model that writes recipes. */
+            composeModel: string;
+            /** @description The model that draws pictures. */
+            drawModel: string;
+            /** @description Whether it may rewrite a recipe somebody already has. */
+            improveEnabled: boolean;
+            /** @description Whether it may write one from an idea. */
+            draftEnabled: boolean;
+            /** @description Whether it may read one out of a photograph or a block of text. */
+            readEnabled: boolean;
+            /** @description Whether it may draw a picture. */
+            drawEnabled: boolean;
+            /**
+             * Format: double
+             * @description What the instance may spend in a month, or null for no ceiling.
+             */
+            monthlyBudget?: number | null;
+            /**
+             * Format: double
+             * @description What one person may spend of it, or null for no share.
+             */
+            personalBudget?: number | null;
+        };
+        /** @description One capability's spend this month. */
+        SettingsGetAssistanceUsageCapabilityUsageContract: {
+            /** @description `improve`, `draft`, `read` or `draw`. */
+            capability: string;
+            /**
+             * Format: int32
+             * @description How many times it was used.
+             */
+            calls: number;
+            /**
+             * Format: double
+             * @description What it came to.
+             */
+            cost: number;
+        };
+        /** @description One person's spend this month. */
+        SettingsGetAssistanceUsagePersonUsageContract: {
+            /**
+             * Format: uuid
+             * @description Who.
+             */
+            userId: string;
+            /** @description What to call them on screen. */
+            displayName: string;
+            /**
+             * Format: int32
+             * @description How many times they asked.
+             */
+            calls: number;
+            /**
+             * Format: double
+             * @description What it came to.
+             */
+            cost: number;
+        };
+        /** @description What the assistant has cost this month. */
+        SettingsGetAssistanceUsageResponse: {
+            /**
+             * Format: date-time
+             * @description When the period being reported started.
+             */
+            since: string;
+            /**
+             * Format: double
+             * @description Everything spent, where a price was known.
+             */
+            totalCost: number;
+            /**
+             * Format: double
+             * @description The instance's ceiling, or null when there is none.
+             */
+            monthlyBudget?: number | null;
+            /**
+             * Format: int64
+             * @description Everything sent.
+             */
+            totalInputTokens: number;
+            /**
+             * Format: int64
+             * @description Everything received.
+             */
+            totalOutputTokens: number;
+            /**
+             * Format: int64
+             * @description Everything drawn.
+             */
+            totalPictures: number;
+            /**
+             * Format: int32
+             * @description How many calls used a model this app has no price for.
+             */
+            unpriced: number;
+            /** @description Who spent what. */
+            byPerson: components["schemas"]["SettingsGetAssistanceUsagePersonUsageContract"][];
+            /** @description What it went on. */
+            byCapability: components["schemas"]["SettingsGetAssistanceUsageCapabilityUsageContract"][];
+        };
         /** @description Who may create an account on this instance. */
         SettingsGetRegistrationResponse: {
             /** @description Whether anyone may create an account. */
@@ -2574,6 +2740,74 @@ export interface components {
              * @description The largest number of accounts this instance allows.
              */
             maxUsers: number;
+        };
+        /** @description The assistant configuration to apply. */
+        SettingsUpdateAssistanceRequest: {
+            /** @description Whether the assistant is on. */
+            enabled: boolean;
+            /** @description Which provider: `gemini` or `openai`. */
+            provider: string;
+            /** @description A new API key, or null to keep the one already stored. */
+            apiKey?: string | null;
+            /** @description Where the provider is, or empty for its usual address. */
+            baseUrl: string;
+            /** @description The model that writes recipes. */
+            composeModel: string;
+            /** @description The model that draws pictures. */
+            drawModel: string;
+            /** @description Whether it may rewrite a recipe somebody already has. */
+            improveEnabled: boolean;
+            /** @description Whether it may write one from an idea. */
+            draftEnabled: boolean;
+            /** @description Whether it may read one out of a photograph or a block of text. */
+            readEnabled: boolean;
+            /** @description Whether it may draw a picture. */
+            drawEnabled: boolean;
+            /**
+             * Format: double
+             * @description What the instance may spend in a month, or null for no ceiling.
+             */
+            monthlyBudget?: number | null;
+            /**
+             * Format: double
+             * @description What one person may spend of it, or null for no share.
+             */
+            personalBudget?: number | null;
+        };
+        /** @description The model this instance talks to, and what it is allowed to do. */
+        SettingsUpdateAssistanceResponse: {
+            /** @description Whether the assistant is on. */
+            enabled: boolean;
+            /** @description Which provider: `gemini` or `openai`. */
+            provider: string;
+            /** @description Whether a key has been entered. Never the key. */
+            apiKeyConfigured: boolean;
+            /** @description Whether the connection has everything this provider needs. */
+            connected: boolean;
+            /** @description Where the provider is, when it is not where it usually is. */
+            baseUrl: string;
+            /** @description The model that writes recipes. */
+            composeModel: string;
+            /** @description The model that draws pictures. */
+            drawModel: string;
+            /** @description Whether it may rewrite a recipe somebody already has. */
+            improveEnabled: boolean;
+            /** @description Whether it may write one from an idea. */
+            draftEnabled: boolean;
+            /** @description Whether it may read one out of a photograph or a block of text. */
+            readEnabled: boolean;
+            /** @description Whether it may draw a picture. */
+            drawEnabled: boolean;
+            /**
+             * Format: double
+             * @description What the instance may spend in a month, or null for no ceiling.
+             */
+            monthlyBudget?: number | null;
+            /**
+             * Format: double
+             * @description What one person may spend of it, or null for no share.
+             */
+            personalBudget?: number | null;
         };
         /** @description The registration policy to apply. */
         SettingsUpdateRegistrationRequest: {
@@ -4040,6 +4274,133 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAssistanceSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetAssistanceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateAssistanceSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsUpdateAssistanceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsUpdateAssistanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAssistanceUsageV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetAssistanceUsageResponse"];
                 };
             };
             /** @description Unauthorized */

@@ -44,7 +44,10 @@ using Application.Searches;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
+using Application.Settings.GetAssistance;
+using Application.Settings.GetAssistanceUsage;
 using Application.Settings.GetRegistration;
+using Application.Settings.UpdateAssistance;
 using Application.Settings.UpdateRegistration;
 using Application.Shopping;
 using Application.Suggestions.Dismiss;
@@ -153,6 +156,13 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<UpdateRegistrationSettingsCommand,
                 Contracts.Settings.UpdateRegistration.Response>,
                 UpdateRegistrationSettingsCommandHandler>()
+            .AddScoped<IQueryHandler<GetAssistanceSettingsQuery,
+                Contracts.Settings.GetAssistance.Response>, GetAssistanceSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateAssistanceSettingsCommand,
+                Contracts.Settings.UpdateAssistance.Response>,
+                UpdateAssistanceSettingsCommandHandler>()
+            .AddScoped<IQueryHandler<GetAssistanceUsageQuery,
+                Contracts.Settings.GetAssistanceUsage.Response>, GetAssistanceUsageQueryHandler>()
 
             // Recipes
             .AddScoped<ICommandHandler<CreateRecipeCommand, Contracts.Recipes.RecipeDetail>,

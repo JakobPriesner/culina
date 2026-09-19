@@ -1,4 +1,7 @@
+using Api.Endpoints.Settings.GetAssistance.V1;
+using Api.Endpoints.Settings.GetAssistanceUsage.V1;
 using Api.Endpoints.Settings.GetRegistration.V1;
+using Api.Endpoints.Settings.UpdateAssistance.V1;
 using Api.Endpoints.Settings.UpdateRegistration.V1;
 
 namespace Api.Endpoints.Settings;
@@ -9,5 +12,8 @@ internal static class SettingsEndpoints
     internal static IServiceCollection AddSettingsEndpoints(this IServiceCollection services) =>
         services
             .AddSingleton<IEndpoint, GetRegistrationSettingsEndpoint>()
-            .AddSingleton<IEndpoint, UpdateRegistrationSettingsEndpoint>();
+            .AddSingleton<IEndpoint, UpdateRegistrationSettingsEndpoint>()
+            .AddSingleton<IEndpoint, GetAssistanceSettingsEndpoint>()
+            .AddSingleton<IEndpoint, UpdateAssistanceSettingsEndpoint>()
+            .AddSingleton<IEndpoint, GetAssistanceUsageEndpoint>();
 }

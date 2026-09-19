@@ -6,6 +6,7 @@
 
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
+  import { session } from '$features/auth/session.svelte';
 
   /**
    * Settings, split into categories.
@@ -30,15 +31,26 @@
 
   let { children }: Props = $props();
 
-  const categories = [
+  // The assistant configures the instance rather than the person looking at it
+  // — one key, one bill — so it is in the rail only for the one account that
+  // may change it. Absent rather than disabled, like every other thing in this
+  // app somebody cannot do.
+  const categories = $derived([
     { href: resolve('/(app)/me'), label: m['me.account'], lead: m['me.account.lead'] },
     {
       href: resolve('/(app)/me/appearance'),
       label: m['me.appearance'],
       lead: m['me.appearance.lead']
     },
-    { href: resolve('/(app)/me/household'), label: m['me.household'], lead: m['me.household.lead'] }
-  ];
+    {
+      href: resolve('/(app)/me/household'),
+      label: m['me.household'],
+      lead: m['me.household.lead']
+    },
+    ...(session.user?.isAdmin
+      ? [{ href: resolve('/(app)/me/ai'), label: m['me.ai'], lead: m['me.ai.lead'] }]
+      : [])
+  ]);
 
   // Exact, not a prefix: no category has children of its own, and a prefix
   // would light Account up on every one of them.

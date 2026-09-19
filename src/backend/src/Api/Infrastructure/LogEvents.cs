@@ -14,6 +14,7 @@ namespace Api.Infrastructure;
 ///   <item><term>1200-1299</term><description>Recipes</description></item>
 ///   <item><term>1300-1399</term><description>Cooking</description></item>
 ///   <item><term>1400-1499</term><description>Shopping</description></item>
+///   <item><term>1500-1599</term><description>The assistant</description></item>
 ///   <item><term>1800-1899</term><description>Request pipeline and security</description></item>
 ///   <item><term>1900-1999</term><description>Infrastructure: migrations, storage</description></item>
 /// </list>
@@ -25,6 +26,7 @@ internal static class LogEvents
     internal const int RecipesBase = 1200;
     internal const int CookingBase = 1300;
     internal const int ShoppingBase = 1400;
+    internal const int AssistanceBase = 1500;
     internal const int PipelineBase = 1800;
     internal const int InfrastructureBase = 1900;
 }
