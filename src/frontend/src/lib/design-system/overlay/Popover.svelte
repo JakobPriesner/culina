@@ -9,6 +9,18 @@
    * trigger and panel — is the browser's `popover`, so none of it is
    * reimplemented here.
    *
+   * Where it lands is not the browser's. That was CSS anchor positioning, which
+   * today means Chromium and Safari 26 — and the stylesheet's own fallback for
+   * everybody else put the panel in the middle of the screen, which is the one
+   * place a menu must never be: it reads as a dialog, it covers what it was
+   * opened from, and nothing on it says which control it belongs to. Nobody
+   * developing in Chrome would ever see it.
+   *
+   * So the arithmetic is done here, once, for every browser. It is less code
+   * than it replaced: `@position-try`, the `position-area` pairs, the
+   * `@supports` fallback and the observer that existed to notice the anchor had
+   * scrolled out from under an anchored panel are all gone.
+   *
    * For a decision that must be answered, use `Sheet` or `Modal` instead. A
    * popover that must not be dismissed is a modal wearing the wrong clothes.
    */
@@ -16,40 +28,113 @@
     /** The control that opens it. Receives the attributes that pair the two. */
     trigger: Snippet<[{ popovertarget: string }]>;
     children: Snippet;
-    /** Which side of the trigger it prefers. Flips if there is no room. */
+    /** Which edge of the trigger it lines up with. Flips if there is no room. */
     placement?: 'bottom-start' | 'bottom-end';
   }
 
   let { trigger, children, placement = 'bottom-start' }: Props = $props();
 
   const id = $props.id();
-  let anchor: HTMLDivElement;
+  let anchor = $state<HTMLDivElement>();
+  let panel = $state<HTMLDivElement>();
   let open = $state(false);
-  let detached = $state(false);
+
+  /** The breath between a trigger and its panel. `--space-1`, as a number. */
+  const gap = 4;
+
+  /** The least the panel leaves between itself and the edge of the screen. */
+  const edge = 16;
+
+  /** Inside the range, and pinned to its start when the range has no room. */
+  const within = (value: number, least: number, most: number) =>
+    Math.max(least, Math.min(value, Math.max(least, most)));
+
+  /**
+   * Puts the panel under its trigger.
+   *
+   * Two reads, in this order, because the second depends on the first: the
+   * height it is allowed decides where its top edge goes, and the height it
+   * wants decides which side of the trigger it is allowed that height on.
+   */
+  function place() {
+    const from = anchor?.getBoundingClientRect();
+
+    if (!panel || !from) {
+      return;
+    }
+
+    const view = { width: window.innerWidth, height: window.innerHeight };
+
+    // Cleared first, or the cap left behind by the last run decides this one —
+    // and a panel that has been squeezed once stays squeezed for the rest of
+    // its life.
+    panel.style.maxHeight = '';
+
+    const wanted = panel.getBoundingClientRect().height;
+    const under = view.height - edge - (from.bottom + gap);
+    const over = from.top - gap - edge;
+
+    // Under the trigger, unless it will not fit there and fits better over it.
+    // On a short landscape screen with the trigger low down, that is the
+    // difference between a list and a sliver of one.
+    const above = wanted > under && over > under;
+
+    // What is left of the screen on the chosen side. The panel scrolls inside
+    // this rather than running off the bottom of it.
+    panel.style.maxHeight = `${Math.max(0, above ? over : under)}px`;
+
+    const { width, height } = panel.getBoundingClientRect();
+    const start = placement === 'bottom-end' ? from.right - width : from.left;
+    const top = above ? from.top - gap - height : from.bottom + gap;
+
+    panel.style.left = `${within(start, edge, view.width - edge - width)}px`;
+    panel.style.top = `${within(top, edge, view.height - edge - height)}px`;
+  }
 
   $effect(() => {
-    if (!open) return;
-    // Anchor fallbacks account for layout overflow, but an open panel can
-    // follow its trigger off-screen when the document scrolls or reflows.
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry) detached = !entry.isIntersecting;
-    });
-    observer.observe(anchor);
-    return () => observer.disconnect();
+    if (!open) {
+      return;
+    }
+
+    place();
+
+    /**
+     * Anything that moved the trigger, except the panel reading itself.
+     *
+     * A panel taller than the room it was given scrolls inside itself, and that
+     * scroll is captured here like any other. Re-placing on it clears the
+     * height cap to measure what the panel wants — which for one frame makes it
+     * its full height, and the browser clamps its scroll position back to the
+     * top. The list jumps to the beginning every time somebody reads down it.
+     */
+    const again = (event: Event) => {
+      if (!(event.target instanceof Node) || !panel?.contains(event.target)) {
+        place();
+      }
+    };
+
+    // Captured, so a trigger inside something that scrolls on its own carries
+    // its panel with it, and not only the page does.
+    window.addEventListener('scroll', again, { capture: true, passive: true });
+    window.addEventListener('resize', again);
+
+    return () => {
+      window.removeEventListener('scroll', again, { capture: true });
+      window.removeEventListener('resize', again);
+    };
   });
 </script>
 
-<div class="anchor" bind:this={anchor} style:--anchor-name="--{id}">
+<div class="anchor" bind:this={anchor}>
   {@render trigger({ popovertarget: id })}
 
   <div
     {id}
-    class="panel {placement}"
-    class:detached
+    bind:this={panel}
+    class="panel"
     popover="auto"
     ontoggle={(event) => {
       open = event.newState === 'open';
-      if (!open) detached = false;
     }}
   >
     {@render children()}
@@ -58,12 +143,18 @@
 
 <style>
   .anchor {
-    position: relative;
     display: inline-flex;
-    anchor-name: var(--anchor-name);
   }
 
   .panel {
+    /*
+     * Placed in viewport coordinates by `place()`. `inset: auto` because the
+     * browser's own rule for a popover is `inset: 0` with `margin: auto`, which
+     * is what centres one — and an `inset` still set on the other two edges
+     * would fight the two being written here.
+     */
+    position: fixed;
+    inset: auto;
     margin: 0;
     padding: var(--space-2);
     border: 1px solid var(--border);
@@ -71,59 +162,10 @@
     background: var(--surface-overlay);
     color: var(--text);
     box-shadow: var(--shadow-overlay);
+    /* Against the screen rather than against where it ends up, so that moving
+       the panel can never change its size and one measurement stays true. */
     max-width: calc(100dvw - 2 * var(--space-4));
-    /* The position area supplies the available space beside the anchor. A
-       long panel must shrink and scroll when neither side fits its content. */
-    max-height: stretch;
     overflow: auto;
     overscroll-behavior: contain;
-
-    position-anchor: var(--anchor-name);
-    position-area: block-end span-inline-end;
-    margin-block-start: var(--space-1);
-    /* Flips to the other side when there is no room below, rather than being
-       clipped off the bottom of a phone. */
-    position-try-fallbacks:
-      flip-block,
-      flip-inline,
-      flip-block flip-inline,
-      --popover-viewport;
-  }
-
-  .bottom-end {
-    position-area: block-end span-inline-start;
-  }
-
-  .panel.detached {
-    position-anchor: auto;
-    position-area: none;
-    inset: var(--space-4);
-    margin: auto;
-    width: max-content;
-    height: max-content;
-    max-height: calc(100dvh - 2 * var(--space-4));
-  }
-
-  /* Keep the choices reachable even when no anchored position fits. */
-  @position-try --popover-viewport {
-    position-area: none;
-    inset: var(--space-4);
-    margin: auto;
-    width: max-content;
-    height: max-content;
-    max-height: calc(100dvh - 2 * var(--space-4));
-  }
-
-  /* Browsers without sized anchor areas get the same viewport fallback. */
-  @supports not ((anchor-name: --a) and (max-height: stretch)) {
-    .panel {
-      position: fixed;
-      position-area: none;
-      inset: var(--space-4);
-      margin: auto;
-      width: max-content;
-      height: max-content;
-      max-height: calc(100dvh - 2 * var(--space-4));
-    }
   }
 </style>
