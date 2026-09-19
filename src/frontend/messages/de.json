@@ -860,5 +860,9 @@
   "assist.photo.label": "Ein Foto eines Rezepts",
   "assist.photo.reading": "Das Foto wird gelesen…",
   "assist.photo.tooLarge": "Das Foto ist zu groß. 10 MB sind das Maximum.",
-  "assist.photo.note": "Er überträgt, was lesbar ist, und lässt Lücken, statt zu raten."
+  "assist.photo.note": "Er überträgt, was lesbar ist, und lässt Lücken, statt zu raten.",
+  "ai.advanced": "Erweitert",
+  "ai.advanced.hint": "Nur wenn du ein Gateway vor den Anbieter setzt oder ein bestimmtes Modell brauchst.",
+  "ai.models.default": "Für dich gewählt",
+  "ai.address.optional": "Leer lassen für die eigene Adresse von {provider}."
 }

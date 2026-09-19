@@ -12,9 +12,23 @@ namespace Infrastructure.Assistance;
 /// Talks to OpenAI's models, and to anything that answers in their shape.
 /// </summary>
 /// <remarks>
-/// The second half of that sentence is why the base address is configurable. A
-/// great many self-hosted model runners speak this API and nothing else, so an
-/// adapter for it is also the adapter for a model on the machine next door.
+/// <para>
+/// The Responses API rather than chat completions, which is what OpenAI now
+/// points new work at. Structured output moved with it: what was
+/// <c>response_format</c> at the top level is <c>text.format</c> here.
+/// </para>
+/// <para>
+/// The system role survives the move, which matters more to this feature than
+/// anything else about it. The instruction is a <c>system</c> message and the
+/// untrusted material is a <c>user</c> message — two different kinds of thing
+/// rather than two parts of one, which is the strongest separation any of the
+/// three providers offers.
+/// </para>
+/// <para>
+/// The second half of "anything that answers in their shape" is why the address
+/// is overridable. A great many self-hosted runners and gateways speak this API
+/// and nothing else, so this adapter is also the adapter for those.
+/// </para>
 /// </remarks>
 /// <param name="settings">The live instance settings.</param>
 /// <param name="protector">Decrypts the stored key.</param>
@@ -26,8 +40,6 @@ internal sealed class OpenAiAssistant(
     AssistantHttp http,
     ILogger<OpenAiAssistant> logger) : IAssistant
 {
-    private const string Home = "https://api.openai.com";
-
     public AssistantKind Kind => AssistantKind.OpenAi;
 
     public async Task<Result<Composed>> ComposeAsync(
@@ -43,17 +55,17 @@ internal sealed class OpenAiAssistant(
 
         var payload = new
         {
-            model = settings.ComposeModel,
-            messages = new object[]
+            model = settings.ComposeModel.Or(AssistantDefaults.ComposeModel(Kind)),
+            input = new object[]
             {
                 new { role = "system", content = request.Instruction },
                 new { role = "user", content = Content(request) }
             },
-            response_format = new
+            text = new
             {
-                type = "json_schema",
-                json_schema = new
+                format = new
                 {
+                    type = "json_schema",
                     name = RecipeSchema.Name,
                     schema = RecipeSchema.Definition
                 }
@@ -61,7 +73,7 @@ internal sealed class OpenAiAssistant(
         };
 
         var answered = await http.PostAsync<OpenAiReply>(
-                AssistantHttp.Address(settings.BaseUrl, Home, "v1/chat/completions"),
+                AssistantHttp.Address(settings.BaseUrl, AssistantDefaults.Home(Kind), "v1/responses"),
                 payload,
                 message => Authorize(message, key),
                 cancellationToken)
@@ -83,7 +95,7 @@ internal sealed class OpenAiAssistant(
 
         var payload = new
         {
-            model = settings.DrawModel,
+            model = settings.DrawModel.Or(AssistantDefaults.DrawModel(Kind)),
             prompt = request.Subject,
             n = 1,
             // One square picture at the middling quality. Not a choice this app
@@ -93,7 +105,10 @@ internal sealed class OpenAiAssistant(
         };
 
         var answered = await http.PostAsync<OpenAiImageReply>(
-                AssistantHttp.Address(settings.BaseUrl, Home, "v1/images/generations"),
+                AssistantHttp.Address(
+                    settings.BaseUrl,
+                    AssistantDefaults.Home(Kind),
+                    "v1/images/generations"),
                 payload,
                 message => Authorize(message, key),
                 cancellationToken)
@@ -106,12 +121,12 @@ internal sealed class OpenAiAssistant(
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
 
     /// <summary>
-    /// The material, as content parts, with the instruction nowhere near it.
+    /// The material, as content parts of the user message.
     /// </summary>
     /// <remarks>
-    /// The instruction is the system message. This builds only the untrusted
-    /// half — what somebody pasted, typed or photographed — and the two are
-    /// never concatenated.
+    /// The instruction is the system message and is never here. This builds only
+    /// the untrusted half — what somebody pasted, typed or photographed — and
+    /// the two are never concatenated.
     /// </remarks>
     private static object[] Content(Composition request)
     {
@@ -128,8 +143,8 @@ internal sealed class OpenAiAssistant(
 
             parts.Add(new
             {
-                type = "image_url",
-                image_url = new
+                type = "image",
+                image = new
                 {
                     url = $"data:{media};base64,{Convert.ToBase64String(request.Picture.Span)}"
                 }
@@ -141,12 +156,9 @@ internal sealed class OpenAiAssistant(
 
     private Result<Composed> Read(OpenAiReply reply)
     {
-        if (reply.Choices is not [{ Message.Content: { Length: > 0 } json }, ..])
+        if (Text(reply) is not { Length: > 0 } json)
         {
-            AssistanceLogs.EmptyAnswer(
-                logger,
-                Kind.Code,
-                reply.Choices is [var refused, ..] ? refused.FinishReason : null);
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Status);
 
             return AssistanceErrors.UnusableAnswer;
         }
@@ -164,6 +176,19 @@ internal sealed class OpenAiAssistant(
             return AssistanceErrors.UnusableAnswer;
         }
     }
+
+    /// <summary>
+    /// The first piece of text the model produced.
+    /// </summary>
+    /// <remarks>
+    /// Searched rather than indexed at <c>output[0].content[0]</c>. A response
+    /// can carry reasoning items and tool calls alongside the message, and the
+    /// answer is not reliably the first thing in the list.
+    /// </remarks>
+    private static string? Text(OpenAiReply reply) => reply.Output?
+        .SelectMany(item => item.Content ?? [])
+        .FirstOrDefault(part => part.Text is { Length: > 0 })?
+        .Text;
 
     private Result<Drawn> ReadPicture(OpenAiImageReply reply)
     {
@@ -183,8 +208,8 @@ internal sealed class OpenAiAssistant(
     }
 
     private static ModelUsage Usage(OpenAiReply reply) => new(
-        reply.Usage?.PromptTokens ?? 0,
-        reply.Usage?.CompletionTokens ?? 0,
+        reply.Usage?.InputTokens ?? 0,
+        reply.Usage?.OutputTokens ?? 0,
         Pictures: 0);
 
     /// <inheritdoc cref="GeminiAssistant" />
@@ -192,40 +217,41 @@ internal sealed class OpenAiAssistant(
         settings.HasApiKey ? protector.Unprotect(settings.ProtectedApiKey) : null;
 }
 
-/// <summary>What a chat completion answers with.</summary>
+/// <summary>What the Responses API answers with.</summary>
 internal sealed record OpenAiReply
 {
-    public IReadOnlyList<OpenAiChoice>? Choices { get; init; }
+    public IReadOnlyList<OpenAiOutputItem>? Output { get; init; }
+
+    /// <summary>Set when the response did not simply complete.</summary>
+    public string? Status { get; init; }
 
     public OpenAiUsage? Usage { get; init; }
 }
 
-/// <summary>One answer.</summary>
-internal sealed record OpenAiChoice
+/// <summary>One item of the output: a message, a reasoning block, a tool call.</summary>
+internal sealed record OpenAiOutputItem
 {
-    public OpenAiMessage? Message { get; init; }
+    public string? Type { get; init; }
 
-    public string? FinishReason { get; init; }
+    public IReadOnlyList<OpenAiContentPart>? Content { get; init; }
 }
 
-/// <summary>The answer's text.</summary>
-internal sealed record OpenAiMessage
+/// <summary>One piece of an output item.</summary>
+internal sealed record OpenAiContentPart
 {
-    public string? Content { get; init; }
+    public string? Type { get; init; }
+
+    public string? Text { get; init; }
 }
 
-/// <summary>What the call consumed, as OpenAI counts it.</summary>
+/// <summary>What the call consumed.</summary>
 internal sealed record OpenAiUsage
 {
-    public int PromptTokens { get; init; }
-
-    public int CompletionTokens { get; init; }
-
-    /// <summary>What an image call reports instead.</summary>
     public int InputTokens { get; init; }
 
-    /// <summary>What an image call reports instead.</summary>
     public int OutputTokens { get; init; }
+
+    public int TotalTokens { get; init; }
 }
 
 /// <summary>What an image generation answers with.</summary>

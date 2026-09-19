@@ -96,6 +96,14 @@ administrator changes while the app runs, from **Settings → Assistant**. A key
 that could only be entered by editing a file on the server is a key nobody will
 ever rotate.
 
+Connecting one is choosing a provider and pasting a key. The address and the
+model names live under **Advanced** and are empty by default — Culina knows
+where Google and OpenAI are, and which of their models to use. Set the address
+only if you run a gateway in front of the provider; set a model only if you want
+to pin one rather than follow whatever Culina currently defaults to. Ollama is
+the exception and is asked for its address up front, because a model on your own
+machine is wherever you put it and there is no default that could be right.
+
 Two things about it belong in a deployment decision rather than a screen, so
 they are said here instead.
 
