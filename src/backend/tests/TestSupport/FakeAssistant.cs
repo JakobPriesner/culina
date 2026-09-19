@@ -70,6 +70,14 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
         return this;
     }
 
+    /// <summary>What it says it offers, and whether it will answer at all.</summary>
+    public Result<IReadOnlyList<ModelInfo>> Models { get; set; } =
+        Result<IReadOnlyList<ModelInfo>>.Success(
+        [
+            new ModelInfo("fast-one", "Fast one", CanDraw: false),
+            new ModelInfo("draws-one", "Draws one", CanDraw: true)
+        ]);
+
     public Task<Result<Composed>> ComposeAsync(
         Connected @using,
         Composition request,
@@ -96,6 +104,15 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
         return Task.FromResult(drawings.Count > 0
             ? drawings.Dequeue()
             : Result<Drawn>.Failure(AssistanceErrors.Unavailable));
+    }
+
+    public Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
+        Connected @using,
+        CancellationToken cancellationToken)
+    {
+        LastConnection = @using;
+
+        return Task.FromResult(Models);
     }
 }
 

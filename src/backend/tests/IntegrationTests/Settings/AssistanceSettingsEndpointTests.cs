@@ -182,6 +182,50 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Models_ShouldListNothing_WhenNoProviderIsConnected()
+    {
+        // Arrange
+        using var admin = await AdminAsync();
+
+        // Act
+        var response = await admin.GetAsync("/api/v1/settings/assistance/models", Token);
+
+        // Assert
+        // Only connected providers appear at all, so an unconfigured instance
+        // asks nobody anything.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, response.Json!.Value.GetProperty("providers").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Models_ShouldSayAProviderIsUnreachable_RatherThanFailing()
+    {
+        // Arrange
+        // A key that will not work, pointed at an address that will not answer.
+        using var admin = await AdminAsync();
+        await admin.PutAsync(
+            "/api/v1/settings/assistance",
+            Configured(provider: "ollama", apiKey: null, baseUrl: "http://127.0.0.1:9"),
+            Token);
+
+        // Act
+        var response = await admin.GetAsync("/api/v1/settings/assistance/models", Token);
+
+        // Assert
+        // A row saying so, with the reason — not a failure. One provider that
+        // is down must not cost the other two, and this is where a wrong key
+        // first shows up.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var ollama = response.Json!.Value.GetProperty("providers")
+            .EnumerateArray()
+            .Single(one => one.GetProperty("provider").GetString() == "ollama");
+
+        Assert.False(ollama.GetProperty("reachable").GetBoolean());
+        Assert.Equal("assistance.unavailable", ollama.GetProperty("problem").GetString());
+    }
+
+    [Fact]
     public async Task Usage_ShouldBeEmpty_BeforeAnybodyHasAskedForAnything()
     {
         // Arrange
@@ -199,6 +243,7 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Theory]
     [InlineData("/api/v1/settings/assistance")]
     [InlineData("/api/v1/settings/assistance/usage")]
+    [InlineData("/api/v1/settings/assistance/models")]
     public async Task Settings_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator(string path)
     {
         // Arrange

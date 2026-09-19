@@ -1581,6 +1581,48 @@
         }
       }
     },
+    "/api/v1/settings/assistance/models": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "List what each connected provider offers",
+        "description": "Instance administrator only. Asks every connected provider what models it has, so choosing one is choosing from a list rather than typing a name correctly.\n\nA provider that does not answer is a row with `reachable: false` and the reason, not a failure — one unreachable provider must not cost the other two. It is also the first place a wrong key shows up, which is most of why the reason is carried.\n\n`canDraw` is the adapter reading the model's name, because none of the three providers states it. Only providers that are connected appear at all.",
+        "operationId": "getAssistanceModelsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetAssistanceModelsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/registration/policy": {
       "get": {
         "tags": [
@@ -8659,6 +8701,76 @@
           }
         },
         "description": "One provider, and whether it is ready to be used."
+      },
+      "SettingsGetAssistanceModelsModelContract": {
+        "required": [
+          "id",
+          "label",
+          "canDraw"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "What to store as the model name."
+          },
+          "label": {
+            "type": "string",
+            "description": "What to show, where the provider says something nicer."
+          },
+          "canDraw": {
+            "type": "boolean",
+            "description": "Whether it makes pictures."
+          }
+        },
+        "description": "One model."
+      },
+      "SettingsGetAssistanceModelsProviderModelsContract": {
+        "required": [
+          "provider",
+          "reachable",
+          "models"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "`gemini`, `openai` or `ollama`."
+          },
+          "reachable": {
+            "type": "boolean",
+            "description": "Whether the provider answered."
+          },
+          "problem": {
+            "type": "string",
+            "description": "Why it did not, when it did not.",
+            "nullable": true
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceModelsModelContract"
+            },
+            "description": "What it offers, newest naming and all."
+          }
+        },
+        "description": "One provider's models, or the reason there are none."
+      },
+      "SettingsGetAssistanceModelsResponse": {
+        "required": [
+          "providers"
+        ],
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceModelsProviderModelsContract"
+            },
+            "description": "One entry per provider that is connected."
+          }
+        },
+        "description": "What each connected provider currently offers."
       },
       "SettingsGetAssistanceResponse": {
         "required": [

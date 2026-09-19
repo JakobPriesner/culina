@@ -108,6 +108,23 @@ export interface Assistance {
   personalBudget: number | null;
 }
 
+/** One model a provider offers. */
+export interface Model {
+  id: string;
+  label: string;
+  /** Whether it makes pictures, as the server read it from the name. */
+  canDraw: boolean;
+}
+
+/** What one provider offers, or why it offered nothing. */
+export interface ProviderModels {
+  provider: Provider;
+  reachable: boolean;
+  /** An error code when it did not answer. The client has the words. */
+  problem: string | null;
+  models: Model[];
+}
+
 /** What it has cost this month. */
 export interface Usage {
   since: string;
@@ -136,6 +153,23 @@ export interface CapabilityUsage {
 }
 
 type AssistanceWire = components['schemas']['SettingsGetAssistanceResponse'];
+type ModelsWire = components['schemas']['SettingsGetAssistanceModelsResponse'];
+
+/** Reads what each provider offers, dropping any this build cannot draw a row for. */
+export function toProviderModels(wire: ModelsWire): ProviderModels[] {
+  return wire.providers
+    .filter((one) => isProvider(one.provider))
+    .map((one) => ({
+      provider: one.provider as Provider,
+      reachable: one.reachable,
+      problem: one.problem ?? null,
+      models: one.models.map((model) => ({
+        id: model.id,
+        label: model.label,
+        canDraw: model.canDraw
+      }))
+    }));
+}
 
 /** Reads what the server sent, dropping anything this build cannot draw. */
 export function toAssistance(wire: AssistanceWire): Assistance {

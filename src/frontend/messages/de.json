@@ -882,5 +882,8 @@
   "ai.connected": "Bereit",
   "ai.cannotDraw": "{provider} zeichnet keine Bilder.",
   "ai.privacy.mixed": "Rezepttexte und Fotos gehen an den Anbieter, den die jeweilige Aufgabe nutzt. Aufgaben mit Ollama senden nichts irgendwohin.",
-  "ai.apiKey.add": "Schlüssel hinzufügen"
+  "ai.apiKey.add": "Schlüssel hinzufügen",
+  "ai.job.model.any": "Für dich gewählt",
+  "ai.models.unreachable": "{provider} hat nicht geantwortet, die Modelle konnten nicht geladen werden. Prüfe Schlüssel und Adresse.",
+  "ai.models.typed": "Modellnamen eingeben"
 }
