@@ -167,6 +167,29 @@ export async function responsiveData(
         total: 6,
         nextCursor: null
       });
+    // What the filter panel offers to narrow by. None: a household's tags are
+    // its own words, and a list of them here would be a list of invented ones.
+    if (path === '/tags' || path.endsWith('/tags')) return reply({ items: [] });
+    // Nothing to suggest. The library waits for this answer before it asks for
+    // a list — it decides the order — so an unanswered one leaves the page on
+    // its skeleton forever, which is exactly what these fixtures must not do.
+    if (path === '/suggestions') return reply({ items: [] });
+    // The library toolbar asks for these on every page that carries it. An
+    // empty list is the fixture worth having: a household with saved searches
+    // renders a row of chips that changes the height of everything below it,
+    // which is not what any of these tests are measuring.
+    if (path === '/searches') return reply({ items: [] });
+    if (path.endsWith('/members'))
+      return reply({
+        items: [
+          {
+            userId: 'user-1',
+            displayName: 'Alex',
+            role: 'owner',
+            joinedAt: '2026-01-04T12:00:00Z'
+          }
+        ]
+      });
     if (path.endsWith('/invitations'))
       return reply({ items: [{ invitationId: 'invite-1', expiresAt: '2026-10-14T12:00:00Z' }] });
     if (path.endsWith('/shopping-list'))

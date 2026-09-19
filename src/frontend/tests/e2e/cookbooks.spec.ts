@@ -55,7 +55,10 @@ test.describe('cookbooks', () => {
     await page.getByRole('link', { name: new RegExp(onTheShelf) }).click();
     await expect(page.getByRole('heading', { level: 1, name: onTheShelf })).toBeVisible();
 
-    await page.getByRole('button', { name: /add to cookbook|zu kochbuch/i }).click();
+    // Behind the recipe page's overflow menu: shelving is occasional, so it
+    // shares one menu with sharing and editing beside the title.
+    await page.getByRole('button', { name: /more actions|weitere aktionen/i }).click();
+    await page.getByRole('button', { name: /add to cookbook|kochbuch/i }).click();
 
     // No cookbooks yet, so the sheet offers to make the first one rather than
     // showing an empty list and leaving it there.

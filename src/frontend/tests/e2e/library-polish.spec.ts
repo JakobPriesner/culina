@@ -71,25 +71,38 @@ async function libraryData(page: Page, locale: 'en' | 'de' = 'en', mode = 'light
 test.describe('library refinement @offline', () => {
   test.use({ serviceWorkers: 'block' });
 
-  test('search and quick filter survive opening a recipe and returning', async ({ page }) => {
+  test('search and time filter survive opening a recipe and returning', async ({ page }) => {
     await libraryData(page);
     await page.goto('/');
+
+    // The ceiling lives in the filter panel with the other three. It had a
+    // shortcut of its own beside the search box, which was only ever there
+    // because it was the one the app shipped with first.
+    const applyHalfAnHour = async () => {
+      await page.getByRole('button', { name: /^Filter/ }).click();
+      await page.getByRole('button', { name: 'Up to 30 min', exact: true }).click();
+      // The footer's, not the sheet's close cross, which says the same word.
+      await page.locator('footer').getByRole('button', { name: 'Done', exact: true }).click();
+    };
+
+    // What is applied, said where it can be taken off again.
+    const applied = page
+      .getByRole('list', { name: 'Applied filters' })
+      .getByRole('button', { name: /Up to 30 min/ });
+
     const search = page.getByRole('searchbox', { name: 'Search recipes' });
     await search.fill('orzo');
-    await page.getByRole('button', { name: 'Up to 30 min' }).click();
+    await applyHalfAnHour();
     await expect(page.locator('.count')).toHaveText('1 recipe');
     await page.getByRole('link', { name: 'Open Lemon orzo with summer greens' }).click();
     await page.getByRole('link', { name: /All recipes/i }).click();
     await expect(search).toHaveValue('orzo');
-    await expect(page.getByRole('button', { name: 'Up to 30 min' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    await expect(applied).toBeVisible();
     await expect(page.locator('.count')).toHaveText('1 recipe');
     await page.getByRole('button', { name: 'Show all recipes' }).click();
     await expect(search).toHaveValue('');
     await expect(page.locator('.count')).toHaveText('4 recipes');
-    await page.getByRole('button', { name: 'Up to 30 min' }).click();
+    await applyHalfAnHour();
     await expect(page.locator('.count')).toHaveText('3 recipes');
     await search.fill('something absent');
     await expect(page.getByRole('heading', { name: 'Nothing matched' })).toBeVisible();
