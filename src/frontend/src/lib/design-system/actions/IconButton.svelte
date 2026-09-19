@@ -19,6 +19,14 @@
     /** Marks a toggle's state, so it is announced as pressed rather than as new. */
     pressed?: boolean;
     type?: 'button' | 'submit';
+    /**
+     * The popover this button opens, from `Popover`'s trigger snippet.
+     *
+     * The same one attribute `Button` takes, and for the same reason: the
+     * browser handles the toggling, the light dismiss and the `aria-expanded`
+     * from it. An overflow menu is an icon, so it needs this end too.
+     */
+    popovertarget?: string;
     onclick?: (event: MouseEvent) => void;
   }
 
@@ -30,6 +38,7 @@
     disabled = false,
     pressed,
     type = 'button',
+    popovertarget,
     onclick
   }: Props = $props();
 </script>
@@ -39,6 +48,7 @@
   class:bordered
   {type}
   {disabled}
+  {popovertarget}
   aria-label={label}
   aria-pressed={pressed === undefined ? undefined : pressed}
   title={label}

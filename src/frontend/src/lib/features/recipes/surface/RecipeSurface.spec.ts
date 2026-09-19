@@ -153,35 +153,64 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('button', { name: 'Start cooking' })).toBeInTheDocument();
   });
 
-  it('draws no action bar at all when the page offers nothing', () => {
-    // What somebody following a share link gets: they cannot cook, shop,
-    // shelve or re-share a recipe that is not theirs, and an empty bar floating
-    // over the last step is worse than no bar.
+  it('parks nothing at the bottom of the screen when there is no cooking to start', () => {
+    // What somebody following a share link gets: they cannot cook a recipe
+    // that is not theirs, and a bar floating over the last step with nothing
+    // on it is worse than no bar.
     const { container } = render();
 
     expect(screen.queryByRole('button', { name: 'Start cooking' })).not.toBeInTheDocument();
     expect(container.querySelector('.foot')).toBeNull();
   });
 
-  it('draws the bar as soon as the page offers one thing', () => {
+  it('keeps the bottom of the screen for cooking alone', () => {
+    // The supporting actions moved to the title row, so offering one of them
+    // is not a reason to float anything over the recipe.
     const { container } = render({ onshare: () => {} });
 
-    expect(container.querySelector('.foot')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+    expect(container.querySelector('.foot')).toBeNull();
   });
 
-  it('offers the way back into the editor, as a real link', () => {
-    render({ editable: true });
+  it('offers the shopping list beside the title, without a menu to open first', () => {
+    render({ onaddtolist: () => {} });
+
+    // The weekly loop — read a recipe, put it on the list — and a loop that
+    // runs twice a week does not belong behind a menu.
+    expect(screen.getByRole('button', { name: 'Add to the shopping list' })).toBeInTheDocument();
+  });
+
+  it('keeps the occasional actions in one menu, closed until it is asked for', () => {
+    render({ editable: true, onshare: () => {}, onaddtocookbook: () => {} });
+
+    // One control on the page, and nothing behind it reachable until it is
+    // pressed.
+    expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument();
+
+    // What is in it, with the panel's own hiding set aside: jsdom implements
+    // neither `showPopover` nor the declarative invocation, so the menu cannot
+    // be opened by pressing its trigger here. The end-to-end suite is where a
+    // real browser presses it.
+    const hidden = { hidden: true } as const;
+
+    expect(
+      screen.getByRole('button', { name: 'Add to a cookbook', ...hidden })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Share', ...hidden })).toBeInTheDocument();
 
     // A link, not a button: a recipe you are about to rewrite is one people
     // open in a second tab beside the one they are reading.
-    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/recipes/r1/edit');
+    expect(screen.getByRole('link', { name: 'Edit', ...hidden })).toHaveAttribute(
+      'href',
+      '/recipes/r1/edit'
+    );
   });
 
   it('says nothing about editing when there is nowhere to edit', () => {
     render();
 
     expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 });
 

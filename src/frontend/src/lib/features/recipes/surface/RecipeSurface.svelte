@@ -3,7 +3,7 @@
 
   import { resolve } from '$app/paths';
 
-  import { Button, Image, SegmentedControl } from '$ds';
+  import { Button, IconButton, Image, Popover, SegmentedControl } from '$ds';
 
   import { m } from '$shell/i18n';
   import {
@@ -155,15 +155,41 @@
   const cooking = $derived(emphasis === 'cook');
 
   /**
-   * Whether the bar has anything on it.
+   * Whether anything is parked at the bottom of the screen.
    *
-   * A visitor following a share link is offered none of the four — they cannot
-   * cook, shop, shelve or re-share somebody else's recipe — and an empty bar
-   * floating over the last step is worse than no bar.
+   * One action, not four: the bar carries the thing the page exists to offer
+   * and nothing else. A visitor following a share link cannot cook here —
+   * cooking keeps a session, and they have none — and a bar floating over the
+   * last step with nothing on it is worse than no bar.
    */
-  const hasActions = $derived(
-    cooking || Boolean(onstartcooking ?? onaddtolist ?? onaddtocookbook ?? onshare)
-  );
+  const hasActions = $derived(cooking || Boolean(onstartcooking));
+
+  /**
+   * Whether the group beside the title has anything in it.
+   *
+   * The same question for the other end of the page: the supporting actions
+   * are offered to whoever owns the recipe, and to nobody else.
+   */
+  const inMenu = $derived(!cooking && Boolean(editable || onaddtocookbook || onshare));
+  const hasSupportingActions = $derived(inMenu || Boolean(!cooking && onaddtolist));
+
+  /**
+   * Closes the menu the pressed item is in, then does the thing.
+   *
+   * The browser closes a popover when the click lands outside it and not when
+   * it lands on one of the choices, which is right for a panel of checkboxes
+   * and wrong for a menu: every item here opens a sheet or leaves the page, and
+   * a menu still hanging over it afterwards is a menu nobody dismissed.
+   */
+  function choose(event: MouseEvent, run?: () => void) {
+    const panel = (event.currentTarget as HTMLElement).closest('[popover]');
+
+    if (panel instanceof HTMLElement && typeof panel.hidePopover === 'function') {
+      panel.hidePopover();
+    }
+
+    run?.();
+  }
 
   /** Cooking has already contracted the region to one step; it cannot do both. */
   const perStep = $derived(view === 'perStep' && !cooking);
@@ -312,14 +338,137 @@
     <div class="titleRow">
       <h1 class="title">{recipe.title}</h1>
 
-      <!-- Quiet, and the other end of the editor's "← Done": writing a recipe
-           down is not one of the things this page is for, it is the way back
-           out of it. Hidden while cooking, where the only correct edit is the
-           one you make to the pan. -->
-      {#if editable && !cooking}
-        <a class="edit" href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: recipe.id })}>
-          {m['editor.edit']()}
-        </a>
+      <!--
+        Everything except cooking, beside the title.
+
+        One rank in one place. What used to be here was a bare "Edit" link while
+        four unrelated actions floated at the bottom of the screen, which meant
+        the page answered "what can I do with this recipe" in two places and in
+        neither of them completely.
+
+        The shopping list keeps its own control because it is the weekly loop —
+        read a recipe, put it on the list — and a loop that runs twice a week
+        does not belong behind a menu. The other three are occasional, so they
+        go in one, the way a document's rarely-used actions do everywhere else.
+
+        Nothing at all while cooking: hands are full, and the only correct edit
+        then is the one made to the pan.
+      -->
+      {#if hasSupportingActions}
+        <div class="actions">
+          {#if onaddtolist}
+            <Button label={m['shopping.addToList']()} onclick={onaddtolist}>
+              {#snippet icon()}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <!-- The same basket the shopping tab is marked with. -->
+                  <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
+                  <path d="M9 8 12 3l3 5" />
+                </svg>
+              {/snippet}
+
+              {m['shopping.addToList']()}
+            </Button>
+          {/if}
+
+          {#if inMenu}
+            <!-- Opening towards the middle of the page: the group is at the
+                 inline end of a full-width row, and a panel that preferred the
+                 other side would be hanging off the edge of the screen. -->
+            <Popover placement="bottom-end">
+              {#snippet trigger({ popovertarget })}
+                <IconButton bordered label={m['recipe.moreActions']()} {popovertarget}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1.6" />
+                    <circle cx="12" cy="12" r="1.6" />
+                    <circle cx="12" cy="19" r="1.6" />
+                  </svg>
+                </IconButton>
+              {/snippet}
+
+              <div class="menu">
+                {#if onaddtocookbook}
+                  <button class="item" type="button" onclick={(e) => choose(e, onaddtocookbook)}>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <!-- A book, closed, spine to the left. -->
+                      <path
+                        d="M6.5 3.5H17a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"
+                      />
+                      <path d="M8 3.5v17" />
+                    </svg>
+
+                    {m['cookbooks.add.action']()}
+                  </button>
+                {/if}
+
+                {#if onshare}
+                  <button class="item" type="button" onclick={(e) => choose(e, onshare)}>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <!-- Three nodes and the two threads between them: the shape
+                           every platform's share control has settled on, so
+                           nobody has to learn what this one means. -->
+                      <circle cx="18" cy="5" r="2.5" />
+                      <circle cx="6" cy="12" r="2.5" />
+                      <circle cx="18" cy="19" r="2.5" />
+                      <path d="M8.2 10.8 15.8 6.4" />
+                      <path d="m8.2 13.2 7.6 4.4" />
+                    </svg>
+
+                    {m['recipe.share.action']()}
+                  </button>
+                {/if}
+
+                <!-- A link, not a button, and the other end of the editor's
+                     "← Done": a recipe somebody is about to rewrite is one they
+                     open in a second tab beside the one they are reading. -->
+                {#if editable}
+                  <a
+                    class="item"
+                    href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: recipe.id })}
+                    onclick={(e) => choose(e)}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+                      <path d="m15 6 3 3" />
+                    </svg>
+
+                    {m['editor.edit']()}
+                  </a>
+                {/if}
+              </div>
+            </Popover>
+          {/if}
+        </div>
       {/if}
     </div>
 
@@ -535,99 +684,21 @@
     <footer class="foot">
       {#if cooking}
         <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
-      {:else}
+      {:else if onstartcooking}
         <!--
-        Three actions of two ranks, never three of three. The two supporting
-        ones share one look, so the accented "Start cooking" is the only thing
-        on the bar asking to be pressed.
+          One button, alone, and the only thing this page parks at the bottom of
+          the screen.
 
-        On a phone they lose their words rather than their room: "Add to the
-        shopping list" set across a third of a 360px screen is three wrapped
-        lines and a bar half the height of the viewport. The label survives as
-        the accessible name — which is what `label` is doing here, and why it
-        is passed on every width rather than only on the narrow one.
-      -->
-        {#if onaddtocookbook}
-          <Button size="lg" label={m['cookbooks.add.action']()} onclick={onaddtocookbook}>
-            {#snippet icon()}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <!-- A book, closed, spine to the left. -->
-                <path
-                  d="M6.5 3.5H17a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"
-                />
-                <path d="M8 3.5v17" />
-              </svg>
-            {/snippet}
-
-            {m['cookbooks.add.action']()}
-          </Button>
-        {/if}
-
-        {#if onshare}
-          <Button size="lg" label={m['recipe.share.action']()} onclick={onshare}>
-            {#snippet icon()}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <!-- Three nodes and the two threads between them: the shape every
-                   platform's share control has settled on, so nobody has to
-                   learn what this one means. -->
-                <circle cx="18" cy="5" r="2.5" />
-                <circle cx="6" cy="12" r="2.5" />
-                <circle cx="18" cy="19" r="2.5" />
-                <path d="M8.2 10.8 15.8 6.4" />
-                <path d="m8.2 13.2 7.6 4.4" />
-              </svg>
-            {/snippet}
-
-            {m['recipe.share.action']()}
-          </Button>
-        {/if}
-
-        {#if onaddtolist}
-          <Button size="lg" label={m['shopping.addToList']()} onclick={onaddtolist}>
-            {#snippet icon()}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <!-- The same basket the shopping tab is marked with. -->
-                <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
-                <path d="M9 8 12 3l3 5" />
-              </svg>
-            {/snippet}
-
-            {m['shopping.addToList']()}
-          </Button>
-        {/if}
-
-        <!-- Takes whatever the icons leave: it is the action the page exists to
-           offer, and a target's size should say so. Conditional like the rest,
-           because a reader following a link cannot cook here — cooking keeps a
-           session, and they have none. -->
-        {#if onstartcooking}
-          <span class="advance">
-            <Button variant="primary" size="lg" full onclick={onstartcooking}>
-              {m['recipe.startCooking']()}
-            </Button>
-          </span>
-        {/if}
+          It is here rather than beside the title because the decision is made
+          at the end of the reading, not at the start of it: you look at the
+          photograph, you read down the ingredients, you work out whether you
+          have the cream — and by then the title is three screens up. Everything
+          that is not that decision went to the title row, so what floats over
+          the recipe is one accented control instead of a strip of four.
+        -->
+        <Button variant="primary" size="lg" onclick={onstartcooking}>
+          {m['recipe.startCooking']()}
+        </Button>
       {/if}
     </footer>
   {/if}
@@ -685,25 +756,67 @@
     border-radius: var(--radius-lg);
   }
 
-  /* Baselines, not centres: the link sits on the first line of a title that
-     may run to three of them. */
+  /*
+   * Two columns, not a wrapping row.
+   *
+   * A row let a long title push the controls onto a line of their own at the
+   * *start* of it, where they sat directly on top of the meta line — so the
+   * page's furniture changed places depending on how long somebody's recipe
+   * was called. Here the title takes the room it needs and wraps inside its own
+   * column, and the group stays at the end of the row it belongs to.
+   */
   .titleRow {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: var(--space-4);
   }
 
-  .edit {
-    flex: none;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    text-decoration: none;
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
-  .edit:hover {
+  /*
+   * A menu of rows, not a panel of buttons.
+   *
+   * The full width each, so the icons line up down the left and the words down
+   * beside them — which is what makes a list of three things scannable rather
+   * than three separate controls that happen to be in one box.
+   */
+  .menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 12rem;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--control-sm);
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
     color: var(--text);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-align: start;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .item:hover {
+    background: var(--surface-hover);
+  }
+
+  .item svg {
+    flex: none;
+    width: var(--space-4);
+    height: var(--space-4);
   }
 
   .title {
@@ -1016,32 +1129,26 @@
     color: var(--text-muted);
   }
 
-  /* Clear of whatever the shell has already parked at the bottom of the
-     viewport — the cooking bar, the phone's navigation bar, or both. */
+  /*
+   * Clear of whatever the shell has already parked at the bottom of the
+   * viewport — the cooking bar, the phone's navigation bar, or both.
+   *
+   * No enclosure of its own any more. A panel around four controls was what
+   * held them together as a bar; around one accented button it is a box drawn
+   * around a box, and the button's own shadow already lifts it off the page.
+   */
   .foot {
     position: sticky;
     bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-6));
     max-width: 100%;
     z-index: var(--z-sticky);
-    /* Breathing room under the bar: while it floats, above whatever the shell
-       has parked at the bottom; once the page ends, below its resting place. */
+    /* Breathing room under the button: while it floats, above whatever the
+       shell has parked at the bottom; once the page ends, below its resting
+       place. */
     margin-block-end: var(--space-8);
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
     justify-content: center;
-    gap: var(--space-2);
     align-self: center;
-    padding: var(--space-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
-  }
-
-  .advance {
-    display: flex;
-    min-width: 0;
   }
 
   /* Step navigation is the cooking page's persistent action strip. Keeping
@@ -1102,60 +1209,26 @@
   }
 
   /*
-   * On a phone the bar is the width of the page and holds one row.
+   * On a phone it is the width of the page.
    *
-   * Wrapping three worded buttons gave a different shape at every phone
-   * width — two and one, one and two, three centred lines of different
-   * lengths — and none of them read as a designed bar. Here the two
-   * supporting actions are square targets of a fixed size and "Start cooking"
-   * takes everything else, so the bar is the same shape on every phone and the
-   * accented control is the one the thumb lands on.
+   * A thumb reaching the bottom of a propped-up phone does not aim, so the one
+   * control down there is given the whole line to land on.
    */
   @media (width < 52rem) {
+    /* Under the title rather than beside it: a heading set at display size and
+       a worded button cannot share a phone's line, and squeezing the heading to
+       make them is giving up the wrong one. */
+    .titleRow {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
     .foot {
       align-self: stretch;
       width: 100%;
     }
 
-    /*
-     * Takes the rest of the row, but never less than it can say "Start
-     * cooking" in. Plain `flex: 1` let it shrink to a column of single
-     * letters at 200% text rather than taking the line below, which is what
-     * there is room for.
-     */
-    /*
-     * The basis is what keeps the bar on one row on the narrowest phone in
-     * use. Three icon-only controls and their gaps take 10.5rem of a 360px
-     * screen's 19.5rem, so a tenth rem here is the difference between one row
-     * and two — and two rows of sticky bar is a third of a kitchen screen.
-     * It is a basis, not a width: everywhere wider, this still takes the rest.
-     */
-    .advance {
-      flex: 1 1 9rem;
-    }
-
-    /* Icon only: the words stay as the accessible name, set on the button. */
-    .foot :global(.button.secondary .label) {
-      display: none;
-    }
-
-    .foot :global(.button.secondary) {
-      flex-shrink: 0;
-      width: var(--control-md);
-      padding-inline: 0;
-    }
-
-    /* Narrower than the default so "Start cooking" stays on one line down to
-       320px, which is where the bar has the least room and needs it most. */
-    .advance :global(.button) {
-      padding-inline: var(--space-4);
-    }
-
-    /* The icon grows into the room the label left, to the size the icon-only
-       controls elsewhere in the app are drawn at. */
-    .foot :global(.button.secondary .icon) {
-      width: var(--space-6);
-      height: var(--space-6);
+    .foot :global(.button) {
+      flex: 1;
     }
   }
 
@@ -1205,7 +1278,7 @@
        not true. Its tags and its timings are no loss either: what a paper
        recipe needs is what it makes and how to make it. */
     .meta,
-    .edit {
+    .actions {
       display: none;
     }
 

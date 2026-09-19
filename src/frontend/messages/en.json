@@ -742,5 +742,6 @@
   "editor.loading": "Opening the recipe",
   "editor.ingredientsEmpty": "Nothing written down yet. The first line goes below.",
   "editor.stepsEmpty": "No method yet. The first step goes below.",
-  "editor.otherWays": "Or start from something you already have"
+  "editor.otherWays": "Or start from something you already have",
+  "recipe.moreActions": "More actions"
 }
