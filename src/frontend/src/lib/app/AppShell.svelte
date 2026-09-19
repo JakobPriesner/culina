@@ -169,6 +169,21 @@
     text-align: end;
   }
 
+  /*
+   * Stays, and stays on every page.
+   *
+   * It is the way home and it is the only thing on screen that says which app
+   * this is — which matters more here than in most places, because Culina is
+   * self-hosted and lives at whatever address somebody gave it. The slot could
+   * carry the page's own title once the title has scrolled away instead, and
+   * that is worth building one day; it is not worth replacing the only fixed
+   * point in the app with.
+   *
+   * What it did not have was the behaviour of the link it is: no hover, no
+   * pressed state, nothing to tell a pointer that this is a control rather than
+   * a logo printed in the corner. It borrows the navigation's own, because it
+   * sits in the same row of pills and does the same kind of thing.
+   */
   .brand {
     grid-column: 1;
     justify-self: start;
@@ -179,6 +194,15 @@
     background: var(--surface-nav-glass);
     backdrop-filter: blur(16px);
     pointer-events: auto;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .brand:hover {
+    background: var(--surface-selected);
+  }
+
+  .brand:active {
+    background: var(--surface-hover);
   }
 
   .content {
