@@ -743,5 +743,20 @@
   "editor.stepsEmpty": "No method yet. The first step goes below.",
   "editor.otherWays": "Or start from something you already have",
   "recipe.moreActions": "More actions",
-  "shopping.progress": "{done} of {total} done"
+  "shopping.progress": "{done} of {total} done",
+  "me.members.title": "Who cooks here",
+  "me.members.body": "Everyone who can read the recipes, write them, and put things on the shopping list.",
+  "me.members.joined": "Here since {when}",
+  "me.members.you": "You",
+  "me.members.failed": "Who cooks here could not be loaded.",
+  "me.members.count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} member",
+        "countPlural=*": "{count} members"
+      }
+    }
+  ]
 }
