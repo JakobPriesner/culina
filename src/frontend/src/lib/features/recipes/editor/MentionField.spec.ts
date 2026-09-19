@@ -107,4 +107,14 @@ describe('mentioning an ingredient in a step', () => {
 
     expect(step()).toHaveAttribute('aria-activedescendant', 'step-0-mentions-1');
   });
+
+  it('renders subtle mention highlight pills in the backdrop for recognized ingredients', async () => {
+    const { container } = renderWithProviders(MentionHarness, {});
+
+    await userEvent.type(step(), 'Melt @butter into pan');
+
+    const pill = container.querySelector('.mention-pill');
+    expect(pill).toBeInTheDocument();
+    expect(pill).toHaveTextContent('@butter');
+  });
 });

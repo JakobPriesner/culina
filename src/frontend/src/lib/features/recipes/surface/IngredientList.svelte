@@ -24,9 +24,11 @@
     scaling: Scaling;
     /** Which ingredient the reader is pointing at, from a step's text. */
     highlighted?: string | null;
+    /** Forwarded when an ingredient row is hovered, for bidirectional highlighting */
+    onhover?: (ingredientId: string | null) => void;
   }
 
-  let { ingredients, scaling, highlighted = null }: Props = $props();
+  let { ingredients, scaling, highlighted = null, onhover }: Props = $props();
 
   const lines = $derived(combineIngredients(ingredients));
 </script>
@@ -37,6 +39,7 @@
       {line}
       {scaling}
       highlighted={highlighted !== null && line.ids.includes(highlighted)}
+      onhover={(ids) => onhover?.(ids && ids.length > 0 ? (ids[0] ?? null) : null)}
     />
   {/each}
 </ul>

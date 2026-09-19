@@ -4,7 +4,13 @@
 
   import { m } from '$shell/i18n';
   import SuggestionList, { type Suggestion } from './SuggestionList.svelte';
-  import { insertMention, pendingMention, suggest, type PendingMention } from './mentions';
+  import {
+    insertMention,
+    pendingMention,
+    suggest,
+    toSegments,
+    type PendingMention
+  } from './mentions';
   import { formatQuantity } from '../formatQuantity';
   import { quantityLabels } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
@@ -54,6 +60,7 @@
 
   const query = $derived(pending?.query.trim() ?? '');
   const matches = $derived(pending ? suggest(pending.query, ingredients) : []);
+  const segments = $derived(toSegments(value, ingredients));
 
   /**
    * A name offered for the list, when there is one worth offering.
@@ -208,23 +215,33 @@
 </script>
 
 <div class="field">
-  <TextArea
-    {id}
-    {label}
-    {value}
-    bind:element={field}
-    rows={2}
-    describedBy={hintId}
-    combobox={{
-      expanded: open,
-      controls: listId,
-      active: open ? rowId(highlighted) : undefined
-    }}
-    oninput={(next) => {
-      oninput(next);
-      reconsider();
-    }}
-  />
+  <div class="editor-wrap">
+    <div class="backdrop" aria-hidden="true">
+      {#each segments as segment, i (i)}{#if segment.kind === 'ingredient'}<mark
+            class="mention-pill">@{segment.name}</mark
+          >{:else}<span>{segment.text}</span>{/if}{/each}{#if value.endsWith('\n')}<span
+          >&nbsp;</span
+        >{/if}
+    </div>
+
+    <TextArea
+      {id}
+      {label}
+      {value}
+      bind:element={field}
+      rows={2}
+      describedBy={hintId}
+      combobox={{
+        expanded: open,
+        controls: listId,
+        active: open ? rowId(highlighted) : undefined
+      }}
+      oninput={(next) => {
+        oninput(next);
+        reconsider();
+      }}
+    />
+  </div>
 
   <!-- On the field, not floating above the form as an instruction nobody
        connects to anything. -->
@@ -236,6 +253,7 @@
       label={m['editor.mentionListLabel']()}
       items={options}
       {highlighted}
+      {query}
       onchoose={pick}
     />
   {/if}
@@ -244,6 +262,57 @@
 <style>
   .field {
     position: relative;
+  }
+
+  .editor-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  /*
+   * Keep the native textarea transparent so the backdrop behind it shows through.
+   * Native caret, text selection, and typography remain completely unhindered.
+   */
+  .editor-wrap :global(.ds-control) {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+  }
+
+  /*
+   * Synchronized Apple-style subtle mention backdrop.
+   * Matches .ds-control box sizing, font, padding, and line height 1:1.
+   */
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    margin: 0;
+    padding-inline: var(--space-4);
+    padding-block: var(--space-2);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--surface-raised);
+    color: transparent;
+    font: inherit;
+    line-height: var(--leading-normal);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /*
+   * The subtle ("dezent") Apple tint pill behind recognized mentions.
+   * A whisper of color and a soft corner curve that quietly says: "recognized".
+   */
+  .mention-pill {
+    color: transparent;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
   }
 
   .hint {

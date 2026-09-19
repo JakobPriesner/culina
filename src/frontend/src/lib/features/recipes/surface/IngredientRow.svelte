@@ -17,14 +17,22 @@
     scaling: Scaling;
     /** Lit while the step that uses it is being read. */
     highlighted?: boolean;
+    /** Emitted when row is hovered or focused, for bidirectional highlighting */
+    onhover?: (ids: readonly string[] | null) => void;
   }
 
-  let { line, scaling, highlighted = false }: Props = $props();
+  let { line, scaling, highlighted = false, onhover }: Props = $props();
 
   const amount = $derived(scaling.amountFor(line));
 </script>
 
-<li class="row" class:highlighted>
+<li
+  id="ingredient-row-{line.ids[0]}"
+  class="row"
+  class:highlighted
+  onmouseenter={() => onhover?.(line.ids)}
+  onmouseleave={() => onhover?.(null)}
+>
   <span class="amount">{amount.text}</span>
 
   <span class="name">
