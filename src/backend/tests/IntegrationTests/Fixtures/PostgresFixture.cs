@@ -116,6 +116,9 @@ public sealed class PostgresFixture : IAsyncLifetime
         {
             api.Services.GetRequiredService<RegistrationSettings>()
                 .CopyFrom(new RegistrationSettings());
+
+            api.Services.GetRequiredService<AssistanceSettings>()
+                .CopyFrom(new AssistanceSettings());
         }
     }
 

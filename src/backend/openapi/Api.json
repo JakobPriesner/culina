@@ -1437,6 +1437,150 @@
         }
       }
     },
+    "/api/v1/settings/assistance": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Read how the assistant is set up",
+        "description": "Instance administrator only.\n\nThe API key is never returned. `apiKeyConfigured` says whether one has been entered, which is the only thing about it a screen needs to know.",
+        "operationId": "getAssistanceSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetAssistanceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Change how the assistant is set up",
+        "description": "Instance administrator only. Takes effect on the next request, with no restart.\n\n`apiKey` has three states, and the difference matters: omit it to keep the key already stored, send an empty string to remove it, and send a value to replace it. It is never returned by any endpoint, so a form has nothing to put in the box and omitting it is what saving an unrelated change looks like.\n\nTurning the assistant on without a key stores it as off — there is nothing for it to be on with.",
+        "operationId": "updateAssistanceSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateAssistanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsUpdateAssistanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/assistance/usage": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Read what the assistant has cost this month",
+        "description": "Instance administrator only.\n\nThe calendar month in UTC, because that is how a provider bills and a figure measured over a different period could not be reconciled with the invoice.\n\n`unpriced` counts calls made with a model this app has no price for. Their tokens are in the totals and their cost is not, because a number nobody can check against a bill is worse than an empty cell.",
+        "operationId": "getAssistanceUsageV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetAssistanceUsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/registration/policy": {
       "get": {
         "tags": [
@@ -8015,6 +8159,203 @@
         },
         "description": "Who signed in, and the token their requests must echo."
       },
+      "SettingsGetAssistanceResponse": {
+        "required": [
+          "enabled",
+          "provider",
+          "apiKeyConfigured",
+          "connected",
+          "baseUrl",
+          "composeModel",
+          "drawModel",
+          "improveEnabled",
+          "draftEnabled",
+          "readEnabled",
+          "drawEnabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the assistant is on."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Which provider: `gemini` or `openai`."
+          },
+          "apiKeyConfigured": {
+            "type": "boolean",
+            "description": "Whether a key has been entered. Never the key."
+          },
+          "connected": {
+            "type": "boolean",
+            "description": "Whether the connection has everything this provider needs."
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Where the provider is, when it is not where it usually is."
+          },
+          "composeModel": {
+            "type": "string",
+            "description": "The model that writes recipes."
+          },
+          "drawModel": {
+            "type": "string",
+            "description": "The model that draws pictures."
+          },
+          "improveEnabled": {
+            "type": "boolean",
+            "description": "Whether it may rewrite a recipe somebody already has."
+          },
+          "draftEnabled": {
+            "type": "boolean",
+            "description": "Whether it may write one from an idea."
+          },
+          "readEnabled": {
+            "type": "boolean",
+            "description": "Whether it may read one out of a photograph or a block of text."
+          },
+          "drawEnabled": {
+            "type": "boolean",
+            "description": "Whether it may draw a picture."
+          },
+          "monthlyBudget": {
+            "type": "number",
+            "description": "What the instance may spend in a month, or null for no ceiling.",
+            "format": "double",
+            "nullable": true
+          },
+          "personalBudget": {
+            "type": "number",
+            "description": "What one person may spend of it, or null for no share.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "The model this instance talks to, and what it is allowed to do."
+      },
+      "SettingsGetAssistanceUsageCapabilityUsageContract": {
+        "required": [
+          "capability",
+          "calls",
+          "cost"
+        ],
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "description": "`improve`, `draft`, `read` or `draw`."
+          },
+          "calls": {
+            "type": "integer",
+            "description": "How many times it was used.",
+            "format": "int32"
+          },
+          "cost": {
+            "type": "number",
+            "description": "What it came to.",
+            "format": "double"
+          }
+        },
+        "description": "One capability's spend this month."
+      },
+      "SettingsGetAssistanceUsagePersonUsageContract": {
+        "required": [
+          "userId",
+          "displayName",
+          "calls",
+          "cost"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Who.",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "What to call them on screen."
+          },
+          "calls": {
+            "type": "integer",
+            "description": "How many times they asked.",
+            "format": "int32"
+          },
+          "cost": {
+            "type": "number",
+            "description": "What it came to.",
+            "format": "double"
+          }
+        },
+        "description": "One person's spend this month."
+      },
+      "SettingsGetAssistanceUsageResponse": {
+        "required": [
+          "since",
+          "totalCost",
+          "totalInputTokens",
+          "totalOutputTokens",
+          "totalPictures",
+          "unpriced",
+          "byPerson",
+          "byCapability"
+        ],
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "string",
+            "description": "When the period being reported started.",
+            "format": "date-time"
+          },
+          "totalCost": {
+            "type": "number",
+            "description": "Everything spent, where a price was known.",
+            "format": "double"
+          },
+          "monthlyBudget": {
+            "type": "number",
+            "description": "The instance's ceiling, or null when there is none.",
+            "format": "double",
+            "nullable": true
+          },
+          "totalInputTokens": {
+            "type": "integer",
+            "description": "Everything sent.",
+            "format": "int64"
+          },
+          "totalOutputTokens": {
+            "type": "integer",
+            "description": "Everything received.",
+            "format": "int64"
+          },
+          "totalPictures": {
+            "type": "integer",
+            "description": "Everything drawn.",
+            "format": "int64"
+          },
+          "unpriced": {
+            "type": "integer",
+            "description": "How many calls used a model this app has no price for.",
+            "format": "int32"
+          },
+          "byPerson": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceUsagePersonUsageContract"
+            },
+            "description": "Who spent what."
+          },
+          "byCapability": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceUsageCapabilityUsageContract"
+            },
+            "description": "What it went on."
+          }
+        },
+        "description": "What the assistant has cost this month."
+      },
       "SettingsGetRegistrationResponse": {
         "required": [
           "openRegistration",
@@ -8038,6 +8379,151 @@
           }
         },
         "description": "Who may create an account on this instance."
+      },
+      "SettingsUpdateAssistanceRequest": {
+        "required": [
+          "enabled",
+          "provider",
+          "baseUrl",
+          "composeModel",
+          "drawModel",
+          "improveEnabled",
+          "draftEnabled",
+          "readEnabled",
+          "drawEnabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the assistant is on."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Which provider: `gemini` or `openai`."
+          },
+          "apiKey": {
+            "type": "string",
+            "description": "A new API key, or null to keep the one already stored.",
+            "nullable": true
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Where the provider is, or empty for its usual address."
+          },
+          "composeModel": {
+            "type": "string",
+            "description": "The model that writes recipes."
+          },
+          "drawModel": {
+            "type": "string",
+            "description": "The model that draws pictures."
+          },
+          "improveEnabled": {
+            "type": "boolean",
+            "description": "Whether it may rewrite a recipe somebody already has."
+          },
+          "draftEnabled": {
+            "type": "boolean",
+            "description": "Whether it may write one from an idea."
+          },
+          "readEnabled": {
+            "type": "boolean",
+            "description": "Whether it may read one out of a photograph or a block of text."
+          },
+          "drawEnabled": {
+            "type": "boolean",
+            "description": "Whether it may draw a picture."
+          },
+          "monthlyBudget": {
+            "type": "number",
+            "description": "What the instance may spend in a month, or null for no ceiling.",
+            "format": "double",
+            "nullable": true
+          },
+          "personalBudget": {
+            "type": "number",
+            "description": "What one person may spend of it, or null for no share.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "The assistant configuration to apply."
+      },
+      "SettingsUpdateAssistanceResponse": {
+        "required": [
+          "enabled",
+          "provider",
+          "apiKeyConfigured",
+          "connected",
+          "baseUrl",
+          "composeModel",
+          "drawModel",
+          "improveEnabled",
+          "draftEnabled",
+          "readEnabled",
+          "drawEnabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the assistant is on."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Which provider: `gemini` or `openai`."
+          },
+          "apiKeyConfigured": {
+            "type": "boolean",
+            "description": "Whether a key has been entered. Never the key."
+          },
+          "connected": {
+            "type": "boolean",
+            "description": "Whether the connection has everything this provider needs."
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Where the provider is, when it is not where it usually is."
+          },
+          "composeModel": {
+            "type": "string",
+            "description": "The model that writes recipes."
+          },
+          "drawModel": {
+            "type": "string",
+            "description": "The model that draws pictures."
+          },
+          "improveEnabled": {
+            "type": "boolean",
+            "description": "Whether it may rewrite a recipe somebody already has."
+          },
+          "draftEnabled": {
+            "type": "boolean",
+            "description": "Whether it may write one from an idea."
+          },
+          "readEnabled": {
+            "type": "boolean",
+            "description": "Whether it may read one out of a photograph or a block of text."
+          },
+          "drawEnabled": {
+            "type": "boolean",
+            "description": "Whether it may draw a picture."
+          },
+          "monthlyBudget": {
+            "type": "number",
+            "description": "What the instance may spend in a month, or null for no ceiling.",
+            "format": "double",
+            "nullable": true
+          },
+          "personalBudget": {
+            "type": "number",
+            "description": "What one person may spend of it, or null for no share.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "The model this instance talks to, and what it is allowed to do."
       },
       "SettingsUpdateRegistrationRequest": {
         "required": [

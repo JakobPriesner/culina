@@ -18,6 +18,7 @@
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 

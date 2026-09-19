@@ -23,6 +23,9 @@ internal sealed class InstanceSettingsLoader(IServiceScopeFactory scopeFactory) 
         {
             await LoadAsync<RegistrationSettings>(scope.ServiceProvider, cancellationToken)
                 .ConfigureAwait(false);
+
+            await LoadAsync<AssistanceSettings>(scope.ServiceProvider, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 

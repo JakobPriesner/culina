@@ -1,10 +1,12 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Suggestions;
+using Infrastructure.Assistance;
 using Infrastructure.Identity;
 using Infrastructure.Import;
 using Infrastructure.Import.Tandoor;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Assistance;
 using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
@@ -57,6 +59,7 @@ public static class DependencyInjection
             .AddInstanceSettings()
             .AddIdentity()
             .AddRecipeImport()
+            .AddAssistance()
             .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton(TimeProvider.System);
     }
@@ -69,7 +72,31 @@ public static class DependencyInjection
         services
             .AddSingleton<RegistrationSettings>()
             .AddScoped<ISettingsStore<RegistrationSettings>, PostgresSettingsStore<RegistrationSettings>>()
+            .AddSingleton<AssistanceSettings>()
+            .AddScoped<ISettingsStore<AssistanceSettings>, PostgresSettingsStore<AssistanceSettings>>()
             .AddHostedService<InstanceSettingsLoader>();
+
+    /// <summary>
+    /// The assistant: one adapter per provider, the registry that picks between
+    /// them, and the ledger that decides whether there is budget to call one.
+    /// </summary>
+    /// <remarks>
+    /// The adapters are singletons because they hold nothing per request — the
+    /// key and the model are read from the settings singleton at each call, so
+    /// rotating a key takes effect immediately — and because the client
+    /// underneath them owns a connection pool that must not be rebuilt per
+    /// request. The ledger is scoped: it writes through the request's own
+    /// database connection.
+    /// </remarks>
+    private static IServiceCollection AddAssistance(this IServiceCollection services) =>
+        services
+            .AddSingleton<ISecretProtector, SecretProtector>()
+            .AddSingleton<AssistantHttp>()
+            .AddSingleton<IAssistant, GeminiAssistant>()
+            .AddSingleton<IAssistant, OpenAiAssistant>()
+            .AddSingleton<IAssistant, OllamaAssistant>()
+            .AddSingleton<IAssistants, Assistants>()
+            .AddScoped<IAssistanceLedger, AssistanceLedger>();
 
     /// <summary>
     /// Reading other people's recipe libraries.

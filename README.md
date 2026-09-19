@@ -35,7 +35,26 @@ you straight back.
 No pantry inventory (nobody maintains one, so it goes stale and poisons
 everything built on it). No calorie calculation (a wrong number is worse than
 none). No social feed, ratings or comments — this is your kitchen, not a
-network. No AI assistant.
+network.
+
+## The assistant
+
+Culina can connect to a language model, and then it will do four things: tidy
+the wording and structure of a recipe you wrote, turn an idea into a draft,
+read a recipe out of a photograph of a cookbook page, and draw a picture for a
+recipe that has none. Nothing it produces is saved until you have read it beside
+what was there before and accepted it, field by field.
+
+It is off until an administrator connects one, and an instance with nothing
+connected is the app exactly as it was before any of this existed — the buttons
+are absent, not greyed out. Culina has to work completely without it, and it
+does.
+
+Three providers: **Ollama**, for a model on your own hardware, where the
+assistant costs nothing per recipe and nothing leaves the machine; **Gemini**
+and **OpenAI** for a hosted one, where recipe text and photographs are sent to
+that company to be read, and where the settings screen tracks tokens and spend
+per person and refuses requests once you have hit the monthly ceiling you set.
 
 ## Stack
 

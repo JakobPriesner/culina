@@ -20,6 +20,12 @@
         <PackageVersion Include="Dapper" Version="2.1.79" />
         <!-- Argon2id: memory-hard password hashing, per cookie-auth-and-security. -->
         <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+        <!-- Encrypts the model provider's API key before it goes into the
+             settings row. The standalone package rather than the framework's,
+             because Infrastructure is a plain library: DataProtectionProvider
+             .Create(DirectoryInfo) needs no host. The key ring it writes to has
+             been configured and volume-backed since the beginning. -->
+        <PackageVersion Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="10.0.12" />
         <!-- Uploaded images are re-encoded rather than served back, which also
              strips EXIF (GPS data in food photos is a real privacy leak).
              Pinned to the 3.1.x line: it is Apache-2.0, whereas 4.x moved to the
