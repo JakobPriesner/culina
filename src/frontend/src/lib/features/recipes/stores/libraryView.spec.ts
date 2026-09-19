@@ -17,12 +17,12 @@ describe('the library view', () => {
   it('keeps a household’s search and filters on return', () => {
     libraryView.forHousehold('one');
     libraryView.query = 'tomato';
-    libraryView.quick = true;
+    libraryView.maxMinutes = 30;
     libraryView.toggleTag('vegetarisch');
     libraryView.sort = 'title';
     libraryView.forHousehold('one');
     expect(libraryView.query).toBe('tomato');
-    expect(libraryView.quick).toBe(true);
+    expect(libraryView.maxMinutes).toBe(30);
     expect(libraryView.tags).toEqual(['vegetarisch']);
     expect(libraryView.sort).toBe('title');
   });
@@ -30,11 +30,11 @@ describe('the library view', () => {
   it('does not carry another household’s filters across', () => {
     libraryView.forHousehold('one');
     libraryView.query = 'tomato';
-    libraryView.quick = true;
+    libraryView.maxMinutes = 30;
     libraryView.toggleTag('vegetarisch');
     libraryView.forHousehold('two');
     expect(libraryView.query).toBe('');
-    expect(libraryView.quick).toBe(false);
+    expect(libraryView.maxMinutes).toBeNull();
     // A tag slug is one kitchen's word. Carrying it across would filter by
     // something nobody in the new one uses, and look broken rather than empty.
     expect(libraryView.tags).toEqual([]);
@@ -43,26 +43,14 @@ describe('the library view', () => {
   it('forgets the search at sign-out', () => {
     libraryView.forHousehold('one');
     libraryView.query = 'tomato';
-    libraryView.quick = true;
+    libraryView.maxMinutes = 30;
     resetAllStores();
     expect(libraryView.query).toBe('');
-    expect(libraryView.quick).toBe(false);
+    expect(libraryView.maxMinutes).toBeNull();
   });
 });
 
 describe('what the library is being asked', () => {
-  it('treats the quick chip as one value of the time filter', () => {
-    // Two flags that could disagree were one bug waiting: "quick" on and the
-    // ceiling cleared is a state nothing could render honestly.
-    const view = new RecipeQuery();
-
-    view.quick = true;
-    expect(view.maxMinutes).toBe(30);
-
-    view.maxMinutes = 45;
-    expect(view.quick).toBe(false);
-  });
-
   it('counts what the panel would show, and not the words', () => {
     const view = new RecipeQuery();
 

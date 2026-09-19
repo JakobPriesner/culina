@@ -148,23 +148,6 @@
         : m['filters.action']()}
     </FilterChip>
 
-    <!-- The shortcut the library has always had, now one value of the time
-         filter rather than a separate flag that could disagree with it. -->
-    <FilterChip shape="rounded" selected={view.quick} onclick={() => (view.quick = !view.quick)}>
-      {#snippet icon()}
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" stroke-linecap="round" />
-        </svg>
-      {/snippet}
-      {m['recipes.filter.quick']()}
-    </FilterChip>
-
     {#if summary}
       <div class="summary">{@render summary()}</div>
     {/if}
@@ -276,9 +259,22 @@
     min-width: 0;
   }
 
+  /*
+   * The widest thing in the toolbar, and deliberately so.
+   *
+   * Searching is what a library of a hundred recipes is actually used with;
+   * the panel beside it is opened once a week. It took a third of the row when
+   * a "Up to 30 minutes" shortcut sat next to it — one of four ceilings, given
+   * a control of its own at the top level because it happened to be the one
+   * the app shipped with first. That went into the panel with the other three,
+   * and the box took the room.
+   *
+   * Capped rather than left to grow: a search field running the full width of
+   * a 1400px monitor stops reading as a field and starts reading as a band.
+   */
   .search {
-    flex: 1 1 14rem;
-    max-width: 28rem;
+    flex: 1 1 20rem;
+    max-width: 42rem;
     min-width: 0;
   }
 
