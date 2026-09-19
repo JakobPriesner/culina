@@ -22,7 +22,23 @@ public sealed record ComposeRecipeDraftCommand(
     string? Material,
     Guid? RecipeId,
     string? Language,
-    Guid UserId);
+    Guid UserId)
+{
+    /// <summary>
+    /// A photograph to read a recipe out of, for the <c>photo</c> kind.
+    /// </summary>
+    /// <remarks>
+    /// Bytes rather than a stream, because they go into a request body that may
+    /// be built more than once and a stream read twice is a stream read once.
+    /// Not part of the positional record: every other caller has none, and a
+    /// twelfth constructor argument that is almost always empty is an argument
+    /// nobody reads.
+    /// </remarks>
+    public ReadOnlyMemory<byte> Photograph { get; init; }
+
+    /// <summary>What kind of photograph, when there is one.</summary>
+    public string? PhotographMediaType { get; init; }
+}
 
 internal sealed class ComposeRecipeDraftCommandHandler(
     AssistantRun assistant,
@@ -90,14 +106,24 @@ internal sealed class ComposeRecipeDraftCommandHandler(
             return await ForRevisionAsync(command, cancellationToken).ConfigureAwait(false);
         }
 
-        if (Material(command) is not { } material)
+        var photographed = command.Kind == "photo";
+        var material = Material(command);
+
+        // A photograph on its own is enough; words on their own are enough;
+        // neither is not.
+        if (material is null && !photographed)
         {
             return AssistanceErrors.NothingToWorkFrom;
         }
 
-        if (material.Length > LongestMaterial)
+        if (material is { Length: > LongestMaterial })
         {
             return AssistanceErrors.TooMuchToWorkFrom;
+        }
+
+        if (photographed && command.Photograph.IsEmpty)
+        {
+            return AssistanceErrors.NothingToWorkFrom;
         }
 
         return RecipeWords.ToLanguage(command.Language ?? "en").Map(language =>
@@ -111,7 +137,9 @@ internal sealed class ComposeRecipeDraftCommandHandler(
                 Instruction = writing
                     ? AssistantPrompts.Draft(language)
                     : AssistantPrompts.Read(language),
-                Material = material
+                Material = material,
+                Picture = command.Photograph,
+                PictureMediaType = command.PhotographMediaType
             };
         });
     }
