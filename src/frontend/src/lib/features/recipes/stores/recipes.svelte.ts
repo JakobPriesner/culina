@@ -207,9 +207,14 @@ class RecipeStore {
     this.#status = 'ready';
   }
 
-  async create(householdId: string, title: string): Promise<Recipe | AppError> {
+  async create(
+    householdId: string,
+    title: string,
+    /** The assistant draft it came from, so the recipe records that it was one. */
+    draftId?: string
+  ): Promise<Recipe | AppError> {
     const result = await request(() =>
-      http.POST('/api/v1/recipes', { body: { householdId, title } })
+      http.POST('/api/v1/recipes', { body: { householdId, title, draftId } })
     );
 
     if (!result.ok) {

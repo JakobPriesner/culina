@@ -40,12 +40,19 @@ product's own stated middle step.
 
 ### A.2 What the README rules out, and why it constrains this work
 
-Four exclusions, all load-bearing:
+Three exclusions, all load-bearing:
 
 > No pantry inventory (nobody maintains one, so it goes stale and poisons
 > everything built on it). No calorie calculation (a wrong number is worse than
 > none). No social feed, ratings or comments — this is your kitchen, not a
-> network. No AI assistant.
+> network.
+
+There were four when this was written; "No AI assistant" has since been
+reversed, and Culina has one that writes and tidies recipes. It changes nothing
+here. Suggestions are a ranking of a household's own library against what it has
+actually cooked, and an optional model that most instances will not have
+connected could not be on that path — the suggestions have to be as good on an
+instance with no assistant as on one with.
 
 And `domain-model.md`, on the cook log:
 

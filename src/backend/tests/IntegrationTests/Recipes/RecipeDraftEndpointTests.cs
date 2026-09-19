@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Recipes;
@@ -102,6 +103,53 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
         Assert.False(assistance.GetProperty("draft").GetBoolean());
         Assert.False(assistance.GetProperty("read").GetBoolean());
         Assert.False(assistance.GetProperty("draw").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Create_ShouldRecordThatARecipeWasDrafted_WhenItCarriesADraftId()
+    {
+        // Arrange
+        var world = await SignedInAsync();
+        var draftId = Guid.CreateVersion7();
+
+        // Act
+        var created = await world.Client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId = world.HouseholdId, title = "Aubergine bake", draftId },
+            Token);
+
+        // Assert
+        // The same provenance an imported recipe carries, in the same table:
+        // "this did not start here" is one fact with one shape.
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var origin = read.Json!.Value.GetProperty("origin");
+
+        Assert.Equal("ai", origin.GetProperty("kind").GetString());
+        Assert.Equal(draftId.ToString(), origin.GetProperty("externalId").GetString());
+    }
+
+    [Fact]
+    public async Task Create_ShouldRecordNothing_ForARecipeSomebodyTyped()
+    {
+        // Arrange
+        var world = await SignedInAsync();
+
+        // Act
+        var created = await world.Client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId = world.HouseholdId, title = "Aubergine bake" },
+            Token);
+
+        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+
+        // Assert
+        // A recipe written here has no origin at all, which is what makes the
+        // presence of one mean something.
+        Assert.False(read.Json!.Value.TryGetProperty("origin", out var origin) && origin.ValueKind is not JsonValueKind.Null);
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;

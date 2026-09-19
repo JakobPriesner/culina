@@ -293,6 +293,27 @@ body: it generates a clean client and stays greppable.
 | `GET` | `/tags?householdId=…` | With usage counts, most used first. Not paged. Feeds the filter bar and the smart-cookbook rule editor. |
 | `GET` | `/settings/registration` | Instance settings. Admin only. |
 | `PUT` | `/settings/registration` | `openRegistration`, `requireInvitation`, `maxUsers`. |
+| `GET` | `/settings/assistance` | How the assistant is set up. Admin only. Never returns the API key — `apiKeyConfigured` says whether there is one. |
+| `PUT` | `/settings/assistance` | `apiKey` has three states: omit to keep the stored key, empty string to remove it, a value to replace it. |
+| `GET` | `/settings/assistance/usage` | This calendar month's tokens and spend, by person and by capability. Admin only. |
+
+## The assistant
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `POST` | `/recipe-drafts` | `kind` is `idea`, `text` or `revision`. A draft, never a recipe — nothing is created. |
+| `POST` | `/recipe-drafts/photographs` | The same draft, read out of a multipart photograph. Its own route because one route cannot bind both JSON and multipart. |
+| `POST` | `/recipes/{id}/image` | Draws one. `PUT` on the same sub-resource replaces it with bytes you send; `POST` asks the server to make one, so it carries no body. |
+
+A draft is accepted through the ordinary recipe endpoints — `POST /recipes` then
+`PUT /recipes/{id}` with `If-Match`. Passing `draftId` to `POST /recipes` records
+in `recipe_origins` that the recipe started as a draft, the same way an imported
+one records where it came from.
+
+`404` means this instance has no assistant *or* that capability is switched off;
+the two are one answer because a caller learns nothing from being told which, and
+the affordance that would have asked is not on screen either way. `429` means the
+month's budget is spent, or the per-person hourly limit was reached.
 
 ## Health
 

@@ -118,6 +118,14 @@ docker run --rm -v culina_culina-keys:/data -v "$PWD":/backup alpine \
 Volume names are prefixed with your compose project name — `docker volume ls`
 shows the real ones.
 
+The key ring is the one that used to be cheap to lose and no longer is. It now
+encrypts the model provider's API key, so restoring an instance without it
+leaves the assistant switched off with an unreadable key stored — which the app
+treats as "no assistant is configured" rather than as an error. An administrator
+enters the key again and everything else is where it was. Nothing else is lost:
+Culina's session cookie carries an opaque reference rather than an encrypted
+payload, so the key ring still has nothing to do with who stays signed in.
+
 ## Restoring
 
 This procedure is run against a real instance as part of the release checklist,

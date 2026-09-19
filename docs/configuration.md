@@ -81,11 +81,46 @@ verifying and are upgraded transparently on the next successful sign-in.
 | `RateLimits__LoginPerAccountPerMinute` | `5` | |
 | `RateLimits__RegisterPerIpPerHour` | `5` | |
 | `RateLimits__InvitationPerIpPerHour` | `10` | |
+| `RateLimits__AssistantRequestsPerHour` | `60` | The only limit here about money rather than load. |
 | `RateLimits__RequestsPerSessionPerMinute` | `600` | |
 
 Login is limited per address **and** per account: per-address alone lets a
 botnet spread an attack on one account across many addresses, and per-account
 alone lets one address walk a password list across many accounts.
+
+## The assistant
+
+Nothing. There is no environment variable for it, and that is deliberate: the
+model, the key, the budget and which capabilities are on are all things an
+administrator changes while the app runs, from **Settings → Assistant**. A key
+that could only be entered by editing a file on the server is a key nobody will
+ever rotate.
+
+Two things about it belong in a deployment decision rather than a screen, so
+they are said here instead.
+
+**What leaves the server.** With Gemini or OpenAI connected, the text of the
+recipe being worked on, the idea somebody typed, and any photograph they point
+it at are sent to that company to be read. Nothing else is: not your other
+recipes, not your shopping list, not who cooked what. Nothing is sent at all
+until an administrator connects a key and switches a capability on, and an
+instance with none behaves exactly as Culina did before the assistant existed.
+
+With **Ollama** connected, nothing leaves the machine you point it at. That is
+the reason it is supported and the reason it needs no key — a self-hosted recipe
+app talking to a model already running in the same house is the arrangement this
+feature is most obviously for. It does not draw pictures.
+
+**What it costs.** Both hosted providers bill per token, so the settings screen
+tracks tokens and spend per person and per capability, and refuses new requests
+once the monthly ceiling you set is reached. The ceiling is in whatever currency
+your provider bills in; Culina does not convert it, because a number it converted
+would drift from the invoice it exists to predict. A model Culina has no price
+for records its tokens and no cost rather than a guess.
+
+The key is encrypted with the data-protection key ring before it is stored — see
+`Storage__DataProtectionKeyPath` above, and `operations.md` for what losing that
+directory now means.
 
 ## Telemetry
 

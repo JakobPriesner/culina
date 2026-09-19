@@ -118,7 +118,7 @@ Named here so that the absence reads as a decision rather than an oversight.
 | Embeddings + pgvector / Qdrant | §9. ~120–470 MB of model in the image, ~250 MB RSS, a second database image, to improve the one query class the user is least able to verify. |
 | Cross-encoder reranking | 30–80 ms per *candidate* on a home CPU. A 50-candidate rerank is a 2-second search. |
 | Learning to rank | Needs labelled relevance judgements. Eight users produce perhaps forty clicks a week. The model would be noise. |
-| LLM query parsing (local or remote) | Latency, an availability dependency on the search box, non-determinism in a UI that shows the user what it parsed, and `README.md` says no AI assistant. §7 designs the optional, non-blocking version anyway. |
+| LLM query parsing (local or remote) | Latency, an availability dependency on the search box, and non-determinism in a UI that shows the user what it parsed. §7 designs the optional, non-blocking version anyway. |
 | Hunspell compound splitting in PostgreSQL | Dictionary files in the DB container; §8 shows the trigram lane already solves compounds. |
 | Seasonality ranking from an ingredient→month table | Already rejected on `culina-v2-erv` for the reason `README.md` rejects a pantry: curated data nobody maintains, going stale, poisoning everything above it. §12 handles `Sommergericht` without it. |
 | "Popular searches" / trending | A statistic over 2–8 people is not a statistic, and showing a household what its members search for is a privacy leak inside the home. Recent searches are per-person and never leave the browser. |
@@ -314,8 +314,10 @@ From `README.md`, `Dockerfile` and `compose.prod.yaml`:
 - Frontend weight budget: 140 kB of JavaScript across every route, 97.4 kB used.
   There is ~42 kB of headroom, and `culina-v2-xcs` says even that is contested.
   Client-side search libraries are priced accordingly.
-- **`README.md`: no AI assistant.** Taken as a product commitment, not a
-  performance note.
+- **No model on the search path.** Culina now has an assistant — it writes and
+  tidies recipes — but nothing here depends on it. The reasons below are about
+  latency, determinism and a search box that must not stop working when somebody
+  else's API does, and none of them changed when the README line did.
 
 ---
 
@@ -760,7 +762,8 @@ A 1–3 B parameter instruct model via `llama.cpp` or ONNX, asked to turn
 - **Determinism**: the interface *shows the user what it parsed*. A parse that
   varies run to run makes that display a lie.
 - **Size**: +1–2 GB image, +1–2 GB RSS.
-- **Product**: `README.md` says no AI assistant.
+- **Product**: the assistant Culina has is optional and off by default, so
+  search cannot be built on the assumption that one is connected.
 
 §7 shows that ~40 grammar rules per language cover the query classes that
 actually occur, deterministically, in under a millisecond. §7.6 designs the

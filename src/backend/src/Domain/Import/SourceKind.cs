@@ -30,6 +30,19 @@ public sealed record SourceKind
     public static SourceKind Tandoor { get; } = new("tandoor");
 
     /// <summary>
+    /// This instance's assistant wrote it.
+    /// </summary>
+    /// <remarks>
+    /// Not somewhere else at all, unlike its two neighbours, and here anyway:
+    /// where a recipe came from is one fact with one shape, and a second table
+    /// for a second kind of elsewhere would be two places to ask one question.
+    /// A drafted recipe is an ordinary recipe in every other respect — edited,
+    /// cooked, scaled and planned like one somebody typed — and the line under
+    /// it saying where it started is the only thing that says otherwise.
+    /// </remarks>
+    public static SourceKind Assistant { get; } = new("ai");
+
+    /// <summary>
     /// The kinds a household can connect to.
     /// </summary>
     /// <remarks>
@@ -46,6 +59,7 @@ public sealed record SourceKind
     {
         "web" => Web,
         "tandoor" => Tandoor,
+        "ai" => Assistant,
         _ => null
     };
 
