@@ -181,10 +181,11 @@
 
     /* Follows a long archive or invitation list down the page: the categories
        are how you leave, and a way out you have to scroll back up for is not
-       one. */
+       one. Clear of the app's own floating header, which is the offset every
+       sticky thing in this app uses. */
     .rail {
       position: sticky;
-      top: var(--space-8);
+      top: var(--space-24);
     }
 
     .legend {

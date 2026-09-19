@@ -864,5 +864,17 @@
   "ai.advanced": "Advanced",
   "ai.advanced.hint": "Only if you run a gateway in front of the provider, or need a particular model.",
   "ai.models.default": "Chosen for you",
-  "ai.address.optional": "Leave empty for {provider}'s own address."
+  "ai.address.optional": "Leave empty for {provider}'s own address.",
+  "ai.connections": "Providers",
+  "ai.connections.hint": "Connect as many as you like. Each job below then picks one.",
+  "ai.jobs": "What does what",
+  "ai.jobs.hint": "Each of these adds one button somewhere in the app. Anything with no provider is absent rather than greyed out.",
+  "ai.job.provider": "Use",
+  "ai.job.none": "Not offered",
+  "ai.job.model": "Model",
+  "ai.notConnected": "Not connected",
+  "ai.connected": "Ready",
+  "ai.cannotDraw": "{provider} does not draw pictures.",
+  "ai.privacy.mixed": "Recipe text and photographs are sent to the provider each job uses. Jobs given to Ollama send nothing anywhere.",
+  "ai.apiKey.add": "Add a key"
 }

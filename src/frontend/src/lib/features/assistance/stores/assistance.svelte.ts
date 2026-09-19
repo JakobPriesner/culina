@@ -1,11 +1,10 @@
 import { http, request, type AppError } from '$api';
 import { registerStore } from '$shell/stores';
 
-import { isProvider, type Assistance, type Usage } from '../types';
+import { toAssistance, type Assistance, type Usage } from '../types';
 
 import type { components } from '$api/generated/schema';
 
-type AssistanceWire = components['schemas']['SettingsGetAssistanceResponse'];
 type UsageWire = components['schemas']['SettingsGetAssistanceUsageResponse'];
 
 /**
@@ -74,13 +73,12 @@ class AssistanceStore {
   /**
    * Saves the form.
    *
-   * @param next What the form holds now.
-   * @param apiKey A new key, `''` to clear the stored one, or `undefined` to
-   *   leave it alone — the three states the endpoint distinguishes, passed
-   *   through rather than folded into `next`, because the key is the one value
-   *   that is never part of what was read.
+   * Everything at once: connections and uses arrive together because a use
+   * pointing at a connection that did not save is a state nobody should be able
+   * to reach. Each connection carries its own three-state key — omitted keeps
+   * the stored one, empty removes it, a value replaces it.
    */
-  async save(next: Assistance, apiKey: string | undefined): Promise<AppError | null> {
+  async save(next: Assistance): Promise<AppError | null> {
     const before = this.#settings;
 
     this.#saving = true;
@@ -91,15 +89,17 @@ class AssistanceStore {
       http.PUT('/api/v1/settings/assistance', {
         body: {
           enabled: next.enabled,
-          provider: next.provider,
-          apiKey,
-          baseUrl: next.baseUrl,
-          composeModel: next.composeModel,
-          drawModel: next.drawModel,
-          improveEnabled: next.improveEnabled,
-          draftEnabled: next.draftEnabled,
-          readEnabled: next.readEnabled,
-          drawEnabled: next.drawEnabled,
+          connections: next.connections.map((one) => ({
+            provider: one.provider,
+            apiKey: one.apiKey,
+            baseUrl: one.baseUrl
+          })),
+          uses: next.uses.map((one) => ({
+            capability: one.capability,
+            enabled: one.enabled,
+            provider: one.provider,
+            model: one.model
+          })),
           monthlyBudget: next.monthlyBudget,
           personalBudget: next.personalBudget
         }
@@ -129,27 +129,6 @@ class AssistanceStore {
     this.#saving = false;
     this.#error = null;
   }
-}
-
-function toAssistance(wire: AssistanceWire): Assistance {
-  return {
-    enabled: wire.enabled,
-    // A build that has not heard of the stored provider still has to render
-    // something. Falling back keeps the form usable instead of blank, and the
-    // server refuses anything it does not know on the way back in.
-    provider: isProvider(wire.provider) ? wire.provider : 'openai',
-    apiKeyConfigured: wire.apiKeyConfigured,
-    connected: wire.connected,
-    baseUrl: wire.baseUrl,
-    composeModel: wire.composeModel,
-    drawModel: wire.drawModel,
-    improveEnabled: wire.improveEnabled,
-    draftEnabled: wire.draftEnabled,
-    readEnabled: wire.readEnabled,
-    drawEnabled: wire.drawEnabled,
-    monthlyBudget: wire.monthlyBudget ?? null,
-    personalBudget: wire.personalBudget ?? null
-  };
 }
 
 function toUsage(wire: UsageWire): Usage {

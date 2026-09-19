@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Application.Abstractions;
-using Application.Abstractions.Settings;
 using Domain.Assistance;
 using Domain.Shared;
 using Microsoft.Extensions.Logging;
@@ -29,33 +28,31 @@ namespace Infrastructure.Assistance;
 /// is overridable. A great many self-hosted runners and gateways speak this API
 /// and nothing else, so this adapter is also the adapter for those.
 /// </para>
+/// <para>
+/// Stateless with respect to configuration: the key, the address and the model
+/// all arrive with the call, so one instance serves however many connections an
+/// administrator has set up.
+/// </para>
 /// </remarks>
-/// <param name="settings">The live instance settings.</param>
-/// <param name="protector">Decrypts the stored key.</param>
 /// <param name="http">The shared client.</param>
 /// <param name="logger">Records what a provider refused, and why.</param>
 internal sealed class OpenAiAssistant(
-    AssistanceSettings settings,
-    ISecretProtector protector,
     AssistantHttp http,
     ILogger<OpenAiAssistant> logger) : IAssistant
 {
     public AssistantKind Kind => AssistantKind.OpenAi;
 
     public async Task<Result<Composed>> ComposeAsync(
+        Connected @using,
         Composition request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
-
-        if (Key() is not { } key)
-        {
-            return AssistanceErrors.NotConfigured;
-        }
 
         var payload = new
         {
-            model = settings.ComposeModel.Or(AssistantDefaults.ComposeModel(Kind)),
+            model = @using.Model,
             input = new object[]
             {
                 new { role = "system", content = request.Instruction },
@@ -73,9 +70,9 @@ internal sealed class OpenAiAssistant(
         };
 
         var answered = await http.PostAsync<OpenAiReply>(
-                AssistantHttp.Address(settings.BaseUrl, AssistantDefaults.Home(Kind), "v1/responses"),
+                AssistantHttp.Address(@using.BaseUrl, "v1/responses"),
                 payload,
-                message => Authorize(message, key),
+                message => Authorize(message, @using.ApiKey),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -83,19 +80,16 @@ internal sealed class OpenAiAssistant(
     }
 
     public async Task<Result<Drawn>> DrawAsync(
+        Connected @using,
         Drawing request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
-
-        if (Key() is not { } key)
-        {
-            return AssistanceErrors.NotConfigured;
-        }
 
         var payload = new
         {
-            model = settings.DrawModel.Or(AssistantDefaults.DrawModel(Kind)),
+            model = @using.Model,
             prompt = request.Subject,
             n = 1,
             // One square picture at the middling quality. Not a choice this app
@@ -105,12 +99,9 @@ internal sealed class OpenAiAssistant(
         };
 
         var answered = await http.PostAsync<OpenAiImageReply>(
-                AssistantHttp.Address(
-                    settings.BaseUrl,
-                    AssistantDefaults.Home(Kind),
-                    "v1/images/generations"),
+                AssistantHttp.Address(@using.BaseUrl, "v1/images/generations"),
                 payload,
-                message => Authorize(message, key),
+                message => Authorize(message, @using.ApiKey),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -212,9 +203,6 @@ internal sealed class OpenAiAssistant(
         reply.Usage?.OutputTokens ?? 0,
         Pictures: 0);
 
-    /// <inheritdoc cref="GeminiAssistant" />
-    private string? Key() =>
-        settings.HasApiKey ? protector.Unprotect(settings.ProtectedApiKey) : null;
 }
 
 /// <summary>What the Responses API answers with.</summary>

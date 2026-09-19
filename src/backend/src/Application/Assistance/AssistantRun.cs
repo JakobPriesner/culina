@@ -6,15 +6,22 @@ using Domain.Shared;
 namespace Application.Assistance;
 
 /// <summary>
-/// One assisted call: allowed, afforded, made, and counted.
+/// One assisted call: allowed, resolved, afforded, made, and counted.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every capability goes through here, which is the point. The four checks
-/// before a model is called — is the assistant on, is this capability on, is
-/// there a provider this knows, is there any budget left — are the same four
-/// every time, and a capability that forgot one of them would be a capability
-/// that spends money it was told not to.
+/// Every capability goes through here, which is the point. The checks before a
+/// model is called are the same every time — is the assistant on, is this job
+/// switched on, was a provider chosen for it, is that provider connected, can
+/// it do this job, and is there any budget left — and a capability that forgot
+/// one of them would be a capability that spends money it was told not to.
+/// </para>
+/// <para>
+/// Resolving lives here too, and that is what lets one instance use three
+/// providers at once. The settings say <em>which</em> provider does this job;
+/// this turns that into a decrypted key, an address and a model name, and hands
+/// the adapter something it can simply call. Adapters therefore know nothing
+/// about settings, encryption, or defaults.
 /// </para>
 /// <para>
 /// Not a decorator over <see cref="IAssistant"/>. A cost check hidden inside
@@ -24,13 +31,15 @@ namespace Application.Assistance;
 /// </para>
 /// </remarks>
 /// <param name="settings">The live instance settings.</param>
-/// <param name="assistants">Picks the adapter for the configured provider.</param>
+/// <param name="assistants">The adapter for each provider.</param>
+/// <param name="protector">Decrypts a stored key.</param>
 /// <param name="ledger">Decides whether there is budget, and records what was used.</param>
 /// <param name="prices">Works out what a call came to.</param>
 /// <param name="time">The injected clock, for which month this is.</param>
 public sealed class AssistantRun(
     AssistanceSettings settings,
     IAssistants assistants,
+    ISecretProtector protector,
     IAssistanceLedger ledger,
     IModelPrices prices,
     TimeProvider time)
@@ -63,11 +72,12 @@ public sealed class AssistantRun(
         return RunAsync(
             who,
             request.Capability,
-            settings.ComposeModel,
             ComposeEstimate,
-            async (assistant, token) =>
+            async (assistant, connected, token) =>
             {
-                var answered = await assistant.ComposeAsync(request, token).ConfigureAwait(false);
+                var answered = await assistant
+                    .ComposeAsync(connected, request, token)
+                    .ConfigureAwait(false);
 
                 return answered.Map(composed => (composed.Recipe, composed.Usage));
             },
@@ -88,11 +98,12 @@ public sealed class AssistantRun(
         return RunAsync(
             who,
             Capability.Draw,
-            settings.DrawModel,
             DrawEstimate,
-            async (assistant, token) =>
+            async (assistant, connected, token) =>
             {
-                var answered = await assistant.DrawAsync(request, token).ConfigureAwait(false);
+                var answered = await assistant
+                    .DrawAsync(connected, request, token)
+                    .ConfigureAwait(false);
 
                 return answered.Map(drawn => (drawn, drawn.Usage));
             },
@@ -102,9 +113,8 @@ public sealed class AssistantRun(
     private async Task<Result<TAnswer>> RunAsync<TAnswer>(
         Asker who,
         Capability capability,
-        string model,
         decimal estimate,
-        Func<IAssistant, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
+        Func<IAssistant, Connected, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
         CancellationToken cancellationToken)
         where TAnswer : notnull
     {
@@ -116,26 +126,60 @@ public sealed class AssistantRun(
             return settings.IsConnected ? AssistanceErrors.Disabled : AssistanceErrors.NotConfigured;
         }
 
-        if (settings.Kind is not { } provider)
+        var resolved = Resolve(capability);
+
+        return await resolved.Match(
+            chosen => AfterReservingAsync(who, capability, chosen, estimate, call, cancellationToken),
+            error => Task.FromResult(Result<TAnswer>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Turns "this job uses that provider" into something callable.
+    /// </summary>
+    /// <remarks>
+    /// The key is decrypted here and nowhere else, so it exists in memory for
+    /// the length of one call and never reaches a class whose job is HTTP. A
+    /// key that cannot be decrypted — a key ring that was lost and came back
+    /// empty — reads as "not configured", because that is what it is.
+    /// </remarks>
+    private Result<Chosen> Resolve(Capability capability)
+    {
+        if (settings.UseFor(capability) is not { } use
+            || AssistantKind.Parse(use.Provider) is not { } kind)
         {
-            return AssistanceErrors.UnknownProvider;
+            return AssistanceErrors.NotConfigured;
         }
 
-        var chosen = assistants.For(provider);
+        if (settings.ConnectionFor(kind) is not { IsUsable: true } connection)
+        {
+            return AssistanceErrors.NotConfigured;
+        }
 
-        return await chosen.Match(
-            assistant => AfterReservingAsync(who, capability, provider, model, estimate, assistant, call, cancellationToken),
-            error => Task.FromResult(Result<TAnswer>.Failure(error))).ConfigureAwait(false);
+        // Null only for a provider that needs a key and whose stored one cannot
+        // be read — a key ring lost and restored empty. That is "not
+        // configured", because it is.
+        var key = kind.NeedsApiKey ? protector.Unprotect(connection.ProtectedApiKey) : string.Empty;
+
+        if (key is null)
+        {
+            return AssistanceErrors.NotConfigured;
+        }
+
+        return assistants.For(kind).Map(assistant => new Chosen(
+            assistant,
+            kind,
+            new Connected(
+                key,
+                connection.BaseUrl.Length > 0 ? connection.BaseUrl : assistants.HomeOf(kind),
+                use.Model.Length > 0 ? use.Model : assistants.DefaultModelFor(kind, capability))));
     }
 
     private async Task<Result<TAnswer>> AfterReservingAsync<TAnswer>(
         Asker who,
         Capability capability,
-        AssistantKind provider,
-        string model,
+        Chosen chosen,
         decimal estimate,
-        IAssistant assistant,
-        Func<IAssistant, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
+        Func<IAssistant, Connected, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
         CancellationToken cancellationToken)
         where TAnswer : notnull
     {
@@ -143,8 +187,8 @@ public sealed class AssistantRun(
             who.UserId,
             who.HouseholdId,
             capability,
-            provider,
-            model,
+            chosen.Kind,
+            chosen.Connected.Model,
             estimate,
             settings.MonthlyBudget,
             settings.PersonalBudget,
@@ -153,7 +197,7 @@ public sealed class AssistantRun(
         var taken = await ledger.ReserveAsync(reservation, cancellationToken).ConfigureAwait(false);
 
         return await taken.Match(
-            id => CallAsync(id, provider, model, assistant, call, cancellationToken),
+            id => CallAsync(id, chosen, call, cancellationToken),
             error => Task.FromResult(Result<TAnswer>.Failure(error))).ConfigureAwait(false);
     }
 
@@ -168,14 +212,13 @@ public sealed class AssistantRun(
     /// </remarks>
     private async Task<Result<TAnswer>> CallAsync<TAnswer>(
         Guid reservationId,
-        AssistantKind provider,
-        string model,
-        IAssistant assistant,
-        Func<IAssistant, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
+        Chosen chosen,
+        Func<IAssistant, Connected, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
         CancellationToken cancellationToken)
         where TAnswer : notnull
     {
-        var answered = await call(assistant, cancellationToken).ConfigureAwait(false);
+        var answered = await call(chosen.Assistant, chosen.Connected, cancellationToken)
+            .ConfigureAwait(false);
 
         var usage = answered.Match(ok => ok.Usage, _ => default);
         var outcome = answered.Match(_ => "ok", error => error.Code);
@@ -184,7 +227,12 @@ public sealed class AssistantRun(
                 new Settlement(
                     reservationId,
                     usage,
-                    prices.Of(provider, model, usage.InputTokens, usage.OutputTokens, usage.Pictures),
+                    prices.Of(
+                        chosen.Kind,
+                        chosen.Connected.Model,
+                        usage.InputTokens,
+                        usage.OutputTokens,
+                        usage.Pictures),
                     outcome),
                 // Not the caller's token: a cancelled request must still leave
                 // the budget it spent accounted for.
@@ -203,6 +251,9 @@ public sealed class AssistantRun(
     /// </remarks>
     internal static DateTimeOffset StartOfMonth(DateTimeOffset now) =>
         new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+
+    /// <summary>An adapter and the connection it is about to be called with.</summary>
+    private sealed record Chosen(IAssistant Assistant, AssistantKind Kind, Connected Connected);
 }
 
 /// <summary>Who is asking, for the ledger.</summary>

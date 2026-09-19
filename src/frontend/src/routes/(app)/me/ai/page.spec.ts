@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/svelte';
+import { screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,23 +7,41 @@ import { assistance } from '$features/assistance/stores/assistance.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
 /*
- * The page rather than the store, because the two things worth proving here are
- * both about what is on screen: that the API key is never in a field somebody
- * could read it out of, and that choosing Ollama removes the controls that do
- * not apply to it. Neither is visible from the store.
+ * The page rather than the store, because what is worth proving is all about
+ * what is on screen: that no API key is ever in a field somebody could read it
+ * out of, that every provider can be connected at once, and that a job can only
+ * be given to a provider that could actually do it.
  */
-const connected = {
-  enabled: true,
-  provider: 'openai',
-  apiKeyConfigured: true,
-  connected: true,
+const connection = (provider: string, overrides: object = {}) => ({
+  provider,
+  apiKeyConfigured: false,
   baseUrl: '',
-  composeModel: 'gpt-4o-mini',
-  drawModel: 'gpt-image-1',
-  improveEnabled: true,
-  draftEnabled: true,
-  readEnabled: true,
-  drawEnabled: true,
+  usable: false,
+  ...overrides
+});
+
+const use = (capability: string, overrides: object = {}) => ({
+  capability,
+  enabled: false,
+  provider: '',
+  model: '',
+  defaultModel: `${capability}-default`,
+  ...overrides
+});
+
+const configured = {
+  enabled: true,
+  connections: [
+    connection('gemini', { apiKeyConfigured: true, usable: true }),
+    connection('openai', { apiKeyConfigured: true, usable: true }),
+    connection('ollama', { baseUrl: 'http://localhost:11434', usable: true })
+  ],
+  uses: [
+    use('improve', { enabled: true, provider: 'ollama' }),
+    use('draft', { enabled: true, provider: 'openai' }),
+    use('read', { enabled: true, provider: 'gemini' }),
+    use('draw', { enabled: true, provider: 'gemini' })
+  ],
   monthlyBudget: 20,
   personalBudget: null
 };
@@ -40,7 +58,7 @@ const emptyUsage = {
   byCapability: []
 };
 
-function serverAnswers(settings: object = connected) {
+function serverAnswers(settings: object = configured) {
   const json = (body: object) =>
     new Response(JSON.stringify(body), {
       status: 200,
@@ -65,89 +83,86 @@ const settle = async () => {
   }
 };
 
+/**
+ * One settings row, found by its label.
+ *
+ * Scoped to the label element rather than to any text: "Gemini" is also the
+ * text of a select option and part of a field label under Advanced, so a bare
+ * text query finds three things and fails on all of them.
+ */
+const rowFor = (label: string) =>
+  screen.getByText(label, { selector: '.label' }).closest('.row') as HTMLElement;
+
 beforeEach(() => {
   assistance.reset();
 });
 
 describe('the assistant settings page', () => {
-  it('never puts the API key in a field, only says that there is one', async () => {
+  it('lists every provider, so adding one is filling a row in', async () => {
+    serverAnswers({ ...configured, connections: [] });
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // All three, none connected. The alternative — a list of what is connected
+    // plus an Add button — makes the empty state a dead end.
+    expect(rowFor('Gemini')).toBeInTheDocument();
+    expect(rowFor('OpenAI')).toBeInTheDocument();
+    expect(rowFor('Ollama')).toBeInTheDocument();
+    expect(screen.getAllByText('Not connected')).toHaveLength(3);
+  });
+
+  it('shows several providers connected at once', async () => {
     serverAnswers();
 
     renderWithProviders(AiPage);
     await settle();
 
-    // The key is not in the response at all, so a box rendered empty would read
-    // as "no key" and saving would look like it had wiped one.
-    expect(screen.getByText('A key is set.')).toBeInTheDocument();
+    // The whole point of the change: they are not interchangeable, so a
+    // household wants each for what it is good at.
+    expect(screen.getAllByText('Ready')).toHaveLength(3);
+  });
+
+  it('never puts an API key in a field, only says that there is one', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    expect(screen.getAllByText('A key is set.')).toHaveLength(2);
     expect(screen.queryByPlaceholderText('Paste the key')).not.toBeInTheDocument();
   });
 
-  it('asks for a key only once somebody says they want to replace it', async () => {
+  it('asks for a key only once somebody says they want to replace one', async () => {
     serverAnswers();
 
     renderWithProviders(AiPage);
     await settle();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    await userEvent.click(within(rowFor('Gemini')).getByRole('button', { name: 'Replace' }));
 
     expect(screen.getByPlaceholderText('Paste the key')).toBeInTheDocument();
   });
 
-  it('drops the key and the drawing controls when the model runs on your own machine', async () => {
+  it('offers drawing only to providers that can draw', async () => {
     serverAnswers();
 
     renderWithProviders(AiPage);
     await settle();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ollama' }));
+    const drawing = within(rowFor('Draw a picture')).getByRole('combobox');
+    const offered = within(drawing)
+      .getAllByRole('option')
+      .map((option) => option.textContent?.trim());
 
-    // Absent, not disabled. Ollama has nobody to authenticate to and does not
-    // make pictures, so a key row and a drawing switch would both be controls
-    // that can never do anything.
-    expect(screen.queryByText('A key is set.')).not.toBeInTheDocument();
-    expect(screen.queryByRole('switch', { name: 'Draw a picture' })).not.toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: 'Improve a recipe' })).toBeInTheDocument();
+    // Ollama serves language and vision models and makes no pictures, so it is
+    // absent here rather than selectable and then refused.
+    expect(offered).toContain('Gemini');
+    expect(offered).toContain('OpenAI');
+    expect(offered).not.toContain('Ollama');
   });
 
-  it('does not ask for an address for a provider that has one of its own', async () => {
-    serverAnswers();
-
-    renderWithProviders(AiPage);
-    await settle();
-
-    // Connecting is choosing a provider and pasting a key. Google's address is
-    // not a deployment decision, and a box for it made that look like work.
-    expect(screen.queryByText('Where your model is running.')).not.toBeInTheDocument();
-
-    // It is still reachable, for the gateway case — just not in the way.
-    expect(screen.getByText('Advanced')).toBeInTheDocument();
-  });
-
-  it('asks for an address for a local model, where it is the connection', async () => {
-    serverAnswers();
-
-    renderWithProviders(AiPage);
-    await settle();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Ollama' }));
-
-    expect(screen.getByText('Where your model is running.')).toBeInTheDocument();
-  });
-
-  it('says what leaves the server, and says it differently for a local model', async () => {
-    serverAnswers();
-
-    renderWithProviders(AiPage);
-    await settle();
-
-    expect(screen.getByText(/sent to OpenAI to be read/)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Ollama' }));
-
-    expect(screen.getByText(/Nothing leaves this machine/)).toBeInTheDocument();
-  });
-
-  it('sends no key at all when the form is saved without touching it', async () => {
+  it('sends each job to the provider it was given', async () => {
     const fetched = serverAnswers();
 
     renderWithProviders(AiPage);
@@ -160,11 +175,66 @@ describe('the assistant settings page', () => {
       .map(([input]) => input)
       .find((input): input is Request => input instanceof Request && input.method === 'PUT');
 
-    expect(write).toBeDefined();
+    const body = JSON.parse(await write!.clone().text());
+    const sent = Object.fromEntries(
+      body.uses.map((one: { capability: string; provider: string }) => [
+        one.capability,
+        one.provider
+      ])
+    );
 
-    // Omitted, not empty: an empty string would take the stored key away, and
+    expect(sent).toEqual({
+      improve: 'ollama',
+      draft: 'openai',
+      read: 'gemini',
+      draw: 'gemini'
+    });
+  });
+
+  it('sends no key at all when the form is saved without touching one', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await settle();
+
+    const write = fetched.mock.calls
+      .map(([input]) => input)
+      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
+
+    // Omitted, not empty: an empty string would take a stored key away, and
     // this is somebody saving the form for an unrelated reason.
     const body = JSON.parse(await write!.clone().text());
-    expect(body.apiKey).toBeUndefined();
+    expect(body.connections.every((one: { apiKey?: string }) => one.apiKey === undefined)).toBe(
+      true
+    );
+  });
+
+  it('says nothing leaves the machine when every job is local', async () => {
+    serverAnswers({
+      ...configured,
+      uses: [
+        use('improve', { enabled: true, provider: 'ollama' }),
+        use('draft', { enabled: true, provider: 'ollama' }),
+        use('read', { enabled: true, provider: 'ollama' }),
+        use('draw')
+      ]
+    });
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    expect(screen.getByText(/Nothing leaves this machine/)).toBeInTheDocument();
+  });
+
+  it('says what leaves the server as soon as one job is hosted', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    expect(screen.getByText(/sent to the provider each job uses/)).toBeInTheDocument();
   });
 });

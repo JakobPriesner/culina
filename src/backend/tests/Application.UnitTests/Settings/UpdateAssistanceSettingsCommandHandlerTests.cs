@@ -7,100 +7,106 @@ using TestSupport;
 namespace Application.UnitTests.Settings;
 
 /// <summary>
-/// What connecting a model will and will not accept, and what it does with the
-/// one value that must never come back out.
+/// Connecting several providers at once, and pointing each job at one.
 /// </summary>
 public class UpdateAssistanceSettingsCommandHandlerTests
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task Handle_ShouldProtectTheKey_RatherThanStoringWhatWasTyped()
+    public async Task Handle_ShouldConnectSeveralProvidersAtOnce()
     {
         // Arrange
         var world = new World();
 
         // Act
-        await world.Handle(Command(apiKey: "sk-secret"));
+        var response = (await world.Handle(Command(
+                connections: [Hosted("openai", "sk-one"), Hosted("gemini", "sk-two"), Local()],
+                uses: [Use("improve", "openai"), Use("draw", "gemini"), Use("read", "ollama")])))
+            .ShouldBeSuccess();
 
         // Assert
-        // What is stored went through the protector — in both places, because
-        // the row and the singleton are written from the same value. The fake
-        // wraps rather than encrypts so that a test can read it back; that the
-        // real one is unreadable is data protection's business, not this
-        // handler's.
-        Assert.NotEqual("sk-secret", world.Settings.ProtectedApiKey);
-        Assert.Equal(world.Settings.ProtectedApiKey, world.Store.Saved!.ProtectedApiKey);
-        Assert.Equal("sk-secret", world.Protector.Unprotect(world.Settings.ProtectedApiKey));
+        // The whole point: the providers are not interchangeable, and a
+        // household with more than one wants each for what it is good at.
+        Assert.All(response.Connections, connection => Assert.True(connection.Usable));
+        Assert.Equal(3, world.Settings.Connections.Count);
     }
 
     [Fact]
-    public async Task Handle_ShouldNeverReturnTheKey_OnlyThatThereIsOne()
+    public async Task Handle_ShouldSendEachJobToTheProviderItWasPointedAt()
     {
         // Arrange
         var world = new World();
 
         // Act
-        var response = (await world.Handle(Command(apiKey: "sk-secret"))).ShouldBeSuccess();
+        await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one"), Hosted("gemini", "sk-two")],
+            uses: [Use("improve", "openai", "cheap-one"), Use("draw", "gemini")]));
 
         // Assert
-        // The response type has no field that could carry it, which is the
-        // point of it being a contract type rather than the record.
-        Assert.True(response.ApiKeyConfigured);
+        Assert.Equal("openai", world.Settings.UseFor(Capability.Improve)!.Provider);
+        Assert.Equal("cheap-one", world.Settings.UseFor(Capability.Improve)!.Model);
+        Assert.Equal("gemini", world.Settings.UseFor(Capability.Draw)!.Provider);
     }
 
     [Fact]
-    public async Task Handle_ShouldKeepTheStoredKey_WhenTheFormLeavesItOut()
-    {
-        // Arrange
-        // A key is already set, and somebody saves the form to change a budget.
-        var world = new World();
-        await world.Handle(Command(apiKey: "sk-first"));
-        var stored = world.Settings.ProtectedApiKey;
-
-        // Act
-        await world.Handle(Command(apiKey: null, monthlyBudget: 5m));
-
-        // Assert
-        // Null means "leave it alone". A form that wiped the key every time it
-        // was saved for an unrelated reason would be unusable.
-        Assert.Equal(stored, world.Settings.ProtectedApiKey);
-        Assert.Equal(5m, world.Settings.MonthlyBudget);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task Handle_ShouldTakeTheKeyAway_WhenAnEmptyOneIsSentDeliberately(string sent)
+    public async Task Handle_ShouldProtectEveryKey_RatherThanStoringWhatWasTyped()
     {
         // Arrange
         var world = new World();
-        await world.Handle(Command(apiKey: "sk-first"));
 
         // Act
-        await world.Handle(Command(apiKey: sent));
+        await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one"), Hosted("gemini", "sk-two")],
+            uses: []));
 
         // Assert
-        // The third state, and the only way to disconnect: an empty string is
-        // somebody clearing the box, which is different from not sending it.
-        Assert.False(world.Settings.HasApiKey);
+        Assert.All(
+            world.Settings.Connections,
+            one => Assert.StartsWith("protected:", one.ProtectedApiKey, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task Handle_ShouldStoreItAsOff_WhenItIsSwitchedOnWithNoKey()
+    public async Task Handle_ShouldKeepEachStoredKey_WhenTheFormLeavesItOut()
     {
         // Arrange
         var world = new World();
+        await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one"), Hosted("gemini", "sk-two")],
+            uses: []));
 
         // Act
-        var response = (await world.Handle(Command(enabled: true, apiKey: null))).ShouldBeSuccess();
+        // The same form saved again to change a budget, with no keys in it.
+        await world.Handle(Command(
+            connections: [Hosted("openai", apiKey: null), Hosted("gemini", apiKey: null)],
+            uses: [],
+            monthlyBudget: 25m));
 
         // Assert
-        // Corrected rather than refused: the form lets somebody fill the key box
-        // last, and an error about a field they are about to type into helps
-        // nobody. There is simply nothing for it to be on with.
-        Assert.False(response.Enabled);
-        Assert.False(world.Settings.Enabled);
+        Assert.Equal(2, world.Settings.Connections.Count);
+        Assert.All(world.Settings.Connections, one => Assert.True(one.HasApiKey));
+        Assert.Equal(25m, world.Settings.MonthlyBudget);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldDisconnectAProvider_WhenItsKeyIsCleared()
+    {
+        // Arrange
+        var world = new World();
+        await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one"), Hosted("gemini", "sk-two")],
+            uses: []));
+
+        // Act
+        await world.Handle(Command(
+            connections: [Hosted("openai", apiKey: ""), Hosted("gemini", apiKey: null)],
+            uses: []));
+
+        // Assert
+        // An empty string is somebody clearing the box, which is different from
+        // not sending it — and a connection with nothing in it is not stored.
+        Assert.Single(world.Settings.Connections);
+        Assert.Equal("gemini", world.Settings.Connections[0].Provider);
     }
 
     [Fact]
@@ -110,69 +116,90 @@ public class UpdateAssistanceSettingsCommandHandlerTests
         var world = new World();
 
         // Act
-        var response = (await world.Handle(Command(
-                enabled: true,
-                provider: "ollama",
-                apiKey: null,
-                baseUrl: "http://localhost:11434")))
+        var response = (await world.Handle(Command(connections: [Local()], uses: [])))
             .ShouldBeSuccess();
 
         // Assert
-        // The case that breaks "configured means has a key". A model on your
-        // own machine has nobody to authenticate to, and refusing to switch it
-        // on for want of a credential it does not use would make the one
-        // provider a self-hosted app most obviously wants unusable.
-        Assert.True(response.Enabled);
-        Assert.True(response.Connected);
-        Assert.False(response.ApiKeyConfigured);
+        // The case that breaks "connected means has a key". A model on your own
+        // machine has nobody to authenticate to.
+        var ollama = response.Connections.Single(one => one.Provider == "ollama");
+        Assert.True(ollama.Usable);
+        Assert.False(ollama.ApiKeyConfigured);
     }
 
     [Fact]
-    public async Task Handle_ShouldRefuseOllamaWithNoAddress_BecauseThereIsNoDefaultThatCouldBeRight()
+    public async Task Handle_ShouldRefuse_PointingDrawingAtAProviderThatCannotDraw()
     {
         // Arrange
         var world = new World();
 
         // Act
-        var result = await world.Handle(Command(provider: "ollama", baseUrl: ""));
+        var result = await world.Handle(Command(
+            connections: [Local()],
+            uses: [Use("draw", "ollama")]));
 
         // Assert
-        // Empty here is not "use the usual address": a model on your own
-        // hardware is wherever you put it.
-        result.ShouldBeFailure(AssistanceErrors.AddressRequired);
+        // Caught at the form rather than at the call, so nobody switches on a
+        // capability that could never work.
+        result.ShouldBeFailure(AssistanceErrors.DrawingNotSupported);
     }
 
     [Fact]
-    public async Task Handle_ShouldStoreOllamaAsOff_WhenItIsSwitchedOnWithNoAddress()
+    public async Task Handle_ShouldAcceptAJobPointedAtAProviderNobodyHasConnectedYet()
     {
         // Arrange
         var world = new World();
 
         // Act
-        await world.Handle(Command(provider: "openai", apiKey: "sk-first", enabled: true));
-        var result = await world.Handle(
-            Command(provider: "ollama", baseUrl: "http://localhost:11434"));
+        var result = await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one")],
+            uses: [Use("improve", "gemini")]));
 
         // Assert
-        // Switching provider leaves the old key stored but no longer relevant:
-        // what counts as connected is the new provider's question.
+        // Unfinished rather than wrong. The job is saved and simply is not
+        // offered — refusing it would mean a form where the order you fill the
+        // boxes in decides whether it saves.
         result.ShouldBeSuccess();
-        Assert.True(world.Settings.IsConnected);
+        Assert.False(world.Settings.Allows(Capability.Improve));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldAcceptAJobWithNoProvider_BecauseItSimplyIsNotOffered()
+    {
+        var world = new World();
+
+        (await world.Handle(Command(
+                connections: [Hosted("openai", "sk-one")],
+                uses: [Use("improve", provider: "")])))
+            .ShouldBeSuccess();
     }
 
     [Fact]
     public async Task Handle_ShouldRefuse_AProviderThisCannotTalkTo()
     {
+        var world = new World();
+
+        (await world.Handle(Command(connections: [Hosted("anthropic", "sk-one")], uses: [])))
+            .ShouldBeFailure(AssistanceErrors.UnknownProvider);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldNotConnectOllamaWithNoAddress_BecauseThereIsNoDefaultThatCouldBeRight()
+    {
         // Arrange
         var world = new World();
 
         // Act
-        var result = await world.Handle(Command(provider: "anthropic"));
+        var result = await world.Handle(Command(
+            connections: [new ConnectionEdit("ollama", null, string.Empty)],
+            uses: [Use("read", "ollama")]));
 
         // Assert
-        // Quietly picking one would send somebody's key to a company they did
-        // not choose.
-        result.ShouldBeFailure(AssistanceErrors.UnknownProvider);
+        // A row with nothing in it is a provider nobody connected, not an
+        // error: the screen sends all three every time it saves.
+        result.ShouldBeSuccess();
+        Assert.Empty(world.Settings.Connections);
+        Assert.False(world.Settings.Allows(Capability.Read));
     }
 
     [Fact]
@@ -180,42 +207,25 @@ public class UpdateAssistanceSettingsCommandHandlerTests
     {
         var world = new World();
 
-        (await world.Handle(Command(monthlyBudget: -1m)))
+        (await world.Handle(Command(connections: [], uses: [], monthlyBudget: -1m)))
             .ShouldBeFailure(AssistanceErrors.InvalidBudget);
     }
 
     [Fact]
-    public async Task Handle_ShouldRefuse_AKeyLongerThanAnyKey()
-    {
-        var world = new World();
-
-        (await world.Handle(Command(apiKey: new string('k', AssistanceSettings.MaxApiKeyLength + 1))))
-            .ShouldBeFailure(AssistanceErrors.InvalidApiKey);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldRefuse_AnAddressThatIsNotOne()
-    {
-        var world = new World();
-
-        (await world.Handle(Command(baseUrl: "not an address")))
-            .ShouldBeFailure(AssistanceErrors.InvalidBaseUrl);
-    }
-
-    [Fact]
-    public async Task Handle_ShouldAcceptAPrivateAddress_BecauseAnAdministratorTypedIt()
+    public async Task Handle_ShouldStoreItAsOff_WhenItIsSwitchedOnWithNothingConnected()
     {
         // Arrange
         var world = new World();
 
         // Act
-        var result = await world.Handle(Command(baseUrl: "http://localhost:11434"));
+        var response = (await world.Handle(Command(connections: [], uses: [], enabled: true)))
+            .ShouldBeSuccess();
 
         // Assert
-        // Unlike the import path, which refuses private addresses because a
-        // user types those. Pointing at a model on the same machine is the
-        // ordinary reason to set this at all.
-        result.ShouldBeSuccess();
+        // Corrected rather than refused: the form lets somebody fill the key
+        // box last, and an error about a field they are about to type into
+        // helps nobody.
+        Assert.False(response.Enabled);
     }
 
     [Fact]
@@ -226,13 +236,15 @@ public class UpdateAssistanceSettingsCommandHandlerTests
         world.Store.FailWith = SettingsErrors.InvalidValue;
 
         // Act
-        var result = await world.Handle(Command(apiKey: "sk-secret"));
+        var result = await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one")],
+            uses: []));
 
         // Assert
         // Persist first, then mutate. A failed save must never leave the
         // process talking to a provider the database has not heard of.
         result.ShouldBeFailure(SettingsErrors.InvalidValue);
-        Assert.False(world.Settings.HasApiKey);
+        Assert.Empty(world.Settings.Connections);
     }
 
     [Fact]
@@ -242,38 +254,55 @@ public class UpdateAssistanceSettingsCommandHandlerTests
         var world = new World();
 
         // Act
-        var error = (await world.Handle(
-            Command(provider: "anthropic", baseUrl: "nonsense", monthlyBudget: -5m)))
+        var error = (await world.Handle(Command(
+                connections: [Hosted("anthropic", "sk-one")],
+                uses: [Use("draw", "ollama")],
+                monthlyBudget: -5m)))
             .ShouldBeFailure();
 
         // Assert
-        // A form with twelve controls on it, so "that is not valid" would send
-        // somebody looking through all of them.
+        // A screen with three providers and four jobs on it, so "that is not
+        // valid" would send somebody looking through all of them.
         var aggregate = Assert.IsType<ValidationError>(error);
         Assert.Equal(3, aggregate.Errors.Count);
     }
 
-    private static UpdateAssistanceSettingsCommand Command(
-        bool enabled = false,
-        string provider = "openai",
-        string? apiKey = null,
-        string baseUrl = "",
-        decimal? monthlyBudget = null) =>
-        new(
-            enabled,
-            provider,
-            apiKey,
-            baseUrl,
-            ComposeModel: "gpt-4o-mini",
-            DrawModel: "gpt-image-1",
-            ImproveEnabled: true,
-            DraftEnabled: true,
-            ReadEnabled: true,
-            DrawEnabled: false,
-            monthlyBudget,
-            PersonalBudget: null);
+    [Fact]
+    public async Task Handle_ShouldSayWhichModelEachJobWouldFallBackTo()
+    {
+        // Arrange
+        var world = new World();
 
-    /// <summary>The handler and the two things it writes through.</summary>
+        // Act
+        var response = (await world.Handle(Command(
+                connections: [Hosted("openai", "sk-one")],
+                uses: [Use("improve", "openai")])))
+            .ShouldBeSuccess();
+
+        // Assert
+        // The server decides the default, so the server says what it is — a
+        // form hard-coding a name would show a placeholder the server had
+        // stopped agreeing with.
+        var improve = response.Uses.Single(one => one.Capability == "improve");
+        Assert.Equal("openai-default-improve", improve.DefaultModel);
+    }
+
+    private static ConnectionEdit Hosted(string provider, string? apiKey = "sk-secret") =>
+        new(provider, apiKey, string.Empty);
+
+    private static ConnectionEdit Local() => new("ollama", null, "http://localhost:11434");
+
+    private static UseEdit Use(string capability, string provider, string model = "") =>
+        new(capability, Enabled: true, provider, model);
+
+    private static UpdateAssistanceSettingsCommand Command(
+        IReadOnlyList<ConnectionEdit> connections,
+        IReadOnlyList<UseEdit> uses,
+        bool enabled = false,
+        decimal? monthlyBudget = null) =>
+        new(enabled, connections, uses, monthlyBudget, PersonalBudget: null);
+
+    /// <summary>The handler and the things it writes through.</summary>
     private sealed class World
     {
         internal AssistanceSettings Settings { get; } = new();
@@ -284,7 +313,11 @@ public class UpdateAssistanceSettingsCommandHandlerTests
 
         internal Task<Result<Contracts.Settings.UpdateAssistance.Response>> Handle(
             UpdateAssistanceSettingsCommand command) =>
-            new UpdateAssistanceSettingsCommandHandler(Settings, Store, Protector)
+            new UpdateAssistanceSettingsCommandHandler(
+                    Settings,
+                    Store,
+                    new FakeAssistants(new FakeAssistant()),
+                    Protector)
                 .Handle(command, Token);
     }
 }

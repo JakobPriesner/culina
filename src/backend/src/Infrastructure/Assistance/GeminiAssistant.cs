@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Application.Abstractions;
-using Application.Abstractions.Settings;
 using Domain.Assistance;
 using Domain.Shared;
 using Microsoft.Extensions.Logging;
@@ -30,18 +29,14 @@ namespace Infrastructure.Assistance;
 /// less standing in its way than OpenAI's system role gives.
 /// </para>
 /// <para>
-/// The settings are read per call rather than captured in the constructor: they
-/// are a mutable singleton an administrator can change without a restart, and an
-/// adapter holding the key it was built with would keep using a rotated one.
+/// Stateless with respect to configuration: the key, the address and the model
+/// all arrive with the call. One instance therefore serves however many
+/// connections and however many models an administrator has set up.
 /// </para>
 /// </remarks>
-/// <param name="settings">The live instance settings.</param>
-/// <param name="protector">Decrypts the stored key.</param>
 /// <param name="http">The shared client.</param>
 /// <param name="logger">Records what a provider refused, and why.</param>
 internal sealed class GeminiAssistant(
-    AssistanceSettings settings,
-    ISecretProtector protector,
     AssistantHttp http,
     ILogger<GeminiAssistant> logger) : IAssistant
 {
@@ -57,19 +52,16 @@ internal sealed class GeminiAssistant(
     public AssistantKind Kind => AssistantKind.Gemini;
 
     public async Task<Result<Composed>> ComposeAsync(
+        Connected @using,
         Composition request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
-
-        if (Key() is not { } key)
-        {
-            return AssistanceErrors.NotConfigured;
-        }
 
         var payload = new
         {
-            model = settings.ComposeModel.Or(AssistantDefaults.ComposeModel(Kind)),
+            model = @using.Model,
             input = Input(request),
             response_format = new
             {
@@ -79,46 +71,43 @@ internal sealed class GeminiAssistant(
             }
         };
 
-        var answered = await PostAsync(payload, key, cancellationToken).ConfigureAwait(false);
+        var answered = await PostAsync(@using, payload, cancellationToken).ConfigureAwait(false);
 
         return answered.Bind(Read);
     }
 
     public async Task<Result<Drawn>> DrawAsync(
+        Connected @using,
         Drawing request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
-
-        if (Key() is not { } key)
-        {
-            return AssistanceErrors.NotConfigured;
-        }
 
         // The same endpoint. An image model answers with an image part where a
         // text model answers with a text one, which is the point of the steps
         // being typed.
         var payload = new
         {
-            model = settings.DrawModel.Or(AssistantDefaults.DrawModel(Kind)),
+            model = @using.Model,
             input = new object[] { new { type = "text", text = request.Subject } }
         };
 
-        var answered = await PostAsync(payload, key, cancellationToken).ConfigureAwait(false);
+        var answered = await PostAsync(@using, payload, cancellationToken).ConfigureAwait(false);
 
         return answered.Bind(ReadPicture);
     }
 
     private Task<Result<GeminiReply>> PostAsync(
+        Connected @using,
         object payload,
-        string key,
         CancellationToken cancellationToken) =>
         http.PostAsync<GeminiReply>(
-            AssistantHttp.Address(settings.BaseUrl, AssistantDefaults.Home(Kind), "v1beta/interactions"),
+            AssistantHttp.Address(@using.BaseUrl, "v1beta/interactions"),
             payload,
             message =>
             {
-                message.Headers.Add("x-goog-api-key", key);
+                message.Headers.Add("x-goog-api-key", @using.ApiKey);
                 message.Headers.Add("Api-Revision", Revision);
             },
             cancellationToken);
@@ -212,16 +201,6 @@ internal sealed class GeminiAssistant(
         reply.Usage?.CompletionTokens ?? 0,
         pictures);
 
-    /// <summary>
-    /// The key, decrypted, or null when there is not a usable one.
-    /// </summary>
-    /// <remarks>
-    /// Null covers two cases that are the same thing from here: nobody entered
-    /// a key, and the key ring that encrypted one was lost. Both are "this
-    /// instance has no assistant", and both are fixed by entering it again.
-    /// </remarks>
-    private string? Key() =>
-        settings.HasApiKey ? protector.Unprotect(settings.ProtectedApiKey) : null;
 }
 
 /// <summary>What the Interactions API answers with.</summary>

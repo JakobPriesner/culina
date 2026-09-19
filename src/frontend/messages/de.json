@@ -864,5 +864,17 @@
   "ai.advanced": "Erweitert",
   "ai.advanced.hint": "Nur wenn du ein Gateway vor den Anbieter setzt oder ein bestimmtes Modell brauchst.",
   "ai.models.default": "Für dich gewählt",
-  "ai.address.optional": "Leer lassen für die eigene Adresse von {provider}."
+  "ai.address.optional": "Leer lassen für die eigene Adresse von {provider}.",
+  "ai.connections": "Anbieter",
+  "ai.connections.hint": "Verbinde so viele du magst. Jede Aufgabe unten wählt dann einen aus.",
+  "ai.jobs": "Was was macht",
+  "ai.jobs.hint": "Jede dieser Aufgaben fügt irgendwo eine Schaltfläche hinzu. Was keinen Anbieter hat, fehlt ganz, statt ausgegraut zu sein.",
+  "ai.job.provider": "Nutzt",
+  "ai.job.none": "Nicht angeboten",
+  "ai.job.model": "Modell",
+  "ai.notConnected": "Nicht verbunden",
+  "ai.connected": "Bereit",
+  "ai.cannotDraw": "{provider} zeichnet keine Bilder.",
+  "ai.privacy.mixed": "Rezepttexte und Fotos gehen an den Anbieter, den die jeweilige Aufgabe nutzt. Aufgaben mit Ollama senden nichts irgendwohin.",
+  "ai.apiKey.add": "Schlüssel hinzufügen"
 }

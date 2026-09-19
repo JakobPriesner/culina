@@ -27,7 +27,13 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         // exactly as Culina behaved before any of this existed.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(response.Json!.Value.GetProperty("enabled").GetBoolean());
-        Assert.False(response.Json!.Value.GetProperty("apiKeyConfigured").GetBoolean());
+
+        // Every provider this build knows is listed, none of them connected —
+        // so adding one is filling a row in rather than finding a button.
+        Assert.Equal(3, response.Json!.Value.GetProperty("connections").GetArrayLength());
+        Assert.All(
+            response.Json!.Value.GetProperty("connections").EnumerateArray(),
+            one => Assert.False(one.GetProperty("usable").GetBoolean()));
     }
 
     [Fact]
@@ -46,7 +52,7 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         // named property could only prove the property it thought to name.
         Assert.DoesNotContain(Key, written.Body ?? string.Empty, StringComparison.Ordinal);
         Assert.DoesNotContain(Key, read.Body ?? string.Empty, StringComparison.Ordinal);
-        Assert.True(read.Json!.Value.GetProperty("apiKeyConfigured").GetBoolean());
+        Assert.True(ConnectionFor(read, "openai").GetProperty("apiKeyConfigured").GetBoolean());
     }
 
     [Fact]
@@ -66,7 +72,7 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
         // Assert
-        Assert.True(read.Json!.Value.GetProperty("apiKeyConfigured").GetBoolean());
+        Assert.True(ConnectionFor(read, "openai").GetProperty("apiKeyConfigured").GetBoolean());
         Assert.Equal(25m, read.Json!.Value.GetProperty("monthlyBudget").GetDecimal());
     }
 
@@ -84,7 +90,7 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         // Assert
         // Disconnecting, which is the one thing an empty string means and the
         // omitted field does not.
-        Assert.False(read.Json!.Value.GetProperty("apiKeyConfigured").GetBoolean());
+        Assert.False(ConnectionFor(read, "openai").GetProperty("apiKeyConfigured").GetBoolean());
         Assert.False(read.Json!.Value.GetProperty("enabled").GetBoolean());
     }
 
@@ -103,8 +109,12 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
         // Assert
-        Assert.Equal("gemini", read.Json!.Value.GetProperty("provider").GetString());
-        Assert.Equal("gemini-2.5-flash", read.Json!.Value.GetProperty("composeModel").GetString());
+        Assert.True(ConnectionFor(read, "gemini").GetProperty("usable").GetBoolean());
+        Assert.Equal(
+            "gemini-2.5-flash",
+            read.Json!.Value.GetProperty("uses").EnumerateArray()
+                .Single(one => one.GetProperty("capability").GetString() == "improve")
+                .GetProperty("model").GetString());
     }
 
     [Fact]
@@ -120,8 +130,12 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
+        // An unknown provider is wrong in two places at once — the connection
+        // and every job pointed at it — so the answer is the aggregate, with
+        // the reason on each field.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("assistance.unknown_provider", response.ProblemCode);
+        Assert.Equal("request.validation_failed", response.ProblemCode);
+        Assert.Contains("assistance.unknown_provider", response.Body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -143,12 +157,12 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         // model gets the assistant for nothing, sends nothing anywhere, and
         // never enters a credential.
         Assert.True(read.Json!.Value.GetProperty("enabled").GetBoolean());
-        Assert.True(read.Json!.Value.GetProperty("connected").GetBoolean());
-        Assert.False(read.Json!.Value.GetProperty("apiKeyConfigured").GetBoolean());
+        Assert.True(ConnectionFor(read, "ollama").GetProperty("usable").GetBoolean());
+        Assert.False(ConnectionFor(read, "ollama").GetProperty("apiKeyConfigured").GetBoolean());
     }
 
     [Fact]
-    public async Task Ollama_ShouldBeRefused_WithoutAnAddress()
+    public async Task Ollama_ShouldNotConnect_WithoutAnAddress()
     {
         // Arrange
         using var admin = await AdminAsync();
@@ -160,8 +174,11 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("assistance.address_required", response.ProblemCode);
+        // Saved, and not connected. A blank row is a provider nobody set up
+        // rather than a mistake — this screen sends all three every time.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False(ConnectionFor(response, "ollama").GetProperty("usable").GetBoolean());
+        Assert.False(response.Json!.Value.GetProperty("enabled").GetBoolean());
     }
 
     [Fact]
@@ -226,26 +243,31 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
 
     private const string Local = "http://localhost:11434";
 
+    /// <summary>One provider connected, and every job pointed at it.</summary>
     private static object Configured(
         string provider = "openai",
         string? apiKey = Key,
-        string composeModel = "gpt-4o-mini",
+        string composeModel = "",
         decimal? monthlyBudget = null,
         string baseUrl = "") => new
         {
             enabled = true,
-            provider,
-            apiKey,
-            baseUrl,
-            composeModel,
-            drawModel = "gpt-image-1",
-            improveEnabled = true,
-            draftEnabled = true,
-            readEnabled = true,
-            drawEnabled = false,
+            connections = new[] { new { provider, apiKey, baseUrl } },
+            uses = new[]
+            {
+                new { capability = "improve", enabled = true, provider, model = composeModel },
+                new { capability = "draft", enabled = true, provider, model = composeModel },
+                new { capability = "read", enabled = true, provider, model = composeModel }
+            },
             monthlyBudget,
             personalBudget = (decimal?)null
         };
+
+    /// <summary>A named connection out of the response, whatever order they came in.</summary>
+    private static System.Text.Json.JsonElement ConnectionFor(ApiResponse response, string provider) =>
+        response.Json!.Value.GetProperty("connections")
+            .EnumerateArray()
+            .Single(one => one.GetProperty("provider").GetString() == provider);
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 

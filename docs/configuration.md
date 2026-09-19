@@ -104,6 +104,18 @@ to pin one rather than follow whatever Culina currently defaults to. Ollama is
 the exception and is asked for its address up front, because a model on your own
 machine is wherever you put it and there is no default that could be right.
 
+**Several providers at once.** Connect as many as you like, then give each job
+to one of them. The four jobs — improving a recipe, writing one from an idea,
+reading one out of a photograph, drawing a picture — do not want the same model:
+reading a cookbook page wants good vision, tidying wording wants something cheap
+that will be asked twenty times an evening, and drawing wants a provider that
+draws at all, which a model on your own hardware does not. A job with no
+provider is not offered, and its button does not appear.
+
+One connection per provider, not per name. Two Ollama boxes, or a direct OpenAI
+key alongside a gateway, would need connections to be named and managed; nobody
+has asked for that yet.
+
 Two things about it belong in a deployment decision rather than a screen, so
 they are said here instead.
 

@@ -1,3 +1,5 @@
+import type { components } from '$api/generated/schema';
+
 /**
  * What the assistant is, on this instance.
  *
@@ -6,12 +8,16 @@
  * runs on your own machine, so it has no key and no picture-drawing, and no
  * amount of configuring changes that. A round trip to learn it would be a round
  * trip to be told something that is true everywhere.
+ *
+ * What is *not* here is which model each provider defaults to. That is the
+ * server's to decide and the server sends it, so a form cannot show a
+ * placeholder the server has stopped agreeing with.
  */
 export const providers = ['gemini', 'openai', 'ollama'] as const;
 
 export type Provider = (typeof providers)[number];
 
-/** Which of the four things the assistant can be asked to do. */
+/** Which of the four jobs the assistant can be given. */
 export const capabilities = ['improve', 'draft', 'read', 'draw'] as const;
 
 export type Capability = (typeof capabilities)[number];
@@ -31,16 +37,6 @@ interface ProviderFacts {
   canDraw: boolean;
   /** What to put in the address box when it is empty, as a hint only. */
   addressHint: string;
-  /**
-   * The model used when nobody picks one.
-   *
-   * A hint in the form rather than a value: the server holds the same default
-   * and applies it, so an empty box means "whatever is current" rather than
-   * "whatever this build was shipped believing".
-   */
-  composeHint: string;
-  /** The same, for pictures. */
-  drawHint: string;
 }
 
 export const providerFacts: Record<Provider, ProviderFacts> = {
@@ -48,25 +44,19 @@ export const providerFacts: Record<Provider, ProviderFacts> = {
     needsApiKey: true,
     needsAddress: false,
     canDraw: true,
-    addressHint: 'https://generativelanguage.googleapis.com',
-    composeHint: 'gemini-3-flash-preview',
-    drawHint: 'gemini-3.1-flash-image-preview'
+    addressHint: 'https://generativelanguage.googleapis.com'
   },
   openai: {
     needsApiKey: true,
     needsAddress: false,
     canDraw: true,
-    addressHint: 'https://api.openai.com',
-    composeHint: 'gpt-6-astra',
-    drawHint: 'gpt-image-2.5-flare'
+    addressHint: 'https://api.openai.com'
   },
   ollama: {
     needsApiKey: false,
     needsAddress: true,
     canDraw: false,
-    addressHint: 'http://localhost:11434',
-    composeHint: 'llama3.2',
-    drawHint: ''
+    addressHint: 'http://localhost:11434'
   }
 };
 
@@ -75,21 +65,45 @@ export function isProvider(value: string): value is Provider {
   return (providers as readonly string[]).includes(value);
 }
 
-/** How the assistant is set up, as the settings screen works in it. */
-export interface Assistance {
-  enabled: boolean;
+/** Which providers could do this job at all. */
+export const providersFor = (capability: Capability): readonly Provider[] =>
+  capability === 'draw' ? providers.filter((one) => providerFacts[one].canDraw) : providers;
+
+/** One provider, as the settings screen works in it. */
+export interface Connection {
   provider: Provider;
   /** Whether a key is stored. Never the key: no endpoint returns it. */
   apiKeyConfigured: boolean;
-  /** Whether the connection has everything this provider needs. */
-  connected: boolean;
   baseUrl: string;
-  composeModel: string;
-  drawModel: string;
-  improveEnabled: boolean;
-  draftEnabled: boolean;
-  readEnabled: boolean;
-  drawEnabled: boolean;
+  /** Whether this connection has everything its provider needs. */
+  usable: boolean;
+  /**
+   * A new key typed into the form, if one was.
+   *
+   * Three states, matching what the endpoint distinguishes: `undefined` leaves
+   * the stored key alone, `''` removes it, and a value replaces it. Not part of
+   * what the server sends, because the server never sends a key.
+   */
+  apiKey?: string;
+}
+
+/** What does one job. */
+export interface Use {
+  capability: Capability;
+  enabled: boolean;
+  /** Empty when nothing was chosen, which means the job is not offered. */
+  provider: Provider | '';
+  /** Empty for the server's current default, which it sends below. */
+  model: string;
+  /** What the server would use if the model above is left empty. */
+  defaultModel: string;
+}
+
+/** How the assistant is set up. */
+export interface Assistance {
+  enabled: boolean;
+  connections: Connection[];
+  uses: Use[];
   monthlyBudget: number | null;
   personalBudget: number | null;
 }
@@ -119,4 +133,32 @@ export interface CapabilityUsage {
   capability: string;
   calls: number;
   cost: number;
+}
+
+type AssistanceWire = components['schemas']['SettingsGetAssistanceResponse'];
+
+/** Reads what the server sent, dropping anything this build cannot draw. */
+export function toAssistance(wire: AssistanceWire): Assistance {
+  return {
+    enabled: wire.enabled,
+    connections: wire.connections
+      .filter((one) => isProvider(one.provider))
+      .map((one) => ({
+        provider: one.provider as Provider,
+        apiKeyConfigured: one.apiKeyConfigured,
+        baseUrl: one.baseUrl,
+        usable: one.usable
+      })),
+    uses: wire.uses
+      .filter((one) => (capabilities as readonly string[]).includes(one.capability))
+      .map((one) => ({
+        capability: one.capability as Capability,
+        enabled: one.enabled,
+        provider: isProvider(one.provider) ? one.provider : '',
+        model: one.model,
+        defaultModel: one.defaultModel
+      })),
+    monthlyBudget: wire.monthlyBudget ?? null,
+    personalBudget: wire.personalBudget ?? null
+  };
 }

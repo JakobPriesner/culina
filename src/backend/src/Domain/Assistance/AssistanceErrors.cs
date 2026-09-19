@@ -139,12 +139,6 @@ public static class AssistanceErrors
         "The model connected to this kitchen does not draw pictures.",
         ErrorType.Validation);
 
-    /// <summary>A provider that has to be told where it is was not told.</summary>
-    public static readonly Error AddressRequired = new(
-        "assistance.address_required",
-        "A model running on your own hardware has to be told where it is.",
-        ErrorType.Validation);
-
     /// <summary>The address given for a provider could not be read as one.</summary>
     public static readonly Error InvalidBaseUrl = new(
         "assistance.invalid_base_url",
