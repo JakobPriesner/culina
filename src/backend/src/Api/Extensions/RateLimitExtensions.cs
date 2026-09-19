@@ -53,6 +53,17 @@ internal static class RateLimitExtensions
     /// </remarks>
     internal const string Source = "recipe-source";
 
+    /// <summary>
+    /// Asking the assistant for anything.
+    /// </summary>
+    /// <remarks>
+    /// The only endpoint in Culina where one request costs real money, so it is
+    /// the only one where a ceiling is about the bill rather than about the
+    /// server. The budget in settings is the backstop; this is what stops
+    /// somebody reaching it in a minute by holding down a button.
+    /// </remarks>
+    internal const string Assistance = "assistance";
+
     internal static IServiceCollection AddCulinaRateLimiter(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -78,6 +89,9 @@ internal static class RateLimitExtensions
 
             options.AddPolicy(Source, context =>
                 PerClient(context, limits.SourceRequestsPerHour, TimeSpan.FromHours(1)));
+
+            options.AddPolicy(Assistance, context =>
+                PerClient(context, limits.AssistantRequestsPerHour, TimeSpan.FromHours(1)));
 
             // A generous ceiling on everything else, so one misbehaving client
             // cannot exhaust the connection pool.

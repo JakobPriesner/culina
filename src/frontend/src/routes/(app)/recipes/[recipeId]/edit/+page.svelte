@@ -18,6 +18,8 @@
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
   import { units } from '$features/recipes/stores/units.svelte';
   import { session } from '$features/auth/session.svelte';
+  import DraftReview from '$features/assistance/DraftReview.svelte';
+  import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { busy } from '$shell/busy.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
@@ -229,6 +231,33 @@
     }
 
     autosave.touch();
+  }
+
+  /**
+   * Asks the assistant to tidy this recipe up.
+   *
+   * Nothing is applied here. The answer opens a review, and only what somebody
+   * ticks there reaches `change()` — which matters more in this editor than it
+   * would in most, because there is no Save button: anything that reached
+   * `change()` would be on its way to the server 800 ms later.
+   */
+  async function improve(): Promise<void> {
+    if (!draft || !session.activeHouseholdId) {
+      return;
+    }
+
+    await drafts.ask({
+      kind: 'revision',
+      householdId: session.activeHouseholdId,
+      recipeId,
+      language: draft.language
+    });
+  }
+
+  /** Folds the accepted parts in as one change, so it is one save. */
+  function acceptDraft(patch: Partial<Recipe>): void {
+    change(patch);
+    drafts.dismiss();
   }
 
   /** A number somebody typed, in either of the two ways Europe writes one. */
@@ -474,6 +503,17 @@
         {/if}
 
         <EditorSection id="recipe" title={m['editor.section.recipe']()}>
+          {#snippet action()}
+            <!-- Only when the instance has an assistant and this capability is
+                 on. Absent rather than disabled: an instance with no model must
+                 look exactly like Culina looked before there was one. -->
+            {#if session.user?.assistance.improve}
+              <Button variant="secondary" size="sm" loading={drafts.asking} onclick={improve}>
+                {m['assist.improve']()}
+              </Button>
+            {/if}
+          {/snippet}
+
           <div class="fields">
             <Field label={m['editor.title']()}>
               {#snippet children({ id, describedBy, invalid })}
@@ -679,6 +719,16 @@
     </div>
   {/if}
 </Page>
+
+{#if drafts.draft && draft}
+  <DraftReview
+    open={true}
+    draft={drafts.draft}
+    current={draft}
+    onaccept={acceptDraft}
+    onclose={() => drafts.dismiss()}
+  />
+{/if}
 
 <style>
   /*

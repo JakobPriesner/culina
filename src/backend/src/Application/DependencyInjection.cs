@@ -1,5 +1,6 @@
 using Application.Abstractions.Messaging;
 using Application.Archive;
+using Application.Assistance;
 using Application.Cookbooks;
 using Application.Cooking.CookPhoto;
 using Application.CookSessions;
@@ -19,6 +20,7 @@ using Application.Planning;
 using Application.Recipes.Create;
 using Application.Recipes.CreateShare;
 using Application.Recipes.Delete;
+using Application.Recipes.Drafts;
 using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
 using Application.Recipes.GetCookLog;
@@ -163,6 +165,11 @@ public static class DependencyInjection
                 UpdateAssistanceSettingsCommandHandler>()
             .AddScoped<IQueryHandler<GetAssistanceUsageQuery,
                 Contracts.Settings.GetAssistanceUsage.Response>, GetAssistanceUsageQueryHandler>()
+
+            // The assistant
+            .AddScoped<AssistantRun>()
+            .AddScoped<ICommandHandler<ComposeRecipeDraftCommand,
+                Contracts.Recipes.Drafts.Response>, ComposeRecipeDraftCommandHandler>()
 
             // Recipes
             .AddScoped<ICommandHandler<CreateRecipeCommand, Contracts.Recipes.RecipeDetail>,

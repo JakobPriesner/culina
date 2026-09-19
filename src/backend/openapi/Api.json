@@ -5070,6 +5070,88 @@
         }
       }
     },
+    "/api/v1/recipe-drafts": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Ask the assistant for a recipe",
+        "description": "A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.\n\n`kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and its language, and changing only how it reads.\n\n404 when this instance has no assistant, or has that capability switched off; the two are one answer because a caller learns nothing from being told which. 429 when the month's budget is spent.\n\nThe answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.",
+        "operationId": "composeRecipeDraftV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesDraftsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesDraftsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/suggestions": {
       "get": {
         "tags": [
@@ -6580,6 +6662,180 @@
           }
         },
         "description": "A new recipe."
+      },
+      "RecipesDraftsDraftGroupContract": {
+        "required": [
+          "ingredients"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The heading, or null for the implicit first group.",
+            "nullable": true
+          },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesDraftsDraftIngredientContract"
+            },
+            "description": "Its lines, in order."
+          }
+        },
+        "description": "A heading and the lines under it."
+      },
+      "RecipesDraftsDraftIngredientContract": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "description": "How much, or null when the recipe does not say.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "In what, or null.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The shoppable noun."
+          },
+          "note": {
+            "type": "string",
+            "description": "The preparation.",
+            "nullable": true
+          }
+        },
+        "description": "One ingredient line."
+      },
+      "RecipesDraftsDraftStepContract": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "What this step is called, when it is called anything.",
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "description": "What to do."
+          },
+          "durationSeconds": {
+            "type": "integer",
+            "description": "How long it waits, when it waits.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "description": "One instruction."
+      },
+      "RecipesDraftsRequest": {
+        "required": [
+          "kind",
+          "householdId"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "What is being asked for: `idea`, `text` or `revision`."
+          },
+          "householdId": {
+            "type": "string",
+            "description": "Whose kitchen it is for.",
+            "format": "uuid"
+          },
+          "material": {
+            "type": "string",
+            "description": "The material, for `idea` and `text`.",
+            "nullable": true
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "Which recipe to rewrite, for `revision`.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "description": "The language to answer in: `en` or `de`.",
+            "nullable": true
+          }
+        },
+        "description": "Asks the assistant for a recipe."
+      },
+      "RecipesDraftsResponse": {
+        "required": [
+          "groups",
+          "steps",
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "What the assistant called it.",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "A sentence or two about it.",
+            "nullable": true
+          },
+          "yieldAmount": {
+            "type": "number",
+            "description": "How many it makes.",
+            "format": "double",
+            "nullable": true
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "What it makes: servings, or a cake.",
+            "nullable": true
+          },
+          "prepMinutes": {
+            "type": "integer",
+            "description": "Minutes of hands-on work.",
+            "format": "int32",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "type": "integer",
+            "description": "Minutes of cooking.",
+            "format": "int32",
+            "nullable": true
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesDraftsDraftGroupContract"
+            },
+            "description": "The ingredient groups, in order."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesDraftsDraftStepContract"
+            },
+            "description": "The steps, in order."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What to file it under."
+          }
+        },
+        "description": "A recipe the assistant wrote. Not saved, and not a recipe yet."
       },
       "RecipesGetAllIngredientMatch": {
         "required": [
@@ -8852,6 +9108,34 @@
         },
         "description": "Why a recipe was suggested."
       },
+      "UsersGetCurrentAssistanceAvailability": {
+        "required": [
+          "improve",
+          "draft",
+          "read",
+          "draw"
+        ],
+        "type": "object",
+        "properties": {
+          "improve": {
+            "type": "boolean",
+            "description": "Rewriting a recipe somebody already has."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Writing one from an idea."
+          },
+          "read": {
+            "type": "boolean",
+            "description": "Reading one out of a photograph or a block of text."
+          },
+          "draw": {
+            "type": "boolean",
+            "description": "Drawing a picture."
+          }
+        },
+        "description": "Which assistant capabilities are switched on."
+      },
       "UsersGetCurrentHouseholdMembership": {
         "required": [
           "householdId",
@@ -8884,6 +9168,7 @@
           "isAdmin",
           "createdAt",
           "households",
+          "assistance",
           "version"
         ],
         "type": "object",
@@ -8916,6 +9201,9 @@
               "$ref": "#/components/schemas/UsersGetCurrentHouseholdMembership"
             },
             "description": "The households they belong to."
+          },
+          "assistance": {
+            "$ref": "#/components/schemas/UsersGetCurrentAssistanceAvailability"
           },
           "version": {
             "type": "integer",

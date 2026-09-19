@@ -71,6 +71,17 @@ public sealed record RateLimitSettings
     /// </remarks>
     public int SharedRecipesPerIpPerMinute { get; init; } = 120;
 
+    /// <summary>
+    /// Requests to the assistant allowed per hour from one person.
+    /// </summary>
+    /// <remarks>
+    /// The only limit here that is about money rather than about load. Sixty an
+    /// hour is far more than anybody writing recipes will use — a draft takes
+    /// half a minute to read — and far less than a held-down button can spend
+    /// before the monthly budget notices.
+    /// </remarks>
+    public int AssistantRequestsPerHour { get; init; } = 60;
+
     /// <summary>Requests allowed per minute from one authenticated session.</summary>
     public int RequestsPerSessionPerMinute { get; init; } = 600;
 
@@ -84,6 +95,7 @@ public sealed record RateLimitSettings
         SettingsGuard.InRange(ImportsPerHour, 1, 10_000, SectionName, nameof(ImportsPerHour));
         SettingsGuard.InRange(SourceRequestsPerHour, 1, 100_000, SectionName, nameof(SourceRequestsPerHour));
         SettingsGuard.InRange(SharedRecipesPerIpPerMinute, 1, 100_000, SectionName, nameof(SharedRecipesPerIpPerMinute));
+        SettingsGuard.InRange(AssistantRequestsPerHour, 1, 10_000, SectionName, nameof(AssistantRequestsPerHour));
         SettingsGuard.InRange(RequestsPerSessionPerMinute, 10, 100_000, SectionName, nameof(RequestsPerSessionPerMinute));
     }
 }

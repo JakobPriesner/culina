@@ -1,3 +1,4 @@
+using Application.Abstractions;
 using Domain.Assistance;
 
 namespace Infrastructure.Assistance;
@@ -25,7 +26,7 @@ namespace Infrastructure.Assistance;
 /// total somebody is about to compare with an invoice.
 /// </para>
 /// </remarks>
-internal static class ModelPrices
+internal sealed class ModelPrices : IModelPrices
 {
     private const decimal PerMillion = 1_000_000m;
 
@@ -90,7 +91,7 @@ internal static class ModelPrices
     /// the difference between a usage screen that reads "nothing, because it is
     /// your own machine" and one that reads "we could not work it out".
     /// </remarks>
-    internal static decimal? Of(
+    public decimal? Of(
         AssistantKind provider,
         string model,
         int inputTokens,
@@ -117,24 +118,6 @@ internal static class ModelPrices
         }
 
         return ((inputTokens * price.Input) + (outputTokens * price.Output)) / PerMillion;
-    }
-
-    /// <summary>Whether this app can price the model at all.</summary>
-    /// <param name="provider">Which provider.</param>
-    /// <param name="model">Which model.</param>
-    /// <param name="drawing">Whether it is being asked to draw.</param>
-    internal static bool Knows(AssistantKind provider, string model, bool drawing)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (provider == AssistantKind.Ollama)
-        {
-            return true;
-        }
-
-        var name = model.Trim().ToLowerInvariant();
-
-        return drawing ? Match(Pictures, name) is not null : Match(Text, name) is not null;
     }
 
     private static TPrice? Match<TPrice>((string Prefix, TPrice Price)[] table, string name)
