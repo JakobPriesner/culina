@@ -1,4 +1,5 @@
 import { render } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import StepText from './StepText.svelte';
@@ -110,5 +111,28 @@ describe('StepText', () => {
     expect(cooking.container.querySelector('a')).toBeNull();
     expect(cooking.container.querySelector('button')).toBeNull();
     expect(cooking.container.querySelector('p')?.textContent).toBe('see the source');
+  });
+
+  it('illuminates the ingredient token when highlighted by the ingredient list', () => {
+    const { container } = render(StepText, {
+      props: { step: step([butter]), scaling, highlighted: 'i-butter' }
+    });
+
+    const button = container.querySelector('button.ingredient');
+    expect(button).toHaveClass('is-highlighted');
+  });
+
+  it('opens an Apple-style Quick-Look card on click', async () => {
+    const { container } = render(StepText, {
+      props: { step: step([butter]), scaling }
+    });
+
+    const button = container.querySelector('button.ingredient')!;
+    expect(container.querySelector('.quick-look')).toBeNull();
+
+    await userEvent.click(button);
+
+    expect(container.querySelector('.quick-look')).toBeInTheDocument();
+    expect(container.querySelector('.quick-look .name')?.textContent).toBe('butter');
   });
 });

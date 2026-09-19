@@ -1,7 +1,9 @@
 <script lang="ts">
   import Self from './StepInline.svelte';
+  import IngredientQuickLook from './IngredientQuickLook.svelte';
   import type { Scaling } from './scaled.svelte';
   import type { Inline } from './stepMarkdown';
+  import type { Ingredient } from '../types';
 
   /**
    * The formatted pieces of one paragraph or list item.
@@ -24,65 +26,171 @@
     /** Whether an ingredient reference can be pointed at. */
     interactive: boolean;
     onhighlight?: (ingredientId: string | null) => void;
+    /** Which ingredient is currently illuminated on the surface (bidirectional) */
+    highlighted?: string | null;
+    /** All recipe ingredients for quick-look metadata and totals */
+    recipeIngredients?: readonly Ingredient[];
+    onlocate?: (ingredientId: string) => void;
   }
 
-  let { nodes, scaling, interactive, onhighlight }: Props = $props();
+  let {
+    nodes,
+    scaling,
+    interactive,
+    onhighlight,
+    highlighted = null,
+    recipeIngredients = [],
+    onlocate
+  }: Props = $props();
+
+  let activeQuickLook = $state<number | null>(null);
+  let buttonRefs = $state<Record<number, HTMLElement>>({});
+
+  function totalFor(ingredientId: string): string | null {
+    const ing = recipeIngredients.find((i) => i.id === ingredientId);
+    return ing ? scaling.amountFor(ing).text : null;
+  }
+
+  function noteFor(ingredientId: string): string | null {
+    const ing = recipeIngredients.find((i) => i.id === ingredientId);
+    return ing?.note ?? null;
+  }
 </script>
 
 <!-- A link in a step goes off site by construction: the parser only keeps the
      ones that do, and resolve() is for this app's own routes. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 {#each nodes as node, index (index)}{#if node.kind === 'text'}{node.text}{:else if node.kind === 'ingredient'}{#if interactive}<button
+        bind:this={buttonRefs[index]}
         class="ingredient"
+        class:is-highlighted={highlighted === node.ingredientId}
         type="button"
         onmouseenter={() => onhighlight?.(node.ingredientId)}
         onmouseleave={() => onhighlight?.(null)}
         onfocus={() => onhighlight?.(node.ingredientId)}
-        onblur={() => onhighlight?.(null)}>{scaling.show(node.quantity).text} {node.name}</button
-      >{:else}<strong class="ingredient-plain"
+        onblur={() => onhighlight?.(null)}
+        onclick={() => (activeQuickLook = activeQuickLook === index ? null : index)}
+        >{scaling.show(node.quantity).text} {node.name}</button
+      >{#if activeQuickLook === index && buttonRefs[index]}<IngredientQuickLook
+          anchor={buttonRefs[index]}
+          name={node.name}
+          stepAmount={scaling.show(node.quantity).text}
+          totalAmount={totalFor(node.ingredientId)}
+          note={noteFor(node.ingredientId)}
+          onclose={() => (activeQuickLook = null)}
+          onlocate={onlocate ? () => onlocate?.(node.ingredientId) : undefined}
+        />{/if}{:else}<strong class="ingredient-plain"
         >{scaling.show(node.quantity).text} {node.name}</strong
       >{/if}{:else if node.kind === 'code'}<code>{node.text}</code
     >{:else if node.kind === 'link'}{#if interactive}<a
         href={node.href}
         rel="noreferrer nofollow"
-        target="_blank"><Self nodes={node.children} {scaling} {interactive} {onhighlight} /></a
+        target="_blank"
+        ><Self
+          nodes={node.children}
+          {scaling}
+          {interactive}
+          {onhighlight}
+          {highlighted}
+          {recipeIngredients}
+          {onlocate}
+        /></a
       >{:else}<Self
         nodes={node.children}
         {scaling}
         {interactive}
         {onhighlight}
+        {highlighted}
+        {recipeIngredients}
+        {onlocate}
       />{/if}{:else if node.kind === 'strong'}<strong
-      ><Self nodes={node.children} {scaling} {interactive} {onhighlight} /></strong
+      ><Self
+        nodes={node.children}
+        {scaling}
+        {interactive}
+        {onhighlight}
+        {highlighted}
+        {recipeIngredients}
+        {onlocate}
+      /></strong
     >{:else if node.kind === 'emphasis'}<em
-      ><Self nodes={node.children} {scaling} {interactive} {onhighlight} /></em
-    >{:else}<s><Self nodes={node.children} {scaling} {interactive} {onhighlight} /></s>{/if}{/each}
+      ><Self
+        nodes={node.children}
+        {scaling}
+        {interactive}
+        {onhighlight}
+        {highlighted}
+        {recipeIngredients}
+        {onlocate}
+      /></em
+    >{:else}<s
+      ><Self
+        nodes={node.children}
+        {scaling}
+        {interactive}
+        {onhighlight}
+        {highlighted}
+        {recipeIngredients}
+        {onlocate}
+      /></s
+    >{/if}{/each}
 
 <style>
   /*
-   * A button, not a span: pointing at an ingredient lights it up in the list,
-   * and a keyboard has to be able to do the same thing. Styled as text because
-   * it is text — the underline says it responds without making a sentence look
-   * like a toolbar.
+   * Apple-grade inline ingredient capsule:
+   * A tactile, translucent pill with tabular numbers and an elegant hover glow.
+   * Fits smoothly into pre-wrap running text without distorting line height.
    */
   .ingredient {
-    padding: 0;
-    border: none;
-    background: none;
-    color: inherit;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25em;
+    padding: 0.08em 0.45em;
+    margin: -0.08em 0.1em;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+    color: var(--text);
     font: inherit;
-    font-weight: var(--weight-semibold);
-    text-decoration: underline;
-    text-decoration-color: var(--border-strong);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.2em;
+    line-height: inherit;
     cursor: pointer;
+    vertical-align: baseline;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-spatial);
   }
 
   .ingredient:hover {
-    text-decoration-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface-raised));
+    border-color: var(--accent);
+    transform: translateY(-0.5px);
+  }
+
+  .ingredient:active {
+    transform: translateY(0.5px) scale(0.98);
+  }
+
+  .ingredient:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
+  }
+
+  /*
+   * Active bidirectional highlight:
+   * When hovering an ingredient in the ingredients list, all mentions of it
+   * across the steps illuminate with this warm, vibrant Apple glow.
+   */
+  .ingredient.is-highlighted {
+    background: var(--surface-highlight);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+    transform: translateY(-0.5px);
   }
 
   .ingredient-plain {
+    display: inline;
     font-weight: var(--weight-semibold);
   }
 
@@ -123,12 +231,12 @@
     .ingredient {
       display: inline;
       padding: 0;
+      margin: 0;
       border: 0;
       background: none;
       color: inherit;
-      font: inherit;
-      font-weight: var(--weight-medium);
-      text-decoration: none;
+      box-shadow: none;
+      transform: none;
     }
   }
 </style>

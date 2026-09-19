@@ -147,6 +147,17 @@
     rememberIngredientsView(view);
   };
 
+  const locateIngredient = (ingredientId: string) => {
+    highlighted = ingredientId;
+    const element = document.getElementById(`ingredient-row-${ingredientId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (element instanceof HTMLElement) {
+        element.focus({ preventScroll: true });
+      }
+    }
+  };
+
   const scaling = createScaling(
     () => recipe,
     () => servings
@@ -587,7 +598,12 @@
           <p class="leftovers">{m['recipe.notInAnyStep']()}</p>
         {/if}
 
-        <IngredientList ingredients={panel} {scaling} {highlighted} />
+        <IngredientList
+          ingredients={panel}
+          {scaling}
+          {highlighted}
+          onhover={(id) => (highlighted = id)}
+        />
       {:else if !perStep}
         <!-- Two different emptinesses. While cooking the list is filtered to
              what this step needs, so "none written down" would be a lie about a
@@ -621,7 +637,12 @@
                    what step two needs is level with step two. -->
               {#if perStep && needs.length > 0}
                 <div class="step-needs">
-                  <IngredientList ingredients={needs} {scaling} {highlighted} />
+                  <IngredientList
+                    ingredients={needs}
+                    {scaling}
+                    {highlighted}
+                    onhover={(id) => (highlighted = id)}
+                  />
                 </div>
               {/if}
 
@@ -662,7 +683,14 @@
                     <StepNeeds ingredients={needs} {scaling} />
                   {/if}
 
-                  <StepText {step} {scaling} onhighlight={(id) => (highlighted = id)} />
+                  <StepText
+                    {step}
+                    {scaling}
+                    {highlighted}
+                    onhighlight={(id) => (highlighted = id)}
+                    recipeIngredients={written}
+                    onlocate={locateIngredient}
+                  />
                 </div>
               {/if}
             </li>

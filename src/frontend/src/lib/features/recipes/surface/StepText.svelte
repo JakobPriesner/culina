@@ -2,7 +2,7 @@
   import type { Scaling } from './scaled.svelte';
   import StepInline from './StepInline.svelte';
   import { parseStep } from './stepMarkdown';
-  import type { Step } from '../types';
+  import type { Ingredient, Step } from '../types';
 
   /**
    * One step, written as Markdown, with its ingredients written into the
@@ -29,9 +29,22 @@
     interactive?: boolean;
     /** Called as the reader's eye moves, so the ingredient list can light up. */
     onhighlight?: (ingredientId: string | null) => void;
+    /** Which ingredient is highlighted on the surface (bidirectional) */
+    highlighted?: string | null;
+    /** All recipe ingredients for quick-look metadata and totals */
+    recipeIngredients?: readonly Ingredient[];
+    onlocate?: (ingredientId: string) => void;
   }
 
-  let { step, scaling, interactive = true, onhighlight }: Props = $props();
+  let {
+    step,
+    scaling,
+    interactive = true,
+    onhighlight,
+    highlighted = null,
+    recipeIngredients = [],
+    onlocate
+  }: Props = $props();
 
   const blocks = $derived(parseStep(step.segments));
 </script>
@@ -39,18 +52,46 @@
 {#each blocks as block, index (index)}
   {#if block.kind === 'paragraph'}
     <p class="text">
-      <StepInline nodes={block.children} {scaling} {interactive} {onhighlight} />
+      <StepInline
+        nodes={block.children}
+        {scaling}
+        {interactive}
+        {onhighlight}
+        {highlighted}
+        {recipeIngredients}
+        {onlocate}
+      />
     </p>
   {:else if block.ordered}
     <ol class="list">
       {#each block.items as item, position (position)}
-        <li><StepInline nodes={item} {scaling} {interactive} {onhighlight} /></li>
+        <li>
+          <StepInline
+            nodes={item}
+            {scaling}
+            {interactive}
+            {onhighlight}
+            {highlighted}
+            {recipeIngredients}
+            {onlocate}
+          />
+        </li>
       {/each}
     </ol>
   {:else}
     <ul class="list">
       {#each block.items as item, position (position)}
-        <li><StepInline nodes={item} {scaling} {interactive} {onhighlight} /></li>
+        <li>
+          <StepInline
+            nodes={item}
+            {scaling}
+            {interactive}
+            {onhighlight}
+            {highlighted}
+            {recipeIngredients}
+            {onlocate}
+          />
+        </li>
       {/each}
     </ul>
   {/if}

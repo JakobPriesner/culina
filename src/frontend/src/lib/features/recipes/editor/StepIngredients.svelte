@@ -63,14 +63,14 @@
       {@const inTheText = named.has(ingredient.id)}
 
       <li class="chip" class:named={inTheText}>
+        {#if inTheText}
+          <!-- Named in the sentence, so it is live-connected to the text -->
+          <span class="badge" title={m['editor.namedInStep']({ name: ingredient.name })}>@</span>
+        {/if}
         {#if amount}<span class="amount">{amount}</span>{/if}
         <span class="name">{ingredient.name}</span>
 
-        {#if inTheText}
-          <!-- Named in the sentence, so it is not this row's to remove: take
-               the word out of the step and the chip goes with it. -->
-          <span class="pinned" title={m['editor.namedInStep']({ name: ingredient.name })}>@</span>
-        {:else}
+        {#if !inTheText}
           <IconButton
             label={m['editor.removeStepIngredient']({ name: ingredient.name })}
             size="sm"
@@ -130,34 +130,51 @@
   }
 
   .chip {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-1);
-    padding-inline-start: var(--space-3);
+    gap: var(--space-2);
+    padding: 0.2rem var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-full);
-    background: var(--surface-sunken);
+    background: var(--surface-raised);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
   }
 
-  /* A chip the sentence already carries, marked rather than hidden: it belongs
-     in the count of what this step needs, and nothing here is removable. */
+  /* A chip the sentence already carries: marked with an Apple accent tint and badge */
   .chip.named {
-    border-style: dashed;
-    background: none;
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface-sunken));
+    border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: var(--radius-full);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+    font-size: 0.6875rem;
+    font-weight: var(--weight-bold);
+    margin-inline-start: -0.25rem;
   }
 
   .amount {
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-medium);
     white-space: nowrap;
   }
 
-  .pinned {
-    padding-inline: var(--space-2);
-    color: var(--text-subtle);
-    font-size: var(--text-xs);
+  .name {
+    color: var(--text);
   }
 
   .picker {
