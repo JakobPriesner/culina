@@ -24,6 +24,10 @@ env:
   # One place, so a bump is one edit rather than a hunt through the file.
   DOTNET_VERSION: '10.0.x'
   NODE_VERSION: '22'
+  # pnpm's version lives in `packageManager` in the frontend's package.json.
+  # There is none at the repository root, and every `pnpm/action-setup` here has
+  # to be pointed at that file or it fails with no version to install.
+  PNPM_PACKAGE_JSON: 'src/frontend/package.json'
   # Nothing here is an interactive session, and the telemetry notice is noise
   # in every log.
   DOTNET_NOLOGO: 'true'
@@ -77,6 +81,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -143,6 +149,8 @@ jobs:
           cache-dependency-path: src/backend/**/packages.lock.json
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -152,6 +160,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
         working-directory: src/frontend
+
+      # A service container runs no init scripts, so the three extensions that
+      # scripts/db-init.sh creates everywhere else have to be created here.
+      # Without them the first migration fails on `type "citext" does not exist`
+      # and the contract is never exported at all.
+      - name: The extensions the migrations expect
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d culina -v ON_ERROR_STOP=1 \
+            -c 'CREATE EXTENSION IF NOT EXISTS citext' \
+            -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm' \
+            -c 'CREATE EXTENSION IF NOT EXISTS unaccent'
 
       # The document is produced by enumerating the endpoints of a *started*
       # host, which is why this job needs a database at all.
@@ -184,6 +205,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -258,6 +281,10 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      # CodeQL reads the run it is part of. Without this the analyze step 403s
+      # on the workflow-runs API and the job ends as a configuration error,
+      # having found nothing.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -285,6 +312,9 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      # Same reason as the CodeQL job: uploading a SARIF reads the run it came
+      # from, and a token without this gets a 403 rather than a report.
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -299,6 +329,8 @@ jobs:
           cache-dependency-path: src/backend/**/packages.lock.json
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

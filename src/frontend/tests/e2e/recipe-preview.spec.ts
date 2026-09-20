@@ -24,7 +24,7 @@ test.describe('recipe experience preview @offline', () => {
     await search.fill('tomatoes');
     await expect(page.getByRole('status')).toHaveText('1 recipe');
     await search.fill('unfindable');
-    await expect(page.getByRole('heading', { name: 'Nothing here just yet.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nothing here just yet' })).toBeVisible();
     await page.getByRole('button', { name: 'Show all recipes', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('3 recipes');
   });
@@ -49,7 +49,7 @@ test.describe('recipe experience preview @offline', () => {
     await expect(page.getByText('Step 1 of 3', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Next step', exact: true }).click();
     await expect(page.getByText('Step 2 of 3', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Back to reading', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to recipe', exact: true }).click();
     await expect(page.getByRole('checkbox', { name: 'Orzo', exact: true })).toBeChecked();
     await expect(page.getByRole('spinbutton', { name: 'Servings' })).toHaveValue('3');
   });
@@ -119,7 +119,7 @@ test.describe('recipe preview continuity @offline', () => {
     await page.getByRole('button', { name: 'Continue cooking', exact: true }).click();
     await expect(page.getByText('Step 2 of 3', { exact: true })).toBeVisible();
     await expect(page.locator('[aria-current="step"]')).toBeFocused();
-    await page.getByRole('button', { name: 'Back to reading', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to recipe', exact: true }).click();
     await expect(page.getByRole('spinbutton', { name: 'Servings' })).toHaveValue('3');
     await expect(page.getByRole('checkbox', { name: 'Orzo', exact: true })).toBeChecked();
   });
@@ -145,7 +145,7 @@ test.describe('recipe preview continuity @offline', () => {
       ratio: 1
     });
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
-    await page.getByRole('button', { name: 'Back to reading', exact: true }).click();
+    await page.getByRole('button', { name: 'Back to recipe', exact: true }).click();
     await expect(page.getByRole('checkbox', { name: 'Orzo', exact: true })).toBeChecked();
     await expect(page.getByRole('spinbutton', { name: 'Servings' })).toHaveValue('3');
   });

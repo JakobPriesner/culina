@@ -79,6 +79,29 @@ const emptyUsage = {
   byCapability: []
 };
 
+/*
+ * Saving re-reads the session, because the four switches travel with the
+ * account. Answering that with the assistant's settings gave the session store
+ * a user with no households and crashed it a turn after the test had passed.
+ */
+const me = {
+  userId: 'u1',
+  email: 'jakob@example.com',
+  displayName: 'Jakob',
+  isAdmin: true,
+  createdAt: '2026-01-01T00:00:00Z',
+  version: 1,
+  households: [{ householdId: 'h1', name: 'Home', role: 'owner' }]
+};
+
+const myPreferences = {
+  locale: 'en',
+  theme: 'warm-paper',
+  mode: 'light',
+  measurementSystem: 'metric',
+  version: 1
+};
+
 function serverAnswers(settings: object = configured, models: object = offered) {
   const json = (body: object) =>
     new Response(JSON.stringify(body), {
@@ -91,6 +114,8 @@ function serverAnswers(settings: object = configured, models: object = offered) 
 
     if (url.includes('/usage')) return Promise.resolve(json(emptyUsage));
     if (url.includes('/models')) return Promise.resolve(json(models));
+    if (url.includes('/users/me/settings')) return Promise.resolve(json(myPreferences));
+    if (url.includes('/users/me')) return Promise.resolve(json(me));
 
     return Promise.resolve(json(settings));
   });
