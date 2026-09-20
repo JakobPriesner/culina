@@ -511,11 +511,47 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    const row = rowFor('Draw a picture');
+    // Found by the default the server sent for this job rather than by the
+    // job's name or by the sentence under the field: both are product copy,
+    // and neither is what this is about. The box is — a picker with nothing in
+    // it and no box beside it is the dead end.
+    expect(screen.getByPlaceholderText('draw-default')).toBeInTheDocument();
+  });
 
-    expect(within(row).getAllByRole('combobox')).toHaveLength(1);
-    expect(within(row).getByRole('textbox')).toBeInTheDocument();
-    expect(screen.getByText(/Gemini listed nothing this job could use/)).toBeInTheDocument();
+  it('tells an empty catalogue apart from one that holds nothing for this job', async () => {
+    // The two look identical from a picker with nothing in it and need
+    // different things done about them: one is the key, the other is ordinary.
+    serverAnswers(configured, {
+      providers: [
+        { provider: 'openai', reachable: true, problem: null, models: [] },
+        {
+          provider: 'gemini',
+          reachable: true,
+          problem: null,
+          models: [{ id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', canDraw: false }]
+        }
+      ]
+    });
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // Both fall back to a box: "write from an idea" is given to OpenAI, which
+    // listed nothing at all, and the drawing job to Gemini, which listed one
+    // model that writes and none that draws.
+    const empty = screen.getByPlaceholderText('draft-default');
+    const wrongKind = screen.getByPlaceholderText('draw-default');
+
+    const hintOf = (field: HTMLElement) =>
+      field.closest('.field')?.querySelector('.hint')?.textContent ?? '';
+
+    // What they say is product copy and is not what this asserts. That they
+    // say different things is: one is the key, the other is ordinary, and a
+    // screen that gave both the same sentence would send somebody to replace a
+    // working key.
+    expect(hintOf(empty)).not.toBe('');
+    expect(hintOf(wrongKind)).not.toBe('');
+    expect(hintOf(empty)).not.toBe(hintOf(wrongKind));
   });
 
   it('says nothing leaves the machine when every job is local', async () => {

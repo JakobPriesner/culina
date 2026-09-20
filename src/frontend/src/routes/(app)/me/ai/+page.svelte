@@ -132,15 +132,31 @@
     ];
   }
 
-  /** Whether this provider answered but offered nothing this job could use. */
-  const listedNothingFor = (capability: Capability, use: Use): boolean => {
+  /**
+   * Why there is no list, in the case where the provider answered.
+   *
+   * Two different situations that read the same from a picker with nothing in
+   * it, and they need different things done about them. An empty catalogue is
+   * the key or the account: nothing at all was offered, so no job on this
+   * screen will ever have a list. A catalogue that simply holds nothing for
+   * *this* job is ordinary — a provider can offer forty models and none that
+   * draws.
+   */
+  function whyNoList(capability: Capability, use: Use): 'nothing-at-all' | 'none-for-job' | null {
     const listed = offeredBy(use.provider);
 
-    return (
-      listed?.reachable === true &&
-      !listed.models.some((model) => (capability === 'draw' ? model.canDraw : !model.canDraw))
-    );
-  };
+    if (listed?.reachable !== true) {
+      return null;
+    }
+
+    if (listed.models.length === 0) {
+      return 'nothing-at-all';
+    }
+
+    return listed.models.some((model) => (capability === 'draw' ? model.canDraw : !model.canDraw))
+      ? null
+      : 'none-for-job';
+  }
 
   function budget(value: string): number | null {
     const parsed = Number(value.replace(',', '.'));
@@ -347,10 +363,11 @@
             <!-- No list to choose from. A text box is what this was before
                  lists existed, and it still works — the convenience is what
                  is lost, never the ability to configure anything. -->
+            {@const why = whyNoList(capability, use)}
             <Field
               label={m['ai.job.model']()}
-              hint={listedNothingFor(capability, use)
-                ? m['ai.models.noneForJob']({
+              hint={why
+                ? m[`ai.models.${why === 'nothing-at-all' ? 'emptyCatalogue' : 'noneForJob'}`]({
                     provider: m[`ai.provider.${use.provider}`]()
                   })
                 : undefined}
