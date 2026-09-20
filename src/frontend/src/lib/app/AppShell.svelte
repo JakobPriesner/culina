@@ -43,6 +43,22 @@
   let dockHeight = $state(0);
   let barHeight = $state(0);
 
+  /**
+   * How tall the floating header is, for the few pages that put something of
+   * their own on its line.
+   *
+   * On a tablet the header is the brand and nothing else — the destinations are
+   * down on the bottom bar — so its right half is empty, and a page with its
+   * own navigation can use it. Lining up with the brand means knowing where the
+   * brand's line is, and the brand's height is its wordmark's, which is a font
+   * metric: measured for the same reason the bar below is.
+   *
+   * Left unset until it has been measured, so the token's own figure holds the
+   * place through the server's render rather than a zero that would put those
+   * pills half off the top edge until the page hydrates.
+   */
+  let headerHeight = $state(0);
+
   /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
   const creating = $derived(offersNewRecipe(page.url.pathname));
 </script>
@@ -51,13 +67,14 @@
   class="shell"
   style:--bar-inset="{barHeight}px"
   style:--bottom-inset="{dockHeight + barHeight}px"
+  style:--header-inset={headerHeight ? `${headerHeight}px` : null}
 >
   <!-- First in the tab order and invisible until focused: without it, reaching
        the page content by keyboard means tabbing through the navigation on
        every single page. -->
   <a class="skip" href="#content">{m['nav.skip']()}</a>
 
-  <header class="header">
+  <header class="header" bind:clientHeight={headerHeight}>
     {#if navigating.to}
       <span class="progress" role="progressbar" aria-label={m['app.navigating']()}></span>
     {/if}

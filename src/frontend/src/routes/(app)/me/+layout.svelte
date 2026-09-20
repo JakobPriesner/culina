@@ -173,6 +173,59 @@
     line-height: var(--leading-normal);
   }
 
+  /*
+   * On a tablet: up into the header, on the brand's line.
+   *
+   * The shell's header carries the brand and nothing else at this width — the
+   * destinations are down on the bottom bar — so the whole right half of that
+   * row is empty, and the categories were spending a line of their own
+   * directly underneath it. They move into the empty half instead, which buys
+   * the panel a line and, more to the point, puts the way between categories
+   * in the same place on every one of them.
+   *
+   * Sticky for the same reason the desktop rail is: the categories are how you
+   * leave a long archive, and a way out you have to scroll back up for is not
+   * one.
+   *
+   * Out of the flow — `height: 0`, centred on that zero — so the panel keeps
+   * the top of the page rather than being pushed down by a row that is no
+   * longer there. The offset is the middle of the header the shell measures,
+   * because the brand's line is set by the wordmark's font metrics; the token
+   * behind it is only the figure that holds the place until that lands.
+   */
+  @media (min-width: 48rem) and (max-width: 63.999rem) {
+    .settings {
+      gap: 0;
+    }
+
+    .rail {
+      position: sticky;
+      /* The header's scrim is opaque where these pills land. */
+      z-index: var(--z-sticky);
+      top: calc(var(--header-inset) / 2);
+      /* From the top of the page back up to the middle of the header. */
+      margin-block-start: calc(-1 * (var(--layout-page-space) + var(--header-inset) / 2));
+      height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    /* The navbar's own container, because this is now the navbar's row: the
+       pills need something to sit on once the page is scrolling underneath
+       them, and inventing a second kind of floating bar for one breakpoint is
+       how a header ends up looking assembled from parts. */
+    .categories {
+      flex-wrap: nowrap;
+      padding: var(--space-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: var(--surface-nav-glass);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-card);
+    }
+  }
+
   @media (min-width: 64rem) {
     .settings {
       grid-template-columns: 14rem minmax(0, 1fr);

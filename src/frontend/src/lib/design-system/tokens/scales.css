@@ -76,6 +76,13 @@
      from sticking to nothing. */
   --bottom-inset: 0px;
   --bar-inset: 0px;
+
+  /* How tall the shell's floating header is, for the few pages that put
+     something of their own on its line. AppShell measures the real value and
+     overrides this; the figure here is what the header comes to today — the
+     brand's own height plus its padding — so the markup is already in the right
+     place in the frame before the measurement lands. */
+  --header-inset: 5.625rem;
   --font-editorial: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
 
   --font-sans:
