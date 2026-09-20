@@ -8,7 +8,12 @@
    * never a styled `div`, because a div cannot be reached by keyboard, cannot
    * be activated by space, and tells a screen reader nothing.
    */
-  export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+  /**
+   * `media` is the one that is not about emphasis: it is where the button is.
+   * A control lying on a photograph cannot take its colour from the page,
+   * because the page is not what is behind it.
+   */
+  export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'media';
   export type ButtonSize = 'sm' | 'md' | 'lg';
 
   interface Props {
@@ -208,6 +213,29 @@
     background: var(--danger-hover);
   }
 
+  /*
+   * On a photograph.
+   *
+   * Dark glass and white text whichever mode the app is in, because what is
+   * behind it is a picture rather than a surface. Blurred where the browser
+   * will: it separates the label from a busy photograph without another
+   * shadow, and the translucency is what keeps it from looking like a sticker.
+   */
+  .media {
+    border-color: var(--border-on-media);
+    background: var(--control-on-media);
+    color: var(--text-on-media);
+    backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  .media:hover:not([aria-disabled='true']) {
+    background: var(--control-on-media-hover);
+  }
+
+  .media:active:not([aria-disabled='true']) {
+    background: var(--control-on-media-hover);
+  }
+
   .button[aria-disabled='true'],
   .button:disabled {
     cursor: not-allowed;
@@ -215,6 +243,17 @@
     color: var(--text-muted);
     border-color: var(--border);
     box-shadow: none;
+  }
+
+  /* After the rule above, which it has to beat: the app's disabled surfaces
+     are page colours, and on a picture they read as a solid tile. Fading the
+     glass says the same thing and stays glass. */
+  .media[aria-disabled='true'],
+  .media:disabled {
+    background: var(--control-on-media);
+    color: var(--text-on-media);
+    border-color: var(--border-on-media);
+    opacity: 0.45;
   }
 
   .label {

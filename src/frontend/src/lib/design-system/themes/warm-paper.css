@@ -49,6 +49,11 @@
   --warning: var(--c-amber-500);
   --warning-subtle: var(--c-amber-200);
 
+  --control-on-media: rgb(20 17 14 / 62%);
+  --control-on-media-hover: rgb(20 17 14 / 78%);
+  --border-on-media: rgb(255 255 255 / 22%);
+  --text-on-media: var(--c-white);
+
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
   --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
@@ -105,6 +110,11 @@
   --success-subtle: #2b3a27;
   --warning: #e3bd6c;
   --warning-subtle: #4a3a18;
+
+  --control-on-media: rgb(20 17 14 / 62%);
+  --control-on-media-hover: rgb(20 17 14 / 78%);
+  --border-on-media: rgb(255 255 255 / 22%);
+  --text-on-media: var(--c-white);
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
   --shadow-overlay: 0 8px 32px rgb(0 0 0 / 55%);
