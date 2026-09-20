@@ -201,7 +201,12 @@
         src={specimenPhoto}
         onpick={() => {}}
         onremove={() => {}}
-      ></ImageField>
+        extraAction={drawOne}
+      />
+
+      {#snippet drawOne()}
+        <Button variant="media" size="sm">Draw one</Button>
+      {/snippet}
 
       <!-- A picture being made. No progress, because a provider reports none
            until it has finished. -->

@@ -65,6 +65,20 @@
   --warning: var(--c-amber-500);
   --warning-subtle: var(--c-amber-200);
 
+  /*
+   * Controls that sit on a photograph.
+   *
+   * The same in both modes on purpose, and the only tokens here that are. A
+   * photograph is not lighter in light mode: a button on one has to be legible
+   * over whatever the picture happens to be underneath it, and the app's own
+   * surfaces — a white pill on a bright dish, a dark one on a dark kitchen —
+   * are exactly what fails there.
+   */
+  --control-on-media: rgb(20 17 14 / 62%);
+  --control-on-media-hover: rgb(20 17 14 / 78%);
+  --border-on-media: rgb(255 255 255 / 22%);
+  --text-on-media: var(--c-white);
+
   /* Effects. */
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);

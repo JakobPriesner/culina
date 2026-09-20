@@ -114,12 +114,15 @@
       <!-- On the picture, and only once there is one. Revealed by pointing at
            it or tabbing into it; always there where nothing can hover. -->
       <div class="overlay">
-        <!-- Disabled while a picture is being drawn: the drawing covers this,
-             so a pointer cannot reach it, and a control a keyboard can still
-             get to but a mouse cannot is a control that behaves differently
-             for different people. -->
+        <!-- All three the same weight, and all three `media`: the page's own
+             button colours are the thing that fails on a photograph — a white
+             pill on a bright dish, a ghost button that disappears into a dark
+             one. Disabled while a picture is being drawn, because the drawing
+             covers them and a control a keyboard can still reach but a mouse
+             cannot is a control that behaves differently for different
+             people. -->
         <Button
-          variant="secondary"
+          variant="media"
           size="sm"
           loading={busy}
           disabled={generating}
@@ -130,7 +133,7 @@
 
         {#if extraAction}{@render extraAction()}{/if}
 
-        <Button variant="ghost" size="sm" disabled={busy || generating} onclick={onremove}>
+        <Button variant="media" size="sm" disabled={busy || generating} onclick={onremove}>
           {removeLabel}
         </Button>
       </div>
@@ -230,9 +233,10 @@
     left: 0;
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: var(--space-2);
     padding: var(--space-3);
-    background: linear-gradient(to top, var(--scrim), transparent);
+    background: linear-gradient(to top, var(--scrim), transparent 90%);
     opacity: 0;
     transition:
       opacity var(--duration-base) var(--ease-out),
