@@ -20,6 +20,11 @@
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" />
     <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="OpenAI" />
+    <PackageReference Include="Google.GenAI" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
   </ItemGroup>
 
   <!-- Migrations are embedded so the runner needs no files on disk. -->
