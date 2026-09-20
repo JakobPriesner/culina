@@ -112,11 +112,12 @@ describe('deadlines', () => {
       http.POST('/api/v1/recipes/{recipeId}/image', { params: { path: { recipeId: 'r1' } } })
     );
 
-    // Measured at sixteen seconds on a real provider. At the ordinary deadline
-    // the browser gave up first and the server, knowing nothing of that,
-    // finished the drawing, paid for it and stored it — so the screen reported
-    // a failure while the picture sat on disk.
-    expect(asked).toEqual([60_000]);
+    // Measured at sixteen seconds on a real provider, and that is a fast one.
+    // At the ordinary deadline the browser gave up first and the server,
+    // knowing nothing of that, finished the drawing, paid for it and stored it
+    // — so the screen reported a failure while the picture sat on disk. Ten
+    // seconds past the server's own two minutes, so the server gives up first.
+    expect(asked).toEqual([130_000]);
   });
 
   it('keeps the short deadline for sending a photograph to the same address', async () => {

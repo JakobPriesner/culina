@@ -96,7 +96,7 @@ internal sealed class GeminiAssistant(
 
         try
         {
-            using var client = Client(@using);
+            using var client = Client(@using, drawing: true);
 
             var answered = await client.Models
                 .GenerateContentAsync(@using.Model, request.Subject, config, cancellationToken)
@@ -275,10 +275,13 @@ internal sealed class GeminiAssistant(
     /// hand-written client had — no redirects with a key attached, one pool,
     /// one deadline.
     /// </remarks>
-    private Client Client(Connected @using) => new(
+    private Client Client(Connected @using, bool drawing = false) => new(
         apiKey: @using.ApiKey,
         httpOptions: new HttpOptions { BaseUrl = @using.BaseUrl },
-        clientOptions: new ClientOptions { HttpClientFactory = () => http.ClientFor(@using.BaseUrl) });
+        clientOptions: new ClientOptions
+        {
+            HttpClientFactory = () => http.ClientFor(@using.BaseUrl, drawing)
+        });
 
     /// <summary>The failures that are the provider's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>
