@@ -146,12 +146,13 @@
   /**
    * A sum of money, with its unit on it.
    *
-   * Euros, stated rather than implied. The figures here are read next to a
-   * budget somebody typed, and a bare number beside another bare number is two
-   * numbers nobody can be sure are the same kind of thing.
+   * Dollars, stated rather than implied: it is what the hosted providers bill
+   * in, so it is what the prices these figures are built from are quoted in.
+   * The alternative is a bare number beside another bare number, and nobody
+   * can be sure those are the same kind of thing.
    */
   const money = (value: number): string =>
-    formatNumber(value, { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
+    formatNumber(value, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
 
   /** Whether any job is given to a provider that sends data off the machine. */
   const anythingHosted = $derived(
@@ -383,7 +384,7 @@
             <!-- Aria-hidden: the unit is in the section's own description, and
                  a lone currency symbol announced before the field would be a
                  word without a sentence. -->
-            <span class="unit" aria-hidden="true">€</span>
+            <span class="unit" aria-hidden="true">$</span>
             <TextInput
               {id}
               {describedBy}
@@ -405,7 +406,7 @@
       <Field label={m['ai.budget.personal']()}>
         {#snippet children({ id, describedBy, invalid })}
           <div class="amount">
-            <span class="unit" aria-hidden="true">€</span>
+            <span class="unit" aria-hidden="true">$</span>
             <TextInput
               {id}
               {describedBy}
@@ -535,7 +536,7 @@
     gap: var(--space-3);
   }
 
-  /* The unit beside the field rather than inside it: typing "€" into a box
+  /* The unit beside the field rather than inside it: typing "$" into a box
      that parses numbers is a mistake the box would have to reject. */
   .amount {
     display: flex;

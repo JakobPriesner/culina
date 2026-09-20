@@ -802,7 +802,7 @@
   "ai.draw.hint": "Erstellt ein Foto für ein Rezept ohne eigenes. Das teuerste der vier.",
   "ai.draw.unsupported": "Ollama zeichnet keine Bilder.",
   "ai.budget": "Budget",
-  "ai.budget.hint": "In Euro. Anfragen werden abgelehnt, sobald eine Grenze erreicht ist.",
+  "ai.budget.hint": "In US-Dollar, so rechnen die gehosteten Anbieter ab. Anfragen werden abgelehnt, sobald eine Grenze erreicht ist.",
   "ai.budget.monthly": "Diese Instanz, pro Monat",
   "ai.budget.personal": "Pro Person, pro Monat",
   "ai.budget.none": "Keine Grenze",

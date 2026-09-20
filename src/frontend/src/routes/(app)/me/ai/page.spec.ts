@@ -470,7 +470,7 @@ describe('the assistant settings page', () => {
 
     // A spend read next to a budget somebody typed: two bare numbers leave it
     // to the reader to assume they are the same kind of thing.
-    expect(screen.getAllByText(/€/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\$/).length).toBeGreaterThan(0);
     expect(screen.queryByText('3.5')).not.toBeInTheDocument();
   });
 
