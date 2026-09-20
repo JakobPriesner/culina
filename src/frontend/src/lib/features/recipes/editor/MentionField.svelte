@@ -310,9 +310,9 @@
    */
   .mention-pill {
     color: transparent;
-    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    background: var(--surface-accent-subtle);
     border-radius: var(--radius-sm);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+    box-shadow: 0 0 0 1px var(--border-accent);
   }
 
   .hint {

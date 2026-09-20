@@ -147,9 +147,9 @@
     gap: 0.25em;
     padding: 0.08em 0.45em;
     margin: -0.08em 0.1em;
-    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    border: 1px solid var(--border-accent);
     border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+    background: var(--surface-accent-subtle);
     color: var(--text);
     font: inherit;
     line-height: inherit;
@@ -163,7 +163,7 @@
   }
 
   .ingredient:hover {
-    background: color-mix(in srgb, var(--accent) 16%, var(--surface-raised));
+    background: var(--surface-highlight);
     border-color: var(--accent);
     transform: translateY(-0.5px);
   }
@@ -185,7 +185,7 @@
   .ingredient.is-highlighted {
     background: var(--surface-highlight);
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: var(--shadow-highlight);
     transform: translateY(-0.5px);
   }
 

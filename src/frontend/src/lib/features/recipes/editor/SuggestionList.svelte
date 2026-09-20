@@ -99,7 +99,7 @@
     margin: 0;
     padding: var(--space-1);
     list-style: none;
-    background: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
+    background: var(--surface-overlay-glass);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid var(--border);
@@ -158,10 +158,10 @@
     width: 1.25rem;
     height: 1.25rem;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    background: var(--surface-accent-subtle);
     color: var(--accent);
     font-size: 0.75rem;
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
   }
 
   .add-icon {
@@ -192,7 +192,7 @@
   .match {
     background: transparent;
     color: var(--accent);
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
   }
 
   .detail {

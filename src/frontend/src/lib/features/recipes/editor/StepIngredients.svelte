@@ -137,7 +137,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-full);
     background: var(--surface-raised);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+    box-shadow: var(--shadow-card);
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
     transition:
@@ -148,8 +148,8 @@
 
   /* A chip the sentence already carries: marked with an Apple accent tint and badge */
   .chip.named {
-    background: color-mix(in srgb, var(--accent) 7%, var(--surface-sunken));
-    border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+    background: var(--surface-accent-subtle);
+    border-color: var(--border-accent);
   }
 
   .badge {
@@ -159,10 +159,10 @@
     width: 1.125rem;
     height: 1.125rem;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    background: var(--surface-highlight);
     color: var(--accent);
     font-size: 0.6875rem;
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-semibold);
     margin-inline-start: -0.25rem;
   }
 
