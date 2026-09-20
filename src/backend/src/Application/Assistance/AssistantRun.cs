@@ -239,7 +239,14 @@ public sealed class AssistantRun(
                 CancellationToken.None)
             .ConfigureAwait(false);
 
-        return answered.Map(ok => ok.Answer);
+        // The ledger row above keeps the precise code; what leaves here does
+        // not. A refused key is the administrator's to fix and is nothing a
+        // person halfway through a recipe can act on, so they are told the
+        // assistant could not be reached — which, for them, is what happened.
+        return answered.Match(
+            ok => Result<TAnswer>.Success(ok.Answer),
+            error => Result<TAnswer>.Failure(
+                error == AssistanceErrors.Rejected ? AssistanceErrors.Unavailable : error));
     }
 
     /// <summary>The first instant of the calendar month, in UTC.</summary>

@@ -59,15 +59,44 @@ public static class AssistanceErrors
         "You have used your share of this month's assistant budget.",
         ErrorType.RateLimited);
 
-    /// <summary>The provider did not answer, took too long, or refused the key.</summary>
+    /// <summary>The provider did not answer, or took too long.</summary>
     /// <remarks>
-    /// One error for three causes on purpose. All three are somebody else's
-    /// server being unavailable to this one, none of them is the caller's to
-    /// fix, and the administrator has the log line that tells them apart.
+    /// One error for two causes on purpose. Both are somebody else's server
+    /// being unavailable to this one, neither is the caller's to fix, and the
+    /// administrator has the log line that tells them apart.
     /// </remarks>
     public static readonly Error Unavailable = new(
         "assistance.unavailable",
         "The assistant could not be reached just now. Try again in a moment.",
+        ErrorType.Unavailable);
+
+    /// <summary>
+    /// The provider answered, and would not accept the credential.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Told apart from <see cref="Unavailable"/> because the answer is a
+    /// different one: a provider that is down is waited for, and a key that is
+    /// refused is replaced. Nothing waiting will fix the second.
+    /// </para>
+    /// <para>
+    /// Worth its own error mostly because of what it is not. A key that signs
+    /// requests perfectly well can still be refused here: providers scope keys,
+    /// and listing the catalogue is a permission of its own that an inference
+    /// key need not carry. "Check the key" is then advice that sends somebody
+    /// to replace a key that was never wrong.
+    /// </para>
+    /// <para>
+    /// A cook never sees it — <c>AssistantRun</c> turns it back into
+    /// <see cref="Unavailable"/> before it leaves — because somebody in the
+    /// middle of cooking can do nothing with it. It is for the settings screen
+    /// and the ledger, where the person reading is the person with the key.
+    /// </para>
+    /// </remarks>
+    public static readonly Error Rejected = new(
+        "assistance.rejected",
+        "The provider would not accept the key. It may be wrong, or it may not be "
+        + "permitted to do this.",
         ErrorType.Unavailable);
 
     /// <summary>The provider answered, and said to slow down.</summary>

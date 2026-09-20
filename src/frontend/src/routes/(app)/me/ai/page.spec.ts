@@ -474,6 +474,24 @@ describe('the assistant settings page', () => {
     expect(screen.queryByText('3.5')).not.toBeInTheDocument();
   });
 
+  it('tells a refused key apart from a provider that is down', async () => {
+    serverAnswers(configured, {
+      providers: [
+        ...offered.providers.filter((one) => one.provider !== 'openai'),
+        { provider: 'openai', reachable: false, problem: 'assistance.rejected', models: [] }
+      ]
+    });
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // The two have different answers: a key is replaced, a provider is waited
+    // for. Telling somebody to check a key that signs every other call in this
+    // app is sending them after the wrong thing.
+    expect(screen.getByText(/OpenAI refused the key/)).toBeInTheDocument();
+    expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
+  });
+
   it('says nothing leaves the machine when every job is local', async () => {
     serverAnswers({
       ...configured,

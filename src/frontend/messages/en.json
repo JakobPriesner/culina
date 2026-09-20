@@ -885,6 +885,7 @@
   "ai.apiKey.add": "Add a key",
   "ai.job.model.any": "Chosen for you",
   "ai.models.unreachable": "{provider} did not answer, so its models could not be listed. Check the key and the address.",
+  "ai.models.rejected": "{provider} refused the key when asked what models it has. Either the key is wrong, or it is not permitted to list models — some providers scope that separately from making requests. The jobs given to it may still work; the model has to be typed rather than chosen.",
   "ai.models.typed": "Type the model name",
   "ai.models.listing": "Asking the provider…",
   "ai.models.unlisted": "The model lists could not be loaded, so the models below are typed rather than chosen. Saving still works."
