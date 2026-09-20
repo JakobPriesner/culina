@@ -153,6 +153,48 @@ describe('the assistant settings page', () => {
     expect(screen.getAllByText('Not connected')).toHaveLength(3);
   });
 
+  it('shows the form before the providers have said what they offer', async () => {
+    // The listing is one connection per provider to a company somewhere else.
+    // Holding the screen blank for it is the delay this guards against.
+    let answerModels = (_: Response) => {};
+    const listed = new Promise<Response>((resume) => {
+      answerModels = resume;
+    });
+
+    const json = (body: object) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: unknown) => {
+        const url = String(input instanceof Request ? input.url : input);
+
+        if (url.includes('/usage')) return Promise.resolve(json(emptyUsage));
+        if (url.includes('/models')) return listed;
+
+        return Promise.resolve(json(configured));
+      })
+    );
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // Everything but the model pickers is already usable.
+    expect(rowFor('Gemini')).toBeInTheDocument();
+    expect(screen.getAllByText('Asking the provider…').length).toBeGreaterThan(0);
+
+    answerModels(json(offered));
+    await settle();
+
+    expect(screen.queryByText('Asking the provider…')).not.toBeInTheDocument();
+    expect(
+      within(picker(rowFor('Draw a picture'), 1)).getByText('Nano Banana 2')
+    ).toBeInTheDocument();
+  });
+
   it('shows several providers connected at once', async () => {
     serverAnswers();
 

@@ -103,6 +103,11 @@
    * the other three see only the ones that do not. An empty first entry keeps
    * "whatever Culina currently defaults to" reachable, which is what most
    * instances should stay on.
+   *
+   * Null means there is no list: either the providers are still being asked,
+   * or this one did not answer. The two look different on screen, because a
+   * picker that is nearly there and a picker that is never coming ask
+   * different things of the person waiting.
    */
   function modelsFor(capability: Capability, use: Use) {
     const listed = offeredBy(use.provider);
@@ -261,7 +266,24 @@
         </Field>
 
         {#if use.provider !== ''}
-          {#if choices}
+          {#if !choices && assistance.listing}
+            <!-- The provider has not answered yet. A placeholder select rather
+                 than the text box below it: the box would be replaced by a
+                 select a moment later, under whatever had been typed into it. -->
+            <Field label={m['ai.job.model']()}>
+              {#snippet children({ id, describedBy, invalid })}
+                <Select
+                  {id}
+                  {describedBy}
+                  {invalid}
+                  inline
+                  disabled
+                  value=""
+                  options={[{ value: '', label: m['ai.models.listing']() }]}
+                />
+              {/snippet}
+            </Field>
+          {:else if choices}
             <Field label={m['ai.job.model']()}>
               {#snippet children({ id, describedBy, invalid })}
                 <Select
