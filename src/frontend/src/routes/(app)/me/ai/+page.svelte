@@ -105,10 +105,11 @@
    * "whatever Culina currently defaults to" reachable, which is what most
    * instances should stay on.
    *
-   * Null means there is no list: either the providers are still being asked,
-   * or this one did not answer. The two look different on screen, because a
-   * picker that is nearly there and a picker that is never coming ask
-   * different things of the person waiting.
+   * Null means there is no list to choose from: the providers are still being
+   * asked, this one did not answer, or it answered with nothing this job could
+   * use. All three end in the text box, because a name can always be typed —
+   * and a picker holding only "chosen for you" is the one outcome that leaves
+   * somebody stuck, since there is nothing in it and nowhere to type.
    */
   function modelsFor(capability: Capability, use: Use) {
     const listed = offeredBy(use.provider);
@@ -121,11 +122,25 @@
       capability === 'draw' ? model.canDraw : !model.canDraw
     );
 
+    if (wanted.length === 0) {
+      return null;
+    }
+
     return [
       { value: '', label: `${m['ai.job.model.any']()} — ${use.defaultModel}` },
       ...wanted.map((model) => ({ value: model.id, label: model.label }))
     ];
   }
+
+  /** Whether this provider answered but offered nothing this job could use. */
+  const listedNothingFor = (capability: Capability, use: Use): boolean => {
+    const listed = offeredBy(use.provider);
+
+    return (
+      listed?.reachable === true &&
+      !listed.models.some((model) => (capability === 'draw' ? model.canDraw : !model.canDraw))
+    );
+  };
 
   function budget(value: string): number | null {
     const parsed = Number(value.replace(',', '.'));
@@ -329,11 +344,17 @@
               {/snippet}
             </Field>
           {:else}
-            <!-- The provider did not answer, so there is no list to choose
-                 from. A text box is what this was before lists existed, and
-                 it still works — an unreachable provider costs the
-                 convenience, not the ability to configure anything. -->
-            <Field label={m['ai.job.model']()}>
+            <!-- No list to choose from. A text box is what this was before
+                 lists existed, and it still works — the convenience is what
+                 is lost, never the ability to configure anything. -->
+            <Field
+              label={m['ai.job.model']()}
+              hint={listedNothingFor(capability, use)
+                ? m['ai.models.noneForJob']({
+                    provider: m[`ai.provider.${use.provider}`]()
+                  })
+                : undefined}
+            >
               {#snippet children({ id, describedBy, invalid })}
                 <TextInput
                   {id}
