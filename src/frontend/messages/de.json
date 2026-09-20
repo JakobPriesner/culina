@@ -886,6 +886,8 @@
   "ai.job.model.any": "Für dich gewählt",
   "ai.models.unreachable": "{provider} hat nicht geantwortet, die Modelle konnten nicht geladen werden. Prüfe Schlüssel und Adresse.",
   "ai.models.rejected": "{provider} hat den Schlüssel abgelehnt, als nach den Modellen gefragt wurde. Entweder ist der Schlüssel falsch, oder er darf keine Modelle auflisten — manche Anbieter vergeben dafür eine eigene Berechtigung. Die Aufgaben können trotzdem funktionieren; das Modell muss dann eingetippt statt ausgewählt werden.",
+  "ai.models.emptyCatalogue": "{provider} hat geantwortet, aber überhaupt keine Modelle aufgelistet — weder für diese noch für eine andere Aufgabe. Meist darf der Schlüssel Anfragen stellen, aber den Katalog nicht lesen. Trag den Modellnamen ein, um ihn trotzdem zu verwenden.",
+  "ai.models.unfiltered": "Keines der Modelle von {provider} hat sich als die Art zu erkennen gegeben, die diese Aufgabe braucht — deshalb stehen alle zur Wahl. Ob ein Modell zeichnet, wird aus seinem Namen gelesen, und das ist geraten.",
   "ai.models.typed": "Modellnamen eingeben",
   "ai.models.listing": "Anbieter wird gefragt…",
   "ai.models.unlisted": "Die Modell-Listen konnten nicht geladen werden, deshalb werden die Modelle unten eingetippt statt ausgewählt. Speichern funktioniert trotzdem."

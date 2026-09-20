@@ -886,6 +886,8 @@
   "ai.job.model.any": "Chosen for you",
   "ai.models.unreachable": "{provider} did not answer, so its models could not be listed. Check the key and the address.",
   "ai.models.rejected": "{provider} refused the key when asked what models it has. Either the key is wrong, or it is not permitted to list models — some providers scope that separately from making requests. The jobs given to it may still work; the model has to be typed rather than chosen.",
+  "ai.models.emptyCatalogue": "{provider} answered, but listed no models at all — not for this job and not for any other. The key is usually allowed to make requests but not to read the catalogue. Type the model name to use it anyway.",
+  "ai.models.unfiltered": "None of {provider}'s models announced itself as the kind this job needs, so all of them are listed. Whether a model draws is read from its name, and that reading is a guess.",
   "ai.models.typed": "Type the model name",
   "ai.models.listing": "Asking the provider…",
   "ai.models.unlisted": "The model lists could not be loaded, so the models below are typed rather than chosen. Saving still works."

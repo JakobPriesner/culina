@@ -105,16 +105,21 @@
    * "whatever Culina currently defaults to" reachable, which is what most
    * instances should stay on.
    *
-   * Null means there is no list to choose from: the providers are still being
-   * asked, this one did not answer, or it answered with nothing this job could
-   * use. All three end in the text box, because a name can always be typed —
-   * and a picker holding only "chosen for you" is the one outcome that leaves
-   * somebody stuck, since there is nothing in it and nowhere to type.
+   * The filter is a convenience and never a gate. Whether a model draws is the
+   * adapter reading its name, because no provider states it — so when that
+   * reading leaves a job with nothing to choose from, the whole catalogue is
+   * offered instead of an empty list. Being wrong costs a call that fails with
+   * a clear message; hiding the model somebody is paying for costs them the
+   * feature, and no message at all explains where it went.
+   *
+   * Null means there is nothing to build a list from at all: the providers are
+   * still being asked, this one did not answer, or it answered with an empty
+   * catalogue. Those end in the text box, because a name can always be typed.
    */
   function modelsFor(capability: Capability, use: Use) {
     const listed = offeredBy(use.provider);
 
-    if (!listed?.reachable) {
+    if (!listed?.reachable || listed.models.length === 0) {
       return null;
     }
 
@@ -122,13 +127,11 @@
       capability === 'draw' ? model.canDraw : !model.canDraw
     );
 
-    if (wanted.length === 0) {
-      return null;
-    }
+    const offered = wanted.length > 0 ? wanted : listed.models;
 
     return [
       { value: '', label: `${m['ai.job.model.any']()} — ${use.defaultModel}` },
-      ...wanted.map((model) => ({ value: model.id, label: model.label }))
+      ...offered.map((model) => ({ value: model.id, label: model.label }))
     ];
   }
 
@@ -346,7 +349,17 @@
               {/snippet}
             </Field>
           {:else if choices}
-            <Field label={m['ai.job.model']()}>
+            <!-- The whole catalogue rather than the filtered part of it, when
+                 the filter came up empty. Said plainly under the picker, so
+                 nobody wonders why a writing model is being offered to the
+                 job that draws. -->
+            {@const unfiltered = whyNoList(capability, use) === 'none-for-job'}
+            <Field
+              label={m['ai.job.model']()}
+              hint={unfiltered
+                ? m['ai.models.unfiltered']({ provider: m[`ai.provider.${use.provider}`]() })
+                : undefined}
+            >
               {#snippet children({ id, describedBy, invalid })}
                 <Select
                   {id}
@@ -360,16 +373,13 @@
               {/snippet}
             </Field>
           {:else}
-            <!-- No list to choose from. A text box is what this was before
-                 lists existed, and it still works — the convenience is what
-                 is lost, never the ability to configure anything. -->
-            {@const why = whyNoList(capability, use)}
+            <!-- No list to choose from at all. A text box is what this was
+                 before lists existed, and it still works — the convenience is
+                 what is lost, never the ability to configure anything. -->
             <Field
               label={m['ai.job.model']()}
-              hint={why
-                ? m[`ai.models.${why === 'nothing-at-all' ? 'emptyCatalogue' : 'noneForJob'}`]({
-                    provider: m[`ai.provider.${use.provider}`]()
-                  })
+              hint={whyNoList(capability, use) === 'nothing-at-all'
+                ? m['ai.models.emptyCatalogue']({ provider: m[`ai.provider.${use.provider}`]() })
                 : undefined}
             >
               {#snippet children({ id, describedBy, invalid })}

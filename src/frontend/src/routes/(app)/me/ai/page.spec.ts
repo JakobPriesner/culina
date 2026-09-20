@@ -492,18 +492,18 @@ describe('the assistant settings page', () => {
     expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
   });
 
-  it('lets a model be typed when a provider listed nothing the job can use', async () => {
-    // OpenAI answering with a catalogue that holds no drawing model used to
-    // leave the drawing job a picker containing one entry — "chosen for you" —
-    // and no way to type anything. A list with nothing in it is worse than no
-    // list, because no list at least gives you the box back.
+  it('offers the whole catalogue when nothing in it looks like what the job needs', async () => {
+    // Whether a model draws is read from its name, so the filter is a guess.
+    // When the guess empties a job's list, the models are offered unfiltered:
+    // choosing a wrong one costs a call that fails with a clear message, and
+    // hiding the model somebody is paying for costs them the feature.
     serverAnswers(configured, {
       providers: [
         {
           provider: 'gemini',
           reachable: true,
           problem: null,
-          models: [{ id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', canDraw: false }]
+          models: [{ id: 'a-model-of-some-kind', label: 'A model', canDraw: false }]
         }
       ]
     });
@@ -511,11 +511,10 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // Found by the default the server sent for this job rather than by the
-    // job's name or by the sentence under the field: both are product copy,
-    // and neither is what this is about. The box is — a picker with nothing in
-    // it and no box beside it is the dead end.
-    expect(screen.getByPlaceholderText('draw-default')).toBeInTheDocument();
+    // Twice: once in the writing job Gemini also has, where the model belongs
+    // by the filter's own reading, and once in the drawing job, where it is
+    // offered only because the alternative was an empty picker.
+    expect(screen.getAllByRole('option', { name: 'A model' })).toHaveLength(2);
   });
 
   it('tells an empty catalogue apart from one that holds nothing for this job', async () => {
@@ -536,22 +535,20 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // Both fall back to a box: "write from an idea" is given to OpenAI, which
-    // listed nothing at all, and the drawing job to Gemini, which listed one
-    // model that writes and none that draws.
+    // OpenAI listed nothing at all, so its job falls back to the box.
     const empty = screen.getByPlaceholderText('draft-default');
-    const wrongKind = screen.getByPlaceholderText('draw-default');
 
     const hintOf = (field: HTMLElement) =>
       field.closest('.field')?.querySelector('.hint')?.textContent ?? '';
 
-    // What they say is product copy and is not what this asserts. That they
-    // say different things is: one is the key, the other is ordinary, and a
-    // screen that gave both the same sentence would send somebody to replace a
-    // working key.
+    // What it says is product copy and is not what this asserts. That it says
+    // anything is: a box with no explanation beside it is a dead end nobody
+    // can act on, and the usual cause — a key that may make requests but not
+    // read the catalogue — is not one anybody guesses.
     expect(hintOf(empty)).not.toBe('');
-    expect(hintOf(wrongKind)).not.toBe('');
-    expect(hintOf(empty)).not.toBe(hintOf(wrongKind));
+
+    // Gemini listed a model, so its job gets a picker rather than a box.
+    expect(screen.queryByPlaceholderText('draw-default')).not.toBeInTheDocument();
   });
 
   it('says nothing leaves the machine when every job is local', async () => {
