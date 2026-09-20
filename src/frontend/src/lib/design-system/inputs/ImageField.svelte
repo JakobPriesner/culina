@@ -100,6 +100,9 @@
   }: Props = $props();
 
   let picker = $state<ReturnType<typeof FilePicker>>();
+
+  /** The noise filter's own id, so two fields on a page do not share one. */
+  const grainId = $props.id();
 </script>
 
 <div class="field">
@@ -167,15 +170,45 @@
       <!-- Over whatever is underneath, because a picture being drawn is about
            to replace it. The frame does the waiting rather than a spinner in a
            button: this is a minute of somebody else's machine working, and a
-           spinner that size says "a moment". -->
+           spinner that size says "a moment".
+
+           Four layers, none of which reports progress: three lights drifting
+           at their own speeds, a band of specular crossing them, and a film of
+           grain over the lot. What makes it read as something being made
+           rather than as a page that has stopped is that no two frames repeat
+           — the drifts are prime-ish against each other, so the pattern does
+           not visibly loop. -->
       <div class="drawing" aria-hidden="true">
-        <span class="sweep"></span>
-        <span class="grain"></span>
+        <span class="light one"></span>
+        <span class="light two"></span>
+        <span class="light three"></span>
+        <span class="sheen"></span>
+
+        <!-- Real noise rather than a gradient pretending to be some: it is
+             what keeps the blur from looking like a cheap radial fill, and it
+             is the texture every photograph has before it resolves. -->
+        <svg class="grain" preserveAspectRatio="none">
+          <filter id={grainId}>
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#{grainId})" />
+        </svg>
       </div>
 
-      {#if generatingLabel}
-        <p class="drawing-label" role="status">{generatingLabel}</p>
-      {/if}
+      <div class="caption">
+        <!-- Four points rather than a ring: a spinner is what a page shows
+             while it fetches something that already exists. -->
+        <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 1.5c.9 5 3.6 7.7 8.6 8.6-5 .9-7.7 3.6-8.6 8.6-.9-5-3.6-7.7-8.6-8.6 5-.9 7.7-3.6 8.6-8.6Z"
+          />
+        </svg>
+
+        {#if generatingLabel}
+          <p class="drawing-label" role="status">{generatingLabel}</p>
+        {/if}
+      </div>
     {/if}
   </div>
 
@@ -294,78 +327,219 @@
   /*
    * A picture being drawn.
    *
-   * Two things at once, because that is what makes it read as work rather than
-   * as a stalled page: a band of light travelling across the frame, and a
-   * grain that breathes underneath it. Neither reports progress, because
-   * nothing here knows any — a provider says nothing until it has finished —
-   * and a bar that invents its own is a bar that lies.
+   * Everything here is composited — transform, opacity and filter only — so
+   * four moving layers cost the compositor and not the main thread. The frame
+   * is at most thirty centimetres of screen; this is not a background worth a
+   * repaint per frame.
    */
   .drawing {
     position: absolute;
     inset: 0;
     overflow: hidden;
     border-radius: var(--radius-lg);
-    background: var(--surface-sunken);
+    background: var(--generating-ground);
   }
 
-  .sweep,
+  /*
+   * The three lights.
+   *
+   * Each is one soft disc, blurred far past its own edge and drifting on its
+   * own clock. Durations that do not divide into each other, so the three
+   * never line up twice in the same way — a loop you can see is a loop that
+   * tells you nothing is really happening.
+   */
+  .light {
+    position: absolute;
+    width: 70%;
+    height: 85%;
+    border-radius: var(--radius-full);
+    filter: blur(28px);
+    opacity: 0.85;
+    will-change: transform;
+  }
+
+  .one {
+    top: -15%;
+    left: -10%;
+    background: var(--generating-1);
+    animation: drift-one 13s ease-in-out infinite;
+  }
+
+  .two {
+    right: -15%;
+    bottom: -20%;
+    background: var(--generating-2);
+    animation: drift-two 17s ease-in-out infinite;
+  }
+
+  .three {
+    top: 20%;
+    left: 30%;
+    width: 55%;
+    height: 60%;
+    background: var(--generating-3);
+    opacity: 0.6;
+    animation: drift-three 11s ease-in-out infinite;
+  }
+
+  /*
+   * The pass of specular.
+   *
+   * Steeper than the frame's diagonal and narrow, so it reads as light moving
+   * across a surface rather than as a bar crossing a box. Soft-light keeps it
+   * light rather than paint: it brightens what it crosses instead of covering
+   * it.
+   */
+  .sheen {
+    position: absolute;
+    inset: -20%;
+    background: linear-gradient(
+      115deg,
+      transparent 42%,
+      var(--generating-sheen) 50%,
+      transparent 58%
+    );
+    background-size: 250% 100%;
+    opacity: 0.35;
+    mix-blend-mode: soft-light;
+    animation: sheen 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
   .grain {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.22;
+    mix-blend-mode: overlay;
+    animation: grain 4.5s steps(1) infinite;
   }
 
-  .sweep {
-    background: linear-gradient(
-      105deg,
-      transparent 30%,
-      var(--surface-accent-subtle) 45%,
-      var(--surface-highlight) 50%,
-      var(--surface-accent-subtle) 55%,
-      transparent 70%
-    );
-    background-size: 300% 100%;
-    animation: sweep 2.4s var(--ease-spatial) infinite;
+  /*
+   * What it says, over the middle of it.
+   *
+   * Centred rather than along the bottom edge: the bottom edge is where this
+   * field keeps the things you can press, and a sentence there while they are
+   * unreachable reads as one of them.
+   */
+  .caption {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    transform: translateY(-50%);
+    pointer-events: none;
   }
 
-  .grain {
-    background:
-      radial-gradient(40% 55% at 30% 35%, var(--surface-accent-subtle), transparent 70%),
-      radial-gradient(45% 45% at 70% 65%, var(--surface-highlight), transparent 70%);
-    opacity: 0.55;
-    animation: breathe 3.6s ease-in-out infinite;
+  .spark {
+    width: var(--space-6);
+    height: var(--space-6);
+    fill: var(--text);
+    opacity: 0.75;
+    animation: spark 2.6s ease-in-out infinite;
   }
 
   .drawing-label {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    padding: var(--space-3);
-    color: var(--text-muted);
+    color: var(--text);
     font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
     text-align: center;
+    animation: pulse 2.6s ease-in-out infinite;
   }
 
-  @keyframes sweep {
-    from {
-      background-position: 150% 0;
-    }
-
-    to {
-      background-position: -150% 0;
-    }
-  }
-
-  @keyframes breathe {
+  @keyframes drift-one {
     0%,
     100% {
-      opacity: 0.45;
-      transform: scale(1);
+      transform: translate3d(0, 0, 0) scale(1);
     }
 
     50% {
-      opacity: 0.7;
-      transform: scale(1.06);
+      transform: translate3d(18%, 22%, 0) scale(1.18);
+    }
+  }
+
+  @keyframes drift-two {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1.1);
+    }
+
+    50% {
+      transform: translate3d(-22%, -16%, 0) scale(0.92);
+    }
+  }
+
+  @keyframes drift-three {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(0.9);
+    }
+
+    50% {
+      transform: translate3d(-14%, 18%, 0) scale(1.25);
+    }
+  }
+
+  @keyframes sheen {
+    0% {
+      background-position: 130% 0;
+    }
+
+    /* Held at the far edge for the second half, so the pass is an event with
+       a pause after it rather than a belt going round. */
+    60%,
+    100% {
+      background-position: -30% 0;
+    }
+  }
+
+  @keyframes grain {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+
+    25% {
+      transform: translate3d(-2%, 1%, 0);
+    }
+
+    50% {
+      transform: translate3d(1%, -2%, 0);
+    }
+
+    75% {
+      transform: translate3d(-1%, -1%, 0);
+    }
+
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes spark {
+    0%,
+    100% {
+      transform: scale(0.85) rotate(0deg);
+      opacity: 0.55;
+    }
+
+    50% {
+      transform: scale(1.1) rotate(45deg);
+      opacity: 0.95;
+    }
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+
+    50% {
+      opacity: 1;
     }
   }
 
@@ -376,9 +550,18 @@
       transition: none;
     }
 
-    .sweep,
-    .grain {
+    /* The wait is still a wait, so the frame still shows the lights and still
+       says what it is doing. It simply stops moving. */
+    .light,
+    .sheen,
+    .grain,
+    .spark,
+    .drawing-label {
       animation: none;
+    }
+
+    .spark {
+      opacity: 0.75;
     }
   }
 

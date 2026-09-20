@@ -49,6 +49,12 @@
   --warning: var(--c-amber-500);
   --warning-subtle: var(--c-amber-200);
 
+  --generating-ground: var(--c-sand-100);
+  --generating-1: var(--c-olive-200);
+  --generating-2: var(--c-terracotta-200);
+  --generating-3: var(--c-amber-200);
+  --generating-sheen: var(--c-white);
+
   --control-on-media: rgb(20 17 14 / 62%);
   --control-on-media-hover: rgb(20 17 14 / 78%);
   --border-on-media: rgb(255 255 255 / 22%);
@@ -110,6 +116,14 @@
   --success-subtle: #2b3a27;
   --warning: #e3bd6c;
   --warning-subtle: #4a3a18;
+
+  /* Deeper and more saturated: the pale tints that glow on paper disappear
+     on charcoal, and a light that does not glow is a stain. */
+  --generating-ground: var(--c-sand-900);
+  --generating-1: var(--c-olive-600);
+  --generating-2: var(--c-terracotta-600);
+  --generating-3: var(--c-amber-500);
+  --generating-sheen: var(--c-sand-300);
 
   --control-on-media: rgb(20 17 14 / 62%);
   --control-on-media-hover: rgb(20 17 14 / 78%);
