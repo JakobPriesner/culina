@@ -128,7 +128,7 @@ internal sealed class GeminiAssistant(
 
             await foreach (var model in pages.ConfigureAwait(false))
             {
-                if (Named(model) is not { Length: > 0 } id || !Usable(id))
+                if (Named(model) is not { Length: > 0 } id)
                 {
                     continue;
                 }
@@ -136,10 +136,11 @@ internal sealed class GeminiAssistant(
                 listed.Add(new ModelInfo(id, Labelled(model, id), DrawingModel.Draws(id, model.DisplayName)));
             }
 
-            IReadOnlyList<ModelInfo> offered = ModelLabels.Distinguish(
+            IReadOnlyList<ModelInfo> everything = ModelLabels.Distinguish(
                 [.. listed.OrderBy(model => model.Id, StringComparer.Ordinal)]);
 
-            return Result<IReadOnlyList<ModelInfo>>.Success(offered);
+            return Result<IReadOnlyList<ModelInfo>>.Success(
+                ModelCatalogue.Narrow(everything, model => Usable(model.Id)));
         }
         catch (Exception failure) when (Expected(failure))
         {

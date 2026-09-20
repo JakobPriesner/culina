@@ -2,6 +2,7 @@ using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Text.Json;
 using Application.Abstractions;
+using Application.Assistance;
 using Domain.Assistance;
 using Domain.Shared;
 using Microsoft.Extensions.AI;
@@ -137,16 +138,17 @@ internal sealed class OpenAiAssistant(
                 .GetModelsAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            IReadOnlyList<ModelInfo> offered =
+            IReadOnlyList<ModelInfo> everything =
             [
                 .. listed.Value
                     .Select(model => model.Id)
-                    .Where(Usable)
+                    .Where(id => id.Length > 0)
                     .Select(id => new ModelInfo(id, id, DrawingModel.Draws(id)))
                     .OrderBy(model => model.Id, StringComparer.Ordinal)
             ];
 
-            return Result<IReadOnlyList<ModelInfo>>.Success(offered);
+            return Result<IReadOnlyList<ModelInfo>>.Success(
+                ModelCatalogue.Narrow(everything, model => Usable(model.Id)));
         }
         catch (Exception failure) when (Expected(failure))
         {
@@ -261,14 +263,16 @@ internal sealed class OpenAiAssistant(
         Client(@using).GetChatClient(@using.Model).AsIChatClient();
 
     /// <summary>
-    /// What is left after the models that cannot write a recipe.
+    /// Whether this one could write a recipe.
     /// </summary>
     /// <remarks>
     /// This listing is everything the account can reach — embeddings, speech,
     /// transcription, moderation, the lot — and there is no field saying which
     /// is which. Filtering by name is crude and is the only thing available;
     /// erring towards keeping a model means an odd entry in a list, where
-    /// erring the other way means a model somebody wanted is missing.
+    /// erring the other way means a model somebody wanted is missing. And a
+    /// key that can reach only speech models would be filtered to nothing,
+    /// which <see cref="ModelCatalogue.Narrow"/> refuses to do.
     /// </remarks>
     private static bool Usable(string id) =>
         id.Length > 0
