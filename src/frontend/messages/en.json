@@ -802,7 +802,7 @@
   "ai.draw.hint": "Makes a photo for a recipe that has none. The most expensive of the four.",
   "ai.draw.unsupported": "Ollama does not draw pictures.",
   "ai.budget": "Budget",
-  "ai.budget.hint": "In whatever currency your provider bills in. Requests are refused once a ceiling is reached.",
+  "ai.budget.hint": "In euros. Requests are refused once a ceiling is reached.",
   "ai.budget.monthly": "This instance, per month",
   "ai.budget.personal": "Each person, per month",
   "ai.budget.none": "No ceiling",
@@ -886,5 +886,6 @@
   "ai.job.model.any": "Chosen for you",
   "ai.models.unreachable": "{provider} did not answer, so its models could not be listed. Check the key and the address.",
   "ai.models.typed": "Type the model name",
-  "ai.models.listing": "Asking the provider…"
+  "ai.models.listing": "Asking the provider…",
+  "ai.models.unlisted": "The model lists could not be loaded, so the models below are typed rather than chosen. Saving still works."
 }
