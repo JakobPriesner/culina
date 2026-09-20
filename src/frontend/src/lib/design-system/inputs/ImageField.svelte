@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { MediaQuery } from 'svelte/reactivity';
 
-  import Button from '../actions/Button.svelte';
+  import Button, { type ButtonVariant } from '../actions/Button.svelte';
   import Image from '../display/Image.svelte';
   import FilePicker from './FilePicker.svelte';
 
@@ -66,11 +67,13 @@
     /**
      * One more thing that can be done to the picture, from the caller.
      *
-     * Rendered with the other two, on the picture and under it, so a field
-     * with three ways to fill it looks like one control rather than a control
-     * with a button loose beside it.
+     * Rendered with the other two, so a field with three ways to fill it looks
+     * like one control rather than a control with a button loose beside it.
+     * Handed the variant the other two are using, because where the strip is
+     * decides how it has to look: glass on a photograph, an ordinary button on
+     * the page below one.
      */
-    extraAction?: Snippet;
+    extraAction?: Snippet<[ButtonVariant]>;
     /** What went wrong, already in words the reader can act on. */
     failure?: string | null;
     onpick: (file: File) => void;
@@ -103,6 +106,22 @@
 
   /** The noise filter's own id, so two fields on a page do not share one. */
   const grainId = $props.id();
+
+  /**
+   * Whether the actions go under the picture rather than on it.
+   *
+   * A strip revealed by hovering is a strip that does not exist on a phone or
+   * a tablet: there is nothing to hover with, and putting it there permanently
+   * covers the bottom of every photograph. Under it instead, filling the
+   * width, where a thumb can reach it.
+   *
+   * The same breakpoint the rest of the app calls desktop, and true while the
+   * server renders — the laid-out version is the one that is right when
+   * nothing has measured anything yet.
+   */
+  const compact = new MediaQuery('(max-width: 63.999rem)', true);
+
+  const actionVariant = $derived<ButtonVariant>(compact.current ? 'secondary' : 'media');
 </script>
 
 <div class="field">
@@ -114,32 +133,10 @@
     {#if src}
       <Image {src} {srcset} {sizes} {alt} {ratio} />
 
-      <!-- On the picture, and only once there is one. Revealed by pointing at
-           it or tabbing into it; always there where nothing can hover. -->
-      <div class="overlay">
-        <!-- All three the same weight, and all three `media`: the page's own
-             button colours are the thing that fails on a photograph — a white
-             pill on a bright dish, a ghost button that disappears into a dark
-             one. Disabled while a picture is being drawn, because the drawing
-             covers them and a control a keyboard can still reach but a mouse
-             cannot is a control that behaves differently for different
-             people. -->
-        <Button
-          variant="media"
-          size="sm"
-          loading={busy}
-          disabled={generating}
-          onclick={() => picker?.open()}
-        >
-          {replaceLabel}
-        </Button>
-
-        {#if extraAction}{@render extraAction()}{/if}
-
-        <Button variant="media" size="sm" disabled={busy || generating} onclick={onremove}>
-          {removeLabel}
-        </Button>
-      </div>
+      <!-- On the picture where there is a pointer to reveal it with. -->
+      {#if !compact.current}
+        <div class="overlay">{@render strip()}</div>
+      {/if}
     {:else}
       <!-- The same box the picture will occupy, drawn rather than left blank:
            an empty field that shows its own dimensions is a form saying what it
@@ -216,8 +213,14 @@
     <div class="actions">
       <Button loading={busy} onclick={() => picker?.open()}>{chooseLabel}</Button>
 
-      {#if extraAction}{@render extraAction()}{/if}
+      <!-- An empty field is on the page rather than on a photograph, so what
+           the caller puts here is an ordinary button whichever screen it is. -->
+      {#if extraAction}{@render extraAction('secondary')}{/if}
     </div>
+  {:else if compact.current}
+    <!-- Under the picture, filling the line: a phone has no hover, and a strip
+         left permanently on the photograph covers the bottom of every one. -->
+    <div class="actions filled-actions">{@render strip()}</div>
   {/if}
 
   {#if failure}
@@ -227,12 +230,46 @@
   <FilePicker bind:this={picker} label={chooseLabel} {accept} {onpick} />
 </div>
 
+<!--
+  The three things you can do to a picture, in the one place they are written.
+
+  All three the same weight, whichever variant they are wearing: this is a
+  strip of things you can do, not a hierarchy, and the one that deletes is the
+  last that should be hard to read. Disabled while a picture is being drawn —
+  on the photograph the drawing covers them, and a control a keyboard can still
+  reach but a pointer cannot is a control that behaves differently for
+  different people.
+-->
+{#snippet strip()}
+  <Button
+    variant={actionVariant}
+    size="sm"
+    loading={busy}
+    disabled={generating}
+    onclick={() => picker?.open()}
+  >
+    {replaceLabel}
+  </Button>
+
+  {#if extraAction}{@render extraAction(actionVariant)}{/if}
+
+  <Button variant={actionVariant} size="sm" disabled={busy || generating} onclick={onremove}>
+    {removeLabel}
+  </Button>
+{/snippet}
+
 <style>
   .field {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-3);
+  }
+
+  /* The picture's own width, so the strip under it is exactly as wide as the
+     thing it acts on rather than as wide as the form. */
+  .filled-actions {
+    width: min(30rem, 100%);
   }
 
   .label {
@@ -283,15 +320,6 @@
     transform: translateY(0);
   }
 
-  /* A touch screen has nothing to hover with, and a control that only appears
-     on hover is a control that does not exist there. */
-  @media (hover: none) {
-    .overlay {
-      opacity: 1;
-      transform: none;
-    }
-  }
-
   .template {
     display: flex;
     flex-direction: column;
@@ -322,6 +350,33 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
+  }
+
+  /*
+   * The strip under a picture, on a screen that cannot hover.
+   *
+   * Full width and shared equally, because it is the whole line's worth of
+   * what you came here to do — and because a thumb aiming at a button wants
+   * the button to be the size of the row rather than the size of its word.
+   * They wrap on a narrow phone and each row still fills.
+   */
+  .filled-actions {
+    align-self: stretch;
+    gap: var(--space-2);
+  }
+
+  /*
+   * One line, shared equally.
+   *
+   * A basis of zero rather than of a word's width, so the three stay the same
+   * size as each other: let them wrap onto separate rows and the one that gets
+   * a row to itself becomes the biggest target on the screen — which, in this
+   * strip, would be the one that deletes the photograph. Labels wrap inside
+   * the buttons instead, which the button is already built for.
+   */
+  .filled-actions :global(.button) {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   /*

@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import ImageField from './ImageField.svelte';
 import { renderWithProviders } from '$lib/test/render';
@@ -76,6 +76,53 @@ describe('with a picture', () => {
     render({ ...withPhoto, busy: true });
 
     expect(screen.getByRole('button', { name: 'Remove the photo' })).toBeDisabled();
+  });
+});
+
+describe('where the things you can do to a picture are', () => {
+  const withPhoto = { src: 'https://example.test/photo.jpg' };
+
+  /** What the browser answers when the component asks how wide the screen is. */
+  const width = (narrow: boolean) =>
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: narrow,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false
+    }));
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('lays them on the picture where there is a pointer to reveal them with', () => {
+    width(false);
+
+    const { container } = render(withPhoto);
+
+    // On the picture, inside the frame: the strip is revealed by hovering, and
+    // a strip left there permanently covers the bottom of every photograph.
+    expect(container.querySelector('.frame .overlay')).not.toBeNull();
+    expect(container.querySelector('.filled-actions')).toBeNull();
+  });
+
+  it('puts them under it on a phone or a tablet, where nothing can hover', () => {
+    width(true);
+
+    const { container } = render(withPhoto);
+
+    expect(container.querySelector('.frame .overlay')).toBeNull();
+    expect(container.querySelector('.filled-actions')).not.toBeNull();
+  });
+
+  it('offers the same three either way', () => {
+    width(true);
+
+    render(withPhoto);
+
+    expect(screen.getByRole('button', { name: 'Replace the photo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove the photo' })).toBeInTheDocument();
   });
 });
 

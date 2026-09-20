@@ -6,7 +6,7 @@
  * recipe is — if it did, it would belong in `$features`.
  */
 export { default as FilterChip } from './actions/FilterChip.svelte';
-export { default as Button } from './actions/Button.svelte';
+export { default as Button, type ButtonVariant } from './actions/Button.svelte';
 export { default as IconButton } from './actions/IconButton.svelte';
 
 export { default as Card } from './containment/Card.svelte';
