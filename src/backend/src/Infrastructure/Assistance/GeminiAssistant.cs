@@ -141,13 +141,15 @@ internal sealed class GeminiAssistant(
     /// Whether it draws.
     /// </summary>
     /// <remarks>
-    /// Read from the name, because nothing in the listing says so. Google names
-    /// every one of its image models with "image" in it, which is a convention
-    /// rather than a guarantee — and being wrong costs a failed call with a
-    /// clear error rather than a wrong recipe.
+    /// Read from the name, because nothing in the listing says so plainly — and
+    /// from the display name too, because that is where "Nano Banana" is
+    /// written. <c>predict</c> is the one thing the listing does say: it is how
+    /// the Imagen family is served, and nothing that writes text uses it.
     /// </remarks>
     private static bool Draws(GeminiModel model) =>
-        Named(model).Contains("image", StringComparison.OrdinalIgnoreCase);
+        DrawingModel.Draws(Named(model), model.DisplayName)
+        || (model.SupportedGenerationMethods ?? []).Any(method =>
+            method.StartsWith("predict", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The id to send, without the <c>models/</c> the listing prefixes.</summary>
     private static string Named(GeminiModel model) =>

@@ -125,7 +125,7 @@ internal sealed class OpenAiAssistant(
             .. (list.Data ?? [])
                 .Select(model => model.Id ?? string.Empty)
                 .Where(Usable)
-                .Select(id => new ModelInfo(id, id, Draws(id)))
+                .Select(id => new ModelInfo(id, id, DrawingModel.Draws(id)))
                 .OrderBy(model => model.Id, StringComparer.Ordinal)
         ]);
     }
@@ -149,10 +149,6 @@ internal sealed class OpenAiAssistant(
         && !id.Contains("audio", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("realtime", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Whether it draws, which OpenAI says in the name and nowhere else.</summary>
-    private static bool Draws(string id) =>
-        id.Contains("image", StringComparison.OrdinalIgnoreCase)
-        || id.StartsWith("dall-e", StringComparison.OrdinalIgnoreCase);
 
     private static void Authorize(HttpRequestMessage message, string key) =>
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
