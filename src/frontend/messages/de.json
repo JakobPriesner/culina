@@ -885,5 +885,6 @@
   "ai.apiKey.add": "Schlüssel hinzufügen",
   "ai.job.model.any": "Für dich gewählt",
   "ai.models.unreachable": "{provider} hat nicht geantwortet, die Modelle konnten nicht geladen werden. Prüfe Schlüssel und Adresse.",
-  "ai.models.typed": "Modellnamen eingeben"
+  "ai.models.typed": "Modellnamen eingeben",
+  "ai.models.listing": "Anbieter wird gefragt…"
 }

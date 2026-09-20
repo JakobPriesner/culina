@@ -29,6 +29,7 @@ class AssistanceStore {
   #usage = $state<Usage | null>(null);
   #models = $state<ProviderModels[]>([]);
   #loading = $state(false);
+  #listing = $state(false);
   #saving = $state(false);
   #error = $state<AppError | null>(null);
 
@@ -55,6 +56,11 @@ class AssistanceStore {
     return this.#loading;
   }
 
+  /** Whether the providers are still being asked what they offer. */
+  get listing(): boolean {
+    return this.#listing;
+  }
+
   get saving(): boolean {
     return this.#saving;
   }
@@ -68,10 +74,17 @@ class AssistanceStore {
     this.#loading = true;
     this.#error = null;
 
-    const [settings, usage, models] = await Promise.all([
+    // Deliberately not awaited with the other two. The form and the spend are
+    // database reads; the model lists are one connection per provider to a
+    // company somewhere else, made one after another. Waiting for all three
+    // together held the entire screen blank for as long as the slowest of
+    // those answers took — so the lists arrive on their own, and the pickers
+    // they fill are the only thing that waits for them.
+    void this.refreshModels();
+
+    const [settings, usage] = await Promise.all([
       request(() => http.GET('/api/v1/settings/assistance')),
-      request(() => http.GET('/api/v1/settings/assistance/usage')),
-      request(() => http.GET('/api/v1/settings/assistance/models'))
+      request(() => http.GET('/api/v1/settings/assistance/usage'))
     ]);
 
     if (settings.ok) {
@@ -84,12 +97,6 @@ class AssistanceStore {
     // not stop somebody connecting a model.
     if (usage.ok) {
       this.#usage = toUsage(usage.value);
-    }
-
-    // Likewise. Without the lists the model pickers become text boxes, which
-    // is how this worked before and is still usable.
-    if (models.ok) {
-      this.#models = toProviderModels(models.value);
     }
 
     this.#loading = false;
@@ -147,13 +154,24 @@ class AssistanceStore {
     return outcome.error;
   }
 
-  /** Asks the providers again, after a key or address has changed. */
+  /**
+   * Asks the providers what they offer, on opening the screen and again after
+   * a key or an address has changed.
+   *
+   * A failure is not an error on this screen. Without the lists the model
+   * pickers become text boxes, which is how this worked before and is still
+   * usable.
+   */
   async refreshModels(): Promise<void> {
+    this.#listing = true;
+
     const models = await request(() => http.GET('/api/v1/settings/assistance/models'));
 
     if (models.ok) {
       this.#models = toProviderModels(models.value);
     }
+
+    this.#listing = false;
   }
 
   reset(): void {
@@ -161,6 +179,7 @@ class AssistanceStore {
     this.#usage = null;
     this.#models = [];
     this.#loading = false;
+    this.#listing = false;
     this.#saving = false;
     this.#error = null;
   }

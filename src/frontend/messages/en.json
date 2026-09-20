@@ -885,5 +885,6 @@
   "ai.apiKey.add": "Add a key",
   "ai.job.model.any": "Chosen for you",
   "ai.models.unreachable": "{provider} did not answer, so its models could not be listed. Check the key and the address.",
-  "ai.models.typed": "Type the model name"
+  "ai.models.typed": "Type the model name",
+  "ai.models.listing": "Asking the provider…"
 }
