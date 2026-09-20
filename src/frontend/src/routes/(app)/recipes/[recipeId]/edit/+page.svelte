@@ -3,7 +3,7 @@
 
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, ErrorState, Field, Skeleton, TextArea, TextInput } from '$ds';
+  import { Button, ErrorState, Field, Select, Skeleton, TextArea, TextInput } from '$ds';
   import { createAutosave } from '$features/recipes/editor/autosave.svelte';
   import EditorRail from '$features/recipes/editor/EditorRail.svelte';
   import EditorSection from '$features/recipes/editor/EditorSection.svelte';
@@ -21,9 +21,10 @@
   import DraftReview from '$features/assistance/DraftReview.svelte';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { busy } from '$shell/busy.svelte';
+  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
-  import type { Ingredient, Recipe, Step } from '$features/recipes/types';
+  import type { Ingredient, Recipe, RecipeLanguage, Step } from '$features/recipes/types';
 
   /**
    * Writing a recipe down.
@@ -350,6 +351,17 @@
   });
 
   /**
+   * The two languages a recipe can be written in, named in their own.
+   *
+   * A list of two, so a select rather than anything cleverer — the same
+   * control, and the same two words, as the language choice in the settings.
+   */
+  const languages = $derived([
+    { value: 'en', label: m['locale.en']() },
+    { value: 'de', label: m['locale.de']() }
+  ]);
+
+  /**
    * What the small word beside the title says.
    *
    * In the order that matters. A conflict is never masked by anything
@@ -519,6 +531,15 @@
             {/if}
           {/snippet}
 
+          <!-- An ask that failed has to say so here. The review dialog only
+               opens on an answer, so without this the button spends a few
+               seconds looking busy and then goes quiet — which is what a
+               budget that is spent, a provider that is down and a bug all
+               looked like. -->
+          {#if drafts.error}
+            <p class="assistFailure" role="alert">{explain(drafts.error)}</p>
+          {/if}
+
           <div class="fields">
             <Field label={m['editor.title']()}>
               {#snippet children({ id, describedBy, invalid })}
@@ -541,6 +562,27 @@
                   {invalid}
                   value={current.description ?? ''}
                   oninput={(value) => change({ description: value || null })}
+                />
+              {/snippet}
+            </Field>
+
+            <!--
+              Asked here rather than guessed from the words, and asked at all
+              because it is not decoration: the search index picks its stemmer
+              from it, and the ingredient suggestions their language. It starts
+              as the language of whoever wrote the recipe down, which is right
+              often enough that most people will never open this.
+            -->
+            <Field label={m['editor.language']()} hint={m['editor.languageHint']()}>
+              {#snippet children({ id, describedBy, invalid })}
+                <Select
+                  {id}
+                  {describedBy}
+                  {invalid}
+                  inline
+                  options={languages}
+                  value={current.language}
+                  onchange={(value) => change({ language: value as RecipeLanguage })}
                 />
               {/snippet}
             </Field>
@@ -774,6 +816,16 @@
 {/if}
 
 <style>
+  /* Inside the section whose header holds the button, so the answer to
+     "why did nothing happen" is next to the thing that did nothing. */
+  .assistFailure {
+    max-width: var(--measure);
+    margin-bottom: var(--space-4);
+    color: var(--text-danger);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
   /*
    * A rail and a column, which is the shape every other second-level screen in
    * this app has: the settings categories sit exactly here.

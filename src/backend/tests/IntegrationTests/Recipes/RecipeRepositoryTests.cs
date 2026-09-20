@@ -312,6 +312,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
                 household.Id,
                 RecipeTitle.Create("Bolognese").ShouldBeSuccess(),
                 user.Id,
+                Language.En,
                 Now);
 
             var butter = RecipeIngredient.Create(

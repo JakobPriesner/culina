@@ -26,6 +26,7 @@ public sealed class Recipe
         Guid householdId,
         RecipeTitle title,
         Guid createdBy,
+        Language language,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
         long version)
@@ -40,7 +41,7 @@ public sealed class Recipe
         Groups = [IngredientGroup.Implicit()];
         Steps = [];
         Tags = [];
-        Language = Language.En;
+        Language = language;
         Yield = Yield.Default;
     }
 
@@ -108,16 +109,25 @@ public sealed class Recipe
     /// <param name="householdId">Which household owns it.</param>
     /// <param name="title">What it is called.</param>
     /// <param name="createdBy">Who wrote it down.</param>
+    /// <param name="language">The language it is being written in.</param>
     /// <param name="now">The injected current time.</param>
+    /// <remarks>
+    /// The language is asked for rather than defaulted, because the default it
+    /// used to have was English and nothing ever overwrote it for a recipe
+    /// somebody typed. It is not a detail either: the search index picks its
+    /// stemmer from this field, so a German recipe stored as English is one
+    /// <c>Tomaten</c> away from not finding itself.
+    /// </remarks>
     public static Recipe Create(
         Guid householdId,
         RecipeTitle title,
         Guid createdBy,
+        Language language,
         DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(title);
 
-        return new Recipe(CulinaId.New(), householdId, title, createdBy, now, now, version: 1);
+        return new Recipe(CulinaId.New(), householdId, title, createdBy, language, now, now, version: 1);
     }
 
     /// <summary>Rebuilds a recipe from storage.</summary>
@@ -139,7 +149,10 @@ public sealed class Recipe
     {
         ArgumentNullException.ThrowIfNull(title);
 
-        return new Recipe(id, householdId, title, createdBy, createdAt, updatedAt, version);
+        // English until Describe says otherwise, which every path out of
+        // storage does: a row carries a language and the reader applies it.
+        return new Recipe(
+            id, householdId, title, createdBy, Language.En, createdAt, updatedAt, version);
     }
 
     /// <summary>Sets everything that is not the ingredient list or the steps.</summary>

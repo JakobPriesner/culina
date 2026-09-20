@@ -149,6 +149,76 @@ public sealed class AssistantRun(
             cancellationToken);
     }
 
+    /// <summary>
+    /// Checks and affords a picture now, so that it can be asked for later.
+    /// </summary>
+    /// <param name="who">Who is asking, and for which kitchen.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <remarks>
+    /// <para>
+    /// Two phases for the same reason composing has them: drawing is streamed,
+    /// and a caller that opened the stream first would have already sent a 200
+    /// by the time it learned there is no assistant here or no budget left.
+    /// Those are not events, they are answers — a 404 and a 429, the second of
+    /// which carries how long to wait.
+    /// </para>
+    /// <para>
+    /// The money is set aside here and settled by the call below, which is what
+    /// stops two simultaneous requests both fitting into the last of it.
+    /// </para>
+    /// </remarks>
+    public async Task<Result<ReservedDrawing>> ReserveDrawingAsync(
+        Asker who,
+        CancellationToken cancellationToken)
+    {
+        var prepared = await PrepareAsync(who, Capability.Draw, DrawEstimate, cancellationToken)
+            .ConfigureAwait(false);
+
+        return prepared.Map(ready => new ReservedDrawing(this, ready));
+    }
+
+    /// <summary>
+    /// A provider already checked and afforded, still to be asked for a picture.
+    /// </summary>
+    /// <remarks>
+    /// Its own type rather than a tuple, because what a caller may do with it is
+    /// exactly one thing and the reservation behind it must be settled however
+    /// that goes.
+    /// </remarks>
+    public sealed class ReservedDrawing
+    {
+        private readonly AssistantRun run;
+        private readonly Reserved ready;
+
+        internal ReservedDrawing(AssistantRun run, Reserved ready)
+        {
+            this.run = run;
+            this.ready = ready;
+        }
+
+        /// <summary>Asks for the picture, and settles whatever it came to.</summary>
+        /// <param name="request">What to draw.</param>
+        /// <param name="cancellationToken">Cancels the call.</param>
+        public async Task<Result<Drawn>> AskAsync(
+            Drawing request,
+            CancellationToken cancellationToken)
+        {
+            var answered = await ready.Chosen.Assistant
+                .DrawAsync(ready.Chosen.Connected, request, cancellationToken)
+                .ConfigureAwait(false);
+
+            await run.SettleAsync(
+                    ready,
+                    answered.Match(drawn => drawn.Usage, _ => default),
+                    answered.Match(_ => "ok", error => error.Code))
+                .ConfigureAwait(false);
+
+            return answered.Match(
+                Result<Drawn>.Success,
+                error => Result<Drawn>.Failure(Leaving(error)));
+        }
+    }
+
     private async Task<Result<TAnswer>> RunAsync<TAnswer>(
         Asker who,
         Capability capability,
@@ -374,10 +444,10 @@ public sealed class AssistantRun(
         new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
 
     /// <summary>An adapter and the connection it is about to be called with.</summary>
-    private sealed record Chosen(IAssistant Assistant, AssistantKind Kind, Connected Connected);
+    internal sealed record Chosen(IAssistant Assistant, AssistantKind Kind, Connected Connected);
 
     /// <summary>A provider to call, and the money already set aside for it.</summary>
-    private sealed record Reserved(Guid ReservationId, Chosen Chosen);
+    internal sealed record Reserved(Guid ReservationId, Chosen Chosen);
 }
 
 /// <summary>Who is asking, for the ledger.</summary>

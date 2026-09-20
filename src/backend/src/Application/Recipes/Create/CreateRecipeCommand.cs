@@ -23,6 +23,7 @@ internal sealed class CreateRecipeCommandHandler(
     IRecipeRepository recipes,
     IHouseholdRepository households,
     IRecipeOriginRepository origins,
+    IUserPreferencesRepository preferences,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<CreateRecipeCommand, RecipeDetail>
@@ -48,6 +49,24 @@ internal sealed class CreateRecipeCommandHandler(
         return tracked.Record(result);
     }
 
+    /// <summary>
+    /// Writes the recipe, in the language the person who is writing it reads.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Their interface language rather than a field on the request, because it
+    /// is the one answer that is already true and cannot be forgotten: three
+    /// screens start a recipe here — a typed title, a pasted block, an
+    /// assistant's draft — and a field on the request is a field two of them
+    /// would eventually stop sending.
+    /// </para>
+    /// <para>
+    /// It is a guess, and the editor can correct it. It is a far better guess
+    /// than English, which is what this used to store for everybody: the
+    /// search index picks its stemmer from this field, and the ingredient
+    /// suggestions their language.
+    /// </para>
+    /// </remarks>
     private async Task<Result<RecipeDetail>> StoreAsync(
         CreateRecipeCommand command,
         RecipeTitle title,
@@ -56,7 +75,8 @@ internal sealed class CreateRecipeCommandHandler(
         // Nothing but a title. Everything else is optional and addable later,
         // which is what makes the create form something people finish.
         var now = time.GetUtcNow();
-        var recipe = Recipe.Create(command.HouseholdId, title, command.UserId, now);
+        var theirs = await preferences.GetAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        var recipe = Recipe.Create(command.HouseholdId, title, command.UserId, theirs.Language, now);
 
         return await unitOfWork.InTransactionAsync(
             async token =>

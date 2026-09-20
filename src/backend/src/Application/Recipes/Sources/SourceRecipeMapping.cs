@@ -41,7 +41,8 @@ internal static class SourceRecipeMapping
     /// Everything about a recipe except its ingredients and steps.
     /// </summary>
     /// <param name="source">The recipe over there.</param>
-    internal static Result<RecipeDetails> ToDetails(SourceRecipe source)
+    /// <param name="language">The language of the person bringing it over.</param>
+    internal static Result<RecipeDetails> ToDetails(SourceRecipe source, Language language)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -51,11 +52,13 @@ internal static class SourceRecipeMapping
             .Map(title => new RecipeDetails(
                 title,
                 Shorten(source.Description, MaxDescriptionLength),
-                // Not guessed from the words. Language decides how amounts and
-                // dates are written, and reading "Mehl" as German because it
-                // looks German is the kind of cleverness that gets one recipe
-                // in twenty wrong with no way to notice.
-                Language.En,
+                // Still not guessed from the words — reading "Mehl" as German
+                // because it looks German is the kind of cleverness that gets
+                // one recipe in twenty wrong with no way to notice. Taken from
+                // the person instead: somebody connecting their own library is
+                // almost always bringing over recipes in the language they
+                // read, and English for all of them was a guess too.
+                language,
                 ToYield(source.Servings),
                 Minutes(source.PrepMinutes),
                 Minutes(source.CookMinutes),

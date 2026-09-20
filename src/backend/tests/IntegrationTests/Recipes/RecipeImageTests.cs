@@ -336,6 +336,36 @@ public class RecipeImageTests(PostgresFixture postgres)
         return await client.SendAsync(request, Token);
     }
 
+    /// <summary>
+    /// Drawing on an instance with no assistant, which is nearly every one.
+    /// </summary>
+    /// <remarks>
+    /// A status code and not a stream, which is the whole reason the checks run
+    /// before the answer opens. They did not once: drawing streamed a 200
+    /// carrying a failure event instead, so an instance with no model answered
+    /// "here is your picture being made" and then, seconds later, that it could
+    /// not be. Nothing covered this route at all, which is how that got out.
+    /// </remarks>
+    [Fact]
+    public async Task Draw_ShouldSayThereIsNothingHere_WhenNoAssistantIsConnected()
+    {
+        // Arrange
+        var (client, recipeId) = await SeedAsync();
+
+        // Act
+        // No body and no content type, exactly as the browser asks for it.
+        var response = await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Post, $"/api/v1/recipes/{recipeId}/image"),
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("assistance.not_configured", response.ProblemCode);
+
+        // And nothing that looks like the beginning of an answer.
+        Assert.NotEqual("text/event-stream", response.ContentHeaders.ContentType?.MediaType);
+    }
+
     private async Task<(ApiClient Client, Guid RecipeId)> SeedAsync()
     {
         await postgres.ResetAsync(Token);

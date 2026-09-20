@@ -211,10 +211,13 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         return visible.Map(recipe => new Composition
         {
             Capability = Capability.Improve,
-            // The recipe's own language, not the caller's: rewriting a German
-            // recipe into English is not tidying it up.
+            // What it is stored as, which is the caller's business and not the
+            // prompt's. The instruction names no language at all: rewriting a
+            // German recipe into English is not tidying it up, and the stored
+            // field is not evidence of which one it is — nothing has ever asked
+            // anybody to set it, so a German recipe is usually stored as "en".
             Language = recipe.Language,
-            Instruction = AssistantPrompts.Improve(recipe.Language),
+            Instruction = AssistantPrompts.Improve(),
             Material = RecipeAsText.Of(recipe)
         });
     }

@@ -24,10 +24,10 @@ namespace Application.Assistance;
 /// prefix: OpenAI's automatic prefix cache, Gemini's implicit cache and Ollama's
 /// KV prefill reuse all keep whatever the front of this request has in common
 /// with the last one. Opening with the capability, as this file used to, meant
-/// the six strings below (three capabilities, two languages) diverged at
-/// character one and shared nothing. Opening with the block that is identical
-/// for all six means all six share it, and the two language variants of one
-/// capability share everything but the last sentence.
+/// the five strings below (two capabilities in two languages, and rewriting in
+/// none) diverged at character one and shared nothing. Opening with the block
+/// that is identical for all five means all five share it, and the two language
+/// variants of one capability share everything but the last sentence.
 /// </para>
 /// <para>
 /// Built once and held, so that two calls for the same job send bytes that are
@@ -87,7 +87,7 @@ internal static class AssistantPrompts
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The longest block and the first one, because it is the only one all six
+    /// The longest block and the first one, because it is the only one all five
     /// prompts share: everything below this is a prefix the providers can reuse
     /// from the previous call whatever that call was for.
     /// </para>
@@ -169,14 +169,21 @@ internal static class AssistantPrompts
          """;
 
     /// <summary>Rewrites a recipe somebody already wrote.</summary>
-    /// <param name="language">The language the answer must be in.</param>
     /// <remarks>
+    /// <para>
     /// "Do not invent" is the load-bearing sentence. The point of this
     /// capability is that somebody's own recipe comes back clearer, and a model
     /// that helpfully adds a clove of garlic has changed what they cook rather
     /// than how it reads.
+    /// </para>
+    /// <para>
+    /// The only composing prompt with no language to pick, which is why it
+    /// takes no argument. Translating somebody's recipe is not tidying it up
+    /// either, so the language is the material's own and this application has
+    /// no opinion to state about it.
+    /// </para>
     /// </remarks>
-    internal static string Improve(Language language) => Built[(Capability.Improve, language)];
+    internal static string Improve() => Improved;
 
     /// <summary>Writes one from an idea.</summary>
     /// <param name="language">The language the answer must be in.</param>
@@ -419,7 +426,7 @@ internal static class AssistantPrompts
     }
 
     /// <summary>
-    /// The last line of every composing prompt.
+    /// The last line of the two prompts that bring a recipe in from outside.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -443,14 +450,46 @@ internal static class AssistantPrompts
          name or a proper noun as it is written.
          """;
 
-    /// <summary>Every prompt this app can send, built once.</summary>
+    /// <summary>
+    /// The same closing position, spent on the opposite instruction.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The material here is not a page somebody found: it is their own recipe,
+    /// already in their own book, and the job is to make it read better.
+    /// Coming back in another language is not a better read, it is a different
+    /// recipe — so the one thing this line asks for is that nothing is
+    /// translated.
+    /// </para>
+    /// <para>
+    /// The recipe's stored language is not consulted for this and deliberately
+    /// so. It is a field nothing in the app has ever asked anybody to set, so
+    /// a German recipe is routinely stored as English; naming a language from
+    /// it is how a tidy-up turned into a translation. The words in front of the
+    /// model are the only reliable answer to what language this recipe is in.
+    /// </para>
+    /// </remarks>
+    private const string SameLanguageLine =
+        """
+        Write the recipe back in the language it is already written in — the
+        title, the description, the ingredient names, the notes, the steps and
+        the tags. Do not translate any of it, and do not switch language
+        part-way: whatever the material is written in is what you answer in,
+        and material that mixes two keeps each part in the one it is in.
+        """;
+
+    /// <summary>Every prompt that picks a language, built once.</summary>
     private static readonly FrozenDictionary<(Capability Capability, Language Language), string> Built =
-        (from capability in new[] { Capability.Improve, Capability.Draft, Capability.Read }
+        (from capability in new[] { Capability.Draft, Capability.Read }
          from language in Enum.GetValues<Language>()
          select KeyValuePair.Create(
              (capability, language),
              $"{House}\n\n{Job(capability)}\n\n{LanguageLine(language)}"))
         .ToFrozenDictionary();
+
+    /// <summary>The one that does not, built once beside them.</summary>
+    private static readonly string Improved =
+        $"{House}\n\n{Job(Capability.Improve)}\n\n{SameLanguageLine}";
 
     private static string Name(Language language) => language switch
     {

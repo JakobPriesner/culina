@@ -160,6 +160,16 @@ async function start(
       credentials: 'include',
       headers: {
         Accept: 'text/event-stream',
+        // A string body is this app's JSON, and it has to say so. Without
+        // this `fetch` labels it text/plain, the endpoint's JSON binding
+        // never matches the route, and the answer is a 404 about an endpoint
+        // that plainly exists — which reads on screen as a button that does
+        // nothing at all.
+        //
+        // FormData is left alone on purpose: the browser writes its own
+        // multipart type with the boundary in it, and a Content-Type set here
+        // would replace that with one the server cannot split.
+        ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { [csrfHeader]: token } : {})
       },
       body,

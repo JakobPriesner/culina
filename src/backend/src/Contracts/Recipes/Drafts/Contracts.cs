@@ -36,7 +36,8 @@ public sealed record Request
     /// Sent rather than inferred from the material, because inferring it gets
     /// the common case wrong: a German household pasting an English page wants
     /// a German recipe, and a model reading the page would answer in English.
-    /// Ignored for a revision, where the recipe's own language wins.
+    /// Ignored for a revision, which comes back in the language it is already
+    /// written in — tidying a recipe up is never translating it.
     /// </remarks>
     public string? Language { get; init; }
 }

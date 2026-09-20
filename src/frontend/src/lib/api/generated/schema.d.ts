@@ -1224,7 +1224,7 @@ export interface paths {
          * Ask the assistant for a recipe
          * @description A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.
          *
-         *     `kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and its language, and changing only how it reads.
+         *     `kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and the language it is written in, and changing only how it reads. `language` is ignored for a revision.
          *
          *     Server-sent events, because a model writes a recipe over tens of seconds and a screen that shows it arriving is a screen somebody reads rather than waits at. Each event carries the whole draft as far as it has been written — a title, then ingredients, then steps — and the last one says `finished`. A field the model has not finished writing is absent rather than half-written.
          *

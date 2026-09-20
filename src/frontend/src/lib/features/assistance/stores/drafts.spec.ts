@@ -67,15 +67,19 @@ type Draft = {
   tags: string[];
 };
 
-let asked: { url: string; method: string }[] = [];
+let asked: { url: string; method: string; type: string | null; body: unknown }[] = [];
 
 function assistant(reply: () => Response = () => new FakeStream().response) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: Request | string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+
       asked.push({
         url: typeof input === 'string' ? input : input.url,
-        method: typeof input === 'string' ? (init?.method ?? 'GET') : input.method
+        method: typeof input === 'string' ? (init?.method ?? 'GET') : input.method,
+        type: headers.get('Content-Type'),
+        body: init?.body
       });
 
       return Promise.resolve(reply());
@@ -217,6 +221,29 @@ describe('the draft store', () => {
     await finished;
   });
 
+  it('says its body is JSON, or the endpoint is not there at all', async () => {
+    assistant();
+
+    const drafts = createDraftStore();
+    const finished = drafts.ask({ ...anIdea, kind: 'revision', recipeId: 'r1' });
+
+    await opened();
+
+    // Without this `fetch` labels the body text/plain, the endpoint's JSON
+    // binding stops matching the route, and the answer is a 404 about an
+    // endpoint that plainly exists — which on screen is a button that spends
+    // a few seconds looking busy and then does nothing.
+    expect(asked[0]?.type).toBe('application/json');
+    expect(JSON.parse(String(asked[0]?.body))).toMatchObject({
+      kind: 'revision',
+      recipeId: 'r1'
+    });
+
+    FakeStream.last!.send({ draft: { title: 'Auberginen' }, finished: true });
+
+    await finished;
+  });
+
   it('posts a photograph to its own route, as multipart', async () => {
     assistant();
 
@@ -231,6 +258,11 @@ describe('the draft store', () => {
 
     expect(asked[0]?.method).toBe('POST');
     expect(asked[0]?.url).toContain('/api/v1/recipe-drafts/photographs?householdId=h1&language=de');
+
+    // Nothing set here on purpose: the browser writes its own multipart type
+    // with the boundary in it, and a Content-Type of ours would replace that
+    // with one the server cannot split.
+    expect(asked[0]?.type).toBeNull();
 
     FakeStream.last!.send({ draft: { title: 'Linsensuppe' }, finished: true });
 

@@ -35,6 +35,53 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Single(created.GetProperty("groups").EnumerateArray().ToList());
     }
 
+    /// <summary>
+    /// A recipe starts in the language the person who started it reads.
+    /// </summary>
+    /// <remarks>
+    /// Every recipe used to start in English, and nothing on any screen ever
+    /// overwrote it — so a German kitchen's whole library said "en", the search
+    /// index stemmed it with the English stemmer, and the assistant translated
+    /// it when asked to tidy it up.
+    /// </remarks>
+    [Fact]
+    public async Task Create_ShouldStartTheRecipeInTheLanguageItsAuthorReads()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        await ReadInGermanAsync(client);
+        var householdId = await FirstHouseholdIdAsync(client);
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId, title = "Linsensuppe" },
+            Token);
+
+        // Assert
+        Assert.Equal("de", response.Json!.Value.GetProperty("language").GetString());
+    }
+
+    [Fact]
+    public async Task Create_ShouldStartTheRecipeInEnglish_ForAnAccountThatNeverChoseALanguage()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+
+        // Act
+        var response = await client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId, title = "Bolognese" },
+            Token);
+
+        // Assert
+        // The default preference, arrived at honestly rather than hard-coded in
+        // the domain: an account that never opened the settings screen reads in
+        // English, so its recipes are written in English.
+        Assert.Equal("en", response.Json!.Value.GetProperty("language").GetString());
+    }
+
     [Fact]
     public async Task Create_ShouldBeRefused_ForAHouseholdTheCallerIsNotIn()
     {
@@ -491,6 +538,24 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         // a 400, described the way every other failure is.
         Assert.NotNull(response.ProblemCode);
         Assert.Equal(400, response.Json!.Value.GetProperty("status").GetInt32());
+    }
+
+    /// <summary>Switches the signed-in account to German.</summary>
+    private static async Task ReadInGermanAsync(ApiClient client)
+    {
+        var before = await client.GetAsync("/api/v1/users/me/settings", Token);
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/me/settings")
+        {
+            Content = JsonContent.Create(
+                new { locale = "de", theme = "warm-paper", mode = "system", measurementSystem = "metric" })
+        };
+
+        request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(before.ETag!));
+
+        var response = await client.SendAsync(request, Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private static async Task<Guid> FirstHouseholdIdAsync(ApiClient client) =>

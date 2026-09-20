@@ -11,15 +11,20 @@ namespace Application.Recipes.Sources;
 /// <param name="Reader">The app-specific client that knows how to ask.</param>
 /// <param name="CookbookId">The shelf this import lands on.</param>
 /// <param name="UserId">Who asked for it.</param>
+/// <param name="Language">The language they read, which every recipe lands in.</param>
 /// <remarks>
 /// Everything that is the same for every recipe in one import, passed once
-/// rather than threaded through six parameters per call.
+/// rather than threaded through six parameters per call. The language is here
+/// for exactly that reason: it is read once for the run rather than once per
+/// recipe, which for four hundred recipes is the difference between one query
+/// and four hundred.
 /// </remarks>
 public sealed record ImportInto(
     RecipeSource Source,
     IRecipeLibrary Reader,
     Guid CookbookId,
-    Guid UserId);
+    Guid UserId,
+    Language Language);
 
 /// <summary>
 /// One recipe: fetched, translated, written, and remembered.
@@ -100,13 +105,17 @@ internal sealed class RecipeImporter(
     {
         var now = time.GetUtcNow();
 
-        var built = SourceRecipeMapping.ToDetails(theirs)
+        var built = SourceRecipeMapping.ToDetails(theirs, into.Language)
             .Bind(details => SourceRecipeMapping.ToGroups(theirs)
                 .Bind(ingredients => SourceRecipeMapping.ToSteps(theirs, ingredients.Landed)
                     .Bind(steps =>
                     {
                         var recipe = Recipe.Create(
-                            into.Source.HouseholdId, details.Title, into.UserId, now);
+                            into.Source.HouseholdId,
+                            details.Title,
+                            into.UserId,
+                            into.Language,
+                            now);
 
                         return recipe.Describe(details, now)
                             .Bind(() => recipe.SetContents(ingredients.Groups, steps, now))

@@ -17,7 +17,7 @@ public class RecipeTests
         var title = RecipeTitle.Create("Bolognese").ShouldBeSuccess();
 
         // Act
-        var recipe = Recipe.Create(Household, title, Author, Now);
+        var recipe = Recipe.Create(Household, title, Author, Language.De, Now);
 
         // Assert
         Assert.Equal("Bolognese", recipe.Title.Value);
@@ -26,6 +26,10 @@ public class RecipeTests
         Assert.Single(recipe.Groups);
         Assert.Null(Assert.Single(recipe.Groups).Name);
         Assert.Empty(recipe.Steps);
+        // The one thing besides the title that must be said at the start: a
+        // recipe that begins in the wrong language is searched with the wrong
+        // stemmer, and nothing later notices.
+        Assert.Equal(Language.De, recipe.Language);
     }
 
     [Theory]
@@ -424,7 +428,12 @@ public class RecipeTests
     }
 
     private static Recipe ARecipe() =>
-        Recipe.Create(Household, RecipeTitle.Create("Bolognese").ShouldBeSuccess(), Author, Now);
+        Recipe.Create(
+            Household,
+            RecipeTitle.Create("Bolognese").ShouldBeSuccess(),
+            Author,
+            Language.En,
+            Now);
 
     private static RecipeDetails Details(int? prep, int? cook) => new(
         RecipeTitle.Create("Bolognese").ShouldBeSuccess(),
