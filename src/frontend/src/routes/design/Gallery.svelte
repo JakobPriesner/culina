@@ -3,6 +3,7 @@
   import Overlays from '$ds/__fixtures__/Overlays.svelte';
   import {
     Button,
+    type ButtonVariant,
     Checkbox,
     Field,
     IconButton,
@@ -204,8 +205,8 @@
         extraAction={drawOne}
       />
 
-      {#snippet drawOne()}
-        <Button variant="media" size="sm">Draw one</Button>
+      {#snippet drawOne(variant: ButtonVariant)}
+        <Button {variant} size="sm">Draw one</Button>
       {/snippet}
 
       <!-- A picture being made. No progress, because a provider reports none

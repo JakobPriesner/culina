@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, ImageField } from '$ds';
+  import { Button, ImageField, type ButtonVariant } from '$ds';
 
   import { http, request } from '$api';
   import { session } from '$features/auth/session.svelte';
@@ -141,11 +141,12 @@
 <!-- Absent entirely where no assistant can draw — which includes every
      instance running a model on its own hardware, since those do not make
      pictures. -->
-{#snippet drawAction()}
-  <!-- `media`, like the two the field supplies either side of it. Anything
-       else here is a button from a different screen that has wandered onto a
-       photograph. -->
-  <Button variant="media" size="sm" disabled={busy || drawing} onclick={draw}>
+{#snippet drawAction(variant: ButtonVariant)}
+  <!-- Whatever the two either side of it are wearing. The field knows where
+       the strip currently is — on the photograph or under it — and this button
+       standing out from its neighbours is a button from another screen that
+       has wandered in. -->
+  <Button {variant} size="sm" disabled={busy || drawing} onclick={draw}>
     {m['assist.draw']()}
   </Button>
 {/snippet}

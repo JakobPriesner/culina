@@ -17,6 +17,29 @@ globalThis.Request = class extends AbsoluteRequest {
   }
 } as typeof Request;
 
+/*
+ * jsdom has no `matchMedia` at all — not a stub, not a throwing one, nothing.
+ * A component that asks the browser how wide it is therefore fails on import
+ * rather than answering "narrow", which is not a distinction any component
+ * should have to know about.
+ *
+ * The stub answers no to every query and never changes, so a layout that adapts
+ * renders the arrangement it would use on the widest screen. A test about the
+ * other arrangement sets the answer itself.
+ */
+if (typeof globalThis.matchMedia !== 'function') {
+  globalThis.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false
+  })) as typeof matchMedia;
+}
+
 // Components are unmounted between tests, so one test's dialog cannot be found
 // by the next one's query. A store that holds state exposes its own `reset`,
 // which its suite calls — explicit, and visible in the test that needs it.
