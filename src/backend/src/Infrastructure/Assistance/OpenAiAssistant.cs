@@ -226,9 +226,36 @@ internal sealed class OpenAiAssistant(
         new ApiKeyCredential(@using.ApiKey),
         new OpenAIClientOptions
         {
-            Endpoint = new Uri(@using.BaseUrl),
+            Endpoint = Endpoint(@using.BaseUrl),
             Transport = new HttpClientPipelineTransport(http.Client)
         });
+
+    /// <summary>
+    /// Where the client should be pointed.
+    /// </summary>
+    /// <param name="baseUrl">The address the connection carries.</param>
+    /// <remarks>
+    /// <para>
+    /// The version segment belongs to the endpoint this library is given: it
+    /// appends <c>models</c> or <c>responses</c> to whatever it is handed, so
+    /// an address without <c>/v1</c> asks for <c>api.openai.com/models</c> and
+    /// is answered with a 404 — which reads on the settings screen as a
+    /// provider that has nothing to offer.
+    /// </para>
+    /// <para>
+    /// Added only when it is missing, because an administrator pointing this at
+    /// a gateway may reasonably paste either form, and the documentation for
+    /// most of them prints the one ending in <c>/v1</c>.
+    /// </para>
+    /// </remarks>
+    private static Uri Endpoint(string baseUrl)
+    {
+        var address = baseUrl.TrimEnd('/');
+
+        return new Uri(address.EndsWith("/v1", StringComparison.OrdinalIgnoreCase)
+            ? address
+            : address + "/v1");
+    }
 
     private IChatClient ChatWith(Connected @using) =>
         Client(@using).GetChatClient(@using.Model).AsIChatClient();
