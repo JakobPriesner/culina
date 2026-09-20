@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Abstractions;
+using Application.Assistance;
 using Domain.Assistance;
 using Domain.Shared;
 using Microsoft.Extensions.Logging;
@@ -114,13 +115,13 @@ internal sealed class GeminiAssistant(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return listed.Map(list => (IReadOnlyList<ModelInfo>)
+        return listed.Map(list => ModelLabels.Distinguish(
         [
             .. (list.Models ?? [])
                 .Where(Generative)
                 .Select(model => new ModelInfo(Named(model), Labelled(model), Draws(model)))
                 .OrderBy(model => model.Id, StringComparer.Ordinal)
-        ]);
+        ]));
     }
 
     /// <summary>
