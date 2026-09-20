@@ -1,15 +1,19 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
-using Domain.Assistance;
-using Domain.Shared;
 
 namespace Infrastructure.Assistance;
 
 /// <summary>
-/// The one way this app talks to a model provider.
+/// The rules every provider's client is made to keep.
 /// </summary>
 /// <remarks>
+/// <para>
+/// This used to be the one way this app talked to a provider — a request
+/// builder, a reader, and a table turning status codes into errors. All three
+/// providers now speak through their own client libraries, so what is left is
+/// the part that was never theirs to decide: the transport, and the shape of
+/// the JSON this app still reads out of an answer.
+/// </para>
 /// <para>
 /// Built on the same reasoning as <see cref="Infrastructure.Import.SourceHttp"/>
 /// and deliberately not shared with it: that one guards against an address a
@@ -19,10 +23,9 @@ namespace Infrastructure.Assistance;
 /// models beats one with a flag.
 /// </para>
 /// <para>
-/// Redirects are not followed, for the same reason: a followed redirect would
-/// carry the API key to wherever it pointed. The key goes on each request
-/// rather than onto the client, because the settings it comes from can change
-/// between two requests without a restart.
+/// Redirects are not followed, and that is the whole reason an SDK is handed a
+/// client from here rather than left to build its own: a followed redirect
+/// carries the API key to wherever it pointed.
 /// </para>
 /// </remarks>
 internal sealed class AssistantHttp : IDisposable
@@ -37,16 +40,6 @@ internal sealed class AssistantHttp : IDisposable
     /// not hold a request open until the proxy closes it.
     /// </remarks>
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(55);
-
-    /// <summary>
-    /// How much of an answer is read.
-    /// </summary>
-    /// <remarks>
-    /// A recipe is a few kilobytes of JSON; a generated image is a megabyte or
-    /// two of base64. Eight is far above both and far below what an unbounded
-    /// read costs when the thing on the other end is not what it claimed.
-    /// </remarks>
-    private const int MaxBytes = 8 * 1024 * 1024;
 
     private readonly SocketsHttpHandler handler;
     private readonly HttpClient client;
@@ -67,173 +60,40 @@ internal sealed class AssistantHttp : IDisposable
     }
 
     /// <summary>
-    /// The client itself, for a provider's own SDK.
+    /// The client itself, for an SDK that carries its own address.
     /// </summary>
-    /// <remarks>
-    /// Handed out rather than hidden so that an SDK bringing its own request
-    /// pipeline still goes through this one's rules: no redirects, because a
-    /// followed one carries the key wherever it points; one connection pool;
-    /// one deadline. An SDK given a client of its own would quietly have none
-    /// of that.
-    /// </remarks>
     internal HttpClient Client => client;
 
-    /// <summary>The shape every provider is spoken to and answers in.</summary>
+    /// <summary>
+    /// A client of its own for one provider, over this one's connection pool.
+    /// </summary>
+    /// <param name="baseUrl">Where that provider lives.</param>
+    /// <remarks>
+    /// For an SDK that wants a client with an address on it. The handler is
+    /// shared and not disposed with the wrapper, so this costs an object rather
+    /// than a connection pool — the mistake that makes an app run out of
+    /// sockets is a new <c>HttpClient</c> with a new handler, not a new
+    /// <c>HttpClient</c> over an old one.
+    /// </remarks>
+    internal HttpClient ClientFor(string baseUrl) =>
+        new(handler, disposeHandler: false)
+        {
+            BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/"),
+            Timeout = Deadline
+        };
+
+    /// <summary>
+    /// How the answer inside an answer is read.
+    /// </summary>
+    /// <remarks>
+    /// The providers' own libraries parse their own envelopes. What is left for
+    /// this app to parse is the recipe the model wrote inside one, which is a
+    /// string of JSON either way.
+    /// </remarks>
     internal static JsonSerializerOptions Json { get; } = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
     };
-
-    /// <summary>
-    /// Posts JSON and reads JSON back, or says why it could not.
-    /// </summary>
-    /// <typeparam name="TBody">The shape expected back.</typeparam>
-    /// <param name="url">What to post to.</param>
-    /// <param name="payload">The request body.</param>
-    /// <param name="authorize">Puts the credential on the request.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
-    /// <remarks>
-    /// Nothing about the body is logged — not on success, not on failure, and
-    /// not the answer. The body carries whatever somebody typed into a recipe,
-    /// and the headers carry the key.
-    /// </remarks>
-    internal async Task<Result<TBody>> PostAsync<TBody>(
-        Uri url,
-        object payload,
-        Action<HttpRequestMessage> authorize,
-        CancellationToken cancellationToken)
-        where TBody : notnull
-    {
-        ArgumentNullException.ThrowIfNull(authorize);
-
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = new StringContent(
-                    JsonSerializer.Serialize(payload, Json),
-                    Encoding.UTF8,
-                    "application/json")
-            };
-
-            authorize(request);
-
-            using var response = await client
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .ConfigureAwait(false);
-
-            return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
-                                            or InvalidOperationException or IOException)
-        {
-            // The provider is unreachable, or took longer than the deadline.
-            // One error for both, because neither is the caller's to fix.
-            return AssistanceErrors.Unavailable;
-        }
-    }
-
-    /// <summary>Reads JSON, or says why it could not.</summary>
-    /// <typeparam name="TBody">The shape expected back.</typeparam>
-    /// <param name="url">What to ask for.</param>
-    /// <param name="authorize">Puts the credential on the request.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
-    internal async Task<Result<TBody>> GetAsync<TBody>(
-        Uri url,
-        Action<HttpRequestMessage> authorize,
-        CancellationToken cancellationToken)
-        where TBody : notnull
-    {
-        ArgumentNullException.ThrowIfNull(authorize);
-
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-            authorize(request);
-
-            using var response = await client
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .ConfigureAwait(false);
-
-            return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
-                                            or InvalidOperationException or IOException)
-        {
-            return AssistanceErrors.Unavailable;
-        }
-    }
-
-    private static async Task<Result<TBody>> ReadAsync<TBody>(
-        HttpResponseMessage response,
-        CancellationToken cancellationToken)
-        where TBody : notnull
-    {
-        if (!response.IsSuccessStatusCode)
-        {
-            return Refusal(response.StatusCode);
-        }
-
-        if (response.Content.Headers.ContentLength > MaxBytes)
-        {
-            return AssistanceErrors.UnusableAnswer;
-        }
-
-        var body = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-
-        await using (body.ConfigureAwait(false))
-        {
-            try
-            {
-                var parsed = await JsonSerializer
-                    .DeserializeAsync<TBody>(body, Json, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return parsed is null ? AssistanceErrors.UnusableAnswer : parsed;
-            }
-            catch (JsonException)
-            {
-                return AssistanceErrors.UnusableAnswer;
-            }
-        }
-    }
-
-    /// <summary>
-    /// What a status code from a provider means.
-    /// </summary>
-    /// <remarks>
-    /// A refused credential is carried as itself this far. It is turned back
-    /// into "unavailable" before it can reach somebody who is cooking, but the
-    /// settings screen and the ledger are read by the person holding the key,
-    /// and telling them their key was refused is the whole of what they need.
-    /// </remarks>
-    private static Error Refusal(HttpStatusCode status) => status switch
-    {
-        HttpStatusCode.TooManyRequests => AssistanceErrors.Throttled,
-        // Forbidden as well as unauthorized: a key scoped to inference and not
-        // to reading the catalogue answers 403 here while signing every other
-        // call in this app perfectly well.
-        HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => AssistanceErrors.Rejected,
-        // Both providers answer a content-filter refusal with 400. So does a
-        // malformed request, which is this app's defect — but the caller's
-        // options are the same either way, and the log line tells them apart.
-        HttpStatusCode.BadRequest => AssistanceErrors.Refused,
-        _ => AssistanceErrors.Unavailable
-    };
-
-    /// <summary>
-    /// Where to send it.
-    /// </summary>
-    /// <param name="origin">The provider's address, already resolved.</param>
-    /// <param name="path">The path to call, without a leading slash.</param>
-    /// <remarks>
-    /// No fallback here any more. Which address a provider has is a question
-    /// with one answer per connection, and answering it in the adapter meant
-    /// the adapter could only ever serve one.
-    /// </remarks>
-    internal static Uri Address(string origin, string path) =>
-        new(new Uri(origin.TrimEnd('/') + "/"), path);
 
     public void Dispose()
     {
