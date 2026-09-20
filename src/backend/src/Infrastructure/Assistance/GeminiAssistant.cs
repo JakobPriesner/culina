@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Application.Abstractions;
 using Application.Assistance;
 using Domain.Assistance;
@@ -260,8 +261,8 @@ internal sealed class GeminiAssistant(
         .FirstOrDefault(part => part.Type == type);
 
     private static ModelUsage Usage(GeminiReply reply, int pictures) => new(
-        reply.Usage?.PromptTokens ?? 0,
-        reply.Usage?.CompletionTokens ?? 0,
+        reply.Usage?.InputTokens ?? 0,
+        reply.Usage?.OutputTokens ?? 0,
         pictures);
 
 }
@@ -317,12 +318,35 @@ internal sealed record GeminiPart
     public string? Data { get; init; }
 }
 
-/// <summary>What the call consumed.</summary>
+/// <summary>
+/// What the call consumed.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Named on every property. The Interactions API accounts for a whole turn
+/// rather than for one message, so the fields are <c>total_input_tokens</c> and
+/// <c>total_output_tokens</c> — and they are snake_case, which the shared
+/// options do not bridge. Under the old names they bound to zero, which is what
+/// every row in the ledger says this instance has spent.
+/// </para>
+/// <para>
+/// Thinking is counted separately in <c>total_thought_tokens</c> and is not
+/// included here. Google bills it, so a budget built from these two runs
+/// slightly under the invoice on a reasoning model — the alternative is to add
+/// a number to output that the documentation does not say belongs there.
+/// </para>
+/// </remarks>
 internal sealed record GeminiUsage
 {
-    public int PromptTokens { get; init; }
+    [JsonPropertyName("total_input_tokens")]
+    public int InputTokens { get; init; }
 
-    public int CompletionTokens { get; init; }
+    [JsonPropertyName("total_output_tokens")]
+    public int OutputTokens { get; init; }
 
+    [JsonPropertyName("total_thought_tokens")]
+    public int ThoughtTokens { get; init; }
+
+    [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; init; }
 }

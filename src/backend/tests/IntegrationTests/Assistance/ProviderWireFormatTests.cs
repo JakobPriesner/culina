@@ -113,6 +113,37 @@ public class ProviderWireFormatTests
     }
 
     [Fact]
+    public void GeminiUsage_ShouldCountAWholeTurn()
+    {
+        // Arrange
+        // The Interactions API accounts for the turn rather than the message,
+        // and writes the fields in snake_case like the other two.
+        const string body = """
+            {
+              "status": "completed",
+              "steps": [
+                { "type": "model_output", "content": [{ "type": "text", "text": "{}" }] }
+              ],
+              "usage": {
+                "total_input_tokens": 940,
+                "total_output_tokens": 210,
+                "total_thought_tokens": 64,
+                "total_tokens": 1214
+              }
+            }
+            """;
+
+        // Act
+        var reply = JsonSerializer.Deserialize<GeminiReply>(body, AssistantHttp.Json);
+
+        // Assert
+        // Zero here is what every row in a real instance's ledger showed, on
+        // calls that had plainly done work.
+        Assert.Equal(940, reply?.Usage?.InputTokens);
+        Assert.Equal(210, reply?.Usage?.OutputTokens);
+    }
+
+    [Fact]
     public void GeminiModels_ShouldReadNameAndDisplayName()
     {
         // Arrange
