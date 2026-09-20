@@ -1,0 +1,25 @@
+# Findings this repository cannot act on, with a date by which it must look
+# again. Never a permanent suppression: an entry with no expiry is how a report
+# stops being read.
+#
+# The runtime base is mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled. A
+# chiseled image has no package manager and no shell, which is most of why it
+# was chosen — and it also means there is no `apt-get upgrade` to run here. The
+# glibc these name is whatever Microsoft built the image with, and the only way
+# to a patched one is Microsoft publishing a rebuilt image.
+#
+# Ubuntu fixed all six in libc6 2.39-0ubuntu8.9; the image ships 2.39-0ubuntu8.8.
+# They are denial-of-service and memory-safety faults in iconv conversion, tilde
+# expansion, wordexp, tdelete and strfmon — none of them on a path this app
+# reaches with anything a request controls, which is why waiting is tolerable
+# rather than merely convenient.
+#
+# When this expires: rebuild and look. If Microsoft has shipped the newer glibc
+# the scan passes on its own and these lines can go. If it has not, extend the
+# date deliberately, here, with today's reasoning.
+CVE-2026-80489 exp:2026-10-19
+CVE-2026-77117 exp:2026-10-19
+CVE-2026-6791 exp:2026-10-19
+CVE-2026-6368 exp:2026-10-19
+CVE-2026-19542 exp:2026-10-19
+CVE-2026-19499 exp:2026-10-19

@@ -9,5 +9,8 @@ src/lib/api/generated
 # Compiled from messages/*.json by the Paraglide Vite plugin.
 src/lib/paraglide
 
-# Paraglide's module cache.
-project.inlang/cache
+# Paraglide owns this directory and writes a cache, a README and a .meta.json
+# into it, none of it formatted and none of it tracked — the project's own
+# .gitignore keeps everything here but the settings. Only the settings are ours.
+project.inlang/*
+!project.inlang/settings.json

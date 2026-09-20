@@ -1,4 +1,5 @@
 using Application.Abstractions.Settings;
+using Domain.Suggestions;
 using Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -27,6 +28,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         .Build();
 
     private CulinaApiFactory? api;
+    private CulinaApiFactory? steadyRanking;
     private NpgsqlDataSource? dataSource;
 
     /// <summary>How to reach the container, in the shape the app configures.</summary>
@@ -60,6 +62,22 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// so the schema is built once per run rather than once per test class.
     /// </summary>
     public CulinaApiFactory Api => api ??= new CulinaApiFactory(this);
+
+    /// <summary>
+    /// The same host, ranking without its exploration jitter.
+    /// </summary>
+    /// <remarks>
+    /// The jitter is deliberate and worth having in the product: it is what
+    /// keeps a list from being the same five recipes forever. It is also, by
+    /// construction, a reason a recipe moves that has nothing to do with any
+    /// ordering rule — and a rule asserted against noise larger than the rule's
+    /// own signal is a test that passes most of the time. Turning it off is how
+    /// a weight gets proven, which is what <c>RankingWeights</c> being a record
+    /// is for.
+    /// </remarks>
+    public CulinaApiFactory SteadyRanking => steadyRanking ??= new CulinaApiFactory(
+        this,
+        weights: RankingWeights.Default with { Exploration = 0m });
 
     /// <summary>
     /// A connection for a test, from the one pool this fixture owns. Building a
@@ -125,6 +143,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         api?.Dispose();
+        steadyRanking?.Dispose();
 
         if (dataSource is not null)
         {

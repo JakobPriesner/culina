@@ -16,24 +16,32 @@ namespace IntegrationTests.Suggestions;
 /// wrote them itself would be a second opinion about what a cooked recipe looks
 /// like in the database, and the first thing to rot.
 /// </remarks>
-internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId)
+internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, CulinaApiFactory Api)
 {
     private const string Password = "correct horse battery staple";
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    /// <param name="api">
+    /// Which host to build the kitchen through. The ordering rules use the one
+    /// that ranks without exploration jitter, because a rule cannot be asserted
+    /// against noise the rule does not control; everything else uses the
+    /// ordinary host, jitter and all, which is what people actually get.
+    /// </param>
     internal static async Task<SuggestionWorld> NewAsync(
         PostgresFixture postgres,
-        string email = "ada@example.com")
+        string email = "ada@example.com",
+        CulinaApiFactory? api = null)
     {
         await postgres.ResetAsync(Token);
 
-        var client = await SignUpAsync(postgres, email, "Ada");
+        var host = api ?? postgres.Api;
+        var client = await SignUpAsync(postgres, email, "Ada", api: host);
 
         var householdId = (await client.GetAsync("/api/v1/households", Token))
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
 
-        return new SuggestionWorld(client, householdId);
+        return new SuggestionWorld(client, householdId, host);
     }
 
     /// <summary>A second person in the same kitchen, for the household-taste rules.</summary>
@@ -48,7 +56,7 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId)
         // default and would otherwise make every request this guest sends a
         // silent 401 — and a household-taste rule asserted against a member who
         // never joined passes or fails for no reason anybody could see.
-        var settings = postgres.Api.Services.GetRequiredService<RegistrationSettings>();
+        var settings = Api.Services.GetRequiredService<RegistrationSettings>();
         settings.OpenRegistration = true;
         settings.RequireInvitation = false;
 
@@ -59,7 +67,7 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId)
 
         var code = invitation.Json!.Value.GetProperty("code").GetString();
 
-        var guest = await SignUpAsync(postgres, email, displayName, joinWith: code);
+        var guest = await SignUpAsync(postgres, email, displayName, joinWith: code, api: Api);
 
         var members = await Client.GetAsync($"/api/v1/households/{HouseholdId}/members", Token);
 
@@ -72,9 +80,10 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId)
         PostgresFixture postgres,
         string email,
         string displayName,
-        string? joinWith = null)
+        string? joinWith = null,
+        CulinaApiFactory? api = null)
     {
-        var client = postgres.Api.NewApiClient();
+        var client = (api ?? postgres.Api).NewApiClient();
 
         await client.PostAsync(
             "/api/v1/users",

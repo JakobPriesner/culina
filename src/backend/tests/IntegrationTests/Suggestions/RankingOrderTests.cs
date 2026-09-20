@@ -24,13 +24,29 @@ public class RankingOrderTests(PostgresFixture postgres)
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
+    /// <summary>
+    /// A kitchen whose ranking has no exploration jitter in it.
+    /// </summary>
+    /// <remarks>
+    /// The jitter is worth ±0.075 per recipe and is seeded by the recipe's id,
+    /// so between two recipes it spans ±0.15 — larger than some of the very
+    /// terms these tests exist to pin down. Rule 4 is the honest example: a
+    /// weekday separates the two recipes by 0.30 and is never in doubt, while a
+    /// weekend separates them by 0.06 and the jitter decided it instead, which
+    /// is how that test came to fail roughly one Sunday run in six. A rule is
+    /// proven with the other terms held still; the jitter is a term like any
+    /// other.
+    /// </remarks>
+    private Task<SuggestionWorld> NewWorldAsync() =>
+        SuggestionWorld.NewAsync(postgres, api: postgres.SteadyRanking);
+
     [Fact]
     public async Task Rule1_ARecipeCookedYesterday_ShouldNotOutrankTheSameOneCookedThreeWeeksAgo()
     {
         // Arrange
         // Fixes the repetition weight against the affinity weight. Two recipes
         // the household likes identically; only when they last ate them differs.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var fresh = await world.WriteAsync("Yesterday", ingredients: ["rice", "egg"]);
         var rested = await world.WriteAsync("Three weeks ago", ingredients: ["rice", "egg"]);
@@ -65,7 +81,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         //
         // This is the rule that makes week one useful: a library nobody has
         // worked through can otherwise only be ordered by chance.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var curry = await world.WriteAsync(
             "Known curry",
@@ -103,7 +119,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // something nobody has tried over something they like but had last night.
         // Without it, a household's rotation is self-reinforcing and nothing new
         // is ever surfaced.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var curry = await world.WriteAsync(
             "Known curry",
@@ -134,7 +150,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // Arrange
         // Fixes the rediscovery weight. The thing a small library is uniquely
         // good at: a household keeps three hundred recipes and cooks twenty.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var loved = await world.WriteAsync("Forgotten favourite", ingredients: ["lamb", "apricot"]);
 
@@ -163,7 +179,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // The other half of the rule, and the one that keeps the list from
         // turning into archaeology: rediscovery is scaled by affinity, so a
         // recipe nobody ever cooked is not "overdue", it is simply untouched.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var untouched = await world.WriteAsync("Never made", ingredients: ["okra"]);
         var loved = await world.WriteAsync("Loved and overdue", ingredients: ["lamb"]);
@@ -190,7 +206,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // Arrange
         // Fixes the effort weight. Both are unknown to the household, so time
         // is the only thing separating them.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         await world.WriteAsync("Twenty minutes", ingredients: ["egg"], prep: 10, cook: 10, steps: 2);
         await world.WriteAsync("Three hours", ingredients: ["egg"], prep: 30, cook: 150, steps: 9);
@@ -218,7 +234,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // Arrange
         // Fixes the slot weight. Meal type is not a column on a recipe; it is
         // what this household's plan says about it.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var porridge = await world.WriteAsync("Porridge", ingredients: ["oats"]);
         var stew = await world.WriteAsync("Stew", ingredients: ["oats"]);
@@ -249,7 +265,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // has to be big enough that your partner's cooking is discoverable and
         // small enough that two people's different tastes are not flattened
         // into one household average.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
         var guest = await world.InviteAsync(postgres, "bob@example.com", "Bob");
 
         var theirs = await world.WriteAsync("Bob's favourite", ingredients: ["liver"]);
@@ -288,7 +304,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // Bounds the exploration weight. It exists to reshuffle near-equals, and
         // a jitter large enough to move a clear winner is noise rather than
         // variety.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var loved = await world.WriteAsync("Clear winner", ingredients: ["beef", "onion"]);
 
@@ -315,7 +331,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // Arrange
         // Titles chosen so that alphabetical order and insertion order are both
         // recognisable, and neither is what should come out.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         foreach (var title in new[] { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot" })
         {
@@ -340,7 +356,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // produces most often, and it is the scoring being faithful to a taste
         // that really is narrow. The diversity pass is what stops faithful from
         // becoming useless.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         for (var index = 0; index < 6; index++)
         {
@@ -376,7 +392,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // full strength a favourite outscores a genuine resemblance — so the
         // strip quietly fills with the same recipes the home page already
         // suggests, under a heading that promises something else.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var reading = await world.WriteAsync(
             "Linsensuppe",
@@ -413,7 +429,7 @@ public class RankingOrderTests(PostgresFixture postgres)
     public async Task Rule10_TheSameQuestionOnTheSameDay_ShouldGiveTheSameAnswer()
     {
         // Arrange
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         for (var index = 0; index < 10; index++)
         {
@@ -444,7 +460,7 @@ public class RankingOrderTests(PostgresFixture postgres)
         // In a kitchen where nine recipes in ten contain salt, salt must carry
         // no information at all — otherwise the taste profile is dominated by
         // the store cupboard and every recipe looks equally like every other.
-        var world = await SuggestionWorld.NewAsync(postgres);
+        var world = await NewWorldAsync();
 
         var cooked = await world.WriteAsync("Cooked", ingredients: ["salt", "saffron"]);
         await world.CookedAsync(cooked, daysAgo: 60);
