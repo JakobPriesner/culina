@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Application.Abstractions;
 using Domain.Assistance;
 using Domain.Shared;
@@ -187,12 +188,17 @@ internal sealed record OllamaReply
 {
     public OllamaMessage? Message { get; init; }
 
+    // Named for the same reason OpenAI's are: Ollama writes these in
+    // snake_case, and the shared options bridge case and nothing else.
+    [JsonPropertyName("done_reason")]
     public string? DoneReason { get; init; }
 
     /// <summary>Tokens in the prompt.</summary>
+    [JsonPropertyName("prompt_eval_count")]
     public int PromptEvalCount { get; init; }
 
     /// <summary>Tokens generated.</summary>
+    [JsonPropertyName("eval_count")]
     public int EvalCount { get; init; }
 }
 

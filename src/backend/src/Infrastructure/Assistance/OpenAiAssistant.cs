@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Application.Abstractions;
 using Domain.Assistance;
 using Domain.Shared;
@@ -165,22 +166,25 @@ internal sealed class OpenAiAssistant(
     {
         List<object> parts = [];
 
+        // input_text and input_image, not text and image: the Responses API
+        // names the parts of a message it is given differently from the parts
+        // of one it produces, and rejects the output names on the way in.
         if (request.Material is { Length: > 0 } material)
         {
-            parts.Add(new { type = "text", text = material });
+            parts.Add(new { type = "input_text", text = material });
         }
 
         if (!request.Picture.IsEmpty)
         {
             var media = request.PictureMediaType ?? "image/jpeg";
 
+            // The data URL goes on image_url directly. It is a string there,
+            // not an object with a url in it — that shape belongs to chat
+            // completions, which this no longer uses.
             parts.Add(new
             {
-                type = "image",
-                image = new
-                {
-                    url = $"data:{media};base64,{Convert.ToBase64String(request.Picture.Span)}"
-                }
+                type = "input_image",
+                image_url = $"data:{media};base64,{Convert.ToBase64String(request.Picture.Span)}"
             });
         }
 
@@ -286,13 +290,25 @@ internal sealed record OpenAiContentPart
     public string? Text { get; init; }
 }
 
-/// <summary>What the call consumed.</summary>
+/// <summary>
+/// What the call consumed.
+/// </summary>
+/// <remarks>
+/// Named on every property, because OpenAI writes these in snake_case and the
+/// shared options are the web defaults: those ignore case and nothing else, so
+/// <c>input_tokens</c> never reaches <c>InputTokens</c> on its own. Without the
+/// names it binds silently to zero — every call free, every budget untouched,
+/// and a usage table of noughts that looks like a feature nobody uses.
+/// </remarks>
 internal sealed record OpenAiUsage
 {
+    [JsonPropertyName("input_tokens")]
     public int InputTokens { get; init; }
 
+    [JsonPropertyName("output_tokens")]
     public int OutputTokens { get; init; }
 
+    [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; init; }
 }
 
@@ -304,8 +320,17 @@ internal sealed record OpenAiImageReply
     public OpenAiUsage? Usage { get; init; }
 }
 
-/// <summary>One generated picture.</summary>
+/// <summary>
+/// One generated picture.
+/// </summary>
+/// <remarks>
+/// The whole of the answer, and the one field in it. Unnamed, it bound to null
+/// on every drawing OpenAI has ever returned, which this read as an answer it
+/// could not use — so the picture arrived, was thrown away, and the screen said
+/// the assistant could not draw one.
+/// </remarks>
 internal sealed record OpenAiImage
 {
+    [JsonPropertyName("b64_json")]
     public string? B64Json { get; init; }
 }
