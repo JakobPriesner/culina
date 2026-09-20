@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   import Button from '../actions/Button.svelte';
   import Image from '../display/Image.svelte';
   import FilePicker from './FilePicker.svelte';
@@ -15,6 +17,13 @@
    * Knows nothing about what is being photographed. Where the bytes go is the
    * caller's business: this reports the file that was chosen and is told
    * whether that worked.
+   *
+   * Once there is a picture, what can be done to it belongs on it. Three
+   * buttons stacked underneath made the field look like a form about a
+   * photograph rather than the photograph itself, and two of the three are
+   * things nobody does twice. They are revealed by pointing at the picture,
+   * by tabbing into it, and unconditionally where there is no pointer to
+   * hover with.
    */
   interface Props {
     label: string;
@@ -43,6 +52,25 @@
     accept?: string;
     /** An upload or a removal in flight. */
     busy?: boolean;
+    /**
+     * A picture being made rather than sent.
+     *
+     * Its own state and not `busy`, because it is its own wait: a minute of
+     * somebody else's machine drawing, where an upload is a few seconds of
+     * this one's network. The frame says so itself instead of a spinner beside
+     * a button saying it.
+     */
+    generating?: boolean;
+    /** What the frame says while it draws. */
+    generatingLabel?: string;
+    /**
+     * One more thing that can be done to the picture, from the caller.
+     *
+     * Rendered with the other two, on the picture and under it, so a field
+     * with three ways to fill it looks like one control rather than a control
+     * with a button loose beside it.
+     */
+    extraAction?: Snippet;
     /** What went wrong, already in words the reader can act on. */
     failure?: string | null;
     onpick: (file: File) => void;
@@ -63,6 +91,9 @@
     ratio = 4 / 3,
     accept = 'image/jpeg,image/png,image/webp',
     busy = false,
+    generating = false,
+    generatingLabel,
+    extraAction,
     failure = null,
     onpick,
     onremove
@@ -76,9 +107,33 @@
     <p class="label">{label}</p>
   {/if}
 
-  <div class="frame">
+  <div class="frame" class:filled={src}>
     {#if src}
       <Image {src} {srcset} {sizes} {alt} {ratio} />
+
+      <!-- On the picture, and only once there is one. Revealed by pointing at
+           it or tabbing into it; always there where nothing can hover. -->
+      <div class="overlay">
+        <!-- Disabled while a picture is being drawn: the drawing covers this,
+             so a pointer cannot reach it, and a control a keyboard can still
+             get to but a mouse cannot is a control that behaves differently
+             for different people. -->
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={busy}
+          disabled={generating}
+          onclick={() => picker?.open()}
+        >
+          {replaceLabel}
+        </Button>
+
+        {#if extraAction}{@render extraAction()}{/if}
+
+        <Button variant="ghost" size="sm" disabled={busy || generating} onclick={onremove}>
+          {removeLabel}
+        </Button>
+      </div>
     {:else}
       <!-- The same box the picture will occupy, drawn rather than left blank:
            an empty field that shows its own dimensions is a form saying what it
@@ -104,17 +159,30 @@
         <p class="hint">{hint}</p>
       </div>
     {/if}
-  </div>
 
-  <div class="actions">
-    <Button loading={busy} onclick={() => picker?.open()}>
-      {src ? replaceLabel : chooseLabel}
-    </Button>
+    {#if generating}
+      <!-- Over whatever is underneath, because a picture being drawn is about
+           to replace it. The frame does the waiting rather than a spinner in a
+           button: this is a minute of somebody else's machine working, and a
+           spinner that size says "a moment". -->
+      <div class="drawing" aria-hidden="true">
+        <span class="sweep"></span>
+        <span class="grain"></span>
+      </div>
 
-    {#if src}
-      <Button variant="ghost" disabled={busy} onclick={onremove}>{removeLabel}</Button>
+      {#if generatingLabel}
+        <p class="drawing-label" role="status">{generatingLabel}</p>
+      {/if}
     {/if}
   </div>
+
+  {#if !src}
+    <div class="actions">
+      <Button loading={busy} onclick={() => picker?.open()}>{chooseLabel}</Button>
+
+      {#if extraAction}{@render extraAction()}{/if}
+    </div>
+  {/if}
 
   {#if failure}
     <p class="failure" role="alert">{failure}</p>
@@ -137,7 +205,54 @@
   }
 
   .frame {
+    position: relative;
     width: min(30rem, 100%);
+  }
+
+  .frame.filled {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+  }
+
+  /*
+   * The strip of things you can do to the picture.
+   *
+   * Sits on it rather than under it: what is being edited is the photograph,
+   * and three buttons in a row beneath it made the field read as a form about
+   * a photograph. Hidden by opacity rather than by `display`, so the buttons
+   * stay in the tab order and `:focus-within` brings them into view the moment
+   * somebody tabs to one.
+   */
+  .overlay {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: linear-gradient(to top, var(--scrim), transparent);
+    opacity: 0;
+    transition:
+      opacity var(--duration-base) var(--ease-out),
+      transform var(--duration-base) var(--ease-out);
+    transform: translateY(var(--space-2));
+  }
+
+  .frame:hover .overlay,
+  .frame:focus-within .overlay {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* A touch screen has nothing to hover with, and a control that only appears
+     on hover is a control that does not exist there. */
+  @media (hover: none) {
+    .overlay {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .template {
@@ -168,7 +283,99 @@
 
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
+  }
+
+  /*
+   * A picture being drawn.
+   *
+   * Two things at once, because that is what makes it read as work rather than
+   * as a stalled page: a band of light travelling across the frame, and a
+   * grain that breathes underneath it. Neither reports progress, because
+   * nothing here knows any — a provider says nothing until it has finished —
+   * and a bar that invents its own is a bar that lies.
+   */
+  .drawing {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
+  }
+
+  .sweep,
+  .grain {
+    position: absolute;
+    inset: 0;
+  }
+
+  .sweep {
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      var(--surface-accent-subtle) 45%,
+      var(--surface-highlight) 50%,
+      var(--surface-accent-subtle) 55%,
+      transparent 70%
+    );
+    background-size: 300% 100%;
+    animation: sweep 2.4s var(--ease-spatial) infinite;
+  }
+
+  .grain {
+    background:
+      radial-gradient(40% 55% at 30% 35%, var(--surface-accent-subtle), transparent 70%),
+      radial-gradient(45% 45% at 70% 65%, var(--surface-highlight), transparent 70%);
+    opacity: 0.55;
+    animation: breathe 3.6s ease-in-out infinite;
+  }
+
+  .drawing-label {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-align: center;
+  }
+
+  @keyframes sweep {
+    from {
+      background-position: 150% 0;
+    }
+
+    to {
+      background-position: -150% 0;
+    }
+  }
+
+  @keyframes breathe {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.7;
+      transform: scale(1.06);
+    }
+  }
+
+  /* The wait is still a wait, so the frame still says so — it simply stops
+     moving. */
+  @media (prefers-reduced-motion: reduce) {
+    .overlay {
+      transition: none;
+    }
+
+    .sweep,
+    .grain {
+      animation: none;
+    }
   }
 
   .failure {

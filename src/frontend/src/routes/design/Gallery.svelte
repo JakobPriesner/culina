@@ -43,6 +43,27 @@
    * the chosen file in the page as an object URL.
    */
   let chosen = $state<string | undefined>();
+
+  /**
+   * A stand-in photograph, drawn rather than fetched.
+   *
+   * The gallery must render with nothing behind it, so the filled state cannot
+   * borrow a real recipe's picture. This is enough of one to show what the
+   * actions look like lying on top of it.
+   */
+  const specimenPhoto =
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="%23c9a227"/><stop offset="1" stop-color="%235c7a3f"/>
+        </linearGradient></defs>
+        <rect width="400" height="300" fill="url(%23g)"/>
+        <circle cx="200" cy="150" r="70" fill="rgba(255,255,255,0.35)"/>
+      </svg>`.replace(/\s+/g, ' ')
+    );
+
+  let drawing = $state(true);
 </script>
 
 <svelte:head><title>Design system</title></svelte:head>
@@ -168,6 +189,35 @@
         onpick={(file) => (chosen = URL.createObjectURL(file))}
         onremove={() => (chosen = undefined)}
       />
+
+      <!-- The filled state, where what you can do to the picture lies on the
+           picture. Point at it, or tab into it. -->
+      <ImageField
+        label="Photo, with one in it"
+        hint="Unused here."
+        chooseLabel="Choose a photo"
+        replaceLabel="Replace"
+        removeLabel="Remove"
+        src={specimenPhoto}
+        onpick={() => {}}
+        onremove={() => {}}
+      ></ImageField>
+
+      <!-- A picture being made. No progress, because a provider reports none
+           until it has finished. -->
+      <ImageField
+        label="Photo, being drawn"
+        hint="One picture of the finished dish."
+        chooseLabel="Choose a photo"
+        replaceLabel="Replace"
+        removeLabel="Remove"
+        generating={drawing}
+        generatingLabel="Drawing…"
+        onpick={() => {}}
+        onremove={() => {}}
+      />
+
+      <Checkbox bind:checked={drawing} label="Keep drawing" />
 
       <SearchField
         id="gallery-search"
