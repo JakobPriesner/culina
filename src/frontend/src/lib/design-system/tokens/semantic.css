@@ -66,6 +66,22 @@
   --warning-subtle: var(--c-amber-200);
 
   /*
+   * A picture being made.
+   *
+   * Three warm lights that drift under a frosted pane, plus the ground they
+   * drift on and the specular band that crosses them. Their own tokens rather
+   * than the accent at several strengths, because this is the one place in the
+   * app where colour is doing no work except saying "something is happening
+   * here" — and an interface that says that in one flat hue says it the way a
+   * progress bar from 1998 does.
+   */
+  --generating-ground: var(--c-sand-100);
+  --generating-1: var(--c-olive-200);
+  --generating-2: var(--c-terracotta-200);
+  --generating-3: var(--c-amber-200);
+  --generating-sheen: var(--c-white);
+
+  /*
    * Controls that sit on a photograph.
    *
    * The same in both modes on purpose, and the only tokens here that are. A
