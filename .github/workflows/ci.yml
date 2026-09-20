@@ -199,10 +199,39 @@ jobs:
 
   e2e:
     name: End to end
-    runs-on: ubuntu-latest
+    # The one job that runs at home. It is also the one that most wants to: six
+    # browsers against a real stack is the slowest thing in this file, and that
+    # machine is sitting there anyway. Everything else stays hosted, where a
+    # clean disk on every run is worth more than the minutes it costs.
+    #
+    # `homeserver` is that runner's own label. A hosted runner is destroyed
+    # after the job and forgives whatever was left running; this one is not,
+    # which is what the two teardown steps below are for.
+    runs-on: [self-hosted, homeserver]
     timeout-minutes: 30
+    env:
+      # Compose reads all three by name, so every `docker compose` below is the
+      # bare verb and the teardown cannot drift from what was started.
+      COMPOSE_FILE: compose.yaml:compose.prod.yaml
+      # A project name of its own, so the teardown names exactly what this job
+      # started and nothing else that machine happens to be running.
+      COMPOSE_PROJECT_NAME: culina-e2e
+      # Not 8080. This publishes onto a host shared with whatever else lives on
+      # that machine, and 8080 is the port everything else wanted too.
+      CULINA_PORT: '18080'
+      # compose.prod.yaml refuses to be read at all without this — including by
+      # `down`, which is why it is here and not on the step that starts the
+      # stack.
+      Database__Password: culina_ci_password
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # A run cancelled between `up` and the teardown leaves a stack holding
+      # the port and — worse — a database with the administrator already in it,
+      # which would fail the account step below on every run after it. The
+      # hosted runners never needed this because the whole machine went away.
+      - name: Clear anything a previous run left behind
+        run: docker compose down --volumes --remove-orphans || true
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
@@ -217,6 +246,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: src/frontend
 
+      # Playwright refuses to install a browser on a distribution it does not
+      # support, and says so plainly. The runner must be on Ubuntu 22.04 or
+      # 24.04 — on 20.04 this step ends at "Playwright does not support
+      # chromium on ubuntu20.04-x64" and nothing after it can run.
       - run: pnpm exec playwright install --with-deps chromium
         working-directory: src/frontend
 
@@ -232,29 +265,55 @@ jobs:
           RateLimits__RegisterPerIpPerHour: '1000'
           # Six browsers driving one instance is a burst no person produces.
           RateLimits__RequestsPerSessionPerMinute: '20000'
+          ForwardedHeaders__KnownNetworks: 172.16.0.0/12
         run: |
           docker build -t culina:ci --build-arg REVISION="${GITHUB_SHA::7}" .
-          CULINA_IMAGE=culina:ci \
-          CULINA_PORT=8080 \
-          ForwardedHeaders__KnownNetworks=172.16.0.0/12 \
-          Database__Password=culina_ci_password \
-          docker compose -f compose.yaml -f compose.prod.yaml up -d --wait
+          CULINA_IMAGE=culina:ci docker compose up -d --wait
+
+      # A hosted runner and the stack it starts share one network stack, so
+      # `localhost` is always the answer there. This runner is itself a
+      # container, and whether localhost reaches a sibling depends entirely on
+      # how that container was started — so ask instead of assuming, and fall
+      # back to the address the stack actually has.
+      - name: Where the stack answers from here
+        id: stack
+        run: |
+          ready() { curl --fail --silent --max-time 5 "$1/health/ready" >/dev/null; }
+
+          base="http://localhost:${CULINA_PORT}"
+
+          if ! ready "$base"; then
+            address=$(docker compose ps --quiet app \
+              | xargs --no-run-if-empty docker inspect \
+                  --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+            base="http://${address}:8080"
+
+            if [ -z "$address" ] || ! ready "$base"; then
+              echo "::error::The stack is healthy but nothing on this runner can reach it: neither localhost:${CULINA_PORT} nor the container's own address answered /health/ready. The runner container needs host networking, or a route to the compose network."
+              exit 1
+            fi
+          fi
+
+          echo "Reached the stack at ${base}."
+          echo "base=${base}" >> "$GITHUB_OUTPUT"
 
       # The signed-in suites need an account, and the first account on a fresh
-      # instance is always the administrator.
+      # instance is always the administrator. Origin has to match the address
+      # actually used, because the server checks that the two agree.
       - name: Create the first account
-        id: account
+        env:
+          BASE: ${{ steps.stack.outputs.base }}
         run: |
           curl --fail --silent --show-error \
-            -X POST http://localhost:8080/api/v1/users \
+            -X POST "${BASE}/api/v1/users" \
             -H 'Content-Type: application/json' \
-            -H 'Origin: http://localhost:8080' \
+            -H "Origin: ${BASE}" \
             -d '{"email":"ci@culina.test","displayName":"CI","password":"a sentence nobody else would pick"}'
 
       - name: Playwright
         working-directory: src/frontend
         env:
-          CULINA_API: http://localhost:8080
+          CULINA_API: ${{ steps.stack.outputs.base }}
           CULINA_E2E_EMAIL: ci@culina.test
           CULINA_E2E_PASSWORD: a sentence nobody else would pick
         run: pnpm test:e2e
@@ -270,9 +329,22 @@ jobs:
             src/frontend/test-results/
           retention-days: 7
 
+      # Before the teardown, or there would be nothing left to ask.
       - name: What the container said
         if: failure()
-        run: docker compose -f compose.yaml -f compose.prod.yaml logs --no-color
+        run: docker compose logs --no-color
+
+      # Always, cancellation included. Every service is `restart:
+      # unless-stopped`, so a stack left behind is a Culina instance running on
+      # somebody's home server until they happen to notice. `--volumes` matters
+      # just as much: the next run needs a database with no administrator in it
+      # yet. Scoped to this project by name — nothing else on the machine is
+      # touched.
+      - name: Take the stack down
+        if: always()
+        run: |
+          docker compose down --volumes --remove-orphans
+          docker image rm --force culina:ci || true
 
   codeql:
     name: CodeQL (${{ matrix.language }})
@@ -369,6 +441,9 @@ jobs:
           # Only what can actually be acted on. A finding with no fix available
           # is a finding that teaches everyone to ignore the report.
           ignore-unfixed: true
+          # Named rather than left to the default lookup, so the file is
+          # discoverable from here. Every entry in it carries an expiry date.
+          trivyignores: .trivyignore
           exit-code: '1'
 
       - uses: github/codeql-action/upload-sarif@977e6ceaea7361825998245d787fa3b4d6b9e5df # codeql-bundle-v2.27.0

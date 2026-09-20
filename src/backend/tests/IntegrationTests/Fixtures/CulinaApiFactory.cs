@@ -1,7 +1,10 @@
 using System.Globalization;
 using System.Net;
+using Domain.Suggestions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Fixtures;
 
@@ -30,9 +33,16 @@ namespace IntegrationTests.Fixtures;
 /// limiter works is a test that teaches people to remove the limiter. The limit
 /// itself is proven by a test that lowers it on purpose.
 /// </param>
+/// <param name="weights">
+/// The ranking weights this host should score with, when a test needs to hold
+/// some of them still. <c>RankingWeights</c> is a record for exactly this —
+/// a rule is proven by fixing nine terms and moving the tenth — and a weight
+/// is not configuration, so it is replaced in the container rather than set.
+/// </param>
 public sealed class CulinaApiFactory(
     PostgresFixture postgres,
-    IReadOnlyDictionary<string, string>? overrides = null) : WebApplicationFactory<Program>
+    IReadOnlyDictionary<string, string>? overrides = null,
+    RankingWeights? weights = null) : WebApplicationFactory<Program>
 {
     private readonly string dataRoot =
         Path.Combine(Path.GetTempPath(), $"culina-test-{Guid.CreateVersion7():n}");
@@ -66,6 +76,11 @@ public sealed class CulinaApiFactory(
         foreach (var (key, value) in overrides ?? new Dictionary<string, string>())
         {
             builder.UseSetting(key, value);
+        }
+
+        if (weights is not null)
+        {
+            builder.ConfigureTestServices(services => services.AddSingleton(weights));
         }
     }
 
