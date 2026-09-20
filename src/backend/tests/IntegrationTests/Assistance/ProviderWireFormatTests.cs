@@ -25,70 +25,14 @@ namespace IntegrationTests.Assistance;
 /// The payloads below are trimmed copies of what the providers document, with
 /// the field names left exactly as they write them.
 /// </para>
+/// <para>
+/// OpenAI is absent because its shapes are no longer this app's to know: that
+/// adapter speaks through the provider's own client library, and a test of
+/// these fields would be a test of somebody else's serializer.
+/// </para>
 /// </remarks>
 public class ProviderWireFormatTests
 {
-    [Fact]
-    public void OpenAiImage_ShouldCarryThePicture_WrittenAsTheProviderWritesIt()
-    {
-        // Arrange
-        const string body = """
-            {
-              "created": 1698116662,
-              "data": [{ "b64_json": "aGVsbG8=" }],
-              "usage": { "input_tokens": 12, "output_tokens": 34, "total_tokens": 46 }
-            }
-            """;
-
-        // Act
-        var reply = JsonSerializer.Deserialize<OpenAiImageReply>(body, AssistantHttp.Json);
-
-        // Assert
-        // The whole of a drawing is this one field. Unbound, every picture
-        // OpenAI ever returned was thrown away as unreadable.
-        Assert.Equal("aGVsbG8=", reply?.Data?[0].B64Json);
-    }
-
-    [Fact]
-    public void OpenAiUsage_ShouldCountTokens_SoTheBudgetIsSpent()
-    {
-        // Arrange
-        const string body = """
-            {
-              "output": [{ "type": "message", "content": [{ "type": "output_text", "text": "{}" }] }],
-              "usage": { "input_tokens": 120, "output_tokens": 340, "total_tokens": 460 }
-            }
-            """;
-
-        // Act
-        var reply = JsonSerializer.Deserialize<OpenAiReply>(body, AssistantHttp.Json);
-
-        // Assert
-        Assert.Equal(120, reply?.Usage?.InputTokens);
-        Assert.Equal(340, reply?.Usage?.OutputTokens);
-    }
-
-    [Fact]
-    public void OpenAiModels_ShouldReadTheCatalogue()
-    {
-        // Arrange
-        const string body = """
-            {
-              "object": "list",
-              "data": [
-                { "id": "gpt-image-1", "object": "model" },
-                { "id": "gpt-5", "object": "model" }
-              ]
-            }
-            """;
-
-        // Act
-        var reply = JsonSerializer.Deserialize<OpenAiModelList>(body, AssistantHttp.Json);
-
-        // Assert
-        Assert.Equal(["gpt-image-1", "gpt-5"], reply?.Data?.Select(model => model.Id));
-    }
-
     [Fact]
     public void OllamaReply_ShouldCountTokensAndCarryItsReason()
     {

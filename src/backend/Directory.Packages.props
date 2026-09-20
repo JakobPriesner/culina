@@ -31,6 +31,21 @@
              Pinned to the 3.1.x line: it is Apache-2.0, whereas 4.x moved to the
              Six Labors Split License and demands a licence key at build time. -->
         <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+        <!-- The providers' own clients, rather than this app's reading of their
+             documentation. What they buy is the class of fault that has no
+             symptom: a field renamed upstream, or written in a case nobody
+             here expected, used to bind to null and be reported as an answer
+             that could not be read. These types are maintained by the people
+             who change the wire format. -->
+        <PackageVersion Include="OpenAI" Version="2.14.0" />
+        <PackageVersion Include="Google.GenAI" Version="1.21.1" />
+        <PackageVersion Include="OllamaSharp" Version="5.4.30" />
+        <!-- One shape for "ask a model for text", so the three adapters differ
+             only where the providers really do. OpenAI and Ollama both offer an
+             IChatClient; Google has no such package, so that one adapter speaks
+             its SDK directly. -->
+        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
+        <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
     </ItemGroup>
 
     <ItemGroup Label="Api">

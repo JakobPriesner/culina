@@ -1,10 +1,14 @@
-using System.Net.Http.Headers;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Application.Abstractions;
 using Domain.Assistance;
 using Domain.Shared;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using OpenAI;
+using OpenAI.Images;
+using OpenAiImageOptions = OpenAI.Images.ImageGenerationOptions;
 
 namespace Infrastructure.Assistance;
 
@@ -13,16 +17,24 @@ namespace Infrastructure.Assistance;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The Responses API rather than chat completions, which is what OpenAI now
-/// points new work at. Structured output moved with it: what was
-/// <c>response_format</c> at the top level is <c>text.format</c> here.
+/// OpenAI's own client library rather than this app's reading of their
+/// documentation. What that buys is the fault with no symptom: a field written
+/// <c>b64_json</c> where a hand-written record expected <c>b64Json</c> bound to
+/// null, and a picture that had arrived was reported as an answer that could
+/// not be read. Those types are now maintained by the people who change the
+/// wire format.
 /// </para>
 /// <para>
-/// The system role survives the move, which matters more to this feature than
-/// anything else about it. The instruction is a <c>system</c> message and the
-/// untrusted material is a <c>user</c> message — two different kinds of thing
-/// rather than two parts of one, which is the strongest separation any of the
-/// three providers offers.
+/// Composition goes through <see cref="IChatClient"/>, so the two providers
+/// that offer one are asked for text in identical words and differ only where
+/// they really differ. Drawing and listing have no such abstraction and use the
+/// SDK directly.
+/// </para>
+/// <para>
+/// The system role survives, which matters more to this feature than anything
+/// else about it: the instruction is a system message and the untrusted
+/// material is a user message — two kinds of thing rather than two halves of
+/// one.
 /// </para>
 /// <para>
 /// The second half of "anything that answers in their shape" is why the address
@@ -35,7 +47,7 @@ namespace Infrastructure.Assistance;
 /// administrator has set up.
 /// </para>
 /// </remarks>
-/// <param name="http">The shared client.</param>
+/// <param name="http">The shared client, whose rules the SDK is made to keep.</param>
 /// <param name="logger">Records what a provider refused, and why.</param>
 internal sealed class OpenAiAssistant(
     AssistantHttp http,
@@ -51,33 +63,29 @@ internal sealed class OpenAiAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        var payload = new
+        List<ChatMessage> conversation =
+        [
+            new(ChatRole.System, request.Instruction),
+            new(ChatRole.User, Material(request))
+        ];
+
+        var options = new ChatOptions
         {
-            model = @using.Model,
-            input = new object[]
-            {
-                new { role = "system", content = request.Instruction },
-                new { role = "user", content = Content(request) }
-            },
-            text = new
-            {
-                format = new
-                {
-                    type = "json_schema",
-                    name = RecipeSchema.Name,
-                    schema = RecipeSchema.Definition
-                }
-            }
+            ResponseFormat = ChatResponseFormat.ForJsonSchema(RecipeSchema.AsJson, RecipeSchema.Name)
         };
 
-        var answered = await http.PostAsync<OpenAiReply>(
-                AssistantHttp.Address(@using.BaseUrl, "v1/responses"),
-                payload,
-                message => Authorize(message, @using.ApiKey),
-                cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            var answered = await ChatWith(@using)
+                .GetResponseAsync(conversation, options, cancellationToken)
+                .ConfigureAwait(false);
 
-        return answered.Bind(Read);
+            return Read(answered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
     public async Task<Result<Drawn>> DrawAsync(
@@ -88,25 +96,32 @@ internal sealed class OpenAiAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        var payload = new
+        try
         {
-            model = @using.Model,
-            prompt = request.Subject,
-            n = 1,
-            // One square picture at the middling quality. Not a choice this app
-            // offers, because every other combination costs more and none of
-            // them makes a recipe card look different.
-            size = "1024x1024"
-        };
+            var drawn = await Client(@using)
+                .GetImageClient(@using.Model)
+                .GenerateImageAsync(
+                    request.Subject,
+                    // One square picture. Not a choice this app offers, because
+                    // every other combination costs more and none of them makes
+                    // a recipe card look different.
+                    new OpenAiImageOptions { Size = GeneratedImageSize.W1024xH1024 },
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-        var answered = await http.PostAsync<OpenAiImageReply>(
-                AssistantHttp.Address(@using.BaseUrl, "v1/images/generations"),
-                payload,
-                message => Authorize(message, @using.ApiKey),
-                cancellationToken)
-            .ConfigureAwait(false);
+            if (drawn.Value?.ImageBytes is not { } bytes)
+            {
+                AssistanceLogs.EmptyAnswer(logger, Kind.Code, finishReason: null);
 
-        return answered.Bind(ReadPicture);
+                return AssistanceErrors.UnusableAnswer;
+            }
+
+            return new Drawn(new MemoryStream(bytes.ToArray()), new ModelUsage(0, 0, Pictures: 1));
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
     public async Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
@@ -115,21 +130,108 @@ internal sealed class OpenAiAssistant(
     {
         ArgumentNullException.ThrowIfNull(@using);
 
-        var listed = await http.GetAsync<OpenAiModelList>(
-                AssistantHttp.Address(@using.BaseUrl, "v1/models"),
-                message => Authorize(message, @using.ApiKey),
-                cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            var listed = await Client(@using)
+                .GetOpenAIModelClient()
+                .GetModelsAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-        return listed.Map(list => (IReadOnlyList<ModelInfo>)
-        [
-            .. (list.Data ?? [])
-                .Select(model => model.Id ?? string.Empty)
-                .Where(Usable)
-                .Select(id => new ModelInfo(id, id, DrawingModel.Draws(id)))
-                .OrderBy(model => model.Id, StringComparer.Ordinal)
-        ]);
+            IReadOnlyList<ModelInfo> offered =
+            [
+                .. listed.Value
+                    .Select(model => model.Id)
+                    .Where(Usable)
+                    .Select(id => new ModelInfo(id, id, DrawingModel.Draws(id)))
+                    .OrderBy(model => model.Id, StringComparer.Ordinal)
+            ];
+
+            return Result<IReadOnlyList<ModelInfo>>.Success(offered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
+
+    /// <summary>
+    /// The material, as the parts of the user message.
+    /// </summary>
+    /// <remarks>
+    /// The instruction is the system message and is never here. This builds only
+    /// the untrusted half — what somebody pasted, typed or photographed — and
+    /// the two are never concatenated.
+    /// </remarks>
+    private static List<AIContent> Material(Composition request)
+    {
+        List<AIContent> parts = [];
+
+        if (request.Material is { Length: > 0 } material)
+        {
+            parts.Add(new TextContent(material));
+        }
+
+        if (!request.Picture.IsEmpty)
+        {
+            parts.Add(new DataContent(
+                request.Picture,
+                request.PictureMediaType ?? "image/jpeg"));
+        }
+
+        return parts;
+    }
+
+    private Result<Composed> Read(ChatResponse answered)
+    {
+        if (answered.Text is not { Length: > 0 } json)
+        {
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, answered.FinishReason?.Value);
+
+            return AssistanceErrors.UnusableAnswer;
+        }
+
+        try
+        {
+            var answer = JsonSerializer.Deserialize<RecipeAnswer>(json, AssistantHttp.Json);
+
+            return answer is null
+                ? AssistanceErrors.UnusableAnswer
+                : new Composed(answer.ToDraft(), Usage(answered));
+        }
+        catch (JsonException)
+        {
+            // The model answered with something that is not the shape it was
+            // given. Ordinary rather than exceptional, and the person asking
+            // gets to try again.
+            return AssistanceErrors.UnusableAnswer;
+        }
+    }
+
+    private static ModelUsage Usage(ChatResponse answered) => new(
+        (int)(answered.Usage?.InputTokenCount ?? 0),
+        (int)(answered.Usage?.OutputTokenCount ?? 0),
+        Pictures: 0);
+
+    /// <summary>
+    /// The client for one connection.
+    /// </summary>
+    /// <remarks>
+    /// Built per call rather than held: the key and the address belong to the
+    /// connection being used, and an instance of this class serves all of them.
+    /// The transport is the app's own, so the SDK inherits the rules the
+    /// hand-written client had — no redirects with a key attached, one pool,
+    /// one deadline.
+    /// </remarks>
+    private OpenAIClient Client(Connected @using) => new(
+        new ApiKeyCredential(@using.ApiKey),
+        new OpenAIClientOptions
+        {
+            Endpoint = new Uri(@using.BaseUrl),
+            Transport = new HttpClientPipelineTransport(http.Client)
+        });
+
+    private IChatClient ChatWith(Connected @using) =>
+        Client(@using).GetChatClient(@using.Model).AsIChatClient();
 
     /// <summary>
     /// What is left after the models that cannot write a recipe.
@@ -150,187 +252,31 @@ internal sealed class OpenAiAssistant(
         && !id.Contains("audio", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("realtime", StringComparison.OrdinalIgnoreCase);
 
-
-    private static void Authorize(HttpRequestMessage message, string key) =>
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
-
-    /// <summary>
-    /// The material, as content parts of the user message.
-    /// </summary>
-    /// <remarks>
-    /// The instruction is the system message and is never here. This builds only
-    /// the untrusted half — what somebody pasted, typed or photographed — and
-    /// the two are never concatenated.
-    /// </remarks>
-    private static object[] Content(Composition request)
-    {
-        List<object> parts = [];
-
-        // input_text and input_image, not text and image: the Responses API
-        // names the parts of a message it is given differently from the parts
-        // of one it produces, and rejects the output names on the way in.
-        if (request.Material is { Length: > 0 } material)
-        {
-            parts.Add(new { type = "input_text", text = material });
-        }
-
-        if (!request.Picture.IsEmpty)
-        {
-            var media = request.PictureMediaType ?? "image/jpeg";
-
-            // The data URL goes on image_url directly. It is a string there,
-            // not an object with a url in it — that shape belongs to chat
-            // completions, which this no longer uses.
-            parts.Add(new
-            {
-                type = "input_image",
-                image_url = $"data:{media};base64,{Convert.ToBase64String(request.Picture.Span)}"
-            });
-        }
-
-        return [.. parts];
-    }
-
-    private Result<Composed> Read(OpenAiReply reply)
-    {
-        if (Text(reply) is not { Length: > 0 } json)
-        {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Status);
-
-            return AssistanceErrors.UnusableAnswer;
-        }
-
-        try
-        {
-            var answer = JsonSerializer.Deserialize<RecipeAnswer>(json, AssistantHttp.Json);
-
-            return answer is null
-                ? AssistanceErrors.UnusableAnswer
-                : new Composed(answer.ToDraft(), Usage(reply));
-        }
-        catch (JsonException)
-        {
-            return AssistanceErrors.UnusableAnswer;
-        }
-    }
+    /// <summary>The failures that are the provider's rather than this app's.</summary>
+    private static bool Expected(Exception failure) =>
+        failure is ClientResultException or HttpRequestException or OperationCanceledException
+            or IOException or InvalidOperationException;
 
     /// <summary>
-    /// The first piece of text the model produced.
+    /// What a refusal means.
     /// </summary>
     /// <remarks>
-    /// Searched rather than indexed at <c>output[0].content[0]</c>. A response
-    /// can carry reasoning items and tool calls alongside the message, and the
-    /// answer is not reliably the first thing in the list.
+    /// A refused credential is carried as itself this far. It is turned back
+    /// into "unavailable" before it can reach somebody who is cooking, but the
+    /// settings screen and the ledger are read by the person holding the key,
+    /// and telling them their key was refused is the whole of what they need.
     /// </remarks>
-    private static string? Text(OpenAiReply reply) => reply.Output?
-        .SelectMany(item => item.Content ?? [])
-        .FirstOrDefault(part => part.Text is { Length: > 0 })?
-        .Text;
-
-    private Result<Drawn> ReadPicture(OpenAiImageReply reply)
+    private static Error Failure(Exception failure) => failure switch
     {
-        if (reply.Data is not [{ B64Json: { Length: > 0 } data }, ..])
-        {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, finishReason: null);
-
-            return AssistanceErrors.UnusableAnswer;
-        }
-
-        return new Drawn(
-            new MemoryStream(Convert.FromBase64String(data)),
-            new ModelUsage(
-                reply.Usage?.InputTokens ?? 0,
-                reply.Usage?.OutputTokens ?? 0,
-                Pictures: 1));
-    }
-
-    private static ModelUsage Usage(OpenAiReply reply) => new(
-        reply.Usage?.InputTokens ?? 0,
-        reply.Usage?.OutputTokens ?? 0,
-        Pictures: 0);
-
-}
-
-/// <summary>What the models listing answers with.</summary>
-internal sealed record OpenAiModelList
-{
-    public IReadOnlyList<OpenAiModel>? Data { get; init; }
-}
-
-/// <summary>One model the account can reach.</summary>
-internal sealed record OpenAiModel
-{
-    public string? Id { get; init; }
-}
-
-/// <summary>What the Responses API answers with.</summary>
-internal sealed record OpenAiReply
-{
-    public IReadOnlyList<OpenAiOutputItem>? Output { get; init; }
-
-    /// <summary>Set when the response did not simply complete.</summary>
-    public string? Status { get; init; }
-
-    public OpenAiUsage? Usage { get; init; }
-}
-
-/// <summary>One item of the output: a message, a reasoning block, a tool call.</summary>
-internal sealed record OpenAiOutputItem
-{
-    public string? Type { get; init; }
-
-    public IReadOnlyList<OpenAiContentPart>? Content { get; init; }
-}
-
-/// <summary>One piece of an output item.</summary>
-internal sealed record OpenAiContentPart
-{
-    public string? Type { get; init; }
-
-    public string? Text { get; init; }
-}
-
-/// <summary>
-/// What the call consumed.
-/// </summary>
-/// <remarks>
-/// Named on every property, because OpenAI writes these in snake_case and the
-/// shared options are the web defaults: those ignore case and nothing else, so
-/// <c>input_tokens</c> never reaches <c>InputTokens</c> on its own. Without the
-/// names it binds silently to zero — every call free, every budget untouched,
-/// and a usage table of noughts that looks like a feature nobody uses.
-/// </remarks>
-internal sealed record OpenAiUsage
-{
-    [JsonPropertyName("input_tokens")]
-    public int InputTokens { get; init; }
-
-    [JsonPropertyName("output_tokens")]
-    public int OutputTokens { get; init; }
-
-    [JsonPropertyName("total_tokens")]
-    public int TotalTokens { get; init; }
-}
-
-/// <summary>What an image generation answers with.</summary>
-internal sealed record OpenAiImageReply
-{
-    public IReadOnlyList<OpenAiImage>? Data { get; init; }
-
-    public OpenAiUsage? Usage { get; init; }
-}
-
-/// <summary>
-/// One generated picture.
-/// </summary>
-/// <remarks>
-/// The whole of the answer, and the one field in it. Unnamed, it bound to null
-/// on every drawing OpenAI has ever returned, which this read as an answer it
-/// could not use — so the picture arrived, was thrown away, and the screen said
-/// the assistant could not draw one.
-/// </remarks>
-internal sealed record OpenAiImage
-{
-    [JsonPropertyName("b64_json")]
-    public string? B64Json { get; init; }
+        ClientResultException { Status: 429 } => AssistanceErrors.Throttled,
+        // Forbidden as well as unauthorized: a key scoped to inference and not
+        // to reading the catalogue answers 403 while signing every other call
+        // in this app perfectly well.
+        ClientResultException { Status: 401 or 403 } => AssistanceErrors.Rejected,
+        // A content filter and a malformed request both answer 400. The
+        // caller's options are the same either way, and the log line tells
+        // them apart.
+        ClientResultException { Status: 400 } => AssistanceErrors.Refused,
+        _ => AssistanceErrors.Unavailable
+    };
 }

@@ -66,6 +66,18 @@ internal sealed class AssistantHttp : IDisposable
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Culina/1.0 (self-hosted recipe app)");
     }
 
+    /// <summary>
+    /// The client itself, for a provider's own SDK.
+    /// </summary>
+    /// <remarks>
+    /// Handed out rather than hidden so that an SDK bringing its own request
+    /// pipeline still goes through this one's rules: no redirects, because a
+    /// followed one carries the key wherever it points; one connection pool;
+    /// one deadline. An SDK given a client of its own would quietly have none
+    /// of that.
+    /// </remarks>
+    internal HttpClient Client => client;
+
     /// <summary>The shape every provider is spoken to and answers in.</summary>
     internal static JsonSerializerOptions Json { get; } = new(JsonSerializerDefaults.Web)
     {

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Application.Abstractions;
 
 namespace Infrastructure.Assistance;
@@ -29,6 +30,17 @@ internal static class RecipeSchema
 {
     /// <summary>What to call it, where a provider wants a name.</summary>
     internal const string Name = "recipe";
+
+    /// <summary>
+    /// The same schema as a parsed document.
+    /// </summary>
+    /// <remarks>
+    /// What <c>Microsoft.Extensions.AI</c> takes, where the dictionary is what
+    /// Google's client takes. Built once: it is constant, and parsing it per
+    /// request would be parsing the same bytes for the life of the process.
+    /// </remarks>
+    internal static JsonElement AsJson { get; } =
+        JsonSerializer.SerializeToElement(Definition, AssistantHttp.Json);
 
     /// <summary>The schema, as both providers take it.</summary>
     internal static IReadOnlyDictionary<string, object> Definition { get; } = Object(
