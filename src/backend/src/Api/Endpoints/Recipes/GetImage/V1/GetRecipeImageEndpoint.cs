@@ -51,10 +51,16 @@ internal sealed class GetRecipeImageEndpoint : IEndpoint
             .WithSummary("Read a recipe image")
             .WithDescription(
                 "Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as "
-                + "private as the recipe it belongs to; its ETag is the content hash, which cannot "
-                + "change under the same address.")
-            .WithRepeatableQueryParameters(["w"], [], ["w"])
+                + "private as the recipe it belongs to; its ETag is the content hash, so a picture that "
+                + "was replaced is fetched and one that was not answers 304.")
+            // "v" is the picture's id, and nothing here reads it. It is in the
+            // address so that replacing a picture changes the address, which is
+            // what makes a browser fetch the new one instead of showing the old
+            // one it already has. Declared because the query guard rejects a
+            // parameter this endpoint has not claimed.
+            .WithRepeatableQueryParameters(["w", "v"], [], ["w"])
             .Produces<byte[]>(StatusCodes.Status200OK, "image/webp")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -74,11 +80,32 @@ internal sealed class GetRecipeImageEndpoint : IEndpoint
             && ImageWidths.Exists(width);
     }
 
+    /// <summary>
+    /// Sends the bytes, or says the client already has them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// No-cache rather than an hour's freshness, which is what every other read
+    /// in this app sends and what this one's own description always claimed to.
+    /// A picture is replaced under the address it was served from — that is
+    /// what setting a new one is — so a browser told it could reuse its copy
+    /// for an hour showed the old picture for an hour, with nothing on the
+    /// screen to suggest the new one had arrived.
+    /// </para>
+    /// <para>
+    /// It costs a request per view and almost no bytes: the tag is the content
+    /// hash, so an unchanged picture answers 304 and is not sent again.
+    /// </para>
+    /// </remarks>
     private static IResult Served(HttpContext context, MemoryStream buffer, ImageDelivery delivery)
     {
-        context.Response.Headers.ETag = $"\"{delivery.ContentHash}\"";
-        context.Response.Headers.CacheControl = "private, max-age=3600";
+        var tag = $"\"{delivery.ContentHash}\"";
 
-        return Results.Bytes(buffer.ToArray(), "image/webp");
+        context.Response.Headers.ETag = tag;
+        context.Response.Headers.CacheControl = "private, no-cache";
+
+        return ETag.Matches(context.Request.Headers.IfNoneMatch, tag)
+            ? Results.StatusCode(StatusCodes.Status304NotModified)
+            : Results.Bytes(buffer.ToArray(), "image/webp");
     }
 }

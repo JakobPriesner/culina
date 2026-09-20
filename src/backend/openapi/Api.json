@@ -2806,7 +2806,7 @@
           "Recipes"
         ],
         "summary": "Read a recipe image",
-        "description": "Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as private as the recipe it belongs to; its ETag is the content hash, which cannot change under the same address.",
+        "description": "Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as private as the recipe it belongs to; its ETag is the content hash, so a picture that was replaced is fetched and one that was not answers 304.",
         "operationId": "getRecipeImageV1",
         "parameters": [
           {
@@ -2825,6 +2825,14 @@
             "schema": {
               "type": "integer"
             }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2838,6 +2846,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Not Modified"
           },
           "400": {
             "description": "Bad Request",
@@ -3321,6 +3332,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Not Modified"
           },
           "400": {
             "description": "Bad Request",

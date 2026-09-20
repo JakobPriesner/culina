@@ -11,15 +11,28 @@ export const imageWidths = [400, 800, 1600] as const;
 
 export type ImageWidth = (typeof imageWidths)[number];
 
-export const imageUrl = (recipeId: string, width: ImageWidth): string =>
-  `${base}/api/v1/recipes/${recipeId}/image?w=${width}`;
+/**
+ * Where a recipe's photo lives, at a given width.
+ *
+ * The version is the id of the picture currently on the recipe, and it is what
+ * makes replacing one visible. A recipe's image has a fixed address, so a new
+ * picture arrives at the address the old one is already displayed from — and a
+ * browser asked to show an `src` it is already showing does not go and look
+ * again. Drawing a picture for a recipe that had one therefore appeared to do
+ * nothing at all.
+ *
+ * Omitted where the caller does not know it, which is honest rather than
+ * harmless: those pictures update on the next load instead of at once.
+ */
+export const imageUrl = (recipeId: string, width: ImageWidth, version?: string | null): string =>
+  `${base}/api/v1/recipes/${recipeId}/image?w=${width}${version ? `&v=${version}` : ''}`;
 
 /**
  * The candidates a browser picks from, so a phone does not fetch a photo sized
  * for a desktop.
  */
-export const imageSrcset = (recipeId: string): string =>
-  imageWidths.map((width) => `${imageUrl(recipeId, width)} ${width}w`).join(', ');
+export const imageSrcset = (recipeId: string, version?: string | null): string =>
+  imageWidths.map((width) => `${imageUrl(recipeId, width, version)} ${width}w`).join(', ');
 
 /**
  * Where your photograph of one attempt lives.

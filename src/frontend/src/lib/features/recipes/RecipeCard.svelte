@@ -38,8 +38,8 @@
        both reads as one grid. -->
   <div class="photo">
     <Image
-      src={recipe.imageId ? imageUrl(recipe.id, 400) : undefined}
-      srcset={recipe.imageId ? imageSrcset(recipe.id) : undefined}
+      src={recipe.imageId ? imageUrl(recipe.id, 400, recipe.imageId) : undefined}
+      srcset={recipe.imageId ? imageSrcset(recipe.id, recipe.imageId) : undefined}
       sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw"
       alt=""
       ratio={4 / 3}
