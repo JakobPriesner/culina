@@ -143,7 +143,15 @@
     }
   }
 
-  const money = (value: number): string => formatNumber(value, { maximumFractionDigits: 2 });
+  /**
+   * A sum of money, with its unit on it.
+   *
+   * Euros, stated rather than implied. The figures here are read next to a
+   * budget somebody typed, and a bare number beside another bare number is two
+   * numbers nobody can be sure are the same kind of thing.
+   */
+  const money = (value: number): string =>
+    formatNumber(value, { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
 
   /** Whether any job is given to a provider that sends data off the machine. */
   const anythingHosted = $derived(
@@ -233,6 +241,13 @@
       {m['ai.models.unreachable']({ provider: m[`ai.provider.${listed.provider}`]() })}
     </p>
   {/each}
+
+  {#if assistance.unlisted}
+    <!-- The listing itself did not happen, so there is no per-provider row to
+         say so. Without this the pickers below are bare text boxes and the
+         screen gives no reason for it. -->
+    <p class="failure" role="alert">{m['ai.models.unlisted']()}</p>
+  {/if}
 
   <SettingsSection title={m['ai.jobs']()} description={m['ai.jobs.hint']()}>
     {#each capabilities as capability (capability)}
@@ -364,18 +379,24 @@
     <SettingsRow label={m['ai.budget.monthly']()}>
       <Field label={m['ai.budget.monthly']()}>
         {#snippet children({ id, describedBy, invalid })}
-          <TextInput
-            {id}
-            {describedBy}
-            {invalid}
-            inputmode="decimal"
-            placeholder={m['ai.budget.none']()}
-            value={it.monthlyBudget?.toString() ?? ''}
-            oninput={(value) => {
-              it.monthlyBudget = budget(value);
-              saved = false;
-            }}
-          />
+          <div class="amount">
+            <!-- Aria-hidden: the unit is in the section's own description, and
+                 a lone currency symbol announced before the field would be a
+                 word without a sentence. -->
+            <span class="unit" aria-hidden="true">€</span>
+            <TextInput
+              {id}
+              {describedBy}
+              {invalid}
+              inputmode="decimal"
+              placeholder={m['ai.budget.none']()}
+              value={it.monthlyBudget?.toString() ?? ''}
+              oninput={(value) => {
+                it.monthlyBudget = budget(value);
+                saved = false;
+              }}
+            />
+          </div>
         {/snippet}
       </Field>
     </SettingsRow>
@@ -383,18 +404,21 @@
     <SettingsRow label={m['ai.budget.personal']()}>
       <Field label={m['ai.budget.personal']()}>
         {#snippet children({ id, describedBy, invalid })}
-          <TextInput
-            {id}
-            {describedBy}
-            {invalid}
-            inputmode="decimal"
-            placeholder={m['ai.budget.none']()}
-            value={it.personalBudget?.toString() ?? ''}
-            oninput={(value) => {
-              it.personalBudget = budget(value);
-              saved = false;
-            }}
-          />
+          <div class="amount">
+            <span class="unit" aria-hidden="true">€</span>
+            <TextInput
+              {id}
+              {describedBy}
+              {invalid}
+              inputmode="decimal"
+              placeholder={m['ai.budget.none']()}
+              value={it.personalBudget?.toString() ?? ''}
+              oninput={(value) => {
+                it.personalBudget = budget(value);
+                saved = false;
+              }}
+            />
+          </div>
         {/snippet}
       </Field>
     </SettingsRow>
@@ -509,6 +533,19 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
+  }
+
+  /* The unit beside the field rather than inside it: typing "€" into a box
+     that parses numbers is a mistake the box would have to reject. */
+  .amount {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .unit {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .advanced {

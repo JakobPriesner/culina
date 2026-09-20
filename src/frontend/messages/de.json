@@ -802,7 +802,7 @@
   "ai.draw.hint": "Erstellt ein Foto für ein Rezept ohne eigenes. Das teuerste der vier.",
   "ai.draw.unsupported": "Ollama zeichnet keine Bilder.",
   "ai.budget": "Budget",
-  "ai.budget.hint": "In der Währung, in der dein Anbieter abrechnet. Anfragen werden abgelehnt, sobald eine Grenze erreicht ist.",
+  "ai.budget.hint": "In Euro. Anfragen werden abgelehnt, sobald eine Grenze erreicht ist.",
   "ai.budget.monthly": "Diese Instanz, pro Monat",
   "ai.budget.personal": "Pro Person, pro Monat",
   "ai.budget.none": "Keine Grenze",
@@ -886,5 +886,6 @@
   "ai.job.model.any": "Für dich gewählt",
   "ai.models.unreachable": "{provider} hat nicht geantwortet, die Modelle konnten nicht geladen werden. Prüfe Schlüssel und Adresse.",
   "ai.models.typed": "Modellnamen eingeben",
-  "ai.models.listing": "Anbieter wird gefragt…"
+  "ai.models.listing": "Anbieter wird gefragt…",
+  "ai.models.unlisted": "Die Modell-Listen konnten nicht geladen werden, deshalb werden die Modelle unten eingetippt statt ausgewählt. Speichern funktioniert trotzdem."
 }

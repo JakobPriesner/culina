@@ -391,6 +391,89 @@ describe('the assistant settings page', () => {
     expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
   });
 
+  it('asks the providers again after a key is saved, so the lists are not stale', async () => {
+    // The moment somebody most wants a list is the moment after they paste the
+    // key. Nothing could be listed before it existed.
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(within(rowFor('Gemini')).getByRole('button', { name: 'Replace' }));
+    await userEvent.type(screen.getByPlaceholderText('Paste the key'), 'a-key');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await settle();
+
+    const listings = fetched.mock.calls
+      .map(([input]) => String(input instanceof Request ? input.url : input))
+      .filter((url) => url.includes('/models'));
+
+    // Once on opening the screen, once after the save.
+    expect(listings).toHaveLength(2);
+  });
+
+  it('says so when the lists could not be fetched at all', async () => {
+    const json = (body: object) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: unknown) => {
+        const url = String(input instanceof Request ? input.url : input);
+
+        if (url.includes('/usage')) return Promise.resolve(json(emptyUsage));
+        if (url.includes('/models')) return Promise.resolve(new Response('', { status: 500 }));
+
+        return Promise.resolve(json(configured));
+      })
+    );
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // Text boxes everywhere is the old behaviour and still usable. Text boxes
+    // everywhere with nothing saying why is what this guards against.
+    expect(screen.getByText(/model lists could not be loaded/)).toBeInTheDocument();
+  });
+
+  it('says what the sums are in, rather than leaving bare numbers', async () => {
+    const json = (body: object) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: unknown) => {
+        const url = String(input instanceof Request ? input.url : input);
+
+        if (url.includes('/usage'))
+          return Promise.resolve(
+            json({
+              ...emptyUsage,
+              totalCost: 3.5,
+              byPerson: [{ userId: 'u1', displayName: 'Jakob', calls: 4, cost: 3.5 }]
+            })
+          );
+        if (url.includes('/models')) return Promise.resolve(json(offered));
+
+        return Promise.resolve(json(configured));
+      })
+    );
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    // A spend read next to a budget somebody typed: two bare numbers leave it
+    // to the reader to assume they are the same kind of thing.
+    expect(screen.getAllByText(/€/).length).toBeGreaterThan(0);
+    expect(screen.queryByText('3.5')).not.toBeInTheDocument();
+  });
+
   it('says nothing leaves the machine when every job is local', async () => {
     serverAnswers({
       ...configured,

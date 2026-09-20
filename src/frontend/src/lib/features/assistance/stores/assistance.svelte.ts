@@ -30,6 +30,7 @@ class AssistanceStore {
   #models = $state<ProviderModels[]>([]);
   #loading = $state(false);
   #listing = $state(false);
+  #unlisted = $state(false);
   #saving = $state(false);
   #error = $state<AppError | null>(null);
 
@@ -59,6 +60,17 @@ class AssistanceStore {
   /** Whether the providers are still being asked what they offer. */
   get listing(): boolean {
     return this.#listing;
+  }
+
+  /**
+   * Whether asking them failed outright.
+   *
+   * Distinct from a provider answering "no": that arrives as a row saying so.
+   * This is the request itself not happening, which used to leave the model
+   * pickers as bare text boxes with nothing on screen to explain why.
+   */
+  get unlisted(): boolean {
+    return this.#unlisted;
   }
 
   get saving(): boolean {
@@ -143,6 +155,13 @@ class AssistanceStore {
     if (outcome.ok) {
       this.#settings = toAssistance(outcome.value);
 
+      // The saved keys and addresses are what decides who can be asked, so the
+      // lists are stale the moment this returns. Without this, connecting a
+      // provider left its model picker a text box until the page was loaded
+      // again — the one moment somebody most wants the list is the moment
+      // after they paste the key.
+      void this.refreshModels();
+
       return null;
     }
 
@@ -171,6 +190,7 @@ class AssistanceStore {
       this.#models = toProviderModels(models.value);
     }
 
+    this.#unlisted = !models.ok;
     this.#listing = false;
   }
 
@@ -180,6 +200,7 @@ class AssistanceStore {
     this.#models = [];
     this.#loading = false;
     this.#listing = false;
+    this.#unlisted = false;
     this.#saving = false;
     this.#error = null;
   }
