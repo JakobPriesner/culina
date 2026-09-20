@@ -142,7 +142,10 @@
      instance running a model on its own hardware, since those do not make
      pictures. -->
 {#snippet drawAction()}
-  <Button variant="secondary" size="sm" disabled={busy || drawing} onclick={draw}>
+  <!-- `media`, like the two the field supplies either side of it. Anything
+       else here is a button from a different screen that has wandered onto a
+       photograph. -->
+  <Button variant="media" size="sm" disabled={busy || drawing} onclick={draw}>
     {m['assist.draw']()}
   </Button>
 {/snippet}
