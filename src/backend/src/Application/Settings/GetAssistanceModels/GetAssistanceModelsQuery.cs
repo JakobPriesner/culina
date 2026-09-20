@@ -6,6 +6,7 @@ using Application.Telemetry;
 using Contracts.Settings.GetAssistanceModels;
 using Domain.Assistance;
 using Domain.Shared;
+using Microsoft.Extensions.Logging;
 using Response = Contracts.Settings.GetAssistanceModels.Response;
 
 namespace Application.Settings.GetAssistanceModels;
@@ -13,10 +14,11 @@ namespace Application.Settings.GetAssistanceModels;
 /// <summary>Reads what each connected provider currently offers.</summary>
 public sealed record GetAssistanceModelsQuery;
 
-internal sealed class GetAssistanceModelsQueryHandler(
+internal sealed partial class GetAssistanceModelsQueryHandler(
     AssistanceSettings settings,
     IAssistants assistants,
-    ISecretProtector protector)
+    ISecretProtector protector,
+    ILogger<GetAssistanceModelsQueryHandler> logger)
     : IQueryHandler<GetAssistanceModelsQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -65,16 +67,32 @@ internal sealed class GetAssistanceModelsQueryHandler(
                     CanDraw = model.CanDraw
                 })]
             },
-            error => new ProviderModelsContract
+            error =>
             {
-                Provider = kind.Code,
-                Reachable = false,
-                // The first place an administrator finds out that the key they
-                // pasted does not work, so the reason is worth carrying.
-                Problem = error.Code,
-                Models = []
+                // Said twice on purpose. The screen carries the reason to the
+                // administrator looking at it now; the log carries it to
+                // whoever reads it afterwards, which is the only record that
+                // one provider out of three stopped answering.
+                CouldNotList(logger, kind.Code, error.Code);
+
+                return new ProviderModelsContract
+                {
+                    Provider = kind.Code,
+                    Reachable = false,
+                    // The first place an administrator finds out that the key
+                    // they pasted does not work, so the reason is worth
+                    // carrying.
+                    Problem = error.Code,
+                    Models = []
+                };
             });
     }
+
+    [LoggerMessage(
+        EventId = 2310,
+        Level = LogLevel.Warning,
+        Message = "Provider {Provider} could not be asked what it offers: {Reason}")]
+    private static partial void CouldNotList(ILogger logger, string provider, string reason);
 
     /// <summary>
     /// Enough of a connection to ask what it offers.

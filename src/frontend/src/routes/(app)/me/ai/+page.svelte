@@ -239,7 +239,14 @@
 
   {#each assistance.models.filter((one) => !one.reachable) as listed (listed.provider)}
     <p class="failure" role="alert">
-      {m['ai.models.unreachable']({ provider: m[`ai.provider.${listed.provider}`]() })}
+      <!-- A refused key and a provider that is down read the same from here
+           and are not the same thing: one is replaced, the other is waited
+           for. "Check the key and the address" sent somebody to replace a key
+           that signs every other call in this app perfectly well — providers
+           scope keys, and reading the catalogue is a permission of its own. -->
+      {listed.problem === 'assistance.rejected'
+        ? m['ai.models.rejected']({ provider: m[`ai.provider.${listed.provider}`]() })
+        : m['ai.models.unreachable']({ provider: m[`ai.provider.${listed.provider}`]() })}
     </p>
   {/each}
 

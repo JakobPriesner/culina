@@ -191,14 +191,18 @@ internal sealed class AssistantHttp : IDisposable
     /// What a status code from a provider means.
     /// </summary>
     /// <remarks>
-    /// A wrong key is reported as unavailable rather than as itself, and
-    /// deliberately: the person who sees this message is cooking, and the
-    /// person who can fix it is the administrator, who has the log line. Told
-    /// apart in the logs, not on screen.
+    /// A refused credential is carried as itself this far. It is turned back
+    /// into "unavailable" before it can reach somebody who is cooking, but the
+    /// settings screen and the ledger are read by the person holding the key,
+    /// and telling them their key was refused is the whole of what they need.
     /// </remarks>
     private static Error Refusal(HttpStatusCode status) => status switch
     {
         HttpStatusCode.TooManyRequests => AssistanceErrors.Throttled,
+        // Forbidden as well as unauthorized: a key scoped to inference and not
+        // to reading the catalogue answers 403 here while signing every other
+        // call in this app perfectly well.
+        HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => AssistanceErrors.Rejected,
         // Both providers answer a content-filter refusal with 400. So does a
         // malformed request, which is this app's defect — but the caller's
         // options are the same either way, and the log line tells them apart.
