@@ -492,6 +492,32 @@ describe('the assistant settings page', () => {
     expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
   });
 
+  it('lets a model be typed when a provider listed nothing the job can use', async () => {
+    // OpenAI answering with a catalogue that holds no drawing model used to
+    // leave the drawing job a picker containing one entry — "chosen for you" —
+    // and no way to type anything. A list with nothing in it is worse than no
+    // list, because no list at least gives you the box back.
+    serverAnswers(configured, {
+      providers: [
+        {
+          provider: 'gemini',
+          reachable: true,
+          problem: null,
+          models: [{ id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', canDraw: false }]
+        }
+      ]
+    });
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const row = rowFor('Draw a picture');
+
+    expect(within(row).getAllByRole('combobox')).toHaveLength(1);
+    expect(within(row).getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByText(/Gemini listed nothing this job could use/)).toBeInTheDocument();
+  });
+
   it('says nothing leaves the machine when every job is local', async () => {
     serverAnswers({
       ...configured,

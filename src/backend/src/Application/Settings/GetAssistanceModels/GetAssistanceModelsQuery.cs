@@ -56,16 +56,27 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
             .ConfigureAwait(false);
 
         return listed.Match(
-            models => new ProviderModelsContract
+            models =>
             {
-                Provider = kind.Code,
-                Reachable = true,
-                Models = [.. models.Select(model => new ModelContract
+                // How many, and how many of them draw. A provider that answers
+                // with an empty catalogue and one that was never asked look
+                // identical from the screen, and the difference is the whole
+                // of what an administrator needs to know next.
+                var drawing = models.Count(model => model.CanDraw);
+
+                Listed(logger, kind.Code, models.Count, drawing);
+
+                return new ProviderModelsContract
                 {
-                    Id = model.Id,
-                    Label = model.Label,
-                    CanDraw = model.CanDraw
-                })]
+                    Provider = kind.Code,
+                    Reachable = true,
+                    Models = [.. models.Select(model => new ModelContract
+                    {
+                        Id = model.Id,
+                        Label = model.Label,
+                        CanDraw = model.CanDraw
+                    })]
+                };
             },
             error =>
             {
@@ -87,6 +98,12 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
                 };
             });
     }
+
+    [LoggerMessage(
+        EventId = 2311,
+        Level = LogLevel.Information,
+        Message = "Provider {Provider} offers {Count} models, {Drawing} of which draw")]
+    private static partial void Listed(ILogger logger, string provider, int count, int drawing);
 
     [LoggerMessage(
         EventId = 2310,
