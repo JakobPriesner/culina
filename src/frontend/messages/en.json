@@ -903,5 +903,7 @@
   "cookbooks.rules.ingredientPlaceholder": "for example, chicken",
   "assist.writing": "Writing…",
   "assist.draw.elapsed": "Creating image… {seconds}s",
-  "assist.improve.writing": "The assistant is still writing. You can accept once it has finished."
+  "assist.improve.writing": "The assistant is still writing. You can accept once it has finished.",
+  "editor.language": "Written in",
+  "editor.languageHint": "Used to search this recipe and to suggest ingredients while you type."
 }

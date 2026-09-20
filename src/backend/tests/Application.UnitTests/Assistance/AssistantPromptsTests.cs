@@ -71,11 +71,28 @@ public class AssistantPromptsTests
     }
 
     [Fact]
-    public void EveryPrompt_ShouldNameTheLanguageItWantsAndNoOther()
+    public void EveryPromptThatPicksALanguage_ShouldNameThatOneAndNoOther()
     {
-        Assert.Contains("in German", AssistantPrompts.Improve(Language.De), StringComparison.Ordinal);
-        Assert.DoesNotContain("in English", AssistantPrompts.Improve(Language.De), StringComparison.Ordinal);
-        Assert.Contains("in English", AssistantPrompts.Improve(Language.En), StringComparison.Ordinal);
+        Assert.Contains("in German", AssistantPrompts.Read(Language.De), StringComparison.Ordinal);
+        Assert.DoesNotContain("in English", AssistantPrompts.Read(Language.De), StringComparison.Ordinal);
+        Assert.Contains("in English", AssistantPrompts.Read(Language.En), StringComparison.Ordinal);
+        Assert.DoesNotContain("in German", AssistantPrompts.Draft(Language.En), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The one that must not pick. A recipe somebody wrote in German is tidied
+    /// up in German, whatever the app has it stored as — so the prompt names no
+    /// language and asks for no translation.
+    /// </summary>
+    [Fact]
+    public void Improve_ShouldNameNoLanguageAtAll()
+    {
+        var improved = AssistantPrompts.Improve();
+
+        Assert.DoesNotContain("in German", improved, StringComparison.Ordinal);
+        Assert.DoesNotContain("in English", improved, StringComparison.Ordinal);
+        Assert.Contains("already written in", improved, StringComparison.Ordinal);
+        Assert.Contains("Do not translate", improved, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -283,8 +300,7 @@ public class AssistantPromptsTests
 
     private static string[] All() =>
     [
-        AssistantPrompts.Improve(Language.En),
-        AssistantPrompts.Improve(Language.De),
+        AssistantPrompts.Improve(),
         AssistantPrompts.Draft(Language.En),
         AssistantPrompts.Draft(Language.De),
         AssistantPrompts.Read(Language.En),

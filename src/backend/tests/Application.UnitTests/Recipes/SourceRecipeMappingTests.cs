@@ -21,7 +21,7 @@ public class SourceRecipeMappingTests
         var theirs = Recipe(title: new string('a', RecipeTitle.MaxLength + 50));
 
         // Act
-        var details = SourceRecipeMapping.ToDetails(theirs);
+        var details = SourceRecipeMapping.ToDetails(theirs, Domain.Shared.Language.En);
 
         // Assert
         Assert.Equal(
@@ -33,7 +33,7 @@ public class SourceRecipeMappingTests
     public void ToDetails_ShouldRefuse_OnlyWhenThereIsNoTitleAtAll()
     {
         // Act
-        var details = SourceRecipeMapping.ToDetails(Recipe(title: "   "));
+        var details = SourceRecipeMapping.ToDetails(Recipe(title: "   "), Domain.Shared.Language.En);
 
         // Assert
         // The one hard requirement: a recipe with no name is not a recipe that
@@ -43,6 +43,26 @@ public class SourceRecipeMappingTests
             details.Match(value => value.Title.Value, error => error.Code));
     }
 
+    /// <summary>
+    /// Still not read out of the words — a title is far too little to tell a
+    /// language from — but no longer English for everybody either. Somebody
+    /// connecting their own library is bringing over recipes in the language
+    /// they read.
+    /// </summary>
+    [Fact]
+    public void ToDetails_ShouldLandTheRecipeInTheImportersLanguage()
+    {
+        // Act
+        var details = SourceRecipeMapping.ToDetails(
+            Recipe(title: "Linsensuppe"),
+            Domain.Shared.Language.De);
+
+        // Assert
+        Assert.Equal(
+            Domain.Shared.Language.De,
+            details.Match(value => value.Language, error => throw Failed(error.Code)));
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-4)]
@@ -50,7 +70,7 @@ public class SourceRecipeMappingTests
     public void ToDetails_ShouldFallBackToTheDefaultYield_RatherThanGuess(decimal servings)
     {
         // Act
-        var details = SourceRecipeMapping.ToDetails(Recipe() with { Servings = servings });
+        var details = SourceRecipeMapping.ToDetails(Recipe() with { Servings = servings }, Domain.Shared.Language.En);
 
         // Assert
         // This number scales every amount in the recipe. A wrong one is worse
@@ -65,7 +85,8 @@ public class SourceRecipeMappingTests
     {
         // Act
         var details = SourceRecipeMapping.ToDetails(
-            Recipe() with { PrepMinutes = 0, CookMinutes = Recipe().CookMinutes });
+            Recipe() with { PrepMinutes = 0, CookMinutes = Recipe().CookMinutes },
+            Domain.Shared.Language.En);
 
         // Assert
         Assert.Null(details.Match(value => value.PrepMinutes, error => throw Failed(error.Code)));
@@ -246,7 +267,8 @@ public class SourceRecipeMappingTests
     {
         // Act
         var details = SourceRecipeMapping.ToDetails(
-            Recipe() with { Tags = ["Vegan", "vegan", "  ", "Schnell"] });
+            Recipe() with { Tags = ["Vegan", "vegan", "  ", "Schnell"] },
+            Domain.Shared.Language.En);
 
         // Assert
         Assert.Equal(

@@ -145,7 +145,7 @@ internal sealed class RestoreArchiveCommandHandler(
         return measure.Bind(yields => groups.Bind(built =>
             title.Bind(named => language.Map(spoken =>
             {
-                var recipe = Recipe.Create(householdId, named, userId, now);
+                var recipe = Recipe.Create(householdId, named, userId, spoken, now);
 
                 recipe.Describe(
                     new RecipeDetails(

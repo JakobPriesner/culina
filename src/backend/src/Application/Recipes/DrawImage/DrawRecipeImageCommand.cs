@@ -57,15 +57,47 @@ internal sealed class DrawRecipeImageCommandHandler(
         var tracked = UseCaseActivity.Start("Recipes.DrawImage");
 #pragma warning restore CA2000
 
+        var ready = await OpenAsync(command, cancellationToken).ConfigureAwait(false);
+
+        return ready.Match(
+            afforded => Result<DrawingProgress>.Success(
+                new DrawingProgress(
+                    Drawing(command, afforded.Recipe, afforded.Provider, tracked, cancellationToken))),
+            error => Refused(tracked, error));
+    }
+
+    /// <summary>
+    /// Everything that can refuse this, before a byte of the answer goes out.
+    /// </summary>
+    /// <remarks>
+    /// The recipe has to be visible, the assistant has to be switched on for
+    /// drawing, the provider has to be one that draws at all, and the month has
+    /// to have budget left. Every one of those is a status code — a 404, a 400,
+    /// a 429 with how long to wait on it — and none of them can be once the
+    /// stream has opened with a 200.
+    /// </remarks>
+    private async Task<Result<Afforded>> OpenAsync(
+        DrawRecipeImageCommand command,
+        CancellationToken cancellationToken)
+    {
         var visible = await RecipeAccess
             .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        return visible.Match(
-            recipe => Result<DrawingProgress>.Success(
-                new DrawingProgress(Drawing(command, recipe, tracked, cancellationToken))),
-            error => Refused(tracked, error));
+        return await visible.Match(
+            async recipe =>
+            {
+                var reserved = await assistant
+                    .ReserveDrawingAsync(new Asker(command.UserId, recipe.HouseholdId), cancellationToken)
+                    .ConfigureAwait(false);
+
+                return reserved.Map(provider => new Afforded(recipe, provider));
+            },
+            error => Task.FromResult(Result<Afforded>.Failure(error))).ConfigureAwait(false);
     }
+
+    /// <summary>A recipe to draw, and a provider already paid for.</summary>
+    private sealed record Afforded(Recipe Recipe, AssistantRun.ReservedDrawing Provider);
 
     private static Result<DrawingProgress> Refused(UseCaseActivity tracked, Error error)
     {
@@ -94,13 +126,14 @@ internal sealed class DrawRecipeImageCommandHandler(
     private async IAsyncEnumerable<DrawingEvent> Drawing(
         DrawRecipeImageCommand command,
         Recipe recipe,
+        AssistantRun.ReservedDrawing provider,
         UseCaseActivity tracked,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using (tracked)
         {
             var startedAt = time.GetUtcNow();
-            var drawing = DrawAsync(command, recipe, cancellationToken);
+            var drawing = DrawAsync(command, recipe, provider, cancellationToken);
 
             // Straight away, before the first tick. It sends the headers, which
             // is what turns "the request is hanging" into "the work started".
@@ -161,11 +194,11 @@ internal sealed class DrawRecipeImageCommandHandler(
     private async Task<Result<RecipeDetail>> DrawAsync(
         DrawRecipeImageCommand command,
         Recipe recipe,
+        AssistantRun.ReservedDrawing provider,
         CancellationToken cancellationToken)
     {
-        var drawn = await assistant
-            .DrawAsync(
-                new Asker(command.UserId, recipe.HouseholdId),
+        var drawn = await provider
+            .AskAsync(
                 new Drawing
                 {
                     Subject = AssistantPrompts.Draw(

@@ -1,9 +1,37 @@
 # Culina developer commands. Every target is the real command, not a wrapper
 # script, so it is always obvious what is being run.
 
+# bash rather than whatever /bin/sh is today, because the server targets below
+# need job control and `set -m` is not in POSIX sh.
+SHELL := /bin/bash
+
 BACKEND  := src/backend
 FRONTEND := src/frontend
 API      := $(BACKEND)/src/Api
+
+# Stops a server and everything it started.
+#
+# Ctrl+C used to leave the API running. `dotnet watch` ignores INT and TERM —
+# not "eventually shuts down", ignores them — so the signal reached the watcher
+# and nothing else, and the app it had launched went on holding port 5000 with
+# no terminal attached to it. The next `make backend` then could not bind, and
+# the only way out was hunting the process down by port.
+#
+# So the signal goes to the process group rather than to the command: `set -m`
+# puts each server in a group of its own, and `kill -- -$$pid` reaches the
+# watcher, the `dotnet run` under it and the app under that. TERM first, so a
+# server that does clean up gets to; KILL two seconds later for the one that
+# does not.
+#
+# Job control is also why every server reads from /dev/null. A background job
+# that reads the terminal is sent SIGTTIN and stopped, and `dotnet watch` reads
+# stdin — so without this it suspends before it ever binds the port, and the
+# frontend answers every /api call with ECONNREFUSED while the watcher sits
+# there in state T looking for all the world like it is running. Nothing here
+# wants the keyboard: the watcher is already told --non-interactive.
+define stop
+	kill -TERM -$$1 2>/dev/null; sleep 2; kill -KILL -$$1 2>/dev/null; true
+endef
 
 .DEFAULT_GOAL := help
 .PHONY: help dev db-up db-down db-reset db-shell backend frontend \
@@ -19,16 +47,23 @@ help: ## Show this help
 dev: db-up ## Start the database, the API and the frontend dev server
 	@echo "API      http://localhost:5000"
 	@echo "Frontend http://localhost:5173  (proxies /api to the API)"
-	@trap 'kill 0' INT TERM; \
-		(cd $(API) && dotnet watch run --non-interactive) & \
-		(cd $(FRONTEND) && pnpm exec vite dev --host) & \
+	@set -m; \
+		(cd $(API) && exec dotnet watch run --non-interactive < /dev/null) & api=$$!; \
+		(cd $(FRONTEND) && exec pnpm exec vite dev --host < /dev/null) & web=$$!; \
+		trap 'stop() { $(stop) ; }; stop $$api; stop $$web; exit 0' INT TERM; \
 		wait
 
 backend: db-up ## Run only the API, with hot reload
-	cd $(API) && dotnet watch run --non-interactive
+	@set -m; \
+		(cd $(API) && exec dotnet watch run --non-interactive < /dev/null) & api=$$!; \
+		trap 'stop() { $(stop) ; }; stop $$api; exit 0' INT TERM; \
+		wait $$api
 
 frontend: ## Run only the frontend dev server
-	cd $(FRONTEND) && pnpm dev
+	@set -m; \
+		(cd $(FRONTEND) && exec pnpm dev < /dev/null) & web=$$!; \
+		trap 'stop() { $(stop) ; }; stop $$web; exit 0' INT TERM; \
+		wait $$web
 
 # ── Database ─────────────────────────────────────────────────────────────────
 

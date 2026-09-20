@@ -109,10 +109,19 @@ public sealed class SourceImportRunner(
     {
         var reader = services.GetRequiredService<IRecipeLibraries>().For(source.Kind);
 
+        // Once for the run, not once per recipe: every recipe in one import
+        // lands in the language of the one person who asked for it.
+        var theirs = await services.GetRequiredService<IUserPreferencesRepository>()
+            .GetAsync(run.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
         await reader.Match(
             async library =>
             {
-                await EachAsync(run, new ImportInto(source, library, run.CookbookId, run.UserId), cancellationToken)
+                await EachAsync(
+                        run,
+                        new ImportInto(source, library, run.CookbookId, run.UserId, theirs.Language),
+                        cancellationToken)
                     .ConfigureAwait(false);
 
                 await MarkUsedAsync(source, services, cancellationToken).ConfigureAwait(false);
