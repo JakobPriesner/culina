@@ -659,7 +659,7 @@ export interface paths {
         };
         /**
          * Read a recipe image
-         * @description Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as private as the recipe it belongs to; its ETag is the content hash, which cannot change under the same address.
+         * @description Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as private as the recipe it belongs to; its ETag is the content hash, so a picture that was replaced is fetched and one that was not answers 304.
          */
         get: operations["getRecipeImageV1"];
         /**
@@ -5389,6 +5389,7 @@ export interface operations {
         parameters: {
             query?: {
                 w?: number;
+                v?: string;
             };
             header?: never;
             path: {
@@ -5406,6 +5407,13 @@ export interface operations {
                 content: {
                     "image/webp": string;
                 };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {
@@ -5930,6 +5938,13 @@ export interface operations {
                 content: {
                     "image/webp": string;
                 };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

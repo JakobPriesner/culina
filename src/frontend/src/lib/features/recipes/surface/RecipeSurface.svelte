@@ -334,8 +334,8 @@
   {#if recipe.imageId && !cooking}
     <div class="hero">
       <Image
-        src={photo?.src ?? imageUrl(recipe.id, 1600)}
-        srcset={photo?.srcset ?? imageSrcset(recipe.id)}
+        src={photo?.src ?? imageUrl(recipe.id, 1600, recipe.imageId)}
+        srcset={photo?.srcset ?? imageSrcset(recipe.id, recipe.imageId)}
         sizes="(min-width: 72rem) 72rem, 100vw"
         alt=""
         loading="eager"

@@ -209,7 +209,18 @@ internal static class ETag
     /// have added. Comparing parsed versions instead is what let one person's
     /// cached response be revalidated into a 304 for another.
     /// </remarks>
-    private static bool Matches(IEnumerable<string?> headerValues, string tag) =>
+    /// <summary>
+    /// Whether the client already holds this exact body.
+    /// </summary>
+    /// <param name="headerValues">What arrived in <c>If-None-Match</c>.</param>
+    /// <param name="tag">The tag this response would carry, quotes included.</param>
+    /// <remarks>
+    /// Internal because the images are served outside <see cref="Respond"/>:
+    /// their bodies are bytes rather than JSON and their tag is a content hash
+    /// rather than a version, but the conditional half of the exchange is the
+    /// same exchange and is not worth a second implementation.
+    /// </remarks>
+    internal static bool Matches(IEnumerable<string?> headerValues, string tag) =>
         headerValues.Any(value => Strong(value) == tag);
 
     private static string? Strong(string? headerValue)

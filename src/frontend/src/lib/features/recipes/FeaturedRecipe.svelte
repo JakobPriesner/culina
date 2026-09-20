@@ -72,8 +72,8 @@
 
   <div class="photo">
     <Image
-      src={imageUrl(recipe.id, 1600)}
-      srcset={imageSrcset(recipe.id)}
+      src={imageUrl(recipe.id, 1600, recipe.imageId)}
+      srcset={imageSrcset(recipe.id, recipe.imageId)}
       sizes="(min-width: 80rem) 44rem, (min-width: 64rem) 55vw, 100vw"
       alt=""
       loading={priority ? 'eager' : 'lazy'}

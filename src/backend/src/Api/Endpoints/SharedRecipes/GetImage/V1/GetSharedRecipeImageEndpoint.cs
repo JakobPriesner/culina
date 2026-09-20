@@ -54,6 +54,7 @@ internal sealed class GetSharedRecipeImageEndpoint : IEndpoint
                 + "address carries a credential, so only the reader's own browser may keep it.")
             .WithRepeatableQueryParameters(["w"], [], ["w"])
             .Produces<byte[]>(StatusCodes.Status200OK, "image/webp")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
@@ -74,11 +75,32 @@ internal sealed class GetSharedRecipeImageEndpoint : IEndpoint
             && ImageWidths.Exists(width);
     }
 
+    /// <summary>
+    /// Sends the bytes, or says the client already has them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// No-cache rather than an hour's freshness, which is what every other read
+    /// in this app sends and what this one's own description always claimed to.
+    /// A picture is replaced under the address it was served from — that is
+    /// what setting a new one is — so a browser told it could reuse its copy
+    /// for an hour showed the old picture for an hour, with nothing on the
+    /// screen to suggest the new one had arrived.
+    /// </para>
+    /// <para>
+    /// It costs a request per view and almost no bytes: the tag is the content
+    /// hash, so an unchanged picture answers 304 and is not sent again.
+    /// </para>
+    /// </remarks>
     private static IResult Served(HttpContext context, MemoryStream buffer, ImageDelivery delivery)
     {
-        context.Response.Headers.ETag = $"\"{delivery.ContentHash}\"";
-        context.Response.Headers.CacheControl = "private, max-age=3600";
+        var tag = $"\"{delivery.ContentHash}\"";
 
-        return Results.Bytes(buffer.ToArray(), "image/webp");
+        context.Response.Headers.ETag = tag;
+        context.Response.Headers.CacheControl = "private, no-cache";
+
+        return ETag.Matches(context.Request.Headers.IfNoneMatch, tag)
+            ? Results.StatusCode(StatusCodes.Status304NotModified)
+            : Results.Bytes(buffer.ToArray(), "image/webp");
     }
 }
