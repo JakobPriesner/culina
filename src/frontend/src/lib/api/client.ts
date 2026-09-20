@@ -31,7 +31,7 @@ const defaultTimeoutMs = 15_000;
  * starts an import and the recipes arrive over a stream, which has no deadline
  * because it is not a request that is waiting for an answer.
  */
-const sourceTimeoutMs = 60_000;
+const patientTimeoutMs = 60_000;
 
 /**
  * Where those calls live.
@@ -39,8 +39,25 @@ const sourceTimeoutMs = 60_000;
  * Matched by path rather than passed per call, because this is a fact about the
  * API and the API layer is the one place allowed to know the API's shape. A
  * caller choosing its own deadline is a caller that will forget to.
+ *
+ * The assistant belongs here as plainly as importing does, and was missing:
+ * drawing a picture is fifteen to forty seconds of somebody else's machine
+ * doing the slowest thing this app asks of anyone. At the default deadline the
+ * browser gave up first — and the server, which knew nothing of that, finished
+ * the drawing, paid for it and stored it. The screen said it had failed while
+ * the picture sat on disk.
  */
-const sourcePathPrefix = '/api/v1/recipe-sources';
+const patientPaths = [
+  '/api/v1/recipe-sources',
+  // Improving, drafting and reading a photograph: a model writing a whole
+  // recipe, not a database read.
+  '/api/v1/recipe-drafts',
+  // Asking every connected provider what it offers, one after another.
+  '/api/v1/settings/assistance/models'
+];
+
+/** Drawing, which is a POST to a recipe's own picture. */
+const drawingPath = /^\/api\/v1\/recipes\/[^/]+\/image$/;
 
 const http = createClient<paths>({
   // No base URL: the generated paths already carry /api/v1, and Culina is
@@ -116,16 +133,24 @@ function describe(thrown: unknown) {
  * is still cancelled when the component that started it goes away.
  */
 function withTimeout(input: Request): Promise<Response> {
-  const deadline = AbortSignal.timeout(deadlineFor(input.url));
+  const deadline = AbortSignal.timeout(deadlineFor(input.url, input.method));
 
   return fetch(input, {
     signal: input.signal ? AbortSignal.any([input.signal, deadline]) : deadline
   });
 }
 
-function deadlineFor(url: string): number {
+function deadlineFor(url: string, method: string): number {
   try {
-    return new URL(url).pathname.startsWith(sourcePathPrefix) ? sourceTimeoutMs : defaultTimeoutMs;
+    const { pathname } = new URL(url);
+
+    // A POST to a recipe's picture asks a model to draw one; a PUT sends bytes
+    // that are already here. Same address, different wait.
+    const drawing = method === 'POST' && drawingPath.test(pathname);
+
+    return drawing || patientPaths.some((path) => pathname.startsWith(path))
+      ? patientTimeoutMs
+      : defaultTimeoutMs;
   } catch {
     // Not a URL this can read, which is not a reason to have no deadline.
     return defaultTimeoutMs;

@@ -102,6 +102,54 @@ describe('deadlines', () => {
 
     expect(asked).toEqual([60_000]);
   });
+
+  it('waits for a picture to be drawn, which takes longer than anything else', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ recipeId: 'r1', imageId: 'i2' }));
+
+    await request(() =>
+      http.POST('/api/v1/recipes/{recipeId}/image', { params: { path: { recipeId: 'r1' } } })
+    );
+
+    // Measured at sixteen seconds on a real provider. At the ordinary deadline
+    // the browser gave up first and the server, knowing nothing of that,
+    // finished the drawing, paid for it and stored it — so the screen reported
+    // a failure while the picture sat on disk.
+    expect(asked).toEqual([60_000]);
+  });
+
+  it('keeps the short deadline for sending a photograph to the same address', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ recipeId: 'r1', imageId: 'i3' }));
+
+    const body = new FormData();
+
+    body.append('file', new File(['bytes'], 'dinner.jpg', { type: 'image/jpeg' }));
+
+    await request(() =>
+      http.PUT('/api/v1/recipes/{recipeId}/image', {
+        params: { path: { recipeId: 'r1' } },
+        body: body as unknown as { file: string },
+        bodySerializer: (value: unknown) => value as FormData
+      })
+    );
+
+    // One address, two waits: asking a model to draw is not the same as
+    // sending bytes that are already here.
+    expect(asked).toEqual([15_000]);
+  });
+
+  it('waits while every connected provider is asked what it offers', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ providers: [] }));
+
+    await request(() => http.GET('/api/v1/settings/assistance/models'));
+
+    expect(asked).toEqual([60_000]);
+  });
 });
 
 const problem = (status: number, body: unknown) =>
