@@ -141,14 +141,16 @@ internal sealed class OpenAiAssistant(
             IReadOnlyList<ModelInfo> everything =
             [
                 .. listed.Value
-                    .Select(model => model.Id)
-                    .Where(id => id.Length > 0)
-                    .Select(id => new ModelInfo(id, id, DrawingModel.Draws(id)))
-                    .OrderBy(model => model.Id, StringComparer.Ordinal)
+                    .Where(model => model.Id.Length > 0)
+                    .Select(model => new ModelInfo(
+                        model.Id,
+                        model.Id,
+                        DrawingModel.Draws(model.Id),
+                        model.CreatedAt))
             ];
 
             return Result<IReadOnlyList<ModelInfo>>.Success(
-                ModelCatalogue.Narrow(everything, model => Usable(model.Id)));
+                ModelCatalogue.Newest(ModelCatalogue.Narrow(everything, model => Usable(model.Id))));
         }
         catch (Exception failure) when (Expected(failure))
         {

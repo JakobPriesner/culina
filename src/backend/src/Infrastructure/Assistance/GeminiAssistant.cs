@@ -136,6 +136,9 @@ internal sealed class GeminiAssistant(
                 listed.Add(new ModelInfo(id, Labelled(model, id), DrawingModel.Draws(id, model.DisplayName)));
             }
 
+            // Name order, and no date: Google's listing does not say when a
+            // model appeared, and a date invented here would sort this list
+            // convincingly and wrongly.
             IReadOnlyList<ModelInfo> everything = ModelLabels.Distinguish(
                 [.. listed.OrderBy(model => model.Id, StringComparer.Ordinal)]);
 
