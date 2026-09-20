@@ -73,13 +73,27 @@ public interface IAssistant
 /// <param name="CanDraw">
 /// Whether it makes pictures.
 /// </param>
+/// <param name="Added">
+/// When the provider published it, where the provider says.
+/// </param>
 /// <remarks>
 /// <see cref="CanDraw"/> is the adapter's best reading rather than a fact the
 /// providers state plainly — none of the three has a field that says "this one
 /// draws". It decides which list a job's picker offers, and being wrong about
 /// it costs a failed call and a clear error, not a wrong recipe.
 /// </remarks>
-public sealed record ModelInfo(string Id, string Label, bool CanDraw);
+/// <remarks>
+/// <see cref="Added"/> is null for a provider that does not date its catalogue.
+/// Google is one: its listing carries a name, a display name, limits and
+/// capabilities, and nothing about when the model appeared. A date invented
+/// here would sort a list convincingly and wrongly, so the absence is carried
+/// as an absence and those listings stay in name order.
+/// </remarks>
+public sealed record ModelInfo(
+    string Id,
+    string Label,
+    bool CanDraw,
+    DateTimeOffset? Added = null);
 
 /// <summary>
 /// One provider, ready to be called.

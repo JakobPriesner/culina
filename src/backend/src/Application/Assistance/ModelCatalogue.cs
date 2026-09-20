@@ -39,4 +39,33 @@ public static class ModelCatalogue
 
         return kept.Count > 0 ? kept : offered;
     }
+
+    /// <summary>
+    /// The newest first.
+    /// </summary>
+    /// <param name="offered">What the provider listed.</param>
+    /// <remarks>
+    /// <para>
+    /// What somebody opens this list for is usually the model that came out
+    /// last week, and alphabetical order buries it: <c>gpt-image-2.5-flare</c>
+    /// sorts above <c>gpt-6-astra</c>, and every dated snapshot of a family
+    /// sorts next to the family whether it is a year old or a day.
+    /// </para>
+    /// <para>
+    /// A provider that dates nothing keeps name order rather than being given
+    /// an order that looks meaningful and is not. The two never mix within one
+    /// listing, because a provider either dates its catalogue or does not.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<ModelInfo> Newest(IReadOnlyList<ModelInfo> offered)
+    {
+        ArgumentNullException.ThrowIfNull(offered);
+
+        return
+        [
+            .. offered
+                .OrderByDescending(model => model.Added ?? DateTimeOffset.MinValue)
+                .ThenBy(model => model.Id, StringComparer.Ordinal)
+        ];
+    }
 }

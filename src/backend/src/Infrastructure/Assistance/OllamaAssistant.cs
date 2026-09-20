@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Abstractions;
+using Application.Assistance;
 using Domain.Assistance;
 using Domain.Shared;
 using Microsoft.Extensions.AI;
@@ -124,18 +125,23 @@ internal sealed class OllamaAssistant(
             IReadOnlyList<ModelInfo> offered =
             [
                 .. pulled
-                    .Select(model => model.Name ?? string.Empty)
-                    .Where(name => name.Length > 0)
+                    .Where(model => (model.Name ?? string.Empty).Length > 0)
                     // Whether anything here draws is read from its name like
                     // everywhere else. Ollama serves language and vision models
                     // today, so this is expected to say no to all of them — and
                     // says yes rather than hiding a model somebody has pulled
                     // on purpose.
-                    .Select(name => new ModelInfo(name, name, DrawingModel.Draws(name)))
-                    .OrderBy(model => model.Id, StringComparer.Ordinal)
+                    //
+                    // The date is when the model was pulled or last changed,
+                    // which on a machine of one's own is what "added" means.
+                    .Select(model => new ModelInfo(
+                        model.Name!,
+                        model.Name!,
+                        DrawingModel.Draws(model.Name!),
+                        model.ModifiedAt))
             ];
 
-            return Result<IReadOnlyList<ModelInfo>>.Success(offered);
+            return Result<IReadOnlyList<ModelInfo>>.Success(ModelCatalogue.Newest(offered));
         }
         catch (Exception failure) when (Expected(failure))
         {
