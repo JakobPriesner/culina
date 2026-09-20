@@ -56,6 +56,17 @@ const patientPaths = [
   '/api/v1/settings/assistance/models'
 ];
 
+/**
+ * The deadline for asking a model to draw.
+ *
+ * Longer again, because drawing is not composing with a picture at the end of
+ * it: it is the one call where a provider spends real time on a machine of its
+ * own. Sixteen seconds is a fast one, and a detailed prompt on a busy afternoon
+ * is minutes. Ten seconds past the server's own two minutes, so the server is
+ * always the one to give up first and say why.
+ */
+const drawingTimeoutMs = 130_000;
+
 /** Drawing, which is a POST to a recipe's own picture. */
 const drawingPath = /^\/api\/v1\/recipes\/[^/]+\/image$/;
 
@@ -145,10 +156,12 @@ function deadlineFor(url: string, method: string): number {
     const { pathname } = new URL(url);
 
     // A POST to a recipe's picture asks a model to draw one; a PUT sends bytes
-    // that are already here. Same address, different wait.
-    const drawing = method === 'POST' && drawingPath.test(pathname);
+    // that are already here. Same address, three different waits.
+    if (method === 'POST' && drawingPath.test(pathname)) {
+      return drawingTimeoutMs;
+    }
 
-    return drawing || patientPaths.some((path) => pathname.startsWith(path))
+    return patientPaths.some((path) => pathname.startsWith(path))
       ? patientTimeoutMs
       : defaultTimeoutMs;
   } catch {

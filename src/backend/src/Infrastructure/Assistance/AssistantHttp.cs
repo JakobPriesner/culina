@@ -41,8 +41,21 @@ internal sealed class AssistantHttp : IDisposable
     /// </remarks>
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(55);
 
+    /// <summary>
+    /// How long a drawing may take.
+    /// </summary>
+    /// <remarks>
+    /// Drawing is not writing with a picture at the end of it: it is the one
+    /// call in this app where a provider spends real time on a machine of its
+    /// own, and sixteen seconds is a fast one. Two minutes is long enough for a
+    /// slow prompt on a busy afternoon and still short enough that a provider
+    /// which has silently stopped answering is noticed the same day.
+    /// </remarks>
+    private static readonly TimeSpan DrawingDeadline = TimeSpan.FromMinutes(2);
+
     private readonly SocketsHttpHandler handler;
     private readonly HttpClient client;
+    private readonly HttpClient patient;
 
     public AssistantHttp()
     {
@@ -55,19 +68,25 @@ internal sealed class AssistantHttp : IDisposable
             ConnectTimeout = TimeSpan.FromSeconds(10)
         };
 
-        client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Culina/1.0 (self-hosted recipe app)");
+        client = Build(Deadline);
+        patient = Build(DrawingDeadline);
     }
 
     /// <summary>
     /// The client itself, for an SDK that carries its own address.
     /// </summary>
-    internal HttpClient Client => client;
+    /// <param name="drawing">
+    /// Whether this is the call that makes a picture, which is allowed longer.
+    /// </param>
+    internal HttpClient Client(bool drawing = false) => drawing ? patient : client;
 
     /// <summary>
     /// A client of its own for one provider, over this one's connection pool.
     /// </summary>
     /// <param name="baseUrl">Where that provider lives.</param>
+    /// <param name="drawing">
+    /// Whether this is the call that makes a picture, which is allowed longer.
+    /// </param>
     /// <remarks>
     /// For an SDK that wants a client with an address on it. The handler is
     /// shared and not disposed with the wrapper, so this costs an object rather
@@ -75,12 +94,21 @@ internal sealed class AssistantHttp : IDisposable
     /// sockets is a new <c>HttpClient</c> with a new handler, not a new
     /// <c>HttpClient</c> over an old one.
     /// </remarks>
-    internal HttpClient ClientFor(string baseUrl) =>
+    internal HttpClient ClientFor(string baseUrl, bool drawing = false) =>
         new(handler, disposeHandler: false)
         {
             BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/"),
-            Timeout = Deadline
+            Timeout = drawing ? DrawingDeadline : Deadline
         };
+
+    private HttpClient Build(TimeSpan deadline)
+    {
+        var built = new HttpClient(handler, disposeHandler: false) { Timeout = deadline };
+
+        built.DefaultRequestHeaders.UserAgent.ParseAdd("Culina/1.0 (self-hosted recipe app)");
+
+        return built;
+    }
 
     /// <summary>
     /// How the answer inside an answer is read.
@@ -98,6 +126,7 @@ internal sealed class AssistantHttp : IDisposable
     public void Dispose()
     {
         client.Dispose();
+        patient.Dispose();
         handler.Dispose();
     }
 }

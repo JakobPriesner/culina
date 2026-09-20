@@ -99,7 +99,7 @@ internal sealed class OpenAiAssistant(
 
         try
         {
-            var drawn = await Client(@using)
+            var drawn = await Client(@using, drawing: true)
                 .GetImageClient(@using.Model)
                 .GenerateImageAsync(
                     request.Subject,
@@ -226,12 +226,15 @@ internal sealed class OpenAiAssistant(
     /// hand-written client had — no redirects with a key attached, one pool,
     /// one deadline.
     /// </remarks>
-    private OpenAIClient Client(Connected @using) => new(
+    private OpenAIClient Client(Connected @using, bool drawing = false) => new(
         new ApiKeyCredential(@using.ApiKey),
         new OpenAIClientOptions
         {
             Endpoint = Endpoint(@using.BaseUrl),
-            Transport = new HttpClientPipelineTransport(http.Client)
+            Transport = new HttpClientPipelineTransport(http.Client(drawing)),
+            // Set as well as on the client: the library keeps a deadline of its
+            // own, and the shorter of the two is the one that decides.
+            NetworkTimeout = http.Client(drawing).Timeout
         });
 
     /// <summary>
