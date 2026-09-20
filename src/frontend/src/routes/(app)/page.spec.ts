@@ -6,6 +6,7 @@ import LibraryPage from './+page.svelte';
 import { session } from '$features/auth/session.svelte';
 import { libraryView } from '$features/recipes/stores/libraryView.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
+import { savedSearches } from '$features/recipes/stores/savedSearches.svelte';
 import { suggestions } from '$features/recipes/stores/suggestions.svelte';
 import { renderWithProviders } from '$lib/test/render';
 import { toaster } from '$shell/toaster.svelte';
@@ -51,23 +52,36 @@ const json = (body: unknown) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
-/** One server, answering both of the page's questions by URL. */
+/** One server, answering each of the page's questions by URL. */
 function serverAnswers(reasoned: { code: string; subject: string | null } | null) {
-  const fetched = vi.fn((input: Request) =>
-    Promise.resolve(
-      input.url.includes('/suggestions')
-        ? json({ items: [suggestion('r1', 'Linsensuppe', reasoned)] })
-        : json({
-            items: [summary('r1', 'Linsensuppe'), summary('r2', 'Omelette')],
-            nextCursor: null,
-            total: 2
-          })
-    )
-  );
+  const fetched = vi.fn((input: Request) => Promise.resolve(answer(input.url, reasoned)));
 
   vi.stubGlobal('fetch', fetched);
 
   return fetched;
+}
+
+/**
+ * The saved searches are answered too, and with their own shape.
+ *
+ * Falling through to the recipe list gave that store rows with no criteria on
+ * them, which it reads unguarded — and the crash landed a turn after the test
+ * had already passed, so the suite went red with nothing failing in it.
+ */
+function answer(url: string, reasoned: { code: string; subject: string | null } | null) {
+  if (url.includes('/suggestions')) {
+    return json({ items: [suggestion('r1', 'Linsensuppe', reasoned)] });
+  }
+
+  if (url.includes('/searches')) {
+    return json({ items: [] });
+  }
+
+  return json({
+    items: [summary('r1', 'Linsensuppe'), summary('r2', 'Omelette')],
+    nextCursor: null,
+    total: 2
+  });
 }
 
 /** Lets every queued effect and the request it made settle. */
@@ -81,6 +95,7 @@ beforeEach(() => {
   recipes.reset();
   suggestions.reset();
   libraryView.reset();
+  savedSearches.reset();
 
   for (const toast of [...toaster.toasts]) {
     toaster.dismiss(toast.id);
@@ -206,26 +221,34 @@ describe('opening the library', () => {
     // itself under the thumb that was only looking at the next idea.
     vi.stubGlobal(
       'fetch',
-      vi.fn((input: Request) =>
-        Promise.resolve(
-          input.url.includes('/suggestions')
-            ? json({
-                items: [
-                  suggestion('r1', 'Linsensuppe', { code: 'affinity', subject: null }),
-                  suggestion('r2', 'Omelette', { code: 'rediscovery', subject: null })
-                ]
-              })
-            : json({
-                items: [
-                  summary('r1', 'Linsensuppe'),
-                  summary('r2', 'Omelette'),
-                  summary('r3', 'Ratatouille')
-                ],
-                nextCursor: null,
-                total: 3
-              })
-        )
-      )
+      vi.fn((input: Request) => {
+        if (input.url.includes('/suggestions')) {
+          return Promise.resolve(
+            json({
+              items: [
+                suggestion('r1', 'Linsensuppe', { code: 'affinity', subject: null }),
+                suggestion('r2', 'Omelette', { code: 'rediscovery', subject: null })
+              ]
+            })
+          );
+        }
+
+        if (input.url.includes('/searches')) {
+          return Promise.resolve(json({ items: [] }));
+        }
+
+        return Promise.resolve(
+          json({
+            items: [
+              summary('r1', 'Linsensuppe'),
+              summary('r2', 'Omelette'),
+              summary('r3', 'Ratatouille')
+            ],
+            nextCursor: null,
+            total: 3
+          })
+        );
+      })
     );
 
     renderWithProviders(LibraryPage);

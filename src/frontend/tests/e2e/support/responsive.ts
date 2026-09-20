@@ -116,7 +116,12 @@ export async function responsiveData(
         isAdmin: false,
         createdAt: stamp,
         version: 1,
-        households: [{ householdId, name: 'Unsere gemeinsame Küche', role: 'owner' }]
+        households: [{ householdId, name: 'Unsere gemeinsame Küche', role: 'owner' }],
+        // Off, but present. The editor reads these to decide whether to offer
+        // the assistant's buttons, and an account without them is not a
+        // household with the assistant switched off — it is a crash, which is
+        // what leaving this out turned every editor layout into.
+        assistance: { improve: false, draft: false, read: false, draw: false }
       });
     if (path === '/users/me/settings')
       return reply({

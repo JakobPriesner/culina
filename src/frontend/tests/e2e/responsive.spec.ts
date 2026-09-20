@@ -83,7 +83,7 @@ test.describe('responsive production layouts @offline', () => {
     await page.goto(`/recipes/${recipeId}/edit`);
     await page
       .getByRole('button', {
-        name: /Sonnenblumenkernvollkornbrot korrigieren/i
+        name: /Sonnenblumenkernvollkornbrot bearbeiten/i
       })
       .click();
     await expectReflow(page);

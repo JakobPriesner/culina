@@ -6,7 +6,8 @@ import {
   seedRecipe,
   signInWithHousehold,
   skipReason,
-  unique
+  unique,
+  writeHeaders
 } from './support/culina';
 
 /**
@@ -78,6 +79,19 @@ test.describe('the shopping list', () => {
 
   test('takes a written line on Enter, with its unit intact', async () => {
     await page.goto('/shopping');
+
+    // In German on purpose, and switched here rather than assumed: a new
+    // account is in English, where every unit's word *is* its code and the
+    // thing this test exists to prove cannot go wrong. "Packung" only means
+    // `pack` in an app that is showing German.
+    const switched = await page.request.put('/api/v1/users/me/settings', {
+      headers: await writeHeaders(page),
+      data: { locale: 'de', theme: 'warm-paper', mode: 'light', measurementSystem: 'metric' }
+    });
+
+    expect(switched.ok(), await switched.text()).toBe(true);
+
+    await page.reload();
 
     const name = unique('Feta');
 

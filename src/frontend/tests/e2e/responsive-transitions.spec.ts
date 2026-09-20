@@ -62,10 +62,10 @@ test.describe('responsive transitions @offline', () => {
     ]) {
       await page.setViewportSize(size);
       await expect(name).toHaveValue('A cookbook I am still writing');
-      await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeInViewport({
+      await expect(dialog.getByRole('button', { name: 'Done', exact: true })).toBeInViewport({
         ratio: 1
       });
-      const save = dialog.getByRole('button', { name: 'Make it', exact: true });
+      const save = dialog.getByRole('button', { name: 'Create cookbook', exact: true });
       await save.scrollIntoViewIfNeeded();
       await expect(save).toBeInViewport({ ratio: 1 });
       await expectReflow(page);
