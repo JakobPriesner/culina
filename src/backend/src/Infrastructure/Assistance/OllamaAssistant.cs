@@ -1,9 +1,10 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Application.Abstractions;
 using Domain.Assistance;
 using Domain.Shared;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using OllamaSharp;
 
 namespace Infrastructure.Assistance;
 
@@ -20,12 +21,18 @@ namespace Infrastructure.Assistance;
 /// this one has none to write.
 /// </para>
 /// <para>
-/// Its native API rather than its OpenAI-compatible one, which would have let
-/// this class not exist. Two reasons it is worth the file: the native
-/// <c>format</c> field takes a JSON schema directly and is enforced by the
-/// runner, where the compatibility layer's <c>response_format</c> has been
-/// uneven; and its token counts come back under different names, so an adapter
-/// pretending to be the OpenAI one would report zero usage for every call.
+/// OllamaSharp rather than the OpenAI-compatible endpoint, and the reasons are
+/// the same ones that made this class worth its own file when it spoke HTTP:
+/// the native API takes a JSON schema directly and the runner enforces it,
+/// where the compatibility layer's has been uneven; and the counts come back
+/// under names of their own, so an adapter pretending to be the OpenAI one
+/// reported zero usage for every call.
+/// </para>
+/// <para>
+/// The client is an <see cref="IChatClient"/> of its own accord, so composition
+/// here reads the same as it does for OpenAI. Drawing does not: no model this
+/// runner serves makes pictures, and the settings screen does not offer the
+/// job — this is the backstop for a request that arrived anyway.
 /// </para>
 /// <para>
 /// No key: there is nobody to authenticate to. The address is not optional for
@@ -56,50 +63,44 @@ internal sealed class OllamaAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        var payload = new
+        List<ChatMessage> conversation =
+        [
+            new(ChatRole.System, request.Instruction),
+            new(ChatRole.User, Material(request))
+        ];
+
+        var options = new ChatOptions
         {
-            model = @using.Model,
-            messages = new object[]
-            {
-                new { role = "system", content = request.Instruction },
-                new
-                {
-                    role = "user",
-                    content = request.Material ?? string.Empty,
-                    // Bare base64, not a data URL: this is the one provider of
-                    // the three that wants it that way.
-                    images = request.Picture.IsEmpty
-                        ? null
-                        : new[] { Convert.ToBase64String(request.Picture.Span) }
-                }
-            },
-            // Enforced by the runner, so the answer is JSON of this shape or
-            // the call fails — which is the same guarantee the hosted two give.
-            format = RecipeSchema.Definition,
-            stream = false
+            ResponseFormat = ChatResponseFormat.ForJsonSchema(RecipeSchema.AsJson, RecipeSchema.Name)
         };
 
-        var answered = await http.PostAsync<OllamaReply>(
-                AssistantHttp.Address(@using.BaseUrl, "api/chat"),
-                payload,
-                // Nothing to authorise. Said out loud rather than left as an
-                // empty lambda nobody can explain.
-                _ => { },
-                cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            using var transport = http.ClientFor(@using.BaseUrl);
+            using var client = new OllamaApiClient(transport, @using.Model);
 
-        return answered.Bind(Read);
+            // Through the interface on purpose: the client offers a shape of
+            // its own beside this one, and what this adapter wants is the one
+            // the OpenAI adapter also speaks.
+            var answered = await ((IChatClient)client)
+                .GetResponseAsync(conversation, options, cancellationToken)
+                .ConfigureAwait(false);
+
+            return Read(answered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
     /// <summary>
-    /// Refuses, because Ollama serves language and vision models and does not
-    /// make pictures.
+    /// Refused, because nothing this runner serves draws.
     /// </summary>
     /// <remarks>
-    /// The settings screen does not offer the switch for this provider, so
-    /// reaching here means a request arrived for a capability that was turned
-    /// on under a different provider and left on. A named refusal rather than a
-    /// call that fails somewhere inside the runner.
+    /// A fact about the provider rather than a failure of the call, which is
+    /// why the settings screen declines to offer the switch at all. This is the
+    /// backstop for a request that arrived anyway.
     /// </remarks>
     public Task<Result<Drawn>> DrawAsync(
         Connected @using,
@@ -107,41 +108,73 @@ internal sealed class OllamaAssistant(
         CancellationToken cancellationToken) =>
         Task.FromResult(Result<Drawn>.Failure(AssistanceErrors.DrawingNotSupported));
 
-    /// <summary>
-    /// What has been pulled onto that machine.
-    /// </summary>
-    /// <remarks>
-    /// The one provider where the list is short, honest and entirely the
-    /// administrator's doing: it is what they have downloaded. Nothing in it
-    /// draws, because Ollama serves language and vision models.
-    /// </remarks>
     public async Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
         Connected @using,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(@using);
 
-        var listed = await http.GetAsync<OllamaModelList>(
-                AssistantHttp.Address(@using.BaseUrl, "api/tags"),
-                _ => { },
-                cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            using var transport = http.ClientFor(@using.BaseUrl);
+            using var client = new OllamaApiClient(transport, @using.Model);
 
-        return listed.Map(list => (IReadOnlyList<ModelInfo>)
-        [
-            .. (list.Models ?? [])
-                .Select(model => model.Model ?? model.Name ?? string.Empty)
-                .Where(id => id.Length > 0)
-                .Select(id => new ModelInfo(id, id, CanDraw: false))
-                .OrderBy(model => model.Id, StringComparer.Ordinal)
-        ]);
+            var pulled = await client.ListLocalModelsAsync(cancellationToken).ConfigureAwait(false);
+
+            IReadOnlyList<ModelInfo> offered =
+            [
+                .. pulled
+                    .Select(model => model.Name ?? string.Empty)
+                    .Where(name => name.Length > 0)
+                    // Whether anything here draws is read from its name like
+                    // everywhere else. Ollama serves language and vision models
+                    // today, so this is expected to say no to all of them — and
+                    // says yes rather than hiding a model somebody has pulled
+                    // on purpose.
+                    .Select(name => new ModelInfo(name, name, DrawingModel.Draws(name)))
+                    .OrderBy(model => model.Id, StringComparer.Ordinal)
+            ];
+
+            return Result<IReadOnlyList<ModelInfo>>.Success(offered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
-    private Result<Composed> Read(OllamaReply reply)
+    /// <summary>
+    /// The material, as the parts of the user message.
+    /// </summary>
+    /// <remarks>
+    /// The instruction is the system message and is never here. This builds only
+    /// the untrusted half — what somebody pasted, typed or photographed — and
+    /// the two are never concatenated.
+    /// </remarks>
+    private static List<AIContent> Material(Composition request)
     {
-        if (reply.Message?.Content is not { Length: > 0 } json)
+        List<AIContent> parts = [];
+
+        if (request.Material is { Length: > 0 } material)
         {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.DoneReason);
+            parts.Add(new TextContent(material));
+        }
+
+        if (!request.Picture.IsEmpty)
+        {
+            parts.Add(new DataContent(
+                request.Picture,
+                request.PictureMediaType ?? "image/jpeg"));
+        }
+
+        return parts;
+    }
+
+    private Result<Composed> Read(ChatResponse answered)
+    {
+        if (answered.Text is not { Length: > 0 } json)
+        {
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, answered.FinishReason?.Value);
 
             return AssistanceErrors.UnusableAnswer;
         }
@@ -152,58 +185,43 @@ internal sealed class OllamaAssistant(
 
             return answer is null
                 ? AssistanceErrors.UnusableAnswer
-                : new Composed(answer.ToDraft(), Usage(reply));
+                : new Composed(answer.ToDraft(), Usage(answered));
         }
         catch (JsonException)
         {
-            // More likely here than with the hosted providers: a small local
-            // model asked for a schema will sometimes answer with prose that
-            // merely looks like JSON. Ordinary, and asking again usually works.
+            // A local model held to a schema still occasionally answers with
+            // something else. Ordinary rather than exceptional, and the person
+            // asking gets to try again.
             return AssistanceErrors.UnusableAnswer;
         }
     }
 
-    private static ModelUsage Usage(OllamaReply reply) =>
-        new(reply.PromptEvalCount, reply.EvalCount, Pictures: 0);
-}
+    private static ModelUsage Usage(ChatResponse answered) => new(
+        (int)(answered.Usage?.InputTokenCount ?? 0),
+        (int)(answered.Usage?.OutputTokenCount ?? 0),
+        Pictures: 0);
 
-/// <summary>What has been pulled onto the machine.</summary>
-internal sealed record OllamaModelList
-{
-    public IReadOnlyList<OllamaModel>? Models { get; init; }
-}
+    /// <summary>The failures that are the runner's rather than this app's.</summary>
+    private static bool Expected(Exception failure) =>
+        failure is HttpRequestException or OperationCanceledException or IOException
+            or InvalidOperationException or JsonException;
 
-/// <summary>One pulled model.</summary>
-internal sealed record OllamaModel
-{
-    /// <summary>The tag as it is shown, e.g. <c>llama3.2:latest</c>.</summary>
-    public string? Name { get; init; }
-
-    /// <summary>The same thing under the name newer versions use.</summary>
-    public string? Model { get; init; }
-}
-
-/// <summary>What Ollama's chat endpoint answers with.</summary>
-internal sealed record OllamaReply
-{
-    public OllamaMessage? Message { get; init; }
-
-    // Named for the same reason OpenAI's are: Ollama writes these in
-    // snake_case, and the shared options bridge case and nothing else.
-    [JsonPropertyName("done_reason")]
-    public string? DoneReason { get; init; }
-
-    /// <summary>Tokens in the prompt.</summary>
-    [JsonPropertyName("prompt_eval_count")]
-    public int PromptEvalCount { get; init; }
-
-    /// <summary>Tokens generated.</summary>
-    [JsonPropertyName("eval_count")]
-    public int EvalCount { get; init; }
-}
-
-/// <summary>The answer's text.</summary>
-internal sealed record OllamaMessage
-{
-    public string? Content { get; init; }
+    /// <summary>
+    /// What a refusal means.
+    /// </summary>
+    /// <remarks>
+    /// No key here, so nothing can be rejected for one. What is left is a
+    /// runner that is not there, is busy, or was asked for a model it has not
+    /// pulled.
+    /// </remarks>
+    private static Error Failure(Exception failure) =>
+        failure is HttpRequestException { StatusCode: { } status }
+            ? status switch
+            {
+                System.Net.HttpStatusCode.TooManyRequests => AssistanceErrors.Throttled,
+                System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.BadRequest =>
+                    AssistanceErrors.Refused,
+                _ => AssistanceErrors.Unavailable
+            }
+            : AssistanceErrors.Unavailable;
 }

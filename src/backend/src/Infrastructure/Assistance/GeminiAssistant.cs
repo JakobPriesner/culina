@@ -1,56 +1,48 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Application.Abstractions;
 using Application.Assistance;
 using Domain.Assistance;
 using Domain.Shared;
+using Google.GenAI;
+using Google.GenAI.Types;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Assistance;
 
 /// <summary>
-/// Talks to Google's Gemini models, over the Interactions API.
+/// Talks to Google's models.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The Interactions API rather than <c>generateContent</c>, which Google now
-/// calls the legacy generate-content API. It is pinned to a revision with the
-/// <c>Api-Revision</c> header, which is the whole reason that header exists:
-/// the shape changed under everybody in May 2026 — <c>steps</c> replaced
-/// <c>outputs</c>, and <c>response_format</c> absorbed
-/// <c>response_mime_type</c> — and an unpinned client is one that will do that
-/// again without warning.
+/// Google's own client library rather than this app's reading of their
+/// documentation. The fault it removes is the one with no symptom: the token
+/// counts were read from fields nothing sends, so every Gemini call in this
+/// instance's ledger is recorded as having cost nothing at all.
 /// </para>
 /// <para>
-/// One thing is genuinely weaker here than with the other two providers, and it
-/// is worth naming rather than hiding: Interactions has no separate system-
-/// instruction field, so the instruction and the untrusted material travel as
-/// two <em>content parts</em> of one input rather than as two different kinds of
-/// message. They are still never concatenated, and the instruction is still
-/// always first, but a model that decides to read part two as an instruction has
-/// less standing in its way than OpenAI's system role gives.
+/// No <c>Microsoft.Extensions.AI</c> package exists for this SDK, so unlike the
+/// other two this adapter speaks it directly. The shape of what it does is the
+/// same all the same: a system instruction kept apart from the material, a
+/// schema the answer must fit, and failures returned rather than thrown.
+/// </para>
+/// <para>
+/// One call does both jobs. An image model answers <c>generateContent</c> with
+/// an inline picture where a text model answers with text, so what differs
+/// between writing a recipe and drawing one is which parts are asked for and
+/// which part is read back.
 /// </para>
 /// <para>
 /// Stateless with respect to configuration: the key, the address and the model
-/// all arrive with the call. One instance therefore serves however many
-/// connections and however many models an administrator has set up.
+/// all arrive with the call, so one instance serves however many connections an
+/// administrator has set up.
 /// </para>
 /// </remarks>
-/// <param name="http">The shared client.</param>
+/// <param name="http">The shared client, whose rules the SDK is made to keep.</param>
 /// <param name="logger">Records what a provider refused, and why.</param>
 internal sealed class GeminiAssistant(
     AssistantHttp http,
     ILogger<GeminiAssistant> logger) : IAssistant
 {
-    /// <summary>
-    /// The shape of the API this was written against.
-    /// </summary>
-    /// <remarks>
-    /// Sent on every request. Raising it is a deliberate act with a changelog to
-    /// read first, which is exactly what it should be.
-    /// </remarks>
-    private const string Revision = "2026-05-20";
-
     public AssistantKind Kind => AssistantKind.Gemini;
 
     public async Task<Result<Composed>> ComposeAsync(
@@ -61,21 +53,30 @@ internal sealed class GeminiAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        var payload = new
+        var config = new GenerateContentConfig
         {
-            model = @using.Model,
-            input = Input(request),
-            response_format = new
-            {
-                type = "text",
-                mime_type = "application/json",
-                schema = RecipeSchema.Definition
-            }
+            // The instruction is a field of its own rather than a turn in the
+            // conversation, which is the strongest separation this provider
+            // offers between what the app says and what a stranger pasted.
+            SystemInstruction = new Content { Parts = [new Part { Text = request.Instruction }] },
+            ResponseMimeType = "application/json",
+            ResponseJsonSchema = RecipeSchema.Definition
         };
 
-        var answered = await PostAsync(@using, payload, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var client = Client(@using);
 
-        return answered.Bind(Read);
+            var answered = await client.Models
+                .GenerateContentAsync(@using.Model, Material(request), config, cancellationToken)
+                .ConfigureAwait(false);
+
+            return Read(answered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
     public async Task<Result<Drawn>> DrawAsync(
@@ -86,18 +87,27 @@ internal sealed class GeminiAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        // The same endpoint. An image model answers with an image part where a
-        // text model answers with a text one, which is the point of the steps
-        // being typed.
-        var payload = new
+        var config = new GenerateContentConfig
         {
-            model = @using.Model,
-            input = new object[] { new { type = "text", text = request.Subject } }
+            // Asked for explicitly. An image model given no modalities answers
+            // with a description of the picture rather than the picture.
+            ResponseModalities = ["TEXT", "IMAGE"]
         };
 
-        var answered = await PostAsync(@using, payload, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var client = Client(@using);
 
-        return answered.Bind(ReadPicture);
+            var answered = await client.Models
+                .GenerateContentAsync(@using.Model, request.Subject, config, cancellationToken)
+                .ConfigureAwait(false);
+
+            return ReadPicture(answered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
     public async Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
@@ -106,111 +116,73 @@ internal sealed class GeminiAssistant(
     {
         ArgumentNullException.ThrowIfNull(@using);
 
-        var listed = await http.GetAsync<GeminiModelList>(
-                AssistantHttp.Address(@using.BaseUrl, "v1beta/models"),
-                message =>
-                {
-                    message.Headers.Add("x-goog-api-key", @using.ApiKey);
-                    message.Headers.Add("Api-Revision", Revision);
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            List<ModelInfo> listed = [];
 
-        return listed.Map(list => ModelLabels.Distinguish(
-        [
-            .. (list.Models ?? [])
-                .Where(Generative)
-                .Select(model => new ModelInfo(Named(model), Labelled(model), Draws(model)))
-                .OrderBy(model => model.Id, StringComparer.Ordinal)
-        ]));
+            using var client = Client(@using);
+
+            var pages = await client.Models
+                .ListAsync(new ListModelsConfig { PageSize = 100 }, cancellationToken)
+                .ConfigureAwait(false);
+
+            await foreach (var model in pages.ConfigureAwait(false))
+            {
+                if (Named(model) is not { Length: > 0 } id || !Usable(id))
+                {
+                    continue;
+                }
+
+                listed.Add(new ModelInfo(id, Labelled(model, id), DrawingModel.Draws(id, model.DisplayName)));
+            }
+
+            IReadOnlyList<ModelInfo> offered = ModelLabels.Distinguish(
+                [.. listed.OrderBy(model => model.Id, StringComparer.Ordinal)]);
+
+            return Result<IReadOnlyList<ModelInfo>>.Success(offered);
+        }
+        catch (Exception failure) when (Expected(failure))
+        {
+            return Failure(failure);
+        }
     }
 
     /// <summary>
-    /// Whether this is a model that makes something, rather than one that
-    /// measures.
+    /// The material, as the parts of the one user turn.
     /// </summary>
     /// <remarks>
-    /// The list carries embedding and token-counting models too, and offering
-    /// those as a choice for "write me a recipe" would be offering something
-    /// that cannot answer.
+    /// The instruction is not here. It is the config's own field, and the two
+    /// are never concatenated.
     /// </remarks>
-    private static bool Generative(GeminiModel model) =>
-        model.SupportedGenerationMethods is null
-        || model.SupportedGenerationMethods.Any(method =>
-            method.Contains("generate", StringComparison.OrdinalIgnoreCase));
-
-    /// <summary>
-    /// Whether it draws.
-    /// </summary>
-    /// <remarks>
-    /// Read from the name, because nothing in the listing says so plainly — and
-    /// from the display name too, because that is where "Nano Banana" is
-    /// written. <c>predict</c> is the one thing the listing does say: it is how
-    /// the Imagen family is served, and nothing that writes text uses it.
-    /// </remarks>
-    private static bool Draws(GeminiModel model) =>
-        DrawingModel.Draws(Named(model), model.DisplayName)
-        || (model.SupportedGenerationMethods ?? []).Any(method =>
-            method.StartsWith("predict", StringComparison.OrdinalIgnoreCase));
-
-    /// <summary>The id to send, without the <c>models/</c> the listing prefixes.</summary>
-    private static string Named(GeminiModel model) =>
-        (model.Name ?? string.Empty).StartsWith("models/", StringComparison.Ordinal)
-            ? model.Name![7..]
-            : model.Name ?? string.Empty;
-
-    private static string Labelled(GeminiModel model) =>
-        string.IsNullOrWhiteSpace(model.DisplayName) ? Named(model) : model.DisplayName;
-
-    private Task<Result<GeminiReply>> PostAsync(
-        Connected @using,
-        object payload,
-        CancellationToken cancellationToken) =>
-        http.PostAsync<GeminiReply>(
-            AssistantHttp.Address(@using.BaseUrl, "v1beta/interactions"),
-            payload,
-            message =>
-            {
-                message.Headers.Add("x-goog-api-key", @using.ApiKey);
-                message.Headers.Add("Api-Revision", Revision);
-            },
-            cancellationToken);
-
-    /// <summary>
-    /// The instruction and the material, as separate parts of one input.
-    /// </summary>
-    /// <remarks>
-    /// Never joined into one string, and the instruction is always first. See
-    /// the note on this class: two parts is what this API offers in place of a
-    /// system role, and it is weaker.
-    /// </remarks>
-    private static object[] Input(Composition request)
+    private static List<Content> Material(Composition request)
     {
-        List<object> parts = [new { type = "text", text = request.Instruction }];
+        List<Part> parts = [];
 
         if (request.Material is { Length: > 0 } material)
         {
-            parts.Add(new { type = "text", text = material });
+            parts.Add(new Part { Text = material });
         }
 
         if (!request.Picture.IsEmpty)
         {
-            parts.Add(new
+            parts.Add(new Part
             {
-                type = "image",
-                mime_type = request.PictureMediaType ?? "image/jpeg",
-                data = Convert.ToBase64String(request.Picture.Span)
+                InlineData = new Blob
+                {
+                    Data = request.Picture.ToArray(),
+                    MimeType = request.PictureMediaType ?? "image/jpeg"
+                }
             });
         }
 
-        return [.. parts];
+        return [new Content { Role = "user", Parts = parts }];
     }
 
-    private Result<Composed> Read(GeminiReply reply)
+    private Result<Composed> Read(GenerateContentResponse answered)
     {
-        if (Part(reply, "text")?.Text is not { Length: > 0 } json)
+        if (answered.Text is not { Length: > 0 } json)
         {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Status);
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, Reason(answered));
 
             return AssistanceErrors.UnusableAnswer;
         }
@@ -221,7 +193,7 @@ internal sealed class GeminiAssistant(
 
             return answer is null
                 ? AssistanceErrors.UnusableAnswer
-                : new Composed(answer.ToDraft(), Usage(reply, pictures: 0));
+                : new Composed(answer.ToDraft(), Usage(answered, pictures: 0));
         }
         catch (JsonException)
         {
@@ -232,121 +204,100 @@ internal sealed class GeminiAssistant(
         }
     }
 
-    private Result<Drawn> ReadPicture(GeminiReply reply)
+    private Result<Drawn> ReadPicture(GenerateContentResponse answered)
     {
-        if (Part(reply, "image")?.Data is not { Length: > 0 } data)
+        var picture = (answered.Parts ?? [])
+            .Select(part => part.InlineData)
+            .FirstOrDefault(blob => blob?.Data is { Length: > 0 });
+
+        if (picture?.Data is not { Length: > 0 } bytes)
         {
-            AssistanceLogs.EmptyAnswer(logger, Kind.Code, reply.Status);
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, Reason(answered));
 
             return AssistanceErrors.UnusableAnswer;
         }
 
-        return new Drawn(
-            new MemoryStream(Convert.FromBase64String(data)),
-            Usage(reply, pictures: 1));
+        return new Drawn(new MemoryStream(bytes), Usage(answered, pictures: 1));
     }
 
     /// <summary>
-    /// The first part of that type the model produced.
+    /// What it consumed.
     /// </summary>
     /// <remarks>
-    /// Only <c>model_output</c> steps. A timeline can also carry the input back
-    /// and, once tools are in play, function calls — and reading the echo of
-    /// what was sent as if it were the answer is the kind of mistake that looks
-    /// like it works.
+    /// Thinking is counted apart, in <c>ThoughtsTokenCount</c>, and left out of
+    /// both. Google bills it, so a budget built from these two runs slightly
+    /// under the invoice on a reasoning model — the alternative is to add a
+    /// number to output that the provider does not put there.
     /// </remarks>
-    private static GeminiPart? Part(GeminiReply reply, string type) => reply.Steps?
-        .Where(step => step.Type == "model_output")
-        .SelectMany(step => step.Content ?? [])
-        .FirstOrDefault(part => part.Type == type);
-
-    private static ModelUsage Usage(GeminiReply reply, int pictures) => new(
-        reply.Usage?.InputTokens ?? 0,
-        reply.Usage?.OutputTokens ?? 0,
+    private static ModelUsage Usage(GenerateContentResponse answered, int pictures) => new(
+        answered.UsageMetadata?.PromptTokenCount ?? 0,
+        answered.UsageMetadata?.CandidatesTokenCount ?? 0,
         pictures);
 
-}
+    private static string? Reason(GenerateContentResponse answered) =>
+        answered.Candidates?.FirstOrDefault()?.FinishReason?.ToString();
 
-/// <summary>What the models listing answers with.</summary>
-internal sealed record GeminiModelList
-{
-    public IReadOnlyList<GeminiModel>? Models { get; init; }
-}
+    /// <summary>The id to send, without the <c>models/</c> the listing prefixes.</summary>
+    private static string Named(Model model) =>
+        (model.Name ?? string.Empty).StartsWith("models/", StringComparison.Ordinal)
+            ? model.Name![7..]
+            : model.Name ?? string.Empty;
 
-/// <summary>One model Google offers.</summary>
-internal sealed record GeminiModel
-{
-    /// <summary>Prefixed <c>models/</c> in the listing, not in a request.</summary>
-    public string? Name { get; init; }
+    private static string Labelled(Model model, string id) =>
+        string.IsNullOrWhiteSpace(model.DisplayName) ? id : model.DisplayName!;
 
-    public string? DisplayName { get; init; }
+    /// <summary>
+    /// What is left after the models that cannot write a recipe or draw one.
+    /// </summary>
+    /// <remarks>
+    /// The listing carries embedding, retrieval and answering models too, and
+    /// offering those as a choice for "write me a recipe" would be offering
+    /// something that cannot answer. By name, because the client's model type
+    /// carries a name, a display name and a description and nothing that says
+    /// what it does.
+    /// </remarks>
+    private static bool Usable(string id) =>
+        !id.Contains("embedding", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("aqa", StringComparison.OrdinalIgnoreCase)
+        && !id.Contains("retrieval", StringComparison.OrdinalIgnoreCase);
 
-    public IReadOnlyList<string>? SupportedGenerationMethods { get; init; }
-}
+    /// <summary>
+    /// The client for one connection.
+    /// </summary>
+    /// <remarks>
+    /// Built per call rather than held: the key and the address belong to the
+    /// connection being used, and an instance of this class serves all of them.
+    /// The transport is the app's own, so the SDK inherits the rules the
+    /// hand-written client had — no redirects with a key attached, one pool,
+    /// one deadline.
+    /// </remarks>
+    private Client Client(Connected @using) => new(
+        apiKey: @using.ApiKey,
+        httpOptions: new HttpOptions { BaseUrl = @using.BaseUrl },
+        clientOptions: new ClientOptions { HttpClientFactory = () => http.ClientFor(@using.BaseUrl) });
 
-/// <summary>What the Interactions API answers with.</summary>
-internal sealed record GeminiReply
-{
-    public IReadOnlyList<GeminiStep>? Steps { get; init; }
+    /// <summary>The failures that are the provider's rather than this app's.</summary>
+    private static bool Expected(Exception failure) =>
+        failure is HttpRequestException or OperationCanceledException or IOException
+            or InvalidOperationException or JsonException;
 
-    /// <summary>Set when the interaction wants something before it can finish.</summary>
-    public string? Status { get; init; }
-
-    public GeminiUsage? Usage { get; init; }
-}
-
-/// <summary>One step of the interaction.</summary>
-internal sealed record GeminiStep
-{
-    /// <summary><c>model_output</c>, <c>user_input</c>, <c>function_call</c>.</summary>
-    public string? Type { get; init; }
-
-    public IReadOnlyList<GeminiPart>? Content { get; init; }
-}
-
-/// <summary>One piece of a step: words, or a picture.</summary>
-internal sealed record GeminiPart
-{
-    /// <summary><c>text</c> or <c>image</c>.</summary>
-    public string? Type { get; init; }
-
-    public string? Text { get; init; }
-
-    public string? MimeType { get; init; }
-
-    /// <summary>A picture, base64-encoded.</summary>
-    public string? Data { get; init; }
-}
-
-/// <summary>
-/// What the call consumed.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Named on every property. The Interactions API accounts for a whole turn
-/// rather than for one message, so the fields are <c>total_input_tokens</c> and
-/// <c>total_output_tokens</c> — and they are snake_case, which the shared
-/// options do not bridge. Under the old names they bound to zero, which is what
-/// every row in the ledger says this instance has spent.
-/// </para>
-/// <para>
-/// Thinking is counted separately in <c>total_thought_tokens</c> and is not
-/// included here. Google bills it, so a budget built from these two runs
-/// slightly under the invoice on a reasoning model — the alternative is to add
-/// a number to output that the documentation does not say belongs there.
-/// </para>
-/// </remarks>
-internal sealed record GeminiUsage
-{
-    [JsonPropertyName("total_input_tokens")]
-    public int InputTokens { get; init; }
-
-    [JsonPropertyName("total_output_tokens")]
-    public int OutputTokens { get; init; }
-
-    [JsonPropertyName("total_thought_tokens")]
-    public int ThoughtTokens { get; init; }
-
-    [JsonPropertyName("total_tokens")]
-    public int TotalTokens { get; init; }
+    /// <summary>
+    /// What a refusal means.
+    /// </summary>
+    /// <remarks>
+    /// A refused credential is carried as itself this far. It is turned back
+    /// into "unavailable" before it can reach somebody who is cooking, but the
+    /// settings screen and the ledger are read by the person holding the key.
+    /// </remarks>
+    private static Error Failure(Exception failure) =>
+        failure is HttpRequestException { StatusCode: { } status }
+            ? status switch
+            {
+                System.Net.HttpStatusCode.TooManyRequests => AssistanceErrors.Throttled,
+                System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden =>
+                    AssistanceErrors.Rejected,
+                System.Net.HttpStatusCode.BadRequest => AssistanceErrors.Refused,
+                _ => AssistanceErrors.Unavailable
+            }
+            : AssistanceErrors.Unavailable;
 }
