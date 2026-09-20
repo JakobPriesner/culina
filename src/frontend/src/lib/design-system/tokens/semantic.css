@@ -17,6 +17,10 @@
   --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
+  /* The veil an overlay lays over whatever it covers. The plain overlay for
+     anything that must stay legible on top of it; this where a hint of the
+     page beneath tells the reader the thing is temporary. */
+  --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-100);
   /* The one row the reader is pointing at, right now. Louder than
      `--surface-accent-subtle`, which marks a lasting choice on the page's own
@@ -40,6 +44,10 @@
   --border: var(--c-sand-200);
   --border-strong: var(--c-sand-400);
   --border-focus: var(--c-olive-600);
+  /* The edge of something tinted with the accent — an ingredient capsule in a
+     step, a chosen row. Quieter than `--accent` itself, which on a hairline
+     around a pale fill reads as a box drawn around the words. */
+  --border-accent: var(--c-olive-300);
 
   /* The accent. One colour, for the primary action on a screen. */
   --accent: var(--c-olive-600);
@@ -61,6 +69,10 @@
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
   --scrim: rgb(31 26 22 / 45%);
+  /* The glow on the thing being pointed at from somewhere else — an ingredient
+     in the list lighting up every mention of it in the steps. A ring rather
+     than a shadow: it says "this one", not "this is raised". */
+  --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 
   /* The shimmer a skeleton animates between. */
   --skeleton-base: var(--c-sand-200);

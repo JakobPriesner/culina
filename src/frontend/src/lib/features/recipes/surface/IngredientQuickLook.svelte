@@ -168,7 +168,7 @@
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
+    background: var(--surface-overlay-glass);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     box-shadow: var(--shadow-overlay);
@@ -209,7 +209,7 @@
     width: 1.25rem;
     height: 1.25rem;
     border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    background: var(--surface-highlight);
     color: var(--accent);
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);

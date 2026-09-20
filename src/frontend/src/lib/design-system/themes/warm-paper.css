@@ -16,6 +16,7 @@
   --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
+  --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-100);
   --surface-highlight: var(--c-olive-200);
   --surface-hover: var(--c-sand-100);
@@ -33,6 +34,7 @@
   --border: var(--c-sand-200);
   --border-strong: var(--c-sand-400);
   --border-focus: var(--c-olive-600);
+  --border-accent: var(--c-olive-300);
 
   --accent: var(--c-olive-600);
   --accent-hover: var(--c-olive-700);
@@ -49,6 +51,7 @@
 
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
+  --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   --scrim: rgb(31 26 22 / 45%);
 
   --skeleton-base: var(--c-sand-200);
@@ -66,6 +69,7 @@
   --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-sand-800);
+  --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-800);
   --surface-highlight: var(--c-olive-700);
   --surface-hover: var(--c-sand-800);
@@ -83,6 +87,9 @@
   --border: var(--c-sand-800);
   --border-strong: var(--c-sand-500);
   --border-focus: var(--c-olive-300);
+  /* Darker rather than lighter here: the capsule it edges is olive-800, and a
+     pale hairline around a dark fill is a cut-out, not an edge. */
+  --border-accent: var(--c-olive-600);
 
   /* Lighter than the light-mode accent: the same hue on a dark ground reads as
      muddy, and contrast has to be earned in both directions. */
@@ -101,6 +108,7 @@
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
   --shadow-overlay: 0 8px 32px rgb(0 0 0 / 55%);
+  --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   --scrim: rgb(0 0 0 / 65%);
 
   --skeleton-base: var(--c-sand-800);
