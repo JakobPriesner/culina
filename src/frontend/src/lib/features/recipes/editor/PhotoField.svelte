@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, ImageField, type ButtonVariant } from '$ds';
 
-  import { http, request } from '$api';
+  import { ask, http, request } from '$api';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import { imageSrcset, imageUrl } from '../recipeImage';
@@ -23,6 +23,19 @@
     onchange: (imageId: string | null) => void;
   }
 
+  /**
+   * One event as the drawing stream sends it.
+   *
+   * Declared here rather than taken from the generated client, which describes
+   * requests that end and has nothing to say about a stream. The same shape the
+   * import's progress events are read with, for the same reason.
+   */
+  interface DrawingEvent {
+    seconds: number;
+    finished: boolean;
+    recipe?: { imageId?: string | null } | null;
+  }
+
   let { recipeId, imageId, onchange }: Props = $props();
 
   const canDraw = $derived(session.user?.assistance.draw ?? false);
@@ -37,6 +50,14 @@
    * button beside it.
    */
   let drawing = $state(false);
+  /**
+   * How long the assistant has been drawing, as the server counts it.
+   *
+   * The server's count rather than a timer here, so a tab that was left in the
+   * background and throttled shows the real elapsed time when somebody comes
+   * back to it.
+   */
+  let drawnFor = $state(0);
   let failure = $state<string | null>(null);
 
   /** Checked here so an obviously hopeless upload fails instantly. */
@@ -83,22 +104,42 @@
    * the picture with bytes being sent, POST asks the server to produce one. The
    * result travels the identical path afterwards, so a drawn picture is an
    * ordinary recipe photo in every other respect.
+   *
+   * A stream, because this is the slowest thing the app asks of anybody:
+   * sixteen seconds is a fast drawing and two minutes is the ceiling. There is
+   * nothing partial to show — a provider hands over a finished picture or none
+   * — so what arrives until the end is a tick every few seconds saying it is
+   * still going. That is the difference between a frame that says "creating
+   * image… 47s" and one that has said nothing for a minute and looks broken,
+   * and it is also what stops a proxy closing a request that never speaks.
    */
-  async function draw() {
+  function draw() {
     drawing = true;
+    drawnFor = 0;
     failure = null;
 
-    const result = await request(() =>
-      http.POST('/api/v1/recipes/{recipeId}/image', { params: { path: { recipeId } } })
-    );
+    const stream = ask<DrawingEvent>(`/api/v1/recipes/${recipeId}/image`, null, {
+      message: (event) => {
+        drawnFor = event.seconds;
 
-    drawing = false;
+        if (!event.finished) {
+          return;
+        }
 
-    if (result.ok) {
-      onchange(result.value.imageId ?? null);
-    } else {
-      failure = m['assist.draw.failed']();
-    }
+        stream.close();
+        drawing = false;
+
+        if (event.recipe) {
+          onchange(event.recipe.imageId ?? null);
+        } else {
+          failure = m['assist.draw.failed']();
+        }
+      },
+      failed: () => {
+        drawing = false;
+        failure = m['assist.draw.failed']();
+      }
+    });
   }
 
   async function remove() {
@@ -131,7 +172,9 @@
   sizes="(min-width: 40rem) 30rem, 90vw"
   {busy}
   generating={drawing}
-  generatingLabel={m['assist.draw.working']()}
+  generatingLabel={drawnFor > 0
+    ? m['assist.draw.elapsed']({ seconds: drawnFor })
+    : m['assist.draw.working']()}
   extraAction={canDraw ? drawAction : undefined}
   {failure}
   onpick={upload}

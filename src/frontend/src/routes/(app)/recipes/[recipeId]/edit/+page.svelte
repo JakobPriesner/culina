@@ -240,6 +240,11 @@
    * ticks there reaches `change()` — which matters more in this editor than it
    * would in most, because there is no Save button: anything that reached
    * `change()` would be on its way to the server 800 ms later.
+   *
+   * The review opens on the first thing the assistant says rather than on the
+   * last: the suggestion is worth reading as it is written, and thirty seconds
+   * of a spinner on a button is thirty seconds of wondering. Accepting stays
+   * shut until it has finished.
    */
   async function improve(): Promise<void> {
     if (!draft || !session.activeHouseholdId) {
@@ -700,31 +705,69 @@
          and a skeleton the same shape means nothing moves when it lands. -->
     <div class="layout" aria-busy="true" aria-label={m['editor.loading']()}>
       <div class="ghost-rail">
-        <Skeleton width="8rem" height="1.5rem" />
-        <Skeleton width="100%" height="2rem" />
+        <Skeleton width="5rem" height="1.25rem" />
+        <Skeleton width="10rem" height="1.5rem" />
+        <Skeleton width="6rem" height="1rem" />
+
+        <div class="ghost-sections">
+          {#each [0, 1, 2, 3, 4] as i (i)}
+            <div class="ghost-section-row">
+              <Skeleton width="6rem" height="1rem" />
+            </div>
+          {/each}
+        </div>
       </div>
 
       <div class="form">
         <div class="ghost">
-          <Skeleton width="12rem" height="2rem" />
-          <Skeleton width="100%" height="3.5rem" />
-          <Skeleton width="100%" height="6rem" />
+          <Skeleton width="8rem" height="1.75rem" />
+          <div class="ghost-field">
+            <Skeleton width="4rem" height="0.875rem" />
+            <Skeleton width="100%" height="3rem" shape="block" />
+          </div>
+          <div class="ghost-field">
+            <Skeleton width="6rem" height="0.875rem" />
+            <Skeleton width="100%" height="5rem" shape="block" />
+          </div>
+          <div class="ghost-meta">
+            <div class="ghost-pair">
+              <Skeleton width="100%" height="var(--control-sm)" shape="block" />
+              <Skeleton width="100%" height="var(--control-sm)" shape="block" />
+            </div>
+            <div class="ghost-pair">
+              <Skeleton width="100%" height="var(--control-sm)" shape="block" />
+              <Skeleton width="100%" height="var(--control-sm)" shape="block" />
+            </div>
+          </div>
         </div>
 
         <div class="ghost">
-          <Skeleton width="9rem" height="2rem" />
-          <Skeleton width="100%" height="14rem" />
+          <Skeleton width="5rem" height="1.75rem" />
+          <Skeleton width="100%" height="10rem" shape="block" />
+        </div>
+
+        <div class="ghost">
+          <Skeleton width="7rem" height="1.75rem" />
+          <div class="ghost-list">
+            {#each [0, 1, 2, 3] as row (row)}
+              <div class="ghost-row">
+                <Skeleton width="4rem" height="var(--control-sm)" shape="block" />
+                <Skeleton width="100%" height="var(--control-sm)" shape="block" />
+              </div>
+            {/each}
+          </div>
         </div>
       </div>
     </div>
   {/if}
 </Page>
 
-{#if drafts.draft && draft}
+{#if (drafts.asking || drafts.draft) && draft}
   <DraftReview
     open={true}
     draft={drafts.draft}
     current={draft}
+    writing={drafts.asking}
     onaccept={acceptDraft}
     onclose={() => drafts.dismiss()}
   />
@@ -863,6 +906,49 @@
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+  }
+
+  .ghost-sections {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+
+  .ghost-section-row {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-sm);
+  }
+
+  .ghost-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .ghost-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .ghost-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .ghost-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .ghost-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
   }
 
   .ghost + .ghost {

@@ -40,35 +40,19 @@ const patientTimeoutMs = 60_000;
  * API and the API layer is the one place allowed to know the API's shape. A
  * caller choosing its own deadline is a caller that will forget to.
  *
- * The assistant belongs here as plainly as importing does, and was missing:
- * drawing a picture is fifteen to forty seconds of somebody else's machine
- * doing the slowest thing this app asks of anyone. At the default deadline the
- * browser gave up first — and the server, which knew nothing of that, finished
- * the drawing, paid for it and stored it. The screen said it had failed while
- * the picture sat on disk.
+ * Asking the assistant for a recipe, and asking it to draw one, used to be on
+ * this list and are not any more: both stream now, and a stream is read through
+ * `ask` in `./events` rather than sent through here. A deadline is the wrong
+ * tool for a response that is meant to stay open — which was the whole trouble
+ * with drawing, where the browser gave up first and the server, knowing nothing
+ * of that, finished the picture, paid for it and stored it against a screen
+ * that had already said it failed.
  */
 const patientPaths = [
   '/api/v1/recipe-sources',
-  // Improving, drafting and reading a photograph: a model writing a whole
-  // recipe, not a database read.
-  '/api/v1/recipe-drafts',
   // Asking every connected provider what it offers, one after another.
   '/api/v1/settings/assistance/models'
 ];
-
-/**
- * The deadline for asking a model to draw.
- *
- * Longer again, because drawing is not composing with a picture at the end of
- * it: it is the one call where a provider spends real time on a machine of its
- * own. Sixteen seconds is a fast one, and a detailed prompt on a busy afternoon
- * is minutes. Ten seconds past the server's own two minutes, so the server is
- * always the one to give up first and say why.
- */
-const drawingTimeoutMs = 130_000;
-
-/** Drawing, which is a POST to a recipe's own picture. */
-const drawingPath = /^\/api\/v1\/recipes\/[^/]+\/image$/;
 
 const http = createClient<paths>({
   // No base URL: the generated paths already carry /api/v1, and Culina is
@@ -144,22 +128,16 @@ function describe(thrown: unknown) {
  * is still cancelled when the component that started it goes away.
  */
 function withTimeout(input: Request): Promise<Response> {
-  const deadline = AbortSignal.timeout(deadlineFor(input.url, input.method));
+  const deadline = AbortSignal.timeout(deadlineFor(input.url));
 
   return fetch(input, {
     signal: input.signal ? AbortSignal.any([input.signal, deadline]) : deadline
   });
 }
 
-function deadlineFor(url: string, method: string): number {
+function deadlineFor(url: string): number {
   try {
     const { pathname } = new URL(url);
-
-    // A POST to a recipe's picture asks a model to draw one; a PUT sends bytes
-    // that are already here. Same address, three different waits.
-    if (method === 'POST' && drawingPath.test(pathname)) {
-      return drawingTimeoutMs;
-    }
 
     return patientPaths.some((path) => pathname.startsWith(path))
       ? patientTimeoutMs

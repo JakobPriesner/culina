@@ -1,10 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { ErrorState, Skeleton } from '$ds';
+  import { ErrorState } from '$ds';
   import { sharedImageSrcset, sharedImageUrl } from '$features/recipes/recipeImage';
   import { sharedRecipe } from '$features/recipes/stores/sharedRecipe.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
+  import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
@@ -71,11 +72,7 @@
       photo={{ src: sharedImageUrl(token, 1600), srcset: sharedImageSrcset(token) }}
     />
   {:else}
-    <div class="loading" aria-busy="true" aria-label={m['shared.loading']()}>
-      <Skeleton width="60%" height="2.5em" />
-      <Skeleton width="30%" />
-      <Skeleton width="100%" height="12rem" />
-    </div>
+    <RecipeSurfaceSkeleton />
   {/if}
 </Page>
 
@@ -89,12 +86,6 @@
     font-weight: var(--weight-semibold);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-  }
-
-  .loading {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
   }
 
   @media print {

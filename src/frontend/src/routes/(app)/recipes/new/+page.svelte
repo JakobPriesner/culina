@@ -303,7 +303,10 @@
           householdId={session.activeHouseholdId}
           language={preferences.locale}
           onread={(written) => void startFromDraft(written)}
-          oncancel={() => (photographing = false)}
+          oncancel={() => {
+            photographing = false;
+            drafts.dismiss();
+          }}
         />
       {:else}
         <!--

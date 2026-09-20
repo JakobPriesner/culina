@@ -133,3 +133,18 @@ describe('when something goes wrong', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('That photo could not be saved.');
   });
 });
+
+describe('while an image is being generated', () => {
+  it('shows the live streamed status in the image frame', () => {
+    render({ generating: true, generatingLabel: 'Creating image… 15s' });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Creating image… 15s');
+  });
+
+  it('keeps image actions unavailable until the stream finishes', () => {
+    render({ src: 'https://example.test/photo.jpg', generating: true });
+
+    expect(screen.getByRole('button', { name: 'Replace the photo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remove the photo' })).toBeDisabled();
+  });
+});

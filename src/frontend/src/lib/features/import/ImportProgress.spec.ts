@@ -69,8 +69,8 @@ describe('an import as it runs', () => {
       }
     });
 
-    expect(screen.getByRole('button', { name: 'Look again' })).toBeInTheDocument();
-    expect(screen.queryByText('They are here')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
+    expect(screen.queryByText('Import complete')).not.toBeInTheDocument();
   });
 
   it('quotes why it stopped, because the reasons need different reactions', () => {
@@ -119,7 +119,7 @@ describe('an import as it runs', () => {
       props: { run: run(), ondone: () => {}, onlook: () => {} }
     });
 
-    expect(screen.getByText('Already had')).toBeInTheDocument();
-    expect(screen.getByText('Brought over')).toBeInTheDocument();
+    expect(screen.getByText('Already imported')).toBeInTheDocument();
+    expect(screen.getByText('Imported')).toBeInTheDocument();
   });
 });

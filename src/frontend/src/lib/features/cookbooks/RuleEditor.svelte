@@ -101,7 +101,7 @@
           {id}
           {describedBy}
           bind:value={typedIngredient}
-          placeholder="Hähnchen"
+          placeholder={m['cookbooks.rules.ingredientPlaceholder']()}
           maxlength={120}
         />
         <Button onclick={addIngredient}>{m['cookbooks.rules.ingredientAdd']()}</Button>

@@ -50,8 +50,11 @@
   <ul class="list" aria-busy="true" aria-label={m['me.members.title']()}>
     {#each ['a', 'b'] as row (row)}
       <li class="row">
-        <Skeleton width="var(--space-12)" height="var(--space-12)" />
-        <span class="who"><Skeleton width="8rem" /></span>
+        <Skeleton shape="circle" width="var(--space-12)" height="var(--space-12)" />
+        <span class="who">
+          <Skeleton width="9rem" height="1rem" />
+          <Skeleton width="6rem" height="0.75rem" />
+        </span>
       </li>
     {/each}
   </ul>

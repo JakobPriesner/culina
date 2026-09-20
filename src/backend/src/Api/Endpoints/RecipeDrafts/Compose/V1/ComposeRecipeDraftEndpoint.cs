@@ -2,8 +2,8 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Recipes.Drafts;
+using Event = Contracts.Recipes.Drafts.Event;
 using Request = Contracts.Recipes.Drafts.Request;
-using Response = Contracts.Recipes.Drafts.Response;
 
 namespace Api.Endpoints.RecipeDrafts.Compose.V1;
 
@@ -17,7 +17,7 @@ internal sealed class ComposeRecipeDraftEndpoint : IEndpoint
         app.MapPost($"{ApiPaths.V1}/recipe-drafts", async (
                 Request request,
                 HttpContext context,
-                ICommandHandler<ComposeRecipeDraftCommand, Response> handler,
+                ICommandHandler<ComposeRecipeDraftCommand, DraftProgress> handler,
                 CancellationToken cancellationToken) =>
             {
                 var result = await handler
@@ -32,7 +32,7 @@ internal sealed class ComposeRecipeDraftEndpoint : IEndpoint
                         cancellationToken)
                     .ConfigureAwait(false);
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                return result.Match(Stream, CustomResults.Problem);
             })
             .WithName("composeRecipeDraftV1")
             .WithTags(Tags.Recipes)
@@ -45,13 +45,22 @@ internal sealed class ComposeRecipeDraftEndpoint : IEndpoint
                 + "draft, `text` reads one out of something pasted, and `revision` rewrites "
                 + "the recipe named by `recipeId` — keeping its ingredients, its amounts and "
                 + "its language, and changing only how it reads.\n\n"
-                + "404 when this instance has no assistant, or has that capability switched "
-                + "off; the two are one answer because a caller learns nothing from being "
-                + "told which. 429 when the month's budget is spent.\n\n"
+                + "Server-sent events, because a model writes a recipe over tens of seconds "
+                + "and a screen that shows it arriving is a screen somebody reads rather than "
+                + "waits at. Each event carries the whole draft as far as it has been "
+                + "written — a title, then ingredients, then steps — and the last one says "
+                + "`finished`. A field the model has not finished writing is absent rather "
+                + "than half-written.\n\n"
+                + "Everything that can refuse the ask is decided before the stream opens, so "
+                + "it is still an ordinary status code: 404 when this instance has no "
+                + "assistant, or has that capability switched off — the two are one answer "
+                + "because a caller learns nothing from being told which — and 429 when the "
+                + "month's budget is spent. What goes wrong afterwards arrives as `problem` "
+                + "on the last event, because by then the 200 has been sent.\n\n"
                 + "The answer is checked on the way out: a line the app could not store loses "
                 + "the part it could not store rather than failing the whole draft, because a "
                 + "draft is a thing somebody is about to correct anyway.")
-            .Produces<Response>()
+            .Produces<Event>(StatusCodes.Status200OK, "text/event-stream")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -60,4 +69,7 @@ internal sealed class ComposeRecipeDraftEndpoint : IEndpoint
             .RequireRateLimiting(RateLimitExtensions.Assistance)
             .RequireAuthorization();
     }
+
+    private static IResult Stream(DraftProgress progress) =>
+        TypedResults.ServerSentEvents(progress.Events);
 }

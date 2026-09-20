@@ -46,15 +46,29 @@ internal static class DraftMapping
 
     /// <summary>Turns it into the shape the client reads.</summary>
     /// <param name="draft">What the model said.</param>
-    internal static Response ToResponse(this DraftedRecipe draft)
+    /// <remarks>
+    /// A new id every time. Two asks are two drafts, and could become two
+    /// recipes, so they must not share an external id.
+    /// </remarks>
+    internal static Response ToResponse(this DraftedRecipe draft) =>
+        draft.ToResponse(Guid.CreateVersion7());
+
+    /// <summary>Turns it into the shape the client reads, under an id of its own.</summary>
+    /// <param name="draft">What the model said.</param>
+    /// <param name="draftId">The id this draft already has.</param>
+    /// <remarks>
+    /// For a draft that arrives in pieces. Every piece is the same draft
+    /// growing, so every piece carries the same id — a fresh one per piece
+    /// would leave a client unable to tell a second ask from the next few
+    /// characters of the first.
+    /// </remarks>
+    internal static Response ToResponse(this DraftedRecipe draft, Guid draftId)
     {
         ArgumentNullException.ThrowIfNull(draft);
 
         return new Response
         {
-            // New every time. Two asks are two drafts, and could become two
-            // recipes, so they must not share an external id.
-            DraftId = Guid.CreateVersion7(),
+            DraftId = draftId,
             Title = Trimmed(draft.Title),
             Description = Trimmed(draft.Description),
             YieldAmount = draft.YieldAmount is > 0 ? draft.YieldAmount : null,

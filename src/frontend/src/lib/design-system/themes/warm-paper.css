@@ -54,6 +54,13 @@
   --generating-2: var(--c-terracotta-200);
   --generating-3: var(--c-amber-200);
   --generating-sheen: var(--c-white);
+  --generating-grid: rgb(255 255 255 / 4%);
+  --generating-vignette: rgb(0 0 0 / 22%);
+  --generating-glow: rgb(255 255 255 / 52%);
+  --generating-scan: rgb(255 255 255 / 20%);
+  --generating-panel: rgb(20 17 14 / 44%);
+  --generating-panel-border: rgb(255 255 255 / 16%);
+  --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
 
   --control-on-media: rgb(20 17 14 / 62%);
   --control-on-media-hover: rgb(20 17 14 / 78%);
@@ -124,6 +131,13 @@
   --generating-2: var(--c-terracotta-600);
   --generating-3: var(--c-amber-500);
   --generating-sheen: var(--c-sand-300);
+  --generating-grid: rgb(255 255 255 / 4%);
+  --generating-vignette: rgb(0 0 0 / 22%);
+  --generating-glow: rgb(255 255 255 / 42%);
+  --generating-scan: rgb(255 255 255 / 18%);
+  --generating-panel: rgb(20 17 14 / 52%);
+  --generating-panel-border: rgb(255 255 255 / 16%);
+  --generating-panel-shadow: 0 0.5rem 2rem rgb(0 0 0 / 24%);
 
   --control-on-media: rgb(20 17 14 / 62%);
   --control-on-media-hover: rgb(20 17 14 / 78%);

@@ -92,11 +92,8 @@
   /* Tabular, so a list going from 9 to 10 does not nudge the heading. */
   .count {
     margin-inline-start: var(--space-3);
-    color: var(--text-subtle);
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
+    color: var(--text-muted);
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0;
   }
 
   .description {

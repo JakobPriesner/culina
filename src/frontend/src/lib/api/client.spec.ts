@@ -103,24 +103,7 @@ describe('deadlines', () => {
     expect(asked).toEqual([60_000]);
   });
 
-  it('waits for a picture to be drawn, which takes longer than anything else', async () => {
-    const asked = watchDeadlines();
-
-    respondWith(json({ recipeId: 'r1', imageId: 'i2' }));
-
-    await request(() =>
-      http.POST('/api/v1/recipes/{recipeId}/image', { params: { path: { recipeId: 'r1' } } })
-    );
-
-    // Measured at sixteen seconds on a real provider, and that is a fast one.
-    // At the ordinary deadline the browser gave up first and the server,
-    // knowing nothing of that, finished the drawing, paid for it and stored it
-    // — so the screen reported a failure while the picture sat on disk. Ten
-    // seconds past the server's own two minutes, so the server gives up first.
-    expect(asked).toEqual([130_000]);
-  });
-
-  it('keeps the short deadline for sending a photograph to the same address', async () => {
+  it('keeps the short deadline for sending a photograph, which is not a slow call', async () => {
     const asked = watchDeadlines();
 
     respondWith(json({ recipeId: 'r1', imageId: 'i3' }));
@@ -137,8 +120,11 @@ describe('deadlines', () => {
       })
     );
 
-    // One address, two waits: asking a model to draw is not the same as
-    // sending bytes that are already here.
+    // The same address a drawing is asked for at, and nothing like the same
+    // wait — which is why drawing is not sent through here at all. Sending
+    // bytes that are already on this machine is an ordinary upload; asking a
+    // model to make some is a stream, read by `ask` in `./events`, where no
+    // deadline applies.
     expect(asked).toEqual([15_000]);
   });
 
