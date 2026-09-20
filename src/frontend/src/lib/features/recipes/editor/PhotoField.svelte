@@ -25,7 +25,18 @@
 
   let { recipeId, imageId, onchange }: Props = $props();
 
+  const canDraw = $derived(session.user?.assistance.draw ?? false);
+
   let busy = $state(false);
+  /**
+   * Kept apart from `busy`, because the two are different waits.
+   *
+   * An upload is a few seconds of this machine's network; a drawing is a
+   * minute of somebody else's machine working. The frame says so itself while
+   * it happens, so the picture is where the waiting is shown rather than in a
+   * button beside it.
+   */
+  let drawing = $state(false);
   let failure = $state<string | null>(null);
 
   /** Checked here so an obviously hopeless upload fails instantly. */
@@ -74,14 +85,14 @@
    * ordinary recipe photo in every other respect.
    */
   async function draw() {
-    busy = true;
+    drawing = true;
     failure = null;
 
     const result = await request(() =>
       http.POST('/api/v1/recipes/{recipeId}/image', { params: { path: { recipeId } } })
     );
 
-    busy = false;
+    drawing = false;
 
     if (result.ok) {
       onchange(result.value.imageId ?? null);
@@ -119,34 +130,30 @@
   srcset={imageId ? imageSrcset(recipeId, imageId) : undefined}
   sizes="(min-width: 40rem) 30rem, 90vw"
   {busy}
+  generating={drawing}
+  generatingLabel={m['assist.draw.working']()}
+  extraAction={canDraw ? drawAction : undefined}
   {failure}
   onpick={upload}
   onremove={remove}
 />
 
-<!-- Beside the picker rather than inside it: choosing a file is what this
-     field is for, and asking for a drawing is a different kind of act. Absent
-     entirely where no assistant can draw — which includes every instance
-     running a model on its own hardware, since those do not make pictures. -->
-{#if session.user?.assistance.draw}
-  <div class="drawing">
-    <Button variant="secondary" size="sm" loading={busy} onclick={draw}>
-      {m['assist.draw']()}
-    </Button>
-    <p class="note">{m['assist.draw.note']()}</p>
-  </div>
+<!-- Absent entirely where no assistant can draw — which includes every
+     instance running a model on its own hardware, since those do not make
+     pictures. -->
+{#snippet drawAction()}
+  <Button variant="secondary" size="sm" disabled={busy || drawing} onclick={draw}>
+    {m['assist.draw']()}
+  </Button>
+{/snippet}
+
+{#if canDraw && !imageId}
+  <p class="note">{m['assist.draw.note']()}</p>
 {/if}
 
 <style>
-  .drawing {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-    margin-top: var(--space-3);
-  }
-
   .note {
+    margin-top: var(--space-2);
     max-width: var(--measure);
     color: var(--text-muted);
     font-size: var(--text-sm);

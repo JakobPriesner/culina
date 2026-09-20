@@ -6,6 +6,7 @@
   import { formatNumber, m } from '$shell/i18n';
 
   import { assistance } from '$features/assistance/stores/assistance.svelte';
+  import { session } from '$features/auth/session.svelte';
   import {
     capabilities,
     providerFacts,
@@ -140,6 +141,13 @@
     if (!failure) {
       draft = assistance.settings ? structuredClone($state.snapshot(assistance.settings)) : draft;
       saved = true;
+
+      // What is set here is what decides whether the rest of the app shows an
+      // assistant's buttons at all: the four switches travel with the signed-in
+      // account, and that is read once when the app boots. Without this, giving
+      // "improve a recipe" a provider left the editor with no button to press
+      // until somebody reloaded the page — and nothing on screen said so.
+      await session.refresh();
     }
   }
 
