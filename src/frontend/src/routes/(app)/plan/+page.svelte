@@ -5,6 +5,7 @@
   import { Button, EmptyState, ErrorState } from '$ds';
 
   import PlannedCard from '$features/planning/PlannedCard.svelte';
+  import PlanWeekSkeleton from '$features/planning/PlanWeekSkeleton.svelte';
   import MoveMealSheet from '$features/planning/MoveMealSheet.svelte';
   import {
     asDate,
@@ -263,6 +264,8 @@
         </Button>
       {/snippet}
     </ErrorState>
+  {:else if mealPlan.loading && mealPlan.days.length === 0}
+    <PlanWeekSkeleton />
   {:else}
     <ol class="week" class:dragging={drag.held !== null}>
       {#each mealPlan.days as day (day.date)}

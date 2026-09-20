@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Checkbox, Modal } from '$ds';
+  import { Button, Checkbox, GenerationStatus, Modal, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
 
   import {
@@ -32,22 +32,35 @@
    *
    * Everything starts unticked. A dialog that opens with its work already
    * accepted is a dialog people dismiss without reading.
+   *
+   * It opens on the first thing the assistant says rather than on the last, so
+   * the suggestion is read as it is written. Nothing can be accepted until it
+   * is finished: ticking a box against half an ingredient list and pressing the
+   * button would apply a list the assistant had not finished writing — and this
+   * editor has no Save button, so that would be on its way to the server 800 ms
+   * later.
    */
   interface Props {
     open: boolean;
-    draft: Draft;
+    draft: Draft | null;
     current: Recipe;
+    /** Whether more of the draft is still arriving. */
+    writing?: boolean;
     onaccept: (patch: Partial<Recipe>) => void;
     onclose: () => void;
   }
 
-  let { open = $bindable(), draft, current, onaccept, onclose }: Props = $props();
+  let { open = $bindable(), draft, current, writing = false, onaccept, onclose }: Props = $props();
 
   let accepted = $state<Accepted>(acceptNothing());
 
-  const available = $derived(offers(draft));
-  const parts = $derived(
-    (
+  const available = $derived(draft ? offers(draft) : acceptNothing());
+  const parts = $derived.by(() => {
+    if (!draft) {
+      return [];
+    }
+
+    return (
       [
         ['title', m['assist.part.title'](), current.title, draft.title],
         ['description', m['assist.part.description'](), current.description, draft.description],
@@ -66,14 +79,18 @@
           m['assist.stepCount']({ count: draft.steps.length })
         ]
       ] as const
-    ).filter(([key]) => available[key])
-  );
+    ).filter(([key]) => available[key]);
+  });
 
   function describeYield(recipe: Recipe): string {
     return `${recipe.yieldAmount} ${recipe.yieldLabel ?? ''}`.trim();
   }
 
   function describeDraftYield(): string {
+    if (!draft) {
+      return '';
+    }
+
     return `${draft.yieldAmount ?? current.yieldAmount} ${draft.yieldLabel ?? ''}`.trim();
   }
 
@@ -85,6 +102,10 @@
   }
 
   function describeDraftTimes(): string {
+    if (!draft) {
+      return '';
+    }
+
     return [draft.prepMinutes, draft.cookMinutes]
       .filter((value): value is number => value != null)
       .map((value) => m['assist.minutes']({ count: value }))
@@ -92,6 +113,10 @@
   }
 
   function accept(): void {
+    if (!draft) {
+      return;
+    }
+
     onaccept(toPatch(draft, accepted, current));
     accepted = acceptNothing();
   }
@@ -110,12 +135,27 @@
 >
   <p class="lead">{m['assist.improve.lead']()}</p>
 
-  {#if parts.length === 0}
+  {#if writing}
+    <div class="progress">
+      <GenerationStatus
+        label={draft ? m['assist.improve.writing']() : m['assist.improve.asking']()}
+      />
+    </div>
+  {/if}
+
+  {#if !draft && writing}
+    <div class="forming" aria-hidden="true">
+      <Skeleton width="9rem" height="1rem" />
+      <Skeleton width="100%" height="3.5rem" shape="block" />
+      <Skeleton width="7rem" height="1rem" />
+      <Skeleton width="82%" height="1rem" />
+    </div>
+  {:else if parts.length === 0 && !writing}
     <p class="lead">{m['assist.nothing']()}</p>
-  {:else}
+  {:else if draft}
     <ul class="parts">
       {#each parts as [key, label, before, after] (key)}
-        <li class="part">
+        <li class="part arrival">
           <Checkbox
             checked={accepted[key]}
             {label}
@@ -139,7 +179,7 @@
     {#if draft.steps.length > 0}
       <ol class="steps">
         {#each draft.steps as step, index (index)}
-          <li>
+          <li class="arrival">
             {#if step.title}<span class="stepTitle">{step.title}</span>{/if}
             {step.text}
           </li>
@@ -150,16 +190,24 @@
 
   <!-- Said here rather than only on the button, because this is the moment
        somebody decides whether to trust it. -->
-  <p class="warning">{m['assist.warning']()}</p>
+  {#if draft}
+    <p class="warning">{m['assist.warning']()}</p>
+  {/if}
 
   {#snippet footer()}
     <Button variant="ghost" onclick={close}>{m['assist.discard']()}</Button>
 
-    {#if parts.length > 0}
-      <Button variant="secondary" onclick={() => (accepted = acceptEverything(draft))}>
+    {#if draft && parts.length > 0}
+      <Button
+        variant="secondary"
+        disabled={writing}
+        onclick={() => (accepted = acceptEverything(draft))}
+      >
         {m['assist.acceptAll']()}
       </Button>
-      <Button onclick={accept} disabled={!anyAccepted(accepted)}>{m['assist.accept']()}</Button>
+      <Button onclick={accept} disabled={writing || !anyAccepted(accepted)}>
+        {m['assist.accept']()}
+      </Button>
     {/if}
   {/snippet}
 </Modal>
@@ -169,6 +217,25 @@
     max-width: var(--measure);
     color: var(--text-muted);
     line-height: var(--leading-normal);
+  }
+
+  .progress {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-accent-subtle);
+  }
+
+  .forming {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
   }
 
   .parts {
@@ -239,9 +306,31 @@
     font-size: var(--text-sm);
   }
 
+  .arrival {
+    animation: arrive 320ms var(--ease-out) both;
+  }
+
+  @keyframes arrive {
+    from {
+      opacity: 0;
+      transform: translateY(0.45rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   @media (min-width: 40rem) {
     .compare {
       grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .arrival {
+      animation: none;
     }
   }
 </style>

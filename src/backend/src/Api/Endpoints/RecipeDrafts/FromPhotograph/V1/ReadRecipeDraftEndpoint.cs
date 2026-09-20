@@ -4,7 +4,7 @@ using Application.Abstractions.Messaging;
 using Application.Abstractions.Settings;
 using Application.Recipes.Drafts;
 using Domain.Assistance;
-using Response = Contracts.Recipes.Drafts.Response;
+using Event = Contracts.Recipes.Drafts.Event;
 
 namespace Api.Endpoints.RecipeDrafts.FromPhotograph.V1;
 
@@ -28,7 +28,7 @@ internal sealed class ReadRecipeDraftEndpoint : IEndpoint
                 string? language,
                 HttpContext context,
                 StorageSettings storage,
-                ICommandHandler<ComposeRecipeDraftCommand, Response> handler,
+                ICommandHandler<ComposeRecipeDraftCommand, DraftProgress> handler,
                 CancellationToken cancellationToken) =>
             {
                 if (file.Length > storage.MaxImageBytes)
@@ -54,7 +54,7 @@ internal sealed class ReadRecipeDraftEndpoint : IEndpoint
                         cancellationToken)
                     .ConfigureAwait(false);
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                return result.Match(Stream, CustomResults.Problem);
             })
             .WithName("readRecipeDraftV1")
             .WithTags(Tags.Recipes)
@@ -66,9 +66,12 @@ internal sealed class ReadRecipeDraftEndpoint : IEndpoint
                 + "where the source is unreadable rather than guessing: a plausible number "
                 + "invented for a blurred corner is the one failure of this capability somebody "
                 + "would not catch.\n\n"
+                + "Server-sent events, exactly as the JSON route sends them: the draft arrives "
+                + "a field at a time and the last event says `finished`, or carries a "
+                + "`problem` saying why it stopped.\n\n"
                 + "404 when this instance has no assistant or the capability is off. 429 when "
-                + "the month's budget is spent.")
-            .Produces<Response>()
+                + "the month's budget is spent. Both are decided before the stream opens.")
+            .Produces<Event>(StatusCodes.Status200OK, "text/event-stream")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -79,6 +82,9 @@ internal sealed class ReadRecipeDraftEndpoint : IEndpoint
             .DisableAntiforgery()
             .RequireAuthorization();
     }
+
+    private static IResult Stream(DraftProgress progress) =>
+        TypedResults.ServerSentEvents(progress.Events);
 
     /// <summary>
     /// The whole file, in memory.

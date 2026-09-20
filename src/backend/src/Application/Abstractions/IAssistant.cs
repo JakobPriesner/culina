@@ -42,6 +42,39 @@ public interface IAssistant
         Composition request,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Asks for a recipe, and hands it over as it is written.
+    /// </summary>
+    /// <param name="using">Where to reach the provider, and which model.</param>
+    /// <param name="request">What to do, and what to do it to.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <remarks>
+    /// <para>
+    /// Beside <see cref="ComposeAsync"/> rather than instead of it, because the
+    /// two answer different questions. Every caller who shows somebody a recipe
+    /// being written wants this one; anything that only needs the finished
+    /// article — a test, a future job with nobody watching — wants the other,
+    /// and would otherwise have to fold a stream back into one answer.
+    /// </para>
+    /// <para>
+    /// A model writes JSON from the first brace to the last, so what arrives
+    /// halfway through is not a recipe and cannot be parsed as one. Reading it
+    /// anyway is this layer's job rather than the caller's: each part carries
+    /// the recipe as far as it can currently be read, which grows a title, then
+    /// ingredients, then steps, exactly as the model writes them.
+    /// </para>
+    /// <para>
+    /// It never throws for a failure that belongs to the provider. The last
+    /// part is always the one with <see cref="Composing.Finished"/> on it, and
+    /// it carries either what the call cost or why it stopped — which is what
+    /// lets the ledger be settled the same way however the call went.
+    /// </para>
+    /// </remarks>
+    IAsyncEnumerable<Composing> ComposeStreamAsync(
+        Connected @using,
+        Composition request,
+        CancellationToken cancellationToken);
+
     /// <summary>Asks for a picture.</summary>
     /// <param name="using">Where to reach the provider, and which model.</param>
     /// <param name="request">What to draw.</param>
@@ -147,6 +180,38 @@ public sealed record Composition
 /// <param name="Recipe">The answer, still unvalidated.</param>
 /// <param name="Usage">What to write in the ledger.</param>
 public sealed record Composed(DraftedRecipe Recipe, ModelUsage Usage);
+
+/// <summary>
+/// A recipe part-written, or the moment one stopped being written.
+/// </summary>
+/// <remarks>
+/// One type for both because a stream has one shape, and a caller that had to
+/// tell three kinds of item apart would be a caller that forgot one. Every part
+/// carries the recipe so far; the last part says so, and says what it cost or
+/// what went wrong.
+/// </remarks>
+public sealed record Composing
+{
+    /// <summary>The recipe as far as it has been written. Never null, often thin.</summary>
+    public required DraftedRecipe Recipe { get; init; }
+
+    /// <summary>Whether this is the last part. Exactly one part has it.</summary>
+    public bool Finished { get; init; }
+
+    /// <summary>What the call consumed, on the last part and nothing before it.</summary>
+    public ModelUsage Usage { get; init; }
+
+    /// <summary>
+    /// Why it stopped, when it stopped badly.
+    /// </summary>
+    /// <remarks>
+    /// Returned rather than thrown, like every other expected failure in this
+    /// application — and on the item rather than around the sequence, because
+    /// an <c>IAsyncEnumerable</c> of results reads worse than a sequence that
+    /// ends by saying why.
+    /// </remarks>
+    public Error? Failure { get; init; }
+}
 
 /// <summary>A request for a picture.</summary>
 public sealed record Drawing

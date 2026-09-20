@@ -3,6 +3,7 @@
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
+  import DraftWriting from './DraftWriting.svelte';
   import { drafts } from './stores/drafts.svelte';
 
   import type { Draft } from './draftToRecipe';
@@ -20,6 +21,11 @@
    * a title, then update with the contents. A create-with-everything endpoint
    * would be a second way to write a recipe, and the second way is the one
    * that drifts.
+   *
+   * The draft is shown here as it is written rather than only when it is done.
+   * Somebody watching the recipe appear has usually decided whether they want
+   * it before the last step lands, and the one who does not want it can say so
+   * without having waited out the whole call.
    */
   interface Props {
     householdId: string;
@@ -65,6 +71,10 @@
       />
     {/snippet}
   </Field>
+
+  {#if drafts.asking || drafts.draft}
+    <DraftWriting draft={drafts.draft} writing={drafts.asking} />
+  {/if}
 
   {#if drafts.error}
     <p class="failure" role="alert">{explain(drafts.error)}</p>

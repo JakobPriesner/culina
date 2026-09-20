@@ -107,7 +107,7 @@ describe('looking through somebody else’s library', () => {
     renderWithProviders(SourceLibrary, { props: { source, onimport: chosen } });
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Zwiebelkuchen' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Bring these over' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Import selected recipes' }));
 
     expect(chosen).toHaveBeenCalledWith(['1']);
   });
@@ -129,7 +129,7 @@ describe('looking through somebody else’s library', () => {
     renderWithProviders(SourceLibrary, { props: { source, onimport: chosen } });
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'All' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Bring these over' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Import selected recipes' }));
 
     // Three reads: the first page, then the two it went and got. "All" that
     // meant "the page you can see" is the lie this control exists to avoid.
@@ -192,7 +192,7 @@ describe('looking through somebody else’s library', () => {
     expect(asked).toBe(2);
 
     // A half-read library is better than none, and the failure is on screen.
-    await userEvent.click(screen.getByRole('button', { name: 'Bring these over' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Import selected recipes' }));
 
     expect(chosen).toHaveBeenCalledWith(['1']);
   });
@@ -204,6 +204,8 @@ describe('looking through somebody else’s library', () => {
 
     renderWithProviders(SourceLibrary, { props: { source, onimport: () => {} } });
 
-    expect(screen.queryByRole('button', { name: 'Bring these over' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Import selected recipes' })
+    ).not.toBeInTheDocument();
   });
 });

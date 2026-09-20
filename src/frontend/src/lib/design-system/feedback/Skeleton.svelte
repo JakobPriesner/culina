@@ -32,16 +32,27 @@
 
 <style>
   .skeleton {
+    position: relative;
+    overflow: hidden;
     display: block;
-    background: var(--skeleton-base);
+    background-color: var(--skeleton-base);
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .skeleton::after {
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
     background-image: linear-gradient(
       90deg,
-      var(--skeleton-base) 0%,
+      transparent 0%,
       var(--skeleton-highlight) 50%,
-      var(--skeleton-base) 100%
+      transparent 100%
     );
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease-in-out infinite;
+    opacity: 0.6;
+    animation: shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    content: '';
+    pointer-events: none;
   }
 
   .text {
@@ -54,11 +65,22 @@
 
   .circle {
     border-radius: var(--radius-full);
+    aspect-ratio: 1;
   }
 
   @keyframes shimmer {
-    to {
-      background-position: -200% 0;
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
     }
   }
 
@@ -66,8 +88,11 @@
      "this is coming", and a flat block says that too. */
   @media (prefers-reduced-motion: reduce) {
     .skeleton {
-      background-image: none;
       animation: none;
+    }
+
+    .skeleton::after {
+      display: none;
     }
   }
 </style>

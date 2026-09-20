@@ -184,14 +184,14 @@ describe('the assistant settings page', () => {
 
     // Everything but the model pickers is already usable.
     expect(rowFor('Gemini')).toBeInTheDocument();
-    expect(screen.getAllByText('Asking the provider…').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Loading models…').length).toBeGreaterThan(0);
 
     answerModels(json(offered));
     await settle();
 
-    expect(screen.queryByText('Asking the provider…')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading models…')).not.toBeInTheDocument();
     expect(
-      within(picker(rowFor('Draw a picture'), 1)).getByText('Nano Banana 2')
+      within(picker(rowFor('Create recipe image'), 1)).getByText('Nano Banana 2')
     ).toBeInTheDocument();
   });
 
@@ -234,7 +234,7 @@ describe('the assistant settings page', () => {
     await settle();
 
     // The first combobox in the row is the provider; the second is the model.
-    const drawing = picker(rowFor('Draw a picture'), 0);
+    const drawing = picker(rowFor('Create recipe image'), 0);
     const offered = within(drawing)
       .getAllByRole('option')
       .map((option) => option.textContent?.trim());
@@ -304,7 +304,7 @@ describe('the assistant settings page', () => {
 
     // "Read a photograph" is given to Gemini, which listed one text model and
     // one image model. Only the text one can do this job.
-    const reading = picker(rowFor('Read a photograph'), 1);
+    const reading = picker(rowFor('Import recipe from photo'), 1);
     const labels = within(reading)
       .getAllByRole('option')
       .map((option) => option.textContent?.trim());
@@ -319,7 +319,7 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    const drawing = picker(rowFor('Draw a picture'), 1);
+    const drawing = picker(rowFor('Create recipe image'), 1);
     const labels = within(drawing)
       .getAllByRole('option')
       .map((option) => option.textContent?.trim());
@@ -334,7 +334,7 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    const reading = picker(rowFor('Read a photograph'), 1);
+    const reading = picker(rowFor('Import recipe from photo'), 1);
     await userEvent.selectOptions(reading, 'gemini-3-flash-preview');
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -357,7 +357,7 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    const row = rowFor('Read a photograph');
+    const row = rowFor('Import recipe from photo');
     await userEvent.selectOptions(picker(row, 1), 'gemini-3-flash-preview');
     await userEvent.selectOptions(picker(row, 0), 'openai');
 
@@ -388,7 +388,7 @@ describe('the assistant settings page', () => {
     const row = rowFor('Improve a recipe');
     expect(within(row).getAllByRole('combobox')).toHaveLength(1);
     expect(within(row).getByRole('textbox')).toBeInTheDocument();
-    expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
+    expect(screen.getByText(/models from Ollama could not be loaded/i)).toBeInTheDocument();
   });
 
   it('asks the providers again after a key is saved, so the lists are not stale', async () => {
@@ -436,7 +436,7 @@ describe('the assistant settings page', () => {
 
     // Text boxes everywhere is the old behaviour and still usable. Text boxes
     // everywhere with nothing saying why is what this guards against.
-    expect(screen.getByText(/model lists could not be loaded/)).toBeInTheDocument();
+    expect(screen.getByText(/model list could not be loaded/)).toBeInTheDocument();
   });
 
   it('says what the sums are in, rather than leaving bare numbers', async () => {
@@ -488,8 +488,8 @@ describe('the assistant settings page', () => {
     // The two have different answers: a key is replaced, a provider is waited
     // for. Telling somebody to check a key that signs every other call in this
     // app is sending them after the wrong thing.
-    expect(screen.getByText(/OpenAI refused the key/)).toBeInTheDocument();
-    expect(screen.getByText(/Ollama did not answer/)).toBeInTheDocument();
+    expect(screen.getByText(/OpenAI rejected the API key/)).toBeInTheDocument();
+    expect(screen.getByText(/models from Ollama could not be loaded/i)).toBeInTheDocument();
   });
 
   it('offers the whole catalogue when nothing in it looks like what the job needs', async () => {
@@ -565,7 +565,7 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    expect(screen.getByText(/Nothing leaves this machine/)).toBeInTheDocument();
+    expect(screen.getByText(/not to an external AI provider/)).toBeInTheDocument();
   });
 
   it('says what leaves the server as soon as one job is hosted', async () => {
@@ -574,6 +574,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    expect(screen.getByText(/sent to the provider each job uses/)).toBeInTheDocument();
+    expect(screen.getByText(/sent to the provider selected for each feature/)).toBeInTheDocument();
   });
 });

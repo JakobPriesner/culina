@@ -29,6 +29,7 @@ export { default as ProgressBar } from './feedback/ProgressBar.svelte';
 export { default as Toaster } from './feedback/Toaster.svelte';
 export { default as EmptyState } from './feedback/EmptyState.svelte';
 export { default as ErrorState } from './feedback/ErrorState.svelte';
+export { default as GenerationStatus } from './feedback/GenerationStatus.svelte';
 export { default as Skeleton } from './feedback/Skeleton.svelte';
 
 export { default as Checkbox } from './inputs/Checkbox.svelte';

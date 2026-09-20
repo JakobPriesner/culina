@@ -104,6 +104,103 @@ public class AssistantRunTests
     }
 
     [Fact]
+    public async Task ComposeStreamAsync_ShouldRefuseBeforeTheStreamOpens_WhenTheBudgetIsSpent()
+    {
+        // Arrange
+        var world = new World();
+        world.Ledger.RefuseWith = AssistanceErrors.BudgetExhausted;
+
+        // Act
+        var result = await world.ComposeStreamAsync();
+
+        // Assert
+        // The reason this returns a result wrapping a stream rather than a
+        // stream that can fail. Once the first event is out the response is a
+        // 200 that has begun, and nothing after that can be a 429 — so every
+        // check that decides whether the call may happen runs first.
+        result.ShouldBeFailure(AssistanceErrors.BudgetExhausted);
+        Assert.Equal(0, world.Assistant.Calls);
+    }
+
+    [Fact]
+    public async Task ComposeStreamAsync_ShouldSettleWithWhatWasUsed_WhenItRanToTheEnd()
+    {
+        // Arrange
+        var world = new World();
+        world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" }, new ModelUsage(120, 340, 0));
+
+        // Act
+        var parts = await world.ReadToTheEndAsync();
+
+        // Assert
+        // Thin first, whole last: that is what the screen shows arriving.
+        Assert.Equal(2, parts.Count);
+        Assert.False(parts[0].Finished);
+        Assert.True(parts[^1].Finished);
+
+        var settlement = Assert.Single(world.Ledger.Settled);
+        Assert.Equal("ok", settlement.Outcome);
+        Assert.Equal(340, settlement.Usage.OutputTokens);
+    }
+
+    [Fact]
+    public async Task ComposeStreamAsync_ShouldStillSettle_WhenTheProviderStoppedPartWay()
+    {
+        // Arrange
+        var world = new World();
+        world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.Throttled));
+
+        // Act
+        var parts = await world.ReadToTheEndAsync();
+
+        // Assert
+        Assert.Equal(AssistanceErrors.Throttled, Assert.Single(parts).Failure);
+        Assert.Equal("assistance.throttled", Assert.Single(world.Ledger.Settled).Outcome);
+    }
+
+    [Fact]
+    public async Task ComposeStreamAsync_ShouldNotTellACookThatTheKeyWasRefused()
+    {
+        // Arrange
+        var world = new World();
+        world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.Rejected));
+
+        // Act
+        var parts = await world.ReadToTheEndAsync();
+
+        // Assert
+        // A refused key is the administrator's to fix and is nothing somebody
+        // halfway through a recipe can act on. The ledger keeps the real code.
+        Assert.Equal(AssistanceErrors.Unavailable, Assert.Single(parts).Failure);
+        Assert.Equal("assistance.rejected", Assert.Single(world.Ledger.Settled).Outcome);
+    }
+
+    [Fact]
+    public async Task ComposeStreamAsync_ShouldSettle_WhenNobodyReadsToTheEnd()
+    {
+        // Arrange
+        var world = new World();
+        world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" }, new ModelUsage(120, 340, 0));
+
+        var opened = (await world.ComposeStreamAsync()).ShouldBeSuccess();
+
+        // Act
+        // One part, and then the reader walks away — which is what a person
+        // closing the page looks like from here, and is an ordinary end rather
+        // than an edge case.
+        await using (var parts = opened.GetAsyncEnumerator(Token))
+        {
+            Assert.True(await parts.MoveNextAsync());
+        }
+
+        // Assert
+        // A reservation nobody settled holds its estimate against the month's
+        // budget until the month turns.
+        var settlement = Assert.Single(world.Ledger.Settled);
+        Assert.Equal("abandoned", settlement.Outcome);
+    }
+
+    [Fact]
     public async Task ComposeAsync_ShouldReserveAgainstTheConfiguredCeilings()
     {
         // Arrange
@@ -298,6 +395,33 @@ public class AssistantRunTests
                     Material = "something with aubergines"
                 },
                 Token);
+
+        internal Task<Result<IAsyncEnumerable<Composing>>> ComposeStreamAsync() =>
+            Run.ComposeStreamAsync(
+                new Asker(Guid.CreateVersion7(), Guid.CreateVersion7()),
+                new Composition
+                {
+                    Capability = Capability.Draft,
+                    Language = Language.En,
+                    Instruction = "Write a recipe.",
+                    Material = "something with aubergines"
+                },
+                Token);
+
+        /// <summary>Every part of a stream that was read properly.</summary>
+        internal async Task<IReadOnlyList<Composing>> ReadToTheEndAsync()
+        {
+            var opened = (await ComposeStreamAsync()).ShouldBeSuccess();
+
+            List<Composing> parts = [];
+
+            await foreach (var part in opened.WithCancellation(Token))
+            {
+                parts.Add(part);
+            }
+
+            return parts;
+        }
 
         internal Task<Result<Drawn>> DrawAsync() =>
             Run.DrawAsync(

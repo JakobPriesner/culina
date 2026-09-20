@@ -80,6 +80,13 @@
   --generating-2: var(--c-terracotta-200);
   --generating-3: var(--c-amber-200);
   --generating-sheen: var(--c-white);
+  --generating-grid: rgb(255 255 255 / 4%);
+  --generating-vignette: rgb(0 0 0 / 22%);
+  --generating-glow: rgb(255 255 255 / 52%);
+  --generating-scan: rgb(255 255 255 / 20%);
+  --generating-panel: rgb(20 17 14 / 44%);
+  --generating-panel-border: rgb(255 255 255 / 16%);
+  --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
 
   /*
    * Controls that sit on a photograph.

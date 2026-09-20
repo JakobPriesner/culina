@@ -41,7 +41,7 @@ const render = () =>
     props: { householdId: 'h1', onconnected: () => {} }
   });
 
-const address = () => screen.getByLabelText('Where it is');
+const address = () => screen.getByLabelText('App address');
 
 beforeEach(() => {
   sources.reset();
@@ -56,7 +56,7 @@ describe('connecting another app', () => {
     // A form that asked for all four at once would be asking for a token
     // before it could offer any help getting one.
     expect(address()).toBeInTheDocument();
-    expect(screen.queryByLabelText('Username there')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Username in the app')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
   });
 
@@ -65,11 +65,11 @@ describe('connecting another app', () => {
 
     await userEvent.type(address(), 'reci');
 
-    expect(screen.queryByLabelText('Username there')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Username in the app')).not.toBeInTheDocument();
 
     await userEvent.type(address(), 'pes.example.com');
 
-    expect(screen.getByLabelText('Username there')).toBeInTheDocument();
+    expect(screen.getByLabelText('Username in the app')).toBeInTheDocument();
   });
 
   it('offers signing in first, because that is what people already have', async () => {
@@ -78,15 +78,15 @@ describe('connecting another app', () => {
     await userEvent.type(address(), 'recipes.example.com');
 
     expect(screen.getByRole('radio', { name: /Sign in/ })).toBeChecked();
-    expect(screen.getByLabelText('Password there')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password in the app')).toBeInTheDocument();
   });
 
   it('sends the sign-in and no token', async () => {
     render();
 
     await userEvent.type(address(), 'recipes.example.com');
-    await userEvent.type(screen.getByLabelText('Username there'), 'ada');
-    await userEvent.type(screen.getByLabelText('Password there'), 'hunter2');
+    await userEvent.type(screen.getByLabelText('Username in the app'), 'ada');
+    await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
     await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
     // The server refuses a request carrying both, so an empty token must not
@@ -136,8 +136,8 @@ describe('connecting another app', () => {
     render();
 
     await userEvent.type(address(), 'recipes.example.com');
-    await userEvent.type(screen.getByLabelText('Username there'), 'ada');
-    await userEvent.type(screen.getByLabelText('Password there'), 'hunter2');
+    await userEvent.type(screen.getByLabelText('Username in the app'), 'ada');
+    await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
     await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
     // "Used once and not stored" has to be true of this screen too, which on a

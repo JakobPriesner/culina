@@ -2,13 +2,14 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, ErrorState, Skeleton } from '$ds';
+  import { Button, ErrorState } from '$ds';
   import AddToCookbookSheet from '$features/cookbooks/AddToCookbookSheet.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import ShareRecipeSheet from '$features/recipes/ShareRecipeSheet.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
+  import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
@@ -137,11 +138,7 @@
 
     <SimilarRecipes {recipeId} />
   {:else}
-    <div class="loading" aria-busy="true" aria-label={m['recipes.list.loading']()}>
-      <Skeleton width="60%" height="2.5em" />
-      <Skeleton width="30%" />
-      <Skeleton width="100%" height="12rem" />
-    </div>
+    <RecipeSurfaceSkeleton />
   {/if}
 </Page>
 
@@ -174,12 +171,6 @@
 
   .back a:hover {
     color: var(--text);
-  }
-
-  .loading {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
   }
 
   /* Paper cannot be navigated. */

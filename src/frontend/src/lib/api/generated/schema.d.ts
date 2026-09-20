@@ -673,7 +673,9 @@ export interface paths {
          *
          *     What comes back goes through exactly the same path an upload does — decoded to find out what it is, re-encoded to WebP at three widths — so a drawn image is an ordinary recipe photo in every respect afterwards.
          *
-         *     404 when this instance has no assistant or drawing is switched off. 400 when the connected provider cannot draw at all, which is the case for a model running on your own hardware. 429 when the month's budget is spent.
+         *     Server-sent events, because this is the slowest call in the app: sixteen seconds is a fast drawing and two minutes is the ceiling. A picture has no halfway state to send, so the events carry the elapsed seconds and nothing else until the last one, which carries the recipe with its new picture or a `problem` saying why there is none. A request that said nothing for two minutes is one a proxy closes and a person gives up on — while the server finishes the drawing, pays for it, and stores it.
+         *
+         *     404 when this instance has no assistant or drawing is switched off. 400 when the connected provider cannot draw at all, which is the case for a model running on your own hardware. 429 when the month's budget is spent. Those are decided before the stream opens; anything later is on the last event.
          */
         post: operations["drawRecipeImageV1"];
         /** Remove a recipe image */
@@ -1224,7 +1226,9 @@ export interface paths {
          *
          *     `kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and its language, and changing only how it reads.
          *
-         *     404 when this instance has no assistant, or has that capability switched off; the two are one answer because a caller learns nothing from being told which. 429 when the month's budget is spent.
+         *     Server-sent events, because a model writes a recipe over tens of seconds and a screen that shows it arriving is a screen somebody reads rather than waits at. Each event carries the whole draft as far as it has been written — a title, then ingredients, then steps — and the last one says `finished`. A field the model has not finished writing is absent rather than half-written.
+         *
+         *     Everything that can refuse the ask is decided before the stream opens, so it is still an ordinary status code: 404 when this instance has no assistant, or has that capability switched off — the two are one answer because a caller learns nothing from being told which — and 429 when the month's budget is spent. What goes wrong afterwards arrives as `problem` on the last event, because by then the 200 has been sent.
          *
          *     The answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.
          */
@@ -1250,7 +1254,9 @@ export interface paths {
          *
          *     The assistant is told to transcribe rather than improve, and to leave a gap where the source is unreadable rather than guessing: a plausible number invented for a blurred corner is the one failure of this capability somebody would not catch.
          *
-         *     404 when this instance has no assistant or the capability is off. 429 when the month's budget is spent.
+         *     Server-sent events, exactly as the JSON route sends them: the draft arrives a field at a time and the last event says `finished`, or carries a `problem` saying why it stopped.
+         *
+         *     404 when this instance has no assistant or the capability is off. 429 when the month's budget is spent. Both are decided before the stream opens.
          */
         post: operations["readRecipeDraftV1"];
         delete?: never;
@@ -1950,6 +1956,13 @@ export interface components {
              */
             durationSeconds?: number | null;
         };
+        /** @description One moment of a recipe being written. */
+        RecipesDraftsEvent: {
+            draft: components["schemas"]["RecipesDraftsResponse"];
+            /** @description Whether this is the last one. */
+            finished?: boolean;
+            problem?: (null) | components["schemas"]["StreamingProblem"];
+        };
         /** @description Asks the assistant for a recipe. */
         RecipesDraftsRequest: {
             /** @description What is being asked for: `idea`, `text` or `revision`. */
@@ -2003,6 +2016,18 @@ export interface components {
             steps: components["schemas"]["RecipesDraftsDraftStepContract"][];
             /** @description What to file it under. */
             tags: string[];
+        };
+        /** @description One moment of a picture being drawn. */
+        RecipesDrawingEvent: {
+            /**
+             * Format: int32
+             * @description How long the assistant has been drawing, in seconds.
+             */
+            seconds: number;
+            /** @description Whether this is the last one. */
+            finished?: boolean;
+            recipe?: (null) | components["schemas"]["RecipesRecipeDetail"];
+            problem?: (null) | components["schemas"]["StreamingProblem"];
         };
         /** @description How well a recipe fits what you have. */
         RecipesGetAllIngredientMatch: {
@@ -3129,6 +3154,13 @@ export interface components {
              * @enum {string|null}
              */
             section?: "produce" | "dairy_eggs" | "meat_fish" | "bakery" | "dry_goods" | "canned_jars" | "frozen" | "spices_baking" | "drinks" | "household" | "other" | null;
+        };
+        /** @description A failure that happened after the answer had already started. */
+        StreamingProblem: {
+            /** @description The machine-readable code, formatted `module.reason`. */
+            code: string;
+            /** @description A sentence for a person, where the client has nothing better. */
+            detail: string;
         };
         /** @description A handful of recipes for one occasion. */
         SuggestionsGetAllResponse: {
@@ -5516,7 +5548,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecipesRecipeDetail"];
+                    "text/event-stream": components["schemas"]["RecipesDrawingEvent"];
                 };
             };
             /** @description Bad Request */
@@ -7329,7 +7361,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecipesDraftsResponse"];
+                    "text/event-stream": components["schemas"]["RecipesDraftsEvent"];
                 };
             };
             /** @description Bad Request */
@@ -7403,7 +7435,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecipesDraftsResponse"];
+                    "text/event-stream": components["schemas"]["RecipesDraftsEvent"];
                 };
             };
             /** @description Bad Request */

@@ -107,8 +107,13 @@
 
   {#if sources.browseStatus === 'loading'}
     <ul class="list">
-      {#each [0, 1, 2, 3, 4, 5] as row (row)}
-        <li class="row"><Skeleton height="1.25rem" /></li>
+      {#each ['65%', '50%', '80%', '40%', '70%', '55%'] as width, row (row)}
+        <li class="row">
+          <div class="row-skeleton">
+            <Skeleton width="var(--space-6)" height="var(--space-6)" shape="text" />
+            <Skeleton {width} height="1.125rem" />
+          </div>
+        </li>
       {/each}
     </ul>
   {:else if sources.browseStatus === 'failed'}
@@ -165,9 +170,12 @@
            is what fetches them, so there is no button to find and no moment
            where the list looks finished when it is not. -->
       <ul class="list" aria-hidden="true">
-        {#each [0, 1, 2] as row (row)}
+        {#each ['60%', '75%', '50%'] as width, row (row)}
           <li class="row" {@attach whenVisible(() => void sources.more(query))}>
-            <Skeleton height="1.25rem" />
+            <div class="row-skeleton">
+              <Skeleton width="var(--space-6)" height="var(--space-6)" shape="text" />
+              <Skeleton {width} height="1.125rem" />
+            </div>
           </li>
         {/each}
       </ul>
@@ -250,6 +258,13 @@
     gap: var(--space-3);
     padding-block: var(--space-2);
     min-width: 0;
+  }
+
+  .row-skeleton {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
   }
 
   .row + .row {

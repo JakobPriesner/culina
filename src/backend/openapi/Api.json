@@ -2682,7 +2682,7 @@
           "Recipes"
         ],
         "summary": "Draw a recipe image",
-        "description": "POST and PUT mean different things on this one sub-resource, and the difference is who made the picture. PUT replaces it with bytes you are sending; POST asks the assistant to make one, so it carries no body.\n\nWhat comes back goes through exactly the same path an upload does — decoded to find out what it is, re-encoded to WebP at three widths — so a drawn image is an ordinary recipe photo in every respect afterwards.\n\n404 when this instance has no assistant or drawing is switched off. 400 when the connected provider cannot draw at all, which is the case for a model running on your own hardware. 429 when the month's budget is spent.",
+        "description": "POST and PUT mean different things on this one sub-resource, and the difference is who made the picture. PUT replaces it with bytes you are sending; POST asks the assistant to make one, so it carries no body.\n\nWhat comes back goes through exactly the same path an upload does — decoded to find out what it is, re-encoded to WebP at three widths — so a drawn image is an ordinary recipe photo in every respect afterwards.\n\nServer-sent events, because this is the slowest call in the app: sixteen seconds is a fast drawing and two minutes is the ceiling. A picture has no halfway state to send, so the events carry the elapsed seconds and nothing else until the last one, which carries the recipe with its new picture or a `problem` saying why there is none. A request that said nothing for two minutes is one a proxy closes and a person gives up on — while the server finishes the drawing, pays for it, and stores it.\n\n404 when this instance has no assistant or drawing is switched off. 400 when the connected provider cannot draw at all, which is the case for a model running on your own hardware. 429 when the month's budget is spent. Those are decided before the stream opens; anything later is on the last event.",
         "operationId": "drawRecipeImageV1",
         "parameters": [
           {
@@ -2699,9 +2699,9 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecipesRecipeDetail"
+                  "$ref": "#/components/schemas/RecipesDrawingEvent"
                 }
               }
             }
@@ -5213,7 +5213,7 @@
           "Recipes"
         ],
         "summary": "Ask the assistant for a recipe",
-        "description": "A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.\n\n`kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and its language, and changing only how it reads.\n\n404 when this instance has no assistant, or has that capability switched off; the two are one answer because a caller learns nothing from being told which. 429 when the month's budget is spent.\n\nThe answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.",
+        "description": "A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.\n\n`kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and its language, and changing only how it reads.\n\nServer-sent events, because a model writes a recipe over tens of seconds and a screen that shows it arriving is a screen somebody reads rather than waits at. Each event carries the whole draft as far as it has been written — a title, then ingredients, then steps — and the last one says `finished`. A field the model has not finished writing is absent rather than half-written.\n\nEverything that can refuse the ask is decided before the stream opens, so it is still an ordinary status code: 404 when this instance has no assistant, or has that capability switched off — the two are one answer because a caller learns nothing from being told which — and 429 when the month's budget is spent. What goes wrong afterwards arrives as `problem` on the last event, because by then the 200 has been sent.\n\nThe answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.",
         "operationId": "composeRecipeDraftV1",
         "requestBody": {
           "content": {
@@ -5229,9 +5229,9 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecipesDraftsResponse"
+                  "$ref": "#/components/schemas/RecipesDraftsEvent"
                 }
               }
             }
@@ -5295,7 +5295,7 @@
           "Recipes"
         ],
         "summary": "Read a recipe out of a photograph",
-        "description": "A cookbook page, a card, a screenshot. What comes back is the same draft the other kinds return — nothing is created, and it is shown for correction.\n\nThe assistant is told to transcribe rather than improve, and to leave a gap where the source is unreadable rather than guessing: a plausible number invented for a blurred corner is the one failure of this capability somebody would not catch.\n\n404 when this instance has no assistant or the capability is off. 429 when the month's budget is spent.",
+        "description": "A cookbook page, a card, a screenshot. What comes back is the same draft the other kinds return — nothing is created, and it is shown for correction.\n\nThe assistant is told to transcribe rather than improve, and to leave a gap where the source is unreadable rather than guessing: a plausible number invented for a blurred corner is the one failure of this capability somebody would not catch.\n\nServer-sent events, exactly as the JSON route sends them: the draft arrives a field at a time and the last event says `finished`, or carries a `problem` saying why it stopped.\n\n404 when this instance has no assistant or the capability is off. 429 when the month's budget is spent. Both are decided before the stream opens.",
         "operationId": "readRecipeDraftV1",
         "parameters": [
           {
@@ -5353,9 +5353,9 @@
           "200": {
             "description": "OK",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecipesDraftsResponse"
+                  "$ref": "#/components/schemas/RecipesDraftsEvent"
                 }
               }
             }
@@ -7004,6 +7004,35 @@
         },
         "description": "One instruction."
       },
+      "RecipesDraftsEvent": {
+        "required": [
+          "draft"
+        ],
+        "type": "object",
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/RecipesDraftsResponse"
+          },
+          "finished": {
+            "type": "boolean",
+            "description": "Whether this is the last one."
+          },
+          "problem": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/StreamingProblem"
+              }
+            ]
+          }
+        },
+        "description": "One moment of a recipe being written."
+      },
       "RecipesDraftsRequest": {
         "required": [
           "kind",
@@ -7109,6 +7138,50 @@
           }
         },
         "description": "A recipe the assistant wrote. Not saved, and not a recipe yet."
+      },
+      "RecipesDrawingEvent": {
+        "required": [
+          "seconds"
+        ],
+        "type": "object",
+        "properties": {
+          "seconds": {
+            "type": "integer",
+            "description": "How long the assistant has been drawing, in seconds.",
+            "format": "int32"
+          },
+          "finished": {
+            "type": "boolean",
+            "description": "Whether this is the last one."
+          },
+          "recipe": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesRecipeDetail"
+              }
+            ]
+          },
+          "problem": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/StreamingProblem"
+              }
+            ]
+          }
+        },
+        "description": "One moment of a picture being drawn."
       },
       "RecipesGetAllIngredientMatch": {
         "required": [
@@ -9406,6 +9479,24 @@
           }
         },
         "description": "A change to one line."
+      },
+      "StreamingProblem": {
+        "required": [
+          "code",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The machine-readable code, formatted `module.reason`."
+          },
+          "detail": {
+            "type": "string",
+            "description": "A sentence for a person, where the client has nothing better."
+          }
+        },
+        "description": "A failure that happened after the answer had already started."
       },
       "SuggestionsGetAllResponse": {
         "required": [

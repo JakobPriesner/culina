@@ -17,7 +17,7 @@ import { renderWithProviders } from '$lib/test/render';
 const amount = () => screen.getByLabelText('Amount');
 const unit = () => screen.getByRole('combobox', { name: 'Unit' });
 const name = () => screen.getByRole('combobox', { name: 'Ingredient' });
-const note = () => screen.getByLabelText('Preparation');
+const note = () => screen.getByLabelText('Note (e.g. diced)');
 const unitList = () => screen.queryByRole('listbox', { name: 'Unit suggestions' });
 const nameList = () => screen.queryByRole('listbox', { name: 'Ingredient suggestions' });
 
@@ -265,12 +265,12 @@ describe('correcting an ingredient', () => {
   ];
 
   /** The open row, named so it is not confused with the one below it. */
-  const row = () => within(screen.getByRole('group', { name: 'Correct flour' }));
+  const row = () => within(screen.getByRole('group', { name: 'Edit flour' }));
 
   it('opens the same fields it was written in, already filled', async () => {
     renderWithProviders(IngredientHarness, { props: { ingredients: [...existing] } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Correct flour' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit flour' }));
 
     expect(row().getByLabelText('Amount')).toHaveValue('200');
     expect(row().getByRole('combobox', { name: 'Unit' })).toHaveValue('g');
@@ -280,7 +280,7 @@ describe('correcting an ingredient', () => {
   it('leaves the empty row below it alone, so the two cannot be confused', async () => {
     renderWithProviders(IngredientHarness, { props: { ingredients: [...existing] } });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Correct flour' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit flour' }));
 
     const adding = within(screen.getByRole('group', { name: 'New ingredient' }));
 
@@ -295,7 +295,7 @@ describe('correcting an ingredient', () => {
       props: { ingredients: [...existing], onchange }
     });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Correct flour' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit flour' }));
     await userEvent.clear(row().getByLabelText('Amount'));
     await userEvent.type(row().getByLabelText('Amount'), '250');
 

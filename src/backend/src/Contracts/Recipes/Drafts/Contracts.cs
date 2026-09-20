@@ -150,3 +150,49 @@ public sealed record DraftStepContract
     /// <summary>How long it waits, when it waits.</summary>
     public int? DurationSeconds { get; init; }
 }
+
+/// <summary>
+/// One moment of a recipe being written.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The whole draft every time rather than what changed since the last one. A
+/// recipe is a few kilobytes and a client that had to apply deltas would be a
+/// client with a second, subtly different idea of what the draft currently
+/// says — the bug that costs an afternoon, to save bytes on a connection that
+/// is usually the same building.
+/// </para>
+/// <para>
+/// Every event of one ask carries the same <c>draftId</c>, because they are all
+/// the same draft arriving. Asking again makes a new one.
+/// </para>
+/// </remarks>
+public sealed record Event
+{
+    /// <summary>The recipe as far as it has been written.</summary>
+    /// <remarks>
+    /// Thin at first and thin for good: a field the model has not finished
+    /// writing is absent rather than half-written, so nothing on screen ever
+    /// shows a value that was never said.
+    /// </remarks>
+    public required Response Draft { get; init; }
+
+    /// <summary>
+    /// Whether this is the last one.
+    /// </summary>
+    /// <remarks>
+    /// Said out loud rather than inferred from the stream closing, because a
+    /// proxy dropping a connection closes it too and the two mean opposite
+    /// things: one is a finished recipe, the other is a recipe to ask for
+    /// again.
+    /// </remarks>
+    public bool Finished { get; init; }
+
+    /// <summary>Why it stopped, when the last event is a failure.</summary>
+    /// <remarks>
+    /// Only ever on a finished event. The draft beside it is whatever had been
+    /// written before the provider gave up, which is worth offering: it was
+    /// paid for, and half a recipe is a starting point.
+    /// </remarks>
+    public Streaming.Problem? Problem { get; init; }
+}

@@ -2,10 +2,11 @@ using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Assistance;
 using Application.Telemetry;
+using Contracts.Streaming;
 using Domain.Assistance;
 using Domain.Recipes;
 using Domain.Shared;
-using Response = Contracts.Recipes.Drafts.Response;
+using Event = Contracts.Recipes.Drafts.Event;
 
 namespace Application.Recipes.Drafts;
 
@@ -40,11 +41,25 @@ public sealed record ComposeRecipeDraftCommand(
     public string? PhotographMediaType { get; init; }
 }
 
+/// <summary>
+/// A draft, arriving.
+/// </summary>
+/// <param name="Events">
+/// The recipe as it is written: thin at first, fuller each time, and a last one
+/// that says it is finished or says why it stopped.
+/// </param>
+/// <remarks>
+/// A wrapper rather than the sequence itself, so the handler's result reads the
+/// same as every other handler's and the endpoint can turn a refusal into a
+/// status code before a single byte of the body has been sent.
+/// </remarks>
+public sealed record DraftProgress(IAsyncEnumerable<Event> Events);
+
 internal sealed class ComposeRecipeDraftCommandHandler(
     AssistantRun assistant,
     IRecipeRepository recipes,
     IHouseholdRepository households)
-    : ICommandHandler<ComposeRecipeDraftCommand, Response>
+    : ICommandHandler<ComposeRecipeDraftCommand, DraftProgress>
 {
     /// <summary>
     /// How much text this will send.
@@ -58,34 +73,70 @@ internal sealed class ComposeRecipeDraftCommandHandler(
     /// </remarks>
     private const int LongestMaterial = 20_000;
 
-    public async Task<Result<Response>> Handle(
+    /// <summary>
+    /// Everything that can refuse the ask, then the stream.
+    /// </summary>
+    /// <remarks>
+    /// The split matters more here than in a handler that answers once. Access,
+    /// the material, the capability and the budget are all decided before
+    /// anything is returned, so each of them is still an ordinary failure with
+    /// an ordinary status code. After that the response has begun and the only
+    /// way left to say anything is on the stream itself.
+    /// </remarks>
+    public async Task<Result<DraftProgress>> Handle(
         ComposeRecipeDraftCommand command,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        using var tracked = UseCaseActivity.Start("Recipes.ComposeDraft");
+#pragma warning disable CA2000 // Handed to the stream below, which closes it.
+        // Not disposed here, unlike every other handler's: a stream that has
+        // been handed back has not finished doing the thing being measured.
+        var tracked = UseCaseActivity.Start("Recipes.ComposeDraft");
+#pragma warning restore CA2000
 
+        var opened = await OpenAsync(command, cancellationToken).ConfigureAwait(false);
+
+        return opened.Match(
+            parts => Result<DraftProgress>.Success(new DraftProgress(Watched(parts, tracked))),
+            error => Refused(tracked, error));
+    }
+
+    private static Result<DraftProgress> Refused(UseCaseActivity tracked, Error error)
+    {
+        using (tracked)
+        {
+            return tracked.Record(Result<DraftProgress>.Failure(error));
+        }
+    }
+
+    private async Task<Result<IAsyncEnumerable<Composing>>> OpenAsync(
+        ComposeRecipeDraftCommand command,
+        CancellationToken cancellationToken)
+    {
         var permitted = await RecipeAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await permitted.Match(
+        return await permitted.Match(
             () => AskAsync(command, cancellationToken),
-            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
-
-        return tracked.Record(result);
+            error => Task.FromResult(Result<IAsyncEnumerable<Composing>>.Failure(error)))
+            .ConfigureAwait(false);
     }
 
-    private async Task<Result<Response>> AskAsync(
+    private async Task<Result<IAsyncEnumerable<Composing>>> AskAsync(
         ComposeRecipeDraftCommand command,
         CancellationToken cancellationToken)
     {
         var prepared = await PrepareAsync(command, cancellationToken).ConfigureAwait(false);
 
         return await prepared.Match(
-            request => ComposeAsync(command, request, cancellationToken),
-            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
+            request => assistant.ComposeStreamAsync(
+                new Asker(command.UserId, command.HouseholdId),
+                request,
+                cancellationToken),
+            error => Task.FromResult(Result<IAsyncEnumerable<Composing>>.Failure(error)))
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -168,22 +219,58 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         });
     }
 
-    private async Task<Result<Response>> ComposeAsync(
-        ComposeRecipeDraftCommand command,
-        Composition request,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// The stream a client reads, with the span held open across it.
+    /// </summary>
+    /// <remarks>
+    /// One draft id for every event of one ask, because they are all the same
+    /// draft arriving — a new id per event would be a client unable to tell a
+    /// second ask from the next few characters of the first.
+    /// </remarks>
+    private static async IAsyncEnumerable<Event> Watched(
+        IAsyncEnumerable<Composing> parts,
+        UseCaseActivity tracked)
     {
-        var answered = await assistant
-            .ComposeAsync(
-                new Asker(command.UserId, command.HouseholdId),
-                request,
-                cancellationToken)
-            .ConfigureAwait(false);
+        using (tracked)
+        {
+            var draftId = Guid.CreateVersion7();
 
-        return answered.Bind(draft => draft.IsUsable()
-            ? Result<Response>.Success(draft.ToResponse())
-            : AssistanceErrors.UnusableAnswer);
+            await foreach (var part in parts.ConfigureAwait(false))
+            {
+                var failure = Wrong(part);
+
+                if (failure is not null)
+                {
+                    tracked.Record(Result.Failure(failure));
+                }
+
+                yield return new Event
+                {
+                    Draft = part.Recipe.ToResponse(draftId),
+                    Finished = part.Finished,
+                    Problem = failure is null
+                        ? null
+                        : new Problem { Code = failure.Code, Detail = failure.Description }
+                };
+            }
+        }
     }
+
+    /// <summary>
+    /// What went wrong with this part, if anything did.
+    /// </summary>
+    /// <remarks>
+    /// An answer with nothing in it counts. A model that finished having said
+    /// no title, no ingredients and no steps did not write a thin recipe, it
+    /// failed to answer — and a blank draft offered for correction is worse
+    /// than being told to ask again.
+    /// </remarks>
+    private static Error? Wrong(Composing part) => part switch
+    {
+        { Failure: { } failure } => failure,
+        { Finished: true } when !part.Recipe.IsUsable() => AssistanceErrors.UnusableAnswer,
+        _ => null
+    };
 
     private static string? Material(ComposeRecipeDraftCommand command) =>
         string.IsNullOrWhiteSpace(command.Material) ? null : command.Material.Trim();

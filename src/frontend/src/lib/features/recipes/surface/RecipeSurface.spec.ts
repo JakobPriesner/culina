@@ -111,13 +111,13 @@ describe('reading a recipe', () => {
   it('admits that the times stop being right when the factor is far from one', () => {
     render({ servings: 6 });
 
-    expect(screen.getByText(/Times are for/)).toBeInTheDocument();
+    expect(screen.getByText(/The times are for/)).toBeInTheDocument();
   });
 
   it('says nothing about times at the recipe’s own yield', () => {
     render();
 
-    expect(screen.queryByText(/Times are for/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/The times are for/)).not.toBeInTheDocument();
   });
 
   it('numbers a step that has no name of its own', () => {
@@ -193,9 +193,7 @@ describe('reading a recipe', () => {
     // real browser presses it.
     const hidden = { hidden: true } as const;
 
-    expect(
-      screen.getByRole('button', { name: 'Add to a cookbook', ...hidden })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to cookbook', ...hidden })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Share', ...hidden })).toBeInTheDocument();
 
     // A link, not a button: a recipe you are about to rewrite is one people
@@ -218,7 +216,7 @@ describe('what a step needs', () => {
   it('lists it under the step while reading, so it can be got out first', () => {
     render();
 
-    const [first] = steps().getAllByText('Get out');
+    const [first] = steps().getAllByText('For this step');
 
     expect(first).toBeInTheDocument();
   });
@@ -251,7 +249,7 @@ describe('what a step needs', () => {
       }
     });
 
-    expect(steps().queryByText('Get out')).not.toBeInTheDocument();
+    expect(steps().queryByText('For this step')).not.toBeInTheDocument();
   });
 });
 
@@ -311,7 +309,7 @@ describe('how the ingredients are arranged', () => {
     render();
     await chooseByStep();
 
-    expect(steps().queryByText('Get out')).not.toBeInTheDocument();
+    expect(steps().queryByText('For this step')).not.toBeInTheDocument();
   });
 
   it('keeps an ingredient no step asks for, rather than losing it', async () => {
@@ -385,7 +383,7 @@ describe('cooking a recipe', () => {
 
     // Saying it twice on a screen read from across the kitchen is worse than
     // saying it once.
-    expect(steps().queryByText('Get out')).not.toBeInTheDocument();
+    expect(steps().queryByText('For this step')).not.toBeInTheDocument();
   });
 
   it('follows the step being cooked', () => {

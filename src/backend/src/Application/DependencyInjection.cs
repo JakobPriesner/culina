@@ -174,10 +174,10 @@ public static class DependencyInjection
             // The assistant
             .AddScoped<AssistantRun>()
             .AddScoped<RecipeImageWriter>()
-            .AddScoped<ICommandHandler<DrawRecipeImageCommand, Contracts.Recipes.RecipeDetail>,
+            .AddScoped<ICommandHandler<DrawRecipeImageCommand, DrawingProgress>,
                 DrawRecipeImageCommandHandler>()
-            .AddScoped<ICommandHandler<ComposeRecipeDraftCommand,
-                Contracts.Recipes.Drafts.Response>, ComposeRecipeDraftCommandHandler>()
+            .AddScoped<ICommandHandler<ComposeRecipeDraftCommand, DraftProgress>,
+                ComposeRecipeDraftCommandHandler>()
 
             // Recipes
             .AddScoped<ICommandHandler<CreateRecipeCommand, Contracts.Recipes.RecipeDetail>,

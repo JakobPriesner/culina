@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Application.Abstractions;
 using Domain.Assistance;
 using Domain.Shared;
@@ -91,6 +92,39 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
             ? compositions.Dequeue()
             : Result<Composed>.Failure(AssistanceErrors.Unavailable));
     }
+
+    /// <summary>
+    /// The same queued answer, handed over in pieces.
+    /// </summary>
+    /// <remarks>
+    /// One queue for both methods on purpose: a test that set up an answer
+    /// should not also have to know which of the two the handler happens to
+    /// call. A success arrives as a thin part and then the whole thing, which
+    /// is the shape a real stream has and the shape a caller must survive.
+    /// </remarks>
+    public async IAsyncEnumerable<Composing> ComposeStreamAsync(
+        Connected @using,
+        Composition request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var answered = await ComposeAsync(@using, request, cancellationToken).ConfigureAwait(false);
+
+        foreach (var part in answered.Match(Written, Stopped))
+        {
+            yield return part;
+        }
+    }
+
+    private static IEnumerable<Composing> Written(Composed answer) =>
+    [
+        new Composing { Recipe = new DraftedRecipe { Title = answer.Recipe.Title } },
+        new Composing { Recipe = answer.Recipe, Finished = true, Usage = answer.Usage }
+    ];
+
+    private static IEnumerable<Composing> Stopped(Error failure) =>
+    [
+        new Composing { Recipe = new DraftedRecipe(), Finished = true, Failure = failure }
+    ];
 
     public Task<Result<Drawn>> DrawAsync(
         Connected @using,

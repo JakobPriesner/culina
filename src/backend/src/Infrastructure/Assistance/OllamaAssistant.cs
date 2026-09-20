@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Application.Abstractions;
 using Application.Assistance;
@@ -64,17 +65,6 @@ internal sealed class OllamaAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        List<ChatMessage> conversation =
-        [
-            new(ChatRole.System, request.Instruction),
-            new(ChatRole.User, Material(request))
-        ];
-
-        var options = new ChatOptions
-        {
-            ResponseFormat = ChatResponseFormat.ForJsonSchema(RecipeSchema.AsJson, RecipeSchema.Name)
-        };
-
         try
         {
             using var transport = http.ClientFor(@using.BaseUrl);
@@ -84,7 +74,7 @@ internal sealed class OllamaAssistant(
             // its own beside this one, and what this adapter wants is the one
             // the OpenAI adapter also speaks.
             var answered = await ((IChatClient)client)
-                .GetResponseAsync(conversation, options, cancellationToken)
+                .GetResponseAsync(ChatAsk.Conversation(request), ChatAsk.Options(), cancellationToken)
                 .ConfigureAwait(false);
 
             return Read(answered);
@@ -92,6 +82,34 @@ internal sealed class OllamaAssistant(
         catch (Exception failure) when (Expected(failure))
         {
             return Failure(failure);
+        }
+    }
+
+    public async IAsyncEnumerable<Composing> ComposeStreamAsync(
+        Connected @using,
+        Composition request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(@using);
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Both are disposed when the enumeration ends, however it ends —
+        // including a caller who walks away halfway through, which is what a
+        // person closing the page looks like from here.
+        using var transport = http.ClientFor(@using.BaseUrl);
+        using var client = new OllamaApiClient(transport, @using.Model);
+
+        var parts = ChatStream.ComposeAsync(
+            (IChatClient)client,
+            request,
+            Kind,
+            logger,
+            Recognised,
+            cancellationToken);
+
+        await foreach (var part in parts.ConfigureAwait(false))
+        {
+            yield return part;
         }
     }
 
@@ -149,33 +167,6 @@ internal sealed class OllamaAssistant(
         }
     }
 
-    /// <summary>
-    /// The material, as the parts of the user message.
-    /// </summary>
-    /// <remarks>
-    /// The instruction is the system message and is never here. This builds only
-    /// the untrusted half — what somebody pasted, typed or photographed — and
-    /// the two are never concatenated.
-    /// </remarks>
-    private static List<AIContent> Material(Composition request)
-    {
-        List<AIContent> parts = [];
-
-        if (request.Material is { Length: > 0 } material)
-        {
-            parts.Add(new TextContent(material));
-        }
-
-        if (!request.Picture.IsEmpty)
-        {
-            parts.Add(new DataContent(
-                request.Picture,
-                request.PictureMediaType ?? "image/jpeg"));
-        }
-
-        return parts;
-    }
-
     private Result<Composed> Read(ChatResponse answered)
     {
         if (answered.Text is not { Length: > 0 } json)
@@ -206,6 +197,17 @@ internal sealed class OllamaAssistant(
         (int)(answered.Usage?.InputTokenCount ?? 0),
         (int)(answered.Usage?.OutputTokenCount ?? 0),
         Pictures: 0);
+
+    /// <summary>
+    /// What a thrown failure means, or null where it is not the runner's.
+    /// </summary>
+    /// <remarks>
+    /// The same two decisions a <c>catch</c> filter and its body make, as one
+    /// value — which is what a stream needs, because it cannot catch around a
+    /// <c>yield</c> and has to be handed the verdict instead.
+    /// </remarks>
+    private static Error? Recognised(Exception failure) =>
+        Expected(failure) ? Failure(failure) : null;
 
     /// <summary>The failures that are the runner's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>

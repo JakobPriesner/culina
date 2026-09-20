@@ -64,21 +64,10 @@ internal sealed class OpenAiAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        List<ChatMessage> conversation =
-        [
-            new(ChatRole.System, request.Instruction),
-            new(ChatRole.User, Material(request))
-        ];
-
-        var options = new ChatOptions
-        {
-            ResponseFormat = ChatResponseFormat.ForJsonSchema(RecipeSchema.AsJson, RecipeSchema.Name)
-        };
-
         try
         {
             var answered = await ChatWith(@using)
-                .GetResponseAsync(conversation, options, cancellationToken)
+                .GetResponseAsync(ChatAsk.Conversation(request), ChatAsk.Options(), cancellationToken)
                 .ConfigureAwait(false);
 
             return Read(answered);
@@ -87,6 +76,23 @@ internal sealed class OpenAiAssistant(
         {
             return Failure(failure);
         }
+    }
+
+    public IAsyncEnumerable<Composing> ComposeStreamAsync(
+        Connected @using,
+        Composition request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(@using);
+        ArgumentNullException.ThrowIfNull(request);
+
+        return ChatStream.ComposeAsync(
+            ChatWith(@using),
+            request,
+            Kind,
+            logger,
+            Recognised,
+            cancellationToken);
     }
 
     public async Task<Result<Drawn>> DrawAsync(
@@ -156,33 +162,6 @@ internal sealed class OpenAiAssistant(
         {
             return Failure(failure);
         }
-    }
-
-    /// <summary>
-    /// The material, as the parts of the user message.
-    /// </summary>
-    /// <remarks>
-    /// The instruction is the system message and is never here. This builds only
-    /// the untrusted half — what somebody pasted, typed or photographed — and
-    /// the two are never concatenated.
-    /// </remarks>
-    private static List<AIContent> Material(Composition request)
-    {
-        List<AIContent> parts = [];
-
-        if (request.Material is { Length: > 0 } material)
-        {
-            parts.Add(new TextContent(material));
-        }
-
-        if (!request.Picture.IsEmpty)
-        {
-            parts.Add(new DataContent(
-                request.Picture,
-                request.PictureMediaType ?? "image/jpeg"));
-        }
-
-        return parts;
     }
 
     private Result<Composed> Read(ChatResponse answered)
@@ -287,6 +266,17 @@ internal sealed class OpenAiAssistant(
         && !id.Contains("tts", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("audio", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("realtime", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// What a thrown failure means, or null where it is not the provider's.
+    /// </summary>
+    /// <remarks>
+    /// The same two decisions a <c>catch</c> filter and its body make, as one
+    /// value — which is what a stream needs, because it cannot catch around a
+    /// <c>yield</c> and has to be handed the verdict instead.
+    /// </remarks>
+    private static Error? Recognised(Exception failure) =>
+        Expected(failure) ? Failure(failure) : null;
 
     /// <summary>The failures that are the provider's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>

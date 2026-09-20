@@ -2,7 +2,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, EmptyState, ErrorState } from '$ds';
+  import { Button, EmptyState, ErrorState, Skeleton } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
@@ -243,10 +243,15 @@
     <header class="head">
       <div class="heading">
         <p class="eyebrow">{m['cookbooks.title']()}</p>
-        <h1 class="title">{cookbook?.name ?? ''}</h1>
+        {#if !cookbook && cookbooks.status === 'loading'}
+          <Skeleton width="16rem" height="2.25rem" />
+          <Skeleton width="24rem" height="1.25rem" />
+        {:else}
+          <h1 class="title">{cookbook?.name ?? ''}</h1>
 
-        {#if cookbook?.description}
-          <p class="subtitle">{cookbook.description}</p>
+          {#if cookbook?.description}
+            <p class="subtitle">{cookbook.description}</p>
+          {/if}
         {/if}
 
         <!-- What it asks for, in the words somebody chose, so the shelf

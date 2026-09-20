@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Application.Abstractions;
 using Application.Assistance;
@@ -53,22 +54,12 @@ internal sealed class GeminiAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        var config = new GenerateContentConfig
-        {
-            // The instruction is a field of its own rather than a turn in the
-            // conversation, which is the strongest separation this provider
-            // offers between what the app says and what a stranger pasted.
-            SystemInstruction = new Content { Parts = [new Part { Text = request.Instruction }] },
-            ResponseMimeType = "application/json",
-            ResponseJsonSchema = RecipeSchema.Definition
-        };
-
         try
         {
             using var client = Client(@using);
 
             var answered = await client.Models
-                .GenerateContentAsync(@using.Model, Material(request), config, cancellationToken)
+                .GenerateContentAsync(@using.Model, Material(request), Writing(request), cancellationToken)
                 .ConfigureAwait(false);
 
             return Read(answered);
@@ -77,6 +68,85 @@ internal sealed class GeminiAssistant(
         {
             return Failure(failure);
         }
+    }
+
+    public async IAsyncEnumerable<Composing> ComposeStreamAsync(
+        Connected @using,
+        Composition request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(@using);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var answer = new PartialRecipe();
+        var usage = default(ModelUsage);
+        string? finishReason = null;
+
+        using var client = Client(@using);
+
+        // Advanced by hand rather than with `await foreach`, because a `yield`
+        // may not live inside a `try` that catches — and every part of this
+        // that talks to the provider has to be inside one.
+        var parts = client.Models
+            .GenerateContentStreamAsync(@using.Model, Material(request), Writing(request), cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+
+        try
+        {
+            while (true)
+            {
+                GenerateContentResponse? part = null;
+                Exception? thrown = null;
+
+                try
+                {
+                    if (await parts.MoveNextAsync().ConfigureAwait(false))
+                    {
+                        part = parts.Current;
+                    }
+                }
+                catch (Exception failure) when (Expected(failure))
+                {
+                    thrown = failure;
+                }
+
+                if (thrown is not null)
+                {
+                    yield return Stopped(answer, Failure(thrown));
+
+                    yield break;
+                }
+
+                if (part is null)
+                {
+                    break;
+                }
+
+                answer.Add(part.Text);
+                usage = Counted(part, usage);
+                finishReason ??= Reason(part);
+
+                if (answer.Read() is { } soFar)
+                {
+                    yield return new Composing { Recipe = soFar };
+                }
+            }
+        }
+        finally
+        {
+            await parts.DisposeAsync().ConfigureAwait(false);
+        }
+
+        if (answer.ReadWhole() is not { } written)
+        {
+            AssistanceLogs.EmptyAnswer(logger, Kind.Code, finishReason);
+
+            yield return Stopped(answer, AssistanceErrors.UnusableAnswer);
+
+            yield break;
+        }
+
+        yield return new Composing { Recipe = written, Finished = true, Usage = usage };
     }
 
     public async Task<Result<Drawn>> DrawAsync(
@@ -150,6 +220,51 @@ internal sealed class GeminiAssistant(
             return Failure(failure);
         }
     }
+
+    /// <summary>How to ask for a recipe, whether or not it is read as it arrives.</summary>
+    /// <param name="request">What to do, and what to do it to.</param>
+    private static GenerateContentConfig Writing(Composition request) => new()
+    {
+        // The instruction is a field of its own rather than a turn in the
+        // conversation, which is the strongest separation this provider
+        // offers between what the app says and what a stranger pasted.
+        SystemInstruction = new Content { Parts = [new Part { Text = request.Instruction }] },
+        ResponseMimeType = "application/json",
+        ResponseJsonSchema = RecipeSchema.Definition
+    };
+
+    /// <summary>
+    /// The last part of a stream that ended badly.
+    /// </summary>
+    /// <remarks>
+    /// It still carries the recipe, and deliberately: a provider that cut out
+    /// after the ingredients wrote something worth keeping, and the screen can
+    /// offer it beside the reason rather than throwing away work that was paid
+    /// for.
+    /// </remarks>
+    private static Composing Stopped(PartialRecipe answer, Error failure) => new()
+    {
+        Recipe = answer.SoFar(),
+        Finished = true,
+        Failure = failure
+    };
+
+    /// <summary>
+    /// The counts, which this provider repeats on every chunk.
+    /// </summary>
+    /// <remarks>
+    /// Kept rather than overwritten by an absence: the last chunk of a Gemini
+    /// stream carries the totals, but nothing promises that every chunk does,
+    /// and a call recorded as free is the fault this adapter's SDK was adopted
+    /// to remove.
+    /// </remarks>
+    private static ModelUsage Counted(GenerateContentResponse part, ModelUsage soFar) =>
+        part.UsageMetadata is null
+            ? soFar
+            : new ModelUsage(
+                part.UsageMetadata.PromptTokenCount ?? soFar.InputTokens,
+                part.UsageMetadata.CandidatesTokenCount ?? soFar.OutputTokens,
+                Pictures: 0);
 
     /// <summary>
     /// The material, as the parts of the one user turn.

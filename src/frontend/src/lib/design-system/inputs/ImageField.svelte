@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
+  import { fade } from 'svelte/transition';
 
   import Button, { type ButtonVariant } from '../actions/Button.svelte';
   import Image from '../display/Image.svelte';
+  import GenerationStatus from '../feedback/GenerationStatus.svelte';
   import FilePicker from './FilePicker.svelte';
 
   /**
@@ -104,9 +106,6 @@
 
   let picker = $state<ReturnType<typeof FilePicker>>();
 
-  /** The noise filter's own id, so two fields on a page do not share one. */
-  const grainId = $props.id();
-
   /**
    * Whether the actions go under the picture rather than on it.
    *
@@ -120,6 +119,7 @@
    * nothing has measured anything yet.
    */
   const compact = new MediaQuery('(max-width: 63.999rem)', true);
+  const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)', false);
 
   const actionVariant = $derived<ButtonVariant>(compact.current ? 'secondary' : 'media');
 </script>
@@ -169,41 +169,27 @@
            button: this is a minute of somebody else's machine working, and a
            spinner that size says "a moment".
 
-           Four layers, none of which reports progress: three lights drifting
-           at their own speeds, a band of specular crossing them, and a film of
-           grain over the lot. What makes it read as something being made
-           rather than as a page that has stopped is that no two frames repeat
-           — the drifts are prime-ish against each other, so the pattern does
-           not visibly loop. -->
-      <div class="drawing" aria-hidden="true">
-        <span class="light one"></span>
-        <span class="light two"></span>
-        <span class="light three"></span>
-        <span class="sheen"></span>
+           A soft colour wash develops underneath a set of drawn strokes. The
+           stroke cycle is visibly constructive, but deliberately has no end
+           point: the provider reports elapsed time, not percentage complete,
+           and the interface must not invent one. -->
+      <div class="generating-overlay" out:fade={{ duration: reducedMotion.current ? 0 : 260 }}>
+        <div class="drawing" aria-hidden="true">
+          <span class="wash wash-one"></span>
+          <span class="wash wash-two"></span>
+          <span class="wash wash-three"></span>
 
-        <!-- Real noise rather than a gradient pretending to be some: it is
-             what keeps the blur from looking like a cheap radial fill, and it
-             is the texture every photograph has before it resolves. -->
-        <svg class="grain" preserveAspectRatio="none">
-          <filter id={grainId}>
-            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#{grainId})" />
-        </svg>
-      </div>
-
-      <div class="caption">
-        <!-- Four points rather than a ring: a spinner is what a page shows
-             while it fetches something that already exists. -->
-        <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M12 1.5c.9 5 3.6 7.7 8.6 8.6-5 .9-7.7 3.6-8.6 8.6-.9-5-3.6-7.7-8.6-8.6 5-.9 7.7-3.6 8.6-8.6Z"
-          />
-        </svg>
+          <span class="stroke stroke-one"></span>
+          <span class="stroke stroke-two"></span>
+          <span class="stroke stroke-three"></span>
+          <span class="stroke stroke-four"></span>
+          <span class="scan"></span>
+        </div>
 
         {#if generatingLabel}
-          <p class="drawing-label" role="status">{generatingLabel}</p>
+          <div class="caption">
+            <GenerationStatus label={generatingLabel} tone="on-media" align="center" />
+          </div>
         {/if}
       </div>
     {/if}
@@ -379,95 +365,123 @@
     min-width: 0;
   }
 
-  /*
-   * A picture being drawn.
-   *
-   * Everything here is composited — transform, opacity and filter only — so
-   * four moving layers cost the compositor and not the main thread. The frame
-   * is at most thirty centimetres of screen; this is not a background worth a
-   * repaint per frame.
-   */
+  .generating-overlay,
   .drawing {
     position: absolute;
     inset: 0;
     overflow: hidden;
     border-radius: var(--radius-lg);
+  }
+
+  .generating-overlay {
+    z-index: 2;
     background: var(--generating-ground);
   }
 
-  /*
-   * The three lights.
-   *
-   * Each is one soft disc, blurred far past its own edge and drifting on its
-   * own clock. Durations that do not divide into each other, so the three
-   * never line up twice in the same way — a loop you can see is a loop that
-   * tells you nothing is really happening.
-   */
-  .light {
+  /* A picture developing, rather than colour blobs drifting indefinitely.
+     The wash gives it photographic depth; the four strokes make each short
+     cycle visibly add something. */
+  .drawing {
+    background: var(--generating-ground);
+  }
+
+  .drawing::after {
     position: absolute;
-    width: 70%;
-    height: 85%;
-    border-radius: var(--radius-full);
-    filter: blur(28px);
-    opacity: 0.85;
+    inset: 0;
+    background:
+      linear-gradient(var(--generating-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--generating-grid) 1px, transparent 1px),
+      radial-gradient(circle at center, transparent 25%, var(--generating-vignette) 100%);
+    background-size:
+      2.5rem 2.5rem,
+      2.5rem 2.5rem,
+      100% 100%;
+    content: '';
+    opacity: 0.55;
+  }
+
+  .wash {
+    position: absolute;
+    border-radius: 42% 58% 63% 37% / 46% 38% 62% 54%;
+    filter: blur(26px);
+    opacity: 0.78;
     will-change: transform;
   }
 
-  .one {
-    top: -15%;
-    left: -10%;
+  .wash-one {
+    top: -24%;
+    left: -16%;
+    width: 78%;
+    height: 94%;
     background: var(--generating-1);
-    animation: drift-one 13s ease-in-out infinite;
+    animation: float-one 9s ease-in-out infinite alternate;
   }
 
-  .two {
-    right: -15%;
-    bottom: -20%;
+  .wash-two {
+    right: -20%;
+    bottom: -28%;
+    width: 84%;
+    height: 92%;
     background: var(--generating-2);
-    animation: drift-two 17s ease-in-out infinite;
+    animation: float-two 11s ease-in-out infinite alternate;
   }
 
-  .three {
-    top: 20%;
-    left: 30%;
-    width: 55%;
-    height: 60%;
+  .wash-three {
+    top: 22%;
+    left: 28%;
+    width: 58%;
+    height: 62%;
     background: var(--generating-3);
-    opacity: 0.6;
-    animation: drift-three 11s ease-in-out infinite;
+    opacity: 0.62;
+    animation: float-three 7s ease-in-out infinite alternate;
   }
 
-  /*
-   * The pass of specular.
-   *
-   * Steeper than the frame's diagonal and narrow, so it reads as light moving
-   * across a surface rather than as a bar crossing a box. Soft-light keeps it
-   * light rather than paint: it brightens what it crosses instead of covering
-   * it.
-   */
-  .sheen {
+  .stroke {
     position: absolute;
-    inset: -20%;
-    background: linear-gradient(
-      115deg,
-      transparent 42%,
-      var(--generating-sheen) 50%,
-      transparent 58%
-    );
-    background-size: 250% 100%;
-    opacity: 0.35;
-    mix-blend-mode: soft-light;
-    animation: sheen 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    left: 14%;
+    height: 0.24rem;
+    border-radius: var(--radius-full);
+    background: var(--generating-sheen);
+    box-shadow: 0 0 1rem var(--generating-glow);
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    animation: draw-stroke 4.8s var(--ease-out) infinite;
   }
 
-  .grain {
+  .stroke-one {
+    top: 25%;
+    width: 42%;
+  }
+
+  .stroke-two {
+    top: 35%;
+    width: 66%;
+    animation-delay: 0.3s;
+  }
+
+  .stroke-three {
+    top: 45%;
+    width: 54%;
+    animation-delay: 0.6s;
+  }
+
+  .stroke-four {
+    top: 55%;
+    width: 34%;
+    animation-delay: 0.9s;
+  }
+
+  .scan {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.22;
-    mix-blend-mode: overlay;
-    animation: grain 4.5s steps(1) infinite;
+    top: -18%;
+    right: -20%;
+    width: 48%;
+    height: 145%;
+    background: linear-gradient(90deg, transparent, var(--generating-scan), transparent);
+    filter: blur(8px);
+    transform: rotate(16deg) translateX(0);
+    animation: scan 5.4s ease-in-out infinite;
   }
 
   /*
@@ -486,115 +500,84 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-2);
+    padding: var(--space-4);
     transform: translateY(-50%);
     pointer-events: none;
   }
 
-  .spark {
-    width: var(--space-6);
-    height: var(--space-6);
-    fill: var(--text);
-    opacity: 0.75;
-    animation: spark 2.6s ease-in-out infinite;
+  .caption :global(.status) {
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--generating-panel-border);
+    border-radius: var(--radius-lg);
+    background: var(--generating-panel);
+    box-shadow: var(--generating-panel-shadow);
+    backdrop-filter: blur(10px);
   }
 
-  .drawing-label {
-    color: var(--text);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    text-align: center;
-    animation: pulse 2.6s ease-in-out infinite;
-  }
-
-  @keyframes drift-one {
-    0%,
-    100% {
+  @keyframes float-one {
+    from {
       transform: translate3d(0, 0, 0) scale(1);
     }
 
-    50% {
-      transform: translate3d(18%, 22%, 0) scale(1.18);
+    to {
+      transform: translate3d(22%, 18%, 0) scale(1.14) rotate(8deg);
     }
   }
 
-  @keyframes drift-two {
-    0%,
-    100% {
+  @keyframes float-two {
+    from {
       transform: translate3d(0, 0, 0) scale(1.1);
     }
 
-    50% {
-      transform: translate3d(-22%, -16%, 0) scale(0.92);
+    to {
+      transform: translate3d(-20%, -14%, 0) scale(0.94) rotate(-10deg);
     }
   }
 
-  @keyframes drift-three {
-    0%,
-    100% {
+  @keyframes float-three {
+    from {
       transform: translate3d(0, 0, 0) scale(0.9);
     }
 
-    50% {
-      transform: translate3d(-14%, 18%, 0) scale(1.25);
+    to {
+      transform: translate3d(-12%, 16%, 0) scale(1.2) rotate(12deg);
     }
   }
 
-  @keyframes sheen {
-    0% {
-      background-position: 130% 0;
-    }
-
-    /* Held at the far edge for the second half, so the pass is an event with
-       a pause after it rather than a belt going round. */
-    60%,
-    100% {
-      background-position: -30% 0;
-    }
-  }
-
-  @keyframes grain {
-    0% {
-      transform: translate3d(0, 0, 0);
-    }
-
-    25% {
-      transform: translate3d(-2%, 1%, 0);
-    }
-
-    50% {
-      transform: translate3d(1%, -2%, 0);
-    }
-
-    75% {
-      transform: translate3d(-1%, -1%, 0);
-    }
-
-    100% {
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  @keyframes spark {
+  @keyframes draw-stroke {
     0%,
+    8% {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+
+    22%,
+    62% {
+      opacity: 0.44;
+      transform: scaleX(1);
+    }
+
     100% {
-      transform: scale(0.85) rotate(0deg);
+      opacity: 0;
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes scan {
+    0%,
+    12% {
+      opacity: 0;
+      transform: rotate(16deg) translateX(0);
+    }
+
+    24% {
       opacity: 0.55;
     }
 
-    50% {
-      transform: scale(1.1) rotate(45deg);
-      opacity: 0.95;
-    }
-  }
-
-  @keyframes pulse {
-    0%,
+    72%,
     100% {
-      opacity: 0.6;
-    }
-
-    50% {
-      opacity: 1;
+      opacity: 0;
+      transform: rotate(16deg) translateX(-245%);
     }
   }
 
@@ -605,18 +588,17 @@
       transition: none;
     }
 
-    /* The wait is still a wait, so the frame still shows the lights and still
+    /* The wait is still a wait, so the frame still shows the colour and still
        says what it is doing. It simply stops moving. */
-    .light,
-    .sheen,
-    .grain,
-    .spark,
-    .drawing-label {
+    .wash,
+    .stroke,
+    .scan {
       animation: none;
     }
 
-    .spark {
-      opacity: 0.75;
+    .stroke {
+      opacity: 0.3;
+      transform: scaleX(1);
     }
   }
 
