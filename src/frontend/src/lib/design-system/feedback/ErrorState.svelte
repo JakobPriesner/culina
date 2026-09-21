@@ -21,13 +21,22 @@
     /** Labelled, so the id is not a bare string nobody can interpret. */
     requestIdLabel?: string;
     requestId?: string | null;
+    /**
+     * Which heading this title is.
+     *
+     * Two of these replace the whole screen rather than sitting inside a page —
+     * the session-unreachable gate and the root error boundary — and there is
+     * no other heading on the document when they do. A page with no level-one
+     * heading is a page a screen reader cannot summarise, so those two say so.
+     */
+    level?: 1 | 2;
   }
 
-  let { title, body, action, requestIdLabel, requestId }: Props = $props();
+  let { title, body, action, requestIdLabel, requestId, level = 2 }: Props = $props();
 </script>
 
 <div class="error" role="alert">
-  <h2 class="title">{title}</h2>
+  <svelte:element this={level === 1 ? 'h1' : 'h2'} class="title">{title}</svelte:element>
   <p class="body">{body}</p>
 
   {#if action}
