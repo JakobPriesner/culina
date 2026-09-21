@@ -83,6 +83,104 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task AddRecipe_Twice_ShouldContributeTwice()
+    {
+        // Arrange
+        // The plan adds a recipe once per meal, so a recipe cooked on Monday and
+        // again on Tuesday arrives as two identical requests. Two meals is twice
+        // the shopping; a list that answered with one meal's worth would send
+        // somebody home short.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        // Act
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+
+        // Assert
+        var items = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
+        var butter = Assert.Single(items, item => item.GetProperty("name").GetString() == "Butter");
+
+        Assert.Equal(400m, butter.GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AddRecipe_Twice_AtDifferentServings_ShouldSumBoth()
+    {
+        // Arrange
+        // Monday for four, Thursday for six.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        // Act
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 6 },
+            Token);
+
+        // Assert
+        var items = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
+        var butter = Assert.Single(items, item => item.GetProperty("name").GetString() == "Butter");
+
+        // 200 for four, 300 for six.
+        Assert.Equal(500m, butter.GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AddRecipe_ShouldNotTouchALineAlreadyInTheTrolley()
+    {
+        // Arrange
+        // A ticked line is bought. Adding to it would change an amount somebody
+        // has already picked up, so the second add starts a new line instead.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        var first = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+
+        var itemId = first.Json!.Value.GetProperty("items")[0].GetProperty("itemId").GetGuid();
+
+        await client.PatchAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items/{itemId}",
+            new { isChecked = true },
+            Token);
+
+        // Act
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+
+        // Assert
+        var butter = response.Json!.Value.GetProperty("items").EnumerateArray()
+            .Where(item => item.GetProperty("name").GetString() == "Butter")
+            .ToList();
+
+        Assert.Equal(2, butter.Count);
+        Assert.Equal(200m, butter.Single(i => i.GetProperty("isChecked").GetBoolean())
+            .GetProperty("quantity").GetDecimal());
+        Assert.Equal(200m, butter.Single(i => !i.GetProperty("isChecked").GetBoolean())
+            .GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
     public async Task AddRecipe_ShouldScaleToWhatIsBeingCooked()
     {
         // Arrange
