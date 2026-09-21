@@ -91,11 +91,11 @@ test.describe('cooking a recipe', () => {
     await page.goto('/shopping');
 
     // And the bar says what is still going on, from anywhere in the app.
-    const bar = page.getByText(new RegExp(`cooking ${title}|${title} wird gekocht`, 'i'));
+    const bar = page.getByText(new RegExp(`cooking ${title}|Gerade am Kochen: ${title}`, 'i'));
 
     await expect(bar).toBeVisible();
 
-    await page.getByRole('link', { name: /pick it back up|weitermachen/i }).click();
+    await page.getByRole('link', { name: /keep cooking|weiterkochen/i }).click();
 
     // Back at step two, not back at the beginning.
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));

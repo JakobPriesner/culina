@@ -60,7 +60,7 @@ test.describe('sharing a kitchen', () => {
 
     // Made from the app, not the API: the point is that a person can do this.
     await owner.goto('/me/household');
-    await owner.getByRole('button', { name: /make an invitation|einladung erstellen/i }).click();
+    await owner.getByRole('button', { name: /create invitation|einladung erstellen/i }).click();
 
     const link = owner.getByTestId('invitation-link');
 
@@ -142,7 +142,7 @@ test.describe('sharing a kitchen', () => {
 
   test('an invitation can be taken back before anyone uses it', async () => {
     await owner.goto('/me/household');
-    await owner.getByRole('button', { name: /make an invitation|einladung erstellen/i }).click();
+    await owner.getByRole('button', { name: /create invitation|einladung erstellen/i }).click();
 
     const outstanding = owner.getByRole('listitem');
 
@@ -155,7 +155,7 @@ test.describe('sharing a kitchen', () => {
     while ((await outstanding.count()) > 0) {
       await outstanding
         .first()
-        .getByRole('button', { name: /take it back|zurücknehmen/i })
+        .getByRole('button', { name: /revoke invitation|einladung zurückziehen/i })
         .click();
     }
 

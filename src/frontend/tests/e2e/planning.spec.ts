@@ -56,8 +56,11 @@ test.describe('planning a week', () => {
   });
 
   test('puts a recipe on a day, and the week writes the shopping list', async () => {
+    // Through the navigation, which is where the week lives now. The library
+    // used to carry a link of its own and does not since the shortlist took
+    // the top of that page.
     await page.goto('/');
-    await page.getByRole('link', { name: /plan the week|woche planen/i }).click();
+    await page.getByRole('link', { name: /^(week|woche)$/i }).click();
 
     await expect(page).toHaveURL(/\/plan$/);
 

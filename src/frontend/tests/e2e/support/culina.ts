@@ -126,7 +126,7 @@ export async function signInWithHousehold(page: Page, who = credentials): Promis
 
   if (new URL(page.url()).pathname === '/welcome') {
     await page.getByLabel(/name your household|heißen/i).fill(unique('Kitchen'));
-    await page.getByRole('button', { name: /^(create a household|haushalt anlegen)$/i }).click();
+    await page.getByRole('button', { name: /^(create a household|haushalt erstellen)$/i }).click();
     await expect(page).toHaveURL(/\/$/);
   }
 }
