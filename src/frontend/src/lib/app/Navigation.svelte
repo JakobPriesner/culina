@@ -148,5 +148,18 @@
     .bottom .destination {
       padding-inline: calc(var(--space-1) / 2);
     }
+
+    /*
+      And a step down in size, because the padding alone was winning by about
+      7% — which a scrollbar taking 15px of the 320, or any translation a
+      character longer, takes straight back. Together they leave roughly a
+      third of the row spare, which is a margin rather than a coincidence.
+
+      One step, and only here: 11px is still a legible label, and this is the
+      narrowest phone anyone opens the app on rather than the common case.
+    */
+    .bottom .label {
+      font-size: 0.6875rem;
+    }
   }
 </style>
