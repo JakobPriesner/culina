@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
 using Domain.Recipes;
@@ -52,7 +53,7 @@ internal sealed class ExportArchiveQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Archive.Export");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
