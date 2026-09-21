@@ -80,9 +80,12 @@ test.describe('sharing a kitchen', () => {
     // them in.
     await them.goto(url.pathname);
 
-    // Landed in the household, and the recipe is simply there.
+    // Landed in the household, and the recipe is simply there. Asked for as a
+    // heading rather than as text anywhere: a shortlisted recipe carries its
+    // own "Stop suggesting {title}" button, so the title is on that page twice
+    // and only one of the two is the recipe.
     await expect(them).toHaveURL(/\/$/);
-    await expect(them.getByText(title)).toBeVisible();
+    await expect(them.getByRole('heading', { name: title })).toBeVisible();
 
     await theirContext.close();
   });
@@ -144,7 +147,12 @@ test.describe('sharing a kitchen', () => {
     await owner.goto('/me/household');
     await owner.getByRole('button', { name: /create invitation|einladung erstellen/i }).click();
 
-    const outstanding = owner.getByRole('listitem');
+    // The ones that can be taken back, which is not every row on this screen:
+    // the members are a list too, and a loop over all of them waits forever for
+    // a button that a person is never going to have.
+    const outstanding = owner.getByRole('listitem').filter({
+      has: owner.getByRole('button', { name: /revoke invitation|einladung zurückziehen/i })
+    });
 
     await expect(outstanding.first()).toBeVisible();
 
@@ -159,6 +167,8 @@ test.describe('sharing a kitchen', () => {
         .click();
     }
 
-    await expect(owner.getByText(/none waiting to be used|keine offen/i)).toBeVisible();
+    await expect(
+      owner.getByText(/no pending invitations|keine offenen einladungen/i)
+    ).toBeVisible();
   });
 });

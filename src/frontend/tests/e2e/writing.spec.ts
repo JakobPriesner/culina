@@ -18,6 +18,16 @@ import {
  * what reaches a shopping list.
  */
 /** The row of empty fields at the foot of the list, where the next one goes. */
+/**
+ * The ingredients a recipe actually has, as opposed to the advice about them.
+ *
+ * The hint under the fields offers "200 g flour" as its example and sits in
+ * the same region as the list, so an assertion about an amount finds the
+ * suggestion too and fails on two matches rather than none.
+ */
+const ingredientsOf = (page: Page) =>
+  page.getByRole('region', { name: /^(ingredients|zutaten)$/i }).getByRole('list');
+
 const newIngredient = (page: Page) =>
   page.getByRole('group', { name: /new ingredient|neue zutat/i });
 
@@ -44,7 +54,11 @@ async function write(page: Page, { amount = '', unit = '', name, note = '' }: Wr
   await row.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill(unit);
   await row.getByLabel(/^\s*(note|hinweis)/i).fill(note);
 
-  const field = row.getByRole('combobox', { name: /^(ingredient|zutat)$/i });
+  // Not anchored at the end: once a suggestion is arrowed to, the field's
+  // accessible name becomes "Ingredient Potatoes" — the highlighted option is
+  // part of what a screen reader says — and a locator that insisted on the
+  // label alone stopped matching the control it was already typing into.
+  const field = row.getByRole('combobox', { name: /^\s*(ingredient|zutat)\b/i });
 
   await field.fill(name);
   await field.press('Enter');
@@ -86,16 +100,8 @@ test.describe('writing a recipe', () => {
     // would print it as.
     await write(page, { amount: '200', unit: 'g', name: 'Butter' });
 
-    // Scoped to the list rather than the page or even the section: the hint
-    // under the fields spells out "200 g flour" as its example and lives inside
-    // the same region, so anything wider matches the advice as well as the
-    // ingredient.
-    const written = page
-      .getByRole('region', { name: /^(ingredients|zutaten)$/i })
-      .getByRole('list');
-
-    await expect(written.getByText('Butter')).toBeVisible();
-    await expect(written.getByText(/200\s*g/)).toBeVisible();
+    await expect(ingredientsOf(page).getByText('Butter')).toBeVisible();
+    await expect(ingredientsOf(page).getByText(/200\s*g/)).toBeVisible();
 
     // A German decimal comma is a decimal point: somebody typing "1,5" into
     // the amount means one and a half.
@@ -131,7 +137,7 @@ test.describe('writing a recipe', () => {
     await expect(page).toHaveURL(/\/edit/);
 
     await write(page, { amount: '200', unit: 'g', name: 'Butter' });
-    await expect(page.getByText(/200\s*g/)).toBeVisible();
+    await expect(ingredientsOf(page).getByText(/200\s*g/)).toBeVisible();
 
     // Saved before the mention is written, because a line the server has never
     // seen has no id for a step to point at.
@@ -220,7 +226,11 @@ test.describe('writing a recipe', () => {
     await expect(page).toHaveURL(/\/edit/);
 
     const row = newIngredient(page);
-    const field = row.getByRole('combobox', { name: /^(ingredient|zutat)$/i });
+    // Not anchored at the end: once a suggestion is arrowed to, the field's
+    // accessible name becomes "Ingredient Potatoes" — the highlighted option is
+    // part of what a screen reader says — and a locator that insisted on the
+    // label alone stopped matching the control it was already typing into.
+    const field = row.getByRole('combobox', { name: /^\s*(ingredient|zutat)\b/i });
     const list = page.getByRole('listbox', { name: /ingredient suggestions|zutatenvorschläge/i });
 
     // Only the name is suggested. The amount is its own field now, and nobody
@@ -241,7 +251,7 @@ test.describe('writing a recipe', () => {
     await expect(field).toHaveValue('Potatoes');
 
     await field.press('Enter');
-    await expect(page.getByText(/200\s*g/)).toBeVisible();
+    await expect(ingredientsOf(page).getByText(/200\s*g/)).toBeVisible();
 
     // A word no seeded list has ever heard of is still an ingredient.
     //
@@ -294,10 +304,16 @@ test.describe('writing a recipe', () => {
     // A range is read as its lower bound: the one you can still add to.
     await expect(page.getByText('1 tbsp', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
+    // The one in the paste panel, not the form's own: both say "Create recipe"
+    // since the copy pass, and the form's is the empty-recipe button this
+    // screen also carries.
+    await page
+      .getByRole('button', { name: /create recipe|rezept erstellen/i })
+      .last()
+      .click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 
-    await expect(page.getByText('flour')).toBeVisible();
+    await expect(ingredientsOf(page).getByText('flour')).toBeVisible();
 
     // The steps are fields, so this reads their value rather than the page.
     // The numbers were the paste's; the editor's list supplies its own.
@@ -315,15 +331,15 @@ test.describe('writing a recipe', () => {
     await page.goto('/recipes/new');
     await page.getByRole('button', { name: /paste a recipe|rezept einfügen/i }).click();
 
-    const link = page.getByRole('textbox', { name: /a link to a recipe|link zu einem rezept/i });
+    const link = page.getByRole('textbox', { name: /a link to a recipe|link zum rezept/i });
 
     // The refusal first, and against a real address: the server does the
     // fetching, so an unguarded import would read the network it sits in. This
     // one goes nowhere, and says so without saying what it found.
     await link.fill('http://169.254.169.254/latest/meta-data/');
-    await page.getByRole('button', { name: /^(read it|lesen)$/i }).click();
+    await page.getByRole('button', { name: /^(import recipe|rezept abrufen)$/i }).click();
 
-    await expect(page.getByRole('alert')).toContainText(/could not be read|nicht gelesen werden/i);
+    await expect(page.getByRole('alert')).toContainText(/could not be opened|nicht öffnen/i);
 
     // And the ordinary case. The page itself is stubbed here — what the server
     // does with an address is proven where the fetching is — so this is about
@@ -345,15 +361,20 @@ test.describe('writing a recipe', () => {
     );
 
     await link.fill('https://example.test/orzo');
-    await page.getByRole('button', { name: /^(read it|lesen)$/i }).click();
+    await page.getByRole('button', { name: /^(import recipe|rezept abrufen)$/i }).click();
 
     await expect(page.getByRole('status')).toContainText(/2/);
     await expect(page.getByText('200 g', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
+    // The import panel's, as in the pasted case: the form's own empty-recipe
+    // button carries the same words.
+    await page
+      .getByRole('button', { name: /create recipe|rezept erstellen/i })
+      .last()
+      .click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 
-    await expect(page.getByText('orzo')).toBeVisible();
+    await expect(ingredientsOf(page).getByText('orzo')).toBeVisible();
     // What the site published about the recipe, not only its words.
     await expect(page.getByRole('textbox', { name: /^(makes|ergibt)$/i })).toHaveValue('4');
   });
@@ -438,9 +459,11 @@ test.describe('writing a recipe', () => {
     await write(page, { amount: '200', unit: 'g', name: 'Butter' });
 
     // Said plainly, and neither version is thrown away: both choices are here.
-    await expect(page.getByText(/somebody else changed|jemand anderes/i)).toBeVisible();
     await expect(
-      page.getByRole('button', { name: /keep my version|meine fassung/i })
+      page.getByText(/someone changed this recipe|jemand hat dieses rezept geändert/i)
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /keep my version|meine version behalten/i })
     ).toBeVisible();
 
     await page.getByRole('button', { name: /take theirs|andere version übernehmen/i }).click();
