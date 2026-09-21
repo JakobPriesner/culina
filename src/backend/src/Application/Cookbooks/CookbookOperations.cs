@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
 using Contracts.Cookbooks;
@@ -54,7 +55,7 @@ internal sealed class GetCookbooksQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Cookbooks.GetAll");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -109,7 +110,7 @@ internal sealed class CreateCookbookCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Cookbooks.Create");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.Draft.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 

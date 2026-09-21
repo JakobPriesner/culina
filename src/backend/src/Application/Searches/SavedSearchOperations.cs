@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
 using Contracts.Searches;
@@ -45,7 +46,7 @@ internal sealed class GetSavedSearchesQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Searches.GetAll");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -80,7 +81,7 @@ internal sealed class CreateSavedSearchCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Searches.Create");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.Draft.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 

@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Recipes;
 using Domain.Import;
@@ -36,7 +37,7 @@ internal sealed class CreateRecipeCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.Create");
 
-        var permitted = await RecipeAccess
+        var permitted = await HouseholdAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 

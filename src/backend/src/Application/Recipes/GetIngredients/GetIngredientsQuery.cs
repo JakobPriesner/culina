@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Shopping;
 using Application.Telemetry;
 using Contracts.Recipes.GetIngredients;
@@ -42,7 +43,7 @@ internal sealed class GetIngredientsQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.GetIngredients");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 

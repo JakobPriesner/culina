@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Recipes.GetTags;
 using Domain.Shared;
@@ -20,7 +21,7 @@ internal sealed class GetTagsQueryHandler(ITagRepository tags, IHouseholdReposit
 
         using var tracked = UseCaseActivity.Start("Recipes.GetTags");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 

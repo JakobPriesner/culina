@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
 using Domain.Recipes;
@@ -34,7 +35,7 @@ internal sealed class RestoreArchiveCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Archive.Restore");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
