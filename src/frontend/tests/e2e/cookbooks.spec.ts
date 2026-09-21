@@ -25,6 +25,7 @@ test.describe('cookbooks', () => {
 
   let page: Page;
   let onTheShelf: string;
+  let onTheShelfId: string;
   let elsewhere: string;
   let name: string;
 
@@ -42,7 +43,7 @@ test.describe('cookbooks', () => {
     elsewhere = unique('Gazpacho');
     name = unique('Sundays');
 
-    await seedRecipe(page, { title: onTheShelf, yieldAmount: 4 });
+    onTheShelfId = await seedRecipe(page, { title: onTheShelf, yieldAmount: 4 });
     await seedRecipe(page, { title: elsewhere, yieldAmount: 4 });
   });
 
@@ -51,8 +52,12 @@ test.describe('cookbooks', () => {
   });
 
   test('a recipe is what suggests the shelf it belongs on', async () => {
-    await page.goto('/');
-    await page.getByRole('link', { name: new RegExp(onTheShelf) }).click();
+    // Straight to its own address rather than clicked out of the library. A
+    // recipe nobody has cooked is exactly what the library now leads with, and
+    // a shortlisted recipe is a heading in that panel and deliberately not also
+    // a card below it — so there is no link named after it to click. What this
+    // test is about starts on the recipe page either way.
+    await page.goto(`/recipes/${onTheShelfId}`);
     await expect(page.getByRole('heading', { level: 1, name: onTheShelf })).toBeVisible();
 
     // Behind the recipe page's overflow menu: shelving is occasional, so it
@@ -64,7 +69,7 @@ test.describe('cookbooks', () => {
     // showing an empty list and leaving it there.
     await page.getByRole('button', { name: /new cookbook|neues kochbuch/i }).click();
     await page.getByRole('textbox', { name: /^(name)$/i }).fill(name);
-    await page.getByRole('button', { name: /make it|anlegen/i }).click();
+    await page.getByRole('button', { name: /create cookbook|anlegen/i }).click();
 
     // Made and ticked in one move: making a cookbook is never the goal, putting
     // this recipe somewhere is.
@@ -156,7 +161,7 @@ test.describe('an automatic cookbook', () => {
 
     await page.getByRole('radio', { name: /fills itself|füllt sich selbst/i }).check();
     await page.getByRole('checkbox', { name: new RegExp(tag) }).check();
-    await page.getByRole('button', { name: /make it|anlegen/i }).click();
+    await page.getByRole('button', { name: /create cookbook|anlegen/i }).click();
 
     // A shelf somebody fills starts empty. One that fills itself never does.
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();

@@ -37,9 +37,12 @@ interface Written {
 async function write(page: Page, { amount = '', unit = '', name, note = '' }: Written) {
   const row = newIngredient(page);
 
-  await row.getByLabel(/^(amount|menge)$/i).fill(amount);
+  // Padded, like every other getByLabel here: the label wraps its text in a
+  // span beside the input, so what Playwright matches carries the whitespace
+  // between them and an anchored pattern never fires.
+  await row.getByLabel(/^\s*(amount|menge)\s*$/i).fill(amount);
   await row.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill(unit);
-  await row.getByLabel(/^(preparation|zubereitung)$/i).fill(note);
+  await row.getByLabel(/^\s*(note|hinweis)/i).fill(note);
 
   const field = row.getByRole('combobox', { name: /^(ingredient|zutat)$/i });
 
@@ -73,7 +76,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
 
     // Saved and open for editing, at its own address: a recipe that exists is
     // a recipe that cannot be lost by closing a tab.
@@ -83,8 +86,16 @@ test.describe('writing a recipe', () => {
     // would print it as.
     await write(page, { amount: '200', unit: 'g', name: 'Butter' });
 
-    await expect(page.getByText('Butter')).toBeVisible();
-    await expect(page.getByText(/200\s*g/)).toBeVisible();
+    // Scoped to the list rather than the page or even the section: the hint
+    // under the fields spells out "200 g flour" as its example and lives inside
+    // the same region, so anything wider matches the advice as well as the
+    // ingredient.
+    const written = page
+      .getByRole('region', { name: /^(ingredients|zutaten)$/i })
+      .getByRole('list');
+
+    await expect(written.getByText('Butter')).toBeVisible();
+    await expect(written.getByText(/200\s*g/)).toBeVisible();
 
     // A German decimal comma is a decimal point: somebody typing "1,5" into
     // the amount means one and a half.
@@ -99,7 +110,7 @@ test.describe('writing a recipe', () => {
     await expect(page.getByText(/fein gehackt/)).toBeVisible();
 
     // The fields are empty again, waiting for the next one.
-    await expect(newIngredient(page).getByLabel(/^(amount|menge)$/i)).toHaveValue('');
+    await expect(newIngredient(page).getByLabel(/^\s*(amount|menge)\s*$/i)).toHaveValue('');
 
     // Typed, never submitted: an editor that loses work on a closed tab is an
     // editor nobody trusts with a recipe they are still thinking about.
@@ -116,7 +127,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
     await write(page, { amount: '200', unit: 'g', name: 'Butter' });
@@ -159,7 +170,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
     // Waited for the write itself, not for the word "Saved": that word is
@@ -205,7 +216,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
     const row = newIngredient(page);
@@ -214,7 +225,7 @@ test.describe('writing a recipe', () => {
 
     // Only the name is suggested. The amount is its own field now, and nobody
     // needs help typing a number into it.
-    await row.getByLabel(/^(amount|menge)$/i).fill('200');
+    await row.getByLabel(/^\s*(amount|menge)\s*$/i).fill('200');
     await row.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill('g');
     await expect(list).toBeHidden();
 
@@ -283,7 +294,7 @@ test.describe('writing a recipe', () => {
     // A range is read as its lower bound: the one you can still add to.
     await expect(page.getByText('1 tbsp', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /make this recipe|rezept anlegen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 
     await expect(page.getByText('flour')).toBeVisible();
@@ -339,7 +350,7 @@ test.describe('writing a recipe', () => {
     await expect(page.getByRole('status')).toContainText(/2/);
     await expect(page.getByText('200 g', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /make this recipe|rezept anlegen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 
     await expect(page.getByText('orzo')).toBeVisible();
@@ -352,7 +363,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
     await page.goto('/');
@@ -372,7 +383,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
     const recipeId = new URL(page.url()).pathname.split('/')[2]!;
@@ -387,7 +398,9 @@ test.describe('writing a recipe', () => {
 
     // The app says where the work is, and does not say "Saved" about something
     // that only exists on this laptop.
-    await expect(page.getByText(/kept on this device|auf diesem gerät/i)).toBeVisible();
+    await expect(
+      page.getByText(/saved on this device|auf diesem gerät gespeichert/i)
+    ).toBeVisible();
 
     await context.setOffline(false);
     await page.reload();
@@ -408,7 +421,7 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/recipes/new');
     await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
-    await page.getByRole('button', { name: /start the recipe|rezept anfangen/i }).click();
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
     await expect(page).toHaveURL(/\/edit/);
 
     const recipeId = new URL(page.url()).pathname.split('/')[2]!;
@@ -430,7 +443,7 @@ test.describe('writing a recipe', () => {
       page.getByRole('button', { name: /keep my version|meine fassung/i })
     ).toBeVisible();
 
-    await page.getByRole('button', { name: /take theirs|ihre übernehmen/i }).click();
+    await page.getByRole('button', { name: /take theirs|andere version übernehmen/i }).click();
 
     // Theirs is what is on screen, and this device is no longer holding a draft
     // that would come back on the next reload and conflict all over again.

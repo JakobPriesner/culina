@@ -30,13 +30,13 @@ test.describe('the first-run path', () => {
     await page.getByLabel(/call you|nennen/i).fill('Sam');
     await page.getByLabel(/email|e-mail/i).fill(email);
     await page.getByLabel(/password|passwort/i).fill(password);
-    await page.getByRole('button', { name: /create account|konto anlegen/i }).click();
+    await page.getByRole('button', { name: /create account|konto erstellen/i }).click();
 
     // No household yet, so this must not be a dead end.
     await expect(page).toHaveURL(/\/welcome$/);
 
     await page.getByLabel(/name your household|heißen/i).fill('Sam’s kitchen');
-    await page.getByRole('button', { name: /^(create a household|haushalt anlegen)$/i }).click();
+    await page.getByRole('button', { name: /^(create a household|haushalt erstellen)$/i }).click();
 
     await expect(page).toHaveURL(/\/$/);
 
