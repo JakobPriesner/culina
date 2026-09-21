@@ -211,6 +211,38 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Settings_ShouldChangeTheirTag_OnTheVeryFirstChange()
+    {
+        // Arrange
+        // The first save is the one that used to be lost. Nothing is stored for
+        // a new account, so the read is answered from the defaults — and while
+        // those claimed the same version as the row the first save creates, the
+        // tag did not move and the next read was a 304 carrying the values the
+        // person had just replaced. It took a second change to show the first.
+        using var client = await SignedInAsync();
+        var before = await client.GetAsync("/api/v1/users/me/settings", Token);
+
+        // Act
+        await client.PutAsync(
+            "/api/v1/users/me/settings",
+            new { locale = "de", theme = "warm-paper", mode = "dark", measurementSystem = "imperial" },
+            Token);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/settings");
+
+        request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(before.ETag!));
+
+        var after = await client.SendAsync(request, Token);
+
+        // Assert
+        // Not 304: what a conditional read must never do is answer "unchanged"
+        // about something that just changed.
+        Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+        Assert.Equal("de", after.Json!.Value.GetProperty("locale").GetString());
+        Assert.Equal("imperial", after.Json!.Value.GetProperty("measurementSystem").GetString());
+    }
+
+    [Fact]
     public async Task Settings_ShouldStartAtTheDefaults_ForAnAccountThatNeverChangedThem()
     {
         // Arrange
