@@ -127,20 +127,31 @@ class CookingStore {
   }
 
   /** Finishing and giving up are both "over", but only one means it worked. */
-  async end(completed: boolean): Promise<void> {
+  /**
+   * Closes the session, and says whether the server agreed.
+   *
+   * The local session is dropped either way — whoever pressed "I made it" is
+   * finished cooking whatever the network thinks. The answer is returned
+   * because the page reports an outcome to the person, and reporting one
+   * without looking at this is how "Added to your cooking history" appeared
+   * over a request that had failed.
+   */
+  async end(completed: boolean): Promise<boolean> {
     const session = this.#session;
 
     this.#session = null;
 
     if (!session) {
-      return;
+      return true;
     }
 
-    await request(() =>
+    const result = await request(() =>
       http.DELETE('/api/v1/cook-sessions/{sessionId}', {
         params: { path: { sessionId: session.sessionId }, query: { completed: String(completed) } }
       })
     );
+
+    return result.ok;
   }
 
   reset(): void {

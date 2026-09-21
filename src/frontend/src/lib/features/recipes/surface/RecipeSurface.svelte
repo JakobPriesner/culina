@@ -173,7 +173,18 @@
    * cooking keeps a session, and they have none — and a bar floating over the
    * last step with nothing on it is worse than no bar.
    */
-  const hasActions = $derived(cooking || Boolean(onstartcooking));
+  /**
+   * Whether there is anything to cook.
+   *
+   * A recipe with no steps offered the button like any other, and cook mode
+   * then opened on "Step 1 of 0" with nothing under it. An empty recipe is an
+   * ordinary state — one saved from an import, or half written — so the page
+   * says so where the steps would be, rather than letting somebody walk into a
+   * screen that looks broken.
+   */
+  const canCook = $derived(Boolean(onstartcooking) && recipe.steps.length > 0);
+
+  const hasActions = $derived(cooking || canCook);
 
   /**
    * Whether the group beside the title has anything in it.
@@ -712,7 +723,7 @@
     <footer class="foot">
       {#if cooking}
         <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
-      {:else if onstartcooking}
+      {:else if canCook}
         <!--
           One button, alone, and the only thing this page parks at the bottom of
           the screen.
