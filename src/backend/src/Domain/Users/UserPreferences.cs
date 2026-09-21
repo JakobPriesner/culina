@@ -81,10 +81,20 @@ public sealed class UserPreferences
     public long Version { get; private set; }
 
     /// <summary>The preferences a new account starts with.</summary>
+    /// <remarks>
+    /// Version zero, because nothing has been written yet and the read of these
+    /// carries an ETag derived from it. At version one it was indistinguishable
+    /// from the row the first save creates — so that save changed the values,
+    /// left the ETag alone, and the next read was answered 304 with the
+    /// defaults. The first time anybody chose a language, a theme, an
+    /// appearance or a unit system, it saved and the app went on showing what
+    /// it had. The second change worked, which is what made it look like a
+    /// timing problem.
+    /// </remarks>
     /// <param name="userId">Whose they are.</param>
     /// <param name="language">Their language, usually guessed from Accept-Language.</param>
     public static UserPreferences Default(Guid userId, Language language = Language.En) =>
-        new(userId, language, DefaultTheme, ThemeMode.System, MeasurementSystem.Metric, version: 1);
+        new(userId, language, DefaultTheme, ThemeMode.System, MeasurementSystem.Metric, version: 0);
 
     /// <summary>Rebuilds preferences from storage.</summary>
     /// <param name="userId">Whose they are.</param>
