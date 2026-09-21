@@ -233,9 +233,16 @@ jobs:
       - name: Clear anything a previous run left behind
         run: docker compose down --volumes --remove-orphans || true
 
+      # `standalone` because this runner is not a hosted one. The usual
+      # installer is a Node script, and it runs before setup-node has put a
+      # modern Node on the path — so it gets whatever the runner image has,
+      # which here is old enough that `require('node:path')` fails and the
+      # install ends at "self-installer exits with code 1". A standalone pnpm
+      # is a single binary and needs no Node at all to arrive.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
+          standalone: true
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
