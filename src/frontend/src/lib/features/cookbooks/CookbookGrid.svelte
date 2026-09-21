@@ -29,7 +29,10 @@
 </script>
 
 {#if loading}
-  <div class="grid" aria-busy="true" aria-label={m['cookbooks.list.loading']()}>
+  <!-- A status rather than a bare div: a plain element is generic, and a
+       generic element may not carry a name at all — the label was there for
+       assistive technology and was being dropped on the floor by it. -->
+  <div class="grid" role="status" aria-busy="true" aria-label={m['cookbooks.list.loading']()}>
     {#each placeholders as row (row)}
       <CookbookCardSkeleton />
     {/each}
