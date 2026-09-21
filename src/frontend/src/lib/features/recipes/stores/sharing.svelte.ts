@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 /**
  * Whether one recipe is published behind a link, and what the link is.
@@ -13,17 +13,15 @@ import { registerStore } from '$shell/stores';
  * question about a link you sent last month, and an answer of "it is gone, here
  * is a new one" would break the one in the message.
  */
-export type SharingStatus = 'idle' | 'loading' | 'ready' | 'failed';
-
 class Sharing {
   /** Which recipe the answer below is about. */
   #recipeId = $state<string | null>(null);
   #token = $state<string | null>(null);
-  #status = $state<SharingStatus>('idle');
+  #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
   #working = $state(false);
 
-  get status(): SharingStatus {
+  get status(): LoadStatus {
     return this.#status;
   }
 

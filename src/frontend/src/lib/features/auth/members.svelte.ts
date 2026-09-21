@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 /**
  * Everyone in a household.
@@ -17,18 +17,16 @@ export interface Member {
   readonly joinedAt: string;
 }
 
-type Status = 'idle' | 'loading' | 'ready' | 'failed';
-
 class Members {
   #items = $state<Member[]>([]);
-  #status = $state<Status>('idle');
+  #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
   get items(): readonly Member[] {
     return this.#items;
   }
 
-  get status(): Status {
+  get status(): LoadStatus {
     return this.#status;
   }
 

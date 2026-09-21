@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 /**
  * Invitations to a household, from the inside.
@@ -17,11 +17,9 @@ export interface Invitation {
   readonly code?: string;
 }
 
-type Status = 'idle' | 'loading' | 'ready' | 'failed';
-
 class Invitations {
   #items = $state<Invitation[]>([]);
-  #status = $state<Status>('idle');
+  #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
   /** The code of the invitation made in this session, if any. */
@@ -31,7 +29,7 @@ class Invitations {
     return this.#items;
   }
 
-  get status(): Status {
+  get status(): LoadStatus {
     return this.#status;
   }
 

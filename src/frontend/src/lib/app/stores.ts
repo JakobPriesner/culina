@@ -1,4 +1,13 @@
 /**
+ * How far a store has got with the read it was asked for.
+ *
+ * One type rather than one per store. These four states meant the same thing in
+ * all nine places that spelled them out — under four different names, which is
+ * how a tenth store ends up inventing a fifth state nobody renders.
+ */
+export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
+
+/**
  * Every store that holds something belonging to the signed-in person.
  *
  * Signing out has to clear all of them. Stale data from a previous user is a
