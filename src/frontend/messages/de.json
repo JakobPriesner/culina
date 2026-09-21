@@ -905,5 +905,6 @@
   "assist.draw.elapsed": "Bild wird erstellt… {seconds}s",
   "assist.improve.writing": "Der Assistent schreibt noch. Übernehmen kannst du, sobald er fertig ist.",
   "editor.language": "Geschrieben auf",
-  "editor.languageHint": "Damit wird dieses Rezept durchsucht und beim Tippen nach Zutaten vorgeschlagen."
+  "editor.languageHint": "Damit wird dieses Rezept durchsucht und beim Tippen nach Zutaten vorgeschlagen.",
+  "cooking.madeIt.failed": "Das konnte nicht in deiner Kochhistorie gespeichert werden. Versuche es noch einmal."
 }

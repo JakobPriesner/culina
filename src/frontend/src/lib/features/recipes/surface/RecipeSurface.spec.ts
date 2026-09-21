@@ -153,6 +153,16 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('button', { name: 'Start cooking' })).toBeInTheDocument();
   });
 
+  it('does not offer to cook a recipe that has no steps', () => {
+    // Cook mode walks the steps. With none it opened on "Step 1 of 0" under an
+    // empty list, which reads as broken rather than as a recipe nobody has
+    // written the method for yet.
+    const { container } = render({ recipe: { ...recipe, steps: [] }, onstartcooking: () => {} });
+
+    expect(screen.queryByRole('button', { name: 'Start cooking' })).not.toBeInTheDocument();
+    expect(container.querySelector('.foot')).toBeNull();
+  });
+
   it('parks nothing at the bottom of the screen when there is no cooking to start', () => {
     // What somebody following a share link gets: they cannot cook a recipe
     // that is not theirs, and a bar floating over the last step with nothing
