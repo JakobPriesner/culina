@@ -127,4 +127,26 @@
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
   }
+
+  /*
+    Five labels sharing the narrowest screen anyone uses.
+
+    German is the constraint: "Einstellungen" wants 75px where an equal fifth of
+    320px gives about 64px, and "Kochbücher" wants 67px. Measured at 320px, all
+    three long labels were landing a fraction of a pixel short of their own text
+    — 46.1 against 46, 66.8 against 67, 74.8 against 75 — and wrapping to two
+    lines for want of almost nothing.
+
+    So they are given almost nothing: half the side padding, below the width
+    where it is needed. That is 20px back across the row, which leaves about a
+    tenth of the space spare rather than a rounding error, so the next
+    translation that is a character longer than today's does not put it back.
+    The type stays at --text-xs; a nav label is small enough already, and this
+    row is read at arm's length with wet hands.
+  */
+  @media (width < 23rem) {
+    .bottom .destination {
+      padding-inline: calc(var(--space-1) / 2);
+    }
+  }
 </style>
