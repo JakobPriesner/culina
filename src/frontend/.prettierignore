@@ -9,5 +9,9 @@ src/lib/api/generated
 # Compiled from messages/*.json by the Paraglide Vite plugin.
 src/lib/paraglide
 
-# Paraglide's module cache.
-project.inlang/cache
+# Paraglide owns this folder. It regenerates the cache, a .meta.json and a
+# README on every `pnpm messages`, and git ignores all three
+# (project.inlang/.gitignore keeps only settings.json). Formatting generated
+# files nobody commits just broke `make lint` on a fresh clone.
+project.inlang/*
+!project.inlang/settings.json
