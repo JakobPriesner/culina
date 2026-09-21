@@ -18,13 +18,26 @@ import { glob, readFile } from 'node:fs/promises';
 /**
  * The limits. Raise one deliberately, in a commit that says what was added and
  * why it was worth it — never to make a build pass.
+ *
+ * The two totals were re-baselined on 21 September 2026, against an app that
+ * had roughly half again as much in it as the one they were written for: 21
+ * pages rather than 13, 128 components rather than 92, and 808 translated
+ * strings rather than 297. Measured rather than assumed — no dependency had
+ * crept in, the only runtime one is still openapi-fetch, and the largest
+ * chunks are the Svelte and SvelteKit runtimes. Building with one locale
+ * instead of two gives 205.5 kB, so the second language is 16.9 kB of it:
+ * Paraglide inlines both strings and a dispatcher for every message.
+ *
+ * `firstLoadBytes` did not move and should be the last one that ever does. It
+ * is what somebody waits for at the back of a house on a bad signal, and at
+ * 70.3 kB there is still room under it.
  */
 export const budgets = {
   /** Everything the shell asks for before it can render: scripts and styles. */
   firstLoadBytes: 80 * 1024,
   /** Every chunk of every route together, which bounds the worst navigation. */
-  totalJavaScriptBytes: 140 * 1024,
-  totalStyleBytes: 24 * 1024
+  totalJavaScriptBytes: 235 * 1024,
+  totalStyleBytes: 38 * 1024
 } as const;
 
 export interface Weight {
