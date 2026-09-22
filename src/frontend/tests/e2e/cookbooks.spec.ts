@@ -192,6 +192,8 @@ test.describe('an automatic cookbook', () => {
     await expect(
       page.getByRole('button', { name: /add to cookbook|zu einem kochbuch hinzufügen/i })
     ).toBeHidden();
-    await expect(page.getByRole('button', { name: /change the rules|regeln bearbeiten/i })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /change the rules|regeln bearbeiten/i })
+    ).toBeVisible();
   });
 });
