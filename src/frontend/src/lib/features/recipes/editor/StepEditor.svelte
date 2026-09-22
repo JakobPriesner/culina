@@ -270,7 +270,15 @@
 
   .controls {
     display: flex;
+    /* And the buttons wrap within it. Giving the group its own line is not
+       enough on its own: three of them are 280px at 200% text, which is wider
+       than a 320px screen once the step's padding is counted. */
+    flex-wrap: wrap;
+    justify-content: flex-end;
     flex: none;
+    /* `flex: none` sizes this to its contents, so without a bound it never
+       reaches the point of wrapping — it just gets wider than the screen. */
+    max-width: 100%;
     gap: var(--space-1);
   }
 
