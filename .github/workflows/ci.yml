@@ -462,8 +462,14 @@ jobs:
             VERSION=0.0.0-edge
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: true
-          sbom: true
+          # Off while the package is created. With these on, `edge` is an OCI
+          # index carrying attestation manifests beside the image, and GHCR
+          # refuses to write one into a namespace that has no package yet —
+          # "denied: permission_denied: read_package", after the layers have
+          # already gone up. Provenance is attested below by GitHub's own
+          # action either way; this is buildx's copy of it.
+          provenance: false
+          sbom: false
 
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
