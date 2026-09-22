@@ -68,9 +68,13 @@
        lines of short words from landing closer together than that. */
     min-height: var(--control-sm);
     /* Bled out to the gutter and back so the hover lands on the whole line
-       rather than on the words: the line is the target, not the text. */
-    margin-inline: calc(var(--space-3) * -1);
-    padding-inline: var(--space-3);
+       rather than on the words: the line is the target, not the text.
+       Fixed pixels, not a spacing step: the step is in rem, so at 200% text
+       this bleeds 24px each side into a gutter that did not grow with it, and
+       the row reaches past the edge of a 320px screen. How far a hover target
+       extends past its text is not a question about how big the text is. */
+    margin-inline: -12px;
+    padding-inline: 12px;
     border-radius: var(--radius-md);
     transition: background-color var(--duration-fast) var(--ease-out);
   }
