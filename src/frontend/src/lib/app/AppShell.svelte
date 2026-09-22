@@ -61,10 +61,31 @@
 
   /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
   const creating = $derived(offersNewRecipe(page.url.pathname));
+  /**
+   * How tall the window is, so the shell can tell when it is mostly furniture.
+   */
+  let viewportHeight = $state(0);
+
+  /**
+   * True when the header, the dock and the bar would take half the screen.
+   *
+   * Every one of them is sized by its contents, so all three grow when somebody
+   * enlarges text — and none of them knows about the others. On a 320x568
+   * phone at 200% the header alone is 208px, the dock 120 and the navigation
+   * 193: 521 pixels of chrome around 47 pixels of recipe. No media query can
+   * see this, because text scale is not a thing a media query is told about;
+   * the shell already measures all three, so it is the one place that can.
+   */
+  const crowded = $derived(
+    viewportHeight > 0 && headerHeight + dockHeight + barHeight > viewportHeight / 2
+  );
 </script>
+
+<svelte:window bind:innerHeight={viewportHeight} />
 
 <div
   class="shell"
+  class:crowded
   style:--bar-inset="{barHeight}px"
   style:--bottom-inset="{dockHeight + barHeight}px"
   style:--header-inset={headerHeight ? `${headerHeight}px` : null}
@@ -345,6 +366,20 @@
     .header::before {
       display: none;
     }
+  }
+
+  /* And the same answer when it is text rather than the window that has taken
+     the room: the header scrolls away with the page instead of floating over
+     what is left of it. The bars at the bottom stay — they are how somebody
+     gets anywhere — and giving back the header's share is enough to read and
+     type in what remains. */
+  .shell.crowded .header {
+    position: relative;
+    top: auto;
+  }
+
+  .shell.crowded .header::before {
+    display: none;
   }
 
   @media (prefers-reduced-motion: reduce) {

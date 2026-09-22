@@ -127,4 +127,21 @@
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
   }
+
+  /*
+   * On the narrowest phones the five labels need every pixel of the row.
+   *
+   * German asks for about 325 of the 320 there are — "Einstellungen" alone is
+   * 85px where the icon above it is 48 — and a label with nowhere to go wraps
+   * onto a second line, which moves the bar up and the page under it. The four
+   * pixels either side of each destination are the difference, and they are
+   * not doing any visible work: the raised pill around the icon is what gives
+   * the row its inset, and the destinations divide the width between them
+   * whether or not they are padded.
+   */
+  @media (width < 24rem) {
+    .bottom .destination {
+      padding-inline: 0;
+    }
+  }
 </style>
