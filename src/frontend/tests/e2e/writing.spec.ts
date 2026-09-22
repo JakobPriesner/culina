@@ -389,12 +389,15 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/');
 
-    await expect(page.getByText(title)).toBeVisible();
+    // As a heading: a recipe the shortlist picked up carries a "Stop suggesting
+    // {title}" button as well, so the title is on the page twice and only one
+    // of the two is the recipe.
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
 
     // And search finds it, which is what a list is for once there are forty.
     await page.getByRole('searchbox').fill(title.split(' ')[1]!);
 
-    await expect(page.getByText(title)).toBeVisible();
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
   });
 
   test('does not lose what was typed to a reload, a language switch, or no signal', async ({
