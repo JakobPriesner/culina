@@ -123,6 +123,11 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
+    /* Without this the list keeps the width of its widest chip and wraps at
+       that, rather than at the width it has been given: one ingredient named
+       "Sonnenblumenkernvollkornbrot" at 200% text is 268px inside a 190px
+       column, and the page scrolls sideways to show it. */
+    min-width: 0;
     gap: var(--space-2);
     margin: 0;
     padding: 0;
@@ -131,6 +136,10 @@
 
   .chip {
     display: inline-flex;
+    /* And the chip itself, so a name longer than the column wraps inside it
+       rather than setting the column's width. */
+    min-width: 0;
+    max-width: 100%;
     align-items: center;
     gap: var(--space-2);
     padding: 0.2rem var(--space-3);
