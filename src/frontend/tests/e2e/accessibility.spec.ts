@@ -34,6 +34,19 @@ async function violations(page: Page) {
   );
 }
 
+/*
+ * Motion off, everywhere in this file.
+ *
+ * A colour is only a colour once it has stopped moving. The advance button on
+ * the cooking screen starts in the disabled palette and crosses to the accent
+ * one over 120ms as the session resolves, and axe sampling inside that window
+ * read #b4b1ab on #9fa691 — 1.17:1 — and called it a serious contrast failure.
+ * Two and a half seconds later the same button is white on #536340, which is
+ * fine. app.css collapses every transition under reduced motion, so asking for
+ * it is how this suite gets told the truth rather than a frame of it.
+ */
+test.use({ reducedMotion: 'reduce' });
+
 test.describe('what a machine can check @offline', () => {
   for (const [name, path] of [
     ['sign in', '/login'],
@@ -79,7 +92,7 @@ test.describe('what a machine can check, signed in', () => {
 
     // An explicit context, because axe refuses to run in a page that was made
     // straight from the browser.
-    context = await browser.newContext();
+    context = await browser.newContext({ reducedMotion: 'reduce' });
     page = await context.newPage();
 
     await signInWithHousehold(page, await accountFor(browser, testInfo));
@@ -193,7 +206,7 @@ test.describe('what moves while a page loads', () => {
       return;
     }
 
-    context = await browser.newContext();
+    context = await browser.newContext({ reducedMotion: 'reduce' });
     page = await context.newPage();
 
     await signInWithHousehold(page, await accountFor(browser, testInfo));
@@ -263,7 +276,7 @@ test.describe('reaching everything with a keyboard', () => {
       return;
     }
 
-    context = await browser.newContext();
+    context = await browser.newContext({ reducedMotion: 'reduce' });
     page = await context.newPage();
 
     await signInWithHousehold(page, await accountFor(browser, testInfo));

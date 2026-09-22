@@ -275,6 +275,15 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
     y: Math.max(96, Math.min(onto.y + onto.height / 2, viewport.height - 96))
   };
 
+  // Watched from before the button comes up, because the move is sent the
+  // moment it does. The screen redraws optimistically, so a test that only
+  // looked at the screen would be told the move happened and could reload
+  // before the server had been asked — which is how "it survives the round
+  // trip" came to fail against a move that was still in flight.
+  const moved = page.waitForResponse(
+    (response) => response.url().includes('/meal-plan/') && response.request().method() === 'PATCH'
+  );
+
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
 
@@ -286,6 +295,7 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
   }
 
   await page.mouse.up();
+  await moved;
 }
 
 /**
