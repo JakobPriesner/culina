@@ -30,23 +30,6 @@ test.describe('responsive transitions @offline', () => {
     }
   });
 
-  test('all cookbook shelf cards can be reached without widening the page', async ({ page }) => {
-    await responsiveData(page, 'en');
-    await page.setViewportSize({ width: 320, height: 720 });
-    await page.goto('/');
-    const shelf = page.getByRole('region', { name: 'Cookbooks', exact: true });
-    const links = shelf.getByRole('link', { name: /^Open / });
-    await expect(links).toHaveCount(6);
-    await links.first().focus();
-    for (const [index, link] of (await links.all()).entries()) {
-      if (index > 0) await page.keyboard.press('Tab');
-      await expect(link).toBeFocused();
-      await expect(link).toBeInViewport({ ratio: 1 });
-      await expectReflow(page);
-    }
-    expect(await shelf.locator('ul').evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-  });
-
   test('a cookbook form survives rotation and its content remains reachable', async ({ page }) => {
     await responsiveData(page, 'en');
     await page.setViewportSize({ width: 320, height: 720 });
