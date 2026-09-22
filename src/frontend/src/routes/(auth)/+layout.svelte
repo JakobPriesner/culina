@@ -48,6 +48,12 @@
   }
   .preferences {
     display: flex;
+    /* Wraps for the same reason the header around it does. These are two
+       controls whose words grow with somebody's text size, and at 200% on a
+       320px screen they are wider than the screen — which is a page that
+       scrolls sideways, not a row that is slightly too long. */
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: var(--space-4);
   }
