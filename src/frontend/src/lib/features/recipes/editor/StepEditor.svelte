@@ -227,6 +227,11 @@
 
   .head {
     display: flex;
+    /* Wraps only when it has to. The three buttons keep their size, so at 200%
+       text they are 280px of a 320px screen and the title beside them cannot
+       fit — and a row that will not wrap makes the page scroll sideways
+       instead. At every ordinary size this changes nothing. */
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
