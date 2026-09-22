@@ -27,7 +27,15 @@ internal static class SmartShelfSql
     /// <param name="tags">The SQL expression holding the required tag slugs.</param>
     /// <param name="ingredients">The SQL expression holding the required ingredients.</param>
     /// <param name="maxMinutes">The SQL expression holding the time ceiling.</param>
-    internal static string Matches(string tags, string ingredients, string maxMinutes) => $"""
+    /// <param name="held">
+    /// How many of <paramref name="ingredients"/> this recipe has, when the
+    /// caller has already worked that out. Defaults to asking per recipe.
+    /// </param>
+    internal static string Matches(
+        string tags,
+        string ingredients,
+        string maxMinutes,
+        string? held = null) => $"""
             (cardinality({tags}) = 0 or (
                 select count(distinct t.slug) from recipe_tags rt
                 join tags t on t.id = rt.tag_id
@@ -36,13 +44,8 @@ internal static class SmartShelfSql
             -- Unlike the ingredient ranking the search does, this excludes. On
             -- a shelf asking for chicken, a recipe without chicken is not a
             -- worse match; it is not on the shelf.
-            and (cardinality({ingredients}) = 0 or (
-                select count(*) from unnest({ingredients}) as required
-                where exists (
-                    select 1 from recipe_ingredients ri
-                    join ingredient_groups g on g.id = ri.group_id
-                    where g.recipe_id = r.id and ri.name ilike '%' || required || '%'))
-                = cardinality({ingredients}))
+            and (cardinality({ingredients}) = 0
+                 or {held ?? Held(ingredients)} = cardinality({ingredients}))
             -- A recipe with no stated time is excluded by the ceiling rather
             -- than treated as taking zero minutes, the same way the filter bar
             -- reads it.
@@ -50,5 +53,23 @@ internal static class SmartShelfSql
                  or ((r.prep_minutes is not null or r.cook_minutes is not null)
                      and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0)
                          <= {maxMinutes}))
+        """;
+
+    /// <summary>
+    /// How many of the required ingredients one recipe has, asked per recipe.
+    /// </summary>
+    /// <remarks>
+    /// The only form the cookbook card can use: every shelf on that page
+    /// carries its own rules, so there is nothing to work out once for all of
+    /// them. The recipe list has one rule for the whole query and passes a
+    /// count it has already aggregated — the same number, reached without
+    /// asking again for every recipe in the household.
+    /// </remarks>
+    private static string Held(string ingredients) => $"""
+        (select count(*) from unnest({ingredients}) as required
+         where exists (
+             select 1 from recipe_ingredients ri
+             join ingredient_groups g on g.id = ri.group_id
+             where g.recipe_id = r.id and ri.name ilike '%' || required || '%'))
         """;
 }
