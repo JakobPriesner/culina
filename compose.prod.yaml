@@ -7,8 +7,9 @@
 # image rather than from a shell on somebody's laptop.
 #
 # TLS terminates at the operator's own reverse proxy. Culina sets no HSTS,
-# performs no HTTPS redirect and compresses nothing: compressing a
-# cookie-authenticated response invites BREACH.
+# performs no HTTPS redirect and compresses no response it generates:
+# compressing a cookie-authenticated response invites BREACH. Static files are
+# compressed at build time instead, and served as they are.
 
 services:
   db:

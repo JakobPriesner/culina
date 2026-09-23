@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node --experimental-strip-types build-tools/compressBuild.ts",
     "preview": "vite preview",
     "prepare": "svelte-kit sync && pnpm messages || echo \"\"",
     "check": "pnpm messages && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.worker.json",

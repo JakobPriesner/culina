@@ -26,8 +26,11 @@ a handful of commands.
 ```
 
 **TLS is your proxy's job.** Culina sets no HSTS, performs no HTTPS redirect and
-compresses nothing — compressing a cookie-authenticated response invites BREACH.
-It trusts `X-Forwarded-*` only from the proxies you name.
+compresses no response it generates — compressing a cookie-authenticated
+response invites BREACH. Its static files arrive already compressed at build
+time, which is safe because they are the same for everyone. If your proxy
+compresses, leave `/api` out of it. It trusts `X-Forwarded-*` only from the
+proxies you name.
 
 ## Installing
 
