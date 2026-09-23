@@ -699,8 +699,10 @@
                        list, at the amounts on screen. Cooking is doing, and
                        there the panel to the left has already become it — as
                        has the column beside this step, once the reader has
-                       asked for the ingredients by step. -->
-                  {#if !perStep && needs.length > 0}
+                       asked for the ingredients by step. A lone step's list
+                       is the panel beside it, so saying it twice says
+                       nothing. -->
+                  {#if !perStep && divisible && needs.length > 0}
                     <StepNeeds ingredients={needs} {scaling} />
                   {/if}
 
