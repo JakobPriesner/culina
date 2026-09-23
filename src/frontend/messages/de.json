@@ -906,5 +906,21 @@
   "assist.improve.writing": "Der Assistent schreibt noch. Übernehmen kannst du, sobald er fertig ist.",
   "editor.language": "Geschrieben auf",
   "editor.languageHint": "Damit wird dieses Rezept durchsucht und beim Tippen nach Zutaten vorgeschlagen.",
-  "cooking.madeIt.failed": "Das konnte nicht in deiner Kochhistorie gespeichert werden. Versuche es noch einmal."
+  "cooking.madeIt.failed": "Das konnte nicht in deiner Kochhistorie gespeichert werden. Versuche es noch einmal.",
+  "assist.failure.not_configured": "Mit diesem Culina ist noch keine KI verbunden.",
+  "assist.failure.disabled": "Die KI ist hier nicht dafür eingerichtet.",
+  "assist.failure.model_missing": "Das in den Assistent-Einstellungen gewählte KI-Modell ist nicht verfügbar. Lade es beim Anbieter herunter oder wähle ein anderes Modell.",
+  "assist.failure.unknown_provider": "Mit dem KI-Anbieter aus den Assistent-Einstellungen kann Culina nicht sprechen.",
+  "assist.failure.drawing_not_supported": "Die verbundene KI kann keine Bilder erstellen.",
+  "assist.failure.unavailable": "Die KI war nicht erreichbar. Versuch es gleich noch einmal – wenn das öfter passiert, prüfe die Verbindung in den Assistent-Einstellungen.",
+  "assist.failure.rejected": "Der KI-Anbieter hat den Schlüssel aus den Assistent-Einstellungen nicht akzeptiert.",
+  "assist.failure.throttled": "Die KI ist gerade ausgelastet. Versuch es gleich noch einmal.",
+  "assist.failure.budget_exhausted": "Das KI-Budget für diesen Monat ist aufgebraucht. Nächsten Monat geht es weiter.",
+  "assist.failure.personal_budget_exhausted": "Du hast deinen Anteil am KI-Budget für diesen Monat aufgebraucht. Nächsten Monat geht es weiter.",
+  "assist.failure.refused": "Darauf wollte die KI nicht antworten. Versuch es anders zu formulieren.",
+  "assist.failure.unusable_answer": "Die Antwort der KI ließ sich nicht als Rezept lesen. Meist klappt es beim nächsten Versuch.",
+  "assist.failure.nothing_to_work_from": "Beschreib kurz, was du kochen möchtest.",
+  "assist.failure.too_much_to_work_from": "Das ist mehr Text, als die KI auf einmal liest. Versuch es mit einem kürzeren Stück.",
+  "assist.failure.settings": "Assistent-Einstellungen öffnen",
+  "assist.failure.askAdmin": "Wer dieses Culina betreut, kann das in den Assistent-Einstellungen beheben."
 }

@@ -47,7 +47,7 @@
 
   {#if draft?.title}
     <h3 class="title arrival">{draft.title}</h3>
-  {:else}
+  {:else if writing}
     <Skeleton width="60%" height="1.6em" />
   {/if}
 

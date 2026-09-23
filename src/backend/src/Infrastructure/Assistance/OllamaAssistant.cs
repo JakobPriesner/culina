@@ -227,8 +227,8 @@ internal sealed class OllamaAssistant(
             ? status switch
             {
                 System.Net.HttpStatusCode.TooManyRequests => AssistanceErrors.Throttled,
-                System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.BadRequest =>
-                    AssistanceErrors.Refused,
+                System.Net.HttpStatusCode.NotFound => AssistanceErrors.ModelMissing,
+                System.Net.HttpStatusCode.BadRequest => AssistanceErrors.Refused,
                 _ => AssistanceErrors.Unavailable
             }
             : AssistanceErrors.Unavailable;

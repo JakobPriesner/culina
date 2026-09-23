@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Button, ImageField, type ButtonVariant } from '$ds';
 
-  import { ask, http, request } from '$api';
+  import { ask, clientError, http, request, type AppError } from '$api';
+  import AssistFailure from '$features/assistance/AssistFailure.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import { imageSrcset, imageUrl } from '../recipeImage';
@@ -34,6 +35,7 @@
     seconds: number;
     finished: boolean;
     recipe?: { imageId?: string | null } | null;
+    problem?: { code: string; detail: string } | null;
   }
 
   let { recipeId, imageId, onchange }: Props = $props();
@@ -59,6 +61,14 @@
    */
   let drawnFor = $state(0);
   let failure = $state<string | null>(null);
+  /**
+   * Why the assistant did not draw, kept as the error rather than a sentence.
+   *
+   * Said under the field rather than inside it, because the answer is often
+   * "the model cannot draw" or "the budget is spent" — and those come with a
+   * way to the assistant settings that a line in the frame has no room for.
+   */
+  let drawFailure = $state<AppError | null>(null);
 
   /** Checked here so an obviously hopeless upload fails instantly. */
   const maxBytes = 10 * 1024 * 1024;
@@ -72,6 +82,7 @@
 
     busy = true;
     failure = null;
+    drawFailure = null;
 
     const body = new FormData();
 
@@ -117,6 +128,7 @@
     drawing = true;
     drawnFor = 0;
     failure = null;
+    drawFailure = null;
 
     const stream = ask<DrawingEvent>(`/api/v1/recipes/${recipeId}/image`, null, {
       message: (event) => {
@@ -131,13 +143,15 @@
 
         if (event.recipe) {
           onchange(event.recipe.imageId ?? null);
+        } else if (event.problem) {
+          drawFailure = clientError(event.problem.code, event.problem.detail);
         } else {
           failure = m['assist.draw.failed']();
         }
       },
-      failed: () => {
+      failed: (error) => {
         drawing = false;
-        failure = m['assist.draw.failed']();
+        drawFailure = error;
       }
     });
   }
@@ -145,6 +159,7 @@
   async function remove() {
     busy = true;
     failure = null;
+    drawFailure = null;
 
     const result = await request(() =>
       http.DELETE('/api/v1/recipes/{recipeId}/image', { params: { path: { recipeId } } })
@@ -194,11 +209,21 @@
   </Button>
 {/snippet}
 
+{#if drawFailure}
+  <div class="drawFailure">
+    <AssistFailure error={drawFailure} />
+  </div>
+{/if}
+
 {#if canDraw && !imageId}
   <p class="note">{m['assist.draw.note']()}</p>
 {/if}
 
 <style>
+  .drawFailure {
+    margin-top: var(--space-2);
+  }
+
   .note {
     margin-top: var(--space-2);
     max-width: var(--measure);

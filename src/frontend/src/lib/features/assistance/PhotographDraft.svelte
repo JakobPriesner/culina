@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Button, FilePicker } from '$ds';
-  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
+  import AssistFailure from './AssistFailure.svelte';
   import DraftWriting from './DraftWriting.svelte';
+  import { saysAnything } from './draftToRecipe';
   import { drafts } from './stores/drafts.svelte';
 
   import type { Draft } from './draftToRecipe';
@@ -60,14 +61,16 @@
 <div class="photo">
   <p class="note">{m['assist.photo.note']()}</p>
 
-  {#if drafts.asking || drafts.draft}
+  <!-- Only while it is being written, or once something has been: a request
+       that failed before a word arrived leaves the reason, not an empty box. -->
+  {#if drafts.asking || saysAnything(drafts.draft)}
     <DraftWriting draft={drafts.draft} writing={drafts.asking} />
   {/if}
 
   {#if tooLarge}
     <p class="failure" role="alert">{m['assist.photo.tooLarge']()}</p>
   {:else if drafts.error}
-    <p class="failure" role="alert">{explain(drafts.error)}</p>
+    <AssistFailure error={drafts.error} />
   {/if}
 
   <div class="actions">

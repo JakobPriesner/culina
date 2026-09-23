@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { clientError } from '$api';
 import { renderWithProviders } from '$lib/test/render';
 import DraftReview from './DraftReview.svelte';
 
@@ -73,5 +74,24 @@ describe('the streamed recipe improvement review', () => {
     expect(screen.getByRole('status')).toHaveTextContent('The assistant is still writing');
     expect(screen.getByText('Roasted tomato soup')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Apply selected changes' })).toBeDisabled();
+  });
+
+  it('says why the assistant stopped, rather than that it suggested nothing', () => {
+    renderWithProviders(DraftReview, {
+      props: {
+        open: true,
+        draft: partial,
+        current,
+        writing: false,
+        error: clientError('assistance.unavailable', 'The assistant could not be reached.'),
+        onaccept: vi.fn(),
+        onclose: vi.fn()
+      }
+    });
+
+    // What was written before it stopped is still on offer beside the reason.
+    expect(screen.getByText('Roasted tomato soup')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent("The AI couldn't be reached");
+    expect(screen.queryByText('The AI did not suggest any changes.')).not.toBeInTheDocument();
   });
 });
