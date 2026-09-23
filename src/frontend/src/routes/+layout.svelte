@@ -62,7 +62,11 @@
 
     {#snippet failed(_error, reset)}
       <div class="boundary">
-        <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>
+        <ErrorState
+          title={m['error.unexpected.title']()}
+          body={m['error.unexpected.body']()}
+          level={1}
+        >
           {#snippet action()}
             <button class="retry" type="button" onclick={reset}>{m['error.retry']()}</button>
           {/snippet}

@@ -694,7 +694,7 @@ export interface paths {
         };
         /**
          * Read your photo of an attempt
-         * @description Widths 400, 800 and 1600. Private and revalidated: this is one person's photograph, and its ETag is the content hash, which cannot change under the same address.
+         * @description Widths 400, 800 and 1600. Private and revalidated, because a photograph is replaced under the address it was served from; its ETag is the content hash, so a picture that was replaced is fetched and one that was not answers 304.
          */
         get: operations["getCookPhotoV1"];
         /**
@@ -5657,6 +5657,13 @@ export interface operations {
                 content: {
                     "image/webp": string;
                 };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

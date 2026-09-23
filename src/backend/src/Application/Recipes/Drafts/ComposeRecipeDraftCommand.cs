@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Assistance;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Streaming;
 using Domain.Assistance;
@@ -114,7 +115,7 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         ComposeRecipeDraftCommand command,
         CancellationToken cancellationToken)
     {
-        var permitted = await RecipeAccess
+        var permitted = await HouseholdAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 

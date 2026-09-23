@@ -1,5 +1,4 @@
 using Application.Abstractions;
-using Domain.Households;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -33,20 +32,4 @@ internal static class RecipeAccess
                     : RecipeErrors.NotFound(recipeId),
             error => Task.FromResult(Result<Recipe>.Failure(error))).ConfigureAwait(false);
     }
-
-    /// <summary>
-    /// Whether the caller is in this household at all.
-    /// </summary>
-    /// <remarks>
-    /// The same answer for reading and for writing: a household has members,
-    /// not roles, and a member may do anything in their own kitchen.
-    /// </remarks>
-    internal static async Task<Result> MemberOfAsync(
-        IHouseholdRepository households,
-        Guid householdId,
-        Guid userId,
-        CancellationToken cancellationToken) =>
-        await households.IsMemberAsync(householdId, userId, cancellationToken).ConfigureAwait(false)
-            ? Result.Success()
-            : HouseholdErrors.NotFound(householdId);
 }

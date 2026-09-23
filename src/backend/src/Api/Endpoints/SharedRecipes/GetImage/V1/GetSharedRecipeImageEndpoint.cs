@@ -28,7 +28,7 @@ internal sealed class GetSharedRecipeImageEndpoint : IEndpoint
                 IQueryHandler<GetSharedImageQuery, ImageDelivery> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (!TryReadWidth(context, out var width))
+                if (!ImageResponse.TryReadWidth(context, out var width))
                 {
                     return CustomResults.Problem(ImageErrors.UnknownWidth);
                 }
@@ -42,7 +42,7 @@ internal sealed class GetSharedRecipeImageEndpoint : IEndpoint
                         .ConfigureAwait(false);
 
                     return result.Match(
-                        delivery => Served(context, buffer, delivery),
+                        delivery => ImageResponse.Served(context, buffer, delivery),
                         CustomResults.Problem);
                 }
             })
@@ -62,45 +62,5 @@ internal sealed class GetSharedRecipeImageEndpoint : IEndpoint
             .RequireRateLimiting(RateLimitExtensions.SharedRecipe);
     }
 
-    private static bool TryReadWidth(HttpContext context, out int width)
-    {
-        width = ImageWidths.Detail;
 
-        if (context.Request.Query["w"].Count == 0)
-        {
-            return true;
-        }
-
-        return int.TryParse(context.Request.Query["w"], CultureInfo.InvariantCulture, out width)
-            && ImageWidths.Exists(width);
-    }
-
-    /// <summary>
-    /// Sends the bytes, or says the client already has them.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// No-cache rather than an hour's freshness, which is what every other read
-    /// in this app sends and what this one's own description always claimed to.
-    /// A picture is replaced under the address it was served from — that is
-    /// what setting a new one is — so a browser told it could reuse its copy
-    /// for an hour showed the old picture for an hour, with nothing on the
-    /// screen to suggest the new one had arrived.
-    /// </para>
-    /// <para>
-    /// It costs a request per view and almost no bytes: the tag is the content
-    /// hash, so an unchanged picture answers 304 and is not sent again.
-    /// </para>
-    /// </remarks>
-    private static IResult Served(HttpContext context, MemoryStream buffer, ImageDelivery delivery)
-    {
-        var tag = $"\"{delivery.ContentHash}\"";
-
-        context.Response.Headers.ETag = tag;
-        context.Response.Headers.CacheControl = "private, no-cache";
-
-        return ETag.Matches(context.Request.Headers.IfNoneMatch, tag)
-            ? Results.StatusCode(StatusCodes.Status304NotModified)
-            : Results.Bytes(buffer.ToArray(), "image/webp");
-    }
 }

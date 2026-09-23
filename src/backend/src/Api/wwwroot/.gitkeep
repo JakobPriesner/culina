@@ -1,0 +1,15 @@
+Keeps this directory in git, which cannot track an empty one.
+
+The production image overwrites it with the built frontend (Dockerfile:
+"COPY --from=frontend /src/build/ src/Api/wwwroot/"), so it is empty in a
+checkout and that is correct — in development the frontend is served by Vite.
+
+It still has to exist. Microsoft.NET.Sdk.Web registers wwwroot as a static web
+asset content root whether or not it is there, and the host builds a
+PhysicalFileProvider over every content root at startup. Nothing in `dotnet
+build` creates the directory, so on a clean clone there was nothing to point
+at: `make dev` and `make backend` worked only on machines where it happened to
+exist already, from something the developer had done once and forgotten.
+
+Not served: it has no extension the static file middleware knows, and unknown
+types are refused.

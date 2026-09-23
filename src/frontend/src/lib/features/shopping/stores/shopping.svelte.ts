@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 import type { Unit } from '$features/recipes/units';
 
@@ -24,7 +24,7 @@ export interface SectionGroup {
 
 class ShoppingStore {
   #list = $state<ShoppingList | null>(null);
-  #status = $state<'idle' | 'loading' | 'ready' | 'failed'>('idle');
+  #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
   get status() {

@@ -1,5 +1,5 @@
 import { ErrorCodes, http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 import { toRecipe, toSummary, toWireGroups, toWireSteps } from '../mappers';
 import type { Recipe, RecipeSummary } from '../types';
@@ -38,8 +38,6 @@ export interface RecipeFilters {
    */
   readonly sort?: RecipeSort;
 }
-
-export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
 const pageSize = 24;
 

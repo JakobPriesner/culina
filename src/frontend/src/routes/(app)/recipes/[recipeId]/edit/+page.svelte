@@ -10,6 +10,7 @@
   import IngredientEditor from '$features/recipes/editor/IngredientEditor.svelte';
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
+  import { withIngredients } from '$features/recipes/editor/ingredientGroups';
   import { withoutIngredients } from '$features/recipes/editor/stepUsage';
   import type { SaveTone } from '$features/recipes/editor/SaveState.svelte';
   import { yieldNoun } from '$features/recipes/yieldWords';
@@ -160,7 +161,12 @@
 
     // Taken from the pool as they are used, so two lines of the same name get
     // an id each rather than both getting the first one.
-    const unclaimed = saved.groups.flatMap((group) => group.ingredients);
+    //
+    // Only the first group's, because that is the only one the editor writes
+    // to. Drawing from every group let a new "flour" in the first group claim
+    // the id of a "flour" in the second, and the same ingredient id in two
+    // groups is a primary key the save cannot insert twice.
+    const unclaimed = [...(saved.groups[0]?.ingredients ?? [])];
 
     const claim = (name: string): string => {
       const at = unclaimed.findIndex((one) => one.name.toLowerCase() === name.toLowerCase());
@@ -185,7 +191,9 @@
    *
    * Groups are the "for the dough" / "for the sauce" headings, and they stay
    * invisible until a recipe needs them, so the editor only ever writes to the
-   * implicit first one.
+   * implicit first one. The rest are carried through a save untouched — this
+   * editor cannot show them yet, and a recipe that arrived from an import with
+   * real headings must not lose them to a keystroke.
    */
   const firstGroup = $derived(draft?.groups[0]?.ingredients ?? []);
 
@@ -199,7 +207,7 @@
     // `change` spreads its patch, so an absent key and one set to undefined are
     // not the same thing — the steps are only named when they have changed.
     change({
-      groups: [{ id: draft?.groups[0]?.id ?? null, name: null, ingredients }],
+      groups: withIngredients(draft?.groups ?? [], ingredients),
       ...(gone.size > 0 ? { steps: withoutIngredients(draft?.steps ?? [], gone) } : {})
     });
   }

@@ -1,17 +1,8 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 import { toSuggestion } from '../mappers';
 import type { Suggestion } from '../types';
-
-/**
- * What this person might want to cook, for one occasion.
- *
- * A bounded set with a reason for each, never a feed. Ranking the whole
- * collection is the recipe store's job with `sort: 'suggested'` — a cookbook is
- * a view of the library rather than a second one, and so is a suggestion.
- */
-export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
 export interface SuggestionQuery {
   /** Which meal, when the caller knows. The plan always does. */
@@ -43,6 +34,13 @@ interface Answer {
   readonly status: LoadStatus;
 }
 
+/**
+ * What this person might want to cook, for one occasion.
+ *
+ * A bounded set with a reason for each, never a feed. Ranking the whole
+ * collection is the recipe store's job with `sort: 'suggested'` — a cookbook is
+ * a view of the library rather than a second one, and so is a suggestion.
+ */
 class SuggestionStore {
   /**
    * One entry per question.
