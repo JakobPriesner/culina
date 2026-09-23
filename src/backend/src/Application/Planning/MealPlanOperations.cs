@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
 using Contracts.Planning;
@@ -54,7 +55,7 @@ internal sealed class GetMealPlanQueryHandler(IMealPlanRepository plans, IHouseh
 
         using var tracked = UseCaseActivity.Start("Planning.GetMealPlan");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -195,7 +196,7 @@ internal sealed class MoveMealCommandHandler(
         // Membership is enough: the entry is already this household's, and the
         // recipe on it was checked when it was planned. Nothing here can point
         // the plan at a recipe it could not see before.
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -279,7 +280,7 @@ internal sealed class UnplanMealCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Planning.UnplanMeal");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 

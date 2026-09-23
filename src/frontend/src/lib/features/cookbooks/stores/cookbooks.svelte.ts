@@ -1,18 +1,8 @@
 import { ErrorCodes, http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 import { toCookbook, toDetail, toMembership } from '../mappers';
 import type { Cookbook, CookbookDetail, CookbookMembership, CookbookRules } from '../types';
-
-/**
- * A household's shelves.
- *
- * This store knows what shelves exist and what is on them. It does not know
- * what a recipe is: the recipes on a cookbook are the recipe store's, read with
- * a `cookbookId` filter, so a cookbook page gets search, filters and paging
- * without a second implementation of any of them.
- */
-export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
 const pageSize = 24;
 
@@ -32,6 +22,14 @@ const toWireRules = (rules?: CookbookRules | null) =>
       }
     : undefined;
 
+/**
+ * A household's shelves.
+ *
+ * This store knows what shelves exist and what is on them. It does not know
+ * what a recipe is: the recipes on a cookbook are the recipe store's, read with
+ * a `cookbookId` filter, so a cookbook page gets search, filters and paging
+ * without a second implementation of any of them.
+ */
 class CookbookStore {
   #items = $state<Cookbook[]>([]);
   #open = $state<CookbookDetail | null>(null);

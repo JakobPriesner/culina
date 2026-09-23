@@ -42,6 +42,21 @@ const activeHouseholdKey = 'culina.household';
  */
 const bootHintKey = 'culina.boot';
 
+/**
+ * How long boot waits to find out who is signed in.
+ *
+ * Shorter than the 15 seconds every other request gets, because this one is
+ * different in kind: the app layout's guard awaits it before anything renders,
+ * so until it answers the screen holds the static boot logo and nothing else.
+ * Fifteen seconds of that is indistinguishable from a broken app, and it is
+ * what a backend that hangs rather than refuses actually produced.
+ *
+ * Giving up costs nothing: the status becomes "unavailable" rather than
+ * "signed out", which is the screen that says so and offers to try again, and
+ * the cookie is still in the jar when they do.
+ */
+const bootDeadlineMs = 4_000;
+
 class SessionStore {
   #status = $state<SessionStatus>('unknown');
   #user = $state<CurrentUser | null>(null);
@@ -91,7 +106,7 @@ class SessionStore {
       return Promise.resolve();
     }
 
-    this.#resolving ??= this.#load().finally(() => {
+    this.#resolving ??= this.#load(AbortSignal.timeout(bootDeadlineMs)).finally(() => {
       this.#resolving = null;
     });
 
@@ -156,13 +171,13 @@ class SessionStore {
     this.#activeHouseholdId = null;
   }
 
-  async #load(): Promise<void> {
+  async #load(signal?: AbortSignal): Promise<void> {
     // In parallel: both need the same cookie, and waiting for the first to
     // decide whether to ask for the second would cost a round trip on the one
     // request path that is always on the critical path.
     const [me, settings] = await Promise.all([
-      request(() => http.GET('/api/v1/users/me')),
-      request(() => http.GET('/api/v1/users/me/settings'))
+      request(() => http.GET('/api/v1/users/me', { signal })),
+      request(() => http.GET('/api/v1/users/me/settings', { signal }))
     ]);
 
     if (!me.ok) {

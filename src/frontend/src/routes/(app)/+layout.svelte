@@ -49,7 +49,11 @@
 
 {#if unreachable}
   <div class="unreachable">
-    <ErrorState title={m['session.unavailable.title']()} body={m['session.unavailable.body']()}>
+    <ErrorState
+      title={m['session.unavailable.title']()}
+      body={m['session.unavailable.body']()}
+      level={1}
+    >
       {#snippet action()}
         <Button variant="primary" onclick={retry} loading={retrying}>{m['error.retry']()}</Button>
       {/snippet}
