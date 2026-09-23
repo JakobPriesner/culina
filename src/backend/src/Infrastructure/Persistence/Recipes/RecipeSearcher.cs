@@ -102,8 +102,13 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
     /// found only this way is two tiers down, below everything the query
     /// actually names.
     /// </para>
+    /// <para>
+    /// Also what every connection sets <c>pg_trgm.word_similarity_threshold</c>
+    /// to (see <see cref="CulinaDataSource"/>), so that the trigram index on
+    /// titles hands back at least every title this counts as a match.
+    /// </para>
     /// </remarks>
-    private const double FuzzyThreshold = 0.5d;
+    internal const double FuzzyThreshold = 0.5d;
 
     /// <summary>
     /// The candidate projection, built once per shape rather than per request.
@@ -186,11 +191,12 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
           -- is still the household's, still searchable and still on its
           -- shelves. "Stop suggesting this" is not "delete this".
           {{(scored ? "and not coalesce(s.dismissed, false)" : string.Empty)}}
-          -- Words are answered by the search document, in four lanes, rather
-          -- than by three LIKE scans over the recipe tables. The lanes are
-          -- named in RecipeSearchLanes because the tier below has to know
-          -- which of them fired.
-          and (@query::text is null or not q.has_text or ({{RecipeSearchLanes.Predicate}}))
+          -- Words are answered by the search documents, one index per lane,
+          -- in `hits`. Both escapes are decided while planning, because both
+          -- are about a parameter: without words, or with none that survive
+          -- the fold, this line is gone from the plan and `hits` never runs.
+          and (@query::text is null or not ({{RecipeSearchLanes.HasText}})
+               or r.id in (select recipe_id from hits))
           and (@tagCount = 0 or (
                 select count(distinct t.slug) from recipe_tags rt
                 join tags t on t.id = rt.tag_id
@@ -315,6 +321,7 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
         // cannot disagree with the list it counts.
         var sql = $$"""
             with {{scoring}}q as ({{RecipeSearchLanes.QueryCte}}),
+            hits as ({{RecipeSearchLanes.Hits}}),
             wanted as ({{Holders("@ingredients::text[]")}}),
             required as ({{Holders("@ruleIngredients::text[]")}}),
             matching as (select r.id {{Sources(scored)}} {{Rules(scored)}}),

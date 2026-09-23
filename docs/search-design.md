@@ -3320,6 +3320,76 @@ about one query in a hundred.
 - PostgreSQL's own buffer cache does the real work: a 6.4 MB index is resident
   after the first few queries and stays there.
 
+### 27.6 The candidates, found by the indexes (culina-v2-p65e)
+
+Phase 1 built four indexes on `recipe_search_documents` and no read ever used
+one. The lanes were one `or`, and an `or` whose operands read columns of the
+`q` CTE is a condition no index can serve — so every text search read every
+document in the household, and the cost was linear in the size of the library.
+Two of the lanes could not have been index-qualified in any shape, because they
+correlated a LIKE pattern with an `unnest`.
+
+The candidates are now a `union`, one branch per lane, each over its own index,
+with the query spelt out in each branch instead of read from `q`. Npgsql sends
+parameters with an unnamed statement, which PostgreSQL plans knowing their
+values, and the fold functions are immutable, so the patterns are constants by
+the time the planner looks. Two lanes of the old `or` — the title prefix and
+the title word — are inside the substring lane whenever the query has a term,
+because the title is the first thing in `fuzzy_text` in both folds; they now
+run only for a query with no term at all (`Ei`, `und`).
+
+Two more changes came out of measuring what was left:
+
+- **The typo lane has an index** (migration 0018, a trigram GIN on `title_ae`).
+  It is reached through `<%`, whose threshold is a setting rather than an
+  argument, so every connection sends `pg_trgm.word_similarity_threshold` at
+  startup from `RecipeSearcher.FuzzyThreshold`. The explicit
+  `word_similarity(…) >= @fuzzyThreshold` stays and is still the rule; the
+  setting only decides what the index hands back. The golden set's typos sit at
+  0.58 and 0.54, under the default of 0.6, so a connection that lost the
+  setting would fail those tests rather than quietly find less.
+- **Lexical evidence is only asked of a document the query matches.**
+  `ts_rank_cd` searches the whole document for a cover even when there is none,
+  which is most candidates — the substring lane brings in every compound, and a
+  compound is exactly what the stemmer cannot see. And "did it match in the
+  title band" is now `ts_filter(document, '{a}') @@ tsq` rather than a rank
+  with three weights zeroed, at a twentieth of the cost. Checked over all
+  12,200 bench documents for 21 queries, phrases and `or` among them, it gives
+  the same answer for every document the query matches — once a query of
+  nothing but exclusions (`-reis`), which matches almost everything and names
+  no band, is kept out through `querytree`.
+
+The one change of behaviour is a query with a minus in it. The cover-density
+rank never evaluated the minus, so `Tomaten -Reis` gave a recipe containing
+Reis lexical credit for "Tomaten" and let it come first. It now earns none.
+The substring lane still finds it, so the minus demotes rather than removes —
+`RecipeSearchRelevanceTests` holds that order.
+
+Measured through `GET /api/v1/recipes`, page 1 of 20, median of 11, on a
+synthetic library whose words are about as selective as a real one (a staple
+in most recipes, any other ingredient in about one in ten):
+
+| Query | 200 before → after | 2,000 before → after | 10,000 before → after |
+| --- | --- | --- | --- |
+| `Bolgnese` | 8.7 → 7.2 ms | 25.0 → 13.0 | 90.4 → **14.2** |
+| `Linsensuppe` | 8.5 → 6.3 | 29.8 → 15.0 | 104.9 → **21.6** |
+| `qwertzuiop` | 7.4 → 6.6 | 16.3 → 10.0 | 41.0 → **8.6** |
+| `Pesto Basilikum Parmesan` | 15.0 → 9.5 | 90.5 → 22.7 | 398.4 → **40.3** |
+| `Hähnchen` | 11.9 → 10.3 | 47.9 → 22.6 | 240.5 → **58.1** |
+| `Tomaten Reis` | 17.9 → 9.1 | 99.3 → 27.4 | 460.7 → **70.2** |
+
+What still grows is the ranking, and it grows with the number of *matches*, not
+the size of the library: `Tomaten Reis` matches 4,921 of the 10,000, because
+either word is enough to be a candidate, and every candidate needs a tier and a
+score before any twenty of them can be chosen. A query that matches little is
+now flat.
+
+Verified: 829 responses captured through the API before and after — 57
+queries including every golden-set class, four orders and filters each, the
+second page of every relevance result, at all three sizes — are byte-identical
+except the nine for `tomaten -reis` under relevance, whose totals are unchanged
+and whose demoted recipes all contain "Reis".
+
 ### 20.7 What would break first
 
 If a household somehow reached 50,000 recipes:
@@ -4055,3 +4125,5 @@ make about latency: **estimate, then measure, then believe the measurement.**
 - Phase 1 changed no interface. Everything in §18 is phase 2.
 - The `qwertzuiop` case costs 8 ms at 2,000 recipes, which is the floor of the
   candidate scan. §20.7's advice stands if a library ever reaches five figures.
+  *(Superseded by §27.6: there is no candidate scan any more, and `qwertzuiop`
+  is 9 ms at 10,000.)*
