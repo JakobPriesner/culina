@@ -16,7 +16,7 @@
     "test:unit": "pnpm messages && vitest run",
     "test:e2e": "playwright test",
     "test:watch": "vitest",
-    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+    "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --output-structure locale-modules",
     "verify:release": "node --experimental-strip-types build-tools/checkRelease.ts",
     "verify:budget": "node --experimental-strip-types build-tools/checkBudget.ts"
   },
