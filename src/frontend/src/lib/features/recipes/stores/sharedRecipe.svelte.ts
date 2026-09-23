@@ -2,6 +2,7 @@ import { http, request, type AppError } from '$api';
 
 import { toSharedRecipe } from '../mappers';
 import type { RecipeReading } from '../types';
+import { type LoadStatus } from '$shell/stores';
 
 /**
  * The one recipe a visitor was sent a link to.
@@ -11,8 +12,6 @@ import type { RecipeReading } from '../types';
  * this page: whoever is reading it has no account, and a store registered for
  * that clear-down would be answering a question that is never asked here.
  */
-export type SharedStatus = 'idle' | 'loading' | 'ready' | 'failed';
-
 class SharedRecipe {
   /**
    * Which token was last asked for.
@@ -27,14 +26,14 @@ class SharedRecipe {
   #requested: string | null = null;
 
   #recipe = $state<RecipeReading | null>(null);
-  #status = $state<SharedStatus>('idle');
+  #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
   get recipe(): RecipeReading | null {
     return this.#recipe;
   }
 
-  get status(): SharedStatus {
+  get status(): LoadStatus {
     return this.#status;
   }
 

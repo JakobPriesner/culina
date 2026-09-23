@@ -1,5 +1,5 @@
 import { http, request, watch, type AppError, type Stream } from '$api';
-import { registerStore } from '$shell/stores';
+import { registerStore, type LoadStatus } from '$shell/stores';
 
 import type {
   ConnectedSource,
@@ -8,8 +8,6 @@ import type {
   ImportRun,
   SourceRecipe
 } from '../types';
-
-export type LoadStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
 /**
  * The libraries connected here, and the one being looked through.

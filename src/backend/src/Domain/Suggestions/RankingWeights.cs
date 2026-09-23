@@ -114,7 +114,33 @@ public sealed record RankingWeights
     /// How much similarity to the recipe on screen counts, for
     /// <see cref="SuggestionPurpose.Like"/>.
     /// </summary>
-    public decimal Similarity { get; init; } = 1.50m;
+    /// <remarks>
+    /// <para>
+    /// Like <see cref="Repetition"/>, this has to beat what it is competing
+    /// with rather than merely match it. "More like this" is competing with
+    /// habit: the strip sits under a heading that promises resemblance, and a
+    /// household favourite carries an affinity near 1.8 after half a dozen
+    /// cooks.
+    /// </para>
+    /// <para>
+    /// Similarity is a Jaccard score, so a genuine resemblance is around 0.6
+    /// rather than 1.0 — two soups sharing ginger, coconut milk and their tag
+    /// still differ in the ingredient each is named for. At 1.5 that came to
+    /// 0.9 against a favourite's 1.8-odd, which left the two within
+    /// <see cref="Exploration"/> of each other, and exploration is entitled to
+    /// reorder near-equals. <c>Rule11_CloseToThisOne</c> therefore failed about
+    /// four runs in ten — not on a full suite or a particular day, but on a
+    /// coin toss.
+    /// </para>
+    /// <para>
+    /// 2.2 was not guessed either. It puts a 0.6 resemblance 0.42 clear of
+    /// where 1.5 put it, which is nearly three times the widest gap exploration
+    /// can open, so the promise holds rather than usually holding. 1.8 also
+    /// passed the test repeatedly and only clears that gap by 0.03, which is
+    /// the same mistake one decimal place further along.
+    /// </para>
+    /// </remarks>
+    public decimal Similarity { get; init; } = 2.20m;
 
     /// <summary>
     /// Days for a signal to be worth half of what it was. A year: a recipe

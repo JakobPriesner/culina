@@ -139,7 +139,34 @@ internal static partial class TandoorTemplate
     /// </para>
     /// </remarks>
     private static string Lines(string instruction) =>
-        Blanks().Replace(Trailing().Replace(instruction.ReplaceLineEndings("\n"), string.Empty), "\n\n");
+        Blanks().Replace(
+            Trailing().Replace(Unmarked(instruction.ReplaceLineEndings("\n")), string.Empty),
+            "\n\n");
+
+    /// <summary>
+    /// The words Markdown was decorating, without the decoration.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Tandoor renders the instruction as Markdown; a step here is plain text
+    /// and a reference, with nowhere to put emphasis. So the choice is the
+    /// words or the punctuation, and a step that reads "**Tipp:** ..." on the
+    /// other side arrived here with the asterisks in it.
+    /// </para>
+    /// <para>
+    /// Deliberately timid, because a recipe is full of characters that only
+    /// look like Markdown. Emphasis is unwrapped only where a marker actually
+    /// closes — so <c>2 * 3</c> and <c>creme_fraiche</c> keep their
+    /// punctuation, and so does a lone asterisk somebody left behind. List
+    /// markers stay: a dash at the start of a line reads as the list it was.
+    /// </para>
+    /// </remarks>
+    private static string Unmarked(string instruction) =>
+        Heading().Replace(
+            Code().Replace(
+                Emphasis().Replace(Strong().Replace(instruction, "$2"), "${text}"),
+                "$1"),
+            string.Empty);
 
     /// <summary>Where a tag starts here, and what closes it.</summary>
     private static (int Start, string Closing)? Opening(string instruction, int index)
@@ -264,6 +291,35 @@ internal static partial class TandoorTemplate
     /// <summary>More blank lines in a row than any gap is.</summary>
     [GeneratedRegex(@"\n{3,}", RegexOptions.None, matchTimeoutMilliseconds: 500)]
     private static partial Regex Blanks();
+
+    /// <summary>
+    /// <c>**bold**</c> or <c>__bold__</c>, wrapping something, on one line.
+    /// </summary>
+    [GeneratedRegex(@"(\*\*|__)(?=\S)(.+?)(?<=\S)\1", RegexOptions.None, matchTimeoutMilliseconds: 500)]
+    private static partial Regex Strong();
+
+    /// <summary>
+    /// <c>*italic*</c> or <c>_italic_</c>, with the underscore form refused
+    /// inside a word so that <c>creme_fraiche</c> survives.
+    /// </summary>
+    /// <remarks>
+    /// Both arms name the same group, which .NET allows, so one replacement
+    /// works whichever marker matched.
+    /// </remarks>
+    [GeneratedRegex(
+        @"(?<![\w*])\*(?=\S)(?<text>[^*\n]+?)(?<=\S)\*(?![\w*])"
+        + @"|(?<![\w_])_(?=\S)(?<text>[^_\n]+?)(?<=\S)_(?![\w_])",
+        RegexOptions.None,
+        matchTimeoutMilliseconds: 500)]
+    private static partial Regex Emphasis();
+
+    /// <summary>A span of inline code, which here is just words.</summary>
+    [GeneratedRegex(@"`([^`\n]+)`", RegexOptions.None, matchTimeoutMilliseconds: 500)]
+    private static partial Regex Code();
+
+    /// <summary>The hashes that open an ATX heading, and the space after them.</summary>
+    [GeneratedRegex(@"^[ \t]{0,3}#{1,6}[ \t]+", RegexOptions.Multiline, matchTimeoutMilliseconds: 500)]
+    private static partial Regex Heading();
 
     /// <summary>
     /// <c>ingredients[3]</c>, on its own or with one of its four fields.

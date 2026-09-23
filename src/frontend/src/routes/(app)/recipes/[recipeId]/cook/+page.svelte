@@ -128,25 +128,33 @@
   async function finish(completed: boolean) {
     over = true;
 
-    await cooking.end(completed);
+    const closed = await cooking.end(completed);
     timers.clear();
 
     if (completed) {
       const recorded = await cookLog.record(recipeId, servings);
 
-      // Done first, undo offered after: asking "are you sure?" before a one-tap
-      // action that was never dangerous costs everyone a decision to protect
-      // against a mistake that was already cheap to fix.
-      toaster.show({
-        message: m['cooking.madeIt.toast'](),
-        tone: 'success',
-        action: recorded
+      // Both halves of "I made it" are reported on, not just the one that
+      // happens to have a toast. Saying it was added when the attempt never
+      // reached the server, or when the session it belongs to is still open,
+      // is worse than saying nothing: the history is the only place anyone
+      // would go to check.
+      toaster.show(
+        recorded && closed
           ? {
-              label: m['cooking.madeIt.undo'](),
-              run: () => void cookLog.undo(recipeId, recorded.entryId)
+              message: m['cooking.madeIt.toast'](),
+              tone: 'success',
+              // Done first, undo offered after: asking "are you sure?" before a
+              // one-tap action that was never dangerous costs everyone a
+              // decision to protect against a mistake that was already cheap
+              // to fix.
+              action: {
+                label: m['cooking.madeIt.undo'](),
+                run: () => void cookLog.undo(recipeId, recorded.entryId)
+              }
             }
-          : undefined
-      });
+          : { message: m['cooking.madeIt.failed'](), tone: 'danger' }
+      );
     }
 
     await goto(

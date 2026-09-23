@@ -106,72 +106,81 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
     private const double FuzzyThreshold = 0.5d;
 
     /// <summary>
-    /// The projection, built once per shape rather than per request.
+    /// The candidate projection, built once per shape rather than per request.
+    /// </summary>
+    private static readonly string ScoredCandidates = Candidates(scored: true);
+
+    private static readonly string PlainCandidates = Candidates(scored: false);
+
+    /// <summary>
+    /// Which recipes hold each of some named ingredients, worked out once.
     /// </summary>
     /// <remarks>
-    /// Two constant strings, because only the suggested order pays for the
-    /// scoring join and only a plain browse should pay for neither.
+    /// <para>
+    /// Asked once for the whole query rather than once per recipe. The obvious
+    /// spelling — a correlated subquery in the projection — runs the ILIKE for
+    /// every recipe in the household times every name, and
+    /// <c>recipe_ingredients_name_trgm_idx</c> cannot help it: a pattern
+    /// correlated with an <c>unnest</c> is not something an index can be asked
+    /// for.
+    /// </para>
+    /// <para>
+    /// Measured over ten thousand recipes with two ingredients named, this is
+    /// the difference between 636 ms and 51. The shape of the cost matters more
+    /// than the number: as a correlated subquery, ten times the recipes cost
+    /// thirty-seven times the time, and this way it costs 1.2 times.
+    /// </para>
+    /// <para>
+    /// It is also what keeps the two scans below honest. The count and the page
+    /// each apply the filters, so a filter that is expensive to apply would be
+    /// paid for twice — which made an ingredient shelf slower, not faster,
+    /// until this was here.
+    /// </para>
+    /// <para>
+    /// Counted by position rather than by word, because the subquery this
+    /// replaces counted the array it was given: two entries that happen to say
+    /// the same thing were two wants satisfied, and staying exactly as wrong
+    /// about that as before is the point of a change that is only about speed.
+    /// </para>
     /// </remarks>
-    private static readonly string ScoredProjection = Projection(scored: true);
+    private static string Holders(string ingredients) => $"""
+        select g.recipe_id, count(distinct one.position) as matched
+        from unnest({ingredients}) with ordinality as one(name, position)
+        join recipe_ingredients ri on ri.name ilike '%' || one.name || '%'
+        join ingredient_groups g on g.id = ri.group_id
+        join recipes owner on owner.id = g.recipe_id
+                          and owner.household_id = @householdId
+        group by g.recipe_id
+        """;
 
-    private static readonly string PlainProjection = Projection(scored: false);
-
-    private static string Projection(bool scored) => $$"""
-        select
-            r.id,
-            r.title,
-            r.image_id,
-            case
-                when r.prep_minutes is null and r.cook_minutes is null then null
-                else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0)
-            end as total_minutes,
-            r.yield_amount,
-            r.yield_kind,
-            r.yield_label,
-            r.updated_at,
-            coalesce(
-                array(
-                    select t.slug from recipe_tags rt
-                    join tags t on t.id = rt.tag_id
-                    where rt.recipe_id = r.id
-                    order by t.slug),
-                '{}') as tags,
-            -- One scan for both facts rather than two over the same index:
-            -- cook_log_recipe_user_idx is (recipe_id, user_id, made_at desc),
-            -- so the count and the latest entry come out of one lookup.
-            coalesce(mine.cook_count, 0) as cook_count,
-            mine.last_cooked_at,
-            {{(scored ? "coalesce(s.score, 0)" : "0::numeric")}} as suggestion_score,
-            -- From the document, which counted them when the recipe was
-            -- written. The subquery is the fallback for a document that has
-            -- gone missing, and coalesce only reaches it when one has: counting
-            -- ingredients per row was 620 ms over two thousand recipes, and it
-            -- was the most expensive thing in this query long before search
-            -- was rewritten.
-            coalesce(d.ingredient_count, (
-                select count(*) from recipe_ingredients ri
-                join ingredient_groups g on g.id = ri.group_id
-                where g.recipe_id = r.id)) as ingredient_count,
-            (select count(*) from unnest(@ingredients::text[]) as wanted
-             where exists (
-                 select 1 from recipe_ingredients ri
-                 join ingredient_groups g on g.id = ri.group_id
-                 where g.recipe_id = r.id and ri.name ilike '%' || wanted || '%'))
-                as matched_ingredients,
-            (select cr.added_at from cookbook_recipes cr
-             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as added_to_cookbook_at,
-            q.has_text,
-            {{RecipeSearchLanes.Evidence}}
+    /// <summary>
+    /// The tables a search reads.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="Rules"/> so that the count can read the same
+    /// tables without the cook log, which only the rows on the page and the
+    /// most-cooked order have any use for.
+    /// </remarks>
+    private static string Sources(bool scored) => $"""
         from q
         cross join recipes r
         left join recipe_search_documents d on d.recipe_id = r.id
-        left join lateral (
-            select count(*) as cook_count, max(c.made_at) as last_cooked_at
-            from cook_log_entries c
-            where c.recipe_id = r.id and c.user_id = @userId
-        ) mine on true
-        {{(scored ? "left join suggestion_scores s on s.recipe_id = r.id" : string.Empty)}}
-        {{RecipeSearchLanes.LanguageJoin}}
+        left join wanted on wanted.recipe_id = r.id
+        left join required on required.recipe_id = r.id
+        {(scored ? "left join suggestion_scores s on s.recipe_id = r.id" : string.Empty)}
+        {RecipeSearchLanes.LanguageJoin}
+        """;
+
+    /// <summary>
+    /// Which rows survive.
+    /// </summary>
+    /// <remarks>
+    /// Written once and used twice — by the count, which selects nothing but
+    /// the id, and by the candidates, which select what the ordering needs. Two
+    /// copies of a filter is two ways for a total to disagree with the list it
+    /// is a total of.
+    /// </remarks>
+    private static string Rules(bool scored) => $$"""
         where r.household_id = @householdId
           -- Hidden from the suggested order and from nowhere else: the recipe
           -- is still the household's, still searchable and still on its
@@ -198,13 +207,80 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
           -- anywhere: this is the whole of "a new recipe appears on it by
           -- itself". The rules live in SmartShelfSql because the cookbook card
           -- counts the same recipes this lists, and the two must not drift.
-          and {{SmartShelfSql.Matches("@ruleTags::text[]", "@ruleIngredients::text[]", "@ruleMaxMinutes")}}
+          and {{SmartShelfSql.Matches(
+                    "@ruleTags::text[]",
+                    "@ruleIngredients::text[]",
+                    "@ruleMaxMinutes",
+                    held: "coalesce(required.matched, 0)")}}
           -- A recipe with no stated time is excluded by a time filter rather
           -- than treated as taking zero minutes. "I have 25 minutes" asks for
           -- recipes known to fit, and an unknown time is not an answer.
           and (@maxMinutes is null
                or ((r.prep_minutes is not null or r.cook_minutes is not null)
                    and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= @maxMinutes))
+        """;
+
+    /// <summary>
+    /// What a candidate row carries: its identity, and everything the ordering
+    /// and the ranking need in order to place it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Everything here is either a plain column of a table already being
+    /// scanned or a number the tier and the score are built from. What a recipe
+    /// <em>looks like</em> is not here — the tag list is a correlated subquery
+    /// with a join and an order by, and computing it for a whole library in
+    /// order to show twenty of them was the single most expensive thing in this
+    /// query.
+    /// </para>
+    /// <para>
+    /// Two constant strings, because only the suggested order pays for the
+    /// scoring join and only a plain browse should pay for neither.
+    /// </para>
+    /// </remarks>
+    private static string Candidates(bool scored) => $$"""
+        select
+            r.id,
+            r.title,
+            r.image_id,
+            case
+                when r.prep_minutes is null and r.cook_minutes is null then null
+                else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0)
+            end as total_minutes,
+            r.yield_amount,
+            r.yield_kind,
+            r.yield_label,
+            r.updated_at,
+            -- One scan for both facts rather than two over the same index:
+            -- cook_log_recipe_user_idx is (recipe_id, user_id, made_at desc),
+            -- so the count and the latest entry come out of one lookup. It is
+            -- here rather than below the page because the most-cooked order
+            -- sorts by it.
+            coalesce(mine.cook_count, 0) as cook_count,
+            mine.last_cooked_at,
+            {{(scored ? "coalesce(s.score, 0)" : "0::numeric")}} as suggestion_score,
+            -- From the document, which counted them when the recipe was
+            -- written. The subquery is the fallback for a document that has
+            -- gone missing, and coalesce only reaches it when one has: counting
+            -- ingredients per row was 620 ms over two thousand recipes, and it
+            -- was the most expensive thing in this query long before search
+            -- was rewritten.
+            coalesce(d.ingredient_count, (
+                select count(*) from recipe_ingredients ri
+                join ingredient_groups g on g.id = ri.group_id
+                where g.recipe_id = r.id)) as ingredient_count,
+            coalesce(wanted.matched, 0) as matched_ingredients,
+            (select cr.added_at from cookbook_recipes cr
+             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as added_to_cookbook_at,
+            q.has_text,
+            {{RecipeSearchLanes.Evidence}}
+        {{Sources(scored)}}
+        left join lateral (
+            select count(*) as cook_count, max(c.made_at) as last_cooked_at
+            from cook_log_entries c
+            where c.recipe_id = r.id and c.user_id = @userId
+        ) mine on true
+        {{Rules(scored)}}
         """;
 
     internal async Task<RecipePage> SearchAsync(
@@ -223,23 +299,54 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
         // multiply by zero.
         var scoring = scored ? $"{SuggestionScoringSql.Ctes},\n            " : string.Empty;
 
+        var order = RecipeSearchSql.OrderBy(search.Sort);
+
         // One extra row tells us whether there is a next page without a second
         // count query.
-        var sql = $"""
-            with {scoring}q as ({RecipeSearchLanes.QueryCte}),
-            matching as ({(scored ? ScoredProjection : PlainProjection)}),
+        //
+        // The total is counted over `matching`, which selects nothing but the
+        // id, rather than over the rows below it. Counting the full projection
+        // is what a window function on top of it amounts to, and it forbids the
+        // limit from ever reaching an index: every recipe in the household has
+        // to be built before twenty of them can be returned. Over ten thousand
+        // recipes that was a quarter of a second for a page of twenty.
+        //
+        // Both still read the same rules in the same statement, so the count
+        // cannot disagree with the list it counts.
+        var sql = $$"""
+            with {{scoring}}q as ({{RecipeSearchLanes.QueryCte}}),
+            wanted as ({{Holders("@ingredients::text[]")}}),
+            required as ({{Holders("@ruleIngredients::text[]")}}),
+            matching as (select r.id {{Sources(scored)}} {{Rules(scored)}}),
+            candidates as ({{(scored ? ScoredCandidates : PlainCandidates)}}),
             ranked as (
                 select *,
                     ingredient_count - matched_ingredients as extra_ingredients,
-                    {RecipeSearchLanes.Tier} as tier,
-                    {RecipeSearchLanes.StructuralFit} as structural_fit
-                from matching),
-            scored as (select *, {RecipeSearchLanes.Score} as score from ranked),
-            counted as (select *, count(*) over () as total_count from scored)
-            select * from counted
-            {(resume is null ? string.Empty : $"where {resume}")}
-            order by {RecipeSearchSql.OrderBy(search.Sort)}
-            limit {limit + 1};
+                    {{RecipeSearchLanes.Tier}} as tier,
+                    {{RecipeSearchLanes.StructuralFit}} as structural_fit
+                from candidates),
+            scored as (select *, {{RecipeSearchLanes.Score}} as score from ranked),
+            page as (
+                select * from scored
+                {{(resume is null ? string.Empty : $"where {resume}")}}
+                order by {{order}}
+                limit {{limit + 1}})
+            select
+                page.*,
+                (select count(*) from matching) as total_count,
+                -- Asked for the rows that survived, not for the library. This
+                -- is a correlated subquery with a join and an order by in it,
+                -- and it is the reason the projection above holds nothing that
+                -- only decides what a recipe looks like.
+                coalesce(
+                    array(
+                        select t.slug from recipe_tags rt
+                        join tags t on t.id = rt.tag_id
+                        where rt.recipe_id = page.id
+                        order by t.slug),
+                    '{}') as tags
+            from page
+            order by {{order}};
             """;
 
         var rows = await executor.QueryAsync<RecipeSearchRowData>(

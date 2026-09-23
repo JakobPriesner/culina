@@ -49,6 +49,31 @@ describe('deleting an ingredient', () => {
     expect(withoutIngredients(steps, new Set(['salt']))).toEqual([step(['butter']), step([])]);
   });
 
+  it('turns a mention of it back into the word it was showing', () => {
+    // The server rebuilds `uses` from the sentence, so a mention left behind
+    // put the deleted id straight back and failed the next autosave.
+    const sentence = step(
+      ['butter'],
+      [{ kind: 'text', text: 'Melt ' }, mention('butter'), { kind: 'text', text: ' in the pan.' }]
+    );
+
+    const [written] = withoutIngredients([sentence], new Set(['butter']));
+
+    expect(written!.uses).toEqual([]);
+    expect(written!.segments).toEqual([{ kind: 'text', text: 'Melt butter in the pan.' }]);
+  });
+
+  it('leaves other ingredients mentioned in the same sentence alone', () => {
+    const sentence = step(
+      ['butter', 'salt'],
+      [mention('butter'), { kind: 'text', text: ' and ' }, mention('salt')]
+    );
+
+    const [written] = withoutIngredients([sentence], new Set(['salt']));
+
+    expect(written!.segments).toEqual([mention('butter'), { kind: 'text', text: ' and salt' }]);
+  });
+
   it('leaves a step it did not touch as it was, so nothing re-renders', () => {
     const untouched = step(['butter']);
 

@@ -108,7 +108,7 @@ internal sealed class GetCookPhotoEndpoint : IEndpoint
                 IQueryHandler<GetCookPhotoQuery, ImageDelivery> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (!TryReadWidth(context, out var width))
+                if (!ImageResponse.TryReadWidth(context, out var width))
                 {
                     return CustomResults.Problem(Domain.Recipes.ImageErrors.UnknownWidth);
                 }
@@ -128,7 +128,7 @@ internal sealed class GetCookPhotoEndpoint : IEndpoint
                         .ConfigureAwait(false);
 
                     return result.Match(
-                        delivery => Served(context, buffer, delivery),
+                        delivery => ImageResponse.Served(context, buffer, delivery),
                         CustomResults.Problem);
                 }
             })
@@ -136,35 +136,17 @@ internal sealed class GetCookPhotoEndpoint : IEndpoint
             .WithTags(Tags.Recipes)
             .WithSummary("Read your photo of an attempt")
             .WithDescription(
-                "Widths 400, 800 and 1600. Private and revalidated: this is one person's "
-                + "photograph, and its ETag is the content hash, which cannot change under the "
-                + "same address.")
+                "Widths 400, 800 and 1600. Private and revalidated, because a photograph is "
+                + "replaced under the address it was served from; its ETag is the content hash, "
+                + "so a picture that was replaced is fetched and one that was not answers 304.")
             .WithRepeatableQueryParameters(["w"], [], ["w"])
             .Produces<byte[]>(StatusCodes.Status200OK, "image/webp")
+            .Produces(StatusCodes.Status304NotModified)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireAuthorization();
     }
 
-    private static bool TryReadWidth(HttpContext context, out int width)
-    {
-        width = ImageWidths.Detail;
 
-        if (context.Request.Query["w"].Count == 0)
-        {
-            return true;
-        }
-
-        return int.TryParse(context.Request.Query["w"], CultureInfo.InvariantCulture, out width)
-            && ImageWidths.Exists(width);
-    }
-
-    private static IResult Served(HttpContext context, MemoryStream buffer, ImageDelivery delivery)
-    {
-        context.Response.Headers.ETag = $"\"{delivery.ContentHash}\"";
-        context.Response.Headers.CacheControl = "private, max-age=3600";
-
-        return Results.Bytes(buffer.ToArray(), "image/webp");
-    }
 }

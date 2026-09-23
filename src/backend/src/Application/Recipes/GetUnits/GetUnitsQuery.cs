@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Recipes.GetUnits;
 using Domain.Recipes;
@@ -25,7 +26,7 @@ internal sealed class GetUnitsQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.GetUnits");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
