@@ -10,7 +10,12 @@
 # .NET SDK, no shell, no package manager.
 
 # ── 1. The app ───────────────────────────────────────────────────────────────
-FROM node:22-alpine AS frontend
+# Built on whatever machine is doing the building, not once per architecture it
+# is being built for. What comes out is HTML, CSS and JavaScript, which is the
+# same bytes for arm64 as for amd64 — and running `pnpm install` a second time
+# under emulation is how a two-architecture build goes from fifteen minutes to
+# more than ninety and is killed by the timeout.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend
 
 WORKDIR /src
 
