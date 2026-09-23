@@ -27,9 +27,14 @@ cookie/CSRF model in `cookie-auth-and-security` sound.
 ```
 
 **TLS terminates at the operator's proxy.** The app sets no HSTS, performs no
-HTTPS redirect and does no response compression — compressing
-cookie-authenticated responses invites BREACH. It trusts `X-Forwarded-*` only
-from configured proxy addresses (`ForwardedHeaders:KnownProxies`).
+HTTPS redirect and compresses no response it generates — compressing
+cookie-authenticated responses invites BREACH. The frontend build instead
+writes Brotli and gzip copies beside every static text file, and the host sends
+whichever one a client accepts: those files are identical for every visitor and
+carry no secret, so there is nothing for BREACH to recover, and nothing is
+compressed at request time. If the proxy compresses, leave `/api` out of it for
+the same reason. It trusts `X-Forwarded-*` only from configured proxy addresses
+(`ForwardedHeaders:KnownProxies`).
 
 Two volumes are mandatory, and forgetting either is a silent failure:
 

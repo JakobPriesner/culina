@@ -62,23 +62,45 @@ internal static class HostingExtensions
             await next(context).ConfigureAwait(false);
         });
 
+        // The copies the frontend build compressed, for clients that can read
+        // them. Picks a file; compresses nothing. See PrecompressedAssets.
+        var webRoot = app.Environment.WebRootFileProvider;
+
+        app.Use(async (context, next) =>
+        {
+            Infrastructure.PrecompressedAssets.Choose(context, webRoot);
+
+            await next(context).ConfigureAwait(false);
+        });
+
         app.UseStaticFiles(new StaticFileOptions
         {
+            ContentTypeProvider = Infrastructure.PrecompressedAssets.ContentTypes,
             OnPrepareResponse = context =>
             {
                 var headers = context.Context.Response.GetTypedHeaders();
 
+                if (Infrastructure.PrecompressedAssets.Encoding(context.File.Name) is { } coding)
+                {
+                    context.Context.Response.Headers.ContentEncoding = coding;
+                }
+
+                // Decided from the file that was asked for, not the copy of it
+                // on its way out: the service worker is still the service
+                // worker when what is sent is service-worker.js.br.
+                var asked = Infrastructure.PrecompressedAssets.Unencoded(context.Context.Request.Path);
+
                 // The service worker decides what every later request is
                 // answered with, so a stale copy of it is a stale copy of the
                 // whole app. It is revalidated every time, never reused blind.
-                if (IsServiceWorker(context.Context.Request.Path))
+                if (IsServiceWorker(asked))
                 {
                     headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
 
                     return;
                 }
 
-                headers.CacheControl = IsImmutable(context.File.Name, context.Context.Request.Path)
+                headers.CacheControl = IsImmutable(context.File.Name, asked)
                     ? new CacheControlHeaderValue
                     {
                         Public = true,
