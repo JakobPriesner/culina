@@ -86,6 +86,31 @@ test.describe('responsive transitions @offline', () => {
     await expect(last).toBeInViewport({ ratio: 1 });
   });
 
+  test('an ingredient popover follows its trigger when a ticked chip pushes it along', async ({
+    page
+  }) => {
+    await responsiveData(page, 'en', { extraIngredients: 22 });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`/recipes/${recipeId}/edit`);
+    const trigger = page.getByRole('button', { name: 'Add an ingredient', exact: true }).nth(1);
+    await trigger.click();
+    const popover = page.locator(':popover-open');
+    const before = (await trigger.boundingBox())!;
+    for (let i = 0; i < 6; i++) {
+      await popover.locator('input[type=checkbox]:not(:checked):not(:disabled)').first().check();
+    }
+    await expect.poll(async () => (await trigger.boundingBox())!.x).not.toBe(before.x);
+    await expect
+      .poll(async () => {
+        const from = (await trigger.boundingBox())!;
+        const panel = (await popover.boundingBox())!;
+        // Under it or, when there is no room there, over it — never on top of it.
+        const clear = panel.y >= from.y + from.height || panel.y + panel.height <= from.y;
+        return [panel.x === from.x, clear];
+      })
+      .toEqual([true, true]);
+  });
+
   test('enlarged text reflows the form, recipe and cookbook tools', async ({ page }) => {
     await responsiveData(page, 'en');
     for (const width of [320, 640, 1280]) {
