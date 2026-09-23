@@ -261,6 +261,13 @@ describe('what a step needs', () => {
 
     expect(steps().queryByText('For this step')).not.toBeInTheDocument();
   });
+
+  it('does not repeat the panel under a recipe’s only step', () => {
+    render({ recipe: { ...recipe, steps: [recipe.steps[0]!] } });
+
+    expect(ingredients().getByText('salt')).toBeInTheDocument();
+    expect(steps().queryByText('For this step')).not.toBeInTheDocument();
+  });
 });
 
 describe('how the ingredients are arranged', () => {
