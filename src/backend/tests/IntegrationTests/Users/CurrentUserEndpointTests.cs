@@ -145,6 +145,37 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Me_ShouldChangeItsTag_WhenAnAdministratorSwitchesTheAssistantOnOrOff()
+    {
+        // Arrange
+        // Switching the assistant on changes nobody's account, so a tag made
+        // of the account and its households answered 304 and the app kept an
+        // all-false snapshot: the admin saved, saw "Ready", and New recipe
+        // still offered no idea or photograph door — across reloads, because
+        // the service worker keeps the same stale copy.
+        using var client = await SignedInAsync();
+        var before = await client.GetAsync("/api/v1/users/me", Token);
+
+        // Act
+        await client.PutAsync("/api/v1/settings/assistance", Assistant(enabled: true), Token);
+        var switchedOn = await RevalidateAsync(client, before.ETag!);
+
+        await client.PutAsync("/api/v1/settings/assistance", Assistant(enabled: false), Token);
+        var switchedOff = await RevalidateAsync(client, switchedOn.ETag!);
+
+        // Assert
+        Assert.False(before.Json!.Value.GetProperty("assistance").GetProperty("draft").GetBoolean());
+
+        Assert.Equal(HttpStatusCode.OK, switchedOn.StatusCode);
+        var on = switchedOn.Json!.Value.GetProperty("assistance");
+        Assert.True(on.GetProperty("draft").GetBoolean());
+        Assert.True(on.GetProperty("read").GetBoolean());
+
+        Assert.Equal(HttpStatusCode.OK, switchedOff.StatusCode);
+        Assert.False(switchedOff.Json!.Value.GetProperty("assistance").GetProperty("draft").GetBoolean());
+    }
+
+    [Fact]
     public async Task Me_ShouldBeUnauthorised_WhenThereIsNoSession()
     {
         // Arrange
@@ -299,6 +330,29 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    /// <summary>One provider connected, and drafting and reading pointed at it.</summary>
+    private static object Assistant(bool enabled) => new
+    {
+        enabled,
+        connections = new[] { new { provider = "openai", apiKey = "sk-test", baseUrl = "" } },
+        uses = new[]
+        {
+            new { capability = "draft", enabled = true, provider = "openai", model = "" },
+            new { capability = "read", enabled = true, provider = "openai", model = "" }
+        },
+        monthlyBudget = (decimal?)null,
+        personalBudget = (decimal?)null
+    };
+
+    private static async Task<ApiResponse> RevalidateAsync(ApiClient client, string etag)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me");
+
+        request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(etag));
+
+        return await client.SendAsync(request, Token);
+    }
 
     private static async Task<ApiResponse> PatchWithMatchAsync(
         ApiClient client,
