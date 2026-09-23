@@ -99,6 +99,22 @@ public static class AssistanceErrors
         + "permitted to do this.",
         ErrorType.Unavailable);
 
+    /// <summary>
+    /// The provider answered, and has no model by the name in the settings.
+    /// </summary>
+    /// <remarks>
+    /// Its own error because it used to be reported as <see cref="Refused"/>:
+    /// Ollama answers 404 for a model nobody has pulled, and "the assistant
+    /// would not answer that" sent people to reword a request that no wording
+    /// could have rescued. The fix is in the settings — pull the model, or pick
+    /// one that is there — and unlike a refused key it is worth saying to the
+    /// cook, who is so often the person who set it up.
+    /// </remarks>
+    public static readonly Error ModelMissing = new(
+        "assistance.model_missing",
+        "The model named in the assistant settings is not available from its provider.",
+        ErrorType.Unavailable);
+
     /// <summary>The provider answered, and said to slow down.</summary>
     public static readonly Error Throttled = new(
         "assistance.throttled",

@@ -64,6 +64,16 @@ export function offers(draft: Draft): Accepted {
 export const anyAccepted = (accepted: Accepted): boolean => Object.values(accepted).some(Boolean);
 
 /**
+ * Whether a draft has anything in it worth showing.
+ *
+ * A request that failed still ends on a draft — an empty one, when the
+ * provider stopped before writing a word — and showing that is an empty box
+ * where the reason should be.
+ */
+export const saysAnything = (draft: Draft | null): boolean =>
+  draft !== null && anyAccepted(offers(draft));
+
+/**
  * Turns the accepted parts into the patch the editor applies.
  *
  * One patch, so accepting six things is one autosave and one version bump
