@@ -96,32 +96,39 @@
       return;
     }
 
-    place();
-
     /**
-     * Anything that moved the trigger, except the panel reading itself.
+     * Placed again whenever the trigger or the window has moved, checked once a
+     * frame for as long as the panel is open.
      *
-     * A panel taller than the room it was given scrolls inside itself, and that
-     * scroll is captured here like any other. Re-placing on it clears the
-     * height cap to measure what the panel wants — which for one frame makes it
-     * its full height, and the browser clamps its scroll position back to the
-     * top. The list jumps to the beginning every time somebody reads down it.
+     * Scroll and resize events were not enough. Most of what moves a trigger
+     * fires neither: ticking an ingredient in this very panel adds a chip to
+     * the row the trigger sits in and pushes it along, and the shell lets its
+     * header stop floating once enlarged text has made it tall. Each time, the
+     * panel stayed where the trigger had been and covered what it belonged to.
+     *
+     * Only the trigger is compared, never the panel. A panel taller than its
+     * room scrolls inside itself, and re-placing clears the height cap to
+     * measure it — which for one frame makes it full height, and the browser
+     * clamps its scroll position back to the top.
      */
-    const again = (event: Event) => {
-      if (!(event.target instanceof Node) || !panel?.contains(event.target)) {
+    let last = '';
+    let frame = 0;
+
+    const follow = () => {
+      const from = anchor?.getBoundingClientRect();
+      const now = `${from?.left} ${from?.top} ${from?.bottom} ${window.innerWidth} ${window.innerHeight}`;
+
+      if (now !== last) {
+        last = now;
         place();
       }
+
+      frame = requestAnimationFrame(follow);
     };
 
-    // Captured, so a trigger inside something that scrolls on its own carries
-    // its panel with it, and not only the page does.
-    window.addEventListener('scroll', again, { capture: true, passive: true });
-    window.addEventListener('resize', again);
+    follow();
 
-    return () => {
-      window.removeEventListener('scroll', again, { capture: true });
-      window.removeEventListener('resize', again);
-    };
+    return () => cancelAnimationFrame(frame);
   });
 </script>
 

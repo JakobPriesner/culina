@@ -140,7 +140,11 @@ img {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    /* `none`, not a tiny duration. A duration alone leaves every element's
+       `transition-property` at its initial `all`, so everything — insets,
+       `top`, sizes — transitioned, and anything measuring the page read where
+       it had been rather than where it was going. */
+    transition: none !important;
     scroll-behavior: auto !important;
   }
 }
