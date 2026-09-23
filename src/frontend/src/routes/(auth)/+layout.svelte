@@ -18,7 +18,18 @@
   </header>
   <main class="main">
     <aside class="story" aria-label={m['auth.story.label']()}>
-      <img src="{base}/images/culina-orzo.webp" alt="" width="1536" height="1024" />
+      <!-- Lazy, because below 64rem this whole panel is display: none, and an
+           eager image inside a hidden panel is still fetched: 260 kB that a
+           phone downloaded to show nothing. A lazy one is only fetched when it
+           could be seen, which on a wide screen is straight away. -->
+      <img
+        src="{base}/images/culina-orzo.webp"
+        alt=""
+        width="1536"
+        height="1024"
+        loading="lazy"
+        decoding="async"
+      />
       <div class="story-copy">
         <p class="eyebrow">{m['auth.story.eyebrow']()}</p>
         <h2>{m['auth.story.title']()}</h2>
