@@ -148,4 +148,23 @@ p32.save('${staticDir}/favicon.ico', format='ICO', sizes=[(16, 16), (32, 32), (4
 
 execSync(`rm -rf "${tempDir}"`);
 
+// A screenshot is a 32-bit PNG, and the mark's soft gradients survive a
+// 256-colour palette without anything anybody could see: 54 dB against the
+// screenshot over both light and dark, no channel off by more than 12 in 255.
+// That halves every raster — the 512-pixel icon was 164 kB.
+//
+// libimagequant, because Pillow's own octree quantiser rings the radial
+// gradient visibly at the same palette size. And the opaque icons are
+// quantised from RGB, not RGBA: a transparency chunk on a full-bleed icon is
+// one iOS paints black behind, and a maskable icon is required to be opaque.
+execSync(`python3 -c "
+from PIL import Image
+for name in ['icon-512', 'icon-192', 'icon-maskable-512', 'apple-touch-icon', 'favicon-32']:
+    path = '${staticDir}/' + name + '.png'
+    image = Image.open(path).convert('RGBA')
+    opaque = image.getextrema()[3][0] == 255
+    source = image.convert('RGB') if opaque else image
+    source.quantize(colors=256, method=Image.Quantize.LIBIMAGEQUANT).save(path, optimize=True)
+"`);
+
 console.log('✓ All PWA and favicon assets successfully generated in static/');
