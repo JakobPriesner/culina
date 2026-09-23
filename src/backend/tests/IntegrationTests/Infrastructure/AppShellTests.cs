@@ -3,8 +3,8 @@ using Api.Infrastructure;
 namespace IntegrationTests.Infrastructure;
 
 /// <summary>
-/// The shell carries the one inline script Culina has: the few lines that apply
-/// the stored theme before the first paint.
+/// The shell carries two inline scripts: the few lines that apply the stored
+/// theme before the first paint, and SvelteKit's boot script.
 /// </summary>
 /// <remarks>
 /// Under <c>script-src 'self' 'nonce-…'</c> that script runs only if it carries
@@ -28,6 +28,19 @@ public sealed class AppShellTests : IDisposable
 
         // Assert
         Assert.Equal("<script nonce=\"abc123\"></script><script nonce=\"abc123\"></script>", rendered);
+    }
+
+    [Fact]
+    public void Render_ShouldNonceABareScript_WhenTheFrameworkWroteOne()
+    {
+        // Arrange — SvelteKit's boot script, which app.html has no say over.
+        Write("<script>__sveltekit = {};</script>");
+
+        // Act
+        var rendered = AppShell.Load(root).Render("abc123");
+
+        // Assert
+        Assert.Equal("<script nonce=\"abc123\">__sveltekit = {};</script>", rendered);
     }
 
     [Fact]

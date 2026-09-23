@@ -41,9 +41,9 @@ internal static class SecurityHeaders
     /// <summary>
     /// The SPA document's policy. There is no <c>unsafe-inline</c> and no
     /// <c>unsafe-eval</c> anywhere — either one disables the protection the
-    /// rest of the policy provides. The two inline blocks the app needs (the
-    /// theme applied before first paint, and the boot screen's styles) carry
-    /// the per-response nonce.
+    /// rest of the policy provides. The inline blocks the app needs (the theme
+    /// applied before first paint, SvelteKit's boot script, and the boot
+    /// screen's styles) carry the per-response nonce.
     /// </summary>
     /// <remarks>
     /// The nonce is named for styles as well as scripts. Without it

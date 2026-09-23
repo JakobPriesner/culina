@@ -21,6 +21,21 @@ const apiProxy = {
   }
 };
 
+function messages(outputStructure: 'message-modules' | 'locale-modules') {
+  return paraglideVitePlugin({
+    project: './project.inlang',
+    outdir: './src/lib/paraglide',
+    outputStructure,
+    emitTsDeclarations: true,
+    // The locale a signed-in person chose is applied by the preferences
+    // store once the session is known. Before that — and for a visitor who
+    // has never signed in — the last choice on this device wins, then the
+    // browser's own language, then English.
+    strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
+    localStorageKey: 'culina.locale'
+  });
+}
+
 export default defineConfig({
   // A literal, always. The gallery has to disappear from a release build, and
   // it can only disappear if the condition guarding it is a constant the
@@ -38,17 +53,16 @@ export default defineConfig({
     // Messages compile to tree-shakeable functions, so there is no runtime
     // dictionary to ship and a key that does not exist is a compile error
     // rather than an empty string in production.
-    paraglideVitePlugin({
-      project: './project.inlang',
-      outdir: './src/lib/paraglide',
-      emitTsDeclarations: true,
-      // The locale a signed-in person chose is applied by the preferences
-      // store once the session is known. Before that — and for a visitor who
-      // has never signed in — the last choice on this device wins, then the
-      // browser's own language, then English.
-      strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
-      localStorageKey: 'culina.locale'
-    }),
+    //
+    // One module per message is what makes them tree-shakeable, and it is also
+    // what made the dev server slow: Vite serves modules unbundled, so every
+    // page load fetched hundreds of message files and took about 850ms where
+    // the build takes 50. The dev server gets one module per locale instead,
+    // which is what Paraglide itself recommends. Both expose the same `m`.
+    // `pnpm messages` writes the dev layout too, so running the checks or the
+    // unit tests beside a dev server does not put the slow layout back.
+    { ...messages('message-modules'), apply: 'build' },
+    { ...messages('locale-modules'), apply: 'serve' },
 
     sveltekit({
       compilerOptions: {

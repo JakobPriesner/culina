@@ -2,10 +2,44 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "culina-api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "watch",
+        "--project",
+        "src/backend/src/Api",
+        "run",
+        "--non-interactive"
+      ],
+      "port": 5000
+    },
+    {
       "name": "culina-frontend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "src/frontend", "dev", "--port", "5173", "--strictPort"],
+      "runtimeArgs": [
+        "--dir",
+        "src/frontend",
+        "dev",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
       "port": 5173
+    },
+    {
+      "name": "culina-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "src/frontend",
+        "exec",
+        "vite",
+        "preview",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "port": 4173
     }
   ]
 }
