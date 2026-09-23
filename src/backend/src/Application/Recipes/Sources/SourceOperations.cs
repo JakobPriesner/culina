@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Recipes.Sources;
 using Domain.Import;
@@ -45,7 +46,7 @@ internal sealed class ConnectSourceCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Sources.Connect");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.Draft.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -194,7 +195,7 @@ internal sealed class GetSourcesQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Sources.GetAll");
 
-        var allowed = await RecipeAccess
+        var allowed = await HouseholdAccess
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 

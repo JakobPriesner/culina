@@ -320,6 +320,44 @@ public class TandoorTemplateTests
     private static string Words(SourceStep step) =>
         string.Concat(step.Segments.OfType<SourceTextSegment>().Select(segment => segment.Value));
 
+    [Theory]
+    // Emphasis is decoration, and a step here is plain text with nowhere to put
+    // it. The words are what somebody wrote; the asterisks are how Tandoor was
+    // told to draw them.
+    [InlineData("**Tipp:** gut kühlen.", "Tipp: gut kühlen.")]
+    [InlineData("__Tipp:__ gut kühlen.", "Tipp: gut kühlen.")]
+    [InlineData("Das *sofort* servieren.", "Das sofort servieren.")]
+    [InlineData("Das _sofort_ servieren.", "Das sofort servieren.")]
+    [InlineData("Auf `180 °C` vorheizen.", "Auf 180 °C vorheizen.")]
+    [InlineData("# Vorbereitung\nMehl sieben.", "Vorbereitung\nMehl sieben.")]
+    [InlineData("### Vorbereitung\nMehl sieben.", "Vorbereitung\nMehl sieben.")]
+    public void MarkdownMarkers_ShouldArriveAsTheWordsTheyWrapped(string theirs, string expected)
+    {
+        // Act
+        var step = Assert.Single(TandoorMapping.ToSource(Recipe(theirs)).Steps);
+
+        // Assert
+        Assert.Equal([new SourceTextSegment(expected)], step.Segments);
+    }
+
+    [Theory]
+    // Timid on purpose: a recipe is full of characters that only look like
+    // Markdown, and turning "2 * 3" into "2 3" would be a worse bug than the
+    // one being fixed.
+    [InlineData("2 * 3 Portionen.")]
+    [InlineData("Creme_fraiche unterheben.")]
+    [InlineData("Ein * allein.")]
+    [InlineData("- Mehl\n- Zucker")]
+    [InlineData("Salz & Pfeffer (nach Gefühl).")]
+    public void ThingsThatOnlyLookLikeMarkdown_ShouldSurviveUntouched(string theirs)
+    {
+        // Act
+        var step = Assert.Single(TandoorMapping.ToSource(Recipe(theirs)).Steps);
+
+        // Assert
+        Assert.Equal([new SourceTextSegment(theirs)], step.Segments);
+    }
+
     private static TandoorRecipe Recipe(string instruction, params TandoorIngredient[] ingredients) =>
         new()
         {
