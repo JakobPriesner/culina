@@ -176,6 +176,24 @@ public class AssistantRunTests
     }
 
     [Fact]
+    public async Task ComposeStreamAsync_ShouldTellACookThatTheModelIsMissing()
+    {
+        // Arrange
+        var world = new World();
+        world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.ModelMissing));
+
+        // Act
+        var parts = await world.ReadToTheEndAsync();
+
+        // Assert
+        // Not folded into "unavailable" the way a refused key is: waiting will
+        // never make a model appear that nobody pulled, and the cook is so
+        // often the person who can pull it that the screen should say so.
+        Assert.Equal(AssistanceErrors.ModelMissing, Assert.Single(parts).Failure);
+        Assert.Equal("assistance.model_missing", Assert.Single(world.Ledger.Settled).Outcome);
+    }
+
+    [Fact]
     public async Task ComposeStreamAsync_ShouldSettle_WhenNobodyReadsToTheEnd()
     {
         // Arrange

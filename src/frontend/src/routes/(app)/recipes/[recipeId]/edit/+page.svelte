@@ -19,10 +19,11 @@
   import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
   import { units } from '$features/recipes/stores/units.svelte';
   import { session } from '$features/auth/session.svelte';
+  import AssistFailure from '$features/assistance/AssistFailure.svelte';
   import DraftReview from '$features/assistance/DraftReview.svelte';
+  import { saysAnything } from '$features/assistance/draftToRecipe';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { busy } from '$shell/busy.svelte';
-  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
   import type { Ingredient, Recipe, RecipeLanguage, Step } from '$features/recipes/types';
@@ -267,6 +268,17 @@
       language: draft.language
     });
   }
+
+  /**
+   * Whether the review is open.
+   *
+   * While the assistant is writing, and afterwards only if it wrote something.
+   * A request that failed before a word arrived used to open the review anyway
+   * and say "no changes suggested" — which hid a model that was never there
+   * behind a sentence about the recipe. It fails beside the button instead,
+   * the same way the idea and the photograph do.
+   */
+  const reviewing = $derived(drafts.asking || saysAnything(drafts.draft));
 
   /** Folds the accepted parts in as one change, so it is one save. */
   function acceptDraft(patch: Partial<Recipe>): void {
@@ -544,8 +556,10 @@
                seconds looking busy and then goes quiet — which is what a
                budget that is spent, a provider that is down and a bug all
                looked like. -->
-          {#if drafts.error}
-            <p class="assistFailure" role="alert">{explain(drafts.error)}</p>
+          {#if drafts.error && !reviewing}
+            <div class="assistFailure">
+              <AssistFailure error={drafts.error} />
+            </div>
           {/if}
 
           <div class="fields">
@@ -812,12 +826,13 @@
   {/if}
 </Page>
 
-{#if (drafts.asking || drafts.draft) && draft}
+{#if reviewing && draft}
   <DraftReview
     open={true}
     draft={drafts.draft}
     current={draft}
     writing={drafts.asking}
+    error={drafts.error}
     onaccept={acceptDraft}
     onclose={() => drafts.dismiss()}
   />
@@ -827,11 +842,7 @@
   /* Inside the section whose header holds the button, so the answer to
      "why did nothing happen" is next to the thing that did nothing. */
   .assistFailure {
-    max-width: var(--measure);
     margin-bottom: var(--space-4);
-    color: var(--text-danger);
-    font-size: var(--text-sm);
-    line-height: var(--leading-normal);
   }
 
   /*

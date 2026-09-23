@@ -303,6 +303,7 @@ internal sealed class OpenAiAssistant(
         // caller's options are the same either way, and the log line tells
         // them apart.
         ClientResultException { Status: 400 } => AssistanceErrors.Refused,
+        ClientResultException { Status: 404 } => AssistanceErrors.ModelMissing,
         _ => AssistanceErrors.Unavailable
     };
 }
