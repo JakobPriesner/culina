@@ -289,6 +289,33 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Search_ShouldRankARecipeWithAnExcludedWord_BelowOneWithout()
+    {
+        // Arrange
+        var world = await SeedAsync();
+        await SaveAsync(world, "Tomaten mit Reis", "de", 10, 20,
+            [("Tomaten", null), ("Reis", null)], [], "Kochen.");
+        await SaveAsync(world, "Tomaten mit Nudeln", "de", 10, 20,
+            [("Tomaten", null), ("Nudeln", null)], [], "Kochen.");
+
+        // Act
+        var titles = Titles(await SearchAsync(world, "Tomaten -Reis"));
+
+        // Assert
+        // The minus is a full-text operator, so it is the full-text evidence
+        // that honours it: a recipe containing the excluded word earns none.
+        // The substring lane knows nothing of operators and still finds it by
+        // "Tomaten", so the minus demotes rather than removes — but it can no
+        // longer come first on the strength of the very word it was asked not
+        // to have, which the cover-density rank used to let it.
+        var without = titles.IndexOf("Tomaten mit Nudeln");
+        var with = titles.IndexOf("Tomaten mit Reis");
+
+        Assert.True(without >= 0 && with >= 0, string.Join(" · ", titles));
+        Assert.True(without < with, string.Join(" · ", titles));
+    }
+
+    [Fact]
     public async Task Search_ShouldKeepPaging_StableAcrossRelevance()
     {
         // Arrange

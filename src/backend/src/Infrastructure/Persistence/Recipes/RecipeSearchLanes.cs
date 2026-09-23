@@ -6,12 +6,14 @@ namespace Infrastructure.Persistence.Recipes;
 /// <remarks>
 /// <para>
 /// Four kinds of evidence, each answering a question the others cannot, and
-/// each named so that the ranking can tell them apart. They are written once
-/// here because the search asks for them twice — the <c>where</c> decides
-/// which recipes are candidates, and the projection records <em>why</em> each
-/// one is, which is what the tier in <see cref="Tier"/> is built from. Two
-/// hand-kept copies of that would eventually disagree about a recipe, and the
-/// symptom would be a result with no visible reason to be there.
+/// each named so that the ranking can tell them apart. The search asks about
+/// them twice — <see cref="Hits"/> decides which recipes are candidates, and
+/// <see cref="Evidence"/> records <em>why</em> each one is, which is what the
+/// tier in <see cref="Tier"/> is built from — and both are here, next to each
+/// other, because they have to agree. They cannot share one text: the first
+/// has to be shaped for an index and the second for a single row. If they
+/// ever drift, the symptom is a result with no visible reason to be there,
+/// which the tier puts last rather than hiding.
 /// </para>
 /// <para>
 /// The division of labour between the lanes is not a matter of taste. Full text
@@ -27,6 +29,17 @@ namespace Infrastructure.Persistence.Recipes;
 internal static class RecipeSearchLanes
 {
     /// <summary>
+    /// Whether anything searchable survived the fold.
+    /// </summary>
+    /// <remarks>
+    /// A query of nothing but punctuation — "%", "...", "???" — folds to the
+    /// empty string, and an empty string is a prefix of every title. Saying so
+    /// once makes "no content is no query" a decision with a name on it rather
+    /// than something that falls out of <c>like '%'</c> by accident.
+    /// </remarks>
+    internal const string HasText = "coalesce(culina_fold_ae(@query::text), '') <> ''";
+
+    /// <summary>
     /// The query, folded and parsed once, for every row to be compared against.
     /// </summary>
     /// <remarks>
@@ -35,19 +48,14 @@ internal static class RecipeSearchLanes
     /// "Curry" and "Butter" are both at once — while a document says so
     /// outright. The row picks which of the two to use.
     /// </remarks>
-    internal const string QueryCte = """
+    internal const string QueryCte = $"""
         select
             culina_fold_ae(@query::text)                    as q_ae,
             culina_fold_a(@query::text)                     as q_a,
             culina_search_terms(@query::text)               as terms,
             websearch_to_tsquery('culina_de', @query::text) as tsq_de,
             websearch_to_tsquery('culina_en', @query::text) as tsq_en,
-            -- Whether anything searchable survived the fold. A query of
-            -- nothing but punctuation — "%", "...", "???" — folds to the empty
-            -- string, and an empty string is a prefix of every title. Saying so
-            -- here makes "no content is no query" a decision with a name on it
-            -- rather than something that falls out of `like '%'` by accident.
-            coalesce(culina_fold_ae(@query::text), '') <> '' as has_text
+            {HasText} as has_text
         """;
 
     /// <summary>
@@ -71,27 +79,57 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// Whether a lexeme landed in a particular weight band.
+    /// Whether the query matched inside one weight band of the document.
     /// </summary>
     /// <remarks>
-    /// Ranking the same vector with every weight but one set to zero is the
-    /// only way to ask a tsvector <em>where</em> it matched. A tsquery answers
-    /// whether, never where, and the tier needs where.
+    /// <para>
+    /// A tsquery answers whether, never where, and the tier needs where — so
+    /// the vector is cut down to the one band and asked again. This used to be
+    /// a cover-density rank with every weight but one set to zero, which gives
+    /// the same answer for every document the query matches and cost thirteen
+    /// microseconds a row where this costs well under one; over the thousands
+    /// of candidates a common word brings in, it was most of the query.
+    /// </para>
+    /// <para>
+    /// Only a document the query matches can match in a band, which is the
+    /// one place this means something different from the rank it replaces: a
+    /// query with a minus in it. The rank never evaluated the minus, so a
+    /// recipe containing the excluded word still earned credit for the rest;
+    /// here it does not, which is what "-reis" was asking for. A query that is
+    /// nothing but exclusions has no band to have matched in, and says so
+    /// through <c>querytree</c>, whose answer for such a query is <c>T</c>.
+    /// </para>
     /// </remarks>
-    private static string BandHit(string weights) => $"{Rank(weights)} > 0";
+    private static string BandHit(char weight) =>
+        $"(d.document @@ lang.tsq and querytree(lang.tsq) <> 'T' "
+        + $"and ts_filter(d.document, '{{{weight}}}') @@ lang.tsq)";
 
     /// <summary>
     /// The cover-density rank of this row, bounded into [0, 1).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Normalisation 32 is <c>rank / (rank + 1)</c>, which is what makes the
     /// value comparable with the other terms of the score. Length
     /// normalisation is deliberately not asked for on top of it: how much of
     /// the title the query accounts for is already a term of its own, and
     /// dividing by the document length here would count that twice.
+    /// </para>
+    /// <para>
+    /// Zero without asking when the document does not match, which is most
+    /// candidates — the substring lane brings in every compound, and a
+    /// compound is exactly what the stemmer cannot see. <c>ts_rank_cd</c> on a
+    /// document it cannot match still searches the whole of it for a cover,
+    /// and that search was the most expensive thing a broad query did. It
+    /// changes nothing but a query with a minus in it, for the reason given
+    /// under <see cref="BandHit"/>.
+    /// </para>
     /// </remarks>
-    private static string Rank(string weights) =>
-        $"ts_rank_cd('{{{weights}}}'::float4[], d.document, lang.tsq, 32)";
+    private const string Rank = """
+        case when d.document @@ lang.tsq
+             then ts_rank_cd('{0.1, 0.3, 0.6, 1.0}'::float4[], d.document, lang.tsq, 32)
+             else 0 end
+        """;
 
     /// <summary>
     /// A term inside a word of the title, or near enough to one.
@@ -135,32 +173,78 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// Which recipes are candidates at all.
+    /// Which recipes are candidates at all: one index scan per lane, and the
+    /// ids they found.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// A recipe with no document row is excluded from a text search rather than
-    /// from the collection: the join is a left join, so it still lists, still
-    /// filters and still pages, and only stops being findable by words until
-    /// the next write rebuilds it. A missing document should be impossible —
-    /// the migration backfills every row and the writer runs in the recipe's
-    /// own transaction — but "impossible" is a poor reason for a recipe to
-    /// vanish from a library.
+    /// The recipes a query matches are the union of what each lane matches, and
+    /// it is asked as a union because that is the only form PostgreSQL can
+    /// answer from the indexes. The same lanes written as one <c>or</c> — which
+    /// this was — are one condition no index serves, so every text search read
+    /// every document in the household: 470 ms for "Tomaten Reis" over ten
+    /// thousand recipes. Each branch below is one lane over one index.
     /// </para>
     /// <para>
-    /// Every lane is listed, including the ones the ranking treats as weak.
+    /// The query is spelt out in every branch rather than read from the
+    /// <c>q</c> row, and that is what makes the indexes usable at all.
+    /// Npgsql sends <c>@query</c> as a parameter of an unnamed statement, which
+    /// PostgreSQL plans knowing its value, and the fold functions are immutable,
+    /// so <c>culina_fold_ae(@query)</c> is worked out while planning and the
+    /// title's prefix scan becomes a range of the btree. A column of a CTE is
+    /// only known once the query runs, too late for a range.
+    /// </para>
+    /// <para>
+    /// Every lane is here, including the ones the ranking treats as weak.
     /// Narrowing the candidate set is the one thing that cannot be undone
-    /// later: a recipe the <c>where</c> rejected is one no amount of ranking
-    /// can bring back.
+    /// later: a recipe this leaves out is one no amount of ranking can bring
+    /// back. Two lanes of the old <c>or</c> are not listed because they are
+    /// already inside the substring lane — a title is the first thing in
+    /// <c>fuzzy_text</c>, in both folds, so a title holding a term is a
+    /// document holding it. That stops being true only for a query with no
+    /// term in it at all ("Ei", "und"), and those still read the titles.
+    /// </para>
+    /// <para>
+    /// A recipe with no document row is excluded from a text search rather than
+    /// from the collection, because every lane reads the documents: it still
+    /// lists, still filters and still pages, and only stops being findable by
+    /// words until the next write rebuilds it. A missing document should be
+    /// impossible — the migration backfills every row and the writer runs in
+    /// the recipe's own transaction — but "impossible" is a poor reason for a
+    /// recipe to vanish from a library.
     /// </para>
     /// </remarks>
-    internal static string Predicate { get; } = $"""
-        q.has_text and d.recipe_id is not null and (
-               ({ExactTitle})
-            or ({TitleWord})
-            or d.document @@ lang.tsq
-            or ({FuzzyBody})
-            or ({FuzzyTitle}))
+    internal const string Hits = $"""
+        -- Lexical, by the document's own language: what the stemmer can see.
+        select d.recipe_id from recipe_search_documents d
+        where d.household_id = @householdId and d.language = 'de'
+          and d.document @@ websearch_to_tsquery('culina_de', @query::text)
+        union
+        select d.recipe_id from recipe_search_documents d
+        where d.household_id = @householdId and d.language <> 'de'
+          and d.document @@ websearch_to_tsquery('culina_en', @query::text)
+        union
+        -- A term inside any word of the recipe: compounds, everywhere.
+        select d.recipe_id
+        from unnest(culina_search_terms(@query::text)) as term
+        join recipe_search_documents d on d.fuzzy_text like '%' || term || '%'
+        where d.household_id = @householdId
+        union
+        -- A term near enough to a word of the title: typos. The operator is
+        -- the index's way in and the comparison after it is the rule — see
+        -- migration 0018 for why the two are separate.
+        select d.recipe_id
+        from unnest(culina_search_terms(@query::text)) as term
+        join recipe_search_documents d on term <% d.title_ae
+        where d.household_id = @householdId
+          and word_similarity(term, d.title_ae) >= @fuzzyThreshold
+        union
+        -- The title, for a query too short to have a term of its own.
+        select d.recipe_id from q
+        cross join recipe_search_documents d
+        where cardinality(culina_search_terms(@query::text)) = 0
+          and d.household_id = @householdId
+          and ({TitleWord})
         """;
 
     /// <summary>
@@ -169,12 +253,12 @@ internal static class RecipeSearchLanes
     internal static string Evidence { get; } = $"""
         coalesce({ExactTitle}, false)                    as exact_title,
         coalesce({TitleWord}, false)                     as title_word,
-        coalesce({BandHit("0, 0, 0, 1")}, false)         as title_hit,
-        coalesce({BandHit("0, 0, 1, 0")}, false)         as tag_hit,
+        coalesce({BandHit('a')}, false)                  as title_hit,
+        coalesce({BandHit('b')}, false)                  as tag_hit,
         coalesce(d.document @@ lang.tsq, false)          as lexical_hit,
         coalesce({FuzzyTitle}, false)                    as fuzzy_title,
         coalesce({FuzzyBody}, false)                     as fuzzy_body,
-        coalesce({Rank("0.1, 0.3, 0.6, 1.0")}, 0)::float8 as lexical_rank,
+        coalesce({Rank}, 0)::float8                      as lexical_rank,
         {QueryCoverage}                                  as query_coverage,
         {TitleCoverage}                                  as title_coverage
         """;
