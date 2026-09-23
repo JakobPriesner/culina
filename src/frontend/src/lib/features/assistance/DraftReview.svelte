@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Button, Checkbox, GenerationStatus, Modal, Skeleton } from '$ds';
+  import type { AppError } from '$api';
   import { m } from '$shell/i18n';
 
+  import AssistFailure from './AssistFailure.svelte';
   import {
     acceptEverything,
     acceptNothing,
@@ -46,11 +48,27 @@
     current: Recipe;
     /** Whether more of the draft is still arriving. */
     writing?: boolean;
+    /**
+     * Why the assistant stopped, when it stopped part-way.
+     *
+     * What it wrote before then is still offered — it was paid for — but the
+     * reason is said here, where the reader is, rather than only beside a
+     * button the dialog is covering.
+     */
+    error?: AppError | null;
     onaccept: (patch: Partial<Recipe>) => void;
     onclose: () => void;
   }
 
-  let { open = $bindable(), draft, current, writing = false, onaccept, onclose }: Props = $props();
+  let {
+    open = $bindable(),
+    draft,
+    current,
+    writing = false,
+    error = null,
+    onaccept,
+    onclose
+  }: Props = $props();
 
   let accepted = $state<Accepted>(acceptNothing());
 
@@ -150,7 +168,7 @@
       <Skeleton width="7rem" height="1rem" />
       <Skeleton width="82%" height="1rem" />
     </div>
-  {:else if parts.length === 0 && !writing}
+  {:else if parts.length === 0 && !writing && !error}
     <p class="lead">{m['assist.nothing']()}</p>
   {:else if draft}
     <ul class="parts">
@@ -186,6 +204,10 @@
         {/each}
       </ol>
     {/if}
+  {/if}
+
+  {#if error}
+    <AssistFailure {error} />
   {/if}
 
   <!-- Said here rather than only on the button, because this is the moment

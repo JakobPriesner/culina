@@ -419,6 +419,7 @@ internal sealed class GeminiAssistant(
                 System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden =>
                     AssistanceErrors.Rejected,
                 System.Net.HttpStatusCode.BadRequest => AssistanceErrors.Refused,
+                System.Net.HttpStatusCode.NotFound => AssistanceErrors.ModelMissing,
                 _ => AssistanceErrors.Unavailable
             }
             : AssistanceErrors.Unavailable;

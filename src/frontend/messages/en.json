@@ -906,5 +906,21 @@
   "assist.improve.writing": "The assistant is still writing. You can accept once it has finished.",
   "editor.language": "Written in",
   "editor.languageHint": "Used to search this recipe and to suggest ingredients while you type.",
-  "cooking.madeIt.failed": "That could not be saved to your cooking history. Try again."
+  "cooking.madeIt.failed": "That could not be saved to your cooking history. Try again.",
+  "assist.failure.not_configured": "No AI is connected to this Culina yet.",
+  "assist.failure.disabled": "The AI isn't set up to do this here.",
+  "assist.failure.model_missing": "The AI model chosen in the assistant settings isn't available. Download it on the provider or choose a different model.",
+  "assist.failure.unknown_provider": "The AI provider in the assistant settings isn't one Culina can talk to.",
+  "assist.failure.drawing_not_supported": "The connected AI can't create images.",
+  "assist.failure.unavailable": "The AI couldn't be reached. Try again in a moment — if it keeps happening, check the connection in the assistant settings.",
+  "assist.failure.rejected": "The AI provider didn't accept the key in the assistant settings.",
+  "assist.failure.throttled": "The AI is busy right now. Try again in a moment.",
+  "assist.failure.budget_exhausted": "This month's AI budget is used up. It starts again next month.",
+  "assist.failure.personal_budget_exhausted": "You've used your share of this month's AI budget. It starts again next month.",
+  "assist.failure.refused": "The AI wouldn't answer that. Try putting it differently.",
+  "assist.failure.unusable_answer": "The AI's answer couldn't be read as a recipe. Trying again usually works.",
+  "assist.failure.nothing_to_work_from": "Say a little about what you'd like to cook.",
+  "assist.failure.too_much_to_work_from": "That's more text than the AI reads at once. Try a shorter piece.",
+  "assist.failure.settings": "Open assistant settings",
+  "assist.failure.askAdmin": "Whoever looks after this Culina can fix this in the assistant settings."
 }
