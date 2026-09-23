@@ -64,6 +64,28 @@ const privateCacheName = 'culina-private';
 const privateCacheLimit = 120;
 
 /**
+ * The static files the document itself links to, and the only ones installed.
+ *
+ * Named rather than taken from `files` wholesale. `files` is everything in
+ * `static/`, and that was 1.2 MB: three 1536-pixel photographs for the sign-in
+ * and preview pages, and the 512-pixel icons the operating system reads once,
+ * when somebody adds the app to a home screen. A signed-in person on their own
+ * phone sees none of them and was downloading all of them on the first visit
+ * and again after every deploy.
+ *
+ * Nothing is lost offline by leaving them out: `assetResponse` keeps every
+ * static file it fetches, so anything that has actually been on screen is
+ * still there without a network. And a list is the safer default than a rule
+ * about what to skip — a new file in `static/` is not installed on every
+ * device until somebody decides it should be.
+ */
+const linkedByTheDocument = new Set([
+  `${base}/favicon.ico`,
+  `${base}/icon.svg`,
+  `${base}/manifest.webmanifest`
+]);
+
+/**
  * Everything else worth having before the network goes away.
  *
  * Storing the document also stores the CSP header that came with it, so the
@@ -71,7 +93,7 @@ const privateCacheLimit = 120;
  * one — which is the whole reason the shell is rendered rather than served
  * from disk.
  */
-const shell = [...build, ...files];
+const shell = [...build, ...files.filter((file) => linkedByTheDocument.has(file))];
 
 worker.addEventListener('install', (event) => {
   // No skipWaiting: the running app decides when to hand over. See the message
