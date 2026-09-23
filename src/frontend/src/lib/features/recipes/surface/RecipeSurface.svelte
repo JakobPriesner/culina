@@ -213,8 +213,18 @@
     run?.();
   }
 
+  /**
+   * Whether the steps have more than one list to be dealt out between.
+   *
+   * With one step, "by step" and "all together" are the same list — and dealing
+   * it out only moves it off the panel into a second card under an empty one.
+   * So a lone step is read side by side, whichever arrangement was chosen, and
+   * the choice is kept for the next recipe rather than overwritten.
+   */
+  const divisible = $derived(recipe.steps.length > 1);
+
   /** Cooking has already contracted the region to one step; it cannot do both. */
-  const perStep = $derived(view === 'perStep' && !cooking);
+  const perStep = $derived(view === 'perStep' && !cooking && divisible);
 
   const byId = $derived(ingredientsOf(recipe));
 
@@ -586,8 +596,8 @@
         <h2 class="section">{m['recipe.ingredients']()}</h2>
 
         <!-- Nothing to choose while cooking, where one step is the whole
-             arrangement. -->
-        {#if !cooking && written.length > 0}
+             arrangement, nor in a recipe that only has the one. -->
+        {#if !cooking && divisible && written.length > 0}
           <SegmentedControl
             label={m['recipe.ingredientsView.label']()}
             selected={view}

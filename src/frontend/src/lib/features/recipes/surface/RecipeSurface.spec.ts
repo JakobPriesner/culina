@@ -352,6 +352,23 @@ describe('how the ingredients are arranged', () => {
     expect(screen.getByRole('button', { name: 'By step' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('keeps a lone step beside the whole list, whichever arrangement was chosen', async () => {
+    const first = render();
+
+    await chooseByStep();
+    first.unmount();
+
+    render({
+      recipe: { ...recipe, steps: [{ ...recipe.steps[0]!, uses: [butter, flour, salt] }] }
+    });
+
+    // One step's ingredients are all of them, so there is nothing to deal out
+    // and nothing to choose between.
+    expect(ingredients().getByText('300 g')).toBeInTheDocument();
+    expect(ingredients().queryByText('Not tied to a step')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'By step' })).not.toBeInTheDocument();
+  });
+
   it('offers no choice while cooking, where one step is the whole arrangement', () => {
     render({ emphasis: 'cook' });
 
