@@ -8,6 +8,7 @@
   import { sortLabel } from '$features/recipes/filters/labels';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { effectiveSort, libraryView } from '$features/recipes/stores/libraryView.svelte';
+  import { recallRanking, rememberRanking } from '$features/recipes/stores/rankingHint';
   import type { SavedSearch } from '$features/recipes/stores/savedSearches.svelte';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
@@ -55,6 +56,18 @@
   const topSuggestion = $derived(shortlist[0]);
 
   /**
+   * What the ranking said about this kitchen the last time this device asked.
+   *
+   * Read once per household and then held for the visit, deliberately: it is
+   * not replaced when the fresh answer arrives. A list fetched in one order and
+   * re-fetched in another is a page that rearranges itself under somebody who
+   * has started reading it. When the two disagree — about once in the life of a
+   * kitchen — this visit keeps the order it began with, and the next one has
+   * the new answer.
+   */
+  const remembered = $derived(householdId ? recallRanking(householdId) : null);
+
+  /**
    * Whether the ranking has anything true to say about this kitchen yet.
    *
    * Used instead of counting cook-log entries against a threshold, and it is
@@ -63,7 +76,9 @@
    * here for the order to mean something". A brand-new kitchen gets the app it
    * has always had, and nothing had to guess a number.
    */
-  const ranks = $derived(topSuggestion?.reason != null);
+  const ranks = $derived(remembered ?? topSuggestion?.reason != null);
+
+  const searching = $derived(libraryView.query.trim().length > 0);
 
   /**
    * What the toolbar needs in order to decide an order nobody has chosen.
@@ -71,27 +86,36 @@
    * `ranks` is the same signal the suggested chip used: the ranking may only
    * take over once it has something true to say about this kitchen.
    */
-  const context = $derived({
-    searching: libraryView.query.trim().length > 0,
-    ranks,
-    inACookbook: false
-  });
+  const context = $derived({ searching, ranks, inACookbook: false });
 
   const order = $derived(effectiveSort(libraryView.sort, context));
 
   /**
    * Whether the order is settled enough to ask for a list in it.
    *
-   * The list is not fetched until the suggestion question has come back, either
-   * way. Listing first and re-listing when the answer arrives works, and it is
-   * wrong: the page settles, somebody starts reading it, and then it silently
-   * rearranges itself under them. One small request first is the cheaper of the
-   * two costs, and the skeleton was already going to be on screen for it.
+   * The question is only open when nobody has chosen an order and nothing has
+   * been typed: then, and only then, the order depends on what the ranking
+   * says. Anywhere else waiting for the shortlist was a round trip spent on an
+   * answer that could not change anything.
+   *
+   * When it does depend, a remembered answer settles it at once, and the list
+   * is asked for alongside the shortlist rather than after it. With nothing
+   * remembered — a first visit on this device — the list waits, because
+   * listing first and re-listing when the answer arrives is the page
+   * rearranging itself under somebody who is already reading it. One small
+   * request first is the cheaper of those two costs, and the skeleton was
+   * already going to be on screen for it.
    *
    * A failed suggestion counts as settled — it means "recently updated", which
    * is the order the app has always had.
    */
-  const settled = $derived(!householdId || suggestions.answered(householdId, featuredQuery));
+  const settled = $derived(
+    !householdId ||
+      libraryView.sort !== null ||
+      searching ||
+      remembered !== null ||
+      suggestions.answered(householdId, featuredQuery)
+  );
 
   /**
    * Which list is on screen.
@@ -181,6 +205,16 @@
   $effect(() => {
     if (householdId && settled) {
       void recipes.list(householdId, filters);
+    }
+  });
+
+  // Kept for the next visit, and only from an answer that actually came back:
+  // a failed shortlist says nothing about the kitchen, and remembering it as
+  // "nothing to say" would hold a ranked kitchen in recent order until the
+  // next success.
+  $effect(() => {
+    if (householdId && suggestions.statusOf(householdId, featuredQuery) === 'ready') {
+      rememberRanking(householdId, topSuggestion?.reason != null);
     }
   });
 

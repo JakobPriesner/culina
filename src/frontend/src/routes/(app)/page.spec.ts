@@ -96,6 +96,10 @@ beforeEach(() => {
   suggestions.reset();
   libraryView.reset();
   savedSearches.reset();
+  // The page remembers what the ranking said, and jsdom keeps storage for the
+  // whole file — so without this every test would open on the last one's
+  // answer rather than on a device that has never been told.
+  localStorage.clear();
 
   for (const toast of [...toaster.toasts]) {
     toaster.dismiss(toast.id);
@@ -274,5 +278,108 @@ describe('opening the library', () => {
       .filter((url) => url.includes('/recipes'));
 
     expect(listed.some((url) => url.includes('sort=suggested'))).toBe(true);
+  });
+});
+
+/*
+ * When the list may be asked for. The shortlist decides the order nobody chose,
+ * so the list used to wait for it on every visit — sign-in check, shortlist,
+ * list, one after the other. Each test holds the shortlist back, forever, and
+ * looks at what the page asked for in the meantime.
+ */
+describe('waiting for the shortlist', () => {
+  /** A server whose shortlist never answers. */
+  function shortlistHeldBack() {
+    const fetched = vi.fn((input: Request) =>
+      input.url.includes('/suggestions')
+        ? new Promise<Response>(() => {})
+        : Promise.resolve(answer(input.url, null))
+    );
+
+    vi.stubGlobal('fetch', fetched);
+
+    return () =>
+      fetched.mock.calls.map(([request]) => request.url).filter((url) => url.includes('/recipes?'));
+  }
+
+  it('waits, on a device that has never been told', async () => {
+    const listed = shortlistHeldBack();
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // Listing now and again when the answer arrives would rearrange the page
+    // under somebody who is already reading it.
+    expect(listed()).toEqual([]);
+  });
+
+  it('asks for the list alongside the shortlist when this device remembers the answer', async () => {
+    localStorage.setItem(`culina.ranks.${household}`, 'yes');
+    const listed = shortlistHeldBack();
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // The round trip this exists to remove: the list is out before the
+    // shortlist is back, and in the order the remembered answer names.
+    expect(listed()).toHaveLength(1);
+    expect(listed()[0]).toContain('sort=suggested');
+  });
+
+  it('does not wait when somebody has chosen the order', async () => {
+    libraryView.forHousehold(household);
+    libraryView.sort = 'title';
+    const listed = shortlistHeldBack();
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // The answer could not change a chosen order, so there was nothing to wait
+    // for.
+    expect(listed()).toHaveLength(1);
+    expect(listed()[0]).toContain('sort=title');
+  });
+
+  it('keeps the order it began with when the fresh answer disagrees', async () => {
+    localStorage.setItem(`culina.ranks.${household}`, 'no');
+    const fetched = serverAnswers({ code: 'affinity', subject: null });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const listed = fetched.mock.calls
+      .map(([request]) => request.url)
+      .filter((url) => url.includes('/recipes?'));
+
+    // One list, in the order the visit started in, and a label that still
+    // says so. Re-listing in the new order is the rearranging this is for.
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toContain('sort=-updatedAt');
+    expect(
+      screen.getByText('Recently updated', { selector: '.collection-note' })
+    ).toBeInTheDocument();
+
+    // And the next visit opens on what the ranking says now.
+    expect(localStorage.getItem(`culina.ranks.${household}`)).toBe('yes');
+  });
+
+  it('remembers nothing from a shortlist that failed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        Promise.resolve(
+          input.url.includes('/suggestions')
+            ? new Response(null, { status: 503 })
+            : answer(input.url, null)
+        )
+      )
+    );
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // A failure says nothing about the kitchen. Remembered as "nothing to
+    // say", it would hold a ranked kitchen in recent order until a success.
+    expect(localStorage.getItem(`culina.ranks.${household}`)).toBeNull();
   });
 });
