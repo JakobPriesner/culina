@@ -30,6 +30,8 @@ internal sealed record PlannedRow
     public int? CookMinutes { get; init; }
 
     public decimal YieldAmount { get; init; }
+
+    public bool IsOnShoppingList { get; init; }
 }
 
 /// <summary>Stores what a household means to cook.</summary>
@@ -47,7 +49,10 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         var rows = await executor.QueryAsync<PlannedRow>(
             """
             select p.id, p.household_id, p.on_date, p.recipe_id, p.servings, p.slot, p.sort_order,
-                   r.title, r.image_id, r.prep_minutes, r.cook_minutes, r.yield_amount
+                   r.title, r.image_id, r.prep_minutes, r.cook_minutes, r.yield_amount,
+                   exists (
+                       select 1 from shopping_list_item_sources s where s.plan_entry_id = p.id
+                   ) as is_on_shopping_list
             from meal_plan_entries p
             join recipes r on r.id = p.recipe_id
             where p.household_id = @householdId
@@ -216,7 +221,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         // Only when both are known: "45 minutes" for a recipe that never said
         // how long it stands is a number somebody would plan an evening around.
         row.PrepMinutes is { } prep && row.CookMinutes is { } cook ? prep + cook : null,
-        row.YieldAmount);
+        row.YieldAmount,
+        row.IsOnShoppingList);
 }
 
 /// <summary>How a slot is spelled in the database.</summary>
