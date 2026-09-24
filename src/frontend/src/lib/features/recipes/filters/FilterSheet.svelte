@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Checkbox, Field, RadioGroup, Sheet, type RadioOption } from '$ds';
+  import { Button, Field, RadioGroup, Sheet, type RadioOption } from '$ds';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
   import { m } from '$shell/i18n';
 
@@ -11,6 +11,7 @@
     type SortContext
   } from '../stores/libraryView.svelte';
   import { sortLabel, timeLabel } from './labels';
+  import TagChooser from './TagChooser.svelte';
 
   /**
    * Everything the library can be asked, in one panel.
@@ -102,21 +103,12 @@
     </Field>
 
     <Field label={m['filters.tags']()} hint={m['filters.tags.hint']()} group>
-      {#if tags.items.length === 0}
-        <p class="empty">{m['filters.tags.none']()}</p>
-      {:else}
-        <ul class="tags">
-          {#each tags.items as tag (tag.slug)}
-            <li>
-              <Checkbox
-                label="{tag.name} · {m['cookbooks.rules.usedBy']({ count: tag.recipeCount })}"
-                checked={view.tags.includes(tag.slug)}
-                onchange={() => view.toggleTag(tag.slug)}
-              />
-            </li>
-          {/each}
-        </ul>
-      {/if}
+      <TagChooser
+        tags={tags.items}
+        selected={view.tags}
+        empty={m['filters.tags.none']()}
+        ontoggle={(slug) => view.toggleTag(slug)}
+      />
     </Field>
   </div>
 
@@ -166,31 +158,5 @@
     background: var(--surface-accent-subtle);
     color: var(--accent);
     font-weight: var(--weight-medium);
-  }
-
-  .tags {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    /* Long enough to be worth scrolling past rather than pushing the order and
-       the time filter off the sheet. */
-    max-height: 14rem;
-    overflow-y: auto;
-    /* Gutter for a bar that takes width, padding for an overlay bar that does
-       not and is painted over the tags instead. See RecipePicker for why both
-       are needed. */
-    scrollbar-gutter: stable;
-    padding-inline-end: var(--space-2);
-    /* A bounded list inside a sheet that also scrolls: without this, reaching
-       the end of the tags carries on and scrolls the sheet behind them. */
-    overscroll-behavior: contain;
-  }
-
-  .empty {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
   }
 </style>
