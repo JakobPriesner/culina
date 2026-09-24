@@ -265,13 +265,14 @@
   let stepList = $state<HTMLOListElement>();
 
   /**
-   * Whether a step has already been centred once.
+   * Whether the page has arrived.
    *
-   * The first run is the page arriving, and a page that scrolls itself the
-   * moment it opens has taken the reader somewhere they did not ask to go. It
-   * is every *move* after that which needs the screen to follow.
+   * Arriving is not a move. A page that scrolls itself the moment it opens has
+   * taken the cook somewhere they did not ask to go — unless it opened with the
+   * step they are cooking under the controls, where it cannot be read. The
+   * first run only rescues a step like that; every move after it follows.
    */
-  let centred = false;
+  let arrived = false;
 
   /**
    * Waits for the steps to finish changing size.
@@ -313,37 +314,83 @@
       return;
     }
 
-    if (!centred) {
-      centred = true;
+    const moved = arrived;
+    arrived = true;
+
+    void resized(list).then(() => reveal(list.children[index], moved));
+  });
+
+  /**
+   * The same rescue when the screen changes shape.
+   *
+   * A phone turned on its side reflows every step, and the one being cooked
+   * lands wherever the reflow puts it. Width only: the address bar sliding
+   * away as the cook scrolls changes the height, and answering that would pull
+   * the page back out from under their thumb.
+   */
+  $effect(() => {
+    const list = stepList;
+
+    if (!cooking || !list) {
       return;
     }
 
-    void resized(list).then(() => {
-      const step = list.children[index];
+    let width = window.innerWidth;
 
-      // `scrollIntoView` is missing in jsdom, and moving the screen is a
-      // courtesy rather than behaviour the page depends on.
-      if (!(step instanceof HTMLElement) || !step.scrollIntoView) {
-        return;
+    const onresize = () => {
+      if (window.innerWidth !== width) {
+        width = window.innerWidth;
+        void resized(list).then(() => reveal(list.children[currentStep], false));
       }
+    };
 
-      // A step grows as it becomes current, and a long one is most of the
-      // screen or more. Centring that hides its first words behind the header
-      // or its last behind the controls, so only a step with room to spare is
-      // centred; a longer one starts at the top, where it is read from. The
-      // `scroll-margin` on `.step` is what keeps that clear of the header.
-      const fits = step.getBoundingClientRect().height < window.innerHeight / 2;
+    window.addEventListener('resize', onresize);
 
-      step.scrollIntoView({
-        block: fits ? 'center' : 'start',
-        // Smoothly, so it reads as the page following rather than jumping —
-        // unless the person has said they do not want things moving.
-        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-          ? 'auto'
-          : 'smooth'
-      });
-    });
+    return () => window.removeEventListener('resize', onresize);
   });
+
+  /**
+   * Brings a step into the part of the screen nothing is parked over.
+   *
+   * That part is the viewport less the `scroll-margin` on `.step`, which the
+   * cook page sizes to its own controls — so "fits" means fits between the
+   * header and the controls, not half a viewport that the controls may be
+   * standing in. A step that fits is centred there, with the next one already
+   * showing underneath; a longer one starts at the top, where it is read from.
+   *
+   * `followed` is a move, which always brings the step over. Otherwise the
+   * page is left alone while the step is readable: it starts in the clear,
+   * and ends there too when it can.
+   */
+  const reveal = (step: Element | undefined, followed: boolean) => {
+    // `scrollIntoView` is missing in jsdom, and moving the screen is a
+    // courtesy rather than behaviour the page depends on.
+    if (!(step instanceof HTMLElement) || !step.scrollIntoView) {
+      return;
+    }
+
+    const style = getComputedStyle(step);
+    const top = parseFloat(style.scrollMarginTop) || 0;
+    const bottom = window.innerHeight - (parseFloat(style.scrollMarginBottom) || 0);
+    const box = step.getBoundingClientRect();
+    const fits = box.height <= bottom - top;
+    const readable = box.top >= top && box.top < bottom && (!fits || box.bottom <= bottom);
+
+    if (!followed && readable) {
+      return;
+    }
+
+    step.scrollIntoView({
+      block: fits ? 'center' : 'start',
+      // A move is followed smoothly, so it reads as the page following rather
+      // than jumping — unless the person has said they do not want things
+      // moving. A rescue is not something to watch.
+      behavior:
+        followed && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          ? 'smooth'
+          : 'auto'
+    });
+  };
 </script>
 
 <article class="surface" class:cooking class:perStep>
@@ -1093,7 +1140,8 @@
   }
 
   .step {
-    scroll-margin-block: var(--space-24) calc(var(--bottom-inset) + var(--space-24));
+    /* Clear of the page's own floating controls too; see `--controls-inset`. */
+    scroll-margin-block: var(--space-24) calc(var(--bottom-inset) + var(--controls-inset));
     padding-block: var(--space-6);
     border-top: 1px solid var(--border);
   }
