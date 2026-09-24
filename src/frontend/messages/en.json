@@ -1119,5 +1119,6 @@
   "tags.search.clear": "Clear",
   "tags.all": "Show all {count} tags",
   "tags.fewer": "Show fewer",
-  "tags.nothing": "No tag matches that."
+  "tags.nothing": "No tag matches that.",
+  "me.update": "Update"
 }

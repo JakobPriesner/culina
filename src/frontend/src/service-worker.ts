@@ -146,6 +146,12 @@ worker.addEventListener('message', (event) => {
     void worker.skipWaiting();
   }
 
+  // Asked by a page deciding whether it has already mentioned this version,
+  // so an update is offered once rather than on every reload.
+  if (type === 'culina:version') {
+    event.ports[0]?.postMessage(version);
+  }
+
   // Sent when anyone signs in or out. Both, not just out: a device where one
   // person closed the browser without signing out and another signed in must
   // not answer the second one from the first one's cache.
