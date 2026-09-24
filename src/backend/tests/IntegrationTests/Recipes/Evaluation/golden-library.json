@@ -1,0 +1,1713 @@
+{
+  "recipes": [
+    {
+      "title": "Spaghetti Bolognese",
+      "language": "de",
+      "prep": 15,
+      "cook": 30,
+      "tags": [
+        "pasta",
+        "italienisch"
+      ],
+      "ingredients": [
+        "Hackfleisch",
+        "passierte Tomaten",
+        "Zwiebel",
+        "Spaghetti",
+        "Möhre"
+      ],
+      "step": "Hackfleisch anbraten, mit Rotwein ablöschen."
+    },
+    {
+      "title": "Lasagne Bolognese",
+      "language": "de",
+      "prep": 30,
+      "cook": 60,
+      "tags": [
+        "pasta",
+        "italienisch",
+        "ofen"
+      ],
+      "ingredients": [
+        "Hackfleisch",
+        "Tomaten",
+        "Lasagneplatten",
+        "Béchamel"
+      ],
+      "step": "Schichten und backen."
+    },
+    {
+      "title": "Bolognese-Sauce auf Vorrat",
+      "language": "de",
+      "prep": 20,
+      "cook": 100,
+      "tags": [
+        "sauce",
+        "meal-prep"
+      ],
+      "ingredients": [
+        "Hackfleisch",
+        "Tomaten",
+        "Rotwein",
+        "Sellerie"
+      ],
+      "step": "Lange köcheln lassen."
+    },
+    {
+      "title": "Ragù alla Napoletana",
+      "language": "de",
+      "prep": 30,
+      "cook": 180,
+      "tags": [
+        "pasta",
+        "italienisch"
+      ],
+      "ingredients": [
+        "Rindfleisch",
+        "Schweinerippchen",
+        "Tomaten",
+        "Rotwein"
+      ],
+      "step": "Stundenlang schmoren."
+    },
+    {
+      "title": "Gemüselasagne",
+      "language": "de",
+      "prep": 25,
+      "cook": 45,
+      "tags": [
+        "pasta",
+        "vegetarisch",
+        "ofen"
+      ],
+      "ingredients": [
+        "Zucchini",
+        "Aubergine",
+        "Tomaten",
+        "Béchamel",
+        "Lasagneplatten"
+      ],
+      "step": "Schichten und backen."
+    },
+    {
+      "title": "Hähnchenbrustfilet mit Reis",
+      "language": "de",
+      "prep": 10,
+      "cook": 20,
+      "tags": [
+        "schnell"
+      ],
+      "ingredients": [
+        "Hähnchenbrust",
+        "Reis",
+        "Zitrone"
+      ],
+      "step": "Braten und servieren."
+    },
+    {
+      "title": "Hähnchen-Curry",
+      "language": "de",
+      "prep": 15,
+      "cook": 25,
+      "tags": [
+        "asiatisch"
+      ],
+      "ingredients": [
+        "Hähnchenschenkel",
+        "Kokosmilch",
+        "Currypaste",
+        "Reis"
+      ],
+      "step": "Alles köcheln lassen."
+    },
+    {
+      "title": "Brathähnchen mit Kartoffeln",
+      "language": "de",
+      "prep": 15,
+      "cook": 70,
+      "tags": [
+        "ofen",
+        "sonntag"
+      ],
+      "ingredients": [
+        "Hähnchen",
+        "Kartoffeln",
+        "Rosmarin"
+      ],
+      "step": "Im Ofen goldbraun braten."
+    },
+    {
+      "title": "Kartoffelgratin",
+      "language": "de",
+      "prep": 20,
+      "cook": 40,
+      "tags": [
+        "auflauf",
+        "vegetarisch"
+      ],
+      "ingredients": [
+        "Kartoffeln",
+        "Sahne",
+        "Käse",
+        "Muskat"
+      ],
+      "step": "In die Form und in den Ofen."
+    },
+    {
+      "title": "Süßkartoffelcurry",
+      "language": "de",
+      "prep": 15,
+      "cook": 20,
+      "tags": [
+        "vegan"
+      ],
+      "ingredients": [
+        "Süßkartoffel",
+        "Kokosmilch",
+        "Ingwer",
+        "Kichererbsen"
+      ],
+      "step": "Alles köcheln lassen."
+    },
+    {
+      "title": "Zwiebelkuchen",
+      "language": "de",
+      "prep": 30,
+      "cook": 60,
+      "tags": [
+        "ofen"
+      ],
+      "ingredients": [
+        "Zwiebeln",
+        "Speck",
+        "Hefeteig",
+        "Schmand"
+      ],
+      "step": "Belegen und backen."
+    },
+    {
+      "title": "Rindergulasch",
+      "language": "de",
+      "prep": 30,
+      "cook": 150,
+      "tags": [
+        "deftig"
+      ],
+      "ingredients": [
+        "Rindfleisch",
+        "Zwiebeln",
+        "Paprikapulver",
+        "Tomatenmark"
+      ],
+      "step": "Scharf anbraten und schmoren."
+    },
+    {
+      "title": "Müsliriegel",
+      "language": "de",
+      "prep": 15,
+      "cook": 10,
+      "tags": [
+        "snack"
+      ],
+      "ingredients": [
+        "Haferflocken",
+        "Honig",
+        "Nüsse"
+      ],
+      "step": "Pressen und backen."
+    },
+    {
+      "title": "Bircher-Frühstück",
+      "language": "de",
+      "prep": 10,
+      "cook": null,
+      "tags": [
+        "frühstück"
+      ],
+      "ingredients": [
+        "Muesli",
+        "Joghurt",
+        "Apfel"
+      ],
+      "step": "Über Nacht quellen lassen."
+    },
+    {
+      "title": "Käsekuchen",
+      "language": "de",
+      "prep": 30,
+      "cook": 60,
+      "tags": [
+        "backen",
+        "dessert"
+      ],
+      "ingredients": [
+        "Quark",
+        "Eier",
+        "Zucker",
+        "Mürbeteig"
+      ],
+      "step": "Backen und auskühlen lassen."
+    },
+    {
+      "title": "Waffeln",
+      "language": "de",
+      "prep": 10,
+      "cook": 15,
+      "tags": [],
+      "ingredients": [
+        "Mehl",
+        "Eier",
+        "Milch",
+        "Zucker"
+      ],
+      "step": "Im Waffeleisen ausbacken."
+    },
+    {
+      "title": "Tomatensuppe",
+      "language": "de",
+      "prep": 10,
+      "cook": 20,
+      "tags": [
+        "vegetarisch",
+        "suppe"
+      ],
+      "ingredients": [
+        "Tomate",
+        "Zwiebel",
+        "Gemüsebrühe"
+      ],
+      "step": "Pürieren."
+    },
+    {
+      "title": "Linsensuppe",
+      "language": "de",
+      "prep": 15,
+      "cook": 40,
+      "tags": [
+        "suppe"
+      ],
+      "ingredients": [
+        "Linsen",
+        "Karotten",
+        "Speck",
+        "Kartoffeln"
+      ],
+      "step": "Weich kochen."
+    },
+    {
+      "title": "Kartoffelsalat",
+      "language": "de",
+      "prep": 20,
+      "cook": 20,
+      "tags": [
+        "salat",
+        "vegetarisch"
+      ],
+      "ingredients": [
+        "Kartoffeln",
+        "Gurke",
+        "Essig",
+        "Zwiebel"
+      ],
+      "step": "Warm anmachen."
+    },
+    {
+      "title": "Griechischer Salat",
+      "language": "de",
+      "prep": 15,
+      "cook": null,
+      "tags": [
+        "salat",
+        "vegetarisch",
+        "sommer"
+      ],
+      "ingredients": [
+        "Tomaten",
+        "Gurke",
+        "Feta",
+        "Oliven"
+      ],
+      "step": "Anrichten."
+    },
+    {
+      "title": "Pfannkuchen",
+      "language": "de",
+      "prep": 10,
+      "cook": 15,
+      "tags": [
+        "frühstück"
+      ],
+      "ingredients": [
+        "Mehl",
+        "Eier",
+        "Milch"
+      ],
+      "step": "Dünn ausbacken."
+    },
+    {
+      "title": "Rührei mit Schnittlauch",
+      "language": "de",
+      "prep": 5,
+      "cook": 5,
+      "tags": [
+        "frühstück",
+        "schnell"
+      ],
+      "ingredients": [
+        "Eier",
+        "Butter",
+        "Schnittlauch"
+      ],
+      "step": "Langsam stocken lassen."
+    },
+    {
+      "title": "Nudelauflauf",
+      "language": "de",
+      "prep": 20,
+      "cook": 30,
+      "tags": [
+        "auflauf"
+      ],
+      "ingredients": [
+        "Nudeln",
+        "Schinken",
+        "Käse",
+        "Sahne"
+      ],
+      "step": "Überbacken."
+    },
+    {
+      "title": "Pilzrisotto",
+      "language": "de",
+      "prep": 10,
+      "cook": 30,
+      "tags": [
+        "italienisch"
+      ],
+      "ingredients": [
+        "Risottoreis",
+        "Champignons",
+        "Parmesan",
+        "Weißwein"
+      ],
+      "step": "Nach und nach Brühe angießen."
+    },
+    {
+      "title": "Ofengemüse mit Feta",
+      "language": "de",
+      "prep": 15,
+      "cook": 30,
+      "tags": [
+        "ofen",
+        "vegetarisch"
+      ],
+      "ingredients": [
+        "Paprika",
+        "Zucchini",
+        "Feta"
+      ],
+      "step": "Im Ofen rösten."
+    },
+    {
+      "title": "Linsen-Dal",
+      "language": "de",
+      "prep": 10,
+      "cook": 30,
+      "tags": [
+        "indisch"
+      ],
+      "ingredients": [
+        "Rote Linsen",
+        "Kokosmilch",
+        "Kurkuma"
+      ],
+      "step": "Sämig kochen."
+    },
+    {
+      "title": "Gemüse-Pad-Thai",
+      "language": "de",
+      "prep": 20,
+      "cook": 15,
+      "tags": [
+        "asiatisch"
+      ],
+      "ingredients": [
+        "Reisnudeln",
+        "Tofu",
+        "Fischsauce",
+        "Erdnüsse"
+      ],
+      "step": "Im Wok braten."
+    },
+    {
+      "title": "Kürbissuppe",
+      "language": "de",
+      "prep": 15,
+      "cook": 30,
+      "tags": [
+        "suppe",
+        "herbst"
+      ],
+      "ingredients": [
+        "Kürbis",
+        "Hühnerbrühe",
+        "Ingwer"
+      ],
+      "step": "Pürieren."
+    },
+    {
+      "title": "Lachs mit Spinat",
+      "language": "de",
+      "prep": 10,
+      "cook": 20,
+      "tags": [
+        "fisch",
+        "schnell"
+      ],
+      "ingredients": [
+        "Lachs",
+        "Spinat",
+        "Zitrone"
+      ],
+      "step": "Lachs braten, Spinat dünsten."
+    },
+    {
+      "title": "Chili con Carne",
+      "language": "de",
+      "prep": 20,
+      "cook": 60,
+      "tags": [
+        "mexikanisch",
+        "scharf"
+      ],
+      "ingredients": [
+        "Hackfleisch",
+        "Kidneybohnen",
+        "Mais",
+        "Chili"
+      ],
+      "step": "Köcheln lassen."
+    },
+    {
+      "title": "Schweinebraten",
+      "language": "de",
+      "prep": 20,
+      "cook": 120,
+      "tags": [
+        "deftig",
+        "sonntag"
+      ],
+      "ingredients": [
+        "Schweinenacken",
+        "Zwiebeln",
+        "Bier"
+      ],
+      "step": "Im Ofen schmoren."
+    },
+    {
+      "title": "Apfelkuchen",
+      "language": "de",
+      "prep": 30,
+      "cook": 50,
+      "tags": [
+        "backen"
+      ],
+      "ingredients": [
+        "Äpfel",
+        "Mehl",
+        "Butter",
+        "Zucker"
+      ],
+      "step": "Backen."
+    },
+    {
+      "title": "Tiramisu",
+      "language": "de",
+      "prep": 30,
+      "cook": null,
+      "tags": [
+        "dessert",
+        "italienisch"
+      ],
+      "ingredients": [
+        "Mascarpone",
+        "Löffelbiskuits",
+        "Espresso",
+        "Eier"
+      ],
+      "step": "Schichten und kühlen."
+    },
+    {
+      "title": "Obstsalat",
+      "language": "de",
+      "prep": 15,
+      "cook": null,
+      "tags": [
+        "dessert",
+        "sommer"
+      ],
+      "ingredients": [
+        "Äpfel",
+        "Bananen",
+        "Erdbeeren",
+        "Orangen"
+      ],
+      "step": "Schneiden und mischen."
+    },
+    {
+      "title": "Grünkohl mit Mettwurst",
+      "language": "de",
+      "prep": 20,
+      "cook": 90,
+      "tags": [
+        "deftig",
+        "winter"
+      ],
+      "ingredients": [
+        "Grünkohl",
+        "Mettwurst",
+        "Kartoffeln"
+      ],
+      "step": "Lange garen."
+    },
+    {
+      "title": "Spinatknödel",
+      "language": "de",
+      "prep": 20,
+      "cook": 20,
+      "tags": [
+        "vegetarisch"
+      ],
+      "ingredients": [
+        "Semmeln",
+        "Spinat",
+        "Eier",
+        "Parmesan"
+      ],
+      "step": "In Salzwasser ziehen lassen."
+    },
+    {
+      "title": "Falafel mit Hummus",
+      "language": "de",
+      "prep": 30,
+      "cook": 15,
+      "tags": [
+        "orientalisch",
+        "vegan"
+      ],
+      "ingredients": [
+        "Kichererbsen",
+        "Tahin",
+        "Petersilie"
+      ],
+      "step": "Frittieren."
+    },
+    {
+      "title": "Frikadellen",
+      "language": "de",
+      "prep": 15,
+      "cook": 15,
+      "tags": [],
+      "ingredients": [
+        "Hackfleisch",
+        "Brötchen",
+        "Ei",
+        "Zwiebel"
+      ],
+      "step": "Formen und braten."
+    },
+    {
+      "title": "Flammkuchen",
+      "language": "de",
+      "prep": 15,
+      "cook": 15,
+      "tags": [
+        "ofen"
+      ],
+      "ingredients": [
+        "Teig",
+        "Schmand",
+        "Speck",
+        "Zwiebeln"
+      ],
+      "step": "Dünn ausrollen und backen."
+    },
+    {
+      "title": "Milchreis",
+      "language": "de",
+      "prep": 5,
+      "cook": 30,
+      "tags": [
+        "dessert"
+      ],
+      "ingredients": [
+        "Milchreis",
+        "Milch",
+        "Zucker",
+        "Zimt"
+      ],
+      "step": "Unter Rühren quellen lassen."
+    },
+    {
+      "title": "Chicken Curry",
+      "language": "en",
+      "prep": 15,
+      "cook": 25,
+      "tags": [
+        "asian"
+      ],
+      "ingredients": [
+        "chicken breast",
+        "coconut milk",
+        "curry paste"
+      ],
+      "step": "Simmer until done."
+    },
+    {
+      "title": "Chicken Tikka Masala",
+      "language": "en",
+      "prep": 20,
+      "cook": 30,
+      "tags": [
+        "indian"
+      ],
+      "ingredients": [
+        "chicken thighs",
+        "yoghurt",
+        "tomatoes",
+        "garam masala"
+      ],
+      "step": "Grill, then simmer in the sauce."
+    },
+    {
+      "title": "Chicken Noodle Soup",
+      "language": "en",
+      "prep": 15,
+      "cook": 40,
+      "tags": [
+        "soup"
+      ],
+      "ingredients": [
+        "chicken",
+        "egg noodles",
+        "carrots",
+        "celery"
+      ],
+      "step": "Simmer."
+    },
+    {
+      "title": "Beef Stew",
+      "language": "en",
+      "prep": 20,
+      "cook": 150,
+      "tags": [
+        "hearty"
+      ],
+      "ingredients": [
+        "beef",
+        "potatoes",
+        "carrots",
+        "red wine"
+      ],
+      "step": "Braise low and slow."
+    },
+    {
+      "title": "Pancakes",
+      "language": "en",
+      "prep": 10,
+      "cook": 15,
+      "tags": [
+        "breakfast"
+      ],
+      "ingredients": [
+        "flour",
+        "eggs",
+        "milk",
+        "butter"
+      ],
+      "step": "Fry in a hot pan."
+    },
+    {
+      "title": "Porridge with Berries",
+      "language": "en",
+      "prep": 5,
+      "cook": 10,
+      "tags": [
+        "breakfast"
+      ],
+      "ingredients": [
+        "rolled oats",
+        "milk",
+        "blueberries"
+      ],
+      "step": "Stir until creamy."
+    },
+    {
+      "title": "Caesar Salad",
+      "language": "en",
+      "prep": 15,
+      "cook": null,
+      "tags": [
+        "salad"
+      ],
+      "ingredients": [
+        "romaine",
+        "parmesan",
+        "anchovies",
+        "croutons"
+      ],
+      "step": "Toss."
+    },
+    {
+      "title": "Mushroom Risotto",
+      "language": "en",
+      "prep": 10,
+      "cook": 30,
+      "tags": [
+        "italian"
+      ],
+      "ingredients": [
+        "arborio",
+        "mushrooms",
+        "parmesan",
+        "white wine"
+      ],
+      "step": "Add the stock slowly."
+    },
+    {
+      "title": "Veggie Burger",
+      "language": "en",
+      "prep": 20,
+      "cook": 15,
+      "tags": [
+        "vegetarian"
+      ],
+      "ingredients": [
+        "black beans",
+        "oats",
+        "burger buns"
+      ],
+      "step": "Shape and fry."
+    },
+    {
+      "title": "Fish Tacos",
+      "language": "en",
+      "prep": 20,
+      "cook": 10,
+      "tags": [
+        "mexican"
+      ],
+      "ingredients": [
+        "cod",
+        "tortillas",
+        "cabbage",
+        "lime"
+      ],
+      "step": "Fry the fish."
+    },
+    {
+      "title": "Apple Crumble",
+      "language": "en",
+      "prep": 20,
+      "cook": 40,
+      "tags": [
+        "dessert"
+      ],
+      "ingredients": [
+        "apples",
+        "flour",
+        "butter",
+        "sugar"
+      ],
+      "step": "Bake until golden."
+    },
+    {
+      "title": "Chocolate Brownies",
+      "language": "en",
+      "prep": 15,
+      "cook": 25,
+      "tags": [
+        "baking"
+      ],
+      "ingredients": [
+        "chocolate",
+        "butter",
+        "sugar",
+        "eggs"
+      ],
+      "step": "Bake."
+    },
+    {
+      "title": "Guacamole",
+      "language": "en",
+      "prep": 10,
+      "cook": null,
+      "tags": [
+        "snack",
+        "vegan"
+      ],
+      "ingredients": [
+        "avocado",
+        "lime",
+        "onion",
+        "coriander"
+      ],
+      "step": "Mash."
+    },
+    {
+      "title": "Tomato Soup",
+      "language": "en",
+      "prep": 10,
+      "cook": 25,
+      "tags": [
+        "soup"
+      ],
+      "ingredients": [
+        "tomatoes",
+        "onion",
+        "vegetable stock",
+        "cream"
+      ],
+      "step": "Blend."
+    },
+    {
+      "title": "Shepherd's Pie",
+      "language": "en",
+      "prep": 25,
+      "cook": 45,
+      "tags": [
+        "hearty"
+      ],
+      "ingredients": [
+        "lamb mince",
+        "potatoes",
+        "peas",
+        "carrots"
+      ],
+      "step": "Bake."
+    },
+    {
+      "title": "Kartoffel Rösti",
+      "language": "en",
+      "prep": 15,
+      "cook": 20,
+      "tags": [
+        "breakfast"
+      ],
+      "ingredients": [
+        "Kartoffeln",
+        "butter",
+        "salt"
+      ],
+      "step": "Fry until crisp."
+    },
+    {
+      "title": "Spätzle with Cheese",
+      "language": "en",
+      "prep": 20,
+      "cook": 20,
+      "tags": [
+        "german"
+      ],
+      "ingredients": [
+        "Spätzle",
+        "Bergkäse",
+        "Zwiebeln"
+      ],
+      "step": "Layer and melt."
+    },
+    {
+      "title": "Lemon Drizzle Cake",
+      "language": "en",
+      "prep": 20,
+      "cook": 45,
+      "tags": [
+        "baking"
+      ],
+      "ingredients": [
+        "flour",
+        "lemons",
+        "sugar",
+        "butter",
+        "eggs"
+      ],
+      "step": "Bake, then drizzle."
+    },
+    {
+      "title": "Greek Yoghurt Bowl",
+      "language": "en",
+      "prep": 5,
+      "cook": null,
+      "tags": [
+        "breakfast"
+      ],
+      "ingredients": [
+        "greek yoghurt",
+        "honey",
+        "walnuts"
+      ],
+      "step": "Top and serve."
+    },
+    {
+      "title": "Pad Thai with Prawns",
+      "language": "en",
+      "prep": 20,
+      "cook": 15,
+      "tags": [
+        "asian"
+      ],
+      "ingredients": [
+        "rice noodles",
+        "prawns",
+        "peanuts",
+        "fish sauce"
+      ],
+      "step": "Stir fry."
+    }
+  ],
+  "queries": [
+    {
+      "query": "Spaghetti Bolognese",
+      "class": "known-item exact",
+      "grades": {
+        "Spaghetti Bolognese": 2,
+        "Lasagne Bolognese": 1,
+        "Bolognese-Sauce auf Vorrat": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Käsekuchen",
+      "class": "known-item exact",
+      "grades": {
+        "Käsekuchen": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Kartoffelgratin",
+      "class": "known-item exact",
+      "grades": {
+        "Kartoffelgratin": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "chicken tikka masala",
+      "class": "known-item exact",
+      "grades": {
+        "Chicken Tikka Masala": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Bolognese",
+      "class": "known-item partial",
+      "grades": {
+        "Spaghetti Bolognese": 2,
+        "Lasagne Bolognese": 2,
+        "Bolognese-Sauce auf Vorrat": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Lasagne",
+      "class": "known-item partial",
+      "grades": {
+        "Lasagne Bolognese": 2,
+        "Gemüselasagne": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Curry",
+      "class": "known-item partial",
+      "grades": {
+        "Hähnchen-Curry": 2,
+        "Süßkartoffelcurry": 2,
+        "Chicken Curry": 2,
+        "Chicken Tikka Masala": 1,
+        "Linsen-Dal": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Risotto",
+      "class": "known-item partial",
+      "grades": {
+        "Pilzrisotto": 2,
+        "Mushroom Risotto": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Bolgnese",
+      "class": "typo",
+      "grades": {
+        "Spaghetti Bolognese": 2,
+        "Lasagne Bolognese": 2,
+        "Bolognese-Sauce auf Vorrat": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Kartoffelgratn",
+      "class": "typo",
+      "grades": {
+        "Kartoffelgratin": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Tiramsu",
+      "class": "typo",
+      "grades": {
+        "Tiramisu": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Muesli",
+      "class": "spelling variant",
+      "grades": {
+        "Müsliriegel": 2,
+        "Bircher-Frühstück": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Kasekuchen",
+      "class": "spelling variant",
+      "grades": {
+        "Käsekuchen": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Kaesekuchen",
+      "class": "spelling variant",
+      "grades": {
+        "Käsekuchen": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Tomaten",
+      "class": "morphology",
+      "grades": {
+        "Tomatensuppe": 2,
+        "Tomato Soup": 1,
+        "Spaghetti Bolognese": 1,
+        "Griechischer Salat": 1,
+        "Lasagne Bolognese": 1,
+        "Gemüselasagne": 1,
+        "Bolognese-Sauce auf Vorrat": 1,
+        "Ragù alla Napoletana": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Zwiebeln",
+      "class": "morphology",
+      "grades": {
+        "Zwiebelkuchen": 2,
+        "Flammkuchen": 1,
+        "Kartoffelsalat": 1,
+        "Tomatensuppe": 1,
+        "Rindergulasch": 1,
+        "Schweinebraten": 1,
+        "Frikadellen": 1,
+        "Spaghetti Bolognese": 1,
+        "Spätzle with Cheese": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Hähnchen",
+      "class": "compound",
+      "grades": {
+        "Hähnchenbrustfilet mit Reis": 2,
+        "Hähnchen-Curry": 2,
+        "Brathähnchen mit Kartoffeln": 2,
+        "Chicken Curry": 1,
+        "Chicken Tikka Masala": 1,
+        "Chicken Noodle Soup": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Kartoffel",
+      "class": "compound",
+      "grades": {
+        "Kartoffelgratin": 2,
+        "Kartoffelsalat": 2,
+        "Kartoffel Rösti": 2,
+        "Brathähnchen mit Kartoffeln": 1,
+        "Linsensuppe": 1,
+        "Grünkohl mit Mettwurst": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Gulasch",
+      "class": "compound",
+      "grades": {
+        "Rindergulasch": 2,
+        "Beef Stew": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "chicken",
+      "class": "cross-language",
+      "grades": {
+        "Chicken Curry": 2,
+        "Chicken Tikka Masala": 2,
+        "Chicken Noodle Soup": 2,
+        "Hähnchen-Curry": 1,
+        "Hähnchenbrustfilet mit Reis": 1,
+        "Brathähnchen mit Kartoffeln": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Pasta",
+      "class": "cross-language",
+      "grades": {
+        "Spaghetti Bolognese": 2,
+        "Lasagne Bolognese": 2,
+        "Gemüselasagne": 2,
+        "Nudelauflauf": 2,
+        "Ragù alla Napoletana": 1,
+        "Spätzle with Cheese": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Nachtisch",
+      "class": "concept",
+      "grades": {
+        "Käsekuchen": 2,
+        "Tiramisu": 2,
+        "Obstsalat": 2,
+        "Milchreis": 2,
+        "Apple Crumble": 2,
+        "Waffeln": 1,
+        "Chocolate Brownies": 1,
+        "Apfelkuchen": 1,
+        "Lemon Drizzle Cake": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Suppe",
+      "class": "concept",
+      "grades": {
+        "Tomatensuppe": 2,
+        "Linsensuppe": 2,
+        "Kürbissuppe": 2,
+        "Chicken Noodle Soup": 2,
+        "Tomato Soup": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Gockel",
+      "class": "concept",
+      "grades": {
+        "Hähnchenbrustfilet mit Reis": 1,
+        "Hähnchen-Curry": 1,
+        "Brathähnchen mit Kartoffeln": 1,
+        "Chicken Curry": 1,
+        "Chicken Tikka Masala": 1,
+        "Chicken Noodle Soup": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "was kann ich mit Kartoffeln machen?",
+      "class": "ingredient-led",
+      "grades": {
+        "Kartoffelgratin": 2,
+        "Kartoffelsalat": 2,
+        "Brathähnchen mit Kartoffeln": 2,
+        "Kartoffel Rösti": 2,
+        "Linsensuppe": 1,
+        "Grünkohl mit Mettwurst": 1,
+        "Beef Stew": 1,
+        "Shepherd's Pie": 1
+      },
+      "empty": false,
+      "never": [],
+      "chips": [
+        "ingredient:potato"
+      ]
+    },
+    {
+      "query": "etwas mit Hähnchen",
+      "class": "ingredient-led",
+      "grades": {
+        "Hähnchenbrustfilet mit Reis": 2,
+        "Hähnchen-Curry": 2,
+        "Brathähnchen mit Kartoffeln": 2,
+        "Chicken Curry": 2,
+        "Chicken Tikka Masala": 2,
+        "Chicken Noodle Soup": 2
+      },
+      "empty": false,
+      "never": [],
+      "chips": [
+        "ingredient:chicken"
+      ]
+    },
+    {
+      "query": "Kokosmilch",
+      "class": "ingredient-led",
+      "grades": {
+        "Hähnchen-Curry": 2,
+        "Süßkartoffelcurry": 2,
+        "Linsen-Dal": 2,
+        "Chicken Curry": 2
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "vegetarisch",
+      "class": "constraint",
+      "grades": {
+        "Gemüselasagne": 2,
+        "Kartoffelgratin": 2,
+        "Süßkartoffelcurry": 2,
+        "Müsliriegel": 1,
+        "Bircher-Frühstück": 1,
+        "Käsekuchen": 1,
+        "Waffeln": 1,
+        "Tomatensuppe": 2,
+        "Kartoffelsalat": 2,
+        "Griechischer Salat": 2,
+        "Pfannkuchen": 1,
+        "Rührei mit Schnittlauch": 1,
+        "Pilzrisotto": 1,
+        "Ofengemüse mit Feta": 2,
+        "Linsen-Dal": 1,
+        "Apfelkuchen": 1,
+        "Tiramisu": 1,
+        "Obstsalat": 1,
+        "Spinatknödel": 2,
+        "Falafel mit Hummus": 2,
+        "Milchreis": 1,
+        "Pancakes": 1,
+        "Porridge with Berries": 1,
+        "Mushroom Risotto": 1,
+        "Veggie Burger": 2,
+        "Apple Crumble": 1,
+        "Chocolate Brownies": 1,
+        "Guacamole": 2,
+        "Tomato Soup": 1,
+        "Kartoffel Rösti": 1,
+        "Spätzle with Cheese": 1,
+        "Lemon Drizzle Cake": 1,
+        "Greek Yoghurt Bowl": 1
+      },
+      "empty": false,
+      "never": [
+        "Spaghetti Bolognese",
+        "Lasagne Bolognese",
+        "Bolognese-Sauce auf Vorrat",
+        "Ragù alla Napoletana",
+        "Hähnchenbrustfilet mit Reis",
+        "Hähnchen-Curry",
+        "Brathähnchen mit Kartoffeln",
+        "Zwiebelkuchen",
+        "Rindergulasch",
+        "Linsensuppe",
+        "Nudelauflauf",
+        "Chili con Carne",
+        "Schweinebraten",
+        "Grünkohl mit Mettwurst",
+        "Frikadellen",
+        "Flammkuchen",
+        "Chicken Curry",
+        "Chicken Tikka Masala",
+        "Chicken Noodle Soup",
+        "Beef Stew",
+        "Shepherd's Pie",
+        "Lachs mit Spinat",
+        "Fish Tacos",
+        "Pad Thai with Prawns",
+        "Caesar Salad",
+        "Gemüse-Pad-Thai",
+        "Kürbissuppe"
+      ],
+      "chips": [
+        "diet:vegetarian"
+      ]
+    },
+    {
+      "query": "unter 30 Minuten",
+      "class": "constraint",
+      "grades": {
+        "Hähnchenbrustfilet mit Reis": 1,
+        "Müsliriegel": 1,
+        "Bircher-Frühstück": 1,
+        "Waffeln": 1,
+        "Tomatensuppe": 1,
+        "Griechischer Salat": 1,
+        "Pfannkuchen": 1,
+        "Rührei mit Schnittlauch": 1,
+        "Lachs mit Spinat": 1,
+        "Tiramisu": 1,
+        "Obstsalat": 1,
+        "Frikadellen": 1,
+        "Flammkuchen": 1,
+        "Pancakes": 1,
+        "Porridge with Berries": 1,
+        "Caesar Salad": 1,
+        "Fish Tacos": 1,
+        "Guacamole": 1,
+        "Greek Yoghurt Bowl": 1
+      },
+      "empty": false,
+      "never": [
+        "Spaghetti Bolognese",
+        "Lasagne Bolognese",
+        "Bolognese-Sauce auf Vorrat",
+        "Ragù alla Napoletana",
+        "Gemüselasagne",
+        "Hähnchen-Curry",
+        "Brathähnchen mit Kartoffeln",
+        "Kartoffelgratin",
+        "Süßkartoffelcurry",
+        "Zwiebelkuchen",
+        "Rindergulasch",
+        "Käsekuchen",
+        "Linsensuppe",
+        "Kartoffelsalat",
+        "Nudelauflauf",
+        "Pilzrisotto",
+        "Ofengemüse mit Feta",
+        "Linsen-Dal",
+        "Gemüse-Pad-Thai",
+        "Kürbissuppe",
+        "Chili con Carne",
+        "Schweinebraten",
+        "Apfelkuchen",
+        "Grünkohl mit Mettwurst",
+        "Spinatknödel",
+        "Falafel mit Hummus",
+        "Milchreis",
+        "Chicken Curry",
+        "Chicken Tikka Masala",
+        "Chicken Noodle Soup",
+        "Beef Stew",
+        "Mushroom Risotto",
+        "Veggie Burger",
+        "Apple Crumble",
+        "Chocolate Brownies",
+        "Tomato Soup",
+        "Shepherd's Pie",
+        "Kartoffel Rösti",
+        "Spätzle with Cheese",
+        "Lemon Drizzle Cake",
+        "Pad Thai with Prawns"
+      ],
+      "chips": [
+        "time:30"
+      ]
+    },
+    {
+      "query": "vegetarisch unter 30 Minuten",
+      "class": "constraint",
+      "grades": {
+        "Müsliriegel": 1,
+        "Bircher-Frühstück": 1,
+        "Waffeln": 1,
+        "Tomatensuppe": 2,
+        "Griechischer Salat": 2,
+        "Pfannkuchen": 1,
+        "Rührei mit Schnittlauch": 1,
+        "Tiramisu": 1,
+        "Obstsalat": 1,
+        "Pancakes": 1,
+        "Porridge with Berries": 1,
+        "Guacamole": 2,
+        "Greek Yoghurt Bowl": 1
+      },
+      "empty": false,
+      "never": [
+        "Spaghetti Bolognese",
+        "Lasagne Bolognese",
+        "Bolognese-Sauce auf Vorrat",
+        "Ragù alla Napoletana",
+        "Hähnchenbrustfilet mit Reis",
+        "Hähnchen-Curry",
+        "Brathähnchen mit Kartoffeln",
+        "Zwiebelkuchen",
+        "Rindergulasch",
+        "Linsensuppe",
+        "Nudelauflauf",
+        "Chili con Carne",
+        "Schweinebraten",
+        "Grünkohl mit Mettwurst",
+        "Frikadellen",
+        "Flammkuchen",
+        "Chicken Curry",
+        "Chicken Tikka Masala",
+        "Chicken Noodle Soup",
+        "Beef Stew",
+        "Shepherd's Pie",
+        "Lachs mit Spinat",
+        "Fish Tacos",
+        "Pad Thai with Prawns",
+        "Caesar Salad",
+        "Gemüse-Pad-Thai",
+        "Kürbissuppe",
+        "Gemüselasagne",
+        "Kartoffelgratin",
+        "Süßkartoffelcurry",
+        "Käsekuchen",
+        "Kartoffelsalat",
+        "Pilzrisotto",
+        "Ofengemüse mit Feta",
+        "Linsen-Dal",
+        "Apfelkuchen",
+        "Spinatknödel",
+        "Falafel mit Hummus",
+        "Milchreis",
+        "Mushroom Risotto",
+        "Veggie Burger",
+        "Apple Crumble",
+        "Chocolate Brownies",
+        "Tomato Soup",
+        "Kartoffel Rösti",
+        "Spätzle with Cheese",
+        "Lemon Drizzle Cake"
+      ],
+      "chips": [
+        "diet:vegetarian",
+        "time:30"
+      ]
+    },
+    {
+      "query": "Frühstück",
+      "class": "constraint",
+      "grades": {
+        "Bircher-Frühstück": 2,
+        "Pfannkuchen": 2,
+        "Rührei mit Schnittlauch": 2,
+        "Pancakes": 2,
+        "Porridge with Berries": 2,
+        "Greek Yoghurt Bowl": 2,
+        "Kartoffel Rösti": 1
+      },
+      "empty": false,
+      "never": [],
+      "chips": [
+        "meal:breakfast"
+      ]
+    },
+    {
+      "query": "italienisch",
+      "class": "constraint",
+      "grades": {
+        "Spaghetti Bolognese": 2,
+        "Lasagne Bolognese": 2,
+        "Ragù alla Napoletana": 2,
+        "Pilzrisotto": 2,
+        "Tiramisu": 2,
+        "Mushroom Risotto": 2,
+        "Gemüselasagne": 1
+      },
+      "empty": false,
+      "never": [],
+      "chips": [
+        "cuisine:italian"
+      ]
+    },
+    {
+      "query": "Gericht ohne Fleisch",
+      "class": "negation",
+      "grades": {
+        "Gemüselasagne": 2,
+        "Kartoffelgratin": 2,
+        "Süßkartoffelcurry": 2,
+        "Müsliriegel": 1,
+        "Bircher-Frühstück": 1,
+        "Käsekuchen": 1,
+        "Waffeln": 1,
+        "Tomatensuppe": 2,
+        "Kartoffelsalat": 2,
+        "Griechischer Salat": 2,
+        "Pfannkuchen": 1,
+        "Rührei mit Schnittlauch": 1,
+        "Pilzrisotto": 1,
+        "Ofengemüse mit Feta": 2,
+        "Linsen-Dal": 1,
+        "Apfelkuchen": 1,
+        "Tiramisu": 1,
+        "Obstsalat": 1,
+        "Spinatknödel": 2,
+        "Falafel mit Hummus": 2,
+        "Milchreis": 1,
+        "Pancakes": 1,
+        "Porridge with Berries": 1,
+        "Mushroom Risotto": 1,
+        "Veggie Burger": 2,
+        "Apple Crumble": 1,
+        "Chocolate Brownies": 1,
+        "Guacamole": 2,
+        "Tomato Soup": 1,
+        "Kartoffel Rösti": 1,
+        "Spätzle with Cheese": 1,
+        "Lemon Drizzle Cake": 1,
+        "Greek Yoghurt Bowl": 1
+      },
+      "empty": false,
+      "never": [
+        "Spaghetti Bolognese",
+        "Lasagne Bolognese",
+        "Bolognese-Sauce auf Vorrat",
+        "Ragù alla Napoletana",
+        "Hähnchenbrustfilet mit Reis",
+        "Hähnchen-Curry",
+        "Brathähnchen mit Kartoffeln",
+        "Zwiebelkuchen",
+        "Rindergulasch",
+        "Linsensuppe",
+        "Nudelauflauf",
+        "Chili con Carne",
+        "Schweinebraten",
+        "Grünkohl mit Mettwurst",
+        "Frikadellen",
+        "Flammkuchen",
+        "Chicken Curry",
+        "Chicken Tikka Masala",
+        "Chicken Noodle Soup",
+        "Beef Stew",
+        "Shepherd's Pie",
+        "Lachs mit Spinat",
+        "Fish Tacos",
+        "Pad Thai with Prawns",
+        "Caesar Salad",
+        "Gemüse-Pad-Thai",
+        "Kürbissuppe"
+      ],
+      "chips": [
+        "diet:vegetarian"
+      ]
+    },
+    {
+      "query": "Suppe ohne Speck",
+      "class": "negation",
+      "grades": {
+        "Tomatensuppe": 2,
+        "Kürbissuppe": 2,
+        "Tomato Soup": 2,
+        "Chicken Noodle Soup": 2
+      },
+      "empty": false,
+      "never": [
+        "Linsensuppe"
+      ]
+    },
+    {
+      "query": "Nudeln mit Tomatensoße",
+      "class": "under-parse",
+      "grades": {
+        "Spaghetti Bolognese": 2,
+        "Lasagne Bolognese": 1,
+        "Gemüselasagne": 1,
+        "Nudelauflauf": 1
+      },
+      "empty": false,
+      "never": [],
+      "chips": []
+    },
+    {
+      "query": "schnelles Abendessen",
+      "class": "vague",
+      "grades": {
+        "Hähnchenbrustfilet mit Reis": 2,
+        "Lachs mit Spinat": 2,
+        "Süßkartoffelcurry": 1,
+        "Hähnchen-Curry": 1,
+        "Chicken Curry": 1,
+        "Gemüse-Pad-Thai": 1,
+        "Rührei mit Schnittlauch": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "warme Mahlzeit",
+      "class": "vague",
+      "grades": {
+        "Tomatensuppe": 1,
+        "Linsensuppe": 1,
+        "Kürbissuppe": 1,
+        "Rindergulasch": 1,
+        "Hähnchen-Curry": 1,
+        "Süßkartoffelcurry": 1,
+        "Chicken Curry": 1,
+        "Beef Stew": 1,
+        "Chicken Noodle Soup": 1,
+        "Tomato Soup": 1,
+        "Chili con Carne": 1,
+        "Kartoffelgratin": 1,
+        "Gemüselasagne": 1,
+        "Nudelauflauf": 1,
+        "Lasagne Bolognese": 1,
+        "Schweinebraten": 1,
+        "Brathähnchen mit Kartoffeln": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "vegetarisch mit Lachs",
+      "class": "conflict",
+      "grades": {},
+      "empty": true,
+      "never": []
+    },
+    {
+      "query": "Schnitzel",
+      "class": "no result",
+      "grades": {},
+      "empty": true,
+      "never": []
+    },
+    {
+      "query": "zzzz",
+      "class": "no result",
+      "grades": {},
+      "empty": true,
+      "never": []
+    }
+  ]
+}
