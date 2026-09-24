@@ -1782,6 +1782,13 @@ existing history is clean) and grows after. Mitigation: evaluate on a **frozen
 pre-launch slice** as a permanent reference point, alongside the rolling window.
 Report both.
 
+> **As built.** `tests/IntegrationTests/Suggestions/Replay/`. The household is
+> put back as of `t` by deleting everything dated at or after it inside a
+> transaction that is rolled back, so the ranker under test is the production
+> SQL, unaltered. It replays a simulated two-person kitchen (`ReplayKitchen`) in
+> CI, and a restored copy of a real database when `CULINA_REPLAY_DATABASE` is
+> set. The frozen slice ends the day suggestions shipped, 2026-09-18.
+
 ### M.2 Online metrics — three counters, no more
 
 On the existing `Culina` meter, so they reach whatever OTLP endpoint the operator
@@ -1813,6 +1820,14 @@ involvement:
 These four are the ones that catch the small-catalogue failure mode, and they
 need no user feedback at all.
 
+> **As built.** `suggestion_impressions` was not built (see 9y8y.2), and these
+> four do not need it: the replay knows exactly which five recipes the front
+> page would have shown on every evening it predicts, so `ShortlistQuality`
+> computes them from the replayed lists — with no write on render, and for
+> weight vectors nobody has shipped. The first reading, on the simulated
+> kitchen, is the failure this section predicts: repeats 0.78, novelty 0.00
+> (culina-v2-9y8y.6).
+
 ### M.3 Weight calibration without an ML pipeline
 
 Ten weights, one scalar objective (recall@5 from M.1), a few hundred evaluation
@@ -1833,6 +1848,15 @@ Two guardrails, both non-negotiable:
 **No per-instance auto-tuning.** A self-hosted app whose ranking silently drifts
 per installation is unsupportable: two people comparing notes cannot reproduce
 each other's behaviour, and a bug report becomes untriageable. Weights are code.
+
+> **As built.** `WeightCalibration`, run by the explicit
+> `WeightCalibrationTests`. It sweeps the ten weights that can move a front-page
+> list (Slot and Similarity cannot: the question names no slot and resembles
+> nothing) over multiples 0–3× of their shipped value, scores candidates on an
+> frozen slice thinned evenly towards 150 points, and keeps a step only after
+> every rule in `RankingRules` holds for it — checked through hosts built with
+> that exact vector, in a database separate from the one being replayed. It
+> prints a proposal; it never writes one.
 
 ### M.4 The qualitative check that actually decides it
 

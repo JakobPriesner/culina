@@ -1,8 +1,6 @@
-using Application.Abstractions.Settings;
 using Domain.Suggestions;
 using Infrastructure.Persistence;
 using IntegrationTests.Fixtures;
-using Npgsql;
 
 namespace IntegrationTests.Suggestions.Replay;
 
@@ -13,16 +11,6 @@ namespace IntegrationTests.Suggestions.Replay;
 [Collection(RequiresDatabase.Name)]
 public class SuggestionReplayTests(PostgresFixture postgres)
 {
-    /// <summary>
-    /// A connection string for a <b>restored copy</b> of a real Culina database.
-    /// </summary>
-    /// <remarks>
-    /// A copy and never the live one. The replay rolls back everything it does,
-    /// but it does it by deleting a household's history inside a transaction, and
-    /// the row locks that takes are nothing a running instance should wait on.
-    /// </remarks>
-    private const string RealDatabaseVariable = "CULINA_REPLAY_DATABASE";
-
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -79,31 +67,20 @@ public class SuggestionReplayTests(PostgresFixture postgres)
 
     /// <summary>
     /// The number a weight change is actually defended with: a replay of a real
-    /// cook log.
+    /// cook log. Explicit, because it needs a <see cref="RestoredDatabase"/>.
     /// </summary>
-    /// <remarks>
-    /// Explicit, because it needs a database this repository does not have.
-    /// Restore a backup somewhere local, then run
-    /// <c>CULINA_REPLAY_DATABASE="Host=…;Database=…;Username=…;Password=…"
-    /// dotnet test --filter Run_ShouldReportEveryHousehold</c>.
-    /// </remarks>
     [Fact(Explicit = true)]
     public async Task Run_ShouldReportEveryHousehold_InARestoredDatabase()
     {
         // Arrange
-        var connectionString = Environment.GetEnvironmentVariable(RealDatabaseVariable);
+        var connectionString = RestoredDatabase.ConnectionString;
 
-        Assert.SkipWhen(connectionString is null, $"Set {RealDatabaseVariable} to a restored copy of a Culina database.");
+        Assert.SkipWhen(connectionString is null, $"Set {RestoredDatabase.Variable} to a restored copy of a Culina database.");
 
-        await using var dataSource = RealDataSource(connectionString!);
+        await using var dataSource = RestoredDatabase.Open(connectionString!);
         await using var session = new DbSession(dataSource);
 
-        var households = await new DbExecutor(session).QueryAsync<Guid>(
-            "select distinct household_id from cook_log_entries;",
-            null,
-            Token);
-
-        foreach (var householdId in households)
+        foreach (var householdId in await RestoredDatabase.HouseholdsAsync(session, Token))
         {
             var replay = new SuggestionReplay(session, householdId);
 
@@ -125,22 +102,4 @@ public class SuggestionReplayTests(PostgresFixture postgres)
             """,
             null,
             Token);
-
-    /// <summary>The app's own data source, so the replay reads a restored database exactly as the app would.</summary>
-    private static NpgsqlDataSource RealDataSource(string connectionString)
-    {
-        var parts = new NpgsqlConnectionStringBuilder(connectionString);
-
-        DapperConfiguration.Apply();
-
-        return CulinaDataSource.Build(new DatabaseSettings
-        {
-            Host = parts.Host!,
-            Port = parts.Port,
-            Name = parts.Database!,
-            Username = parts.Username!,
-            Password = parts.Password ?? string.Empty,
-            RequireSsl = parts.SslMode is SslMode.Require or SslMode.VerifyCA or SslMode.VerifyFull
-        });
-    }
 }
