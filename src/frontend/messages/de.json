@@ -1125,5 +1125,6 @@
   "auth.join.member.body": "Diese Einladung gilt für einen Haushalt, zu dem du gehörst – es hat sich also nichts geändert, und der Link funktioniert weiter für die Person, für die er gedacht war.",
   "auth.join.open": "{household} öffnen",
   "auth.join.home": "Zurück zu deiner Küche",
-  "auth.join.joining": "Einladung wird geöffnet …"
+  "auth.join.joining": "Einladung wird geöffnet …",
+  "ai.models.seeConnection": "Keine Liste von {provider} – siehe die Verbindung oben. Gib den Modellnamen stattdessen ein."
 }

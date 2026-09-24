@@ -136,30 +136,57 @@
   }
 
   /**
-   * Why there is no list, in the case where the provider answered.
+   * Whether a job is offered the provider's whole catalogue, because none of
+   * it announced itself as the kind this job needs.
    *
-   * Two different situations that read the same from a picker with nothing in
-   * it, and they need different things done about them. An empty catalogue is
-   * the key or the account: nothing at all was offered, so no job on this
-   * screen will ever have a list. A catalogue that simply holds nothing for
-   * *this* job is ordinary — a provider can offer forty models and none that
-   * draws.
+   * Ordinary, and said under the picker so nobody wonders why a writing model
+   * is offered to the job that draws: a provider can offer forty models and
+   * none that draws.
    */
-  function whyNoList(capability: Capability, use: Use): 'nothing-at-all' | 'none-for-job' | null {
+  function offersWholeCatalogue(capability: Capability, use: Use): boolean {
     const listed = offeredBy(use.provider);
 
-    if (listed?.reachable !== true) {
+    return (
+      listed?.reachable === true &&
+      listed.models.length > 0 &&
+      !listed.models.some((model) => (capability === 'draw' ? model.canDraw : !model.canDraw))
+    );
+  }
+
+  /**
+   * What is wrong with a provider's list of models, said once, beside the
+   * provider.
+   *
+   * It is a fact about the connection, not about any one job: a key that may
+   * not read the catalogue leaves every job without a list. Said under each
+   * job it was the same long paragraph three times, the page twice as long on
+   * a phone, and a screen reader reading it three times over.
+   */
+  function catalogueProblem(provider: Provider): string | null {
+    const listed = offeredBy(provider);
+    const name = m[`ai.provider.${provider}`]();
+
+    if (!listed) {
       return null;
     }
 
-    if (listed.models.length === 0) {
-      return 'nothing-at-all';
+    // A refused key and a provider that is down read the same from here and
+    // are not the same thing: one is replaced, the other is waited for.
+    // "Check the key and the address" sent somebody to replace a key that
+    // signs every other call in this app perfectly well — providers scope
+    // keys, and reading the catalogue is a permission of its own.
+    if (!listed.reachable) {
+      return listed.problem === 'assistance.rejected'
+        ? m['ai.models.rejected']({ provider: name })
+        : m['ai.models.unreachable']({ provider: name });
     }
 
-    return listed.models.some((model) => (capability === 'draw' ? model.canDraw : !model.canDraw))
-      ? null
-      : 'none-for-job';
+    return listed.models.length === 0 ? m['ai.models.emptyCatalogue']({ provider: name }) : null;
   }
+
+  /** Whether a job's provider has no list for a reason already said above. */
+  const unlistedByProvider = (use: Use): boolean =>
+    use.provider !== '' && catalogueProblem(use.provider) !== null;
 
   function budget(value: string): number | null {
     const parsed = Number(value.replace(',', '.'));
@@ -213,6 +240,7 @@
     {#each providers as provider (provider)}
       {@const facts = providerFacts[provider]}
       {@const connection = connectionFor(provider)}
+      {@const problem = catalogueProblem(provider)}
 
       <SettingsRow
         label={m[`ai.provider.${provider}`]()}
@@ -272,25 +300,16 @@
             {m['ai.apiKey.cancel']()}
           </Button>
         {/if}
+
+        {#if problem}
+          <p class="failure" role="alert">{problem}</p>
+        {/if}
       </SettingsRow>
     {/each}
   </SettingsSection>
 
   <!-- Said plainly, before anybody turns anything on. -->
   <p class="privacy">{anythingHosted ? m['ai.privacy.mixed']() : m['ai.privacy.local']()}</p>
-
-  {#each assistance.models.filter((one) => !one.reachable) as listed (listed.provider)}
-    <p class="failure" role="alert">
-      <!-- A refused key and a provider that is down read the same from here
-           and are not the same thing: one is replaced, the other is waited
-           for. "Check the key and the address" sent somebody to replace a key
-           that signs every other call in this app perfectly well — providers
-           scope keys, and reading the catalogue is a permission of its own. -->
-      {listed.problem === 'assistance.rejected'
-        ? m['ai.models.rejected']({ provider: m[`ai.provider.${listed.provider}`]() })
-        : m['ai.models.unreachable']({ provider: m[`ai.provider.${listed.provider}`]() })}
-    </p>
-  {/each}
 
   {#if assistance.unlisted}
     <!-- The listing itself did not happen, so there is no per-provider row to
@@ -353,7 +372,7 @@
                  the filter came up empty. Said plainly under the picker, so
                  nobody wonders why a writing model is being offered to the
                  job that draws. -->
-            {@const unfiltered = whyNoList(capability, use) === 'none-for-job'}
+            {@const unfiltered = offersWholeCatalogue(capability, use)}
             <Field
               label={m['ai.job.model']()}
               hint={unfiltered
@@ -378,8 +397,8 @@
                  what is lost, never the ability to configure anything. -->
             <Field
               label={m['ai.job.model']()}
-              hint={whyNoList(capability, use) === 'nothing-at-all'
-                ? m['ai.models.emptyCatalogue']({ provider: m[`ai.provider.${use.provider}`]() })
+              hint={unlistedByProvider(use)
+                ? m['ai.models.seeConnection']({ provider: m[`ai.provider.${use.provider}`]() })
                 : undefined}
             >
               {#snippet children({ id, describedBy, invalid })}
