@@ -124,10 +124,19 @@
    * ask for the same thing — three copies of this object is three ways for a
    * "load more" to append rows from a different list than the one above it.
    */
+  /**
+   * The query whose correction was turned down.
+   *
+   * Compared rather than cleared, so it lapses by itself the moment the query
+   * changes: a refusal is about the words it was given, not the next ones.
+   */
+  let asTypedFor = $state<string | null>(null);
+
   const filters = $derived({
     query: libraryView.query,
     tags: libraryView.tags,
     maxMinutes: libraryView.maxMinutes ?? undefined,
+    asTyped: asTypedFor !== null && asTypedFor === libraryView.query,
     // Always explicit, so that the order the page names above the grid is the
     // order it actually asked for. The server would pick the same one from an
     // absent `sort`, but a label worked out separately from the request is a
@@ -347,6 +356,9 @@
     searchPlaceholder={m['recipes.list.searchPlaceholder']()}
     savable
     onpromote={promote}
+    interpretation={recipes.status === 'ready' ? recipes.interpretation : null}
+    total={recipes.total}
+    onastyped={() => (asTypedFor = libraryView.query)}
   >
     {#snippet summary()}
       <div class="collection-summary" aria-live="polite" aria-atomic="true">

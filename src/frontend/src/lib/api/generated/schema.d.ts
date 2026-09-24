@@ -2077,6 +2077,12 @@ export interface components {
              * @description Where they end, exclusive.
              */
             end: number;
+            /**
+             * @description For an ingredient or an exclusion, the thing itself as typed —
+             *     "Kartoffeln" when `text` is the whole "was kann ich mit Kartoffeln
+             *     machen?" — for labelling a chip whose span removes more.
+             */
+            word?: string | null;
         };
         /** @description One refinement, and how many results it would leave. */
         RecipesGetAllFacet: {

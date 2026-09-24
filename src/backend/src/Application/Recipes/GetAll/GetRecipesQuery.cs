@@ -203,7 +203,8 @@ internal static class RecipeListMappings
         Value = inference.Value,
         Text = inference.Text,
         Start = inference.Start,
-        End = inference.End
+        End = inference.End,
+        Word = inference.Word
     };
 
     private static RecipeSummary ToSummary(this RecipeSearchRow row, int requestedIngredients) => new()

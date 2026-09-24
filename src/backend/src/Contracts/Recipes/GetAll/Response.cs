@@ -122,6 +122,13 @@ public sealed record AppliedInference
 
     /// <summary>Where they end, exclusive.</summary>
     public required int End { get; init; }
+
+    /// <summary>
+    /// For an ingredient or an exclusion, the thing itself as typed —
+    /// "Kartoffeln" when <c>text</c> is the whole "was kann ich mit Kartoffeln
+    /// machen?" — for labelling a chip whose span removes more.
+    /// </summary>
+    public string? Word { get; init; }
 }
 
 /// <summary>
