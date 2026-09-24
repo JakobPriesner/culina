@@ -14,4 +14,10 @@
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
 
+  <!-- The search evaluation's library and judged queries: data, so that adding
+       a case is editing a list rather than writing a test. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Recipes/Evaluation/golden-library.json" LogicalName="golden-library.json" />
+  </ItemGroup>
+
 </Project>

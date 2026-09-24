@@ -48,7 +48,7 @@ public static class CulinaryLexicon
     /// The version of this table. Raise it with any change to an entry or to
     /// how text is matched against them.
     /// </summary>
-    public const int Version = 2;
+    public const int Version = 3;
 
     private static readonly Compiled Index = new(Entries());
 
@@ -456,9 +456,11 @@ public static class CulinaryLexicon
         Ingredient("veal", ["Kalb", "Kalbfleisch"], ["veal"], "meat"),
         Ingredient("game", ["Wild", "Wildschwein", "Hirsch", "Rehrücken", "Rehkeule", "Wildbret"],
             ["venison", "game"], "meat"),
-        Ingredient("chicken", ["Hähnchen", "Hühnchen", "Huhn", "Hühner", "Hendl", "Poulet", "Poularde", "Suppenhuhn"],
-            ["chicken", "drumsticks"], "poultry"),
-        Ingredient("rooster", ["Hahn", "Gockel"], ["rooster", "cockerel"], "chicken"),
+        // "Gockel" and "Hahn" are what some people call it, not a kind of it:
+        // as a concept beneath chicken, nothing ever answered to them.
+        Ingredient("chicken",
+            ["Hähnchen", "Hühnchen", "Huhn", "Hühner", "Hendl", "Poulet", "Poularde", "Suppenhuhn", "Gockel", "Hahn"],
+            ["chicken", "drumsticks", "rooster", "cockerel"], "poultry"),
         Ingredient("turkey", ["Pute", "Puten", "Puter", "Truthahn"], ["turkey"], "poultry"),
         Ingredient("duck", ["Ente"], ["duck"], "poultry"),
         Ingredient("goose", ["Gans", "Gänse"], ["goose"], "poultry"),

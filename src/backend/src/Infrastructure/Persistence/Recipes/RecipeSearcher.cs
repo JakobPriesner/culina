@@ -105,14 +105,21 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     /// Half, and the number is not a guess. Trigram similarity counts shared
     /// three-letter windows, and a single transposed or missing letter in the
     /// middle of a word destroys three of them at once: "Bolgnese" scores
-    /// 0.58 against "Bolognese" and "Bolognäse" scores 0.54, so anything
-    /// stricter refuses both of the misspellings this was built to survive.
+    /// 0.58 against "Bolognese" and "Bolognäse" 0.62, so anything stricter
+    /// refuses the misspellings this was built to survive.
+    /// </para>
+    /// <para>
+    /// Strict word similarity — against a whole word of the title, not the best
+    /// stretch of it. The looser measure scored "Schnitzel" well against
+    /// "Rührei mit Schnittlauch" on the strength of "schnit" alone, so a
+    /// library with no Schnitzel answered with scrambled eggs; against the
+    /// whole word "schnittlauch" it is 0.35.
     /// The cost of being generous is contained by where it lands — a match
     /// found only this way is two tiers down, below everything the query
     /// actually names.
     /// </para>
     /// <para>
-    /// Also what every connection sets <c>pg_trgm.word_similarity_threshold</c>
+    /// Also what every connection sets <c>pg_trgm.strict_word_similarity_threshold</c>
     /// to (see <see cref="CulinaDataSource"/>), so that the trigram index on
     /// titles hands back at least every title this counts as a match.
     /// </para>

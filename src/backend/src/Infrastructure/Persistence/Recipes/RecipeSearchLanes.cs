@@ -154,7 +154,7 @@ internal static class RecipeSearchLanes
         exists (select 1 from unnest(q.terms) as term
                 where d.title_ae like '%' || term || '%'
                    or d.title_a like '%' || term || '%'
-                   or word_similarity(term, d.title_ae) >= @fuzzyThreshold)
+                   or strict_word_similarity(term, d.title_ae) >= @fuzzyThreshold)
         """;
 
     /// <summary>
@@ -235,9 +235,9 @@ internal static class RecipeSearchLanes
         -- migration 0018 for why the two are separate.
         select d.recipe_id
         from unnest(culina_search_terms(@query::text)) as term
-        join recipe_search_documents d on term <% d.title_ae
+        join recipe_search_documents d on term <<% d.title_ae
         where d.household_id = @householdId
-          and word_similarity(term, d.title_ae) >= @fuzzyThreshold
+          and strict_word_similarity(term, d.title_ae) >= @fuzzyThreshold
         union
         -- What the recipe is rather than what it says: every concept the
         -- query names, among the ones its title, tags and ingredients do.
@@ -270,6 +270,8 @@ internal static class RecipeSearchLanes
         coalesce({FuzzyTitle}, false)                    as fuzzy_title,
         coalesce({FuzzyBody}, false)                     as fuzzy_body,
         coalesce(cardinality(@concepts::text[]) > 0 and d.concepts @> @concepts::text[], false) as concept_hit,
+        coalesce(cardinality(@diets::text[]) > 0 and d.concepts @> @diets::text[], false) as diet_asserted,
+        {TitleSimilarity}                                as title_similarity,
         coalesce({Rank}, 0)::float8                      as lexical_rank,
         {QueryCoverage}                                  as query_coverage,
         {TitleCoverage}                                  as title_coverage
@@ -365,6 +367,13 @@ internal static class RecipeSearchLanes
     /// places makes the tuning of one silently undo the other.
     /// </para>
     /// <para>
+    /// Three nudges sit outside the four weights, each zero unless its
+    /// question was asked: "schnell" (<see cref="QuickFit"/>), the closer
+    /// spelling within the typo tier (<see cref="TitleSimilarity"/>), and a
+    /// diet somebody asserted — a title or a tag that says vegetarisch — ahead
+    /// of one that is only presumed because nothing in the recipe refutes it.
+    /// </para>
+    /// <para>
     /// Every term is bounded in [0, 1] and computed per row, so nothing is
     /// normalised across the result set. Saving a recipe therefore cannot
     /// reorder the ones around it — in a library somebody adds to every few
@@ -378,6 +387,23 @@ internal static class RecipeSearchLanes
         + 0.20 * lexical_rank
         + 0.15 * structural_fit
         + 0.10 * quick_fit
+        + 0.10 * title_similarity
+        + 0.10 * case when diet_asserted then 1.0 else 0.0 end
+        """;
+
+    /// <summary>
+    /// How nearly a term of the query is a whole word of the title.
+    /// </summary>
+    /// <remarks>
+    /// The typo lane puts every title a misspelling resembles into one tier,
+    /// and "Kartoffelgratn" resembles Kartoffelsalat as well as Kartoffelgratin
+    /// — so within the tier, the closer spelling comes first. Measured against
+    /// the title only, like the lane itself, which keeps it a few microseconds
+    /// a row. Outside the four weights, and one for an exact title, so it only
+    /// ever breaks ties the tier and the coverage left.
+    /// </remarks>
+    private const string TitleSimilarity = """
+        coalesce((select max(strict_word_similarity(term, d.title_ae)) from unnest(q.terms) as term), 0)::float8
         """;
 
     /// <summary>
