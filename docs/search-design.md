@@ -2701,6 +2701,17 @@ Four entity kinds, visually distinct in the UI (§18.3):
 
 Never cached (`Cache-Control: no-store`) and never logged with its `q` (§21).
 
+**Amended after building it.** The route is
+`GET /api/v1/households/{householdId}/completions?query=…`, not
+`…/suggestions`: `GET /suggestions` already is the "what should I cook?"
+ranking, and one name for two unrelated answers would be read as one feature.
+A refinement comes back as `{ label, maxMinutes, recipeCount }` rather than a
+finished query string, so the client words it in the reader's language —
+"Hähnchen unter 30 Minuten" and "chicken under 30 minutes" parse alike. Only
+the words still being typed are completed: `vegetarisch häh` completes `häh`.
+Ingredient names carry their folds as generated columns (migration 0020); folded
+at query time they cost 75 ms at p95 over two thousand recipes, and 6 ms stored.
+
 ### 17.4 `GET /api/v1/recipes/{recipeId}/related`
 
 ```

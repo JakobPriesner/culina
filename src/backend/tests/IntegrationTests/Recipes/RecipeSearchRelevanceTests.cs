@@ -557,6 +557,163 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         Assert.DoesNotContain("pasta", lasagne);
     }
 
+    [Theory]
+    [InlineData("häh")]
+    [InlineData("haeh")]
+    [InlineData("Hah")]
+    public async Task Completions_ShouldOfferTheHouseholdsOwnWords_InEitherSpelling(string typed)
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var items = await CompletionsAsync(world, typed);
+
+        // Assert
+        // A recipe to go to comes first, then what to filter by.
+        Assert.Equal("recipe:Hähnchenbrustfilet mit Reis", items[0]);
+        Assert.Contains("ingredient:Hähnchenbrust:1", items);
+    }
+
+    [Fact]
+    public async Task Completions_ShouldCompleteOnlyTheWordsStillBeingTyped()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var tags = await CompletionsAsync(world, "veg");
+        var afterADiet = await CompletionsAsync(world, "vegetarisch Kar");
+        var oneLetter = await CompletionsAsync(world, "h");
+
+        // Assert
+        Assert.Contains("tag:vegetarisch:3", tags);
+        Assert.Contains("tag:vegan:1", tags);
+        // The diet has been understood; "Kar" has not.
+        Assert.Equal("recipe:Kartoffelgratin", afterADiet[0]);
+        // One letter is a prefix of half the library.
+        Assert.Empty(oneLetter);
+    }
+
+    [Fact]
+    public async Task Completions_ShouldOfferARefinement_OnlyWhenItWouldSplitWhatIsFound()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        // Two recipes say "Zwiebel"; one of them takes half an hour.
+        var items = await CompletionsAsync(world, "Zwie");
+
+        // Assert
+        Assert.Contains("refinement:Zwiebel:1:30", items);
+    }
+
+    [Fact]
+    public async Task Completions_ShouldBeNeitherCachedNorOpenToAnotherHousehold()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var own = await world.Client.GetAsync(
+            $"/api/v1/households/{world.HouseholdId}/completions?query=Bol", Token);
+        var foreign = await world.Client.GetAsync(
+            $"/api/v1/households/{Guid.NewGuid()}/completions?query=Bol", Token);
+
+        // Assert
+        Assert.Contains("no-store", own.Headers.CacheControl?.ToString() ?? string.Empty, StringComparison.Ordinal);
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, foreign.StatusCode);
+    }
+
+    /// <summary>
+    /// The budget a completion has: it is asked on every pause in typing, so
+    /// it has to be back before the next keystroke is.
+    /// </summary>
+    /// <remarks>
+    /// Explicit, because seeding two thousand recipes is a measurement rather
+    /// than a check. Run it after changing the completion queries:
+    /// <c>dotnet test --filter-method *TwoThousandRecipes*</c> with the
+    /// explicit tests included.
+    /// </remarks>
+    [Fact(Explicit = true)]
+    public async Task Completions_ShouldAnswerWithinFortyMilliseconds_OverTwoThousandRecipes()
+    {
+        // Arrange
+        var world = await SeedAsync();
+        await postgres.ExecuteAsync(
+            $$"""
+            with words(title_word) as (
+                select unnest(array['Hähnchen', 'Kartoffel', 'Tomaten', 'Linsen', 'Kürbis', 'Lachs', 'Rinder',
+                                    'Gemüse', 'Spinat', 'Pilz', 'Paprika', 'Zucchini', 'Käse', 'Bohnen']) ),
+            dishes(dish) as (
+                select unnest(array['Curry', 'Suppe', 'Auflauf', 'Pfanne', 'Salat', 'Eintopf', 'Gratin',
+                                    'Risotto', 'Lasagne', 'Bowl']) ),
+            pool(name, n) as (
+                select name, row_number() over () from unnest(array[
+                    'Zwiebel', 'Knoblauch', 'Olivenöl', 'Salz', 'Pfeffer', 'Butter', 'Sahne', 'Milch', 'Mehl',
+                    'Eier', 'Reis', 'Nudeln', 'Hähnchenbrust', 'Hackfleisch', 'Speck', 'Kartoffeln', 'Karotten',
+                    'Sellerie', 'Lauch', 'Tomaten', 'Tomatenmark', 'Paprika', 'Chili', 'Ingwer', 'Kokosmilch',
+                    'Linsen', 'Kichererbsen', 'Spinat', 'Feta', 'Parmesan', 'Mozzarella', 'Zitrone', 'Limette',
+                    'Petersilie', 'Basilikum', 'Koriander', 'Brühe', 'Weißwein', 'Honig', 'Senf']) as name),
+            made as (
+                insert into recipes (id, household_id, title, language, yield_amount, yield_kind,
+                                     prep_minutes, cook_minutes, created_by, created_at, updated_at)
+                select gen_random_uuid(), '{{world.HouseholdId}}',
+                       w.title_word || d.dish || ' ' || i, 'de', 4, 'servings',
+                       10 + (i % 4) * 5, 10 + (i % 7) * 10,
+                       (select created_by from recipes where household_id = '{{world.HouseholdId}}' limit 1),
+                       now(), now()
+                from generate_series(1, 2000) as i
+                cross join lateral (select title_word from words offset (i % 14) limit 1) w
+                cross join lateral (select dish from dishes offset (i % 10) limit 1) d
+                returning id),
+            grouped as (
+                insert into ingredient_groups (id, recipe_id, sort_order)
+                select gen_random_uuid(), id, 0 from made
+                returning id, recipe_id)
+            insert into recipe_ingredients (id, group_id, sort_order, name)
+            select gen_random_uuid(), g.id, k, p.name
+            from grouped g
+            cross join generate_series(0, 7) as k
+            join pool p on p.n = 1 + (abs(hashtext(g.recipe_id::text || k)) % 40);
+
+            insert into recipe_search_documents (
+                recipe_id, household_id, language, document, fuzzy_text,
+                title_ae, title_a, ingredient_count, analyzer_version)
+            select recipe_id, household_id, language, document, fuzzy_text,
+                   title_ae, title_a, ingredient_count, analyzer_version
+            from recipe_search_input
+            on conflict (recipe_id) do nothing;
+
+            analyze;
+            """,
+            Token);
+
+        string[] prefixes = ["hä", "häh", "kar", "kart", "tom", "lin", "kür", "lac", "zwi", "koko", "pil", "boh"];
+        var timings = new List<double>();
+
+        // Act
+        foreach (var round in Enumerable.Range(0, 5))
+        {
+            foreach (var prefix in prefixes)
+            {
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                await CompletionsAsync(world, prefix);
+                timings.Add(clock.Elapsed.TotalMilliseconds);
+            }
+        }
+
+        // Assert
+        // The first round warms the connection and the plans; what is measured
+        // is what somebody typing meets.
+        var steady = timings.Skip(prefixes.Length).Order().ToList();
+        var p95 = steady[(int)Math.Ceiling(steady.Count * 0.95) - 1];
+
+        TestContext.Current.SendDiagnosticMessage($"completions p95 {p95:F1} ms, median {steady[steady.Count / 2]:F1} ms");
+        Assert.True(p95 <= 40, $"p95 was {p95:F1} ms");
+    }
+
     [Fact]
     public async Task Search_ShouldTreatALikeMetacharacterAsInert()
     {
@@ -804,6 +961,27 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         && facets.ValueKind == System.Text.Json.JsonValueKind.Object
             ? [.. facets.GetProperty("tags").EnumerateArray().Select(tag => tag.GetProperty("value").GetString()!)]
             : [];
+
+    private static async Task<List<string>> CompletionsAsync(World world, string typed)
+    {
+        var response = await world.Client.GetAsync(
+            $"/api/v1/households/{world.HouseholdId}/completions?query={Uri.EscapeDataString(typed)}",
+            Token);
+
+        return [.. response.Json!.Value.GetProperty("items").EnumerateArray().Select(item =>
+        {
+            var kind = item.GetProperty("kind").GetString();
+            var label = item.GetProperty("label").GetString();
+
+            return kind switch
+            {
+                "recipe" => $"recipe:{label}",
+                "refinement" => $"refinement:{label}:{item.GetProperty("recipeCount").GetInt32()}:"
+                                + item.GetProperty("maxMinutes").GetInt32(),
+                _ => $"{kind}:{label}:{item.GetProperty("recipeCount").GetInt32()}"
+            };
+        })];
+    }
 
     private static List<string> Titles(ApiResponse response) =>
         [.. response.Json!.Value.GetProperty("items").EnumerateArray()
