@@ -359,17 +359,17 @@
   "plan.thisWeek": "This week",
   "plan.add": "Add",
   "plan.remove": "Take {title} off the plan",
-  "plan.toShoppingList": "Add the week to the shopping list",
-  "plan.addedToList": [
+  "plan.toShoppingList": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "Added {count} recipe to the shopping list.",
-        "countPlural=*": "Added {count} recipes to the shopping list."
+        "countPlural=one": "Put {count} meal on the shopping list",
+        "countPlural=*": "Put {count} meals on the shopping list"
       }
     }
   ],
+  "plan.addedToList": "The week's meals are on the shopping list.",
   "plan.openList": "Open the list",
   "plan.slot.breakfast": "Breakfast",
   "plan.slot.lunch": "Lunch",
@@ -380,7 +380,7 @@
   "plan.pick.clear": "Clear search",
   "plan.pick.slot": "Meal",
   "plan.empty.title": "Nothing planned yet.",
-  "plan.empty.description": "Plan recipes for the week and your shopping list fills up automatically.",
+  "plan.empty.description": "Plan recipes for the week, then put the whole week on your shopping list at once.",
   "plan.empty.action": "Find something to cook",
   "plan.move.handle": "Move {title} to another day",
   "plan.move.title": "Move {title}",
@@ -1106,5 +1106,11 @@
   "problem.users.registration_closed": "This Culina isn't accepting new accounts.",
   "problem.users.weak_password": "A password must be at least 12 characters.",
   "units.cup": "cup",
-  "units.cups": "cups"
+  "units.cups": "cups",
+  "plan.shop.hint": "A meal already on the list — or a recipe you added from its page — is not added twice.",
+  "plan.shop.done": "Everything planned this week is on the shopping list.",
+  "plan.onList": "On the shopping list",
+  "plan.unplanned.stillOnList": "{title} is off the plan. Its ingredients are still on the shopping list.",
+  "plan.unplanned.withdraw": "Remove them",
+  "plan.unplanned.withdrawn": "Its ingredients are off the shopping list."
 }

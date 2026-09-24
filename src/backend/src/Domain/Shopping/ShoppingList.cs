@@ -53,10 +53,11 @@ public sealed class ShoppingList
         new(id, householdId, [.. items], version);
 
     /// <summary>
-    /// Puts something on the list, merging it into a line that is already there.
+    /// Puts what a recipe asks for on the list, merging it into a line that is
+    /// already there.
     /// </summary>
     /// <param name="name">What to buy.</param>
-    /// <param name="quantity">How much.</param>
+    /// <param name="source">Which recipe asks for it, and how much.</param>
     /// <param name="section">Where in the shop it is found.</param>
     /// <returns>The line it went onto, whether new or existing.</returns>
     /// <remarks>
@@ -66,26 +67,25 @@ public sealed class ShoppingList
     /// </remarks>
     public Result<ShoppingListItem> Add(
         ItemName name,
-        Quantity quantity,
+        ShoppingItemSource source,
         ShoppingSection section)
     {
         ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(quantity);
+        ArgumentNullException.ThrowIfNull(source);
 
         var existing = items.FirstOrDefault(item =>
-            !item.IsChecked && ItemMergePolicy.CanMerge(item, name, quantity));
+            !item.IsChecked && ItemMergePolicy.CanMerge(item, name, source.Quantity));
+
+        Version += 1;
 
         if (existing is not null)
         {
-            return quantity.IsMeasured
-                ? existing.Add(quantity).Map(() => existing)
-                : existing;
+            return existing.Receive(source).Map(() => existing);
         }
 
-        var added = ShoppingListItem.Create(name, quantity, section, NextSortOrder(section), isManual: false);
+        var added = ShoppingListItem.Asked(name, source, section, NextSortOrder(section));
 
         items.Add(added);
-        Version += 1;
 
         return added;
     }
@@ -101,7 +101,7 @@ public sealed class ShoppingList
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        var added = ShoppingListItem.Create(name, quantity, section, NextSortOrder(section), isManual: true);
+        var added = ShoppingListItem.Typed(name, quantity, section, NextSortOrder(section));
 
         items.Add(added);
         Version += 1;
@@ -169,6 +169,71 @@ public sealed class ShoppingList
         }
 
         return removed;
+    }
+
+    /// <summary>Whether this planned meal's shopping is already on the list.</summary>
+    /// <param name="planEntryId">The planned meal.</param>
+    public bool IsShoppedFor(Guid planEntryId) => items.Exists(item => item.IsFor(planEntryId));
+
+    /// <summary>
+    /// Counts a recipe that is already here, added by itself, as the shopping
+    /// for a planned meal of it.
+    /// </summary>
+    /// <param name="recipeId">The planned recipe.</param>
+    /// <param name="planEntryId">The planned meal.</param>
+    /// <returns>Whether the recipe was here to count.</returns>
+    /// <remarks>
+    /// Somebody who put the waffles on the list from the recipe and then planned
+    /// them for Saturday has shopped for Saturday once. Adding the week again
+    /// would double every ingredient, silently, and the list would be wrong in
+    /// exactly the way nobody checks until the shop.
+    /// </remarks>
+    public bool CountFor(Guid recipeId, Guid planEntryId)
+    {
+        var counted = false;
+
+        foreach (var item in items)
+        {
+            counted |= item.CountFor(recipeId, planEntryId);
+        }
+
+        if (counted)
+        {
+            Version += 1;
+        }
+
+        return counted;
+    }
+
+    /// <summary>
+    /// Takes back exactly what a planned meal put on the list.
+    /// </summary>
+    /// <param name="planEntryId">The planned meal.</param>
+    /// <returns>How many lines changed.</returns>
+    /// <remarks>
+    /// What is already in the trolley stays: it has been bought, and a list
+    /// that un-bought it would be arguing with the shop. A line somebody else
+    /// still wants keeps what they want; only a line nothing wants any more
+    /// goes.
+    /// </remarks>
+    public int Withdraw(Guid planEntryId)
+    {
+        var changed = items.Where(item => !item.IsChecked && item.IsFor(planEntryId)).ToList();
+
+        foreach (var item in changed)
+        {
+            if (!item.Withdraw(planEntryId))
+            {
+                items.Remove(item);
+            }
+        }
+
+        if (changed.Count > 0)
+        {
+            Version += 1;
+        }
+
+        return changed.Count;
     }
 
     private Result<ShoppingListItem> Find(Guid itemId)

@@ -86,6 +86,7 @@ internal static class MealPlanMappings
         TotalMinutes = planned.TotalMinutes,
         Servings = planned.Entry.Servings,
         RecipeServings = planned.RecipeServings,
-        Slot = PlanningWords.Of(planned.Entry.Slot)
+        Slot = PlanningWords.Of(planned.Entry.Slot),
+        IsOnShoppingList = planned.IsOnShoppingList
     };
 }

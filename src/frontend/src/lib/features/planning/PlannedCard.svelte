@@ -74,6 +74,22 @@
         {m[`plan.slot.${meal.slot as 'dinner'}`]?.() ?? ''}{#if meal.servings}
           · {m['recipes.meta.servings']({ count: meal.servings })}{/if}
       </span>
+      <!-- Part of the link's name, so a screen reader hears it with the meal
+           rather than as a stray word between cards. -->
+      {#if meal.isOnShoppingList}
+        <span class="listed">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            aria-hidden="true"
+          >
+            <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          {m['plan.onList']()}
+        </span>
+      {/if}
     </div>
   </a>
 
@@ -160,5 +176,20 @@
   .meta {
     color: var(--text-muted);
     font-size: var(--text-xs);
+  }
+
+  .listed {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .listed svg {
+    flex: 0 0 auto;
+    width: 0.9em;
+    height: 0.9em;
+    color: var(--success);
   }
 </style>

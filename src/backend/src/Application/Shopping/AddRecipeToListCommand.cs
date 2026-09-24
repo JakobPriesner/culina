@@ -3,9 +3,7 @@ using Application.Abstractions.Messaging;
 using Application.Recipes;
 using Application.Telemetry;
 using Contracts.Shopping;
-using Domain.Recipes;
 using Domain.Shared;
-using Domain.Shopping;
 
 namespace Application.Shopping;
 
@@ -50,56 +48,11 @@ internal sealed class AddRecipeToListCommandHandler(
                     unitOfWork,
                     command.HouseholdId,
                     (list, _) => Task.FromResult(
-                        AddIngredients(list, found, command.Servings, overrides)),
+                        RecipeContribution.Add(list, found, command.Servings, planEntryId: null, overrides)),
                     cancellationToken),
                 error => Task.FromResult(Result<Response>.Failure(error)))
             .ConfigureAwait(false);
 
         return tracked.Record(result);
-    }
-
-    private static Result AddIngredients(
-        ShoppingList list,
-        Recipe recipe,
-        decimal servings,
-        IReadOnlyDictionary<string, ShoppingSection> overrides)
-    {
-        // Exact decimal arithmetic, and the sum is stored unrounded. A recipe
-        // for two scaled to five contributes 2.5 × its amounts, and three such
-        // recipes must add up to what they actually add up to — rounding each
-        // one first would compound the error into a number nobody asked for.
-        var factor = recipe.Yield.Amount > 0 ? servings / recipe.Yield.Amount : 1m;
-
-        // `Bind` short-circuits, so the first ingredient that cannot be read
-        // stops the rest: half a recipe on the list is worse than none of it.
-        return recipe.Groups
-            .SelectMany(group => group.Ingredients)
-            .Aggregate(
-                Result.Success(),
-                (outcome, ingredient) => outcome.Bind(() => ItemName
-                    .Create(ingredient.Name)
-                    .Bind(name => list.Add(
-                        name,
-                        Scale(ingredient.Quantity, factor),
-                        AddShoppingItemCommandHandler.SectionFor(name, overrides)))
-                    .Bind(_ => Result.Success())));
-    }
-
-    /// <summary>
-    /// Multiplies an amount, leaving alone the ones that do not scale.
-    /// </summary>
-    /// <remarks>
-    /// A pinch is a gesture: doubling a recipe does not double it. An
-    /// ingredient with no amount has nothing to multiply.
-    /// </remarks>
-    private static Quantity Scale(Quantity quantity, decimal factor)
-    {
-        if (!quantity.Scales || quantity.Amount is not { } amount)
-        {
-            return quantity;
-        }
-
-        return Quantity.Create(amount * factor, quantity.Unit)
-            .Match(scaled => scaled, _ => quantity);
     }
 }

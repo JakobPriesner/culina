@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Text.Json;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Shopping;
@@ -86,10 +88,11 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     public async Task AddRecipe_Twice_ShouldContributeTwice()
     {
         // Arrange
-        // The plan adds a recipe once per meal, so a recipe cooked on Monday and
-        // again on Tuesday arrives as two identical requests. Two meals is twice
-        // the shopping; a list that answered with one meal's worth would send
-        // somebody home short.
+        // A recipe put on the list by itself twice is somebody making it twice
+        // — a double batch, or a second shelf of the same cookbook. Two asks is
+        // twice the shopping; a list that answered with one would send somebody
+        // home short. (A planned week is not repeated this way: it knows which
+        // of its meals are already here.)
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -349,6 +352,187 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         // Every one of them, not four out of five.
         Assert.Equal(names.Length, onTheList.Count);
         Assert.All(names, name => Assert.Contains(name, onTheList));
+    }
+
+    [Fact]
+    public async Task AddPlannedMeals_Twice_ShouldShopForTheWeekOnce()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await PlanAsync(client, householdId, recipeId, Monday);
+
+        // Act
+        await AddWeekAsync(client, householdId);
+        var response = await AddWeekAsync(client, householdId);
+
+        // Assert
+        // Pressing the button again is checking, not shopping twice.
+        Assert.Equal(200m, Butter(response).GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AddPlannedMeals_ShouldCountARecipeAlreadyAddedFromItsPage()
+    {
+        // Arrange
+        // The waffles went on the list from their recipe, then onto Monday.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Waffles", 200);
+
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+        await PlanAsync(client, householdId, recipeId, Monday);
+
+        // Act
+        var response = await AddWeekAsync(client, householdId);
+
+        // Assert
+        // Monday is shopped for once. Doubling every ingredient here was the
+        // bug: silent, and only found out at the till.
+        Assert.Equal(200m, Butter(response).GetProperty("quantity").GetDecimal());
+        Assert.True(Assert.Single(await WeekAsync(client, householdId)).GetProperty("isOnShoppingList").GetBoolean());
+    }
+
+    [Fact]
+    public async Task AddPlannedMeals_ShouldShopForEveryMealOfARecipePlannedTwice()
+    {
+        // Arrange
+        // Monday for four, Thursday for six.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await PlanAsync(client, householdId, recipeId, Monday);
+        await PlanAsync(client, householdId, recipeId, Monday.AddDays(3), servings: 6);
+
+        // Act
+        var response = await AddWeekAsync(client, householdId);
+
+        // Assert
+        Assert.Equal(500m, Butter(response).GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AddPlannedMeals_ShouldSayWhichMealsAreOnTheList()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await PlanAsync(client, householdId, recipeId, Monday);
+
+        // Act
+        var before = Assert.Single(await WeekAsync(client, householdId));
+
+        await AddWeekAsync(client, householdId);
+
+        var after = Assert.Single(await WeekAsync(client, householdId));
+
+        // Assert
+        Assert.False(before.GetProperty("isOnShoppingList").GetBoolean());
+        Assert.True(after.GetProperty("isOnShoppingList").GetBoolean());
+    }
+
+    [Fact]
+    public async Task WithdrawPlannedMeal_ShouldTakeBackExactlyWhatThatMealAdded()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var biscuits = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
+
+        var monday = await PlanAsync(client, householdId, cake, Monday);
+        await PlanAsync(client, householdId, biscuits, Monday.AddDays(1));
+        await AddWeekAsync(client, householdId);
+
+        await client.DeleteAsync($"/api/v1/households/{householdId}/meal-plan/{monday}", Token);
+
+        // Act
+        var response = await client.DeleteAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals/{monday}",
+            Token);
+
+        // Assert
+        // The biscuits still need their 50 g; the cake no longer needs its 200.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(50m, Butter(response).GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task WithdrawPlannedMeal_ShouldKeepWhatSomebodyTyped()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items",
+            new { name = "Limes", quantity = 2 },
+            Token);
+
+        var entryId = await PlanAsync(client, householdId, recipeId, Monday);
+        await AddWeekAsync(client, householdId);
+
+        // Act
+        var response = await client.DeleteAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals/{entryId}",
+            Token);
+
+        // Assert
+        var names = response.Json!.Value.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("name").GetString());
+
+        Assert.Equal(["Limes"], names);
+    }
+
+    private static readonly DateOnly Monday = new(2026, 9, 14);
+
+    private static JsonElement Butter(ApiResponse response) =>
+        Assert.Single(
+            response.Json!.Value.GetProperty("items").EnumerateArray(),
+            item => item.GetProperty("name").GetString() == "Butter");
+
+    private static async Task<Guid> PlanAsync(
+        ApiClient client,
+        Guid householdId,
+        Guid recipeId,
+        DateOnly date,
+        decimal? servings = null)
+    {
+        var planned = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date, recipeId, servings },
+            Token);
+
+        return planned.Json!.Value.GetProperty("days").EnumerateArray()
+            .Single(day => day.GetProperty("date").GetString() == date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+            .GetProperty("meals").EnumerateArray()
+            .Last()
+            .GetProperty("entryId").GetGuid();
+    }
+
+    private static Task<ApiResponse> AddWeekAsync(ApiClient client, Guid householdId) =>
+        client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals",
+            new { from = Monday },
+            Token);
+
+    private static async Task<IReadOnlyList<JsonElement>> WeekAsync(ApiClient client, Guid householdId)
+    {
+        var week = await client.GetAsync(
+            $"/api/v1/households/{householdId}/meal-plan?from={Monday:yyyy-MM-dd}",
+            Token);
+
+        return [.. week.Json!.Value.GetProperty("days").EnumerateArray()
+            .SelectMany(day => day.GetProperty("meals").EnumerateArray())];
     }
 
     private static async Task<Guid> HouseholdAsync(ApiClient client)

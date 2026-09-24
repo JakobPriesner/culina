@@ -27,6 +27,20 @@ internal sealed record ShoppingItemRow
     public bool IsManual { get; init; }
 }
 
+/// <summary>The <c>shopping_list_item_sources</c> row.</summary>
+internal sealed record ShoppingSourceRow
+{
+    public Guid ItemId { get; init; }
+
+    public Guid RecipeId { get; init; }
+
+    public Guid? PlanEntryId { get; init; }
+
+    public decimal? Quantity { get; init; }
+
+    public string? Unit { get; init; }
+}
+
 /// <summary>The <c>shopping_lists</c> row.</summary>
 internal sealed record ShoppingListRow
 {
@@ -72,8 +86,20 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             new { listId = row.Id },
             cancellationToken).ConfigureAwait(false);
 
+        var sources = await executor.QueryAsync<ShoppingSourceRow>(
+            """
+            select s.item_id, s.recipe_id, s.plan_entry_id, s.quantity, s.unit
+            from shopping_list_item_sources s
+            join shopping_list_items i on i.id = s.item_id
+            where i.list_id = @listId;
+            """,
+            new { listId = row.Id },
+            cancellationToken).ConfigureAwait(false);
+
+        var sourcesByItem = sources.ToLookup(source => source.ItemId);
+
         return items
-            .Select(ToItem)
+            .Select(item => ToItem(item, sourcesByItem[item.Id]))
             .Collect()
             .Map(restored => ShoppingList.Rehydrate(row.Id, row.HouseholdId, restored, row.Version));
     }
@@ -134,6 +160,8 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
                     isManual = item.IsManual
                 },
                 cancellationToken).ConfigureAwait(false);
+
+            await InsertSourcesAsync(item, cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success();
@@ -172,18 +200,45 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
         return Result.Success();
     }
 
-    private static Result<ShoppingListItem> ToItem(ShoppingItemRow row) =>
+    private async Task InsertSourcesAsync(ShoppingListItem item, CancellationToken cancellationToken)
+    {
+        foreach (var source in item.Sources)
+        {
+            await executor.ExecuteAsync(
+                """
+                insert into shopping_list_item_sources (item_id, recipe_id, plan_entry_id, quantity, unit)
+                values (@itemId, @recipeId, @planEntryId, @quantity, @unit);
+                """,
+                new
+                {
+                    itemId = item.Id,
+                    recipeId = source.RecipeId,
+                    planEntryId = source.PlanEntryId,
+                    quantity = source.Quantity.Amount,
+                    unit = ShoppingWords.Of(source.Quantity.Unit)
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static Result<ShoppingListItem> ToItem(ShoppingItemRow row, IEnumerable<ShoppingSourceRow> sources) =>
         ItemName.Create(row.Name).Bind(name =>
-            Quantity.Create(row.Quantity, ShoppingWords.ToUnit(row.Unit)).Map(quantity =>
-                ShoppingListItem.Rehydrate(
-                    row.Id,
-                    name,
-                    quantity,
-                    ShoppingWords.ToSection(row.Section) ?? ShoppingSection.Other,
-                    row.IsChecked,
-                    row.CheckedAt,
-                    row.SortOrder,
-                    row.IsManual)));
+            Quantity.Create(row.Quantity, ShoppingWords.ToUnit(row.Unit)).Bind(quantity =>
+                sources.Select(ToSource).Collect().Map(restored =>
+                    ShoppingListItem.Rehydrate(
+                        row.Id,
+                        name,
+                        quantity,
+                        ShoppingWords.ToSection(row.Section) ?? ShoppingSection.Other,
+                        row.IsChecked,
+                        row.CheckedAt,
+                        row.SortOrder,
+                        row.IsManual,
+                        restored))));
+
+    private static Result<ShoppingItemSource> ToSource(ShoppingSourceRow row) =>
+        Quantity.Create(row.Quantity, ShoppingWords.ToUnit(row.Unit))
+            .Map(quantity => new ShoppingItemSource(row.RecipeId, row.PlanEntryId, quantity));
 
     private sealed record SectionOverrideRow
     {

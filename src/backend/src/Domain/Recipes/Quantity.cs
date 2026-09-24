@@ -88,6 +88,30 @@ public sealed record Quantity
         return Create(total, canonical);
     }
 
+    /// <summary>
+    /// What is left after taking <paramref name="other"/> away, in the family's
+    /// canonical unit, or null when nothing is.
+    /// </summary>
+    /// <param name="other">The amount to take away.</param>
+    /// <remarks>
+    /// An amount that cannot be combined with this one was never part of it,
+    /// so taking it away leaves this as it was.
+    /// </remarks>
+    public Quantity? Without(Quantity other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        if (!CanCombineWith(other))
+        {
+            return this;
+        }
+
+        var left = (Amount!.Value * Units.ToCanonicalFactor(Unit))
+            - (other.Amount!.Value * Units.ToCanonicalFactor(other.Unit));
+
+        return left > 0 ? new Quantity(left, Units.CanonicalOf(Unit)) : null;
+    }
+
     /// <summary>This amount expressed in its family's canonical unit.</summary>
     public Quantity ToCanonical() =>
         IsMeasured

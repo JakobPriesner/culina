@@ -16,7 +16,7 @@ User ──< HouseholdMember >── Household ──< Recipe
                                   │          ├──< Step ──< StepIngredientRef
                                   │          └──< RecipeTag >── Tag
                                   ├──< Cookbook ──< CookbookRecipe >── Recipe
-                                  └── ShoppingList ──< ShoppingListItem ──< ShoppingListItemSource
+                                  └── ShoppingList ──< ShoppingListItem ──< ShoppingItemSource
 
 User ──< PersonalNote   ── Recipe     per person, never mutates the recipe
 User ──< CookLogEntry   ── Recipe     "made it", dated
@@ -703,12 +703,28 @@ Scored **against the day rather than the instant**, so two requests on one day
 produce one order: a cursor keeps meaning something on the second page, and the
 list does not rearrange under somebody still reading it.
 
-## ShoppingListItemSource
+## ShoppingItemSource
 
-`ItemId`, `RecipeId`, `RecipeIngredientId`, `Quantity`, `Unit`, `AddedAt`.
+`ItemId`, `RecipeId`, `PlanEntryId?`, `Quantity`, `Unit` — table
+`shopping_list_item_sources` (migration 0022).
 
-Provenance for "which recipes asked for this", revealed on tap, never by
-default. Removing a recipe's contribution subtracts exactly its sources.
+What a line is the sum of: which recipe asked for how much, and for which
+planned meal (null for a recipe put on the list by itself). The quantity is the
+recipe's, scaled and in the unit it was written in; the line holds the sum.
+
+It is what makes the plan and the list one workflow rather than two:
+
+- **A planned meal is shopped for once.** Adding a week skips every meal that
+  already has sources on the list, so pressing it twice changes nothing.
+- **A recipe added by itself counts.** When a planned meal has no sources but
+  its recipe is on the list without a planned meal, those sources are counted
+  as that meal's instead of adding the recipe again. Two planned meals of one
+  recipe are two meals, and each is shopped for.
+- **A meal can be taken back.** Withdrawing a planned meal subtracts exactly its
+  sources; a line nothing else wants goes, a typed line stays, and a ticked line
+  stays because it has been bought.
+
+Lines written before sources existed have none, and are left alone.
 
 ### Sections
 
@@ -749,10 +765,12 @@ or not anything is planned in them. A month view is where recurrence,
 drag-and-drop and a second reason for a shopping list come from, and Culina has
 exactly one list per household on purpose.
 
-**The plan writes the shopping list through the existing path**, one
-`POST /households/{id}/shopping-list/recipes` per planned meal. A second code
-path that merged a whole week at once would be a second place for merging to
-behave differently, and merging is the entire value of the list.
+**The plan writes the shopping list when somebody asks it to**, not by itself:
+a week planned in advance is not a list to shop from yet. One
+`POST /households/{id}/shopping-list/meals` puts the week on, through the same
+merge a single recipe goes through, and each planned meal knows whether it is
+on the list (see `ShoppingItemSource`). Taking a meal off the plan offers to
+take its shopping off too, rather than doing it behind anybody's back.
 
 ## The archive
 

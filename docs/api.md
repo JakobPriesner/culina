@@ -253,10 +253,10 @@ worth knowing: an ingredient **rule excludes**, where the `ingredient` search
 parameter ranks.
 
 **Adding a whole cookbook to the shopping list is not an endpoint.** The client
-sends one `POST /households/{id}/shopping-list/recipes` per recipe, exactly as
-the meal plan does, because a second path that merged many at once would be a
-second place for merging to behave differently — and merging is the entire
-value of the list.
+sends one `POST /households/{id}/shopping-list/recipes` per recipe. Every path
+that puts a recipe on the list — this one, a single recipe, a planned week —
+goes through the same server-side merge, because merging is the entire value
+of the list.
 
 ## Cooking
 
@@ -272,19 +272,22 @@ Timers are **not** in the API. They are device-local (`domain-model.md`).
 
 ## Shopping
 
+One list per household, under the household. Every write answers `200` with
+the whole list, so the client never refetches after one.
+
 | Method | Path | Notes |
 | --- | --- | --- |
-| `GET` | `/shopping-lists?householdId=…` | The household's single list. Created lazily. |
-| `GET` | `/shopping-lists/{listId}` | `200` + ETag. Items grouped by section, checked items last. |
-| `POST` | `/shopping-lists/{listId}/items` | Add a manual item. `201`. Merges into an existing line when the rule in `domain-model.md` matches. |
-| `PATCH` | `/shopping-lists/{listId}/items/{itemId}` | Check / uncheck, rename, change amount or section. A section change is remembered for the household. |
-| `DELETE` | `/shopping-lists/{listId}/items/{itemId}` | `204`. |
-| `POST` | `/shopping-lists/{listId}/recipe-additions` | `{ recipeId, servings }` → merged items, `201`. Response returns the whole list so the client needs no refetch. |
-| `DELETE` | `/shopping-lists/{listId}/recipe-additions/{recipeId}` | Subtract exactly that recipe's contributions. |
-| `DELETE` | `/shopping-lists/{listId}/items?checked=true` | Clear checked items. `204`. |
+| `GET` | `/households/{householdId}/shopping-list` | The household's single list, created on first look. |
+| `POST` | `/households/{householdId}/shopping-list/items` | A line somebody typed. Always its own line. |
+| `PATCH` | `/households/{householdId}/shopping-list/items/{itemId}` | Check / uncheck, or correct the section. A section change is remembered for the household. |
+| `DELETE` | `/households/{householdId}/shopping-list/items?itemId=…` | One line; without `itemId`, everything ticked off. |
+| `POST` | `/households/{householdId}/shopping-list/recipes` | `{ recipeId, servings }`. The recipe's ingredients at those servings, merged by the rule in `domain-model.md`. Adding the same recipe twice asks for it twice. |
+| `POST` | `/households/{householdId}/shopping-list/meals` | `{ from }`. Every meal planned in that week, each once: a meal already on the list is skipped, and a recipe that was added by itself counts as the shopping for a planned meal of it. Safe to repeat. |
+| `DELETE` | `/households/{householdId}/shopping-list/meals/{entryId}` | Subtract exactly what that planned meal contributed — whether or not it is still planned. Ticked and typed lines stay. |
 
-`recipe-additions` is a created sub-resource rather than a polymorphic `items`
-body: it generates a clean client and stays greppable.
+`recipes` and `meals` are sub-resources rather than a polymorphic `items` body:
+each generates a clean client and stays greppable. Which planned meals are on
+the list is read from the plan, as `isOnShoppingList` on each meal.
 
 ## Tags and settings
 

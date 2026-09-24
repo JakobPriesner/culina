@@ -21,6 +21,7 @@
   import type { RecipeSummary } from '$features/recipes/types';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
+  import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
@@ -199,11 +200,12 @@
   }
 
   /**
-   * Puts the week's shopping on the list, one recipe at a time.
+   * Puts the week's shopping on the list, each meal once.
    *
-   * The same call the recipe page makes, repeated. A second code path that
-   * merged a whole week at once would be a second place for merging to be
-   * subtly different, and merging is the entire value of the list.
+   * One request, because only the server can see which meals are already on
+   * the list — and pressing this twice, or after adding one of the recipes from
+   * its own page, must not buy anything twice. The week is read again after, so
+   * every card says truthfully which meals are on the list now.
    */
   async function shop() {
     if (!householdId) {
@@ -212,20 +214,62 @@
 
     busy = true;
 
-    for (const meal of mealPlan.meals) {
-      await shopping.addRecipe(householdId, meal.recipeId, meal.servings ?? meal.recipeServings);
+    const week = mealPlan.from ?? monday;
+    const failure = await shopping.addPlannedWeek(householdId, week);
+
+    if (!failure) {
+      await mealPlan.load(householdId, week);
     }
 
     busy = false;
 
+    toaster.show(
+      failure
+        ? { message: explain(failure), tone: 'danger' }
+        : {
+            message: m['plan.addedToList'](),
+            tone: 'success',
+            action: { label: m['plan.openList'](), run: () => void goToList() }
+          }
+    );
+  }
+
+  /**
+   * Takes a meal off the plan, and offers to take its shopping off too.
+   *
+   * Offered rather than done: the ingredients may already be in a cupboard,
+   * or wanted for something else, and a list that emptied itself behind
+   * somebody's back would be as untrustworthy as one that doubled.
+   */
+  async function unplan(meal: PlannedMeal) {
+    if (!householdId) {
+      return;
+    }
+
+    const ok = await mealPlan.unplan(householdId, meal.entryId);
+
+    if (!ok || !meal.isOnShoppingList) {
+      return;
+    }
+
     toaster.show({
-      message: m['plan.addedToList']({ count: mealPlan.meals.length }),
-      tone: 'success',
-      action: {
-        label: m['plan.openList'](),
-        run: () => void goToList()
-      }
+      message: m['plan.unplanned.stillOnList']({ title: meal.title }),
+      action: { label: m['plan.unplanned.withdraw'](), run: () => void withdraw(meal.entryId) }
     });
+  }
+
+  async function withdraw(entryId: string) {
+    if (!householdId) {
+      return;
+    }
+
+    const failure = await shopping.withdrawMeal(householdId, entryId);
+
+    toaster.show(
+      failure
+        ? { message: explain(failure), tone: 'danger' }
+        : { message: m['plan.unplanned.withdrawn'](), tone: 'success' }
+    );
   }
 
   const goToList = async () => {
@@ -301,7 +345,7 @@
                         drop
                       )}
                     onmove={() => (moving = meal)}
-                    onremove={() => householdId && void mealPlan.unplan(householdId, meal.entryId)}
+                    onremove={() => void unplan(meal)}
                   />
                 </li>
               {/each}
@@ -330,9 +374,17 @@
 
     {#if mealPlan.meals.length > 0}
       <div class="shop">
-        <Button variant="primary" loading={busy} onclick={() => void shop()}>
-          {m['plan.toShoppingList']()}
-        </Button>
+        {#if mealPlan.unshopped.length > 0}
+          <Button variant="primary" loading={busy} onclick={() => void shop()}>
+            {m['plan.toShoppingList']({ count: mealPlan.unshopped.length })}
+          </Button>
+          <p class="shop-note">{m['plan.shop.hint']()}</p>
+        {:else}
+          <p class="shop-note" role="status">
+            {m['plan.shop.done']()}
+            <a href={resolve('/(app)/shopping')}>{m['plan.openList']()}</a>
+          </p>
+        {/if}
       </div>
     {:else if !mealPlan.loading}
       <EmptyState title={m['plan.empty.title']()} body={m['plan.empty.description']()}>
@@ -558,7 +610,22 @@
   }
 
   .shop {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
     margin-top: var(--space-6);
+  }
+
+  .shop-note {
+    max-width: var(--measure);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .shop-note a {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
   }
 
   .slots {

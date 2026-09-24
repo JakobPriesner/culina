@@ -177,6 +177,40 @@ class ShoppingStore {
     return result.ok ? null : result.error;
   }
 
+  /**
+   * Puts a planned week's meals on, each once.
+   *
+   * One request for the whole week rather than one per meal, because only the
+   * server can see which meals are already here — and a week that is added
+   * twice, or after one of its recipes was added from its own page, must not
+   * be bought twice.
+   */
+  async addPlannedWeek(householdId: string, from: string): Promise<AppError | null> {
+    const result = await request(() =>
+      http.POST('/api/v1/households/{householdId}/shopping-list/meals', {
+        params: { path: { householdId } },
+        body: { from }
+      })
+    );
+
+    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+
+    return result.ok ? null : result.error;
+  }
+
+  /** Takes exactly what one planned meal put on the list back off it. */
+  async withdrawMeal(householdId: string, entryId: string): Promise<AppError | null> {
+    const result = await request(() =>
+      http.DELETE('/api/v1/households/{householdId}/shopping-list/meals/{entryId}', {
+        params: { path: { householdId, entryId } }
+      })
+    );
+
+    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+
+    return result.ok ? null : result.error;
+  }
+
   clearError(): void {
     this.#error = null;
   }

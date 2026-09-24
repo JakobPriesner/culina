@@ -53,6 +53,11 @@ public sealed record PlannedMeal
 
     /// <summary><c>breakfast</c>, <c>lunch</c> or <c>dinner</c>.</summary>
     public required string Slot { get; init; }
+
+    /// <summary>
+    /// Whether this meal's ingredients are on the household's shopping list.
+    /// </summary>
+    public required bool IsOnShoppingList { get; init; }
 }
 
 /// <summary>Plans a meal.</summary>

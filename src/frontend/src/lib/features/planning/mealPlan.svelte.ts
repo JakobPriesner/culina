@@ -148,6 +148,11 @@ class MealPlanStore {
     return this.days.flatMap((day) => day.meals);
   }
 
+  /** The week's meals whose ingredients are not on the shopping list yet. */
+  get unshopped(): readonly PlannedMeal[] {
+    return this.meals.filter((meal) => !meal.isOnShoppingList);
+  }
+
   async load(householdId: string, from?: string): Promise<void> {
     // The week already on screen stays while the next one arrives. Replacing it
     // with a skeleton to show the same seven days again loses your place.
