@@ -359,17 +359,17 @@
   "plan.thisWeek": "Diese Woche",
   "plan.add": "Hinzufügen",
   "plan.remove": "{title} vom Plan nehmen",
-  "plan.toShoppingList": "Woche auf die Einkaufsliste",
-  "plan.addedToList": [
+  "plan.toShoppingList": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "{count} Rezept zur Einkaufsliste hinzugefügt.",
-        "countPlural=*": "{count} Rezepte zur Einkaufsliste hinzugefügt."
+        "countPlural=one": "{count} Mahlzeit auf die Einkaufsliste",
+        "countPlural=*": "{count} Mahlzeiten auf die Einkaufsliste"
       }
     }
   ],
+  "plan.addedToList": "Die Mahlzeiten der Woche stehen auf der Einkaufsliste.",
   "plan.openList": "Liste öffnen",
   "plan.slot.breakfast": "Frühstück",
   "plan.slot.lunch": "Mittagessen",
@@ -380,7 +380,7 @@
   "plan.pick.clear": "Suche leeren",
   "plan.pick.slot": "Mahlzeit",
   "plan.empty.title": "Noch nichts geplant",
-  "plan.empty.description": "Plane Rezepte für die Woche – deine Einkaufsliste füllt sich automatisch.",
+  "plan.empty.description": "Plane Rezepte für die Woche und setze dann die ganze Woche auf einmal auf deine Einkaufsliste.",
   "plan.empty.action": "Rezept auswählen",
   "plan.move.handle": "{title} auf einen anderen Tag verschieben",
   "plan.move.title": "{title} verschieben",
@@ -1106,5 +1106,11 @@
   "problem.users.registration_closed": "Dieses Culina nimmt keine neuen Konten an.",
   "problem.users.weak_password": "Ein Passwort muss mindestens 12 Zeichen haben.",
   "units.cup": "Cup",
-  "units.cups": "Cups"
+  "units.cups": "Cups",
+  "plan.shop.hint": "Was schon auf der Liste steht – auch ein Rezept, das du von seiner Seite hinzugefügt hast –, kommt nicht doppelt dazu.",
+  "plan.shop.done": "Alles, was diese Woche geplant ist, steht auf der Einkaufsliste.",
+  "plan.onList": "Auf der Einkaufsliste",
+  "plan.unplanned.stillOnList": "{title} ist nicht mehr geplant. Die Zutaten stehen noch auf der Einkaufsliste.",
+  "plan.unplanned.withdraw": "Entfernen",
+  "plan.unplanned.withdrawn": "Die Zutaten sind von der Einkaufsliste entfernt."
 }

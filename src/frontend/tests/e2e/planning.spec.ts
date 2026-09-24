@@ -15,7 +15,7 @@ import {
  * Seven days and deliberately not a calendar: a week is the unit people plan
  * in, because they shop at the weekend for the week that follows. Its whole
  * payoff is the last step — the plan writes the shopping list, through exactly
- * the same merge a single recipe goes through.
+ * the same merge a single recipe goes through, and never twice for one meal.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -84,13 +84,52 @@ test.describe('planning a week', () => {
     await expect(sheet).toBeHidden();
     await expect(page.getByRole('link', { name: title })).toBeVisible();
 
-    // The payoff. It goes through the same call a single recipe does, so the
-    // merging that makes a list worth having cannot be subtly different here.
-    await page.getByRole('button', { name: /add the week|woche auf die/i }).click();
-    await expect(page.getByRole('status').getByText(/shopping list|einkaufsliste/i)).toBeVisible();
+    // The payoff. The button says what it will do, and afterwards the week
+    // says what it did: every card that is on the list is marked, and there is
+    // nothing left to press.
+    await page.getByRole('button', { name: weekToList }).click();
+    await expect(page.getByRole('link', { name: title })).toContainText(onTheList);
+    await expect(page.getByText(everythingOnTheList)).toBeVisible();
+    await expect(page.getByRole('button', { name: weekToList })).toBeHidden();
 
     await page.goto('/shopping');
     await expect(page.getByText(ingredient)).toBeVisible();
+  });
+
+  test('does not buy a recipe twice when it went on the list from its own page first', async () => {
+    const flour = unique('Mehl');
+    const waffles = unique('Waffles');
+    const recipeId = await seedRecipe(page, {
+      title: waffles,
+      yieldAmount: 2,
+      ingredients: [{ quantity: 250, unit: 'g', name: flour }]
+    });
+
+    // From the recipe first, the way somebody browsing for the weekend does.
+    await page.goto(`/recipes/${recipeId}`);
+    await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+    await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
+
+    // Then onto the week, and the week onto the list.
+    await page.goto('/plan');
+    await page
+      .getByRole('button', { name: /^\+ (add|hinzufügen)$/i })
+      .last()
+      .click();
+
+    const sheet = page.getByRole('dialog');
+
+    await sheet.getByRole('searchbox').fill(waffles);
+    await sheet.getByRole('button', { name: waffles }).click();
+    await expect(sheet).toBeHidden();
+
+    await page.getByRole('button', { name: weekToList }).click();
+    await expect(page.getByRole('link', { name: waffles })).toContainText(onTheList);
+
+    // One Saturday's worth of flour. Doubling here was silent, and only found
+    // out at the till.
+    await page.goto('/shopping');
+    await expect(page.getByRole('listitem').filter({ hasText: flour })).toContainText(/250\s*g/);
   });
 
   test('moves a meal to another day by dragging it there', async () => {
@@ -202,8 +241,24 @@ test.describe('planning a week', () => {
     // That this meal is gone, not that the week is. These suites share one
     // instance, so an earlier run's Thursday is still somebody's Thursday.
     await expect(page.getByRole('link', { name: title })).toBeHidden();
+
+    // Its shopping is still on the list, and the way to take it off is offered
+    // rather than done behind anybody's back.
+    await page.getByRole('button', { name: /^(remove them|entfernen)$/i }).click();
+    await expect(
+      page.getByText(/off the shopping list|von der einkaufsliste entfernt/i)
+    ).toBeVisible();
+
+    await page.goto('/shopping');
+    await expect(page.getByText(ingredient)).toBeHidden();
   });
 });
+
+const weekToList =
+  /^put \d+ meals? on the shopping list$|^\d+ mahlzeit(en)? auf die einkaufsliste$/i;
+const onTheList = /on the shopping list|auf der einkaufsliste/i;
+const everythingOnTheList =
+  /everything planned this week is on|alles, was diese woche geplant ist/i;
 
 /** Which day of the week a meal is on, as the date the planner marks it with. */
 async function dayHolding(page: Page, title: string): Promise<string> {

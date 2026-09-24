@@ -68,6 +68,13 @@ public sealed record AddRecipeRequest
     public required decimal Servings { get; init; }
 }
 
+/// <summary>A planned week's shopping.</summary>
+public sealed record AddPlannedMealsRequest
+{
+    /// <summary>The day the week starts on, as the plan was read.</summary>
+    public required DateOnly From { get; init; }
+}
+
 /// <summary>A change to one line.</summary>
 public sealed record UpdateItemRequest
 {
