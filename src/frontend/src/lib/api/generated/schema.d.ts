@@ -458,6 +458,8 @@ export interface paths {
          * @description Cursor-paginated. Repeat `ingredient` to ask what you can cook from what you have: results rank by how many of them a recipe uses and how few extras it needs, and each carries `ingredientMatch`. There is no pantry to maintain, so nothing can go stale.
          *
          *     `cookbookId` reads inside one cookbook. Every other filter still applies, so a cookbook is a view of the collection rather than a second one; it defaults to `cookbookOrder`, the order the cookbook was built in. An unknown cookbook is an empty page rather than a 404 — it is a filter value, not a resource named in the path.
+         *
+         *     `query` is read for meaning as well as words: a diet, a time, a meal, a cuisine, what to use and what to leave out come back in `interpretation`, each with the characters it was read from, so a client can show it as a chip and remove it by deleting them. When nothing matches, the first page corrects a misspelling against the household's own words or sets one reading aside, and says which; `asTyped=true` turns the correction down.
          */
         get: operations["getRecipesV1"];
         put?: never;
@@ -2056,6 +2058,27 @@ export interface components {
              */
             end: number;
         };
+        /** @description One refinement, and how many results it would leave. */
+        RecipesGetAllFacet: {
+            /** @description A tag slug, a number of minutes, or a cuisine key. */
+            value: string;
+            /** @description The household's name for a tag; null for the others, which a client words itself. */
+            label?: string | null;
+            /**
+             * Format: int32
+             * @description How many of the results it would leave.
+             */
+            count: number;
+        };
+        /** @description Refinements worth offering, computed from the results rather than curated. */
+        RecipesGetAllFacets: {
+            /** @description Tags, by slug, with the household's own name for each. */
+            tags: components["schemas"]["RecipesGetAllFacet"][];
+            /** @description Time ceilings, in minutes. */
+            times: components["schemas"]["RecipesGetAllFacet"][];
+            /** @description Cuisines, by the same keys a cuisine reading uses. */
+            cuisines: components["schemas"]["RecipesGetAllFacet"][];
+        };
         /** @description How well a recipe fits what you have. */
         RecipesGetAllIngredientMatch: {
             /**
@@ -2080,6 +2103,35 @@ export interface components {
             freeText: string;
             /** @description What was inferred, in the order it was typed. */
             applied: components["schemas"]["RecipesGetAllAppliedInference"][];
+            /**
+             * @description The words as typed, when nothing matched them and a correction did —
+             *     `freeText` is then the correction. Resend with `asTyped=true`
+             *     to search what was typed instead.
+             */
+            correctedFrom?: string | null;
+            /**
+             * @description Readings set aside because nothing matched all of them, weakest first:
+             *     cuisine, meal, ingredient, time. A diet or an exclusion never is.
+             */
+            relaxed?: components["schemas"]["RecipesGetAllAppliedInference"][] | null;
+            /**
+             * @description Two readings that cannot both hold — a diet and an ingredient it rules
+             *     out — when that is why nothing matched.
+             */
+            conflict?: components["schemas"]["RecipesGetAllAppliedInference"][] | null;
+        };
+        /** @description Why a recipe is in a search it does not name in its title. */
+        RecipesGetAllMatchReason: {
+            /**
+             * @description `ingredient`, `tag`, `text` (its description or a step)
+             *             or `concept` (only through what it is — "Waffeln" for "Nachtisch").
+             */
+            kind: string;
+            /**
+             * @description The ingredient or tag as the recipe writes it, or the concept in the
+             *     recipe's language; null for text.
+             */
+            term?: string | null;
         };
         /** @description A recipe as it appears in a list. */
         RecipesGetAllRecipeSummary: {
@@ -2130,6 +2182,7 @@ export interface components {
              */
             updatedAt: string;
             ingredientMatch?: (null) | components["schemas"]["RecipesGetAllIngredientMatch"];
+            matchReason?: (null) | components["schemas"]["RecipesGetAllMatchReason"];
         };
         /** @description A page of recipes. */
         RecipesGetAllResponse: {
@@ -2143,6 +2196,7 @@ export interface components {
              */
             total: number;
             interpretation?: (null) | components["schemas"]["RecipesGetAllInterpretation"];
+            facets?: (null) | components["schemas"]["RecipesGetAllFacets"];
         };
         /** @description One time you cooked it. */
         RecipesGetCookLogCookLogItem: {
@@ -4791,6 +4845,7 @@ export interface operations {
                 sort?: string;
                 cursor?: string;
                 limit?: number;
+                asTyped?: string;
                 tag?: string[];
                 ingredient?: string[];
             };

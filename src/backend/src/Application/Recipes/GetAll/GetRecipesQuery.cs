@@ -5,18 +5,26 @@ using Application.Search;
 using Application.Telemetry;
 using Contracts.Recipes.GetAll;
 using Domain.Households;
+using Domain.Search;
 using Domain.Shared;
+using Facet = Contracts.Recipes.GetAll.Facet;
+using Facets = Contracts.Recipes.GetAll.Facets;
+using MatchReason = Contracts.Recipes.GetAll.MatchReason;
 
 namespace Application.Recipes.GetAll;
 
 /// <summary>Finds recipes in one household.</summary>
 /// <param name="Search">What to look for.</param>
-public sealed record GetRecipesQuery(RecipeSearch Search);
+/// <param name="AsTyped">
+/// Search the words exactly as typed: the reader has turned a correction down.
+/// </param>
+public sealed record GetRecipesQuery(RecipeSearch Search, bool AsTyped = false);
 
 internal sealed class GetRecipesQueryHandler(
     IRecipeRepository recipes,
     IHouseholdRepository households,
-    ICookbookRepository cookbooks)
+    ICookbookRepository cookbooks,
+    ISearchVocabulary vocabulary)
     : IQueryHandler<GetRecipesQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -72,9 +80,26 @@ internal sealed class GetRecipesQueryHandler(
                 : query.Search.Sort
         };
 
-        var page = await recipes.SearchAsync(search, cancellationToken).ConfigureAwait(false);
+        var (page, answered, recovery) = await SearchRecovery
+            .SearchAsync(
+                recipes,
+                vocabulary,
+                search,
+                intent,
+                query.Search.MaxMinutes,
+                query.AsTyped,
+                cancellationToken)
+            .ConfigureAwait(false);
 
-        return tracked.Record(Result<Response>.Success(page.ToResponse(search, intent)));
+        // Counted over every result rather than the page, and only for a
+        // question on its first page: a refinement is offered once, where the
+        // results begin.
+        var facets = page.Total > 0 && answered.Cursor is null && intent.Asked
+            ? await recipes.FacetsAsync(answered, cancellationToken).ConfigureAwait(false)
+            : null;
+
+        return tracked.Record(Result<Response>.Success(
+            page.ToResponse(answered, intent, recovery, facets)));
     }
 
     private static int? Min(int? asked, int? read) =>
@@ -84,11 +109,25 @@ internal sealed class GetRecipesQueryHandler(
 /// <summary>Maps a page of search rows onto the shape this operation returns.</summary>
 internal static class RecipeListMappings
 {
-    internal static Response ToResponse(this RecipePage page, RecipeSearch search, QueryIntent intent)
+    /// <summary>
+    /// A refinement is worth offering when it leaves between a fifth and four
+    /// fifths of the results.
+    /// </summary>
+    private const double NarrowestShare = 0.2;
+
+    private const double WidestShare = 0.8;
+
+    internal static Response ToResponse(
+        this RecipePage page,
+        RecipeSearch search,
+        QueryIntent intent,
+        Recovery recovery,
+        SearchFacets? facets)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(search);
         ArgumentNullException.ThrowIfNull(intent);
+        ArgumentNullException.ThrowIfNull(recovery);
 
         return new Response
         {
@@ -97,14 +136,56 @@ internal static class RecipeListMappings
             Total = page.Total,
             // Absent without a query, so the plain library listing is exactly
             // what it always was.
-            Interpretation = intent.Applied.Count == 0 && intent.FreeText.Length == 0
+            Interpretation = !intent.Asked
                 ? null
                 : new Interpretation
                 {
-                    FreeText = intent.FreeText,
-                    Applied = [.. intent.Applied.Select(one => one.ToContract())]
-                }
+                    FreeText = recovery.CorrectedTo ?? intent.FreeText,
+                    Applied = [.. intent.Applied.Select(one => one.ToContract())],
+                    CorrectedFrom = recovery.CorrectedFrom,
+                    Relaxed = recovery.Relaxed.Count == 0 ? null : [.. recovery.Relaxed.Select(one => one.ToContract())],
+                    Conflict = recovery.Conflict.Count == 0 ? null : [.. recovery.Conflict.Select(one => one.ToContract())]
+                },
+            Facets = facets?.ToContract(search)
         };
+    }
+
+    /// <summary>
+    /// The refinements worth a chip: not already applied, and neither
+    /// removing nothing nor everything — the ones that best halve the results
+    /// first.
+    /// </summary>
+    private static Facets? ToContract(this SearchFacets facets, RecipeSearch search)
+    {
+        bool Splits(Abstractions.Facet facet) =>
+            facets.Total > 0
+            && facet.Count >= NarrowestShare * facets.Total
+            && facet.Count <= WidestShare * facets.Total;
+
+        List<Facet> Best(IEnumerable<Abstractions.Facet> offered, Func<Abstractions.Facet, bool> open, int most) =>
+        [
+            .. offered
+                .Where(facet => Splits(facet) && open(facet))
+                .OrderBy(facet => Math.Abs(facet.Count - (facets.Total / 2.0)))
+                .ThenBy(facet => facet.Value, StringComparer.Ordinal)
+                .Take(most)
+                .Select(facet => new Facet { Value = facet.Value, Label = facet.Label, Count = facet.Count })
+        ];
+
+        var tags = Best(facets.Tags, facet => !search.Tags.Contains(facet.Value, StringComparer.Ordinal), 5);
+        var times = Best(
+            facets.Times,
+            facet => search.MaxMinutes is not { } ceiling
+                     || int.Parse(facet.Value, System.Globalization.CultureInfo.InvariantCulture) < ceiling,
+            2);
+        var cuisines = Best(
+            facets.Cuisines,
+            facet => !search.Constraints.Cuisines.Contains(facet.Value, StringComparer.Ordinal),
+            3);
+
+        return tags.Count + times.Count + cuisines.Count == 0
+            ? null
+            : new Facets { Tags = tags, Times = times, Cuisines = cuisines };
     }
 
     private static AppliedInference ToContract(this Inference inference) => new()
@@ -147,6 +228,17 @@ internal static class RecipeListMappings
                 Matched = row.MatchedIngredients,
                 Requested = requestedIngredients,
                 Missing = Math.Max(row.IngredientCount - row.MatchedIngredients, 0)
+            },
+        MatchReason = row.Reason is { } reason
+            ? new MatchReason
+            {
+                Kind = reason.Kind,
+                // A concept is named in the recipe's own language, which is the
+                // one the rest of its card is in.
+                Term = reason.Kind == "concept" && reason.Term is { } key && CulinaryLexicon.Find(key) is { } concept
+                    ? (reason.Language == "de" ? concept.De : concept.En)[0]
+                    : reason.Term
             }
+            : null
     };
 }

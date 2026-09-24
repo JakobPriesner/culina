@@ -167,4 +167,42 @@ public sealed record RecipeSearchRow(
     DateTimeOffset UpdatedAt,
     int MatchedIngredients,
     int IngredientCount,
-    DateTimeOffset? AddedToCookbookAt);
+    DateTimeOffset? AddedToCookbookAt)
+{
+    /// <summary>
+    /// Why the row is here, when the answer is not "its title": null for a
+    /// title match and for every row of a search without words.
+    /// </summary>
+    public MatchReason? Reason { get; init; }
+}
+
+/// <summary>Why a recipe answers a query it does not name in its title.</summary>
+/// <param name="Kind">
+/// <c>ingredient</c>, <c>tag</c>, <c>text</c> (its description or a step) or
+/// <c>concept</c> (only what it is, through the lexicon).
+/// </param>
+/// <param name="Term">
+/// The ingredient or tag as the recipe writes it, or for a concept its lexicon
+/// key; null for text.
+/// </param>
+/// <param name="Language">The recipe's language, which a concept is named in.</param>
+public sealed record MatchReason(string Kind, string? Term, string Language);
+
+/// <summary>
+/// What a set of results could be narrowed by, counted over all of it.
+/// </summary>
+/// <param name="Total">How many recipes the counts are out of.</param>
+/// <param name="Tags">Tag slugs, with their names.</param>
+/// <param name="Times">Time ceilings in minutes: how many fit within each.</param>
+/// <param name="Cuisines">Lexicon cuisine keys.</param>
+public sealed record SearchFacets(
+    int Total,
+    IReadOnlyList<Facet> Tags,
+    IReadOnlyList<Facet> Times,
+    IReadOnlyList<Facet> Cuisines);
+
+/// <summary>One way to narrow a result set, and how many it would leave.</summary>
+/// <param name="Value">What to narrow by.</param>
+/// <param name="Label">How the household writes it, where that differs from the value.</param>
+/// <param name="Count">How many recipes it would leave.</param>
+public sealed record Facet(string Value, string? Label, int Count);
