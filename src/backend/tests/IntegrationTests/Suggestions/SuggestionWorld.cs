@@ -36,7 +36,7 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
         await postgres.ResetAsync(Token);
 
         var host = api ?? postgres.Api;
-        var client = await SignUpAsync(postgres, email, "Ada", api: host);
+        var client = await SignUpAsync(host, email, "Ada");
 
         var householdId = (await client.GetAsync("/api/v1/households", Token))
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
@@ -45,13 +45,8 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
     }
 
     /// <summary>A second person in the same kitchen, for the household-taste rules.</summary>
-    internal async Task<ApiClient> InviteAsync(
-        PostgresFixture postgres,
-        string email,
-        string displayName)
+    internal async Task<ApiClient> InviteAsync(string email, string displayName)
     {
-        ArgumentNullException.ThrowIfNull(postgres);
-
         // An instance refuses a second account by default, which is the right
         // default and would otherwise make every request this guest sends a
         // silent 401 — and a household-taste rule asserted against a member who
@@ -67,7 +62,7 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
 
         var code = invitation.Json!.Value.GetProperty("code").GetString();
 
-        var guest = await SignUpAsync(postgres, email, displayName, joinWith: code, api: Api);
+        var guest = await SignUpAsync(Api, email, displayName, joinWith: code);
 
         var members = await Client.GetAsync($"/api/v1/households/{HouseholdId}/members", Token);
 
@@ -77,13 +72,12 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
     }
 
     private static async Task<ApiClient> SignUpAsync(
-        PostgresFixture postgres,
+        CulinaApiFactory api,
         string email,
         string displayName,
-        string? joinWith = null,
-        CulinaApiFactory? api = null)
+        string? joinWith = null)
     {
-        var client = (api ?? postgres.Api).NewApiClient();
+        var client = api.NewApiClient();
 
         await client.PostAsync(
             "/api/v1/users",

@@ -132,7 +132,7 @@ internal static class ReplayKitchen
     internal static async Task<Guid> BuildAsync(PostgresFixture postgres, CancellationToken cancellationToken)
     {
         var world = await SuggestionWorld.NewAsync(postgres);
-        var bob = await world.InviteAsync(postgres, "bob@example.com", "Bob");
+        var bob = await world.InviteAsync("bob@example.com", "Bob");
 
         Dictionary<Dish, Guid> ids = [];
 
