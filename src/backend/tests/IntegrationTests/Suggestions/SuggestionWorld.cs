@@ -155,10 +155,11 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
 
     /// <summary>Records that somebody cooked it, however long ago.</summary>
     internal Task CookedAsync(Guid recipeId, int daysAgo, ApiClient? by = null) =>
-        (by ?? Client).PostAsync(
-            $"/api/v1/recipes/{recipeId}/cook-log",
-            new { madeAt = DateTimeOffset.UtcNow.AddDays(-daysAgo) },
-            Token);
+        CookedAtAsync(recipeId, DateTimeOffset.UtcNow.AddDays(-daysAgo), by);
+
+    /// <summary>Records that somebody cooked it at a particular moment.</summary>
+    internal Task CookedAtAsync(Guid recipeId, DateTimeOffset madeAt, ApiClient? by = null) =>
+        (by ?? Client).PostAsync($"/api/v1/recipes/{recipeId}/cook-log", new { madeAt }, Token);
 
     internal Task PlanAsync(Guid recipeId, DateOnly date, string slot) =>
         Client.PostAsync(
