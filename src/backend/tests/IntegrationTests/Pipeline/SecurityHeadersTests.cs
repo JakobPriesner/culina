@@ -87,6 +87,28 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task DocumentResponses_ShouldAllowOneStyleAttribute_TheRouteAnnouncers()
+    {
+        // Arrange
+        using var client = postgres.Api.CreateClient();
+
+        // Act
+        using var response = await client.GetAsync(
+            new Uri("/health/live", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // One hash and nothing else: a second source here would be a style
+        // attribute somebody added without deciding to.
+        var directive = Policy(response)
+            .Split("; ")
+            .Single(part => part.StartsWith("style-src-attr ", StringComparison.Ordinal));
+        Assert.Equal(
+            "style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='",
+            directive);
+    }
+
+    [Fact]
     public async Task NoPolicy_ShouldEverAllowInlineOrEval_OnAnyPath()
     {
         // Arrange

@@ -81,9 +81,13 @@ CSP differs by what is being served:
 - **API responses**: `default-src 'none'; frame-ancestors 'none'; base-uri
   'none'; form-action 'none'` — a JSON response needs nothing.
 - **The SPA document**: `default-src 'self'; script-src 'self' 'nonce-…';
-  style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; font-src
-  'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none';
-  form-action 'self'`.
+  style-src 'self' 'nonce-…'; style-src-attr 'unsafe-hashes' 'sha256-…';
+  img-src 'self' data: blob:; connect-src 'self'; font-src 'self';
+  object-src 'none'; base-uri 'none'; frame-ancestors 'none';
+  form-action 'self'`. The single `style-src-attr` hash is SvelteKit's route
+  announcer (`SecurityHeaders.AnnouncerStyleHash`); a nonce cannot go on an
+  attribute, so no other `style="…"` may reach the document — set styles
+  through the CSSOM (Svelte's `style:` directive) or a nonced `<style>`.
 
 No `'unsafe-inline'` and no `'unsafe-eval'` in `script-src`, ever — they
 disable the policy. Inline scripts carry a per-response nonce.
