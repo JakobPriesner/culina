@@ -7186,6 +7186,41 @@
         },
         "description": "One moment of a picture being drawn."
       },
+      "RecipesGetAllAppliedInference": {
+        "required": [
+          "kind",
+          "value",
+          "text",
+          "start",
+          "end"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`time`, `quick`, `diet`, `meal`, `cuisine`,\n        `ingredient` or `exclusion`."
+          },
+          "value": {
+            "type": "string",
+            "description": "What it means: minutes for a time; a stable key for a diet, meal,\ncuisine and every ingredient or exclusion the server recognised\n(`vegetarian`, `dinner`, `italian`, `potato`); and\nthe word as typed for anything it did not."
+          },
+          "text": {
+            "type": "string",
+            "description": "The characters it was read from, exactly as typed."
+          },
+          "start": {
+            "type": "integer",
+            "description": "Where those characters begin in the query, in UTF-16 code units.",
+            "format": "int32"
+          },
+          "end": {
+            "type": "integer",
+            "description": "Where they end, exclusive.",
+            "format": "int32"
+          }
+        },
+        "description": "One thing the query was understood to ask."
+      },
       "RecipesGetAllIngredientMatch": {
         "required": [
           "matched",
@@ -7211,6 +7246,27 @@
           }
         },
         "description": "How well a recipe fits what you have."
+      },
+      "RecipesGetAllInterpretation": {
+        "required": [
+          "freeText",
+          "applied"
+        ],
+        "type": "object",
+        "properties": {
+          "freeText": {
+            "type": "string",
+            "description": "The words that were searched for, once everything below was taken out."
+          },
+          "applied": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetAllAppliedInference"
+            },
+            "description": "What was inferred, in the order it was typed."
+          }
+        },
+        "description": "A query, as the server read it."
       },
       "RecipesGetAllRecipeSummary": {
         "required": [
@@ -7325,6 +7381,19 @@
             "type": "integer",
             "description": "How many recipes match, across all pages.",
             "format": "int32"
+          },
+          "interpretation": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetAllInterpretation"
+              }
+            ]
           }
         },
         "description": "A page of recipes."

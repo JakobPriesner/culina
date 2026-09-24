@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Cookbooks;
+using Application.Search;
 using Application.Telemetry;
 using Contracts.Recipes.GetAll;
 using Domain.Households;
@@ -50,8 +51,17 @@ internal sealed class GetRecipesQueryHandler(
                 cancellationToken)
             .ConfigureAwait(false);
 
+        // What the words ask for beyond themselves — a diet, a time, a meal,
+        // what to use and what to leave out — read before the search runs, so
+        // the lanes are handed only the words still to be found.
+        var intent = QueryUnderstanding.Parse(query.Search.Query);
+
         var search = query.Search with
         {
+            Query = intent.FreeText,
+            Ingredients = [.. query.Search.Ingredients, .. intent.Ingredients],
+            MaxMinutes = Min(query.Search.MaxMinutes, intent.MaxMinutes),
+            Constraints = intent.ToConstraints(),
             CookbookId = scope.Membership,
             Rules = scope.Rules,
             // A shelf that fills itself was never put in an order, so it falls
@@ -64,25 +74,56 @@ internal sealed class GetRecipesQueryHandler(
 
         var page = await recipes.SearchAsync(search, cancellationToken).ConfigureAwait(false);
 
-        return tracked.Record(Result<Response>.Success(page.ToResponse(search)));
+        return tracked.Record(Result<Response>.Success(page.ToResponse(search, intent)));
     }
+
+    private static int? Min(int? asked, int? read) =>
+        asked is { } a && read is { } r ? Math.Min(a, r) : asked ?? read;
 }
 
 /// <summary>Maps a page of search rows onto the shape this operation returns.</summary>
 internal static class RecipeListMappings
 {
-    internal static Response ToResponse(this RecipePage page, RecipeSearch search)
+    internal static Response ToResponse(this RecipePage page, RecipeSearch search, QueryIntent intent)
     {
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(search);
+        ArgumentNullException.ThrowIfNull(intent);
 
         return new Response
         {
             Items = [.. page.Items.Select(row => row.ToSummary(search.Ingredients.Count))],
             NextCursor = page.NextCursor,
-            Total = page.Total
+            Total = page.Total,
+            // Absent without a query, so the plain library listing is exactly
+            // what it always was.
+            Interpretation = intent.Applied.Count == 0 && intent.FreeText.Length == 0
+                ? null
+                : new Interpretation
+                {
+                    FreeText = intent.FreeText,
+                    Applied = [.. intent.Applied.Select(one => one.ToContract())]
+                }
         };
     }
+
+    private static AppliedInference ToContract(this Inference inference) => new()
+    {
+        Kind = inference.Kind switch
+        {
+            InferenceKind.Time => "time",
+            InferenceKind.Quick => "quick",
+            InferenceKind.Diet => "diet",
+            InferenceKind.Meal => "meal",
+            InferenceKind.Cuisine => "cuisine",
+            InferenceKind.Ingredient => "ingredient",
+            _ => "exclusion"
+        },
+        Value = inference.Value,
+        Text = inference.Text,
+        Start = inference.Start,
+        End = inference.End
+    };
 
     private static RecipeSummary ToSummary(this RecipeSearchRow row, int requestedIngredients) => new()
     {

@@ -15,6 +15,56 @@ public sealed record Response
 
     /// <summary>How many recipes match, across all pages.</summary>
     public required int Total { get; init; }
+
+    /// <summary>
+    /// What the query was understood to mean, or null when there was no query.
+    /// </summary>
+    public Interpretation? Interpretation { get; init; }
+}
+
+/// <summary>
+/// A query, as the server read it.
+/// </summary>
+/// <remarks>
+/// Every applied entry is something the client can draw as a removable chip.
+/// Removing one is deleting its <c>start</c>–<c>end</c> span from the query and
+/// asking again, so there is one parser, here, and the client never has to be
+/// a second one.
+/// </remarks>
+public sealed record Interpretation
+{
+    /// <summary>The words that were searched for, once everything below was taken out.</summary>
+    public required string FreeText { get; init; }
+
+    /// <summary>What was inferred, in the order it was typed.</summary>
+    public required IReadOnlyList<AppliedInference> Applied { get; init; }
+}
+
+/// <summary>One thing the query was understood to ask.</summary>
+public sealed record AppliedInference
+{
+    /// <summary>
+    /// <c>time</c>, <c>quick</c>, <c>diet</c>, <c>meal</c>, <c>cuisine</c>,
+    /// <c>ingredient</c> or <c>exclusion</c>.
+    /// </summary>
+    public required string Kind { get; init; }
+
+    /// <summary>
+    /// What it means: minutes for a time; a stable key for a diet, meal,
+    /// cuisine and every ingredient or exclusion the server recognised
+    /// (<c>vegetarian</c>, <c>dinner</c>, <c>italian</c>, <c>potato</c>); and
+    /// the word as typed for anything it did not.
+    /// </summary>
+    public required string Value { get; init; }
+
+    /// <summary>The characters it was read from, exactly as typed.</summary>
+    public required string Text { get; init; }
+
+    /// <summary>Where those characters begin in the query, in UTF-16 code units.</summary>
+    public required int Start { get; init; }
+
+    /// <summary>Where they end, exclusive.</summary>
+    public required int End { get; init; }
 }
 
 /// <summary>
