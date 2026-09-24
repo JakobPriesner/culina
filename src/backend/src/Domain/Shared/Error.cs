@@ -10,7 +10,11 @@ namespace Domain.Shared;
 /// </param>
 /// <param name="Description">
 /// A sentence for a human. It never contains a secret, a token, a password or a
-/// raw database message, because it is returned to the caller verbatim.
+/// raw database message, because it is returned to the caller verbatim. It is
+/// English whatever the request asked for: the web client says the failure in
+/// the reader's language by its code, so a new code needs a
+/// <c>problem.&lt;code&gt;</c> message in the frontend's catalogues, and the
+/// frontend's <c>explain.spec.ts</c> fails until it has one.
 /// </param>
 /// <param name="Type">The kind of failure, which decides the status code.</param>
 /// <remarks>

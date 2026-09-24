@@ -1,4 +1,5 @@
 import type { AppError } from '$api';
+import { explain } from '$shell/explain';
 import { createLoadingState } from '$shell/loadingState.svelte';
 
 /**
@@ -92,7 +93,9 @@ export function createSubmission(): Submission {
     errorFor(field) {
       // A linear scan over at most a handful of causes, rather than a map that
       // would have to be kept in step with the failure it came from.
-      return failure?.fields.find((cause) => cause.field === field)?.detail;
+      const cause = failure?.fields.find((candidate) => candidate.field === field);
+
+      return cause && explain(cause);
     },
 
     register(field, id) {

@@ -1,3 +1,22 @@
+<script lang="ts" module>
+  /**
+   * The failures an administrator fixes in the assistant settings. Budgets count
+   * because an administrator can raise them; a busy provider or an unreadable
+   * answer does not, because nothing there would help.
+   */
+  const fixedInSettings = new Set([
+    'assistance.not_configured',
+    'assistance.disabled',
+    'assistance.model_missing',
+    'assistance.unknown_provider',
+    'assistance.drawing_not_supported',
+    'assistance.unavailable',
+    'assistance.rejected',
+    'assistance.budget_exhausted',
+    'assistance.personal_budget_exhausted'
+  ]);
+</script>
+
 <script lang="ts">
   import { resolve } from '$app/paths';
 
@@ -6,15 +25,12 @@
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
-  import { failureCopy } from './failureCopy';
-
   /**
    * Why the assistant did not answer, in the reader's language, and what to do.
    *
    * One component for all four doors — idea, photograph, improve and draw —
    * because the same provider failing the same way must read the same way
-   * wherever it was asked. The server's detail is English and operational; the
-   * code is stable, so the code is what is translated.
+   * wherever it was asked.
    *
    * Where the fix is in the assistant settings, an administrator gets a link
    * straight there and everyone else is told who can help. A failure that only
@@ -27,13 +43,13 @@
 
   let { error }: Props = $props();
 
-  const copy = $derived(failureCopy(error.code));
+  const settings = $derived(fixedInSettings.has(error.code));
 </script>
 
 <div class="failure" role="alert">
-  <p>{copy ? copy.message() : explain(error)}</p>
+  <p>{explain(error)}</p>
 
-  {#if copy?.settings}
+  {#if settings}
     {#if session.user?.isAdmin}
       <a class="settings" href={resolve('/(app)/me/ai')}>{m['assist.failure.settings']()}</a>
     {:else}
