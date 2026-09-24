@@ -326,6 +326,19 @@ describe('waiting for the shortlist', () => {
     expect(listed()[0]).toContain('sort=suggested');
   });
 
+  it('holds the grid back until the shortlist is in, even with the list back', async () => {
+    localStorage.setItem(`culina.ranks.${household}`, 'yes');
+    shortlistHeldBack();
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // The panel goes above the grid and takes its recipes out of it. Drawing
+    // the grid first would move every card when the shortlist lands.
+    expect(screen.getByRole('status', { name: 'Loading your recipes' })).toBeInTheDocument();
+    expect(screen.queryByText('Omelette')).not.toBeInTheDocument();
+  });
+
   it('does not wait when somebody has chosen the order', async () => {
     libraryView.forHousehold(household);
     libraryView.sort = 'title';
