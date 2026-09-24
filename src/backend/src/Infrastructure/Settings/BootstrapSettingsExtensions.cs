@@ -26,5 +26,6 @@ public static class BootstrapSettingsExtensions
             .AddPasswordHashingSettings(configuration)
             .AddRateLimitSettings(configuration)
             .AddForwardedHeadersSettings(configuration)
-            .AddImportSettings(configuration);
+            .AddImportSettings(configuration)
+            .AddTelemetrySettings(configuration);
 }

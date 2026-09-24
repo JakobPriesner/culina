@@ -36,6 +36,37 @@ Decide with these questions, in order:
 Default to the database. An admin self-hosting this app may have no shell
 access to edit a JSON file.
 
+### Bootstrap settings an admin changes from the app
+
+Some bootstrap settings are host plumbing an admin still needs to reach without
+a shell: the database connection (entered on the first-run setup screen),
+`Cookies`, `ForwardedHeaders`, `RateLimits`, the OTLP endpoint. They stay
+bootstrap records — immutable, validated at startup — and gain a second
+*source*, not a second shape:
+
+- `Infrastructure/Settings/ServerConfigurationFile` inserts
+  `Storage__ConfigPath/culina.json` into the configuration **above
+  `appsettings*.json` and below the environment**. An environment variable
+  still wins; `IServerConfiguration.IsPinned` reports it, and the UI shows the
+  field read-only, named by its variable. That order is also the recovery path
+  from a setting that locked everybody out.
+- A save validates the proposal with the records' own `Validate()`
+  (`ServerSettingsFile.Check`), writes only keys that differ and are not
+  pinned, then calls `IHostRestart.Schedule()`. `Program.cs` runs the host in a
+  loop and builds it again from fresh configuration — so there is still exactly
+  one place a bootstrap value is read, and one validation.
+- Without a complete `Database` section anywhere, `Program.cs` builds the
+  **setup host** instead (SPA, `/api/v1/setup`, the database settings; every
+  other API route `503 settings.setup_required`). Nothing registered there may
+  assume a database.
+- Values are written as the strings `SettingsSection` parses, keyed with
+  `SettingsKey.Of(SectionName, nameof(Property))`; "no value" is written as
+  empty, never removed, so it overrides a lower source.
+
+Add a setting to this group only if it is bootstrap by the questions above
+*and* an admin plausibly has no shell. Anything that should change without a
+restart is an instance setting instead.
+
 ## Bootstrap settings
 
 ```csharp
@@ -205,6 +236,8 @@ ciphertext back).
       grouped as an admin would see it on one screen.
 - [ ] Bootstrap → `init` properties, `SectionName`, `Validate()` called at
       startup. Instance → settable properties, `GroupName`, database-backed.
+- [ ] An admin-editable bootstrap value round-trips: `ToConfigurationValues`
+      writes the string its `Add<Group>Settings` reads back.
 - [ ] Registered as a singleton by its own `Add<Group>Settings` extension.
 - [ ] No `IOptions<T>` in any form; consumers inject the record.
 - [ ] Secrets encrypted at rest and write-only in their Contracts shape.

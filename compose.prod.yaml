@@ -36,30 +36,39 @@ services:
       # Both ends are inside the compose network, which no other container
       # joins. Set this to true the moment the database is anywhere else.
       Database__RequireSsl: ${Database__RequireSsl:-false}
-      # The proxy in front of this terminates TLS, so the cookie must be marked
-      # Secure even though this process speaks plain HTTP to it.
-      Cookies__Secure: 'true'
+      # ── Everything below is also under Settings → Server. ─────────────────
+      # An administrator can change these from the app, which saves them to
+      # /data/config and restarts itself. Each is passed through only if you
+      # set it in .env — and a value set here wins over the app and shows there
+      # as fixed by the environment, which is also how you undo a setting that
+      # locked everybody out. An empty value counts as unset.
+      #
+      # Secure cookies default to on: the proxy in front of this terminates
+      # TLS, so the cookie must be marked Secure even though this process
+      # speaks plain HTTP to it.
+      Cookies__Secure: ${Cookies__Secure:-}
       # One of these is required, and required to be specific: trusting every
       # proxy lets any client forge its own address, which makes per-IP rate
       # limiting useless and every security log line a guess.
       #
       # A proxy in this compose network has no address anyone can know in
       # advance, so name the network instead — `docker network inspect` gives
-      # you its subnet. Keep it as small as it can be.
+      # you its subnet, and the settings screen shows the address it sees. Keep
+      # it as small as it can be.
       ForwardedHeaders__KnownProxies: ${ForwardedHeaders__KnownProxies:-}
       ForwardedHeaders__KnownNetworks: ${ForwardedHeaders__KnownNetworks:-}
-      # Left at their defaults unless an operator says otherwise. The
-      # end-to-end suite raises them, because every request in it comes from
-      # one address and the defaults are right to refuse that.
-      RateLimits__LoginPerIpPerMinute: ${RateLimits__LoginPerIpPerMinute:-10}
-      RateLimits__RegisterPerIpPerHour: ${RateLimits__RegisterPerIpPerHour:-5}
-      RateLimits__RequestsPerSessionPerMinute: ${RateLimits__RequestsPerSessionPerMinute:-600}
+      # At their defaults unless somebody says otherwise. The end-to-end suite
+      # raises them, because every request in it comes from one address and
+      # the defaults are right to refuse that.
+      RateLimits__LoginPerIpPerMinute: ${RateLimits__LoginPerIpPerMinute:-}
+      RateLimits__RegisterPerIpPerHour: ${RateLimits__RegisterPerIpPerHour:-}
+      RateLimits__RequestsPerSessionPerMinute: ${RateLimits__RequestsPerSessionPerMinute:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-culina-api}
     ports:
       - '${CULINA_PORT:-8080}:8080'
     volumes:
-      # ── Both of these are mandatory. ────────────────────────────────────────
+      # ── All three of these are mandatory. ───────────────────────────────────
       # Recipe photographs. Not in the database and not rebuildable: without
       # this volume every photo in the instance is gone on the next deploy, and
       # nothing will have said so.
@@ -69,8 +78,12 @@ services:
       # sign anyone out — but anything the framework protects later would
       # change key on every restart.
       - culina-keys:/data/keys
-    # Nothing but the two volumes is writable, and /tmp is memory that does not
-    # survive the container.
+      # What an administrator changed under Settings → Server, as culina.json.
+      # Without it the settings screen can show those settings but not save
+      # them, and says so.
+      - culina-config:/data/config
+    # Nothing but the three volumes is writable, and /tmp is memory that does
+    # not survive the container.
     read_only: true
     tmpfs:
       - /tmp
@@ -90,3 +103,4 @@ services:
 volumes:
   culina-images:
   culina-keys:
+  culina-config:
