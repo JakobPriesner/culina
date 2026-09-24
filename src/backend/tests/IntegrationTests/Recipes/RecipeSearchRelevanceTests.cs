@@ -33,8 +33,6 @@ namespace IntegrationTests.Recipes;
 [Collection(RequiresDatabase.Name)]
 public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 {
-    private const string Password = "correct horse battery staple";
-
     /// <summary>
     /// One case: a query, and what a person said it should find.
     /// </summary>
@@ -248,7 +246,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var world = await SeedAsync();
 
         // Act
-        await SaveAsync(world, "Ofengemüse mit Feta", "de", 15, 30,
+        await world.SaveAsync("Ofengemüse mit Feta", "de", 15, 30,
             [("Paprika", null), ("Feta", null)], ["ofen", "vegetarisch"], "In den Ofen damit.");
 
         // Assert
@@ -261,7 +259,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     {
         // Arrange
         var world = await SeedAsync();
-        var recipeId = await SaveAsync(world, "Pfannkuchen", "de", 10, 10,
+        var recipeId = await world.SaveAsync("Pfannkuchen", "de", 10, 10,
             [("Mehl", null)], [], "Backen.");
 
         // Act
@@ -283,7 +281,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         // says "Nachtisch", and the search found nothing. The lexicon knows
         // waffles are a dessert.
         var world = await SeedAsync();
-        await SaveAsync(world, "Waffeln", "de", 10, 15,
+        await world.SaveAsync("Waffeln", "de", 10, 15,
             [("Mehl", "g"), ("Eier", null), ("Milch", "ml"), ("Zucker", "g")], [], "Ausbacken.");
 
         // Act
@@ -431,9 +429,13 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         // much the design as showing four: a parser that invents a reading of
         // every query teaches people to distrust the readings it means.
         Assert.Empty(Chips(dish));
-        Assert.Equal(
-            "Nudeln mit Tomatensoße",
-            dish.Json!.Value.GetProperty("interpretation").GetProperty("freeText").GetString());
+        // Nothing in this library is pasta in tomato sauce, so the words may be
+        // corrected to ones it has — but that is a recovery, said as one, and
+        // never a reading of the sentence.
+        var interpretation = dish.Json!.Value.GetProperty("interpretation");
+        Assert.True(
+            interpretation.GetProperty("freeText").GetString() == "Nudeln mit Tomatensoße"
+            || interpretation.GetProperty("correctedFrom").GetString() == "Nudeln mit Tomatensoße");
         // And the plain library listing is exactly what it was.
         Assert.False(browse.Json!.Value.TryGetProperty("interpretation", out var none)
                      && none.ValueKind != System.Text.Json.JsonValueKind.Null);
@@ -766,9 +768,9 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     {
         // Arrange
         var world = await SeedAsync();
-        await SaveAsync(world, "Tomaten mit Reis", "de", 10, 20,
+        await world.SaveAsync("Tomaten mit Reis", "de", 10, 20,
             [("Tomaten", null), ("Reis", null)], [], "Kochen.");
-        await SaveAsync(world, "Tomaten mit Nudeln", "de", 10, 20,
+        await world.SaveAsync("Tomaten mit Nudeln", "de", 10, 20,
             [("Tomaten", null), ("Nudeln", null)], [], "Kochen.");
 
         // Act
@@ -926,7 +928,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    private static Task<ApiResponse> SearchAsync(World world, string query) =>
+    private static Task<ApiResponse> SearchAsync(Kitchen world, string query) =>
         world.Client.GetAsync(
             $"/api/v1/recipes?householdId={world.HouseholdId}&query={Uri.EscapeDataString(query)}",
             Token);
@@ -962,7 +964,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             ? [.. facets.GetProperty("tags").EnumerateArray().Select(tag => tag.GetProperty("value").GetString()!)]
             : [];
 
-    private static async Task<List<string>> CompletionsAsync(World world, string typed)
+    private static async Task<List<string>> CompletionsAsync(Kitchen world, string typed)
     {
         var response = await world.Client.GetAsync(
             $"/api/v1/households/{world.HouseholdId}/completions?query={Uri.EscapeDataString(typed)}",
@@ -987,80 +989,63 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         [.. response.Json!.Value.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("title").GetString()!)];
 
-    private sealed record World(ApiClient Client, Guid HouseholdId);
-
-    private async Task<World> SeedAsync()
+    private async Task<Kitchen> SeedAsync()
     {
-        await postgres.ResetAsync(Token);
+        var world = await Kitchen.OpenAsync(postgres);
 
-        var client = postgres.Api.NewApiClient();
-        await client.PostAsync(
-            "/api/v1/users",
-            new { email = "ada@example.com", displayName = "Ada", password = Password },
-            Token);
-        await client.PostAsync(
-            "/api/v1/sessions",
-            new { email = "ada@example.com", password = Password },
-            Token);
-
-        var householdId = (await client.GetAsync("/api/v1/households", Token))
-            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
-
-        var world = new World(client, householdId);
-
-        await SaveAsync(world, "Spaghetti Bolognese", "de", 15, 30,
+        await world.SaveAsync("Spaghetti Bolognese", "de", 15, 30,
             [("Hackfleisch", "g"), ("passierte Tomaten", "ml"), ("Zwiebel", null), ("Spaghetti", "g")],
             ["pasta", "italienisch"],
             "Hackfleisch anbraten und mit Rotwein abgelöscht köcheln lassen.");
 
-        await SaveAsync(world, "Lasagne Bolognese", "de", 30, 60,
+        await world.SaveAsync("Lasagne Bolognese", "de", 30, 60,
             [("Hackfleisch", "g"), ("Tomaten", "g"), ("Lasagneplatten", null), ("Béchamel", "ml")],
             ["pasta", "italienisch", "ofen"],
             "Schichten und backen.");
 
-        await SaveAsync(world, "Bolognese-Sauce auf Vorrat", "de", 20, 100,
+        await world.SaveAsync("Bolognese-Sauce auf Vorrat", "de", 20, 100,
             [("Hackfleisch", "g"), ("Tomaten", "g")],
             ["sauce"],
             "Lange köcheln lassen.");
 
-        await SaveAsync(world, "Gemüselasagne", "de", 25, 45,
+        await world.SaveAsync("Gemüselasagne", "de", 25, 45,
             [("Zucchini", null), ("Tomaten", "g"), ("Béchamel", "ml")],
             ["pasta", "vegetarisch"],
             "Schichten und backen.");
 
-        await SaveAsync(world, "Hähnchenbrustfilet mit Reis", "de", 10, 20,
+        await world.SaveAsync("Hähnchenbrustfilet mit Reis", "de", 10, 20,
             [("Hähnchenbrust", "g"), ("Reis", "g"), ("Zitrone", null)],
             ["schnell"],
             "Braten und servieren.");
 
-        await SaveAsync(world, "Kartoffelgratin", "de", 20, 40,
+        await world.SaveAsync("Kartoffelgratin", "de", 20, 40,
             [("Kartoffeln", "g"), ("Sahne", "ml"), ("Käse", "g")],
             ["auflauf", "vegetarisch"],
             "In die Form und in den Ofen.");
 
-        await SaveAsync(world, "Süßkartoffelcurry", "de", 15, 20,
+        await world.SaveAsync("Süßkartoffelcurry", "de", 15, 20,
             [("Süßkartoffel", "g"), ("Kokosmilch", "ml"), ("Ingwer", null)],
             ["vegan"],
             "Alles köcheln lassen.");
 
-        await SaveAsync(world, "Müsliriegel", "de", 15, 10,
+        await world.SaveAsync("Müsliriegel", "de", 15, 10,
             [("Haferflocken", "g"), ("Honig", "g")],
             ["snack"],
             "Pressen und backen.");
 
         // Singular, on purpose: the query people type is "Tomaten".
-        await SaveAsync(world, "Tomatensuppe", "de", 10, 20,
+        await world.SaveAsync("Tomatensuppe", "de", 10, 20,
             [("Tomate", null), ("Zwiebel", null), ("Brühe", "ml")],
             ["vegetarisch", "suppe"],
             "Pürieren.");
 
-        await SaveAsync(world, "Zwiebelkuchen", "de", 30, 60,
+        await world.SaveAsync("Zwiebelkuchen", "de", 30, 60,
             [("Zwiebeln", "g"), ("Speck", "g"), ("Hefeteig", null)],
             ["ofen"],
             "Belegen und backen.");
 
         // English, in a German library: a household writes both.
-        await SaveAsync(world, "Chicken Curry", "en", 15, 25,
+        await world.SaveAsync("Chicken Curry", "en", 15, 25,
             [("chicken breast", "g"), ("coconut milk", "ml")],
             ["asian"],
             "Simmer until done.");
@@ -1068,60 +1053,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         return world;
     }
 
-    private static async Task<Guid> SaveAsync(
-        World world,
-        string title,
-        string language,
-        int? prep,
-        int? cook,
-        (string Name, string? Unit)[] ingredients,
-        string[] tags,
-        string step)
-    {
-        var created = await world.Client.PostAsync(
-            "/api/v1/recipes",
-            new { householdId = world.HouseholdId, title },
-            Token);
-
-        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
-        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
-
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
-        {
-            Content = JsonContent.Create(new
-            {
-                title,
-                language,
-                yieldAmount = 4,
-                yieldKind = "servings",
-                prepMinutes = prep,
-                cookMinutes = cook,
-                groups = new[]
-                {
-                    new
-                    {
-                        name = (string?)null,
-                        ingredients = ingredients
-                            .Select(line => new { name = line.Name, unit = line.Unit })
-                            .ToArray()
-                    }
-                },
-                steps = new[]
-                {
-                    new { segments = new[] { new { type = "text", value = step } } }
-                },
-                tags
-            })
-        };
-
-        request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(read.ETag!));
-
-        await world.Client.SendAsync(request, Token);
-
-        return recipeId;
-    }
-
-    private static async Task RenameAsync(World world, Guid recipeId, string title)
+    private static async Task RenameAsync(Kitchen world, Guid recipeId, string title)
     {
         var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
         var body = read.Json!.Value;

@@ -29,11 +29,11 @@ internal static class CulinaDataSource
             Timeout = 10,
             CommandTimeout = 30,
             // What the trigram index on titles hands back for the typo lane.
-            // The `<%` operator reads its threshold from this setting and cannot
-            // be given one, so it is sent at connect time from the constant the
-            // search compares against; as a startup option it also survives the
-            // reset a pooled connection gets between requests.
-            Options = "-c pg_trgm.word_similarity_threshold="
+            // The `<<%` operator reads its threshold from this setting and
+            // cannot be given one, so it is sent at connect time from the
+            // constant the search compares against; as a startup option it also
+            // survives the reset a pooled connection gets between requests.
+            Options = "-c pg_trgm.strict_word_similarity_threshold="
                 + RecipeSearcher.FuzzyThreshold.ToString(CultureInfo.InvariantCulture)
         }.ConnectionString;
 
