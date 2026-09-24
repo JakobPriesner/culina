@@ -5,6 +5,7 @@
 
   import { session } from '$features/auth/session.svelte';
   import { formatDate, m } from '$shell/i18n';
+  import { update } from '$shell/updates.svelte';
 
   import SettingsRow from './SettingsRow.svelte';
   import SettingsSection from './SettingsSection.svelte';
@@ -26,6 +27,16 @@
 </script>
 
 <svelte:head><title>{m['me.account']()}</title></svelte:head>
+
+<!-- Where the update offer waits after its toast has gone, so a version that
+     was mentioned once and missed is still one tap away. -->
+{#if update.ready}
+  <SettingsSection>
+    <SettingsRow label={m['me.update']()} description={m['app.update.available']()}>
+      <Button variant="primary" onclick={() => update.apply()}>{m['app.update.reload']()}</Button>
+    </SettingsRow>
+  </SettingsSection>
+{/if}
 
 {#if user}
   <div class="identity">

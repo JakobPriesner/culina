@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { busy } from './busy.svelte';
 import { toaster } from './toaster.svelte';
-import { watchForUpdates } from './updates.svelte';
+import { update, watchForUpdates } from './updates.svelte';
 
 /*
  * A new version must never take over on its own.
@@ -15,7 +15,18 @@ import { watchForUpdates } from './updates.svelte';
 class FakeWorker implements Pick<ServiceWorker, 'postMessage'> {
   messages: unknown[] = [];
 
-  postMessage(message: unknown): void {
+  /** The build it answers with when asked, as the real worker does. */
+  constructor(readonly version = 'v2') {}
+
+  postMessage(message: unknown, transfer?: Transferable[] | StructuredSerializeOptions): void {
+    if ((message as { type?: string }).type === 'culina:version') {
+      const ports = Array.isArray(transfer) ? transfer : [];
+
+      (ports[0] as MessagePort | undefined)?.postMessage(this.version);
+
+      return;
+    }
+
     this.messages.push(message);
   }
 }
@@ -51,13 +62,20 @@ function fakeServiceWorker(options: { waiting?: FakeWorker; controlled: boolean 
   };
 }
 
-/** Lets the registration promise settle before anything is asserted. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+/** Lets the registration and the worker's answer settle before anything is asserted. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+/** A fresh page: nothing held, nothing on screen — but the device remembers. */
+const reopen = () => {
+  toaster.reset();
+  update.reset();
+};
 
 describe('watching for a new version', () => {
   beforeEach(() => {
-    toaster.reset();
+    reopen();
     busy.reset();
+    localStorage.clear();
   });
 
   it('does nothing at all where service workers do not exist', () => {
@@ -87,9 +105,10 @@ describe('watching for a new version', () => {
 
     expect(fake.container.register).toHaveBeenCalledWith('/service-worker.js', { type: 'module' });
     expect(toast).toBeDefined();
-    // It never expires: a version that is ready and then never mentioned again
-    // is a version nobody installs.
-    expect(toast!.durationMs).toBe(0);
+    // Brief: a prompt that never left sat over the bottom of every screen. The
+    // offer itself stays, in settings, until it is taken.
+    expect(toast!.durationMs).toBeGreaterThan(0);
+    expect(update.ready).toBe(true);
     // And it is an offer, not a countdown.
     expect(waiting.messages).toEqual([]);
 
@@ -140,10 +159,87 @@ describe('watching for a new version', () => {
   });
 });
 
+describe('mentioning a version', () => {
+  beforeEach(() => {
+    reopen();
+    busy.reset();
+    localStorage.clear();
+  });
+
+  it('offers it once, however often the browser reports it', async () => {
+    const waiting = new FakeWorker();
+    const fake = fakeServiceWorker({ waiting, controlled: true });
+
+    vi.stubGlobal('navigator', { serviceWorker: fake.container });
+
+    const first = watchForUpdates();
+    const second = watchForUpdates();
+
+    await settle();
+
+    // Two identical prompts at once is what this used to produce.
+    expect(toaster.toasts).toHaveLength(1);
+
+    first();
+    second();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not mention the same version again on the next visit, but keeps offering it', async () => {
+    const fake = fakeServiceWorker({ waiting: new FakeWorker('v2'), controlled: true });
+
+    vi.stubGlobal('navigator', { serviceWorker: fake.container });
+
+    const stop = watchForUpdates();
+
+    await settle();
+    expect(toaster.toasts).toHaveLength(1);
+
+    stop();
+    reopen();
+
+    const again = watchForUpdates();
+
+    await settle();
+
+    expect(toaster.toasts).toHaveLength(0);
+    expect(update.ready).toBe(true);
+
+    again();
+    vi.unstubAllGlobals();
+  });
+
+  it('mentions the next version, which is news', async () => {
+    const older = fakeServiceWorker({ waiting: new FakeWorker('v2'), controlled: true });
+
+    vi.stubGlobal('navigator', { serviceWorker: older.container });
+
+    const stop = watchForUpdates();
+
+    await settle();
+    stop();
+    reopen();
+
+    const newer = fakeServiceWorker({ waiting: new FakeWorker('v3'), controlled: true });
+
+    vi.stubGlobal('navigator', { serviceWorker: newer.container });
+
+    const again = watchForUpdates();
+
+    await settle();
+
+    expect(toaster.toasts).toHaveLength(1);
+
+    again();
+    vi.unstubAllGlobals();
+  });
+});
+
 describe('a new version arriving at a bad moment', () => {
   beforeEach(() => {
-    toaster.reset();
+    reopen();
     busy.reset();
+    localStorage.clear();
   });
 
   it('says nothing while somebody is cooking or editing', async () => {
