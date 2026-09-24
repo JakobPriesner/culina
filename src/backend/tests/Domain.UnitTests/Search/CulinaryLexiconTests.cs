@@ -96,7 +96,7 @@ public class CulinaryLexiconTests
     [InlineData("ohne Fleisch", "vegetarian")]
     [InlineData("italienische", "italian")]
     [InlineData("sweet potatoes", "sweet_potato")]
-    [InlineData("Gockel", "rooster")]
+    [InlineData("Gockel", "chicken")]
     public void Recognise_ShouldFindTheConceptAQueryWordNames(string query, string expected)
     {
         // Act
