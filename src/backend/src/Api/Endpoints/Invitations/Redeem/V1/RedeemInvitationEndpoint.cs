@@ -30,7 +30,9 @@ internal sealed class RedeemInvitationEndpoint : IEndpoint
                     .ConfigureAwait(false);
 
                 return result.Match(
-                    joined => Results.Created($"{ApiPaths.V1}/households/{joined.HouseholdId}", joined),
+                    joined => joined.AlreadyMember
+                        ? Results.Ok(joined)
+                        : Results.Created($"{ApiPaths.V1}/households/{joined.HouseholdId}", joined),
                     CustomResults.Problem);
             })
             .WithName("redeemInvitationV1")
@@ -38,8 +40,11 @@ internal sealed class RedeemInvitationEndpoint : IEndpoint
             .WithSummary("Join a household")
             .WithDescription(
                 "Unknown, expired and already-used codes all return the identical "
-                + "households.invitation_invalid, so a code cannot be probed for validity.")
+                + "households.invitation_invalid, so a code cannot be probed for validity. A "
+                + "good code presented by somebody already in its household answers `200` with "
+                + "`alreadyMember` and is not used up.")
             .Produces<Response>(StatusCodes.Status201Created)
+            .Produces<Response>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)

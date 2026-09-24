@@ -50,10 +50,53 @@ internal sealed class RedeemInvitationCommandHandler(
         var redeemed = invitation.Redeem(userId, now);
 
         return await redeemed.Match(
-            () => unitOfWork.InTransactionAsync(
-                token => AddMemberAsync(invitation, userId, now, token),
-                cancellationToken),
+            () => JoinUnlessInAsync(invitation, userId, now, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
+    }
+
+    private async Task<Result<Response>> JoinUnlessInAsync(
+        HouseholdInvitation invitation,
+        Guid userId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var member = await households
+            .IsMemberAsync(invitation.HouseholdId, userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (member)
+        {
+            return await AlreadyInAsync(invitation, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await unitOfWork
+            .InTransactionAsync(token => AddMemberAsync(invitation, userId, now, token), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Somebody opening a link to a household they are already in.
+    /// </summary>
+    /// <remarks>
+    /// Usually its owner, checking the link they are about to send. Not an
+    /// error, and the code is not used up: it is still meant for somebody else.
+    /// Only asked once the code is known to be good, so it tells a caller
+    /// nothing about a code they could not already use.
+    /// </remarks>
+    private async Task<Result<Response>> AlreadyInAsync(
+        HouseholdInvitation invitation,
+        CancellationToken cancellationToken)
+    {
+        var household = await households
+            .FindAsync(invitation.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return household.Map(found => new Response
+        {
+            HouseholdId = found.Id,
+            Name = found.Name.Value,
+            AlreadyMember = true
+        });
     }
 
     private async Task<Result<Response>> AddMemberAsync(
@@ -88,7 +131,8 @@ internal sealed class RedeemInvitationCommandHandler(
                 return saved.Map(_ => new Response
                 {
                     HouseholdId = found.Id,
-                    Name = found.Name.Value
+                    Name = found.Name.Value,
+                    AlreadyMember = false
                 });
             },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);

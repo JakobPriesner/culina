@@ -1120,5 +1120,10 @@
   "tags.all": "Alle {count} Schlagwörter zeigen",
   "tags.fewer": "Weniger zeigen",
   "tags.nothing": "Kein Schlagwort passt dazu.",
-  "me.update": "Aktualisierung"
+  "me.update": "Aktualisierung",
+  "auth.join.member.title": "Du gehörst schon zu {household}",
+  "auth.join.member.body": "Diese Einladung gilt für einen Haushalt, zu dem du gehörst – es hat sich also nichts geändert, und der Link funktioniert weiter für die Person, für die er gedacht war.",
+  "auth.join.open": "{household} öffnen",
+  "auth.join.home": "Zurück zu deiner Küche",
+  "auth.join.joining": "Einladung wird geöffnet …"
 }
