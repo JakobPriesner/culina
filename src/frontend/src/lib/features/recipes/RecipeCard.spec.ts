@@ -91,3 +91,50 @@ describe('a recipe in the list', () => {
     expect(container.querySelector('article')).toHaveAttribute('aria-busy', 'true');
   });
 });
+
+/*
+ * A search result says why it is there, and the words that found it are
+ * marked where they appear — a result for "tomate" whose title never says
+ * tomato is only trustworthy once the ingredient that matched can be seen.
+ */
+describe('a recipe found by a search', () => {
+  const marks = () => [...document.querySelectorAll('mark')].map((mark) => mark.textContent);
+
+  it('marks the searched word in a title that matched', () => {
+    renderWithProviders(RecipeCard, {
+      props: { recipe: recipe({ title: 'Tomatensuppe' }), query: 'tomate' }
+    });
+
+    expect(marks()).toEqual(['Tomate']);
+  });
+
+  it('says which ingredient matched, and marks it', () => {
+    renderWithProviders(RecipeCard, {
+      props: {
+        recipe: recipe({ matchReason: { kind: 'ingredient', term: 'passierte Tomaten' } }),
+        query: 'tomate'
+      }
+    });
+
+    expect(screen.getByText(/^Ingredient:/)).toHaveTextContent('Ingredient: passierte Tomaten');
+    expect(marks()).toEqual(['Tomate']);
+  });
+
+  it('says which tag matched, and marks it', () => {
+    renderWithProviders(RecipeCard, {
+      props: {
+        recipe: recipe({ matchReason: { kind: 'tag', term: 'vegetarisch' } }),
+        query: 'vegetarisch'
+      }
+    });
+
+    expect(screen.getByText(/^Tag:/)).toHaveTextContent('Tag: vegetarisch');
+    expect(marks()).toEqual(['vegetarisch']);
+  });
+
+  it('marks nothing outside a search', () => {
+    renderWithProviders(RecipeCard, { props: { recipe: recipe() } });
+
+    expect(marks()).toEqual([]);
+  });
+});

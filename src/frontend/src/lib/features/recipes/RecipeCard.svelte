@@ -6,6 +6,7 @@
   import { m } from '$shell/i18n';
   import { imageSrcset, imageUrl } from './recipeImage';
   import { matchLineFor, metaLineFor } from './recipeMeta';
+  import Highlighted from './search/Highlighted.svelte';
   import { reasonLine } from './search/wording';
   import type { RecipeSummary } from './types';
 
@@ -24,9 +25,11 @@
     recipe: RecipeSummary;
     /** Marked while a change to it is in flight. */
     pending?: boolean;
+    /** What was searched for, so the words that found it can be seen. */
+    query?: string;
   }
 
-  let { recipe, pending = false }: Props = $props();
+  let { recipe, pending = false, query = '' }: Props = $props();
 
   const meta = $derived(metaLineFor(recipe));
   const match = $derived(matchLineFor(recipe));
@@ -62,7 +65,7 @@
       href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}
       aria-label={m['recipes.card.open']({ title: recipe.title })}
     >
-      {recipe.title}
+      <Highlighted text={recipe.title} {query} />
     </a>
   </h3>
 
@@ -80,7 +83,7 @@
   {/if}
 
   {#if reason}
-    <p class="reason">{reason}</p>
+    <p class="reason"><Highlighted text={reason} {query} /></p>
   {/if}
 </article>
 
