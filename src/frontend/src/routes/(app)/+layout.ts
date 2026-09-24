@@ -1,7 +1,10 @@
 import { redirect } from '@sveltejs/kit';
 
+import { resolve } from '$app/paths';
+
 import { loginUrlFor } from '$features/auth/redirectTarget';
 import { session } from '$features/auth/session.svelte';
+import { readSetup } from '$features/server/setup';
 
 /**
  * The guard for everything behind a sign-in.
@@ -21,6 +24,16 @@ export const load = async ({ url }) => {
   // a session that is perfectly valid — the layout offers to try again, and the
   // cookie is still in the jar when they do.
   if (session.status === 'unavailable') {
+    // Unless the reason is that there is nothing to sign in to yet. A server
+    // with no database answers every request but setup's with 503, which is
+    // "unavailable" from here — and the setup screen, not a retry button, is
+    // what that visitor needs.
+    const setup = await readSetup();
+
+    if (setup && setup.stage !== 'complete') {
+      redirect(307, resolve('/(auth)/setup'));
+    }
+
     return;
   }
 

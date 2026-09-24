@@ -18,6 +18,7 @@ a handful of commands.
                    │   /*      → the app      │
                    │  volumes: /data/images   │
                    │           /data/keys     │
+                   │           /data/config   │
                    └────────────┬─────────────┘
                                 │
                         ┌───────┴────────┐
@@ -40,13 +41,15 @@ cd culina
 cp .env.example .env
 ```
 
-Fill in `.env`. Three values have no sensible default and the app will refuse to
-start without them:
+Fill in `.env`. One value has no sensible default and the compose file will
+refuse to start without it:
 
 - `Database__Password` — anything long and random.
-- `ForwardedHeaders__KnownNetworks` (or `__KnownProxies`) — where your proxy
-  sits. `docker network inspect` gives you the subnet.
-- `Cookies__Secure=true` — which the production compose file sets for you.
+
+Where your proxy sits (`ForwardedHeaders__KnownNetworks` or `__KnownProxies`)
+matters just as much, but it can be set in `.env` or on the setup screen, which
+shows the address your proxy's requests actually arrive from. Secure cookies are
+on by default; leave them on behind a proxy that terminates TLS.
 
 Then:
 
@@ -57,9 +60,22 @@ docker compose -f compose.yaml -f compose.prod.yaml up -d
 The database starts, the app waits for it to be healthy, applies its migrations
 and begins serving on `${CULINA_PORT:-8080}`. Point your proxy at that.
 
-**The first account you create becomes the administrator** and gets a household
-of its own. Whether anyone else may register is that administrator's decision,
+Open it in a browser and the **setup screen** walks you through the rest: how
+people reach the server (secure cookies, which proxy to trust), and the first
+account. **Whoever finishes setup becomes the administrator** and gets a
+household of its own — so do it before the instance is reachable by anyone
+else. Whether anyone else may register is then that administrator's decision,
 made in the app, not a setting in a file.
+
+Without the compose file — a single `docker run` against a PostgreSQL you
+already have — leave out every `Database__*` variable and mount a volume at
+`/data/config`. Culina then starts with only the setup screen, asks for the
+database first, and saves it there. See `configuration.md` for what it checks.
+
+Everything under **Settings → Server** — cookies, proxies, rate limits,
+telemetry, the database — is saved to `/data/config/culina.json` and applied by
+a restart of a second or two. A variable in `.env` still wins over it, and is
+how you undo a setting that locked you out.
 
 ### A reverse proxy, minimally
 
@@ -102,7 +118,7 @@ upgrade is affected, and it happens exactly once.
 
 ## Backing up
 
-Three things, and all three are needed:
+Four things, and all four are needed:
 
 ```bash
 # 1. The database.
@@ -116,6 +132,11 @@ docker run --rm -v culina_culina-images:/data -v "$PWD":/backup alpine \
 # 3. The key ring.
 docker run --rm -v culina_culina-keys:/data -v "$PWD":/backup alpine \
     tar czf /backup/culina-keys-$(date +%F).tar.gz -C /data .
+
+# 4. What was set up in the app. Holds the database password when it was
+#    entered on the setup screen, so keep the archive as private as .env.
+docker run --rm -v culina_culina-config:/data -v "$PWD":/backup alpine \
+    tar czf /backup/culina-config-$(date +%F).tar.gz -C /data .
 ```
 
 Volume names are prefixed with your compose project name — `docker volume ls`
@@ -238,8 +259,9 @@ previous release's dump.
   reach the database. Your load balancer wants `ready`.
 - **Logs.** JSON on stdout, one line per request, each carrying the request id
   that the app also shows to whoever hit the error. Ask them for it.
-- **Telemetry.** Set `OTEL_EXPORTER_OTLP_ENDPOINT` and traces, metrics and logs
-  all export. Unset, nothing leaves the machine.
+- **Telemetry.** Set a collector under Settings → Server, or
+  `OTEL_EXPORTER_OTLP_ENDPOINT`, and traces, metrics and logs all export. Unset,
+  nothing leaves the machine.
 - **`Cannot load library libgssapi_krb5.so.2` at boot is expected.** Npgsql
   probes for Kerberos and the chiseled runtime ships none. Culina authenticates
   to PostgreSQL with a password, so nothing needs it. Two lines at startup and

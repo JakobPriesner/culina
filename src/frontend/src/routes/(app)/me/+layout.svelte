@@ -31,9 +31,9 @@
 
   let { children }: Props = $props();
 
-  // The assistant configures the instance rather than the person looking at it
-  // — one key, one bill — so it is in the rail only for the one account that
-  // may change it. Absent rather than disabled, like every other thing in this
+  // The assistant and the server configure the instance rather than the person
+  // looking at it — one key, one bill, one database — so they are in the rail
+  // only for the one account that may change them. Absent rather than disabled, like every other thing in this
   // app somebody cannot do.
   const categories = $derived([
     { href: resolve('/(app)/me'), label: m['me.account'], lead: m['me.account.lead'] },
@@ -48,7 +48,10 @@
       lead: m['me.household.lead']
     },
     ...(session.user?.isAdmin
-      ? [{ href: resolve('/(app)/me/ai'), label: m['me.ai'], lead: m['me.ai.lead'] }]
+      ? [
+          { href: resolve('/(app)/me/ai'), label: m['me.ai'], lead: m['me.ai.lead'] },
+          { href: resolve('/(app)/me/server'), label: m['me.server'], lead: m['me.server.lead'] }
+        ]
       : [])
   ]);
 

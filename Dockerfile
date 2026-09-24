@@ -67,11 +67,12 @@ RUN dotnet publish src/Api/Api.csproj \
         --no-restore \
         --output /app
 
-# The two data directories, made here because the runtime image has no shell to
-# make them in. Docker seeds a volume's mount point from what the image already
-# has at that path — including its ownership — so without this the volumes
-# arrive owned by root and the non-root app cannot write a single photograph.
-RUN mkdir -p /data/images /data/keys
+# The three data directories, made here because the runtime image has no shell
+# to make them in. Docker seeds a volume's mount point from what the image
+# already has at that path — including its ownership — so without this the
+# volumes arrive owned by root and the non-root app cannot write a single
+# photograph.
+RUN mkdir -p /data/images /data/keys /data/config
 
 # ── 3. What ships ────────────────────────────────────────────────────────────
 # Chiseled: no shell and no package manager, which is both a much smaller
@@ -95,20 +96,22 @@ COPY --from=backend /app ./
 # Owned by the user that runs, for the reason above.
 COPY --from=backend --chown=$APP_UID:$APP_UID /data /data
 
-# Both must be volumes. Recipe images are the data that cannot be rebuilt, and
-# the key ring is what the framework protects anything else with. The
-# directories are created here so a deployment that forgets to mount them still
-# starts — and the app says so in its logs rather than failing at the first
-# upload.
+# All three must be volumes. Recipe images are the data that cannot be rebuilt,
+# the key ring is what the framework protects anything else with, and the config
+# directory holds what an administrator set up from the app — the database
+# connection included, when it was entered on the setup screen. The directories
+# are created here so a deployment that forgets to mount them still starts — and
+# the app says so rather than failing at the first upload or the first save.
 ENV Storage__ImagePath=/data/images \
     Storage__DataProtectionKeyPath=/data/keys \
+    Storage__ConfigPath=/data/config \
     ASPNETCORE_HTTP_PORTS=8080 \
     # Nothing in this image reads a user's locale, and the culture data is a
     # meaningful part of a chiseled image's size. Culina formats every
     # user-facing value on the client, where the user's own locale is.
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 
-VOLUME ["/data/images", "/data/keys"]
+VOLUME ["/data/images", "/data/keys", "/data/config"]
 
 EXPOSE 8080
 
