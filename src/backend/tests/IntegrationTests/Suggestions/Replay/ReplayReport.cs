@@ -14,18 +14,20 @@ namespace IntegrationTests.Suggestions.Replay;
 /// What recall@5 a shuffled library would have scored, for scale. A ranker is
 /// only worth its SQL by the distance it keeps from this.
 /// </param>
+/// <param name="Quality">Whether the shortlists were worth looking at, whatever they predicted.</param>
 internal sealed record ReplayScore(
     int Points,
     double RecallAt5,
     double RecallAt10,
     double ReciprocalRank,
-    double ChanceAt5)
+    double ChanceAt5,
+    ShortlistQuality Quality)
 {
     internal static ReplayScore Of(IReadOnlyList<ReplayOutcome> outcomes)
     {
         if (outcomes.Count == 0)
         {
-            return new ReplayScore(0, 0, 0, 0, 0);
+            return new ReplayScore(0, 0, 0, 0, 0, ShortlistQuality.Of([]));
         }
 
         return new ReplayScore(
@@ -33,7 +35,8 @@ internal sealed record ReplayScore(
             outcomes.Average(outcome => outcome.Rank <= 5 ? 1.0 : 0.0),
             outcomes.Average(outcome => outcome.Rank <= 10 ? 1.0 : 0.0),
             outcomes.Average(outcome => outcome.Rank is { } rank ? 1.0 / rank : 0.0),
-            outcomes.Average(outcome => Math.Min(1.0, 5.0 / outcome.LibrarySize)));
+            outcomes.Average(outcome => Math.Min(1.0, 5.0 / outcome.LibrarySize)),
+            ShortlistQuality.Of(outcomes));
     }
 }
 
@@ -82,12 +85,13 @@ internal sealed record ReplayReport(ReplayScore Frozen, ReplayScore Rolling)
     public override string ToString() =>
         string.Join(
             Environment.NewLine,
-            "slice    points  recall@5  recall@10  MRR    chance@5",
+            "slice    points  recall@5  recall@10  MRR    chance@5  coverage  repeats  novelty  gini",
             Row("frozen", Frozen),
             Row("rolling", Rolling));
 
     private static string Row(string name, ReplayScore score) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"{name,-8} {score.Points,6}  {score.RecallAt5,8:0.000}  {score.RecallAt10,9:0.000}  {score.ReciprocalRank,5:0.000}  {score.ChanceAt5,8:0.000}");
+            $"{name,-8} {score.Points,6}  {score.RecallAt5,8:0.000}  {score.RecallAt10,9:0.000}  {score.ReciprocalRank,5:0.000}  {score.ChanceAt5,8:0.000}"
+            + $"  {score.Quality.Coverage,8:0.000}  {score.Quality.RepetitionRate,7:0.000}  {score.Quality.NoveltyShare,7:0.000}  {score.Quality.Gini,4:0.00}");
 }
