@@ -1269,7 +1269,7 @@
           "Households"
         ],
         "summary": "Join a household",
-        "description": "Unknown, expired and already-used codes all return the identical households.invitation_invalid, so a code cannot be probed for validity.",
+        "description": "Unknown, expired and already-used codes all return the identical households.invitation_invalid, so a code cannot be probed for validity. A good code presented by somebody already in its household answers `200` with `alreadyMember` and is not used up.",
         "operationId": "redeemInvitationV1",
         "parameters": [
           {
@@ -1284,6 +1284,16 @@
         "responses": {
           "201": {
             "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsRedeemInvitationResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -6902,7 +6912,8 @@
       "HouseholdsRedeemInvitationResponse": {
         "required": [
           "householdId",
-          "name"
+          "name",
+          "alreadyMember"
         ],
         "type": "object",
         "properties": {
@@ -6914,9 +6925,13 @@
           "name": {
             "type": "string",
             "description": "What it is called."
+          },
+          "alreadyMember": {
+            "type": "boolean",
+            "description": "True when the caller already belonged to it, in which case the code was\nnot used up and still works for whoever it was meant for."
           }
         },
-        "description": "The household the caller just joined."
+        "description": "The household the caller just joined, or was already in."
       },
       "HouseholdsRenameRequest": {
         "required": [
