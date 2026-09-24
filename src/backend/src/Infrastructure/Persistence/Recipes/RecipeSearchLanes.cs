@@ -239,6 +239,17 @@ internal static class RecipeSearchLanes
         where d.household_id = @householdId
           and word_similarity(term, d.title_ae) >= @fuzzyThreshold
         union
+        -- What the recipe is rather than what it says: every concept the
+        -- query names, among the ones its title, tags and ingredients do.
+        -- Waffeln for "Nachtisch", Hähnchen for "chicken". Every, not any:
+        -- "Hähnchen Reis" is a chicken dish with rice, not every dish with
+        -- either. An empty array is contained in everything, so a query the
+        -- lexicon cannot read is kept out by name rather than by accident.
+        select d.recipe_id from recipe_search_documents d
+        where d.household_id = @householdId
+          and cardinality(@concepts::text[]) > 0
+          and d.concepts @> @concepts::text[]
+        union
         -- The title, for a query too short to have a term of its own.
         select d.recipe_id from q
         cross join recipe_search_documents d
@@ -258,6 +269,7 @@ internal static class RecipeSearchLanes
         coalesce(d.document @@ lang.tsq, false)          as lexical_hit,
         coalesce({FuzzyTitle}, false)                    as fuzzy_title,
         coalesce({FuzzyBody}, false)                     as fuzzy_body,
+        coalesce(cardinality(@concepts::text[]) > 0 and d.concepts @> @concepts::text[], false) as concept_hit,
         coalesce({Rank}, 0)::float8                      as lexical_rank,
         {QueryCoverage}                                  as query_coverage,
         {TitleCoverage}                                  as title_coverage
@@ -321,6 +333,13 @@ internal static class RecipeSearchLanes
     /// purpose. Somebody typing <c>Hähnchen</c> means the chicken dish before
     /// the stew that happens to contain some.
     /// </para>
+    /// <para>
+    /// A match through the lexicon alone is last (tier 5), below a word merely
+    /// found somewhere in the recipe. The lexicon is a guess about what words
+    /// mean and a substring is a fact about what the recipe says, so however
+    /// right the guess is, it never outranks the fact — and when it is wrong,
+    /// the wrong recipe is at the bottom of the list rather than at the top.
+    /// </para>
     /// </remarks>
     internal const string Tier = """
         case
@@ -329,7 +348,8 @@ internal static class RecipeSearchLanes
             when title_word or title_hit       then 1
             when fuzzy_title or tag_hit        then 2
             when lexical_hit                   then 3
-            else                                    4
+            when fuzzy_body                    then 4
+            else                                    5
         end
         """;
 
