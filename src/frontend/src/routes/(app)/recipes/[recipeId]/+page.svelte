@@ -86,7 +86,7 @@
     const failure = await shopping.addRecipe(householdId, recipeId, servings);
 
     toaster.show({
-      message: failure ? explain(failure) : m['shopping.added'](),
+      message: () => (failure ? explain(failure) : m['shopping.added']()),
       tone: failure ? 'danger' : 'success'
     });
   }

@@ -8,14 +8,25 @@
  */
 export type ToastTone = 'neutral' | 'success' | 'danger';
 
+/**
+ * What a toast says, asked for each time it is drawn.
+ *
+ * A function rather than a string, because a toast can outlive the language it
+ * was raised in: switch from German to English while "Eine neue Version ist
+ * bereit" is showing, and a string would stay German beside an English Dismiss
+ * button until the next reload. The shell redraws on a change of language, and
+ * a function answers again in the new one — message, action and all.
+ */
+export type ToastWords = () => string;
+
 export interface ToastAction {
-  readonly label: string;
+  readonly label: ToastWords;
   readonly run: () => void;
 }
 
 export interface Toast {
   readonly id: string;
-  readonly message: string;
+  readonly message: ToastWords;
   readonly tone: ToastTone;
   readonly action?: ToastAction;
   /** How long it stays. Zero means until it is dismissed. */
@@ -23,7 +34,7 @@ export interface Toast {
 }
 
 export interface ToastRequest {
-  readonly message: string;
+  readonly message: ToastWords;
   readonly tone?: ToastTone;
   readonly action?: ToastAction;
   readonly durationMs?: number;

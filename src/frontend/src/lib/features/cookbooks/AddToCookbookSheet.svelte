@@ -43,7 +43,7 @@
     const done = await cookbooks.setOn(recipeId, { id: cookbookId, name }, on);
 
     if (!done) {
-      toaster.show({ message: m['cookbooks.add.failed'](), tone: 'danger' });
+      toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
     }
   }
 
@@ -55,7 +55,7 @@
     saving = false;
 
     if (!created) {
-      toaster.show({ message: m['cookbooks.add.failed'](), tone: 'danger' });
+      toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
 
       return;
     }

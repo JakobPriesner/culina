@@ -62,14 +62,14 @@
 
     if ('id' in outcome) {
       name = '';
-      toaster.show({ message: m['saved.saved']({ name: outcome.name }) });
+      toaster.show({ message: () => m['saved.saved']({ name: outcome.name }) });
       onclose();
 
       return;
     }
 
     toaster.show({
-      message: outcome.status === 409 ? m['saved.nameTaken']() : explain(outcome),
+      message: () => (outcome.status === 409 ? m['saved.nameTaken']() : explain(outcome)),
       tone: 'danger'
     });
   }
@@ -83,8 +83,8 @@
 
     toaster.show(
       'id' in outcome
-        ? { message: m['saved.updated']({ name: outcome.name }) }
-        : { message: explain(outcome), tone: 'danger' }
+        ? { message: () => m['saved.updated']({ name: outcome.name }) }
+        : { message: () => explain(outcome), tone: 'danger' }
     );
   }
 
@@ -97,8 +97,8 @@
 
     toaster.show(
       failure
-        ? { message: m['saved.deleteFailed'](), tone: 'danger' }
-        : { message: m['saved.deleted']({ name: search.name }) }
+        ? { message: () => m['saved.deleteFailed'](), tone: 'danger' }
+        : { message: () => m['saved.deleted']({ name: search.name }) }
     );
   }
 </script>

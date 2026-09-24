@@ -56,12 +56,13 @@
     restoring = false;
 
     toaster.show({
-      message: result.ok
-        ? m['archive.restored']({
-            restored: result.value.restored,
-            skipped: result.value.skipped
-          })
-        : m['archive.restoreFailed'](),
+      message: () =>
+        result.ok
+          ? m['archive.restored']({
+              restored: result.value.restored,
+              skipped: result.value.skipped
+            })
+          : m['archive.restoreFailed'](),
       tone: result.ok ? 'success' : 'danger'
     });
   }
