@@ -1125,5 +1125,6 @@
   "auth.join.member.body": "This invitation is for a household you belong to, so nothing changed — and the link still works for whoever it was meant for.",
   "auth.join.open": "Open {household}",
   "auth.join.home": "Back to your kitchen",
-  "auth.join.joining": "Opening the invitation…"
+  "auth.join.joining": "Opening the invitation…",
+  "ai.models.seeConnection": "No list from {provider} — see its connection above. Type the model name instead."
 }
