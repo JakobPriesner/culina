@@ -416,6 +416,40 @@ describe('the assistant settings page', () => {
     expect(screen.getByText(/models from Ollama could not be loaded/i)).toBeInTheDocument();
   });
 
+  it('says a provider has no list once, beside the provider, however many jobs it has', async () => {
+    // Ollama answered but listed nothing, and three jobs are given to it. The
+    // reason belongs to the connection; each job only points back to it.
+    serverAnswers(
+      {
+        ...configured,
+        uses: [
+          use('improve', { enabled: true, provider: 'ollama' }),
+          use('draft', { enabled: true, provider: 'ollama' }),
+          use('read', { enabled: true, provider: 'ollama' }),
+          use('draw', { enabled: true, provider: 'gemini' })
+        ]
+      },
+      {
+        providers: [
+          ...offered.providers.filter((one) => one.provider !== 'ollama'),
+          { provider: 'ollama', reachable: true, problem: null, models: [] }
+        ]
+      }
+    );
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const explained = screen.getAllByText(/Ollama answered, but listed no models/);
+
+    expect(explained).toHaveLength(1);
+    expect(rowFor('Ollama')).toContainElement(explained[0]!);
+
+    for (const job of ['Improve a recipe', 'Write from an idea', 'Import recipe from photo']) {
+      expect(within(rowFor(job)).getByText(/No list from Ollama/)).toBeInTheDocument();
+    }
+  });
+
   it('asks the providers again after a key is saved, so the lists are not stale', async () => {
     // The moment somebody most wants a list is the moment after they paste the
     // key. Nothing could be listed before it existed.
