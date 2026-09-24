@@ -14,6 +14,23 @@
       "port": 5000
     },
     {
+      "name": "culina-api-setup",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "ASPNETCORE_ENVIRONMENT=Production",
+        "ASPNETCORE_URLS=http://localhost:5000",
+        "Storage__ImagePath=../../../../data/setup-preview/images",
+        "Storage__DataProtectionKeyPath=../../../../data/setup-preview/keys",
+        "Storage__ConfigPath=../../../../data/setup-preview/config",
+        "dotnet",
+        "run",
+        "--project",
+        "src/backend/src/Api",
+        "--no-launch-profile"
+      ],
+      "port": 5000
+    },
+    {
       "name": "culina-frontend",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [

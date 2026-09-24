@@ -11,6 +11,7 @@ using Api.Endpoints.Registration;
 using Api.Endpoints.Searches;
 using Api.Endpoints.Sessions;
 using Api.Endpoints.Settings;
+using Api.Endpoints.Setup;
 using Api.Endpoints.SharedRecipes;
 using Api.Endpoints.Shopping;
 using Api.Endpoints.Suggestions;
@@ -37,6 +38,7 @@ internal static class EndpointExtensions
             .AddHouseholdsEndpoints()
             .AddInvitationsEndpoints()
             .AddSettingsEndpoints()
+            .AddSetupEndpoints()
             .AddRegistrationEndpoints()
             .AddRecipesEndpoints()
             .AddSharedRecipesEndpoints()

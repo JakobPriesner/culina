@@ -16,6 +16,11 @@
     <ItemGroup Label="Infrastructure">
         <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
         <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+        <!-- The file an administrator's server settings are saved to is one more
+             configuration source, read by the same provider as appsettings.json;
+             Infrastructure adds it, finds it among the providers to tell which
+             keys the environment pins, and writes it. -->
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
         <PackageVersion Include="Npgsql" Version="10.0.3" />
         <PackageVersion Include="Dapper" Version="2.1.79" />
         <!-- Argon2id: memory-hard password hashing, per cookie-auth-and-security. -->

@@ -56,6 +56,8 @@ public static class DependencyInjection
         // migration runner creates.
         return services
             .AddPersistence()
+            .AddServerSettings()
+            .AddScoped<ISetupProgress, AccountSetupProgress>()
             .AddInstanceSettings()
             .AddIdentity()
             .AddRecipeImport()
@@ -63,6 +65,32 @@ public static class DependencyInjection
             .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton(TimeProvider.System);
     }
+
+    /// <summary>
+    /// What the host that runs before there is a database needs: the settings
+    /// file, a way to try connection details, and the knowledge that it is at
+    /// the first step of setup.
+    /// </summary>
+    /// <remarks>
+    /// No bootstrap settings, no persistence, no hosted services — nothing here
+    /// may assume a database exists, because the point of this host is that it
+    /// does not.
+    /// </remarks>
+    /// <param name="services">The container to register into.</param>
+    public static IServiceCollection AddSetupInfrastructure(this IServiceCollection services) =>
+        services
+            .AddServerSettings()
+            .AddSingleton<ISetupProgress, DatabaseSetupProgress>()
+            .AddSingleton(TimeProvider.System);
+
+    /// <summary>
+    /// Bootstrap settings an administrator changes from the app: the file they
+    /// are saved to, and the check a database has to pass first.
+    /// </summary>
+    private static IServiceCollection AddServerSettings(this IServiceCollection services) =>
+        services
+            .AddSingleton<IServerConfiguration, ServerConfiguration>()
+            .AddSingleton<IDatabaseConnectionCheck, DatabaseConnectionCheck>();
 
     /// <summary>
     /// Admin-editable settings: one mutable singleton per group, its store, and

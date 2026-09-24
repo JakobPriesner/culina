@@ -133,6 +133,9 @@ export async function responsiveData(
       });
     if (path === '/registration/policy')
       return reply({ openRegistration: true, requireInvitation: false, hasAccounts: true });
+    // Asked in front of signing in and registering, which send everybody to
+    // the setup screen until an instance has an administrator.
+    if (path === '/setup') return reply({ stage: 'complete', startedAt: stamp });
     if (path === '/cookbooks')
       return reply({
         items: Array.from({ length: 6 }, (_, i) => ({

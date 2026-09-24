@@ -17,6 +17,9 @@ public sealed record DatabaseSettings
     /// <summary>The host name or address of the server.</summary>
     public required string Host { get; init; }
 
+    /// <summary>PostgreSQL's own port, used when none is configured.</summary>
+    public const int DefaultPort = 5432;
+
     /// <summary>The TCP port the server listens on.</summary>
     public required int Port { get; init; }
 
@@ -29,13 +32,19 @@ public sealed record DatabaseSettings
     /// <summary>The application role's password.</summary>
     public required string Password { get; init; }
 
+    /// <summary>Required unless somebody says otherwise.</summary>
+    public const bool DefaultRequireSsl = true;
+
+    /// <summary>Enough for a household's evening, and far below PostgreSQL's own ceiling.</summary>
+    public const int DefaultMaxPoolSize = 20;
+
     /// <summary>
     /// Whether TLS is required. Only a local, non-TLS server justifies false.
     /// </summary>
-    public bool RequireSsl { get; init; } = true;
+    public bool RequireSsl { get; init; } = DefaultRequireSsl;
 
     /// <summary>The largest number of pooled connections.</summary>
-    public int MaxPoolSize { get; init; } = 20;
+    public int MaxPoolSize { get; init; } = DefaultMaxPoolSize;
 
     /// <summary>Throws when any value would make the process unable to serve.</summary>
     public void Validate()

@@ -22,6 +22,7 @@ public static class StorageSettingsExtensions
             DataProtectionKeyPath = section.String(
                 nameof(StorageSettings.DataProtectionKeyPath),
                 "/data/keys"),
+            ConfigPath = section.String(nameof(StorageSettings.ConfigPath), StorageSettings.DefaultConfigPath),
             MaxImageBytes = section.Int(nameof(StorageSettings.MaxImageBytes), 10 * 1024 * 1024)
         };
 

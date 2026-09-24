@@ -31,6 +31,12 @@ internal static class Tags
 
     internal const string Settings = "Settings";
 
+    /// <summary>
+    /// How far a fresh instance has got — the one read that both hosts serve,
+    /// the one with a database and the one waiting for it.
+    /// </summary>
+    internal const string Setup = "Setup";
+
     internal const string Registration = "Registration";
 
     internal const string CookSessions = "CookSessions";

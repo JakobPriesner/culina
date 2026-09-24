@@ -19,6 +19,7 @@ cookie/CSRF model in `cookie-auth-and-security` sound.
                    │   /*      → SPA fallback │
                    │  volumes: /data/images   │
                    │           /data/keys     │
+                   │           /data/config   │
                    └────────────┬─────────────┘
                                 │
                         ┌───────┴────────┐
@@ -36,12 +37,13 @@ compressed at request time. If the proxy compresses, leave `/api` out of it for
 the same reason. It trusts `X-Forwarded-*` only from configured proxy addresses
 (`ForwardedHeaders:KnownProxies`).
 
-Two volumes are mandatory, and forgetting either is a silent failure:
+Three volumes are mandatory, and forgetting one is a silent failure:
 
 | Path | Why |
 | --- | --- |
 | `/data/images` | Recipe images. Content-addressed; lost on redeploy otherwise. |
 | `/data/keys` | ASP.NET data-protection keys. |
+| `/data/config` | `culina.json`: what an administrator set up in the app. Without it the settings screen cannot save. |
 
 A note on `/data/keys`, because the usual warning does **not** apply here:
 Culina's session cookie carries an opaque reference, not an encrypted payload,
@@ -77,8 +79,12 @@ stage 3  dotnet/aspnet:10.0-noble-chiseled
 
 ## Configuration
 
-Bootstrap settings only, via environment variables (`dotnet-configuration`);
-everything an admin can change lives in the database instead.
+Bootstrap settings, read once at startup (`dotnet-configuration`), from the
+environment and from `/data/config/culina.json` — which the app writes when an
+administrator uses the setup screen or Settings → Server, and applies by
+rebuilding its host in place. The environment wins over the file. Everything an
+admin changes *without* a restart lives in the database instead. The full list,
+and what the app can edit, is in `configuration.md`.
 
 | Variable | Default | |
 | --- | --- | --- |
@@ -86,6 +92,7 @@ everything an admin can change lives in the database instead.
 | `Database__RequireSsl` | `true` | |
 | `Storage__ImagePath` | `/data/images` | |
 | `Storage__DataProtectionKeyPath` | `/data/keys` | |
+| `Storage__ConfigPath` | `/data/config` | where `culina.json` lives |
 | `Cookies__Secure` | `true` | only ever `false` for local HTTP dev |
 | `ForwardedHeaders__KnownProxies` | — | comma-separated; required behind a proxy |
 | `PasswordHashing__*` | Argon2id defaults | memory, iterations, parallelism |
@@ -183,8 +190,8 @@ bead when something needs action.
 - **Observability**: set `OTEL_EXPORTER_OTLP_ENDPOINT` and all three signals
   export. Unset, the app logs JSON to stdout and exports nothing. Culina
   invents no telemetry configuration names of its own.
-- **Backups**: `pg_dump` for the database plus a copy of `/data/images` and
-  `/data/keys`. The documented restore procedure is tested as part of the
+- **Backups**: `pg_dump` for the database plus a copy of `/data/images`,
+  `/data/keys` and `/data/config`. The documented restore procedure is tested as part of the
   release checklist — an untested backup is a hope.
 - **Rollback**: redeploy the previous tag. Safe as long as no migration since
   then was destructive, which is why migrations are additive by default and a

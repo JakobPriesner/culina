@@ -1,10 +1,12 @@
 using System.Globalization;
 using System.Net;
+using Application.Abstractions;
 using Domain.Suggestions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using TestSupport;
 
 namespace IntegrationTests.Fixtures;
 
@@ -47,6 +49,12 @@ public sealed class CulinaApiFactory(
     private readonly string dataRoot =
         Path.Combine(Path.GetTempPath(), $"culina-test-{Guid.CreateVersion7():n}");
 
+    /// <summary>Every restart a saved server setting asked for, none of them performed.</summary>
+    public RecordingRestart Restarts { get; } = new();
+
+    /// <summary>The settings file this host reads at startup and writes when a server setting is saved.</summary>
+    public string ServerSettingsFile => Path.Combine(dataRoot, "config", "culina.json");
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -63,6 +71,7 @@ public sealed class CulinaApiFactory(
         builder.UseSetting("Database:RequireSsl", "false");
         builder.UseSetting("Storage:ImagePath", Path.Combine(dataRoot, "images"));
         builder.UseSetting("Storage:DataProtectionKeyPath", Path.Combine(dataRoot, "keys"));
+        builder.UseSetting("Storage:ConfigPath", Path.Combine(dataRoot, "config"));
         // There is no TLS over the test client, so a __Host- cookie would be
         // refused outright.
         builder.UseSetting("Cookies:Secure", "false");
@@ -78,10 +87,17 @@ public sealed class CulinaApiFactory(
             builder.UseSetting(key, value);
         }
 
-        if (weights is not null)
+        builder.ConfigureTestServices(services =>
         {
-            builder.ConfigureTestServices(services => services.AddSingleton(weights));
-        }
+            // Never the real restart: it would stop the host this factory
+            // serves every later request from.
+            services.AddSingleton<IHostRestart>(Restarts);
+
+            if (weights is not null)
+            {
+                services.AddSingleton(weights);
+            }
+        });
     }
 
     /// <summary>

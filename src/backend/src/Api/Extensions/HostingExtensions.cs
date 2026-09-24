@@ -158,6 +158,27 @@ internal static class HostingExtensions
         return app;
     }
 
+    /// <summary>
+    /// Answers every API route the setup host does not serve with a
+    /// <c>503</c> that says why.
+    /// </summary>
+    /// <remarks>
+    /// Rather than a <c>404</c>: the routes exist, they are unavailable until
+    /// there is a database, and the client — asking who is signed in, say —
+    /// should learn that setup is the reason rather than that the API is gone.
+    /// </remarks>
+    internal static WebApplication MapSetupRequired(this WebApplication app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        app.Map($"{Infrastructure.ApiPaths.Prefix}/{{**path}}", () =>
+                Infrastructure.CustomResults.Problem(Domain.Shared.SettingsErrors.SetupRequired))
+            .ExcludeFromDescription()
+            .AllowAnonymous();
+
+        return app;
+    }
+
     private static bool IsServiceWorker(PathString path) =>
         path.Equals("/service-worker.js", StringComparison.OrdinalIgnoreCase);
 

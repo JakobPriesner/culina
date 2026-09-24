@@ -1633,6 +1633,244 @@
         }
       }
     },
+    "/api/v1/settings/server": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Get the server settings",
+        "description": "Instance administrator, or anyone while nobody has an account. Cookies, trusted proxies, rate limits and telemetry as the running process uses them; `pinned` names the settings the deployment's environment fixes, and `connection` how this request reached the server.",
+        "operationId": "getServerSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetServerResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Change the server settings",
+        "description": "Instance administrator, or anyone while nobody has an account. Validated exactly as the next startup will validate it. Settings the environment pins are not saved. `204` when nothing changed; `202` when the settings were saved and the server is restarting to use them.",
+        "operationId": "updateServerSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateServerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Get how far setup has got",
+        "description": "Anonymous. `database` until a database is configured, `account` until somebody has an account, then `complete`. `startedAt` changes whenever the server restarts to apply a setting.",
+        "operationId": "getSetupV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupGetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/database": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Get the database settings",
+        "description": "Instance administrator, or anyone while nobody has an account. Never returns the password — only whether one is set. `pinned` names the settings the deployment's environment fixes.",
+        "operationId": "getDatabaseSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetDatabaseResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Change the database settings",
+        "description": "Instance administrator, or anyone while nobody has an account. Connects first, and refuses a database Culina could not run in. `204` when nothing changed; `202` when the settings were saved and the server is restarting to use them.",
+        "operationId": "updateDatabaseSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateDatabaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/registration/policy": {
       "get": {
         "tags": [
@@ -9623,6 +9861,64 @@
         },
         "description": "What does one job."
       },
+      "SettingsGetDatabaseResponse": {
+        "required": [
+          "host",
+          "port",
+          "name",
+          "username",
+          "passwordConfigured",
+          "requireSsl",
+          "maxPoolSize",
+          "pinned",
+          "writable"
+        ],
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "The server's host name or address, or empty when none is set."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The port it listens on.",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "description": "The database name, or empty when none is set."
+          },
+          "username": {
+            "type": "string",
+            "description": "The role Culina connects as, or empty when none is set."
+          },
+          "passwordConfigured": {
+            "type": "boolean",
+            "description": "Whether a password has been set. Never the password."
+          },
+          "requireSsl": {
+            "type": "boolean",
+            "description": "Whether the connection must use TLS."
+          },
+          "maxPoolSize": {
+            "type": "integer",
+            "description": "The most connections Culina keeps open.",
+            "format": "int32"
+          },
+          "pinned": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The settings the deployment fixes, by the environment variable that sets\nthem — `Database__Host`. Saving cannot change these."
+          },
+          "writable": {
+            "type": "boolean",
+            "description": "Whether changes can be saved at all."
+          }
+        },
+        "description": "How this instance reaches PostgreSQL. Never the password."
+      },
       "SettingsGetRegistrationResponse": {
         "required": [
           "openRegistration",
@@ -9646,6 +9942,199 @@
           }
         },
         "description": "Who may create an account on this instance."
+      },
+      "SettingsGetServerConnectionContract": {
+        "required": [
+          "forwarded",
+          "proxyTrusted"
+        ],
+        "type": "object",
+        "properties": {
+          "remoteAddress": {
+            "type": "string",
+            "description": "The address the connection came from, as Culina sees it — the proxy's,\nwhen there is one it does not trust yet.",
+            "nullable": true
+          },
+          "forwarded": {
+            "type": "boolean",
+            "description": "Whether the request said it was forwarded for someone else."
+          },
+          "proxyTrusted": {
+            "type": "boolean",
+            "description": "Whether Culina believed it, because the proxy is trusted."
+          }
+        },
+        "description": "How the request that asked for these settings reached the server."
+      },
+      "SettingsGetServerCookiesContract": {
+        "required": [
+          "secure",
+          "sessionDays",
+          "renewAfterHours"
+        ],
+        "type": "object",
+        "properties": {
+          "secure": {
+            "type": "boolean",
+            "description": "Whether cookies are only sent over HTTPS."
+          },
+          "sessionDays": {
+            "type": "integer",
+            "description": "How many days an unused session lasts.",
+            "format": "int32"
+          },
+          "renewAfterHours": {
+            "type": "integer",
+            "description": "How many hours a session may go unused before a request extends it.",
+            "format": "int32"
+          }
+        },
+        "description": "The session cookie's attributes."
+      },
+      "SettingsGetServerForwardedHeadersContract": {
+        "required": [
+          "knownProxies",
+          "knownNetworks"
+        ],
+        "type": "object",
+        "properties": {
+          "knownProxies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Proxy addresses."
+          },
+          "knownNetworks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Proxy networks, as CIDR ranges."
+          }
+        },
+        "description": "Which proxies may say who the client really is."
+      },
+      "SettingsGetServerRateLimitsContract": {
+        "required": [
+          "loginPerIpPerMinute",
+          "loginPerAccountPerMinute",
+          "registerPerIpPerHour",
+          "invitationPerIpPerHour",
+          "importsPerHour",
+          "sourceRequestsPerHour",
+          "sharedRecipesPerIpPerMinute",
+          "assistantRequestsPerHour",
+          "requestsPerSessionPerMinute"
+        ],
+        "type": "object",
+        "properties": {
+          "loginPerIpPerMinute": {
+            "type": "integer",
+            "description": "Sign-in attempts per minute from one address.",
+            "format": "int32"
+          },
+          "loginPerAccountPerMinute": {
+            "type": "integer",
+            "description": "Sign-in attempts per minute against one account.",
+            "format": "int32"
+          },
+          "registerPerIpPerHour": {
+            "type": "integer",
+            "description": "New accounts per hour from one address.",
+            "format": "int32"
+          },
+          "invitationPerIpPerHour": {
+            "type": "integer",
+            "description": "Invitations redeemed per hour from one address.",
+            "format": "int32"
+          },
+          "importsPerHour": {
+            "type": "integer",
+            "description": "Recipe imports from a web page per hour from one person.",
+            "format": "int32"
+          },
+          "sourceRequestsPerHour": {
+            "type": "integer",
+            "description": "Requests to a connected recipe library per hour.",
+            "format": "int32"
+          },
+          "sharedRecipesPerIpPerMinute": {
+            "type": "integer",
+            "description": "Reads of shared recipes per minute from one address.",
+            "format": "int32"
+          },
+          "assistantRequestsPerHour": {
+            "type": "integer",
+            "description": "Requests to the assistant per hour from one person.",
+            "format": "int32"
+          },
+          "requestsPerSessionPerMinute": {
+            "type": "integer",
+            "description": "Requests per minute from one signed-in session.",
+            "format": "int32"
+          }
+        },
+        "description": "The ceilings on what one client may ask for."
+      },
+      "SettingsGetServerResponse": {
+        "required": [
+          "cookies",
+          "forwardedHeaders",
+          "rateLimits",
+          "telemetry",
+          "connection",
+          "pinned",
+          "writable"
+        ],
+        "type": "object",
+        "properties": {
+          "cookies": {
+            "$ref": "#/components/schemas/SettingsGetServerCookiesContract"
+          },
+          "forwardedHeaders": {
+            "$ref": "#/components/schemas/SettingsGetServerForwardedHeadersContract"
+          },
+          "rateLimits": {
+            "$ref": "#/components/schemas/SettingsGetServerRateLimitsContract"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/SettingsGetServerTelemetryContract"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/SettingsGetServerConnectionContract"
+          },
+          "pinned": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The settings the deployment fixes, by the environment variable that sets\nthem — `Cookies__Secure`. Saving cannot change these."
+          },
+          "writable": {
+            "type": "boolean",
+            "description": "Whether changes can be saved at all."
+          }
+        },
+        "description": "The server settings an administrator can change from the app, as the\nrunning process uses them."
+      },
+      "SettingsGetServerTelemetryContract": {
+        "required": [
+          "otlpProtocol"
+        ],
+        "type": "object",
+        "properties": {
+          "otlpEndpoint": {
+            "type": "string",
+            "description": "The OTLP collector's address, or null when nothing is exported.",
+            "nullable": true
+          },
+          "otlpProtocol": {
+            "type": "string",
+            "description": "`grpc` or `http_protobuf`."
+          }
+        },
+        "description": "Where traces, metrics and logs go."
       },
       "SettingsUpdateAssistanceConnectionContract": {
         "required": [
@@ -9841,6 +10330,51 @@
         },
         "description": "What should do one job."
       },
+      "SettingsUpdateDatabaseRequest": {
+        "required": [
+          "host",
+          "port",
+          "name",
+          "username",
+          "requireSsl",
+          "maxPoolSize"
+        ],
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "The server's host name or address."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The port it listens on.",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "description": "The database name."
+          },
+          "username": {
+            "type": "string",
+            "description": "The role to connect as. Never a superuser."
+          },
+          "password": {
+            "type": "string",
+            "description": "A new password, or null to keep the one already set. Write-only: no\nresponse ever carries it back.",
+            "nullable": true
+          },
+          "requireSsl": {
+            "type": "boolean",
+            "description": "Whether the connection must use TLS."
+          },
+          "maxPoolSize": {
+            "type": "integer",
+            "description": "The most connections to keep open.",
+            "format": "int32"
+          }
+        },
+        "description": "How to reach PostgreSQL from now on."
+      },
       "SettingsUpdateRegistrationRequest": {
         "required": [
           "openRegistration",
@@ -9888,6 +10422,178 @@
           }
         },
         "description": "Who may create an account on this instance."
+      },
+      "SettingsUpdateServerCookiesContract": {
+        "required": [
+          "secure",
+          "sessionDays",
+          "renewAfterHours"
+        ],
+        "type": "object",
+        "properties": {
+          "secure": {
+            "type": "boolean",
+            "description": "Whether cookies are only sent over HTTPS."
+          },
+          "sessionDays": {
+            "type": "integer",
+            "description": "How many days an unused session lasts.",
+            "format": "int32"
+          },
+          "renewAfterHours": {
+            "type": "integer",
+            "description": "How many hours a session may go unused before a request extends it.",
+            "format": "int32"
+          }
+        },
+        "description": "The session cookie's attributes."
+      },
+      "SettingsUpdateServerForwardedHeadersContract": {
+        "required": [
+          "knownProxies",
+          "knownNetworks"
+        ],
+        "type": "object",
+        "properties": {
+          "knownProxies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Proxy addresses."
+          },
+          "knownNetworks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Proxy networks, as CIDR ranges."
+          }
+        },
+        "description": "Which proxies may say who the client really is."
+      },
+      "SettingsUpdateServerRateLimitsContract": {
+        "required": [
+          "loginPerIpPerMinute",
+          "loginPerAccountPerMinute",
+          "registerPerIpPerHour",
+          "invitationPerIpPerHour",
+          "importsPerHour",
+          "sourceRequestsPerHour",
+          "sharedRecipesPerIpPerMinute",
+          "assistantRequestsPerHour",
+          "requestsPerSessionPerMinute"
+        ],
+        "type": "object",
+        "properties": {
+          "loginPerIpPerMinute": {
+            "type": "integer",
+            "description": "Sign-in attempts per minute from one address.",
+            "format": "int32"
+          },
+          "loginPerAccountPerMinute": {
+            "type": "integer",
+            "description": "Sign-in attempts per minute against one account.",
+            "format": "int32"
+          },
+          "registerPerIpPerHour": {
+            "type": "integer",
+            "description": "New accounts per hour from one address.",
+            "format": "int32"
+          },
+          "invitationPerIpPerHour": {
+            "type": "integer",
+            "description": "Invitations redeemed per hour from one address.",
+            "format": "int32"
+          },
+          "importsPerHour": {
+            "type": "integer",
+            "description": "Recipe imports from a web page per hour from one person.",
+            "format": "int32"
+          },
+          "sourceRequestsPerHour": {
+            "type": "integer",
+            "description": "Requests to a connected recipe library per hour.",
+            "format": "int32"
+          },
+          "sharedRecipesPerIpPerMinute": {
+            "type": "integer",
+            "description": "Reads of shared recipes per minute from one address.",
+            "format": "int32"
+          },
+          "assistantRequestsPerHour": {
+            "type": "integer",
+            "description": "Requests to the assistant per hour from one person.",
+            "format": "int32"
+          },
+          "requestsPerSessionPerMinute": {
+            "type": "integer",
+            "description": "Requests per minute from one signed-in session.",
+            "format": "int32"
+          }
+        },
+        "description": "The ceilings on what one client may ask for."
+      },
+      "SettingsUpdateServerRequest": {
+        "required": [
+          "cookies",
+          "forwardedHeaders",
+          "rateLimits",
+          "telemetry"
+        ],
+        "type": "object",
+        "properties": {
+          "cookies": {
+            "$ref": "#/components/schemas/SettingsUpdateServerCookiesContract"
+          },
+          "forwardedHeaders": {
+            "$ref": "#/components/schemas/SettingsUpdateServerForwardedHeadersContract"
+          },
+          "rateLimits": {
+            "$ref": "#/components/schemas/SettingsUpdateServerRateLimitsContract"
+          },
+          "telemetry": {
+            "$ref": "#/components/schemas/SettingsUpdateServerTelemetryContract"
+          }
+        },
+        "description": "The server settings to run with from now on. Every group is complete: a\nvalue left out is not \"unchanged\", it is missing."
+      },
+      "SettingsUpdateServerTelemetryContract": {
+        "required": [
+          "otlpProtocol"
+        ],
+        "type": "object",
+        "properties": {
+          "otlpEndpoint": {
+            "type": "string",
+            "description": "The OTLP collector's address, or null to export nothing.",
+            "nullable": true
+          },
+          "otlpProtocol": {
+            "type": "string",
+            "description": "`grpc` or `http_protobuf`."
+          }
+        },
+        "description": "Where traces, metrics and logs go."
+      },
+      "SetupGetResponse": {
+        "required": [
+          "stage",
+          "startedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "description": "`database` when there is none yet, `account` when there is and\n        nobody has an account in it, `complete` once somebody administers\n        the instance."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "When the running host started. Changes whenever the server restarts to\napply a setting, which is how a client that asked for one knows it is\nover.",
+            "format": "date-time"
+          }
+        },
+        "description": "How far this instance has got in being set up."
       },
       "ShoppingAddItemRequest": {
         "required": [
@@ -10521,6 +11227,9 @@
     },
     {
       "name": "Settings"
+    },
+    {
+      "name": "Setup"
     },
     {
       "name": "Registration"

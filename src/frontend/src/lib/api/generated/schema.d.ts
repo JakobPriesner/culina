@@ -426,6 +426,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the server settings
+         * @description Instance administrator, or anyone while nobody has an account. Cookies, trusted proxies, rate limits and telemetry as the running process uses them; `pinned` names the settings the deployment's environment fixes, and `connection` how this request reached the server.
+         */
+        get: operations["getServerSettingsV1"];
+        /**
+         * Change the server settings
+         * @description Instance administrator, or anyone while nobody has an account. Validated exactly as the next startup will validate it. Settings the environment pins are not saved. `204` when nothing changed; `202` when the settings were saved and the server is restarting to use them.
+         */
+        put: operations["updateServerSettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get how far setup has got
+         * @description Anonymous. `database` until a database is configured, `account` until somebody has an account, then `complete`. `startedAt` changes whenever the server restarts to apply a setting.
+         */
+        get: operations["getSetupV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/database": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the database settings
+         * @description Instance administrator, or anyone while nobody has an account. Never returns the password — only whether one is set. `pinned` names the settings the deployment's environment fixes.
+         */
+        get: operations["getDatabaseSettingsV1"];
+        /**
+         * Change the database settings
+         * @description Instance administrator, or anyone while nobody has an account. Connects first, and refuses a database Culina could not run in. `204` when nothing changed; `202` when the settings were saved and the server is restarting to use them.
+         */
+        put: operations["updateDatabaseSettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/registration/policy": {
         parameters: {
             query?: never;
@@ -3192,6 +3260,36 @@ export interface components {
             /** @description The model that will actually be used when none is chosen. */
             defaultModel: string;
         };
+        /** @description How this instance reaches PostgreSQL. Never the password. */
+        SettingsGetDatabaseResponse: {
+            /** @description The server's host name or address, or empty when none is set. */
+            host: string;
+            /**
+             * Format: int32
+             * @description The port it listens on.
+             */
+            port: number;
+            /** @description The database name, or empty when none is set. */
+            name: string;
+            /** @description The role Culina connects as, or empty when none is set. */
+            username: string;
+            /** @description Whether a password has been set. Never the password. */
+            passwordConfigured: boolean;
+            /** @description Whether the connection must use TLS. */
+            requireSsl: boolean;
+            /**
+             * Format: int32
+             * @description The most connections Culina keeps open.
+             */
+            maxPoolSize: number;
+            /**
+             * @description The settings the deployment fixes, by the environment variable that sets
+             *     them — `Database__Host`. Saving cannot change these.
+             */
+            pinned: string[];
+            /** @description Whether changes can be saved at all. */
+            writable: boolean;
+        };
         /** @description Who may create an account on this instance. */
         SettingsGetRegistrationResponse: {
             /** @description Whether anyone may create an account. */
@@ -3203,6 +3301,113 @@ export interface components {
              * @description The largest number of accounts this instance allows.
              */
             maxUsers: number;
+        };
+        /** @description How the request that asked for these settings reached the server. */
+        SettingsGetServerConnectionContract: {
+            /**
+             * @description The address the connection came from, as Culina sees it — the proxy's,
+             *     when there is one it does not trust yet.
+             */
+            remoteAddress?: string | null;
+            /** @description Whether the request said it was forwarded for someone else. */
+            forwarded: boolean;
+            /** @description Whether Culina believed it, because the proxy is trusted. */
+            proxyTrusted: boolean;
+        };
+        /** @description The session cookie's attributes. */
+        SettingsGetServerCookiesContract: {
+            /** @description Whether cookies are only sent over HTTPS. */
+            secure: boolean;
+            /**
+             * Format: int32
+             * @description How many days an unused session lasts.
+             */
+            sessionDays: number;
+            /**
+             * Format: int32
+             * @description How many hours a session may go unused before a request extends it.
+             */
+            renewAfterHours: number;
+        };
+        /** @description Which proxies may say who the client really is. */
+        SettingsGetServerForwardedHeadersContract: {
+            /** @description Proxy addresses. */
+            knownProxies: string[];
+            /** @description Proxy networks, as CIDR ranges. */
+            knownNetworks: string[];
+        };
+        /** @description The ceilings on what one client may ask for. */
+        SettingsGetServerRateLimitsContract: {
+            /**
+             * Format: int32
+             * @description Sign-in attempts per minute from one address.
+             */
+            loginPerIpPerMinute: number;
+            /**
+             * Format: int32
+             * @description Sign-in attempts per minute against one account.
+             */
+            loginPerAccountPerMinute: number;
+            /**
+             * Format: int32
+             * @description New accounts per hour from one address.
+             */
+            registerPerIpPerHour: number;
+            /**
+             * Format: int32
+             * @description Invitations redeemed per hour from one address.
+             */
+            invitationPerIpPerHour: number;
+            /**
+             * Format: int32
+             * @description Recipe imports from a web page per hour from one person.
+             */
+            importsPerHour: number;
+            /**
+             * Format: int32
+             * @description Requests to a connected recipe library per hour.
+             */
+            sourceRequestsPerHour: number;
+            /**
+             * Format: int32
+             * @description Reads of shared recipes per minute from one address.
+             */
+            sharedRecipesPerIpPerMinute: number;
+            /**
+             * Format: int32
+             * @description Requests to the assistant per hour from one person.
+             */
+            assistantRequestsPerHour: number;
+            /**
+             * Format: int32
+             * @description Requests per minute from one signed-in session.
+             */
+            requestsPerSessionPerMinute: number;
+        };
+        /**
+         * @description The server settings an administrator can change from the app, as the
+         *     running process uses them.
+         */
+        SettingsGetServerResponse: {
+            cookies: components["schemas"]["SettingsGetServerCookiesContract"];
+            forwardedHeaders: components["schemas"]["SettingsGetServerForwardedHeadersContract"];
+            rateLimits: components["schemas"]["SettingsGetServerRateLimitsContract"];
+            telemetry: components["schemas"]["SettingsGetServerTelemetryContract"];
+            connection: components["schemas"]["SettingsGetServerConnectionContract"];
+            /**
+             * @description The settings the deployment fixes, by the environment variable that sets
+             *     them — `Cookies__Secure`. Saving cannot change these.
+             */
+            pinned: string[];
+            /** @description Whether changes can be saved at all. */
+            writable: boolean;
+        };
+        /** @description Where traces, metrics and logs go. */
+        SettingsGetServerTelemetryContract: {
+            /** @description The OTLP collector's address, or null when nothing is exported. */
+            otlpEndpoint?: string | null;
+            /** @description `grpc` or `http_protobuf`. */
+            otlpProtocol: string;
         };
         /** @description One provider, and whether it is ready to be used. */
         SettingsUpdateAssistanceConnectionContract: {
@@ -3286,6 +3491,32 @@ export interface components {
             /** @description Which of its models, or empty for the current default. */
             model: string;
         };
+        /** @description How to reach PostgreSQL from now on. */
+        SettingsUpdateDatabaseRequest: {
+            /** @description The server's host name or address. */
+            host: string;
+            /**
+             * Format: int32
+             * @description The port it listens on.
+             */
+            port: number;
+            /** @description The database name. */
+            name: string;
+            /** @description The role to connect as. Never a superuser. */
+            username: string;
+            /**
+             * @description A new password, or null to keep the one already set. Write-only: no
+             *     response ever carries it back.
+             */
+            password?: string | null;
+            /** @description Whether the connection must use TLS. */
+            requireSsl: boolean;
+            /**
+             * Format: int32
+             * @description The most connections to keep open.
+             */
+            maxPoolSize: number;
+        };
         /** @description The registration policy to apply. */
         SettingsUpdateRegistrationRequest: {
             /** @description Whether anyone may create an account. */
@@ -3309,6 +3540,109 @@ export interface components {
              * @description The largest number of accounts this instance allows.
              */
             maxUsers: number;
+        };
+        /** @description The session cookie's attributes. */
+        SettingsUpdateServerCookiesContract: {
+            /** @description Whether cookies are only sent over HTTPS. */
+            secure: boolean;
+            /**
+             * Format: int32
+             * @description How many days an unused session lasts.
+             */
+            sessionDays: number;
+            /**
+             * Format: int32
+             * @description How many hours a session may go unused before a request extends it.
+             */
+            renewAfterHours: number;
+        };
+        /** @description Which proxies may say who the client really is. */
+        SettingsUpdateServerForwardedHeadersContract: {
+            /** @description Proxy addresses. */
+            knownProxies: string[];
+            /** @description Proxy networks, as CIDR ranges. */
+            knownNetworks: string[];
+        };
+        /** @description The ceilings on what one client may ask for. */
+        SettingsUpdateServerRateLimitsContract: {
+            /**
+             * Format: int32
+             * @description Sign-in attempts per minute from one address.
+             */
+            loginPerIpPerMinute: number;
+            /**
+             * Format: int32
+             * @description Sign-in attempts per minute against one account.
+             */
+            loginPerAccountPerMinute: number;
+            /**
+             * Format: int32
+             * @description New accounts per hour from one address.
+             */
+            registerPerIpPerHour: number;
+            /**
+             * Format: int32
+             * @description Invitations redeemed per hour from one address.
+             */
+            invitationPerIpPerHour: number;
+            /**
+             * Format: int32
+             * @description Recipe imports from a web page per hour from one person.
+             */
+            importsPerHour: number;
+            /**
+             * Format: int32
+             * @description Requests to a connected recipe library per hour.
+             */
+            sourceRequestsPerHour: number;
+            /**
+             * Format: int32
+             * @description Reads of shared recipes per minute from one address.
+             */
+            sharedRecipesPerIpPerMinute: number;
+            /**
+             * Format: int32
+             * @description Requests to the assistant per hour from one person.
+             */
+            assistantRequestsPerHour: number;
+            /**
+             * Format: int32
+             * @description Requests per minute from one signed-in session.
+             */
+            requestsPerSessionPerMinute: number;
+        };
+        /**
+         * @description The server settings to run with from now on. Every group is complete: a
+         *     value left out is not "unchanged", it is missing.
+         */
+        SettingsUpdateServerRequest: {
+            cookies: components["schemas"]["SettingsUpdateServerCookiesContract"];
+            forwardedHeaders: components["schemas"]["SettingsUpdateServerForwardedHeadersContract"];
+            rateLimits: components["schemas"]["SettingsUpdateServerRateLimitsContract"];
+            telemetry: components["schemas"]["SettingsUpdateServerTelemetryContract"];
+        };
+        /** @description Where traces, metrics and logs go. */
+        SettingsUpdateServerTelemetryContract: {
+            /** @description The OTLP collector's address, or null to export nothing. */
+            otlpEndpoint?: string | null;
+            /** @description `grpc` or `http_protobuf`. */
+            otlpProtocol: string;
+        };
+        /** @description How far this instance has got in being set up. */
+        SetupGetResponse: {
+            /**
+             * @description `database` when there is none yet, `account` when there is and
+             *             nobody has an account in it, `complete` once somebody administers
+             *             the instance.
+             */
+            stage: string;
+            /**
+             * Format: date-time
+             * @description When the running host started. Changes whenever the server restarts to
+             *     apply a setting, which is how a client that asked for one knows it is
+             *     over.
+             */
+            startedAt: string;
         };
         /** @description Something to put on the list. */
         ShoppingAddItemRequest: {
@@ -4965,6 +5299,232 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getServerSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetServerResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateServerSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsUpdateServerRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSetupV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupGetResponse"];
+                };
+            };
+        };
+    };
+    getDatabaseSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetDatabaseResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateDatabaseSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsUpdateDatabaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
