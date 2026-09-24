@@ -39,6 +39,15 @@ const library = resolve('/(app)');
  */
 export const offersNewRecipe = (pathname: string): boolean => pathname === library;
 
+/**
+ * Whether search is offered on this page: everywhere but the cooking screen.
+ *
+ * Deliberately not there. Hands are covered in flour and the screen is a
+ * recipe; a search box on it is an invitation to lose the place, which is the
+ * one thing that screen promises never to do.
+ */
+export const offersSearch = (pathname: string): boolean => !pathname.endsWith('/cook');
+
 /** One peer navigation model, rendered directly at every viewport size. */
 export const destinations: readonly Destination[] = [
   {
