@@ -5,12 +5,16 @@
   import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
+  import type { Component } from 'svelte';
+
+  import { session } from '$features/auth/session.svelte';
   import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
+  import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
 
   import Brand from './Brand.svelte';
   import { connection } from './connection.svelte';
   import { m } from './i18n';
-  import { offersNewRecipe } from './navigation';
+  import { offersNewRecipe, offersSearch } from './navigation';
   import Navigation from './Navigation.svelte';
   import NewRecipeLink from './NewRecipeLink.svelte';
 
@@ -61,6 +65,48 @@
 
   /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
   const creating = $derived(offersNewRecipe(page.url.pathname));
+  const searchable = $derived(
+    offersSearch(page.url.pathname) && session.activeHouseholdId !== null
+  );
+
+  /**
+   * The search overlay, fetched the first time it is opened.
+   *
+   * Nobody pays for it on first load: it is a few kilobytes that only matter
+   * once somebody reaches for search, and by then a moment's import is
+   * hidden behind the sheet rising.
+   */
+  let Overlay = $state<Component<{
+    open: boolean;
+    householdId: string;
+    onclose: () => void;
+  }> | null>(null);
+
+  $effect(() => {
+    if (searchOverlay.open && Overlay === null) {
+      void import('$features/recipes/search/SearchOverlay.svelte').then((loaded) => {
+        Overlay = loaded.default;
+      });
+    }
+  });
+
+  /**
+   * ⌘K / Ctrl-K anywhere, and "/" wherever nothing is being typed — the habit
+   * people already have from every other app with a search.
+   */
+  function shortcut(event: KeyboardEvent) {
+    if (!searchable || searchOverlay.open) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const typing = target?.closest('input, textarea, select, [contenteditable]') !== null;
+
+    if ((event.key === 'k' && (event.metaKey || event.ctrlKey)) || (event.key === '/' && !typing)) {
+      event.preventDefault();
+      searchOverlay.show();
+    }
+  }
   /**
    * How tall the window is, so the shell can tell when it is mostly furniture.
    */
@@ -81,7 +127,7 @@
   );
 </script>
 
-<svelte:window bind:innerHeight={viewportHeight} />
+<svelte:window bind:innerHeight={viewportHeight} onkeydown={shortcut} />
 
 <div
   class="shell"
@@ -105,9 +151,32 @@
 
       <div class="wide-only"><Navigation placement="top" /></div>
 
-      {#if creating}
+      {#if creating || searchable}
         <div class="library-controls">
-          <NewRecipeLink />
+          {#if searchable}
+            <button
+              type="button"
+              class="search"
+              aria-label={m['search.open']()}
+              title="{m['search.open']()} (⌘K)"
+              aria-keyshortcuts="Meta+K Control+K /"
+              onclick={() => searchOverlay.show()}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                aria-hidden="true"
+              >
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="m15.5 15.5 4 4" stroke-linecap="round" />
+              </svg>
+            </button>
+          {/if}
+          {#if creating}
+            <NewRecipeLink />
+          {/if}
         </div>
       {/if}
       {#if !connection.online}
@@ -132,6 +201,14 @@
   </div>
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
+
+  {#if Overlay && session.activeHouseholdId}
+    <Overlay
+      open={searchOverlay.open}
+      householdId={session.activeHouseholdId}
+      onclose={() => searchOverlay.hide()}
+    />
+  {/if}
 </div>
 
 <style>
@@ -246,6 +323,34 @@
 
   .brand:hover {
     background: var(--surface-selected);
+  }
+
+  /* The same pill as the brand, because it sits in the same row and is the
+     same kind of thing: a way to somewhere, always there. */
+  .search {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: var(--control-sm);
+    min-height: var(--control-sm);
+    padding: var(--space-2);
+    border: 0;
+    border-radius: var(--radius-full);
+    background: var(--surface-nav-glass);
+    backdrop-filter: blur(16px);
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .search:hover {
+    background: var(--surface-selected);
+  }
+
+  .search svg {
+    width: var(--space-4);
+    height: var(--space-4);
   }
 
   .brand:active {
