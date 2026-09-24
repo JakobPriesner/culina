@@ -3,6 +3,7 @@
 
   import { onMount, type Snippet } from 'svelte';
 
+  import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { handleSessionExpiry } from '$api';
@@ -26,7 +27,9 @@
     document.getElementById('boot')?.remove();
 
     const stopFollowingTheDevice = preferences.start();
-    const stopWatchingForUpdates = watchForUpdates();
+    // Not under the dev server: every rebuild there is a "new version", and a
+    // prompt to reload after each save is noise the production app never has.
+    const stopWatchingForUpdates = dev ? () => {} : watchForUpdates();
     const stopFollowingTheNetwork = connection.start();
 
     // The API layer decides *when* a session has ended; what happens next is

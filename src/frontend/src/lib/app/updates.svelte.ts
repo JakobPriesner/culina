@@ -1,6 +1,7 @@
 import { busy } from './busy.svelte';
-import { toaster } from './toaster.svelte';
+import { readDevice, writeDevice } from './deviceStorage';
 import { m } from './i18n';
+import { toaster } from './toaster.svelte';
 
 /**
  * Notices a new version and offers it, rather than imposing it.
@@ -11,13 +12,16 @@ import { m } from './i18n';
  * middle of whatever was being done. In a kitchen that is someone's hands
  * covered in flour, halfway through step four.
  *
- * So the new version waits, a toast says it is there, and the reload happens
- * when the person taps it — or, at the latest, the next time they open the app.
+ * So the new version waits and is offered — once. A toast says it is there,
+ * briefly, and then gets out of the way of the recipe underneath it; the offer
+ * itself stays in settings until it is taken, and the version installs itself
+ * the next time the app is opened anyway. A prompt that sat over the bottom of
+ * every screen, and came back on every reload, was the most-seen thing in the
+ * app and the least useful.
  *
  * And it is not mentioned at all while somebody is cooking or editing. An offer
  * is still an interruption, and "there is a new version" is never worth reading
- * with your hands in a bowl. It waits for the next safe moment, which may be
- * the next time the app is opened.
+ * with your hands in a bowl.
  */
 
 /** Where the built worker is served from. */
@@ -31,6 +35,59 @@ const workerUrl = '/service-worker.js';
  * view would be a heartbeat nobody asked for.
  */
 const checkEveryMs = 60 * 60 * 1000;
+
+/** Long enough to read and reach for, then out of the way. */
+const mentionForMs = 12_000;
+
+/** The last version this device was told about. */
+const mentionedKey = 'culina.update.mentioned';
+
+/** How long a waiting worker has to say which version it is. */
+const versionTimeoutMs = 1000;
+
+/** Whether a new version is waiting, and the way to it. */
+class UpdateOffer {
+  #waiting = $state<ServiceWorker | null>(null);
+
+  get ready(): boolean {
+    return this.#waiting !== null;
+  }
+
+  /** Remembers what is waiting. Returns false for the one already known. */
+  hold(waiting: ServiceWorker): boolean {
+    if (this.#waiting === waiting) {
+      return false;
+    }
+
+    this.#waiting = waiting;
+
+    return true;
+  }
+
+  /** Hands over to the waiting version and reloads into it. */
+  apply(): void {
+    const waiting = this.#waiting;
+
+    if (!waiting) {
+      return;
+    }
+
+    // The page reloads once the new worker has taken control, so the reload
+    // is served by the build the person just agreed to.
+    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
+      once: true
+    });
+
+    waiting.postMessage({ type: 'culina:activate' });
+  }
+
+  /** Called by tests. */
+  reset(): void {
+    this.#waiting = null;
+  }
+}
+
+export const update = new UpdateOffer();
 
 /** Starts the worker and watches for a replacement. Returns a stop function. */
 export function watchForUpdates(): () => void {
@@ -59,7 +116,7 @@ export function watchForUpdates(): () => void {
           // `installed` with a controller means a replacement, not a first
           // install: the very first worker has nothing to interrupt.
           if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-            offer(installing);
+            void offer(installing);
           }
         });
       });
@@ -82,46 +139,77 @@ export function watchForUpdates(): () => void {
 
 function offerIfWaiting(registration: ServiceWorkerRegistration): void {
   if (registration.waiting && navigator.serviceWorker.controller) {
-    offer(registration.waiting);
+    void offer(registration.waiting);
   }
 }
 
 /**
- * One toast, until it is acted on.
+ * Keeps the offer, and mentions it if this device has not heard of it yet.
  *
- * It does not expire: a version that is ready and never mentioned again is a
- * version that is never installed.
+ * However many times the browser reports the same waiting worker — on open,
+ * on the hourly check, in a second tab — there is one offer, and one toast per
+ * version for the life of the device.
  */
-function offer(waiting: ServiceWorker): void {
-  if (!busy.interruptible) {
-    // Asked again when cooking or editing is over. `$effect.root` because this
-    // runs outside a component: the worker's event, not a render.
-    const stop = $effect.root(() => {
-      $effect(() => {
-        if (busy.interruptible) {
-          stop();
-          offer(waiting);
-        }
-      });
+async function offer(waiting: ServiceWorker): Promise<void> {
+  if (!update.hold(waiting)) {
+    return;
+  }
+
+  const version = await versionOf(waiting);
+
+  if (version !== null && readDevice(mentionedKey) === version) {
+    return;
+  }
+
+  mentionWhenFree(() => {
+    if (version !== null) {
+      writeDevice(mentionedKey, version);
+    }
+
+    toaster.show({
+      message: m['app.update.available'],
+      durationMs: mentionForMs,
+      action: { label: m['app.update.reload'], run: () => update.apply() }
     });
+  });
+}
+
+/** Runs now, or once cooking or editing is over. */
+function mentionWhenFree(mention: () => void): void {
+  if (busy.interruptible) {
+    mention();
 
     return;
   }
 
-  toaster.show({
-    message: () => m['app.update.available'](),
-    durationMs: 0,
-    action: {
-      label: () => m['app.update.reload'](),
-      run: () => {
-        // The page reloads once the new worker has taken control, so the
-        // reload is served by the build the person just agreed to.
-        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {
-          once: true
-        });
-
-        waiting.postMessage({ type: 'culina:activate' });
+  // `$effect.root` because this runs outside a component: the worker's event,
+  // not a render.
+  const stop = $effect.root(() => {
+    $effect(() => {
+      if (busy.interruptible) {
+        stop();
+        mention();
       }
-    }
+    });
+  });
+}
+
+/**
+ * Which build the waiting worker is, or null when it does not say.
+ *
+ * A worker from before it could answer never will, which is what the timeout
+ * is for: that one is mentioned, just not remembered.
+ */
+function versionOf(waiting: ServiceWorker): Promise<string | null> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), versionTimeoutMs);
+
+    channel.port1.onmessage = (event: MessageEvent) => {
+      clearTimeout(timer);
+      resolve(typeof event.data === 'string' ? event.data : null);
+    };
+
+    waiting.postMessage({ type: 'culina:version' }, [channel.port2]);
   });
 }
