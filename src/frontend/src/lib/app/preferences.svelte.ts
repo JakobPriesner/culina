@@ -1,5 +1,6 @@
 import { http, request } from '$api';
 
+import { readDevice, writeDevice } from './deviceStorage';
 import { applyLocale, detectLocale, isLocale } from './i18n';
 import {
   defaultAppearance,
@@ -75,7 +76,7 @@ class PreferencesStore {
   start(): () => void {
     this.#values = {
       ...this.#values,
-      ...parseAppearance(read(storageKey)),
+      ...parseAppearance(readDevice(storageKey)),
       locale: detectLocale()
     };
 
@@ -173,7 +174,7 @@ class PreferencesStore {
   }
 
   #cache(): void {
-    write(storageKey, JSON.stringify({ theme: this.#values.theme, mode: this.#values.mode }));
+    writeDevice(storageKey, JSON.stringify({ theme: this.#values.theme, mode: this.#values.mode }));
   }
 
   async #push(): Promise<void> {
@@ -199,20 +200,3 @@ class PreferencesStore {
 }
 
 export const preferences = new PreferencesStore();
-
-/** Storage throws in a private window and in a browser set to block site data. */
-function read(key: string): string | null {
-  try {
-    return globalThis.localStorage?.getItem(key) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function write(key: string, value: string): void {
-  try {
-    globalThis.localStorage?.setItem(key, value);
-  } catch {
-    // Nothing to do: the choice is applied, it just will not survive a reload.
-  }
-}
