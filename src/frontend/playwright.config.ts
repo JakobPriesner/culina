@@ -9,6 +9,8 @@ import { defineConfig, devices } from '@playwright/test';
  * `CULINA_API` overrides the /api proxy target (localhost:5000 by default).
  * Signed-in suites need a running backend and CULINA_E2E_* credentials; they
  * skip without credentials. Suites tagged @offline only need the built app.
+ * Suites tagged @image open a running image at `CULINA_IMAGE_URL` directly, so
+ * its document is loaded under the policy the host really sends.
  */
 const port = 4173;
 
