@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { reasonLineFor } from './suggestionReason';
+import { reasonLineFor, reasonLinesFor } from './suggestionReason';
 import type { Suggestion, SuggestionReason } from './types';
 
 /*
@@ -65,5 +65,33 @@ describe('reasonLineFor', () => {
     const unknown = { code: 'telepathy', subject: null } as unknown as SuggestionReason;
 
     expect(reasonLineFor(suggestion(unknown))).toBeNull();
+  });
+});
+
+describe('reasonLinesFor', () => {
+  const affinity = suggestion({ code: 'affinity', subject: null });
+
+  it('says a run of the same reason once, at the start of the run', () => {
+    // Five true copies of one fact read as boilerplate. The first says why;
+    // the rest fall back to the panel's fixed line.
+    const lines = reasonLinesFor([affinity, affinity, affinity]);
+
+    expect(lines[0]).toBe(reasonLineFor(affinity));
+    expect(lines.slice(1)).toEqual([null, null]);
+  });
+
+  it('says a reason again once something else came between', () => {
+    const fresh = suggestion({ code: 'fresh', subject: null });
+
+    const lines = reasonLinesFor([affinity, fresh, affinity]);
+
+    expect(lines).toEqual([reasonLineFor(affinity), reasonLineFor(fresh), reasonLineFor(affinity)]);
+  });
+
+  it('treats the same reason about two different things as two reasons', () => {
+    const soup = suggestion({ code: 'tag', subject: 'Suppe' });
+    const curry = suggestion({ code: 'tag', subject: 'Curry' });
+
+    expect(reasonLinesFor([soup, curry])).toEqual([reasonLineFor(soup), reasonLineFor(curry)]);
   });
 });
