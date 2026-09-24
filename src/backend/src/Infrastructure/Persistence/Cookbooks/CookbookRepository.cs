@@ -296,6 +296,25 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             new { cookbookId, now },
             cancellationToken);
 
+    public async Task<IReadOnlyList<Guid>> RecipeIdsAsync(
+        Guid cookbookId,
+        CancellationToken cancellationToken)
+    {
+        // Ids and nothing else: this answers "is it already on?" for every row
+        // of a picker at once, and a shelf of a thousand is a few kilobytes.
+        var ids = await executor.QueryAsync<Guid>(
+            $"""
+            select on_shelf.id
+            from cookbooks c
+            cross join lateral ({OnTheShelf}) as on_shelf
+            where c.id = @cookbookId;
+            """,
+            new { cookbookId },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. ids];
+    }
+
     public async Task<IReadOnlyList<CookbookOnAShelf>> ContainingAsync(
         Guid recipeId,
         Guid householdId,

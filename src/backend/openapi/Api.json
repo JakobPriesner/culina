@@ -4806,6 +4806,59 @@
         }
       }
     },
+    "/api/v1/cookbooks/{cookbookId}/recipes": {
+      "get": {
+        "tags": [
+          "Cookbooks"
+        ],
+        "summary": "List which recipes are on a cookbook",
+        "description": "Every recipe on it, by id, for either kind of cookbook — so a picker can mark what is already on before anybody taps it. The members of `PUT` and `DELETE /cookbooks/{cookbookId}/recipes/{recipeId}`. To read the recipes themselves, use `GET /recipes?cookbookId=…`.",
+        "operationId": "getCookbookRecipesV1",
+        "parameters": [
+          {
+            "name": "cookbookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookbooksCookbookRecipesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}": {
       "put": {
         "tags": [
@@ -6308,6 +6361,23 @@
           }
         },
         "description": "One cookbook, with everything its own page needs."
+      },
+      "CookbooksCookbookRecipesResponse": {
+        "required": [
+          "recipeIds"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Every recipe on it."
+          }
+        },
+        "description": "Which recipes are on a cookbook, by id."
       },
       "CookbooksCookbookRulesContract": {
         "type": "object",

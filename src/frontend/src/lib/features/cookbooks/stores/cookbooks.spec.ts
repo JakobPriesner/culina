@@ -108,6 +108,37 @@ describe('putting a recipe on a shelf', () => {
   });
 });
 
+describe('what is on a shelf, all of it', () => {
+  it('knows every recipe on it, not only the first page of them', async () => {
+    serverAnswers((_, url) =>
+      url.endsWith('/cookbooks/c1/recipes') ? json({ recipeIds: ['r1', 'r2'] }) : listOf()
+    );
+
+    await cookbooks.loadMembers('c1');
+
+    expect(cookbooks.membersOf('c1')).toEqual(['r1', 'r2']);
+  });
+
+  it('keeps in step with a tick, and puts it back when the write fails', async () => {
+    serverAnswers((method, url) => {
+      if (url.endsWith('/cookbooks/c1/recipes')) {
+        return json({ recipeIds: ['r1'] });
+      }
+
+      return method === 'DELETE' ? json({ code: 'cookbooks.not_found' }, 404) : noContent();
+    });
+
+    await cookbooks.loadMembers('c1');
+    await cookbooks.setOn('r2', { id: 'c1', name: 'Christmas' }, true);
+
+    expect(cookbooks.membersOf('c1')).toEqual(['r1', 'r2']);
+
+    await cookbooks.setOn('r1', { id: 'c1', name: 'Christmas' }, false);
+
+    expect(cookbooks.membersOf('c1')).toEqual(['r1', 'r2']);
+  });
+});
+
 describe('deleting a shelf', () => {
   beforeEach(async () => {
     serverAnswers(() => listOf(shelf('c1', 'Christmas'), shelf('c2', 'Weeknights')));

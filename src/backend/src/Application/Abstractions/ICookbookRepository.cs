@@ -92,6 +92,11 @@ public interface ICookbookRepository
     /// </remarks>
     Task TouchAsync(Guid cookbookId, DateTimeOffset now, CancellationToken cancellationToken);
 
+    /// <summary>Every recipe on a shelf, whichever kind it is, by id.</summary>
+    /// <param name="cookbookId">Which shelf.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<IReadOnlyList<Guid>> RecipeIdsAsync(Guid cookbookId, CancellationToken cancellationToken);
+
     /// <summary>Which of this household's shelves a recipe is on.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="householdId">Whose shelves.</param>

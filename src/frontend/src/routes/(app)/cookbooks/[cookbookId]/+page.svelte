@@ -94,8 +94,18 @@
 
   const autoLoads = $derived(shelf.hasMore && !shelf.moreFailed);
 
-  /** What is already on the shelf, so the picker can say so rather than repeat it. */
-  const taken = $derived(shelf.items.map((recipe) => recipe.id));
+  /**
+   * Everything already on the shelf, so the picker can mark it before it is
+   * touched. Asked when the picker opens rather than read off the shelf on
+   * screen, which is only its first page.
+   */
+  const taken = $derived(cookbooks.membersOf(cookbookId));
+
+  $effect(() => {
+    if (picking && cookbookId) {
+      void cookbooks.loadMembers(cookbookId);
+    }
+  });
 
   $effect(() => {
     if (cookbookId) {
@@ -179,6 +189,28 @@
 
     toaster.show({ message: m['cookbooks.addRecipes.added']({ title }) });
     reload();
+  }
+
+  /** The same tick, undone: a picker row that is on can be turned off again. */
+  async function takeOff(recipeId: string, title: string) {
+    if (!cookbook) {
+      return;
+    }
+
+    const done = await cookbooks.setOn(recipeId, { id: cookbook.id, name: cookbook.name }, false);
+
+    toaster.show(
+      done
+        ? { message: m['cookbooks.addRecipes.removed']({ title }) }
+        : {
+            message: cookbooks.error ? explain(cookbooks.error) : m['cookbooks.takeOff.failed'](),
+            tone: 'danger'
+          }
+    );
+
+    if (done) {
+      reload();
+    }
   }
 
   /**
@@ -389,6 +421,7 @@
     title={m['cookbooks.addRecipes.title']()}
     {taken}
     onpick={(recipe) => void add(recipe.id, recipe.title)}
+    onremove={(recipe) => void takeOff(recipe.id, recipe.title)}
     onclose={() => (picking = false)}
   >
     {#snippet footer()}

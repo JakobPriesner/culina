@@ -3,6 +3,7 @@ using Api.Endpoints.Cookbooks.Create.V1;
 using Api.Endpoints.Cookbooks.Delete.V1;
 using Api.Endpoints.Cookbooks.GetAll.V1;
 using Api.Endpoints.Cookbooks.GetById.V1;
+using Api.Endpoints.Cookbooks.GetRecipes.V1;
 using Api.Endpoints.Cookbooks.RemoveRecipe.V1;
 using Api.Endpoints.Cookbooks.Update.V1;
 using Api.Endpoints.Recipes.GetCookbooks.V1;
@@ -16,6 +17,7 @@ internal static class CookbooksEndpoints
         services
             .AddSingleton<IEndpoint, GetCookbooksEndpoint>()
             .AddSingleton<IEndpoint, GetCookbookEndpoint>()
+            .AddSingleton<IEndpoint, GetCookbookRecipesEndpoint>()
             .AddSingleton<IEndpoint, CreateCookbookEndpoint>()
             .AddSingleton<IEndpoint, UpdateCookbookEndpoint>()
             .AddSingleton<IEndpoint, DeleteCookbookEndpoint>()

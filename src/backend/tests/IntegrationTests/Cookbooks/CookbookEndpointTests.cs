@@ -238,6 +238,46 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task GetRecipes_ShouldNameEveryRecipeOnTheShelf_NotOnlyTheFirstPage()
+    {
+        // Arrange
+        // A picker has to mark what is already on before anybody taps it, and
+        // a shelf of a hundred is four pages of the recipe list.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cookbookId = await CookbookAsync(client, householdId, "Backen");
+        var on = await RecipeAsync(client, householdId, "Waffeln");
+        await RecipeAsync(client, householdId, "Linsensuppe");
+
+        await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{on}", new { }, Token);
+
+        // Act
+        var response = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}/recipes", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(
+            [on],
+            response.Json!.Value.GetProperty("recipeIds").EnumerateArray().Select(id => id.GetGuid()));
+    }
+
+    [Fact]
+    public async Task GetRecipes_ShouldNotExistForSomebodyElsesHousehold()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var cookbookId = await CookbookAsync(client, await HouseholdAsync(client), "Backen");
+
+        using var stranger = await SecondAccountAsync();
+
+        // Act
+        var response = await stranger.GetAsync($"/api/v1/cookbooks/{cookbookId}/recipes", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task RemoveRecipe_ShouldSucceedForOneThatWasNeverOn()
     {
         // Arrange

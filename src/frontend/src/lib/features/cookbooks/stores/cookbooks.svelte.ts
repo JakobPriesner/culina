@@ -49,6 +49,14 @@ class CookbookStore {
   #memberships = $state<Record<string, CookbookMembership[]>>({});
 
   /**
+   * Every recipe on a shelf, by cookbook id — the same fact from the other
+   * side, for a picker that has to mark what is already on before anybody taps
+   * it. The shelf's own recipe list is paged, so it cannot answer that past
+   * the first screen.
+   */
+  #members = $state<Record<string, readonly string[]>>({});
+
+  /**
    * Whether a first answer has ever arrived.
    *
    * Deliberately **not** `$state`. `list` is called from an `$effect`, and an
@@ -86,6 +94,11 @@ class CookbookStore {
   /** The cookbooks a recipe is on, or an empty list until it has been asked. */
   membershipsOf(recipeId: string): readonly CookbookMembership[] {
     return this.#memberships[recipeId] ?? [];
+  }
+
+  /** The recipes on a shelf, or an empty list until it has been asked. */
+  membersOf(cookbookId: string): readonly string[] {
+    return this.#members[cookbookId] ?? [];
   }
 
   contains(recipeId: string, cookbookId: string): boolean {
@@ -282,6 +295,17 @@ class CookbookStore {
     }
   }
 
+  /** Which recipes are on a shelf, all of them. */
+  async loadMembers(cookbookId: string): Promise<void> {
+    const result = await request(() =>
+      http.GET('/api/v1/cookbooks/{cookbookId}/recipes', { params: { path: { cookbookId } } })
+    );
+
+    if (result.ok) {
+      this.#members = { ...this.#members, [cookbookId]: result.value.recipeIds };
+    }
+  }
+
   /**
    * Puts a recipe on a shelf, or takes it off.
    *
@@ -292,11 +316,16 @@ class CookbookStore {
   async setOn(recipeId: string, cookbook: CookbookMembership, on: boolean): Promise<boolean> {
     const before = this.membershipsOf(recipeId);
     const counted = this.#items;
+    const members = this.membersOf(cookbook.id);
 
     this.#remember(
       recipeId,
       on ? [...before, cookbook] : before.filter((shelf) => shelf.id !== cookbook.id)
     );
+    this.#members = {
+      ...this.#members,
+      [cookbook.id]: on ? [...members, recipeId] : members.filter((id) => id !== recipeId)
+    };
     this.#items = this.#items.map((shelf) =>
       shelf.id === cookbook.id
         ? { ...shelf, recipeCount: shelf.recipeCount + (on ? 1 : -1) }
@@ -320,6 +349,7 @@ class CookbookStore {
     }
 
     this.#remember(recipeId, [...before]);
+    this.#members = { ...this.#members, [cookbook.id]: members };
     this.#items = counted;
     this.#error = result.error;
 
@@ -344,6 +374,7 @@ class CookbookStore {
     this.#loadingMore = false;
     this.#moreFailed = false;
     this.#memberships = {};
+    this.#members = {};
     this.#loaded = false;
   }
 

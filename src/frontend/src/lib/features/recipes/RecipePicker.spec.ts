@@ -146,6 +146,58 @@ describe('the recipe picker', () => {
   });
 
   /*
+   * A cookbook is the other kind of caller: a recipe is on the shelf or it is
+   * not, and a row that looked like an ordinary add for one that is already on
+   * made curating a hundred recipes a matter of tapping and reading toasts.
+   */
+  describe('for a caller that can take a recipe back', () => {
+    it('says which rows are already on before any of them is touched', async () => {
+      renderWithProviders(RecipePicker, { props: props({ taken: ['r1'], onremove: vi.fn() }) });
+
+      expect(
+        await screen.findByRole('button', { name: /Orzo/, pressed: true })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Lentil soup/, pressed: false })
+      ).toBeInTheDocument();
+    });
+
+    it('takes a row that is on back off, rather than adding it again', async () => {
+      const onpick = vi.fn();
+      const onremove = vi.fn();
+
+      renderWithProviders(RecipePicker, { props: props({ taken: ['r1'], onpick, onremove }) });
+
+      await userEvent.click(await screen.findByRole('button', { name: /Orzo/ }));
+
+      expect(onremove).toHaveBeenCalledOnce();
+      expect(onremove.mock.calls[0]![0]).toMatchObject({ id: 'r1' });
+      expect(onpick).not.toHaveBeenCalled();
+    });
+
+    it('still adds a row that is off', async () => {
+      const onpick = vi.fn();
+
+      renderWithProviders(RecipePicker, {
+        props: props({ taken: ['r1'], onpick, onremove: vi.fn() })
+      });
+
+      await userEvent.click(await screen.findByRole('button', { name: /Lentil soup/ }));
+
+      expect(onpick).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('leaves every row an ordinary pick for a caller that cannot take one back', async () => {
+    // The week plan: cooking the same thing twice is planning it twice.
+    renderWithProviders(RecipePicker, { props: props({ taken: ['r1'] }) });
+
+    const orzo = await screen.findByRole('button', { name: /Orzo/ });
+
+    expect(orzo).not.toHaveAttribute('aria-pressed');
+  });
+
+  /*
    * The plan passes `open` as an expression rather than a binding, so the only
    * way it hears about a dismissal is this callback. Without it the page goes
    * on believing the sheet is up and will not open it again.
