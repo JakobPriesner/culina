@@ -39,6 +39,21 @@ internal static class SecurityHeaders
         "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
     /// <summary>
+    /// The one style attribute the document may carry: SvelteKit's route
+    /// announcer, which its generated root component writes with a fixed
+    /// visually-hidden <c>style</c> after the first client-side navigation.
+    /// </summary>
+    /// <remarks>
+    /// A nonce cannot be put on an attribute, so without this the announcer
+    /// lost its styles on every signed-out deep link and the browser logged a
+    /// violation. <c>unsafe-hashes</c> allows this exact value and nothing
+    /// else — any other style attribute is still refused. The hash is of the
+    /// string in <c>@sveltejs/kit</c>'s <c>write_root.js</c>; if an upgrade
+    /// changes it, the <c>@image</c> end-to-end spec reports the violation.
+    /// </remarks>
+    internal const string AnnouncerStyleHash = "sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=";
+
+    /// <summary>
     /// The SPA document's policy. There is no <c>unsafe-inline</c> and no
     /// <c>unsafe-eval</c> anywhere — either one disables the protection the
     /// rest of the policy provides. The inline blocks the app needs (the theme
@@ -58,6 +73,7 @@ internal static class SecurityHeaders
             "default-src 'self'",
             $"script-src 'self' 'nonce-{nonce}'",
             $"style-src 'self' 'nonce-{nonce}'",
+            $"style-src-attr 'unsafe-hashes' '{AnnouncerStyleHash}'",
             "img-src 'self' data: blob:",
             "connect-src 'self'",
             "font-src 'self'",
