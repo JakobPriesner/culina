@@ -127,6 +127,21 @@ public class SourceRecipeMappingTests
     }
 
     [Fact]
+    public void ToGroups_ShouldReadABuiltInTheOtherAppWroteOut_AsTheBuiltIn()
+    {
+        // Arrange
+        // Tandoor stores units as names. "500 Milliliter" kept as a household
+        // unit would never become cups for an imperial kitchen.
+        var theirs = Recipe(ingredients: [new SourceIngredient(500m, "Milliliter", "Milch", null)]);
+
+        // Act
+        var line = Single(SourceRecipeMapping.ToGroups(theirs));
+
+        // Assert
+        Assert.Same(Unit.Millilitre, line.Quantity.Unit);
+    }
+
+    [Fact]
     public void ToGroups_ShouldDropANamelessIngredient_RatherThanRefuseTheRecipe()
     {
         // Arrange
