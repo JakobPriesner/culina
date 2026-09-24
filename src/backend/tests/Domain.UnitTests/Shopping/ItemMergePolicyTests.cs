@@ -95,9 +95,9 @@ public class ItemMergePolicyTests
 
         // Act
         // Three recipes each contributing a third of a kilo.
-        list.Add(Name("Mehl"), Amount(333.333m, Unit.Gram), ShoppingSection.DryGoods);
-        list.Add(Name("mehl"), Amount(333.333m, Unit.Gram), ShoppingSection.DryGoods);
-        list.Add(Name("MEHL"), Amount(333.334m, Unit.Gram), ShoppingSection.DryGoods);
+        list.Add(Name("Mehl"), Asked(333.333m, Unit.Gram), ShoppingSection.DryGoods);
+        list.Add(Name("mehl"), Asked(333.333m, Unit.Gram), ShoppingSection.DryGoods);
+        list.Add(Name("MEHL"), Asked(333.334m, Unit.Gram), ShoppingSection.DryGoods);
 
         // Assert
         // Rounding first and summing second compounds error; rounding is
@@ -114,8 +114,8 @@ public class ItemMergePolicyTests
         var list = ShoppingList.Create(Guid.CreateVersion7());
 
         // Act
-        list.Add(Name("Butter"), Amount(200, Unit.Gram), ShoppingSection.DairyEggs);
-        list.Add(Name("butter"), Amount(0.05m, Unit.Kilogram), ShoppingSection.DairyEggs);
+        list.Add(Name("Butter"), Asked(200, Unit.Gram), ShoppingSection.DairyEggs);
+        list.Add(Name("butter"), Asked(0.05m, Unit.Kilogram), ShoppingSection.DairyEggs);
 
         // Assert
         var item = Assert.Single(list.Items);
@@ -131,8 +131,8 @@ public class ItemMergePolicyTests
         var list = ShoppingList.Create(Guid.CreateVersion7());
 
         // Act
-        list.Add(Name("Olivenöl"), Amount(2, Unit.Tablespoon), ShoppingSection.SpicesBaking);
-        list.Add(Name("olivenoel"), Amount(30, Unit.Millilitre), ShoppingSection.SpicesBaking);
+        list.Add(Name("Olivenöl"), Asked(2, Unit.Tablespoon), ShoppingSection.SpicesBaking);
+        list.Add(Name("olivenoel"), Asked(30, Unit.Millilitre), ShoppingSection.SpicesBaking);
 
         // Assert
         Assert.Equal(2, list.Items.Count);
@@ -144,11 +144,11 @@ public class ItemMergePolicyTests
         // Arrange
         var list = ShoppingList.Create(Guid.CreateVersion7());
 
-        list.Add(Name("Butter"), Amount(200, Unit.Gram), ShoppingSection.DairyEggs);
+        list.Add(Name("Butter"), Asked(200, Unit.Gram), ShoppingSection.DairyEggs);
         list.Check(list.Items[0].Id, isChecked: true, DateTimeOffset.UnixEpoch);
 
         // Act
-        list.Add(Name("butter"), Amount(50, Unit.Gram), ShoppingSection.DairyEggs);
+        list.Add(Name("butter"), Asked(50, Unit.Gram), ShoppingSection.DairyEggs);
 
         // Assert
         // Adding to it would quietly change an amount somebody has already
@@ -162,8 +162,8 @@ public class ItemMergePolicyTests
         // Arrange
         var list = ShoppingList.Create(Guid.CreateVersion7());
 
-        list.Add(Name("Butter"), Amount(200, Unit.Gram), ShoppingSection.DairyEggs);
-        list.Add(Name("Mehl"), Amount(500, Unit.Gram), ShoppingSection.DryGoods);
+        list.Add(Name("Butter"), Asked(200, Unit.Gram), ShoppingSection.DairyEggs);
+        list.Add(Name("Mehl"), Asked(500, Unit.Gram), ShoppingSection.DryGoods);
         list.Check(list.Items[0].Id, isChecked: true, DateTimeOffset.UnixEpoch);
 
         // Act
@@ -180,6 +180,9 @@ public class ItemMergePolicyTests
     private static Quantity Amount(decimal? amount, Unit? unit) =>
         Quantity.Create(amount, unit).Match(q => q, error => throw new InvalidOperationException(error.Code));
 
+    private static ShoppingItemSource Asked(decimal? amount, Unit? unit) =>
+        new(Guid.CreateVersion7(), PlanEntryId: null, Amount(amount, unit));
+
     private static ShoppingListItem Item(string name, decimal? amount, Unit? unit) =>
-        ShoppingListItem.Create(Name(name), Amount(amount, unit), ShoppingSection.Other, 1, false);
+        ShoppingListItem.Asked(Name(name), Asked(amount, unit), ShoppingSection.Other, 1);
 }

@@ -931,6 +931,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/shopping-list/meals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a planned week's ingredients
+         * @description Every meal planned in the seven days from `from`, at its planned servings, merged exactly as a single recipe is. Safe to repeat: a meal already on the list is skipped, and a recipe that was added by itself counts as the shopping for a planned meal of it. Each planned meal's `isOnShoppingList` says which are there.
+         */
+        post: operations["addPlannedMealsToShoppingListV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/shopping-list/meals/{entryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a planned meal's ingredients
+         * @description Subtracts exactly what that meal contributed, whether or not it is still planned. Another meal's share of a line stays, typed lines stay, and ticked lines stay because they have been bought. Repeating it changes nothing.
+         */
+        delete: operations["withdrawPlannedMealFromShoppingListV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
         parameters: {
             query?: never;
@@ -1909,6 +1949,8 @@ export interface components {
             recipeServings: number;
             /** @description `breakfast`, `lunch` or `dinner`. */
             slot: string;
+            /** @description Whether this meal's ingredients are on the household's shopping list. */
+            isOnShoppingList: boolean;
         };
         /** @description An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded. */
         ProblemDetails: {
@@ -3249,6 +3291,14 @@ export interface components {
             quantity?: number | null;
             /** @description In what. */
             unit?: string | null;
+        };
+        /** @description A planned week's shopping. */
+        ShoppingAddPlannedMealsRequest: {
+            /**
+             * Format: date
+             * @description The day the week starts on, as the plan was read.
+             */
+            from: string;
         };
         /** @description A recipe's ingredients, at a chosen scaling. */
         ShoppingAddRecipeRequest: {
@@ -6580,6 +6630,100 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    addPlannedMealsToShoppingListV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingAddPlannedMealsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    withdrawPlannedMealFromShoppingListV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
                 };
             };
             /** @description Unauthorized */

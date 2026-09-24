@@ -3948,6 +3948,141 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/shopping-list/meals": {
+      "post": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Add a planned week's ingredients",
+        "description": "Every meal planned in the seven days from `from`, at its planned servings, merged exactly as a single recipe is. Safe to repeat: a meal already on the list is skipped, and a recipe that was added by itself counts as the shopping for a planned meal of it. Each planned meal's `isOnShoppingList` says which are there.",
+        "operationId": "addPlannedMealsToShoppingListV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingAddPlannedMealsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/shopping-list/meals/{entryId}": {
+      "delete": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Remove a planned meal's ingredients",
+        "description": "Subtracts exactly what that meal contributed, whether or not it is still planned. Another meal's share of a line stays, typed lines stay, and ticked lines stay because they have been bought. Repeating it changes nothing.",
+        "operationId": "withdrawPlannedMealFromShoppingListV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
       "patch": {
         "tags": [
@@ -6872,7 +7007,8 @@
           "recipeId",
           "title",
           "recipeServings",
-          "slot"
+          "slot",
+          "isOnShoppingList"
         ],
         "type": "object",
         "properties": {
@@ -6916,6 +7052,10 @@
           "slot": {
             "type": "string",
             "description": "`breakfast`, `lunch` or `dinner`."
+          },
+          "isOnShoppingList": {
+            "type": "boolean",
+            "description": "Whether this meal's ingredients are on the household's shopping list."
           }
         },
         "description": "One planned meal."
@@ -9687,6 +9827,20 @@
           }
         },
         "description": "Something to put on the list."
+      },
+      "ShoppingAddPlannedMealsRequest": {
+        "required": [
+          "from"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The day the week starts on, as the plan was read.",
+            "format": "date"
+          }
+        },
+        "description": "A planned week's shopping."
       },
       "ShoppingAddRecipeRequest": {
         "required": [
