@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from '$ds';
   import { invitations } from './invitations.svelte';
+  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -42,7 +43,7 @@
     working = false;
 
     if (failure) {
-      toaster.show({ message: failure.detail, tone: 'danger' });
+      toaster.show({ message: explain(failure), tone: 'danger' });
     }
   }
 
@@ -60,7 +61,7 @@
     const failure = await invitations.revoke(householdId, invitationId);
 
     toaster.show({
-      message: failure ? failure.detail : m['me.invite.revoked'](),
+      message: failure ? explain(failure) : m['me.invite.revoked'](),
       tone: failure ? 'danger' : 'neutral'
     });
   }

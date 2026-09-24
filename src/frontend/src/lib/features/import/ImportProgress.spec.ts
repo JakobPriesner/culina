@@ -89,7 +89,7 @@ describe('an import as it runs', () => {
     // "The connection went" is worth waiting through; "that import is gone" is
     // not, and a screen that says only "something stopped" cannot tell anybody
     // which of the two they are looking at.
-    expect(screen.getByText('That import is no longer being followed.')).toBeInTheDocument();
+    expect(screen.getByText(/That import is no longer being followed/)).toBeInTheDocument();
     expect(screen.getByText(/abc123/)).toBeInTheDocument();
   });
 

@@ -1,24 +1,34 @@
-import { ErrorCodes, type AppError } from '$api';
+import { ErrorCodes } from '$api';
 
 import { m } from './i18n';
 
+/** A failure as far as saying it goes: an `AppError`, or one field of one. */
+interface Failure {
+  readonly code: string;
+  readonly detail: string;
+}
+
+type Message = (() => string) | undefined;
+
+const catalogue = m as unknown as Record<string, Message>;
+
 /**
- * What to put on screen when a request fails.
+ * What to put on screen when a request fails, in the reader's language.
  *
- * The API layer is deliberately language-free: it runs before anyone has
- * chosen a language and it has no business importing the message catalogue. So
- * the failures it invents itself — offline, timed out — carry an English
- * sentence as a last resort, and this is where they become the reader's
- * language instead.
+ * The code is what gets translated, never the detail. The API speaks English
+ * whatever the request asked for — its details are written for a log — and the
+ * client invents a few failures of its own (offline, timed out) before anyone
+ * has chosen a language. So every code a server or the client can produce has
+ * a `problem.<code>` message, and `explain.spec.ts` reads the backend's error
+ * catalogue to keep it that way.
  *
- * Anything the server said is used as it is. The server already answers in the
- * language the request asked for, and a second translation here could only
- * disagree with it.
+ * The detail is only the last resort, for a code newer than this build.
  */
-const spoken: Record<string, () => string> = {
-  [ErrorCodes.offline]: () => m['error.offline'](),
-  [ErrorCodes.timeout]: () => m['error.timeout'](),
-  [ErrorCodes.unexpected]: () => m['error.unexpected.body']()
+const clientSaid: Record<string, Message> = {
+  [ErrorCodes.offline]: m['error.offline'],
+  [ErrorCodes.timeout]: m['error.timeout'],
+  [ErrorCodes.unexpected]: m['error.unexpected.body']
 };
 
-export const explain = (error: AppError): string => spoken[error.code]?.() ?? error.detail;
+export const explain = (failure: Failure): string =>
+  (clientSaid[failure.code] ?? catalogue[`problem.${failure.code}`])?.() ?? failure.detail;
