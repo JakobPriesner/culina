@@ -52,7 +52,7 @@
     const failure = await sharing.share(recipeId);
 
     if (failure) {
-      toaster.show({ message: explain(failure), tone: 'danger' });
+      toaster.show({ message: () => explain(failure), tone: 'danger' });
     }
   }
 
@@ -60,7 +60,7 @@
     const failure = await sharing.revoke(recipeId);
 
     toaster.show({
-      message: failure ? explain(failure) : m['recipe.share.revoked'](),
+      message: () => (failure ? explain(failure) : m['recipe.share.revoked']()),
       tone: failure ? 'danger' : 'neutral'
     });
   }
@@ -92,7 +92,7 @@
 
     try {
       await navigator.clipboard.writeText(link);
-      toaster.show({ message: m['recipe.share.copied'](), tone: 'success' });
+      toaster.show({ message: () => m['recipe.share.copied'](), tone: 'success' });
     } catch {
       // A browser that refuses the clipboard is not worth a message: the link
       // is on screen and can be selected.

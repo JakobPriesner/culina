@@ -29,8 +29,8 @@
   <Button
     onclick={() =>
       toaster.show({
-        message: 'Recipe deleted',
-        action: { label: 'Undo', run: () => (undone = true) }
+        message: () => 'Recipe deleted',
+        action: { label: () => 'Undo', run: () => (undone = true) }
       })}
   >
     Delete with undo
