@@ -181,6 +181,19 @@
   );
 
   /**
+   * Whether the panel above the grid is known yet.
+   *
+   * The list may come back before the shortlist now that it is asked for
+   * alongside it. Drawing the grid then and the panel when the shortlist lands
+   * pushes every card down and pulls the shortlisted ones out of it — the page
+   * rearranging under the reader, only later. So the grid stays a skeleton
+   * until both are back: the requests overlap, the page still appears once.
+   */
+  const leadKnown = $derived(
+    filtered || !householdId || suggestions.answered(householdId, featuredQuery)
+  );
+
+  /**
    * Whether the end of the list fetches the next page by itself.
    *
    * It stops once a page fails. A list that asks for itself would otherwise
@@ -407,7 +420,9 @@
 
     <RecipeGrid
       recipes={library}
-      loading={!settled || (recipes.status === 'loading' && recipes.items.length === 0)}
+      loading={!settled ||
+        !leadKnown ||
+        (recipes.status === 'loading' && recipes.items.length === 0)}
       onmore={autoLoads ? more : undefined}
     />
 
