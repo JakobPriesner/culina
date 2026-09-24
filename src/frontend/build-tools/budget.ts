@@ -31,13 +31,24 @@ import { glob, readFile } from 'node:fs/promises';
  * `firstLoadBytes` did not move and should be the last one that ever does. It
  * is what somebody waits for at the back of a house on a bad signal, and at
  * 70.3 kB there is still room under it.
+ *
+ * The totals moved again on 24 September 2026, for the server's own setup:
+ * the first-run screen and Settings → Server, two pages that one administrator
+ * opens a handful of times in the life of an instance. Measured against the
+ * build before them, they are 14.7 kB of script — 5.5 kB of it the 85 new
+ * strings in both languages, 4.2 kB the two pages, 4.3 kB the fields they
+ * share — and 1.0 kB of styles, with no new dependency. The search highlight
+ * just before them had already taken the last of the old headroom (236.9 kB).
+ * Worth it: without them a fresh container did not start at all, and the
+ * settings could only be changed by somebody with a shell. Neither page is on
+ * the first load, which went from 70.6 to 71.0 kB.
  */
 export const budgets = {
   /** Everything the shell asks for before it can render: scripts and styles. */
   firstLoadBytes: 80 * 1024,
   /** Every chunk of every route together, which bounds the worst navigation. */
-  totalJavaScriptBytes: 235 * 1024,
-  totalStyleBytes: 38 * 1024
+  totalJavaScriptBytes: 260 * 1024,
+  totalStyleBytes: 40 * 1024
 } as const;
 
 export interface Weight {
