@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { applyLocale } from '$shell/i18n';
 
 import { formatQuantity } from './formatQuantity';
 import { quantityLabels } from './quantityLabels';
@@ -80,13 +82,13 @@ describe('volume, which converts honestly', () => {
     expect(shown(240, 'ml')).toBe('1 cup');
     // Half a litre is 2.11 cups, and 2⅛ is no measure anybody owns. "About two
     // cups" is the honest answer, and the tilde is how it says so.
-    expect(shown(500, 'ml')).toBe('~2 cup');
+    expect(shown(500, 'ml')).toBe('~2 cups');
   });
 
   it('lands on a measure that is in the drawer', () => {
     // A third-cup measure is in every set, which is exactly why a cup amount
     // must not be rounded onto quarters alone.
-    expect(shown(320, 'ml')).toBe('1⅓ cup');
+    expect(shown(320, 'ml')).toBe('1⅓ cups');
   });
 });
 
@@ -135,5 +137,30 @@ describe('converting and scaling together', () => {
     // Doubling 300 g is 600 g, which is 21 oz — past a pound, so a recipe
     // stops counting in ounces and starts counting in pounds.
     expect(shown(300, 'g', 2)).toMatch(/lb$/);
+  });
+});
+
+describe('in the reader’s language', () => {
+  afterEach(() => applyLocale('en'));
+
+  const inGerman = (value: number, unit: string) => {
+    applyLocale('de');
+
+    return formatQuantity(
+      scaleQuantity({ value, unit }, 1, 'imperial'),
+      'de',
+      quantityLabels
+    ).text.replaceAll('\u00a0', ' ');
+  };
+
+  it('converts a volume, and names the cups in German', () => {
+    expect(inGerman(500, 'ml')).toBe('~2 Cups');
+    expect(inGerman(240, 'ml')).toBe('1 Cup');
+    expect(inGerman(1.5, 'l')).toBe('6⅓ Cups');
+  });
+
+  it('converts a mass the same way in both languages', () => {
+    expect(inGerman(250, 'g')).toBe('8¾ oz');
+    expect(shown(250, 'g')).toBe('8¾ oz');
   });
 });

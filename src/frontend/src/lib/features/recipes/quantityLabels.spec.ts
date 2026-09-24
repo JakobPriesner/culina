@@ -81,4 +81,10 @@ describe('the words a unit picker shows', () => {
     expect(unitFor('Schuss')).toBe('Schuss');
     expect(unitLabel('Schuss')).toBe('Schuss');
   });
+
+  it('reads a built-in written out as the built-in, so it converts like one', () => {
+    expect(unitFor('Milliliter')).toBe('ml');
+    expect(unitFor('Esslöffel')).toBe('tbsp');
+    expect(unitFor('Gramm')).toBe('g');
+  });
 });
