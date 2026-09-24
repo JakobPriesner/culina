@@ -19,6 +19,9 @@ internal sealed class RecipeRepository(
     public Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken) =>
         searcher.SearchAsync(search, cancellationToken);
 
+    public Task<SearchFacets> FacetsAsync(RecipeSearch search, CancellationToken cancellationToken) =>
+        searcher.FacetsAsync(search, cancellationToken);
+
     public async Task<IReadOnlyList<string>> OwnUnitsAsync(
         Guid householdId,
         CancellationToken cancellationToken)

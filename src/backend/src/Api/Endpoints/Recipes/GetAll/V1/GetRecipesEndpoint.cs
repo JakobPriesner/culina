@@ -2,6 +2,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Recipes.GetAll;
+using Domain.Shared;
 using Response = Contracts.Recipes.GetAll.Response;
 
 namespace Api.Endpoints.Recipes.GetAll.V1;
@@ -18,13 +19,16 @@ internal sealed class GetRecipesEndpoint : IEndpoint
                 IQueryHandler<GetRecipesQuery, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                var search = context.Request.Query.ToRecipeSearch(context.CurrentUser().UserId);
+                var request = context.Request.Query
+                    .ToRecipeSearch(context.CurrentUser().UserId)
+                    .Bind(criteria => context.Request.Query.ReadAsTyped()
+                        .Map(asTyped => new GetRecipesQuery(criteria, asTyped)));
 
-                return await search.Match(
-                    async criteria =>
+                return await request.Match(
+                    async asked =>
                     {
                         var result = await handler
-                            .Handle(new GetRecipesQuery(criteria), cancellationToken)
+                            .Handle(asked, cancellationToken)
                             .ConfigureAwait(false);
 
                         return result.Match(Results.Ok, CustomResults.Problem);
@@ -43,9 +47,15 @@ internal sealed class GetRecipesEndpoint : IEndpoint
                 + "cookbook is a view of the collection rather than a second one; it defaults to "
                 + "`cookbookOrder`, the order the cookbook was built in. An unknown cookbook is an "
                 + "empty page rather than a 404 — it is a filter value, not a resource named in "
-                + "the path.")
+                + "the path.\n\n"
+                + "`query` is read for meaning as well as words: a diet, a time, a meal, a cuisine, "
+                + "what to use and what to leave out come back in `interpretation`, each with the "
+                + "characters it was read from, so a client can show it as a chip and remove it by "
+                + "deleting them. When nothing matches, the first page corrects a misspelling "
+                + "against the household's own words or sets one reading aside, and says which; "
+                + "`asTyped=true` turns the correction down.")
             .WithRepeatableQueryParameters(
-                ["householdId", "query", "maxMinutes", "cookbookId", "sort", "cursor", "limit"],
+                ["householdId", "query", "maxMinutes", "cookbookId", "sort", "cursor", "limit", "asTyped"],
                 ["tag", "ingredient"],
                 ["maxMinutes", "limit"])
             .Produces<Response>()

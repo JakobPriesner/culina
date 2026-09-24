@@ -150,6 +150,7 @@ public static class DependencyInjection
             .AddScoped<TagWriter>()
             .AddScoped<RecipeSearcher>()
             .AddScoped<SearchDocumentWriter>()
+            .AddScoped<ISearchVocabulary, SearchVocabulary>()
             .AddScoped<IRecipeRepository, RecipeRepository>()
             .AddScoped<IRecipeShareRepository, RecipeShareRepository>()
             .AddScoped<IPersonalNoteRepository, PersonalNoteRepository>()

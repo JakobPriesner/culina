@@ -66,6 +66,9 @@ public sealed record QueryIntent(
         Of(InferenceKind.Time).Select(one => (int?)int.Parse(one.Value, System.Globalization.CultureInfo.InvariantCulture))
             .Min();
 
+    /// <summary>Whether there was a question at all.</summary>
+    public bool Asked => Applied.Count > 0 || FreeText.Length > 0;
+
     /// <summary>Whether quick recipes were asked to come first.</summary>
     public bool Quick => Of(InferenceKind.Quick).Any();
 

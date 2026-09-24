@@ -17,6 +17,12 @@ public interface IRecipeRepository
     Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Counts what every recipe the search matches could be narrowed by:
+    /// tags, time ceilings and cuisines.
+    /// </summary>
+    Task<SearchFacets> FacetsAsync(RecipeSearch search, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The units this household has written that are not built in.
     /// </summary>
     /// <param name="householdId">Whose kitchen.</param>

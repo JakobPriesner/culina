@@ -440,6 +440,124 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Search_ShouldCorrectAMisspelling_AgainstTheHouseholdsOwnWords()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        // Nothing is called "Kokosmlich". The household's own ingredients say
+        // Kokosmilch, which is a better dictionary than any word list.
+        var corrected = await SearchAsync(world, "Kokosmlich");
+        var asTyped = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&query=Kokosmlich&asTyped=true",
+            Token);
+
+        // Assert
+        var interpretation = corrected.Json!.Value.GetProperty("interpretation");
+
+        Assert.Contains("Süßkartoffelcurry", Titles(corrected));
+        Assert.Equal("Kokosmlich", interpretation.GetProperty("correctedFrom").GetString());
+        Assert.Equal("Kokosmilch", interpretation.GetProperty("freeText").GetString());
+        // Turned down, the words are searched exactly as typed.
+        Assert.Empty(Titles(asTyped));
+    }
+
+    [Fact]
+    public async Task Search_ShouldSetAsideTheWeakestReading_AndSayWhich()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        // Nothing in the library is a dinner. The meal is the weaker guess, so
+        // it goes, and the response says it went.
+        var response = await SearchAsync(world, "schnelles Abendessen");
+
+        // Assert
+        Assert.NotEmpty(Titles(response));
+        Assert.Equal(["meal:dinner:Abendessen"], Relaxed(response));
+    }
+
+    [Fact]
+    public async Task Search_ShouldNeverSetADietAside()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var quick = await SearchAsync(world, "vegan unter 10 Minuten");
+        var chicken = await SearchAsync(world, "vegan Hähnchen");
+
+        // Assert
+        // The time goes; the diet never does.
+        Assert.Equal(["time:10:unter 10 Minuten"], Relaxed(quick));
+        Assert.Contains("Süßkartoffelcurry", Titles(quick));
+        Assert.DoesNotContain("Kartoffelgratin", Titles(quick));
+        Assert.DoesNotContain("Hähnchenbrustfilet mit Reis", Titles(quick));
+        // Nothing vegan is chicken, and nothing is invented to say otherwise.
+        Assert.Empty(Titles(chicken));
+        Assert.Empty(Relaxed(chicken));
+    }
+
+    [Fact]
+    public async Task Search_ShouldNameAContradiction_RatherThanGuessWhichHalfToDrop()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var response = await SearchAsync(world, "vegetarisch mit Lachs");
+
+        // Assert
+        var conflict = response.Json!.Value.GetProperty("interpretation").GetProperty("conflict")
+            .EnumerateArray()
+            .Select(chip => $"{chip.GetProperty("kind").GetString()}:{chip.GetProperty("value").GetString()}");
+
+        Assert.Empty(Titles(response));
+        Assert.Equal(["diet:vegetarian", "ingredient:salmon"], conflict);
+    }
+
+    [Fact]
+    public async Task Search_ShouldSayWhyARecipeIsHere_WhenItsTitleDoesNot()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var coconut = Reasons(await SearchAsync(world, "Kokosmilch"));
+        var poultry = Reasons(await SearchAsync(world, "Geflügel"));
+        var step = Reasons(await SearchAsync(world, "abgelöscht"));
+        var title = Reasons(await SearchAsync(world, "Bolognese"));
+
+        // Assert
+        Assert.Equal("ingredient:Kokosmilch", coconut["Süßkartoffelcurry"]);
+        // Through the lexicon alone, named in the recipe's own language.
+        Assert.Equal("concept:Geflügel", poultry["Hähnchenbrustfilet mit Reis"]);
+        Assert.Equal("concept:poultry", poultry["Chicken Curry"]);
+        Assert.Equal("text:", step["Spaghetti Bolognese"]);
+        // "It is called that" is not worth a line.
+        Assert.Null(title["Spaghetti Bolognese"]);
+    }
+
+    [Fact]
+    public async Task Search_ShouldOfferRefinements_ThatSplitTheResults()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var bolognese = FacetTags(await SearchAsync(world, "Bolognese"));
+        var lasagne = FacetTags(await SearchAsync(world, "Lasagne"));
+
+        // Assert
+        // Two of the three Bolognese are Italian: a chip worth a tap.
+        Assert.Contains("italienisch", bolognese);
+        // Both lasagnes are pasta: a chip that removes nothing is not offered.
+        Assert.DoesNotContain("pasta", lasagne);
+    }
+
+    [Fact]
     public async Task Search_ShouldTreatALikeMetacharacterAsInert()
     {
         // Arrange
@@ -662,6 +780,29 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             ? [.. interpretation.GetProperty("applied").EnumerateArray()
                 .Select(chip => $"{chip.GetProperty("kind").GetString()}:{chip.GetProperty("value").GetString()}:"
                                 + chip.GetProperty("text").GetString())]
+            : [];
+
+    private static List<string> Relaxed(ApiResponse response) =>
+        response.Json!.Value.GetProperty("interpretation").TryGetProperty("relaxed", out var relaxed)
+        && relaxed.ValueKind == System.Text.Json.JsonValueKind.Array
+            ? [.. relaxed.EnumerateArray()
+                .Select(chip => $"{chip.GetProperty("kind").GetString()}:{chip.GetProperty("value").GetString()}:"
+                                + chip.GetProperty("text").GetString())]
+            : [];
+
+    private static Dictionary<string, string?> Reasons(ApiResponse response) =>
+        response.Json!.Value.GetProperty("items").EnumerateArray().ToDictionary(
+            item => item.GetProperty("title").GetString()!,
+            item => item.TryGetProperty("matchReason", out var reason)
+                    && reason.ValueKind == System.Text.Json.JsonValueKind.Object
+                ? $"{reason.GetProperty("kind").GetString()}:"
+                  + (reason.TryGetProperty("term", out var term) ? term.GetString() : null)
+                : null);
+
+    private static List<string> FacetTags(ApiResponse response) =>
+        response.Json!.Value.TryGetProperty("facets", out var facets)
+        && facets.ValueKind == System.Text.Json.JsonValueKind.Object
+            ? [.. facets.GetProperty("tags").EnumerateArray().Select(tag => tag.GetProperty("value").GetString()!)]
             : [];
 
     private static List<string> Titles(ApiResponse response) =>
