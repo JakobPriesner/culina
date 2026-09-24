@@ -21,6 +21,11 @@ public sealed record GetCookbooksQuery(Guid HouseholdId, Guid UserId, string? Cu
 /// <param name="UserId">Who is asking.</param>
 public sealed record GetCookbookQuery(Guid CookbookId, Guid UserId);
 
+/// <summary>Which recipes are on one cookbook.</summary>
+/// <param name="CookbookId">Which one.</param>
+/// <param name="UserId">Who is asking.</param>
+public sealed record GetCookbookRecipesQuery(Guid CookbookId, Guid UserId);
+
 /// <summary>Starts a cookbook.</summary>
 /// <param name="UserId">Whose idea it is.</param>
 /// <param name="Draft">What to call it, and what it is for.</param>
@@ -92,6 +97,37 @@ internal sealed class GetCookbookQueryHandler(
             .ConfigureAwait(false);
 
         return tracked.Record(found.Map(shelf => shelf.ToDetail()));
+    }
+}
+
+internal sealed class GetCookbookRecipesQueryHandler(
+    ICookbookRepository cookbooks,
+    IHouseholdRepository households)
+    : IQueryHandler<GetCookbookRecipesQuery, CookbookRecipesResponse>
+{
+    public async Task<Result<CookbookRecipesResponse>> Handle(
+        GetCookbookRecipesQuery query,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        using var tracked = UseCaseActivity.Start("Cookbooks.GetRecipes");
+
+        var found = await CookbookAccess
+            .VisibleAsync(cookbooks, households, query.CookbookId, query.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = await found.Match(
+            async _ =>
+            {
+                var ids = await cookbooks.RecipeIdsAsync(query.CookbookId, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return Result<CookbookRecipesResponse>.Success(new CookbookRecipesResponse { RecipeIds = ids });
+            },
+            error => Task.FromResult(Result<CookbookRecipesResponse>.Failure(error))).ConfigureAwait(false);
+
+        return tracked.Record(result);
     }
 }
 

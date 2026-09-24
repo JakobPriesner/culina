@@ -1112,5 +1112,7 @@
   "plan.onList": "On the shopping list",
   "plan.unplanned.stillOnList": "{title} is off the plan. Its ingredients are still on the shopping list.",
   "plan.unplanned.withdraw": "Remove them",
-  "plan.unplanned.withdrawn": "Its ingredients are off the shopping list."
+  "plan.unplanned.withdrawn": "Its ingredients are off the shopping list.",
+  "cookbooks.addRecipes.removed": "{title} is off the cookbook.",
+  "cookbooks.takeOff.failed": "That recipe could not be taken off the cookbook. Try again."
 }
