@@ -174,6 +174,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         left join recipe_search_documents d on d.recipe_id = r.id
         left join wanted on wanted.recipe_id = r.id
         left join required on required.recipe_id = r.id
+        left join unwanted on unwanted.recipe_id = r.id
         {(scored ? "left join suggestion_scores s on s.recipe_id = r.id" : string.Empty)}
         {RecipeSearchLanes.LanguageJoin}
         """;
@@ -220,6 +221,25 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
                     "@ruleIngredients::text[]",
                     "@ruleMaxMinutes",
                     held: "coalesce(required.matched, 0)")}}
+          -- What a query was understood to ask beyond its words. Each line is
+          -- gone from the plan when the query asked nothing of its kind.
+          --
+          -- A diet is kept when somebody said so — the title or a tag names
+          -- it — or, for the diets an ingredient can refute, when nothing in
+          -- the recipe does. A missing document can show neither, so it is
+          -- not presumed to keep anything.
+          and (cardinality(@diets::text[]) = 0 or coalesce(
+                d.concepts @> @diets::text[]
+                or (@dietPresumable and not (d.concepts && @dietRefutedBy::text[])), false))
+          and (cardinality(@meals::text[]) = 0 or coalesce(d.concepts && @meals::text[], false))
+          and (cardinality(@cuisines::text[]) = 0 or coalesce(d.concepts && @cuisines::text[], false))
+          and (cardinality(@ingredientConcepts::text[]) = 0
+               or coalesce(d.concepts && @ingredientConcepts::text[], false))
+          -- Left out by what it is when the lexicon knows it, and by the name
+          -- of an ingredient line when it does not.
+          and (cardinality(@excludedConcepts::text[]) = 0
+               or not coalesce(d.concepts && @excludedConcepts::text[], false))
+          and unwanted.recipe_id is null
           -- A recipe with no stated time is excluded by a time filter rather
           -- than treated as taking zero minutes. "I have 25 minutes" asks for
           -- recipes known to fit, and an unknown time is not an answer.
@@ -326,13 +346,15 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             hits as ({{RecipeSearchLanes.Hits}}),
             wanted as ({{Holders("@ingredients::text[]")}}),
             required as ({{Holders("@ruleIngredients::text[]")}}),
+            unwanted as ({{Holders("@excludedTerms::text[]")}}),
             matching as (select r.id {{Sources(scored)}} {{Rules(scored)}}),
             candidates as ({{(scored ? ScoredCandidates : PlainCandidates)}}),
             ranked as (
                 select *,
                     ingredient_count - matched_ingredients as extra_ingredients,
                     {{RecipeSearchLanes.Tier}} as tier,
-                    {{RecipeSearchLanes.StructuralFit}} as structural_fit
+                    {{RecipeSearchLanes.StructuralFit}} as structural_fit,
+                    {{RecipeSearchLanes.QuickFit}} as quick_fit
                 from candidates),
             scored as (select *, {{RecipeSearchLanes.Score}} as score from ranked),
             page as (
@@ -380,6 +402,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         var ingredients = search.Ingredients.ToArray();
 
         var query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim();
+        var constraints = search.Constraints;
 
         var parameters = new DynamicParameters(new
         {
@@ -387,6 +410,18 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             userId = search.UserId,
             query,
             concepts = ConceptsAskedFor(query),
+            diets = constraints.Diets.ToArray(),
+            dietPresumable = constraints.Diets.All(diet => DietRules.RefutedBy(diet) is not null),
+            dietRefutedBy = constraints.Diets
+                .SelectMany(diet => DietRules.RefutedBy(diet) ?? [])
+                .Distinct(StringComparer.Ordinal)
+                .ToArray(),
+            meals = constraints.Meals.ToArray(),
+            cuisines = constraints.Cuisines.ToArray(),
+            ingredientConcepts = constraints.Ingredients.ToArray(),
+            excludedConcepts = constraints.ExcludedConcepts.ToArray(),
+            excludedTerms = constraints.ExcludedTerms.ToArray(),
+            quick = constraints.Quick,
             fuzzyThreshold = FuzzyThreshold,
             tags,
             tagCount = tags.Length,

@@ -48,7 +48,7 @@ public static class CulinaryLexicon
     /// The version of this table. Raise it with any change to an entry or to
     /// how text is matched against them.
     /// </summary>
-    public const int Version = 1;
+    public const int Version = 2;
 
     private static readonly Compiled Index = new(Entries());
 
@@ -86,6 +86,25 @@ public static class CulinaryLexicon
     /// </para>
     /// </remarks>
     public static IReadOnlySet<string> Recognise(string query) => Read(query, whole: true);
+
+    /// <summary>
+    /// The concept this text is a name of, or null.
+    /// </summary>
+    /// <remarks>
+    /// Stricter than <see cref="Recognise"/>: one form has to account for the
+    /// whole of the text, give or take a short ending. "ohne Fleisch" is a name
+    /// of vegetarian; "leckeres Abendessen" is not a name of dinner, however
+    /// much it mentions one. It is what lets a parser consume exactly the words
+    /// a concept was found in, and no others.
+    /// </remarks>
+    public static Concept? Name(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        var key = Index.Whole(SearchText.FoldAe(text)) ?? Index.Whole(SearchText.FoldA(text));
+
+        return key is null ? null : Index.ByKey[key];
+    }
 
     private static HashSet<string> Read(string text, bool whole)
     {
@@ -268,6 +287,31 @@ public static class CulinaryLexicon
                     MatchWord(words[at], found, whole);
                 }
             }
+        }
+
+        internal string? Whole(string folded)
+        {
+            if (folded.Length == 0)
+            {
+                return null;
+            }
+
+            var words = folded.Split(' ');
+
+            if (words.Length == 1)
+            {
+                var found = new HashSet<string>(StringComparer.Ordinal);
+                MatchWord(words[0], found, whole: true);
+
+                return found.Count == 1 ? found.First() : null;
+            }
+
+            return Phrases.TryGetValue(words[0], out var candidates)
+                ? candidates.FirstOrDefault(one =>
+                    one.Words.Length == words.Length
+                    && PhraseAt(words, new bool[words.Length], 0, one.Words)
+                    && words[^1].Length - one.Words[^1].Length <= Ending).Key
+                : null;
         }
 
         private static bool PhraseAt(string[] words, bool[] consumed, int at, string[] phrase)
@@ -763,7 +807,7 @@ public static class CulinaryLexicon
         Cuisine("spanish", ["Spanisch", "Spanien"], ["spanish", "spain"], "mediterranean"),
         Cuisine("french", ["Französisch", "Frankreich"], ["french", "france"]),
         Cuisine("german", ["Deutsch", "Deutschland", "Hausmannskost"], ["german", "germany"]),
-        Cuisine("austrian", ["Österreichisch", "Österreich", "Wiener"], ["austrian", "austria"]),
+        Cuisine("austrian", ["Österreichisch", "Österreich"], ["austrian", "austria"]),
         Cuisine("middle_eastern", ["Orientalisch", "Arabisch", "Libanesisch", "Türkisch", "Persisch", "Israelisch"],
             ["middle eastern", "lebanese", "turkish", "persian", "israeli", "arabic"]),
 
@@ -803,6 +847,7 @@ public static class CulinaryLexicon
         Character("party", ["Party", "Buffet", "Partyrezept"], ["party", "buffet", "potluck"]),
         Character("healthy", ["gesund", "gesunde", "gesundes"], ["healthy", "wholesome"]),
         Character("meal_prep", ["Meal Prep", "vorkochen", "Vorrat"], ["meal prep", "batch cooking", "make ahead"]),
-        Character("quick", ["schnell", "Blitzrezept", "Fix"], ["quick", "fast", "speedy", "weeknight"])
+        Character("quick", ["schnell", "Blitzrezept", "Fix", "einfach", "unkompliziert", "wenig Aufwand"],
+            ["quick", "fast", "speedy", "weeknight", "easy", "simple"])
     ];
 }
