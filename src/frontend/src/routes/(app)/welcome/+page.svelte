@@ -94,7 +94,11 @@
           class="form"
           onsubmit={(event) => {
             event.preventDefault();
-            void join(() => redeemInvitation(code));
+            void join(async () => {
+              const outcome = await redeemInvitation(code);
+
+              return 'householdId' in outcome ? outcome.householdId : outcome;
+            });
           }}
           novalidate
         >

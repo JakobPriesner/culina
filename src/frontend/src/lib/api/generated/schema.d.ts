@@ -315,7 +315,7 @@ export interface paths {
         put?: never;
         /**
          * Join a household
-         * @description Unknown, expired and already-used codes all return the identical households.invitation_invalid, so a code cannot be probed for validity.
+         * @description Unknown, expired and already-used codes all return the identical households.invitation_invalid, so a code cannot be probed for validity. A good code presented by somebody already in its household answers `200` with `alreadyMember` and is not used up.
          */
         post: operations["redeemInvitationV1"];
         delete?: never;
@@ -1840,7 +1840,7 @@ export interface components {
              */
             joinedAt: string;
         };
-        /** @description The household the caller just joined. */
+        /** @description The household the caller just joined, or was already in. */
         HouseholdsRedeemInvitationResponse: {
             /**
              * Format: uuid
@@ -1849,6 +1849,11 @@ export interface components {
             householdId: string;
             /** @description What it is called. */
             name: string;
+            /**
+             * @description True when the caller already belonged to it, in which case the code was
+             *     not used up and still works for whoever it was meant for.
+             */
+            alreadyMember: boolean;
         };
         /** @description The new name. */
         HouseholdsRenameRequest: {
@@ -4659,6 +4664,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdsRedeemInvitationResponse"];
+                };
+            };
             /** @description Created */
             201: {
                 headers: {
