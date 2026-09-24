@@ -130,6 +130,22 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             Contains: ["Spaghetti Bolognese", "Lasagne Bolognese", "Gemüselasagne"],
             Excludes: ["Kartoffelgratin"]),
 
+        // ── Understood: a diet, a time, what to use and what to leave out ──
+        new("vegetarisch unter 30 Minuten", "constraint",
+            Contains: ["Tomatensuppe", "Müsliriegel"],
+            Excludes: ["Hähnchenbrustfilet mit Reis", "Kartoffelgratin", "Gemüselasagne"]),
+        new("was kann ich mit Kartoffeln machen?", "ingredient-led",
+            Top: ["Kartoffelgratin"],
+            Excludes: ["Spaghetti Bolognese", "Müsliriegel"]),
+        new("ohne Zwiebeln", "negation",
+            Contains: ["Kartoffelgratin"],
+            Excludes: ["Zwiebelkuchen", "Tomatensuppe", "Spaghetti Bolognese"]),
+        new("Hähnchen ohne Reis", "negation",
+            Contains: ["Chicken Curry"],
+            Excludes: ["Hähnchenbrustfilet mit Reis"]),
+        // Contradictory, and nothing is invented to paper over it.
+        new("vegetarisch mit Lachs", "conflict", Count: 0),
+
         // ── Steps are searched, which they never used to be ─────────────────
         new("abgelöscht", "step text", Contains: ["Spaghetti Bolognese"]),
 
@@ -354,6 +370,76 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Search_ShouldNeverPresumeAMeatDish_Vegetarian()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var vegetarian = Titles(await SearchAsync(world, "vegetarisch"));
+        var withoutMeat = Titles(await SearchAsync(world, "Gericht ohne Fleisch"));
+
+        // Assert
+        // Zwiebelkuchen has Speck in it. Nobody tagged it either way, and the
+        // ingredient says enough: a vegetarian shown bacon has been failed in
+        // a way a missing result never fails them.
+        Assert.DoesNotContain("Zwiebelkuchen", vegetarian);
+        Assert.DoesNotContain("Chicken Curry", vegetarian);
+        // Presumed vegetarian, because nothing in it says otherwise.
+        Assert.Contains("Müsliriegel", vegetarian);
+        Assert.Equal(vegetarian.Order(StringComparer.Ordinal), withoutMeat.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Search_ShouldSayWhatItUnderstood_WithTheCharactersItReadEachFrom()
+    {
+        // Arrange
+        var world = await SeedAsync();
+        const string query = "vegetarisch unter 30 Minuten mit Kartoffeln";
+
+        // Act
+        var response = await SearchAsync(world, query);
+        var interpretation = response.Json!.Value.GetProperty("interpretation");
+
+        // Assert
+        Assert.Equal(string.Empty, interpretation.GetProperty("freeText").GetString());
+        Assert.Equal(
+            ["diet:vegetarian:vegetarisch", "time:30:unter 30 Minuten", "ingredient:potato:mit Kartoffeln"],
+            Chips(response));
+
+        foreach (var chip in interpretation.GetProperty("applied").EnumerateArray())
+        {
+            var start = chip.GetProperty("start").GetInt32();
+            var end = chip.GetProperty("end").GetInt32();
+
+            Assert.Equal(chip.GetProperty("text").GetString(), query[start..end]);
+        }
+    }
+
+    [Fact]
+    public async Task Search_ShouldClaimNothing_WhenNothingWasInferred()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var dish = await SearchAsync(world, "Nudeln mit Tomatensoße");
+        var browse = await world.Client.GetAsync($"/api/v1/recipes?householdId={world.HouseholdId}", Token);
+
+        // Assert
+        // "mit" joins two foods in a dish's name here. Showing no chips is as
+        // much the design as showing four: a parser that invents a reading of
+        // every query teaches people to distrust the readings it means.
+        Assert.Empty(Chips(dish));
+        Assert.Equal(
+            "Nudeln mit Tomatensoße",
+            dish.Json!.Value.GetProperty("interpretation").GetProperty("freeText").GetString());
+        // And the plain library listing is exactly what it was.
+        Assert.False(browse.Json!.Value.TryGetProperty("interpretation", out var none)
+                     && none.ValueKind != System.Text.Json.JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task Search_ShouldTreatALikeMetacharacterAsInert()
     {
         // Arrange
@@ -401,7 +487,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Search_ShouldRankARecipeWithAnExcludedWord_BelowOneWithout()
+    public async Task Search_ShouldLeaveOutARecipe_WithAnExcludedWord()
     {
         // Arrange
         var world = await SeedAsync();
@@ -411,20 +497,18 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             [("Tomaten", null), ("Nudeln", null)], [], "Kochen.");
 
         // Act
-        var titles = Titles(await SearchAsync(world, "Tomaten -Reis"));
+        var response = await SearchAsync(world, "Tomaten -Reis");
+        var titles = Titles(response);
 
         // Assert
-        // The minus is a full-text operator, so it is the full-text evidence
-        // that honours it: a recipe containing the excluded word earns none.
-        // The substring lane knows nothing of operators and still finds it by
-        // "Tomaten", so the minus demotes rather than removes — but it can no
-        // longer come first on the strength of the very word it was asked not
-        // to have, which the cover-density rank used to let it.
-        var without = titles.IndexOf("Tomaten mit Nudeln");
-        var with = titles.IndexOf("Tomaten mit Reis");
-
-        Assert.True(without >= 0 && with >= 0, string.Join(" · ", titles));
-        Assert.True(without < with, string.Join(" · ", titles));
+        // The minus used to be a full-text operator, which only the full-text
+        // lane understood: the substring lane still found the rice dish by
+        // "Tomaten", so it was demoted rather than removed. Read as an
+        // exclusion it is removed, and says so as a chip that can be undone.
+        Assert.Contains("Tomaten mit Nudeln", titles);
+        Assert.DoesNotContain("Tomaten mit Reis", titles);
+        Assert.DoesNotContain("Hähnchenbrustfilet mit Reis", titles);
+        Assert.Equal(["exclusion:rice:-Reis"], Chips(response));
     }
 
     [Fact]
@@ -571,6 +655,14 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         world.Client.GetAsync(
             $"/api/v1/recipes?householdId={world.HouseholdId}&query={Uri.EscapeDataString(query)}",
             Token);
+
+    private static List<string> Chips(ApiResponse response) =>
+        response.Json!.Value.TryGetProperty("interpretation", out var interpretation)
+        && interpretation.ValueKind == System.Text.Json.JsonValueKind.Object
+            ? [.. interpretation.GetProperty("applied").EnumerateArray()
+                .Select(chip => $"{chip.GetProperty("kind").GetString()}:{chip.GetProperty("value").GetString()}:"
+                                + chip.GetProperty("text").GetString())]
+            : [];
 
     private static List<string> Titles(ApiResponse response) =>
         [.. response.Json!.Value.GetProperty("items").EnumerateArray()

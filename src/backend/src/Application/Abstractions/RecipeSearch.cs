@@ -27,7 +27,41 @@ public sealed record RecipeSearch(
     RecipeRules? Rules,
     RecipeSort Sort,
     string? Cursor,
-    int Limit);
+    int Limit)
+{
+    /// <summary>
+    /// What a query asked for beyond its words, once it has been understood.
+    /// </summary>
+    /// <remarks>
+    /// A property rather than a parameter: only the recipe list reads a query
+    /// for meaning, and every other caller of the search is better off not
+    /// having to say that it did not.
+    /// </remarks>
+    public RecipeConstraints Constraints { get; init; } = RecipeConstraints.None;
+}
+
+/// <summary>
+/// What a query was understood to ask, as the searcher needs it.
+/// </summary>
+/// <param name="Diets">Lexicon diets a recipe must keep, all of them.</param>
+/// <param name="Meals">Lexicon meals a recipe must be, any of them.</param>
+/// <param name="Cuisines">Lexicon cuisines a recipe must be, any of them.</param>
+/// <param name="Ingredients">Lexicon ingredients a recipe must use, at least one.</param>
+/// <param name="ExcludedConcepts">Lexicon concepts a recipe must not be or use.</param>
+/// <param name="ExcludedTerms">Words the lexicon does not know that no ingredient may be called.</param>
+/// <param name="Quick">Whether quick recipes should come first. Never a filter.</param>
+public sealed record RecipeConstraints(
+    IReadOnlyList<string> Diets,
+    IReadOnlyList<string> Meals,
+    IReadOnlyList<string> Cuisines,
+    IReadOnlyList<string> Ingredients,
+    IReadOnlyList<string> ExcludedConcepts,
+    IReadOnlyList<string> ExcludedTerms,
+    bool Quick)
+{
+    /// <summary>Nothing beyond the words.</summary>
+    public static RecipeConstraints None { get; } = new([], [], [], [], [], [], Quick: false);
+}
 
 /// <summary>The orders a recipe list can be returned in.</summary>
 public enum RecipeSort

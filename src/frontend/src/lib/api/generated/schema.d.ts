@@ -2029,6 +2029,33 @@ export interface components {
             recipe?: (null) | components["schemas"]["RecipesRecipeDetail"];
             problem?: (null) | components["schemas"]["StreamingProblem"];
         };
+        /** @description One thing the query was understood to ask. */
+        RecipesGetAllAppliedInference: {
+            /**
+             * @description `time`, `quick`, `diet`, `meal`, `cuisine`,
+             *             `ingredient` or `exclusion`.
+             */
+            kind: string;
+            /**
+             * @description What it means: minutes for a time; a stable key for a diet, meal,
+             *     cuisine and every ingredient or exclusion the server recognised
+             *     (`vegetarian`, `dinner`, `italian`, `potato`); and
+             *     the word as typed for anything it did not.
+             */
+            value: string;
+            /** @description The characters it was read from, exactly as typed. */
+            text: string;
+            /**
+             * Format: int32
+             * @description Where those characters begin in the query, in UTF-16 code units.
+             */
+            start: number;
+            /**
+             * Format: int32
+             * @description Where they end, exclusive.
+             */
+            end: number;
+        };
         /** @description How well a recipe fits what you have. */
         RecipesGetAllIngredientMatch: {
             /**
@@ -2046,6 +2073,13 @@ export interface components {
              * @description How many other ingredients it still needs.
              */
             missing: number;
+        };
+        /** @description A query, as the server read it. */
+        RecipesGetAllInterpretation: {
+            /** @description The words that were searched for, once everything below was taken out. */
+            freeText: string;
+            /** @description What was inferred, in the order it was typed. */
+            applied: components["schemas"]["RecipesGetAllAppliedInference"][];
         };
         /** @description A recipe as it appears in a list. */
         RecipesGetAllRecipeSummary: {
@@ -2108,6 +2142,7 @@ export interface components {
              * @description How many recipes match, across all pages.
              */
             total: number;
+            interpretation?: (null) | components["schemas"]["RecipesGetAllInterpretation"];
         };
         /** @description One time you cooked it. */
         RecipesGetCookLogCookLogItem: {
