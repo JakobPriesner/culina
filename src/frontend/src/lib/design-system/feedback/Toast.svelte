@@ -39,11 +39,11 @@
   onfocusin={() => onpause(toast.id)}
   onfocusout={() => onresume(toast.id)}
 >
-  <p class="message">{toast.message}</p>
+  <p class="message">{toast.message()}</p>
 
   {#if toast.action}
     <button class="action" type="button" onclick={() => onact(toast.id)}>
-      {toast.action.label}
+      {toast.action.label()}
     </button>
   {/if}
 
