@@ -171,6 +171,18 @@ public sealed record UpdateCookbookRequest
     public CookbookRulesContract? Rules { get; init; }
 }
 
+/// <summary>Which recipes are on a cookbook, by id.</summary>
+/// <remarks>
+/// Not paged, and not the recipes: this answers "is it already on?" for every
+/// row of a picker at once. The recipes themselves are
+/// <c>GET /recipes?cookbookId=…</c>, one screen at a time.
+/// </remarks>
+public sealed record CookbookRecipesResponse
+{
+    /// <summary>Every recipe on it.</summary>
+    public required IReadOnlyList<Guid> RecipeIds { get; init; }
+}
+
 /// <summary>Which cookbooks a recipe is on.</summary>
 /// <remarks>
 /// Not paged. A recipe is on a handful of shelves or none, and this answers the
