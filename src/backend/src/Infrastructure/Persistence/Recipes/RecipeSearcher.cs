@@ -1,5 +1,7 @@
+using System.Text.RegularExpressions;
 using Application.Abstractions;
 using Dapper;
+using Domain.Search;
 using Domain.Suggestions;
 using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Suggestions;
@@ -77,7 +79,7 @@ internal sealed record RecipeSearchRowData
 /// <param name="executor">Runs the SQL.</param>
 /// <param name="time">The clock the suggested order is ranked against.</param>
 /// <param name="weights">What each term of the suggested order is worth.</param>
-internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, RankingWeights weights)
+internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider time, RankingWeights weights)
 {
     /// <summary>A hard ceiling, enforced here and not only in the endpoint.</summary>
     internal const int MaxLimit = 100;
@@ -377,11 +379,14 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
         var tags = search.Tags.Distinct(StringComparer.Ordinal).ToArray();
         var ingredients = search.Ingredients.ToArray();
 
+        var query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim();
+
         var parameters = new DynamicParameters(new
         {
             householdId = search.HouseholdId,
             userId = search.UserId,
-            query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim(),
+            query,
+            concepts = ConceptsAskedFor(query),
             fuzzyThreshold = FuzzyThreshold,
             tags,
             tagCount = tags.Length,
@@ -424,6 +429,20 @@ internal sealed class RecipeSearcher(DbExecutor executor, TimeProvider time, Ran
 
         return parameters;
     }
+
+    /// <summary>
+    /// The concepts a query names, for the concept lane.
+    /// </summary>
+    /// <remarks>
+    /// A word with a minus in front of it is one the query asked not to have,
+    /// so it names nothing to look for: "Tomaten -Reis" must not bring in every
+    /// rice dish by what rice is.
+    /// </remarks>
+    private static string[] ConceptsAskedFor(string? query) =>
+        query is null ? [] : [.. CulinaryLexicon.Recognise(Excluded().Replace(query, " "))];
+
+    [GeneratedRegex(@"(?<!\S)-\S+")]
+    private static partial Regex Excluded();
 
     /// <summary>
     /// The day being ranked for, not the instant.
