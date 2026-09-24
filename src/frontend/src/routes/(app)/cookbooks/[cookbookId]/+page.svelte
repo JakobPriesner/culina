@@ -402,6 +402,7 @@
     {:else}
       <RecipeGrid
         recipes={shelf.items}
+        query={view.query}
         loading={shelf.status === 'loading' && shelf.items.length === 0}
         onmore={autoLoads ? more : undefined}
       />

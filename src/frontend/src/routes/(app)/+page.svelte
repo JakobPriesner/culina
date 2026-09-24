@@ -432,6 +432,7 @@
 
     <RecipeGrid
       recipes={library}
+      query={libraryView.query}
       loading={!settled ||
         !leadKnown ||
         (recipes.status === 'loading' && recipes.items.length === 0)}

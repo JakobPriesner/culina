@@ -14,6 +14,7 @@
   import SearchChips from './SearchChips.svelte';
   import SearchNotice from './SearchNotice.svelte';
   import { createCompletionStore } from './stores/completions.svelte';
+  import Highlighted from './Highlighted.svelte';
   import { cuisineLabel, reasonLine, withoutChip } from './wording';
 
   /**
@@ -389,10 +390,14 @@
                   />
                 </span>
                 <span class="text">
-                  <span class="label">{option.recipe.title}</span>
+                  <span class="label"
+                    ><Highlighted text={option.recipe.title} query={applied} /></span
+                  >
                   <span class="meta">{metaLineFor(option.recipe)}</span>
                   {#if option.recipe.matchReason}
-                    <span class="reason">{reasonLine(option.recipe.matchReason)}</span>
+                    <span class="reason">
+                      <Highlighted text={reasonLine(option.recipe.matchReason)} query={applied} />
+                    </span>
                   {/if}
                 </span>
               </a>

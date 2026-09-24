@@ -28,9 +28,11 @@
      * has to be free to call while its own request is still running.
      */
     onmore?: () => void;
+    /** What was searched for, marked in each result it found. */
+    query?: string;
   }
 
-  let { recipes, loading = false, pending = [], onmore }: Props = $props();
+  let { recipes, loading = false, pending = [], onmore, query }: Props = $props();
 
   /** Enough to fill the visible area without pretending to know the count. */
   const placeholders = [0, 1, 2, 3, 4, 5];
@@ -51,7 +53,7 @@
 {:else}
   <ul class="grid">
     {#each recipes as recipe (recipe.id)}
-      <li><RecipeCard {recipe} pending={pending.includes(recipe.id)} /></li>
+      <li><RecipeCard {recipe} {query} pending={pending.includes(recipe.id)} /></li>
     {/each}
 
     <!-- The end of the list, drawn as the rows that are coming. Reaching them
