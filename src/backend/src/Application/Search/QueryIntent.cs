@@ -44,7 +44,12 @@ public enum InferenceKind
 /// <param name="Text">The characters it was read from, as typed.</param>
 /// <param name="Start">Where they begin in the query.</param>
 /// <param name="End">Where they end, exclusive.</param>
-public sealed record Inference(InferenceKind Kind, string Value, string Text, int Start, int End);
+/// <param name="Word">
+/// For an ingredient or an exclusion, the thing itself as typed — "Kartoffeln"
+/// out of "was kann ich mit Kartoffeln machen?" — which is what a chip is
+/// labelled with while the span says what removing it deletes.
+/// </param>
+public sealed record Inference(InferenceKind Kind, string Value, string Text, int Start, int End, string? Word = null);
 
 /// <summary>
 /// A query, understood: the words still to be searched for, and everything

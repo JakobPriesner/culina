@@ -8,6 +8,10 @@
 
   import { effectiveSort, type RecipeQuery, type SortContext } from '../stores/libraryView.svelte';
   import { savedSearches, type SavedSearch } from '../stores/savedSearches.svelte';
+  import SearchChips from '../search/SearchChips.svelte';
+  import SearchNotice from '../search/SearchNotice.svelte';
+  import { withoutChip } from '../search/wording';
+  import type { Interpretation, SearchChip } from '../types';
   import FilterSheet from './FilterSheet.svelte';
   import SavedSearchSheet from './SavedSearchSheet.svelte';
   import { sortLabel, timeLabel } from './labels';
@@ -40,6 +44,14 @@
     savable?: boolean;
     /** The count, the order note — whatever the page says about its own list. */
     summary?: Snippet;
+    /**
+     * What the server read the applied query to mean, and how many it found:
+     * the chips and notices under the box. Absent where nothing searches.
+     */
+    interpretation?: Interpretation | null;
+    total?: number;
+    /** The reader turned the server's correction of their words down. */
+    onastyped?: () => void;
     onpromote?: (search: SavedSearch) => void;
   }
 
@@ -52,8 +64,21 @@
     searchPlaceholder,
     savable = false,
     summary,
+    interpretation = null,
+    total = 0,
+    onastyped,
     onpromote
   }: Props = $props();
+
+  /** A reading removed is its characters removed from the query, applied at once. */
+  function removeChip(chip: SearchChip) {
+    const next = withoutChip(view.query, chip);
+
+    clearTimeout(debounce);
+    typed = next;
+    pushed = next;
+    view.query = next;
+  }
 
   /** What is in the box, which runs ahead of what has been applied. */
   let typed = $state(untrack(() => view.query));
@@ -171,6 +196,18 @@
       <div class="summary">{@render summary()}</div>
     {/if}
   </div>
+
+  {#if interpretation}
+    <SearchChips chips={interpretation.chips} onremove={removeChip} />
+    <SearchNotice
+      {interpretation}
+      {total}
+      query={view.query}
+      offer={false}
+      onastyped={() => onastyped?.()}
+      onremove={removeChip}
+    />
+  {/if}
 
   {#if savable && savedSearches.items.length > 0}
     <div class="saved" role="group" aria-label={m['saved.title']()}>

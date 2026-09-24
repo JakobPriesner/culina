@@ -1,8 +1,15 @@
 import { ErrorCodes, http, request, type AppError } from '$api';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
-import { toRecipe, toSummary, toWireGroups, toWireSteps } from '../mappers';
-import type { Recipe, RecipeSummary } from '../types';
+import {
+  toFacets,
+  toInterpretation,
+  toRecipe,
+  toSummary,
+  toWireGroups,
+  toWireSteps
+} from '../mappers';
+import type { Facets, Interpretation, Recipe, RecipeSummary } from '../types';
 
 import { toWireSort, type RecipeSort } from './libraryView.svelte';
 
@@ -37,6 +44,11 @@ export interface RecipeFilters {
    * lets it compose with every filter above it.
    */
   readonly sort?: RecipeSort;
+  /**
+   * Search the words exactly as typed: the reader turned the server's
+   * correction of them down.
+   */
+  readonly asTyped?: boolean;
 }
 
 const pageSize = 24;
@@ -48,6 +60,8 @@ class RecipeStore {
   #error = $state<AppError | null>(null);
   #total = $state(0);
   #cursor = $state<string | null>(null);
+  #interpretation = $state<Interpretation | null>(null);
+  #facets = $state<Facets | null>(null);
   #loadingMore = $state(false);
   #moreFailed = $state(false);
   /** Ids of rows whose change has been applied here but not yet confirmed. */
@@ -95,6 +109,21 @@ class RecipeStore {
     return this.#total;
   }
 
+  /**
+   * What the server read the last query to mean, or null without one.
+   *
+   * Kept with the list it describes, and replaced with it, so the chips on
+   * screen are always the reading of the results on screen.
+   */
+  get interpretation(): Interpretation | null {
+    return this.#interpretation;
+  }
+
+  /** Refinements that split the current results, or null. */
+  get facets(): Facets | null {
+    return this.#facets;
+  }
+
   /** True while more pages exist. */
   get hasMore(): boolean {
     return this.#cursor !== null;
@@ -135,6 +164,8 @@ class RecipeStore {
         this.#items = page.items;
         this.#cursor = page.nextCursor;
         this.#total = page.total;
+        this.#interpretation = page.interpretation;
+        this.#facets = page.facets;
         this.#status = 'ready';
       },
       (error) => {
@@ -324,6 +355,8 @@ class RecipeStore {
     this.#error = null;
     this.#total = 0;
     this.#cursor = null;
+    this.#interpretation = null;
+    this.#facets = null;
     this.#loadingMore = false;
     this.#moreFailed = false;
     this.#pending = [];
@@ -361,7 +394,8 @@ class RecipeStore {
             cookbookId: filters.cookbookId,
             sort: filters.sort ? toWireSort(filters.sort) : undefined,
             cursor: cursor ?? undefined,
-            limit: pageSize
+            limit: pageSize,
+            asTyped: filters.asTyped ? 'true' : undefined
           }
         }
       })
@@ -373,6 +407,8 @@ class RecipeStore {
           items: RecipeSummary[];
           nextCursor: string | null;
           total: number;
+          interpretation: Interpretation | null;
+          facets: Facets | null;
         }) => TOut,
         onError: (error: AppError) => TOut
       ): TOut =>
@@ -380,7 +416,11 @@ class RecipeStore {
           ? onPage({
               items: result.value.items.map(toSummary),
               nextCursor: result.value.nextCursor ?? null,
-              total: result.value.total
+              total: result.value.total,
+              interpretation: result.value.interpretation
+                ? toInterpretation(result.value.interpretation)
+                : null,
+              facets: result.value.facets ? toFacets(result.value.facets) : null
             })
           : onError(result.error)
     };

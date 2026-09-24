@@ -6,6 +6,7 @@
   import { m } from '$shell/i18n';
   import { imageSrcset, imageUrl } from './recipeImage';
   import { matchLineFor, metaLineFor } from './recipeMeta';
+  import { reasonLine } from './search/wording';
   import type { RecipeSummary } from './types';
 
   /**
@@ -30,6 +31,11 @@
   const meta = $derived(metaLineFor(recipe));
   const match = $derived(matchLineFor(recipe));
   const eyebrow = $derived(recipe.tags[0] ?? null);
+  /**
+   * Why a search found it, when its title does not say — the question somebody
+   * asks silently about every result they did not expect.
+   */
+  const reason = $derived(recipe.matchReason ? reasonLine(recipe.matchReason) : null);
 </script>
 
 <article class="recipe" class:pending aria-busy={pending || undefined}>
@@ -71,6 +77,10 @@
 
   {#if match}
     <p class="match" class:complete={recipe.match?.missing === 0}>{match}</p>
+  {/if}
+
+  {#if reason}
+    <p class="reason">{reason}</p>
   {/if}
 </article>
 
@@ -161,6 +171,12 @@
   .meta {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  .reason {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-style: italic;
   }
 
   .match {

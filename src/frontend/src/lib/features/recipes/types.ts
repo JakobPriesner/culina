@@ -92,7 +92,90 @@ export interface RecipeSummary {
   readonly lastCookedAt: string | null;
   readonly updatedAt: string;
   readonly match: IngredientMatch | null;
+  /**
+   * Why it answers a search its title does not name. Absent outside a search,
+   * and null for a title match.
+   */
+  readonly matchReason?: MatchReason | null;
 }
+
+/**
+ * Why a recipe is in a search it does not name in its title.
+ *
+ * `concept` is a match through what the recipe is rather than what it says —
+ * Waffeln for "Nachtisch" — and always carries a reason, so an associative
+ * match never looks like a real one.
+ */
+export interface MatchReason {
+  readonly kind: 'ingredient' | 'tag' | 'text' | 'concept';
+  /** The ingredient or tag as the recipe writes it, or the concept in its language. */
+  readonly term: string | null;
+}
+
+export type ChipKind = 'time' | 'quick' | 'diet' | 'meal' | 'cuisine' | 'ingredient' | 'exclusion';
+
+/**
+ * One thing the server read a query to mean, and the characters it read it
+ * from: deleting `start`–`end` from the query and asking again removes it.
+ */
+export interface SearchChip {
+  readonly kind: ChipKind;
+  /** Minutes, a stable key (`vegetarian`, `dinner`, `italian`), or a word as typed. */
+  readonly value: string;
+  readonly text: string;
+  readonly start: number;
+  readonly end: number;
+  /** For an ingredient or an exclusion, the thing itself as typed. */
+  readonly word: string | null;
+}
+
+/** A query, as the server understood it. */
+export interface Interpretation {
+  readonly freeText: string;
+  readonly chips: readonly SearchChip[];
+  /** What was typed, when the words were corrected; `freeText` is the correction. */
+  readonly correctedFrom: string | null;
+  /** Readings set aside because nothing matched all of them. */
+  readonly relaxed: readonly SearchChip[];
+  /** Two readings that rule each other out, when that is why nothing matched. */
+  readonly conflict: readonly SearchChip[];
+}
+
+export interface Facet {
+  readonly value: string;
+  readonly label: string | null;
+  readonly count: number;
+}
+
+/** Refinements that split the results, counted over all of them. */
+export interface Facets {
+  readonly tags: readonly Facet[];
+  readonly times: readonly Facet[];
+  readonly cuisines: readonly Facet[];
+}
+
+/** What a half-typed search could become. */
+export type Completion =
+  | {
+      readonly kind: 'recipe';
+      readonly label: string;
+      readonly recipeId: string;
+      readonly imageId: string | null;
+      readonly totalMinutes: number | null;
+    }
+  | { readonly kind: 'ingredient'; readonly label: string; readonly recipeCount: number }
+  | {
+      readonly kind: 'tag';
+      readonly label: string;
+      readonly slug: string;
+      readonly recipeCount: number;
+    }
+  | {
+      readonly kind: 'refinement';
+      readonly label: string;
+      readonly recipeCount: number;
+      readonly maxMinutes: number;
+    };
 
 /**
  * Why a recipe was suggested.

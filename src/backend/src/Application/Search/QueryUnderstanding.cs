@@ -206,7 +206,7 @@ public static class QueryUnderstanding
                     var start = tokens[from].Negated && from == objectAt ? tokens[from].Start - 1 : tokens[from].Start;
 
                     Take(from, objectAt + size - 1, InferenceKind.Exclusion,
-                        concept?.Key ?? tokens[objectAt].Text, start);
+                        concept?.Key ?? tokens[objectAt].Text, start, Span(objectAt, objectAt + size - 1));
 
                     // "ohne Zwiebeln und Knoblauch" leaves out both.
                     var next = objectAt + size;
@@ -341,7 +341,8 @@ public static class QueryUnderstanding
                     }
 
                     ingredients.Add(LineName(concept, Span(at, at + size - 1)));
-                    found.Add(Take(at, at + size - 1, InferenceKind.Ingredient, concept.Key));
+                    found.Add(Take(at, at + size - 1, InferenceKind.Ingredient, concept.Key,
+                        word: Span(at, at + size - 1)));
                     index += size - 1;
 
                     break;
@@ -499,7 +500,13 @@ public static class QueryUnderstanding
             return 1;
         }
 
-        private Inference Take(int first, int last, InferenceKind kind, string value, int? start = null)
+        private Inference Take(
+            int first,
+            int last,
+            InferenceKind kind,
+            string value,
+            int? start = null,
+            string? word = null)
         {
             for (var at = first; at <= last; at++)
             {
@@ -507,7 +514,7 @@ public static class QueryUnderstanding
             }
 
             var from = start ?? tokens[first].Start;
-            var inference = new Inference(kind, value, query[from..tokens[last].End], from, tokens[last].End);
+            var inference = new Inference(kind, value, query[from..tokens[last].End], from, tokens[last].End, word);
 
             applied.Add(inference);
 

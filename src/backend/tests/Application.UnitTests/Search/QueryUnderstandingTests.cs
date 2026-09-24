@@ -104,6 +104,20 @@ public class QueryUnderstandingTests
     }
 
     [Fact]
+    public void Parse_ShouldKeepTheWordItself_WhenTheChipSpansTheSentence()
+    {
+        // Act
+        var chip = QueryUnderstanding.Parse("was kann ich mit Kartoffeln machen?").Applied.Single();
+        var exclusion = QueryUnderstanding.Parse("Suppe ohne Zwiebeln").Applied.Single();
+
+        // Assert
+        Assert.Equal("was kann ich mit Kartoffeln machen", chip.Text);
+        Assert.Equal("Kartoffeln", chip.Word);
+        Assert.Equal("ohne Zwiebeln", exclusion.Text);
+        Assert.Equal("Zwiebeln", exclusion.Word);
+    }
+
+    [Fact]
     public void Parse_ShouldNameIngredients_AsAnIngredientLineWould()
     {
         // Act
