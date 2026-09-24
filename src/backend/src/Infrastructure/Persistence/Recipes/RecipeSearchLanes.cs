@@ -377,6 +377,33 @@ internal static class RecipeSearchLanes
         + 0.30 * query_coverage
         + 0.20 * lexical_rank
         + 0.15 * structural_fit
+        + 0.10 * quick_fit
+        """;
+
+    /// <summary>
+    /// How well a recipe answers "schnell", when that was asked.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A preference and so a nudge, never a filter. "unter 30 Minuten" states a
+    /// number and means it; "schnell" states an intent, and turning it into
+    /// thirty minutes would silently drop the twenty-five-minute recipe
+    /// nobody wrote a time on. So a recipe known to be quick is lifted, one
+    /// with no stated time is lifted half as far, and nothing is removed.
+    /// </para>
+    /// <para>
+    /// Outside the four weights above, which sum to one: zero whenever
+    /// nobody asked, so it changes no order but the one it was asked for.
+    /// </para>
+    /// </remarks>
+    internal const string QuickFit = """
+        case
+            when not @quick then 0.0::float8
+            when total_minutes is null then 0.5::float8
+            when total_minutes <= 30 then 1.0::float8
+            when total_minutes <= 45 then 0.5::float8
+            else 0.0::float8
+        end
         """;
 
     /// <summary>
