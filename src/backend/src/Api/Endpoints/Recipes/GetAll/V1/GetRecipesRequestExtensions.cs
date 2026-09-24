@@ -110,6 +110,22 @@ internal static class GetRecipesRequestExtensions
                 + "'suggested', 'cookbookOrder'.")
         };
 
+    /// <summary>
+    /// Whether the reader turned a correction down: <c>asTyped=true</c>, or
+    /// absent.
+    /// </summary>
+    internal static Result<bool> ReadAsTyped(this IQueryCollection query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        return query["asTyped"].ToString() switch
+        {
+            "" or "false" => false,
+            "true" => true,
+            _ => new FieldError("asTyped", "request.unknown_parameter", "asTyped must be 'true' or 'false'.")
+        };
+    }
+
     /// <summary>Reads an optional cookbook to read inside.</summary>
     private static bool TryReadCookbook(IQueryCollection query, out Guid? value, out Error? failure)
     {

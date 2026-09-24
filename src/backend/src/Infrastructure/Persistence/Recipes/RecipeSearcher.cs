@@ -44,6 +44,13 @@ internal sealed record RecipeSearchRowData
 
     public DateTimeOffset? AddedToCookbookAt { get; init; }
 
+    public string Language { get; init; } = "de";
+
+    /// <summary>Why a row that is not a title match is here; see <see cref="RecipeSearcher"/>.</summary>
+    public string? ReasonKind { get; init; }
+
+    public string? ReasonTerm { get; init; }
+
     /// <summary>Which kind of evidence put this row here. Lower is stronger.</summary>
     public int Tier { get; init; }
 
@@ -278,6 +285,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             r.yield_amount,
             r.yield_kind,
             r.yield_label,
+            r.language,
             r.updated_at,
             -- One scan for both facts rather than two over the same index:
             -- cook_log_recipe_user_idx is (recipe_id, user_id, made_at desc),
@@ -342,12 +350,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         // Both still read the same rules in the same statement, so the count
         // cannot disagree with the list it counts.
         var sql = $$"""
-            with {{scoring}}q as ({{RecipeSearchLanes.QueryCte}}),
-            hits as ({{RecipeSearchLanes.Hits}}),
-            wanted as ({{Holders("@ingredients::text[]")}}),
-            required as ({{Holders("@ruleIngredients::text[]")}}),
-            unwanted as ({{Holders("@excludedTerms::text[]")}}),
-            matching as (select r.id {{Sources(scored)}} {{Rules(scored)}}),
+            with {{scoring}}{{Filtered(scored)}},
             candidates as ({{(scored ? ScoredCandidates : PlainCandidates)}}),
             ranked as (
                 select *,
@@ -375,8 +378,12 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
                         join tags t on t.id = rt.tag_id
                         where rt.recipe_id = page.id
                         order by t.slug),
-                    '{}') as tags
+                    '{}') as tags,
+                reason.kind as reason_kind,
+                reason.term as reason_term
             from page
+            cross join q
+            left join lateral ({{MatchReasonSql}}) reason on true
             order by {{order}};
             """;
 
@@ -392,6 +399,140 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             NextCursorFor(search.Sort, rows.Count > limit, page),
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
+
+    /// <summary>
+    /// Counts what every match could be narrowed by.
+    /// </summary>
+    /// <remarks>
+    /// Over the same <c>matching</c> set the page is cut from, in the same
+    /// words, so a refinement's count is exactly how many results it leaves.
+    /// A second statement rather than more columns on the page: it runs once
+    /// per question, on its first page only, and the page stays the shape it
+    /// was.
+    /// </remarks>
+    internal async Task<SearchFacets> FacetsAsync(RecipeSearch search, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(search);
+
+        var sql = $$"""
+            with {{Filtered(scored: false)}}
+            select 'tag' as kind, t.slug as value, min(t.name) as label, count(*)::int as count
+            from matching m
+            join recipe_tags rt on rt.recipe_id = m.id
+            join tags t on t.id = rt.tag_id
+            group by t.slug
+            union all
+            select 'time', band::text, null, count(*)::int
+            from matching m
+            join recipes r on r.id = m.id
+            cross join unnest(array[15, 30, 45, 60]) as band
+            where (r.prep_minutes is not null or r.cook_minutes is not null)
+              and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= band
+            group by band
+            union all
+            select 'cuisine', cuisine, null, count(*)::int
+            from matching m
+            join recipe_search_documents d on d.recipe_id = m.id
+            cross join unnest(d.concepts) as cuisine
+            where cuisine = any(@cuisineKeys::text[])
+            group by cuisine
+            union all
+            select 'total', '', null, (select count(*)::int from matching);
+            """;
+
+        var parameters = Parameters(search, cursor: null, scored: false);
+        parameters.Add("cuisineKeys", Cuisines);
+
+        var rows = await executor.QueryAsync<FacetRow>(sql, parameters, cancellationToken).ConfigureAwait(false);
+
+        List<Facet> Of(string kind) =>
+            [.. rows.Where(row => row.Kind == kind).Select(row => new Facet(row.Value, row.Label, row.Count))];
+
+        return new SearchFacets(
+            rows.Where(row => row.Kind == "total").Select(row => row.Count).FirstOrDefault(),
+            Of("tag"),
+            Of("time"),
+            Of("cuisine"));
+    }
+
+    private static readonly string[] Cuisines =
+        [.. CulinaryLexicon.All.Where(concept => concept.Kind == ConceptKind.Cuisine).Select(concept => concept.Key)];
+
+    private sealed record FacetRow
+    {
+        public string Kind { get; init; } = string.Empty;
+
+        public string Value { get; init; } = string.Empty;
+
+        public string? Label { get; init; }
+
+        public int Count { get; init; }
+    }
+
+    /// <summary>
+    /// The query and every table expression that decides which recipes match:
+    /// what the page, the count and the facets are all cut from.
+    /// </summary>
+    private static string Filtered(bool scored) => $$"""
+        q as ({{RecipeSearchLanes.QueryCte}}),
+        hits as ({{RecipeSearchLanes.Hits}}),
+        wanted as ({{Holders("@ingredients::text[]")}}),
+        required as ({{Holders("@ruleIngredients::text[]")}}),
+        unwanted as ({{Holders("@excludedTerms::text[]")}}),
+        matching as (select r.id {{Sources(scored)}} {{Rules(scored)}})
+        """;
+
+    /// <summary>
+    /// Why a row on the page answers the query, when its title does not say.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The question a reader asks silently about every result they did not
+    /// expect, answered in one quiet line: "Zutat: Hähnchenbrust", "Ähnlich:
+    /// Dessert". Nothing for a title match, because "it is called that" is not
+    /// worth a line, and always something for a match through the lexicon
+    /// alone — an associative match must look different from a real one.
+    /// </para>
+    /// <para>
+    /// Worked out for the rows on the page only, after the order is settled:
+    /// the ingredient and tag it names are looked up for twenty recipes, not
+    /// for every candidate.
+    /// </para>
+    /// </remarks>
+    private const string MatchReasonSql = """
+        select
+            case
+                when not page.has_text or page.tier <= 1 or page.fuzzy_title then null
+                when page.tier = 5 then 'concept'
+                when found_ingredient.name is not null then 'ingredient'
+                when found_tag.name is not null then 'tag'
+                else 'text'
+            end as kind,
+            case
+                when not page.has_text or page.tier <= 1 or page.fuzzy_title then null
+                when page.tier = 5 then (@concepts::text[])[1]
+                else coalesce(found_ingredient.name, found_tag.name)
+            end as term
+        from (select 1) as one
+        left join lateral (
+            select i.name from recipe_ingredients i
+            join ingredient_groups g on g.id = i.group_id
+            where g.recipe_id = page.id
+              and exists (select 1 from unnest(q.terms) as term
+                          where culina_fold_ae(i.name) like '%' || term || '%'
+                             or culina_fold_a(i.name) like '%' || term || '%')
+            order by g.sort_order, i.sort_order
+            limit 1) found_ingredient on true
+        left join lateral (
+            select t.name from recipe_tags rt
+            join tags t on t.id = rt.tag_id
+            where rt.recipe_id = page.id
+              and exists (select 1 from unnest(q.terms) as term
+                          where culina_fold_ae(t.name) like '%' || term || '%'
+                             or culina_fold_a(t.name) like '%' || term || '%')
+            order by t.slug
+            limit 1) found_tag on true
+        """;
 
     private DynamicParameters Parameters(RecipeSearch search, RecipeCursor? cursor, bool scored)
     {
@@ -506,7 +647,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             ? new RecipeCursor(sort, RecipeSearchSql.KeysOf(sort, page[^1]), page[^1].Id).Encode()
             : null;
 
-    private static RecipeSearchRow ToRow(RecipeSearchRowData data) => new(
+    private static RecipeSearchRow ToRow(RecipeSearchRowData data) => new RecipeSearchRow(
         data.Id,
         data.Title,
         data.ImageId,
@@ -520,5 +661,8 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         data.UpdatedAt,
         data.MatchedIngredients,
         data.IngredientCount,
-        data.AddedToCookbookAt);
+        data.AddedToCookbookAt)
+    {
+        Reason = data.ReasonKind is { } kind ? new MatchReason(kind, data.ReasonTerm, data.Language) : null
+    };
 }

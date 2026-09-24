@@ -20,6 +20,44 @@ public sealed record Response
     /// What the query was understood to mean, or null when there was no query.
     /// </summary>
     public Interpretation? Interpretation { get; init; }
+
+    /// <summary>
+    /// What these results could be narrowed by, counted over all of them — or
+    /// null when there was no query, or nothing would split them.
+    /// </summary>
+    public Facets? Facets { get; init; }
+}
+
+/// <summary>
+/// Refinements worth offering, computed from the results rather than curated.
+/// </summary>
+/// <remarks>
+/// Each one leaves between a fifth and four fifths of the results: a
+/// refinement that removes nothing, or everything, is a tap wasted.
+/// </remarks>
+public sealed record Facets
+{
+    /// <summary>Tags, by slug, with the household's own name for each.</summary>
+    public required IReadOnlyList<Facet> Tags { get; init; }
+
+    /// <summary>Time ceilings, in minutes.</summary>
+    public required IReadOnlyList<Facet> Times { get; init; }
+
+    /// <summary>Cuisines, by the same keys a cuisine reading uses.</summary>
+    public required IReadOnlyList<Facet> Cuisines { get; init; }
+}
+
+/// <summary>One refinement, and how many results it would leave.</summary>
+public sealed record Facet
+{
+    /// <summary>A tag slug, a number of minutes, or a cuisine key.</summary>
+    public required string Value { get; init; }
+
+    /// <summary>The household's name for a tag; null for the others, which a client words itself.</summary>
+    public string? Label { get; init; }
+
+    /// <summary>How many of the results it would leave.</summary>
+    public required int Count { get; init; }
 }
 
 /// <summary>
@@ -38,6 +76,25 @@ public sealed record Interpretation
 
     /// <summary>What was inferred, in the order it was typed.</summary>
     public required IReadOnlyList<AppliedInference> Applied { get; init; }
+
+    /// <summary>
+    /// The words as typed, when nothing matched them and a correction did —
+    /// <c>freeText</c> is then the correction. Resend with <c>asTyped=true</c>
+    /// to search what was typed instead.
+    /// </summary>
+    public string? CorrectedFrom { get; init; }
+
+    /// <summary>
+    /// Readings set aside because nothing matched all of them, weakest first:
+    /// cuisine, meal, ingredient, time. A diet or an exclusion never is.
+    /// </summary>
+    public IReadOnlyList<AppliedInference>? Relaxed { get; init; }
+
+    /// <summary>
+    /// Two readings that cannot both hold — a diet and an ingredient it rules
+    /// out — when that is why nothing matched.
+    /// </summary>
+    public IReadOnlyList<AppliedInference>? Conflict { get; init; }
 }
 
 /// <summary>One thing the query was understood to ask.</summary>
@@ -131,6 +188,28 @@ public sealed record RecipeSummary
     /// about any.
     /// </summary>
     public IngredientMatch? IngredientMatch { get; init; }
+
+    /// <summary>
+    /// Why it answers the query, when that is not its title — null for a title
+    /// match, and for a list without words.
+    /// </summary>
+    public MatchReason? MatchReason { get; init; }
+}
+
+/// <summary>Why a recipe is in a search it does not name in its title.</summary>
+public sealed record MatchReason
+{
+    /// <summary>
+    /// <c>ingredient</c>, <c>tag</c>, <c>text</c> (its description or a step)
+    /// or <c>concept</c> (only through what it is — "Waffeln" for "Nachtisch").
+    /// </summary>
+    public required string Kind { get; init; }
+
+    /// <summary>
+    /// The ingredient or tag as the recipe writes it, or the concept in the
+    /// recipe's language; null for text.
+    /// </summary>
+    public string? Term { get; init; }
 }
 
 /// <summary>
