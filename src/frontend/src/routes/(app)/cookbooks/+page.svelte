@@ -62,7 +62,7 @@
       return;
     }
 
-    toaster.show({ message: m['cookbooks.add.failed'](), tone: 'danger' });
+    toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
   }
 </script>
 

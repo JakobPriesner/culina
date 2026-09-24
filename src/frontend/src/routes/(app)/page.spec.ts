@@ -203,7 +203,7 @@ describe('opening the library', () => {
     // What matters here is that the page asked for an undoable message.
     const toast = toaster.toasts.at(-1);
 
-    expect(toast?.action?.label).toBe('Undo');
+    expect(toast?.action?.label()).toBe('Undo');
 
     // And that the undo actually reaches the server.
     toast?.action?.run();

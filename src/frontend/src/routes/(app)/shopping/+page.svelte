@@ -140,7 +140,7 @@
     taken = taken.filter((id) => id !== recipe.id);
     picking = false;
 
-    toaster.show({ message: explain(failure), tone: 'danger' });
+    toaster.show({ message: () => explain(failure), tone: 'danger' });
   }
 
   function stopPicking() {

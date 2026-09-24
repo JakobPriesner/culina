@@ -151,8 +151,10 @@
       return;
     }
 
+    const failure = cookbooks.error;
+
     toaster.show({
-      message: cookbooks.error ? explain(cookbooks.error) : m['cookbooks.add.failed'](),
+      message: () => (failure ? explain(failure) : m['cookbooks.add.failed']()),
       tone: 'danger'
     });
   }
@@ -162,14 +164,14 @@
     const done = await cookbooks.remove(cookbookId);
 
     if (!done) {
-      toaster.show({ message: m['cookbooks.delete.failed'](), tone: 'danger' });
+      toaster.show({ message: () => m['cookbooks.delete.failed'](), tone: 'danger' });
 
       return;
     }
 
     // Said plainly, because "delete" next to a list of recipes is a frightening
     // word and the reassurance is the true part.
-    toaster.show({ message: m['cookbooks.delete.done']({ name }) });
+    toaster.show({ message: () => m['cookbooks.delete.done']({ name }) });
 
     await goto(resolve('/(app)/cookbooks'));
   }
@@ -182,12 +184,12 @@
     const done = await cookbooks.setOn(recipeId, { id: cookbook.id, name: cookbook.name }, true);
 
     if (!done) {
-      toaster.show({ message: m['cookbooks.add.failed'](), tone: 'danger' });
+      toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
 
       return;
     }
 
-    toaster.show({ message: m['cookbooks.addRecipes.added']({ title }) });
+    toaster.show({ message: () => m['cookbooks.addRecipes.added']({ title }) });
     reload();
   }
 
@@ -199,11 +201,13 @@
 
     const done = await cookbooks.setOn(recipeId, { id: cookbook.id, name: cookbook.name }, false);
 
+    const failure = cookbooks.error;
+
     toaster.show(
       done
-        ? { message: m['cookbooks.addRecipes.removed']({ title }) }
+        ? { message: () => m['cookbooks.addRecipes.removed']({ title }) }
         : {
-            message: cookbooks.error ? explain(cookbooks.error) : m['cookbooks.takeOff.failed'](),
+            message: () => (failure ? explain(failure) : m['cookbooks.takeOff.failed']()),
             tone: 'danger'
           }
     );
@@ -224,7 +228,7 @@
    */
   async function addToShoppingList() {
     if (!householdId || shelf.items.length === 0) {
-      toaster.show({ message: m['cookbooks.shopping.empty']() });
+      toaster.show({ message: () => m['cookbooks.shopping.empty']() });
 
       return;
     }
@@ -246,9 +250,9 @@
 
     toaster.show(
       done === wanted.length
-        ? { message: m['cookbooks.shopping.done']({ count: done }) }
+        ? { message: () => m['cookbooks.shopping.done']({ count: done }) }
         : {
-            message: m['cookbooks.shopping.partial']({ done, total: wanted.length }),
+            message: () => m['cookbooks.shopping.partial']({ done, total: wanted.length }),
             tone: 'danger'
           }
     );

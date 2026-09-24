@@ -253,16 +253,16 @@
     const failure = await suggestions.dismiss(recipeId);
 
     if (failure) {
-      toaster.show({ message: m['suggestions.dismissFailed'](), tone: 'danger' });
+      toaster.show({ message: () => m['suggestions.dismissFailed'](), tone: 'danger' });
 
       return;
     }
 
     toaster.show({
-      message: m['suggestions.dismissed'](),
+      message: () => m['suggestions.dismissed'](),
       tone: 'success',
       action: {
-        label: m['suggestions.restore'](),
+        label: () => m['suggestions.restore'](),
         run: () => void restore(recipeId)
       }
     });
@@ -313,12 +313,12 @@
 
     if (made) {
       shelving = null;
-      toaster.show({ message: m['saved.promoted']({ name }) });
+      toaster.show({ message: () => m['saved.promoted']({ name }) });
 
       return;
     }
 
-    toaster.show({ message: m['cookbooks.add.failed'](), tone: 'danger' });
+    toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
   }
 
   function retry() {

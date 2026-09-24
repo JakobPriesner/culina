@@ -142,18 +142,18 @@
       toaster.show(
         recorded && closed
           ? {
-              message: m['cooking.madeIt.toast'](),
+              message: () => m['cooking.madeIt.toast'](),
               tone: 'success',
               // Done first, undo offered after: asking "are you sure?" before a
               // one-tap action that was never dangerous costs everyone a
               // decision to protect against a mistake that was already cheap
               // to fix.
               action: {
-                label: m['cooking.madeIt.undo'](),
+                label: () => m['cooking.madeIt.undo'](),
                 run: () => void cookLog.undo(recipeId, recorded.entryId)
               }
             }
-          : { message: m['cooking.madeIt.failed'](), tone: 'danger' }
+          : { message: () => m['cooking.madeIt.failed'](), tone: 'danger' }
       );
     }
 

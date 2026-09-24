@@ -159,7 +159,7 @@
     const ok = await mealPlan.move(householdId, entryId, to);
 
     if (!ok) {
-      toaster.show({ message: m['plan.move.failed'](), tone: 'danger' });
+      toaster.show({ message: () => m['plan.move.failed'](), tone: 'danger' });
 
       return;
     }
@@ -170,10 +170,10 @@
     const after = placeOf(mealPlan.days, entryId);
 
     toaster.show({
-      message: m['plan.move.done']({ day: weekdays.format(dayOf(to.date)) }),
+      message: () => m['plan.move.done']({ day: weekdays.format(dayOf(to.date)) }),
       action: after
         ? {
-            label: m['plan.move.undo'](),
+            label: () => m['plan.move.undo'](),
             run: () =>
               void move(entryId, {
                 date: before.date,
@@ -225,11 +225,11 @@
 
     toaster.show(
       failure
-        ? { message: explain(failure), tone: 'danger' }
+        ? { message: () => explain(failure), tone: 'danger' }
         : {
-            message: m['plan.addedToList'](),
+            message: () => m['plan.addedToList'](),
             tone: 'success',
-            action: { label: m['plan.openList'](), run: () => void goToList() }
+            action: { label: () => m['plan.openList'](), run: () => void goToList() }
           }
     );
   }
@@ -253,8 +253,11 @@
     }
 
     toaster.show({
-      message: m['plan.unplanned.stillOnList']({ title: meal.title }),
-      action: { label: m['plan.unplanned.withdraw'](), run: () => void withdraw(meal.entryId) }
+      message: () => m['plan.unplanned.stillOnList']({ title: meal.title }),
+      action: {
+        label: () => m['plan.unplanned.withdraw'](),
+        run: () => void withdraw(meal.entryId)
+      }
     });
   }
 
@@ -267,8 +270,8 @@
 
     toaster.show(
       failure
-        ? { message: explain(failure), tone: 'danger' }
-        : { message: m['plan.unplanned.withdrawn'](), tone: 'success' }
+        ? { message: () => explain(failure), tone: 'danger' }
+        : { message: () => m['plan.unplanned.withdrawn'](), tone: 'success' }
     );
   }
 

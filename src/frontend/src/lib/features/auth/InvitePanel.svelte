@@ -43,14 +43,14 @@
     working = false;
 
     if (failure) {
-      toaster.show({ message: explain(failure), tone: 'danger' });
+      toaster.show({ message: () => explain(failure), tone: 'danger' });
     }
   }
 
   async function copy(code: string) {
     try {
       await navigator.clipboard.writeText(linkFor(code));
-      toaster.show({ message: m['me.invite.copied'](), tone: 'success' });
+      toaster.show({ message: () => m['me.invite.copied'](), tone: 'success' });
     } catch {
       // A browser that refuses the clipboard is not a failure worth a message:
       // the link is on screen and can be selected.
@@ -61,7 +61,7 @@
     const failure = await invitations.revoke(householdId, invitationId);
 
     toaster.show({
-      message: failure ? explain(failure) : m['me.invite.revoked'](),
+      message: () => (failure ? explain(failure) : m['me.invite.revoked']()),
       tone: failure ? 'danger' : 'neutral'
     });
   }

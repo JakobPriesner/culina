@@ -109,10 +109,10 @@ function offer(waiting: ServiceWorker): void {
   }
 
   toaster.show({
-    message: m['app.update.available'](),
+    message: () => m['app.update.available'](),
     durationMs: 0,
     action: {
-      label: m['app.update.reload'](),
+      label: () => m['app.update.reload'](),
       run: () => {
         // The page reloads once the new worker has taken control, so the
         // reload is served by the build the person just agreed to.
