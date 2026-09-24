@@ -1114,5 +1114,10 @@
   "plan.unplanned.withdraw": "Remove them",
   "plan.unplanned.withdrawn": "Its ingredients are off the shopping list.",
   "cookbooks.addRecipes.removed": "{title} is off the cookbook.",
-  "cookbooks.takeOff.failed": "That recipe could not be taken off the cookbook. Try again."
+  "cookbooks.takeOff.failed": "That recipe could not be taken off the cookbook. Try again.",
+  "tags.search": "Find a tag",
+  "tags.search.clear": "Clear",
+  "tags.all": "Show all {count} tags",
+  "tags.fewer": "Show fewer",
+  "tags.nothing": "No tag matches that."
 }
