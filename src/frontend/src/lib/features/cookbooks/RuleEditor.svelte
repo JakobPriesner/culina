@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Button, Checkbox, Field, TextInput } from '$ds';
+  import { Button, Field, TextInput } from '$ds';
 
+  import TagChooser from '$features/recipes/filters/TagChooser.svelte';
   import { m } from '$shell/i18n';
   import { tags } from './stores/tags.svelte';
   import type { CookbookRules } from './types';
@@ -77,21 +78,12 @@
   <p class="hint">{m['cookbooks.rules.hint']()}</p>
 
   <Field label={m['cookbooks.rules.tags']()} hint={m['cookbooks.rules.tagsHint']()} group>
-    {#if tags.items.length === 0}
-      <p class="empty">{m['cookbooks.rules.noTags']()}</p>
-    {:else}
-      <ul class="tags">
-        {#each tags.items as tag (tag.slug)}
-          <li>
-            <Checkbox
-              label="{tag.name} · {m['cookbooks.rules.usedBy']({ count: tag.recipeCount })}"
-              checked={rules.tags.includes(tag.slug)}
-              onchange={(on) => toggleTag(tag.slug, on)}
-            />
-          </li>
-        {/each}
-      </ul>
-    {/if}
+    <TagChooser
+      tags={tags.items}
+      selected={rules.tags}
+      empty={m['cookbooks.rules.noTags']()}
+      ontoggle={toggleTag}
+    />
   </Field>
 
   <Field label={m['cookbooks.rules.ingredients']()} hint={m['cookbooks.rules.ingredientsHint']()}>
@@ -158,32 +150,6 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     max-width: 44ch;
-  }
-
-  .empty {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-  }
-
-  .tags {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    /* Long enough to be worth scrolling past rather than pushing the rest of
-       the form off the sheet. */
-    max-height: 14rem;
-    overflow-y: auto;
-    /* Gutter for a bar that takes width, padding for an overlay bar that does
-       not and is painted over the rules instead. See RecipePicker for why both
-       are needed. */
-    scrollbar-gutter: stable;
-    padding-inline-end: var(--space-2);
-    /* A bounded list inside a sheet that also scrolls: without this, reaching
-       the last rule carries on and scrolls the sheet behind it. */
-    overscroll-behavior: contain;
   }
 
   .entry {

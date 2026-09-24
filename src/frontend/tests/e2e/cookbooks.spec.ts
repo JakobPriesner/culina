@@ -157,7 +157,20 @@ test.describe('an automatic cookbook', () => {
     await page
       .getByRole('radio', { name: /add them automatically|automatisch nach regeln/i })
       .check();
-    await page.getByRole('checkbox', { name: new RegExp(tag) }).check();
+    // A kitchen with many tags opens on the most-used few; the one this shelf
+    // wants is found by typing, which is how anybody finds it among fifty.
+    const sheet = page.getByRole('dialog');
+    const find = sheet.getByRole('searchbox', { name: /find a tag|schlagwort suchen/i });
+
+    if (await find.isVisible()) {
+      await find.fill(tag);
+    }
+
+    await sheet.getByRole('button', { name: new RegExp(tag) }).click();
+    await expect(sheet.getByRole('button', { name: new RegExp(tag) })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
     await page.getByRole('button', { name: /create cookbook|anlegen/i }).click();
 
     // Opened rather than assumed: making a cookbook leaves you on the shelf of
