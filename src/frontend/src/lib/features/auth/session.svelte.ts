@@ -1,6 +1,7 @@
 import { forgetCachedResponses, http, request, type AppError } from '$api';
 import { forgetEveryDraft } from '$features/recipes/editor/journal';
 import { forgetCachedReads } from '$shell/connection.svelte';
+import { readDevice, writeDevice } from '$shell/deviceStorage';
 import { registerStore, resetAllStores } from '$shell/stores';
 import { preferences } from '$shell/preferences.svelte';
 
@@ -150,7 +151,7 @@ class SessionStore {
     }
 
     this.#activeHouseholdId = householdId;
-    remember(activeHouseholdKey, householdId);
+    writeDevice(activeHouseholdKey, householdId);
   }
 
   /** Everything goes: the session, every store, and the cached responses. */
@@ -162,7 +163,7 @@ class SessionStore {
     // stops it being shown to the next person; only this stops it being kept.
     forgetEveryDraft();
     this.#status = 'anonymous';
-    remember(bootHintKey, 'auth');
+    writeDevice(bootHintKey, 'auth');
   }
 
   reset(): void {
@@ -188,7 +189,7 @@ class SessionStore {
       this.#status = me.error.status === 401 ? 'anonymous' : 'unavailable';
 
       if (this.#status === 'anonymous') {
-        remember(bootHintKey, 'auth');
+        writeDevice(bootHintKey, 'auth');
       }
 
       return;
@@ -196,7 +197,7 @@ class SessionStore {
 
     this.#user = me.value;
     this.#status = 'authenticated';
-    remember(bootHintKey, 'app');
+    writeDevice(bootHintKey, 'app');
     this.#activeHouseholdId = this.#chooseHousehold(me.value.households);
 
     // The server is the source of truth: a device that has been offline for a
@@ -219,7 +220,7 @@ class SessionStore {
    * first, because a household picker on boot is a question nobody wants.
    */
   #chooseHousehold(households: readonly Membership[]): string | null {
-    const remembered = recall(activeHouseholdKey);
+    const remembered = readDevice(activeHouseholdKey);
 
     if (remembered && households.some((h) => h.householdId === remembered)) {
       return remembered;
@@ -232,20 +233,3 @@ class SessionStore {
 export const session = new SessionStore();
 
 registerStore(() => session.reset());
-
-/** Storage throws in a private window and where site data is blocked. */
-function recall(key: string): string | null {
-  try {
-    return globalThis.localStorage?.getItem(key) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function remember(key: string, value: string): void {
-  try {
-    globalThis.localStorage?.setItem(key, value);
-  } catch {
-    // The choice still applies for this session; it just will not be recalled.
-  }
-}

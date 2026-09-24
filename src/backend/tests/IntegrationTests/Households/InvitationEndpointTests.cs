@@ -145,23 +145,73 @@ public class InvitationEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Redeem_ShouldRejectAMemberJoiningTwice()
+    public async Task Redeem_ShouldRecogniseAMember_AndLeaveTheCodeForSomebodyElse()
+    {
+        // Arrange
+        // The owner opening the link they are about to send — the commonest way
+        // anybody meets their own invitation. It is not an error, and it must
+        // not use the code up.
+        var (owner, joiner) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var joinerClient = joiner;
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var code = await IssueCodeAsync(owner, householdId);
+
+        // Act
+        var opened = await owner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+        var joined = await joiner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, opened.StatusCode);
+        Assert.True(opened.Json!.Value.GetProperty("alreadyMember").GetBoolean());
+        Assert.Equal(householdId, opened.Json!.Value.GetProperty("householdId").GetGuid());
+
+        Assert.Equal(HttpStatusCode.Created, joined.StatusCode);
+        Assert.False(joined.Json!.Value.GetProperty("alreadyMember").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Redeem_ShouldStillSayInvalid_ToAMemberHoldingAUsedCode()
+    {
+        // Arrange
+        // Recognising a member is only for a code that works. A used one says
+        // what it says to everybody.
+        var (owner, joiner) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var joinerClient = joiner;
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var code = await IssueCodeAsync(owner, householdId);
+        await joiner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+
+        // Act
+        var again = await owner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, again.StatusCode);
+        Assert.Equal("households.invitation_invalid", again.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Redeem_ShouldLetSomebodyWithAHouseholdOfTheirOwnJoinAnother()
     {
         // Arrange
         var (owner, joiner) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var joinerClient = joiner;
         var householdId = await FirstHouseholdIdAsync(owner);
-        var first = await IssueCodeAsync(owner, householdId);
-        var second = await IssueCodeAsync(owner, householdId);
-        await joiner.PostAsync($"/api/v1/invitations/{first}/redemptions", new { }, Token);
+        var code = await IssueCodeAsync(owner, householdId);
+
+        await joiner.PostAsync("/api/v1/households", new { name = "Grace's kitchen" }, Token);
 
         // Act
-        var again = await joiner.PostAsync($"/api/v1/invitations/{second}/redemptions", new { }, Token);
+        var joined = await joiner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
-        Assert.Equal("households.already_a_member", again.ProblemCode);
+        Assert.Equal(HttpStatusCode.Created, joined.StatusCode);
+
+        var theirs = await joiner.GetAsync("/api/v1/households", Token);
+
+        Assert.Equal(2, theirs.Json!.Value.GetProperty("items").GetArrayLength());
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
