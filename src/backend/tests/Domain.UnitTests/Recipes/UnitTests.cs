@@ -28,10 +28,35 @@ public class UnitTests
     }
 
     [Theory]
+    [InlineData("Milliliter", "ml")]
+    [InlineData("millilitres", "ml")]
+    [InlineData("Liter", "l")]
+    [InlineData("Gramm", "g")]
+    [InlineData("Kilogramm", "kg")]
+    [InlineData("EL", "tbsp")]
+    [InlineData("Teelöffel", "tsp")]
+    [InlineData("Stk.", "piece")]
+    [InlineData("Stück", "piece")]
+    [InlineData("Stueck", "piece")]
+    [InlineData("Zehen", "clove")]
+    [InlineData("Prise", "pinch")]
+    public void Create_ShouldReadABuiltInWrittenOut_AsThatBuiltIn(string written, string code)
+    {
+        // Arrange & Act
+        var unit = Unit.Create(written).ShouldBeSuccess();
+
+        // Assert
+        // "500 Milliliter" kept as written would be a counting unit: it would
+        // never become cups for an imperial kitchen, never sum with "ml" on the
+        // shopping list, and read German in an English one.
+        Assert.Same(Unit.BuiltIn.Single(one => one.Code == code), unit);
+    }
+
+    [Theory]
     [InlineData("Schuss")]
     [InlineData("Handvoll")]
     [InlineData("fl oz")]
-    [InlineData("EL")]
+    [InlineData("Becher")]
     public void Create_ShouldAcceptAUnitAHouseholdWrote(string code)
     {
         // Arrange & Act

@@ -26,7 +26,11 @@
 
   const amount = $derived(
     formatQuantity(
-      scaleQuantity({ value: item.quantity ?? null, unit: item.unit ?? null }, 1),
+      scaleQuantity(
+        { value: item.quantity ?? null, unit: item.unit ?? null },
+        1,
+        preferences.measurementSystem
+      ),
       preferences.locale,
       quantityLabels
     ).text

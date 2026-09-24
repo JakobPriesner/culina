@@ -568,7 +568,7 @@
   "me.household.none": "You are not in a household yet.",
   "me.role.owner": "Owner",
   "me.role.member": "Member",
-  "me.amounts.hint": "Choose whether Culina shows amounts in grams or cups.",
+  "me.amounts.hint": "Choose how Culina shows weights and volumes. Spoons, pieces and units you wrote yourself stay as they are.",
   "units.piece": "piece",
   "import.title": "Import recipes",
   "import.lead": "Connect another recipe app and choose what to import. Your recipes will be collected in a cookbook named after the app.",
@@ -1104,5 +1104,7 @@
   "problem.users.max_users_reached": "This Culina has reached the number of accounts it allows.",
   "problem.users.not_found": "That person doesn't have an account here.",
   "problem.users.registration_closed": "This Culina isn't accepting new accounts.",
-  "problem.users.weak_password": "A password must be at least 12 characters."
+  "problem.users.weak_password": "A password must be at least 12 characters.",
+  "units.cup": "cup",
+  "units.cups": "cups"
 }

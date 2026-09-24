@@ -87,9 +87,15 @@ public sealed record Unit
     /// <summary>Creates a unit from what somebody wrote.</summary>
     /// <param name="code">The unit, built in or not.</param>
     /// <remarks>
-    /// Letters and single spaces, so <c>EL</c>, <c>Schuss</c> and <c>fl oz</c>
-    /// are units and <c>200g</c> is a mistake — an amount that lost its space,
-    /// which would otherwise become a unit nobody could ever match again.
+    /// <para>
+    /// Letters and single spaces, so <c>Schuss</c> and <c>fl oz</c> are units
+    /// and <c>200g</c> is a mistake — an amount that lost its space, which
+    /// would otherwise become a unit nobody could ever match again.
+    /// </para>
+    /// <para>
+    /// A built-in written out — <c>Milliliter</c>, <c>EL</c> — is that built-in,
+    /// not a new unit. See <see cref="UnitSpellings"/>.
+    /// </para>
     /// </remarks>
     public static Result<Unit> Create(string? code)
     {
@@ -100,10 +106,10 @@ public sealed record Unit
             return RecipeErrors.InvalidUnit;
         }
 
-        // Returned as itself so the built-ins stay reference-equal and a
-        // `switch` over them in a test reads the way it looks.
-        return BuiltIn.FirstOrDefault(one => one.Code.Equals(trimmed, StringComparison.OrdinalIgnoreCase))
-            ?? new Unit(trimmed);
+        // A built-in is returned as itself, however it was spelt, so the
+        // built-ins stay reference-equal and a `switch` over them in a test
+        // reads the way it looks.
+        return UnitSpellings.Resolve(trimmed) ?? new Unit(trimmed);
     }
 
     /// <inheritdoc />
