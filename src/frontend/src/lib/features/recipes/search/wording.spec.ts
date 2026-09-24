@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { applyLocale } from '$shell/i18n';
 
 import type { SearchChip } from '../types';
 import { chipLabel, reasonLine, withoutChip } from './wording';
@@ -63,5 +65,23 @@ describe('wording a reading', () => {
     expect(reasonLine({ kind: 'ingredient', term: 'Kokosmilch' })).toBe('Ingredient: Kokosmilch');
     expect(reasonLine({ kind: 'concept', term: 'Dessert' })).toBe('Similar: Dessert');
     expect(reasonLine({ kind: 'text', term: null })).toBe('Mentioned in the method');
+  });
+});
+
+describe('saying why a result is there', () => {
+  afterEach(() => applyLocale('en'));
+
+  it('names the field that matched, in English', () => {
+    expect(reasonLine({ kind: 'ingredient', term: 'Tomaten' })).toBe('Ingredient: Tomaten');
+    expect(reasonLine({ kind: 'tag', term: 'vegetarisch' })).toBe('Tag: vegetarisch');
+  });
+
+  it('names the field that matched, in German', () => {
+    applyLocale('de');
+
+    expect(reasonLine({ kind: 'ingredient', term: 'Tomaten' })).toBe('Zutat: Tomaten');
+    expect(reasonLine({ kind: 'tag', term: 'vegetarisch' })).toBe('Schlagwort: vegetarisch');
+    expect(reasonLine({ kind: 'text', term: null })).toBe('In der Zubereitung erwähnt');
+    expect(reasonLine({ kind: 'concept', term: 'Nachtisch' })).toBe('Ähnlich: Nachtisch');
   });
 });
