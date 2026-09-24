@@ -49,12 +49,18 @@ using Application.Searches;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
+using Application.Settings;
 using Application.Settings.GetAssistance;
 using Application.Settings.GetAssistanceModels;
 using Application.Settings.GetAssistanceUsage;
+using Application.Settings.GetDatabase;
 using Application.Settings.GetRegistration;
+using Application.Settings.GetServer;
 using Application.Settings.UpdateAssistance;
+using Application.Settings.UpdateDatabase;
 using Application.Settings.UpdateRegistration;
+using Application.Settings.UpdateServer;
+using Application.Setup.Get;
 using Application.Shopping;
 using Application.Suggestions.Dismiss;
 using Application.Suggestions.GetAll;
@@ -135,6 +141,13 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RevokeInvitationCommand>, RevokeInvitationCommandHandler>()
             .AddScoped<ICommandHandler<RedeemInvitationCommand,
                 Contracts.Households.RedeemInvitation.Response>, RedeemInvitationCommandHandler>()
+
+            // Server settings, beyond what setting up needs
+            .AddSetupHandlers()
+            .AddScoped<IQueryHandler<GetServerSettingsQuery, Contracts.Settings.GetServer.Response>,
+                GetServerSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateServerSettingsCommand, ServerChange>,
+                UpdateServerSettingsCommandHandler>()
 
             // Instance settings
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
@@ -291,4 +304,23 @@ public static class DependencyInjection
                 UpdateSavedSearchCommandHandler>()
             .AddScoped<ICommandHandler<DeleteSavedSearchCommand>, DeleteSavedSearchCommandHandler>();
     }
+
+    /// <summary>
+    /// The use cases the host that runs before there is a database can serve:
+    /// where setup has got to, and the database settings.
+    /// </summary>
+    /// <remarks>
+    /// Part of <see cref="AddApplication"/> as well, because the same routes
+    /// exist once there is a database — the setup screen asks the same
+    /// questions of both hosts, and the settings screen edits the same
+    /// database settings later.
+    /// </remarks>
+    /// <param name="services">The container to register into.</param>
+    public static IServiceCollection AddSetupHandlers(this IServiceCollection services) =>
+        services
+            .AddScoped<IQueryHandler<GetSetupQuery, Contracts.Setup.Get.Response>, GetSetupQueryHandler>()
+            .AddScoped<IQueryHandler<GetDatabaseSettingsQuery, Contracts.Settings.GetDatabase.Response>,
+                GetDatabaseSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateDatabaseSettingsCommand, ServerChange>,
+                UpdateDatabaseSettingsCommandHandler>();
 }

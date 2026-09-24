@@ -43,5 +43,30 @@ internal static class HealthEndpoints
         return app;
     }
 
+    /// <summary>
+    /// Health for the host that runs before there is a database.
+    /// </summary>
+    /// <remarks>
+    /// Ready, deliberately. What this process serves — the setup screen — it
+    /// can serve, and a proxy that routes only to healthy containers (Traefik
+    /// does) would otherwise hide the one page that makes it healthy.
+    /// </remarks>
+    internal static WebApplication MapSetupHealthEndpoints(this WebApplication app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        app.MapGet("/health/live", () => Results.Ok(new HealthResponse("live")))
+            .WithName("healthLive")
+            .ExcludeFromDescription()
+            .AllowAnonymous();
+
+        app.MapGet("/health/ready", () => Results.Ok(new HealthResponse("setup")))
+            .WithName("healthReady")
+            .ExcludeFromDescription()
+            .AllowAnonymous();
+
+        return app;
+    }
+
     private sealed record HealthResponse(string Status);
 }

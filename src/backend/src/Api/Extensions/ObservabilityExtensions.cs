@@ -1,4 +1,5 @@
 using System.Reflection;
+using Application.Abstractions.Settings;
 using Application.Telemetry;
 using Microsoft.Extensions.Logging.Console;
 using Npgsql;
@@ -21,15 +22,15 @@ namespace Api.Extensions;
 /// </para>
 /// <para>
 /// Culina invents no configuration names of its own. The standard
-/// <c>OTEL_*</c> environment variables control export, and with
+/// <c>OTEL_*</c> names control export, and with
 /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> unset the app still logs to stdout and
-/// simply exports nothing.
+/// simply exports nothing. The SDK reads them through the host's
+/// configuration, not the process environment, so an endpoint saved from the
+/// server settings screen works exactly like one set as a variable.
 /// </para>
 /// </remarks>
 internal static class ObservabilityExtensions
 {
-    private const string OtlpEndpointVariable = "OTEL_EXPORTER_OTLP_ENDPOINT";
-
     internal static IHostApplicationBuilder AddObservability(this IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -53,7 +54,7 @@ internal static class ObservabilityExtensions
 
         // Only when a collector is configured. Without this guard the exporter
         // retries against localhost forever and fills the log with noise.
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(OtlpEndpointVariable)))
+        if (!string.IsNullOrWhiteSpace(builder.Configuration[TelemetrySettings.EndpointKey]))
         {
             telemetry.UseOtlpExporter();
         }
