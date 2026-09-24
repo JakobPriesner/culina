@@ -1,5 +1,5 @@
 import type { ScaledQuantity } from './scaling';
-import { isCustomary } from './measurement';
+import { isCustomary, type CustomaryUnit } from './measurement';
 import { familyOf, isBuiltIn, type BuiltInUnit, type Unit } from './units';
 
 /**
@@ -54,13 +54,31 @@ const short: Record<BuiltInUnit, string> = {
 };
 
 /**
+ * The same for the units an imperial conversion produces. Ounces and pounds are
+ * abbreviations in every language; a cup is a word, and gets its plural from
+ * the labels.
+ */
+const customaryShort: Record<CustomaryUnit, string> = {
+  oz: 'oz',
+  lb: 'lb',
+  'fl oz': 'fl oz',
+  cup: ''
+};
+
+/**
  * The short form for any unit, built in or not.
  *
  * A unit a household wrote is its own label — "1 Schuss Milch" — because there
  * is nothing to translate it to and nothing to abbreviate it from. Shown
  * exactly as it was typed, which is also how it was meant.
  */
-const shortOf = (unit: Unit): string => (isBuiltIn(unit) ? short[unit] : unit);
+const shortOf = (unit: Unit): string => {
+  if (isBuiltIn(unit)) {
+    return short[unit];
+  }
+
+  return isCustomary(unit) ? customaryShort[unit] : unit;
+};
 
 export interface QuantityLabels {
   /** The word for a unit that has no short form, supplied by the caller. */

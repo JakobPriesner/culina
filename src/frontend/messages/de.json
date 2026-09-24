@@ -568,7 +568,7 @@
   "me.household.none": "Du bist noch in keinem Haushalt.",
   "me.role.owner": "Haushaltsleitung",
   "me.role.member": "Mitglied",
-  "me.amounts.hint": "Gramm oder Cups – wähle, wie Culina Mengen anzeigt.",
+  "me.amounts.hint": "Wähle, wie Culina Gewichte und Flüssigkeiten anzeigt. Löffel, Stückzahlen und selbst geschriebene Einheiten bleiben, wie sie sind.",
   "units.piece": "Stück",
   "import.title": "Rezepte importieren",
   "import.lead": "Verbinde eine Rezept-App und wähle aus, was du übernehmen möchtest. Die importierten Rezepte landen in einem Kochbuch mit dem Namen der App.",
@@ -1104,5 +1104,7 @@
   "problem.users.max_users_reached": "Dieses Culina hat die erlaubte Anzahl an Konten erreicht.",
   "problem.users.not_found": "Diese Person hat hier kein Konto.",
   "problem.users.registration_closed": "Dieses Culina nimmt keine neuen Konten an.",
-  "problem.users.weak_password": "Ein Passwort muss mindestens 12 Zeichen haben."
+  "problem.users.weak_password": "Ein Passwort muss mindestens 12 Zeichen haben.",
+  "units.cup": "Cup",
+  "units.cups": "Cups"
 }
