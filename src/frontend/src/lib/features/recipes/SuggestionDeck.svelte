@@ -3,7 +3,7 @@
 
   import { m } from '$shell/i18n';
   import FeaturedRecipe from './FeaturedRecipe.svelte';
-  import { reasonLineFor } from './suggestionReason';
+  import { reasonLinesFor } from './suggestionReason';
   import type { Suggestion } from './types';
 
   /**
@@ -44,6 +44,8 @@
 
   let track = $state<HTMLUListElement>();
   let scrolled = $state(0);
+
+  const reasons = $derived(reasonLinesFor(items));
 
   /** Below two there is nothing to walk, and a control row would be furniture. */
   const walkable = $derived(items.length > 1);
@@ -94,7 +96,7 @@
       <li>
         <FeaturedRecipe
           recipe={suggestion}
-          reason={reasonLineFor(suggestion)}
+          reason={reasons[position]}
           priority={position === 0}
           ondismiss={ondismiss ? () => ondismiss(suggestion.id) : undefined}
         />

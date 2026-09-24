@@ -149,6 +149,24 @@ describe('walking the shortlist', () => {
     expect(screen.getByText('3 of 3')).toBeInTheDocument();
   });
 
+  it('does not print the same reason on two panels in a row', () => {
+    // A library with a lot of cook-log history can honestly answer "one you
+    // keep coming back to" five times over. Walked one panel at a time, that is
+    // one fact and four copies of it, so the copies wear the fixed line.
+    const favourites = shortlist.map((one) => ({
+      ...one,
+      reason: { code: 'affinity' as const, subject: null }
+    }));
+
+    renderWithProviders(SuggestionDeck, { props: { items: favourites } });
+
+    const eyebrows = [...document.querySelectorAll('.eyebrow')].map((line) => line.textContent);
+
+    expect(new Set(eyebrows).size).toBe(2);
+    expect(eyebrows[1]).toBe(eyebrows[2]);
+    expect(eyebrows[0]).not.toBe(eyebrows[1]);
+  });
+
   it('is the page it always was when there is only one answer', () => {
     // A kitchen with one suggestion, or with none and the old photograph in its
     // place, gets no controls and nothing that scrolls. The new thing has to

@@ -53,3 +53,23 @@ export function reasonLineFor(suggestion: Suggestion): string | null {
       return null;
   }
 }
+
+/**
+ * The reason lines for a shortlist walked one panel at a time, each null where
+ * it would only repeat the panel before it.
+ *
+ * Every repeat is still true — a household that cooks its favourites really
+ * does get "one you keep coming back to" five times. But read in a row, five
+ * copies of the same fact stop reading as a fact and start reading as
+ * boilerplate, which undoes what a reason is for. So the set is explained
+ * rather than each member of it: the first of a run says why, and the rest fall
+ * back to the panel's fixed line.
+ *
+ * Compared as rendered lines rather than codes, so "you often cook soup" and
+ * "you often cook curry" are two different things to say, which they are.
+ */
+export function reasonLinesFor(suggestions: readonly Suggestion[]): (string | null)[] {
+  const lines = suggestions.map(reasonLineFor);
+
+  return lines.map((line, index) => (index > 0 && line === lines[index - 1] ? null : line));
+}
