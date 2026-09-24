@@ -176,5 +176,8 @@ public static class DependencyInjection
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.
-            .AddHostedService<MigrationHostedService>();
+            .AddHostedService<MigrationHostedService>()
+            // After the migrations, whose column it writes: rebuilds whatever
+            // an older lexicon indexed before the first request is served.
+            .AddHostedService<LexiconReindexService>();
 }

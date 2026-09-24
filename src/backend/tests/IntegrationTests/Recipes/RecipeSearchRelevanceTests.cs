@@ -2,8 +2,12 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Domain.Search;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Recipes;
 using IntegrationTests.Fixtures;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace IntegrationTests.Recipes;
 
@@ -111,6 +115,20 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             Excludes: ["Spaghetti Bolognese"]),
         new("italienisch", "tag",
             Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
+
+        // ── What a recipe is, not only what it says: the lexicon ────────────
+        // Chicken Curry is written in English and never says Hähnchen; the
+        // German recipe never says chicken. One concept, both languages.
+        new("chicken", "cross-language",
+            Top: ["Chicken Curry"],
+            Contains: ["Hähnchenbrustfilet mit Reis"]),
+        new("Hähnchen", "cross-language", Contains: ["Chicken Curry"]),
+        new("italian", "cross-language", Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
+        // Nothing in the library says Geflügel or Nudeln.
+        new("Geflügel", "concept", Contains: ["Hähnchenbrustfilet mit Reis", "Chicken Curry"]),
+        new("Nudeln", "concept",
+            Contains: ["Spaghetti Bolognese", "Lasagne Bolognese", "Gemüselasagne"],
+            Excludes: ["Kartoffelgratin"]),
 
         // ── Steps are searched, which they never used to be ─────────────────
         new("abgelöscht", "step text", Contains: ["Spaghetti Bolognese"]),
@@ -239,6 +257,100 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         // is appended to rather than replaced.
         Assert.Empty(Titles(await SearchAsync(world, "Pfannkuchen")));
         Assert.Equal(["Kaiserschmarrn"], Titles(await SearchAsync(world, "Kaiserschmarrn")));
+    }
+
+    [Fact]
+    public async Task Search_ShouldFindADessert_WhenAskedForNachtisch()
+    {
+        // Arrange
+        // What a household reported (culina-v2-dku9): nothing about Waffeln
+        // says "Nachtisch", and the search found nothing. The lexicon knows
+        // waffles are a dessert.
+        var world = await SeedAsync();
+        await SaveAsync(world, "Waffeln", "de", 10, 15,
+            [("Mehl", "g"), ("Eier", null), ("Milch", "ml"), ("Zucker", "g")], [], "Ausbacken.");
+
+        // Act
+        var titles = Titles(await SearchAsync(world, "Nachtisch"));
+
+        // Assert
+        Assert.Equal(["Waffeln"], titles);
+    }
+
+    [Fact]
+    public async Task Search_ShouldRankAConceptMatch_BelowEveryRecipeThatSaysTheWord()
+    {
+        // Arrange
+        var world = await SeedAsync();
+
+        // Act
+        var titles = Titles(await SearchAsync(world, "Hähnchen"));
+
+        // Assert
+        // Chicken Curry is found only by what "Hähnchen" means, and so comes
+        // after the recipe that actually says it. The lexicon's guess is never
+        // allowed to outrank a fact about the text.
+        var said = titles.IndexOf("Hähnchenbrustfilet mit Reis");
+        var meant = titles.IndexOf("Chicken Curry");
+
+        Assert.True(said >= 0 && meant > said, string.Join(" · ", titles));
+    }
+
+    [Fact]
+    public async Task Startup_ShouldRebuildTheConcepts_ThatAnotherLexiconIndexed()
+    {
+        // Arrange
+        // As a container that has just been upgraded to a new lexicon finds
+        // its documents: built by a version it no longer is.
+        var world = await SeedAsync();
+        await postgres.ExecuteAsync(
+            "update recipe_search_documents set concepts = '{}', lexicon_version = 0;",
+            Token);
+        Assert.Empty(Titles(await SearchAsync(world, "Geflügel")));
+
+        var reindex = postgres.Api.Services
+            .GetServices<IHostedService>()
+            .OfType<LexiconReindexService>()
+            .Single();
+
+        // Act
+        await reindex.StartAsync(Token);
+
+        // Assert
+        Assert.Contains("Chicken Curry", Titles(await SearchAsync(world, "Geflügel")));
+
+        var session = postgres.NewSession();
+        await using var _ = session.ConfigureAwait(false);
+        var stale = await new DbExecutor(session).ExecuteScalarAsync<long>(
+            "select count(*) from recipe_search_documents where lexicon_version <> @version;",
+            new { version = CulinaryLexicon.Version },
+            Token);
+
+        Assert.Equal(0, stale);
+    }
+
+    [Theory]
+    [InlineData("Hähnchenbrust in Zitronensoße")]
+    [InlineData("Müsli, Muesli & MUSLI")]
+    [InlineData("Crème brûlée ÀÉÎÕÜ æ Æ ẞ")]
+    [InlineData("100% Roggen_brot -- ohne Zucker!")]
+    [InlineData("  Łódź 北京 Ñandú  ")]
+    public async Task Fold_ShouldAgreeWithTheDatabase_CharacterForCharacter(string text)
+    {
+        // Arrange
+        // The lexicon reads text in C# and the lanes read it in SQL; a letter
+        // they fold differently is a word the two halves disagree about.
+        var session = postgres.NewSession();
+        await using var _ = session.ConfigureAwait(false);
+        var executor = new DbExecutor(session);
+
+        // Act
+        var ae = await executor.ExecuteScalarAsync<string>("select culina_fold_ae(@text);", new { text }, Token);
+        var a = await executor.ExecuteScalarAsync<string>("select culina_fold_a(@text);", new { text }, Token);
+
+        // Assert
+        Assert.Equal(ae, SearchText.FoldAe(text));
+        Assert.Equal(a, SearchText.FoldA(text));
     }
 
     [Fact]
