@@ -77,6 +77,12 @@
   --bottom-inset: 0px;
   --bar-inset: 0px;
 
+  /* How much a page's own floating controls stand over, above the shell's
+     bottom inset, so a scroll that brings something into view stops clear of
+     them. The cook page measures its step controls and overrides this; the
+     figure here is room for a floating button, which most pages have at most. */
+  --controls-inset: var(--space-24);
+
   /* How tall the shell's floating header is, for the few pages that put
      something of their own on its line. AppShell measures the real value and
      overrides this; the figure here is what the header comes to today — the

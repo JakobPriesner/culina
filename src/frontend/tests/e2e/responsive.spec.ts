@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { cookbookId, expectReflow, recipeId, responsiveData } from './support/responsive';
 
 // Boundary pairs catch layouts that fit a phone and a laptop but break in between.
@@ -119,6 +119,36 @@ test.describe('responsive production layouts @offline', () => {
     await expectReflow(page);
   });
 
+  for (const [width, height] of [
+    [320, 568],
+    [375, 812],
+    [390, 844],
+    [430, 932]
+  ] as const) {
+    test(`the step being cooked is readable above the controls at ${width}px`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`/recipes/${recipeId}/cook`);
+      const next = page.getByRole('button', { name: /nächster schritt/i });
+      await expect(next).toBeEnabled();
+
+      // Arriving, every step after it, and the phone turned on its side.
+      await expectCurrentStepReadable(page);
+      for (let step = 2; step <= 4; step++) {
+        await next.click();
+        await expect(page.getByText(`Schritt ${step} von 4`, { exact: true })).toBeVisible();
+        await expectCurrentStepReadable(page);
+      }
+      await page.setViewportSize({ width: height, height: width });
+      await expectCurrentStepReadable(page);
+      await page.screenshot({ path: testInfo.outputPath(`cook-${width}.png`) });
+    });
+  }
+
   test('short landscape keeps forms, dialogs and cooking reachable', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await responsiveData(page);
@@ -145,3 +175,35 @@ test.describe('responsive production layouts @offline', () => {
     await expectReflow(page);
   });
 });
+
+/**
+ * The current step starts clear of the header and, scrolled by no more than
+ * its own overhang, ends clear of the controls and the bottom navigation.
+ * Polled, because the page follows a move once the steps stop resizing.
+ */
+async function expectCurrentStepReadable(page: Page) {
+  const measure = () =>
+    page.evaluate(() => {
+      const top = (selector: string) =>
+        document.querySelector(selector)?.getBoundingClientRect().top ?? innerHeight;
+      const step = document.querySelector('.step.current')!.getBoundingClientRect();
+      return {
+        top: step.top,
+        bottom: step.bottom,
+        clearTop: document.querySelector('header.header')!.getBoundingClientRect().bottom,
+        clearBottom: Math.min(top('.controls:has(.moves)'), top('nav.bottom'), innerHeight)
+      };
+    });
+
+  await expect
+    .poll(async () => {
+      const at = await measure();
+      return at.top >= at.clearTop && at.top < at.clearBottom;
+    })
+    .toBe(true);
+
+  const at = await measure();
+  await page.evaluate((by) => scrollBy(0, by), Math.max(0, at.bottom - at.clearBottom));
+  const scrolled = await measure();
+  expect(scrolled.bottom).toBeLessThanOrEqual(scrolled.clearBottom + 1);
+}
