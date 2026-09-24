@@ -475,14 +475,29 @@ describe('cooking a recipe', () => {
       expect(scrollIntoView).not.toHaveBeenCalled();
     });
 
-    it('does not move the page the moment it opens', async () => {
+    it('does not move the page the moment it opens onto a readable step', async () => {
       withScrolling({ emphasis: 'cook', currentStep: 1 });
-      await Promise.resolve();
+      await new Promise((done) => setTimeout(done, 450));
 
       // Arriving mid-recipe is the page loading, not the cook moving: a page
       // that scrolls itself as it appears has taken them somewhere they did
-      // not ask to go.
+      // not ask to go. jsdom lays out nothing, so every step is at the top.
       expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it('rescues the step it opens onto when the controls would cover it', async () => {
+      const below = vi
+        .spyOn(Element.prototype, 'getBoundingClientRect')
+        .mockReturnValue(new DOMRect(0, window.innerHeight + 100, 300, 200));
+
+      try {
+        withScrolling({ emphasis: 'cook', currentStep: 1 });
+        await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+
+        expect(scrollIntoView.mock.contexts[0]).toHaveTextContent('Step 2');
+      } finally {
+        below.mockRestore();
+      }
     });
   });
 

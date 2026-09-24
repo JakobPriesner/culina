@@ -179,6 +179,13 @@
   const stepName = $derived(
     recipes.detail?.steps[currentStep]?.title ?? m['recipe.step']({ number: currentStep + 1 })
   );
+
+  /**
+   * How tall the controls are, so the surface can keep a step out from under
+   * them. Measured, because a timer, a phone's second row and enlarged text
+   * all change it.
+   */
+  let controlsHeight = $state(0);
 </script>
 
 <svelte:head>
@@ -200,58 +207,60 @@
 
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
-    <RecipeSurface
-      recipe={recipes.detail}
-      emphasis="cook"
-      {servings}
-      onservings={scale}
-      {currentStep}
-      onstep={move}
-      onstopcooking={() => finish(false)}
-    />
+    <div class="cook" style:--controls-height="{controlsHeight}px">
+      <RecipeSurface
+        recipe={recipes.detail}
+        emphasis="cook"
+        {servings}
+        onservings={scale}
+        {currentStep}
+        onstep={move}
+        onstopcooking={() => finish(false)}
+      />
 
-    <div class="controls">
-      {#if duration !== null}
-        <StepTimer
-          durationSeconds={duration}
-          timer={stepTimer}
-          secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
-          onstart={() => timers.start(currentStep, duration, stepName)}
-          ondismiss={() => timers.dismiss(currentStep)}
-        />
-      {/if}
+      <div class="controls" bind:clientHeight={controlsHeight}>
+        {#if duration !== null}
+          <StepTimer
+            durationSeconds={duration}
+            timer={stepTimer}
+            secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
+            onstart={() => timers.start(currentStep, duration, stepName)}
+            ondismiss={() => timers.dismiss(currentStep)}
+          />
+        {/if}
 
-      <p class="progress">
-        {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
-      </p>
+        <p class="progress">
+          {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
+        </p>
 
-      <div class="moves">
-        <!-- The largest control size, because these are pressed with a wet
+        <div class="moves">
+          <!-- The largest control size, because these are pressed with a wet
              thumb while looking at a pan rather than at the screen.
              Measured at 320 px, "Previous step" used to be the *wider* of the
              two simply because it is a longer phrase — the control that undoes
              progress was an easier target than the one pressed at every step.
              It is an icon now, and next takes the room that frees. -->
-        <IconButton
-          label={m['cooking.previous']()}
-          size="lg"
-          bordered
-          disabled={!ready || currentStep === 0}
-          onclick={() => move(currentStep - 1)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m14 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </IconButton>
+          <IconButton
+            label={m['cooking.previous']()}
+            size="lg"
+            bordered
+            disabled={!ready || currentStep === 0}
+            onclick={() => move(currentStep - 1)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m14 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </IconButton>
 
-        <!-- One control that changes what it says, not two that replace each
+          <!-- One control that changes what it says, not two that replace each
              other. Swapping the element loses focus at exactly the moment
              somebody reaches the last step, which for a keyboard user means
              tabbing back into the page to finish. -->
-        <div class="advance">
-          <Button size="lg" variant="primary" full disabled={!ready} onclick={advance}>
-            {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
-          </Button>
+          <div class="advance">
+            <Button size="lg" variant="primary" full disabled={!ready} onclick={advance}>
+              {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -296,6 +305,12 @@
 </Page>
 
 <style>
+  /* What the controls stand over: their own height, the gap they float at and
+     as much again, so a step's last line is not flush against them. */
+  .cook {
+    --controls-inset: calc(var(--controls-height) + var(--space-8));
+  }
+
   .cook-skeleton {
     display: flex;
     flex-direction: column;
@@ -386,6 +401,10 @@
     }
   }
   @media screen and (max-height: 32rem) {
+    .cook {
+      --controls-inset: var(--space-8);
+    }
+
     .controls {
       position: static;
     }
