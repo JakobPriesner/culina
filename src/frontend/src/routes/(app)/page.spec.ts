@@ -339,6 +339,26 @@ describe('waiting for the shortlist', () => {
     expect(screen.queryByText('Omelette')).not.toBeInTheDocument();
   });
 
+  it('holds the panel back until the list is in, even with the shortlist back', async () => {
+    localStorage.setItem(`culina.ranks.${household}`, 'yes');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.url.includes('/recipes?')
+          ? new Promise<Response>(() => {})
+          : Promise.resolve(answer(input.url, { code: 'rediscovery', subject: null }))
+      )
+    );
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    // The panel goes above the grid. Drawing it over the skeleton would push
+    // the skeleton down, and CI measures that as the page shifting.
+    expect(screen.getByRole('status', { name: 'Loading your recipes' })).toBeInTheDocument();
+    expect(screen.queryByText('Linsensuppe')).not.toBeInTheDocument();
+  });
+
   it('does not wait when somebody has chosen the order', async () => {
     libraryView.forHousehold(household);
     libraryView.sort = 'title';

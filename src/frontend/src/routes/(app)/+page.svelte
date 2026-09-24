@@ -190,16 +190,19 @@
   );
 
   /**
-   * Whether the panel above the grid is known yet.
+   * Whether the panel and the grid can both be drawn.
    *
-   * The list may come back before the shortlist now that it is asked for
-   * alongside it. Drawing the grid then and the panel when the shortlist lands
-   * pushes every card down and pulls the shortlisted ones out of it — the page
-   * rearranging under the reader, only later. So the grid stays a skeleton
-   * until both are back: the requests overlap, the page still appears once.
+   * The list and the shortlist are asked for together and either can come back
+   * first. Drawing whichever lands first moves the page when the other does:
+   * a grid drawn early is pushed down by the panel and loses the shortlisted
+   * recipes to it, and a panel drawn early lands above the grid's skeleton and
+   * pushes that off the screen. So neither is drawn until both are back — the
+   * requests overlap, the page still appears once, already arranged.
    */
-  const leadKnown = $derived(
-    filtered || !householdId || suggestions.answered(householdId, featuredQuery)
+  const arranged = $derived(
+    settled &&
+      (filtered || !householdId || suggestions.answered(householdId, featuredQuery)) &&
+      !(recipes.status === 'loading' && recipes.items.length === 0)
   );
 
   /**
@@ -423,7 +426,7 @@
       {/snippet}
     </EmptyState>
   {:else}
-    {#if lead.length > 0}
+    {#if arranged && lead.length > 0}
       <SuggestionDeck
         items={lead}
         ondismiss={shortlist.length > 0 ? (recipeId) => void hide(recipeId) : undefined}
@@ -433,9 +436,7 @@
     <RecipeGrid
       recipes={library}
       query={libraryView.query}
-      loading={!settled ||
-        !leadKnown ||
-        (recipes.status === 'loading' && recipes.items.length === 0)}
+      loading={!arranged}
       onmore={autoLoads ? more : undefined}
     />
 

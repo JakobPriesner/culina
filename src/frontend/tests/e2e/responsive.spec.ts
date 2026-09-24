@@ -180,8 +180,18 @@ test.describe('responsive production layouts @offline', () => {
  * The current step starts clear of the header and, scrolled by no more than
  * its own overhang, ends clear of the controls and the bottom navigation.
  * Polled, because the page follows a move once the steps stop resizing.
+ *
+ * Measured only after two frames. A resize is answered on the next frame, not
+ * when `setViewportSize` returns, and the page then brings the step back into
+ * the clear. Scrolling before that is scrolling against the page: on a slow
+ * runner the rescue lands after the test's own scroll and puts the step back
+ * where the rescue wants it, overhang and all.
  */
 async function expectCurrentStepReadable(page: Page) {
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
+  );
+
   const measure = () =>
     page.evaluate(() => {
       const top = (selector: string) =>
@@ -190,7 +200,11 @@ async function expectCurrentStepReadable(page: Page) {
       return {
         top: step.top,
         bottom: step.bottom,
-        clearTop: document.querySelector('header.header')!.getBoundingClientRect().bottom,
+        // A header scrolled off the top clears nothing below the screen's edge.
+        clearTop: Math.max(
+          0,
+          document.querySelector('header.header')!.getBoundingClientRect().bottom
+        ),
         clearBottom: Math.min(top('.controls:has(.moves)'), top('nav.bottom'), innerHeight)
       };
     });
