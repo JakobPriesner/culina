@@ -23,4 +23,39 @@ public interface ISearchVocabulary
         Guid householdId,
         IReadOnlyList<string> words,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// What a half-typed word could become: recipes, ingredients and tags of
+    /// this household with a word that begins with it.
+    /// </summary>
+    /// <param name="householdId">Whose recipes.</param>
+    /// <param name="typed">The word so far, as typed.</param>
+    /// <param name="perKind">How many of each kind at most.</param>
+    /// <param name="cancellationToken">Cancels the lookup.</param>
+    Task<Completions> CompletionsAsync(
+        Guid householdId,
+        string typed,
+        int perKind,
+        CancellationToken cancellationToken);
 }
+
+/// <summary>What a half-typed word could become, by kind.</summary>
+/// <param name="Recipes">Recipes whose title has a word beginning with it, the closest first.</param>
+/// <param name="Ingredients">Ingredients by name, the most used first.</param>
+/// <param name="Tags">Tags, the most used first.</param>
+public sealed record Completions(
+    IReadOnlyList<RecipeCompletion> Recipes,
+    IReadOnlyList<IngredientCompletion> Ingredients,
+    IReadOnlyList<TagCompletion> Tags);
+
+/// <summary>A recipe to go straight to.</summary>
+public sealed record RecipeCompletion(Guid RecipeId, string Title, Guid? ImageId, int? TotalMinutes);
+
+/// <summary>
+/// An ingredient the household cooks with, how many recipes use it, and how
+/// many of those are known to take half an hour or less.
+/// </summary>
+public sealed record IngredientCompletion(string Name, int RecipeCount, int QuickCount);
+
+/// <summary>A tag the household uses, and on how many recipes.</summary>
+public sealed record TagCompletion(string Slug, string Name, int RecipeCount);
