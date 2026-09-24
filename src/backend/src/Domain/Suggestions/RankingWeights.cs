@@ -7,7 +7,7 @@ namespace Domain.Suggestions;
 /// <para>
 /// <b>These numbers are not taste.</b> They are the solution to a stated set of
 /// ordering rules, and the rules — not the numbers — are the specification.
-/// Each one is an assertion in <c>RankingOrderTests</c>: a recipe cooked
+/// Each one is a rule in <c>RankingRules</c>: a recipe cooked
 /// yesterday never outranks the same recipe three weeks later; a never-cooked
 /// recipe matching somebody's top tags beats a twice-cooked recipe matching
 /// none; another member's weekly favourite reaches the top twenty and never the

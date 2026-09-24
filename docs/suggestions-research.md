@@ -1402,8 +1402,10 @@ S = A + C + R + U + F_slot + F_effort + P + N + ε
 
 **These numbers are not arbitrary and must not be presented as if they were.**
 They are *derived from stated ordering rules*, and the rules — not the numbers —
-are the specification. Each becomes an xUnit fact in
-`tests/Application.UnitTests/Suggestions/RankingOrderTests.cs`:
+are the specification. Each becomes a named rule in
+`tests/IntegrationTests/Suggestions/RankingRules.cs`, checked against the shipped
+weights by `RankingOrderTests` and against any proposed vector by the calibration
+(§M.3):
 
 1. A recipe cooked yesterday never outranks the same recipe's profile cooked
    three weeks ago. → fixes `w_R` relative to `w_A`.
