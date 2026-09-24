@@ -52,6 +52,16 @@
      */
     suggestFor?: 'breakfast' | 'lunch' | 'dinner';
     onpick: (recipe: RecipeSummary) => void;
+    /**
+     * Takes a taken recipe back, when the caller can.
+     *
+     * With it, every row is a toggle that says whether it is taken before
+     * anybody touches it — a cookbook, where a recipe is on the shelf or not,
+     * and picking it again could only look like an add that failed. Without it,
+     * a taken row is still an ordinary pick: a household that cooks the same
+     * thing twice in a week wants it planned twice.
+     */
+    onremove?: (recipe: RecipeSummary) => void;
     onclose: () => void;
   }
 
@@ -65,8 +75,11 @@
     cookbookId,
     suggestFor,
     onpick,
+    onremove,
     onclose
   }: Props = $props();
+
+  const takenIds = $derived(new Set(taken));
 
   /**
    * This sheet's own list, not the app's.
@@ -171,13 +184,25 @@
     {:else}
       <ul class="results">
         {#each shown as recipe (recipe.id)}
+          {@const isTaken = takenIds.has(recipe.id)}
           <li>
-            <button type="button" onclick={() => onpick(recipe)}>
+            <button
+              type="button"
+              class:toggle={onremove !== undefined}
+              aria-pressed={onremove ? isTaken : undefined}
+              onclick={() => (onremove && isTaken ? onremove(recipe) : onpick(recipe))}
+            >
+              {#if onremove}
+                <span class="tick" class:on={isTaken} aria-hidden="true">
+                  {#if isTaken}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  {/if}
+                </span>
+              {/if}
               <span class="title">{recipe.title}</span>
-              <!-- Taken already, but still a button: a household that cooks the
-                   same thing twice in a week wants the amounts twice, and the
-                   server merges them. -->
-              {#if taken.includes(recipe.id)}
+              {#if isTaken}
                 <span class="meta taken">{m['picker.taken']()}</span>
               {:else}
                 <!-- The same line the card and the surface show, so a recipe
@@ -262,6 +287,39 @@
   .taken {
     color: var(--text-success);
     font-weight: var(--weight-semibold);
+  }
+
+  /* A row that is on or off reads as one: the mark leads, so a column of them
+     can be scanned for what is already there without reading a word. */
+  .results .toggle {
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+  }
+
+  .toggle .title {
+    flex: 1 1 auto;
+  }
+
+  .tick {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-full);
+  }
+
+  .tick.on {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--text-on-accent);
+  }
+
+  .tick svg {
+    width: 0.8rem;
+    height: 0.8rem;
   }
 
   .nothing {

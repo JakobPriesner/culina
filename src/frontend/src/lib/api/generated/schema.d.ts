@@ -1093,6 +1093,26 @@ export interface paths {
         patch: operations["updateCookbookV1"];
         trace?: never;
     };
+    "/api/v1/cookbooks/{cookbookId}/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List which recipes are on a cookbook
+         * @description Every recipe on it, by id, for either kind of cookbook — so a picker can mark what is already on before anybody taps it. The members of `PUT` and `DELETE /cookbooks/{cookbookId}/recipes/{recipeId}`. To read the recipes themselves, use `GET /recipes?cookbookId=…`.
+         */
+        get: operations["getCookbookRecipesV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}": {
         parameters: {
             query?: never;
@@ -1562,6 +1582,11 @@ export interface components {
              * @description Bumped by every write. This is the ETag.
              */
             version: number;
+        };
+        /** @description Which recipes are on a cookbook, by id. */
+        CookbooksCookbookRecipesResponse: {
+            /** @description Every recipe on it. */
+            recipeIds: string[];
         };
         /** @description What a cookbook that fills itself asks for. */
         CookbooksCookbookRulesContract: {
@@ -7239,6 +7264,46 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCookbookRecipesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksCookbookRecipesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

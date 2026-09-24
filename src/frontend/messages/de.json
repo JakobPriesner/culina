@@ -1112,5 +1112,7 @@
   "plan.onList": "Auf der Einkaufsliste",
   "plan.unplanned.stillOnList": "{title} ist nicht mehr geplant. Die Zutaten stehen noch auf der Einkaufsliste.",
   "plan.unplanned.withdraw": "Entfernen",
-  "plan.unplanned.withdrawn": "Die Zutaten sind von der Einkaufsliste entfernt."
+  "plan.unplanned.withdrawn": "Die Zutaten sind von der Einkaufsliste entfernt.",
+  "cookbooks.addRecipes.removed": "{title} ist nicht mehr im Kochbuch.",
+  "cookbooks.takeOff.failed": "Das Rezept ließ sich nicht aus dem Kochbuch nehmen. Versuch es noch einmal."
 }

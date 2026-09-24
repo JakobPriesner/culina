@@ -263,6 +263,8 @@ public static class DependencyInjection
                 GetCookbooksQueryHandler>()
             .AddScoped<IQueryHandler<GetCookbookQuery, Contracts.Cookbooks.CookbookDetail>,
                 GetCookbookQueryHandler>()
+            .AddScoped<IQueryHandler<GetCookbookRecipesQuery, Contracts.Cookbooks.CookbookRecipesResponse>,
+                GetCookbookRecipesQueryHandler>()
             .AddScoped<ICommandHandler<CreateCookbookCommand, Contracts.Cookbooks.CookbookDetail>,
                 CreateCookbookCommandHandler>()
             .AddScoped<ICommandHandler<UpdateCookbookCommand, Contracts.Cookbooks.CookbookDetail>,
