@@ -25,6 +25,7 @@ using Application.Recipes.Drafts;
 using Application.Recipes.DrawImage;
 using Application.Recipes.GetAll;
 using Application.Recipes.GetById;
+using Application.Recipes.GetCompletions;
 using Application.Recipes.GetCookLog;
 using Application.Recipes.GetImage;
 using Application.Recipes.GetIngredients;
@@ -193,6 +194,8 @@ public static class DependencyInjection
                 GetUnitsQueryHandler>()
             .AddScoped<IQueryHandler<GetIngredientsQuery, Contracts.Recipes.GetIngredients.Response>,
                 GetIngredientsQueryHandler>()
+            .AddScoped<IQueryHandler<GetCompletionsQuery, Contracts.Recipes.GetCompletions.Response>,
+                GetCompletionsQueryHandler>()
             .AddScoped<IQueryHandler<GetNotesQuery, Contracts.Recipes.GetNotes.Response>,
                 GetNotesQueryHandler>()
             .AddScoped<ICommandHandler<SaveNotesCommand, Contracts.Recipes.GetNotes.Response>,

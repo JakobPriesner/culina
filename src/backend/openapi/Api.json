@@ -2240,6 +2240,74 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/completions": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Complete a search",
+        "description": "What the words still being typed could become, from this household's own recipes: recipes to open, ingredients and tags to filter by, and at most one refinement. Whatever `query` already says about a diet, time or meal is left out of the completion. Never cached.",
+        "operationId": "getHouseholdCompletionsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetCompletionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipe-imports": {
       "post": {
         "tags": [
@@ -7526,6 +7594,75 @@
           }
         },
         "description": "A page of recipes."
+      },
+      "RecipesGetCompletionsCompletion": {
+        "required": [
+          "kind",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`recipe`, `ingredient`, `tag` or `refinement`."
+          },
+          "label": {
+            "type": "string",
+            "description": "What to show: a recipe's title, an ingredient's or a tag's name as the\nhousehold writes it, or for a refinement the ingredient it narrows."
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe, for a recipe.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Its picture, for a recipe that has one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "Its total time, for a recipe that states one.",
+            "format": "int32",
+            "nullable": true
+          },
+          "slug": {
+            "type": "string",
+            "description": "The tag's slug, for a tag.",
+            "nullable": true
+          },
+          "recipeCount": {
+            "type": "integer",
+            "description": "How many recipes it would find, for an ingredient, a tag or a refinement.",
+            "format": "int32",
+            "nullable": true
+          },
+          "maxMinutes": {
+            "type": "integer",
+            "description": "The time ceiling a refinement adds, in minutes. The client words the\nquery itself — \"Hähnchen unter 30 Minuten\" or \"chicken under 30\nminutes\" — because both read the same way.",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "description": "One thing a half-typed query could become."
+      },
+      "RecipesGetCompletionsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetCompletionsCompletion"
+            },
+            "description": "Recipes first, then ingredients, tags and at most one refinement."
+          }
+        },
+        "description": "What a search field could offer while somebody is still typing."
       },
       "RecipesGetCookLogCookLogItem": {
         "required": [

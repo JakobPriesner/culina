@@ -562,6 +562,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Complete a search
+         * @description What the words still being typed could become, from this household's own recipes: recipes to open, ingredients and tags to filter by, and at most one refinement. Whatever `query` already says about a diet, time or meal is left out of the completion. Never cached.
+         */
+        get: operations["getHouseholdCompletionsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipe-imports": {
         parameters: {
             query?: never;
@@ -2197,6 +2217,50 @@ export interface components {
             total: number;
             interpretation?: (null) | components["schemas"]["RecipesGetAllInterpretation"];
             facets?: (null) | components["schemas"]["RecipesGetAllFacets"];
+        };
+        /** @description One thing a half-typed query could become. */
+        RecipesGetCompletionsCompletion: {
+            /** @description `recipe`, `ingredient`, `tag` or `refinement`. */
+            kind: string;
+            /**
+             * @description What to show: a recipe's title, an ingredient's or a tag's name as the
+             *     household writes it, or for a refinement the ingredient it narrows.
+             */
+            label: string;
+            /**
+             * Format: uuid
+             * @description The recipe, for a recipe.
+             */
+            recipeId?: string | null;
+            /**
+             * Format: uuid
+             * @description Its picture, for a recipe that has one.
+             */
+            imageId?: string | null;
+            /**
+             * Format: int32
+             * @description Its total time, for a recipe that states one.
+             */
+            totalMinutes?: number | null;
+            /** @description The tag's slug, for a tag. */
+            slug?: string | null;
+            /**
+             * Format: int32
+             * @description How many recipes it would find, for an ingredient, a tag or a refinement.
+             */
+            recipeCount?: number | null;
+            /**
+             * Format: int32
+             * @description The time ceiling a refinement adds, in minutes. The client words the
+             *     query itself — "Hähnchen unter 30 Minuten" or "chicken under 30
+             *     minutes" — because both read the same way.
+             */
+            maxMinutes?: number | null;
+        };
+        /** @description What a search field could offer while somebody is still typing. */
+        RecipesGetCompletionsResponse: {
+            /** @description Recipes first, then ingredients, tags and at most one refinement. */
+            items: components["schemas"]["RecipesGetCompletionsCompletion"][];
         };
         /** @description One time you cooked it. */
         RecipesGetCookLogCookLogItem: {
@@ -5210,6 +5274,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipesGetIngredientsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdCompletionsV1: {
+        parameters: {
+            query?: {
+                query?: string;
+            };
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetCompletionsResponse"];
                 };
             };
             /** @description Unauthorized */

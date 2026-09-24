@@ -74,6 +74,84 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
         return rows.ToDictionary(row => row.Typed, row => row.Meant, StringComparer.Ordinal);
     }
 
+    public async Task<Completions> CompletionsAsync(
+        Guid householdId,
+        string typed,
+        int perKind,
+        CancellationToken cancellationToken)
+    {
+        var parameters = new { householdId, typed, perKind };
+
+        // A word of the name that begins with what was typed, in either fold:
+        // "häh" finds Hähnchen-Curry and Brathähnchen alike, and "haeh" and
+        // "hah" find them too.
+        var recipes = await executor.QueryAsync<RecipeCompletion>(
+            $"""
+            with {Typed}
+            select r.id as recipe_id, r.title, r.image_id,
+                   case when r.prep_minutes is null and r.cook_minutes is null then null
+                        else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) end as total_minutes
+            from recipe_search_documents d
+            cross join typed t
+            join recipes r on r.id = d.recipe_id
+            where d.household_id = @householdId
+              and ({Begins("d.title_ae", "d.title_a")})
+            -- A title that starts with the word, then the shortest: the one
+            -- most nearly called what was typed.
+            order by (d.title_ae like t.ae || '%' or d.title_a like t.a || '%') desc,
+                     length(d.title_ae), d.title_ae
+            limit @perKind;
+            """,
+            parameters,
+            cancellationToken).ConfigureAwait(false);
+
+        var ingredients = await executor.QueryAsync<IngredientCompletion>(
+            $"""
+            with {Typed}
+            select min(i.name) as name,
+                   count(distinct r.id)::int as recipe_count,
+                   count(distinct r.id) filter (
+                       where (r.prep_minutes is not null or r.cook_minutes is not null)
+                         and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= 30)::int as quick_count
+            from recipe_ingredients i
+            cross join typed t
+            join ingredient_groups g on g.id = i.group_id
+            join recipes r on r.id = g.recipe_id
+            where r.household_id = @householdId
+              and ({Begins("i.name_ae", "i.name_a")})
+            group by i.name_ae
+            order by recipe_count desc, name
+            limit @perKind;
+            """,
+            parameters,
+            cancellationToken).ConfigureAwait(false);
+
+        var tags = await executor.QueryAsync<TagCompletion>(
+            $"""
+            with {Typed}
+            select tg.slug, tg.name, count(rt.recipe_id)::int as recipe_count
+            from tags tg
+            cross join typed t
+            left join recipe_tags rt on rt.tag_id = tg.id
+            where tg.household_id = @householdId
+              and ({Begins("culina_fold_ae(tg.name)", "culina_fold_a(tg.name)")})
+            group by tg.id
+            order by recipe_count desc, tg.name
+            limit @perKind;
+            """,
+            parameters,
+            cancellationToken).ConfigureAwait(false);
+
+        return new Completions(recipes, ingredients, tags);
+    }
+
+    private const string Typed = "typed as (select culina_fold_ae(@typed) as ae, culina_fold_a(@typed) as a)";
+
+    /// <summary>Whether a word of a folded name, in either fold, begins with what was typed.</summary>
+    private static string Begins(string ae, string a) =>
+        $"{ae} like t.ae || '%' or {ae} like '% ' || t.ae || '%' "
+        + $"or {a} like t.a || '%' or {a} like '% ' || t.a || '%'";
+
     private sealed record Spelling
     {
         public string Typed { get; init; } = string.Empty;
