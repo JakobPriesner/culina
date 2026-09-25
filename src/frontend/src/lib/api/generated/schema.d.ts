@@ -650,6 +650,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipes/{recipeId}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recipes like this one
+         * @description Up to three recipes of the same household, the closest first, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so. Not cached: it changes with every other recipe in the household.
+         */
+        get: operations["getRelatedRecipesV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipe-imports": {
         parameters: {
             query?: never;
@@ -2475,6 +2495,72 @@ export interface components {
             stepId: string;
             /** @description What it says. */
             body: string;
+        };
+        /** @description Why two recipes are related, in words a person can disagree with. */
+        RecipesGetRelatedRelatedReason: {
+            /**
+             * @description `kinds` when what they are is what they share most — both pasta
+             *             bakes, both Italian — or `ingredients` when it is what they are
+             *             made from.
+             */
+            kind: string;
+            /**
+             * @description At most three things they share, the most telling first, worded in the
+             *     language of the recipe being read.
+             */
+            shared: string[];
+        };
+        /** @description A recipe like the one being read, and why. */
+        RecipesGetRelatedRelatedRecipe: {
+            /**
+             * Format: uuid
+             * @description Which recipe.
+             */
+            recipeId: string;
+            /** @description Its title. */
+            title: string;
+            /**
+             * Format: uuid
+             * @description Its picture, if it has one.
+             */
+            imageId?: string | null;
+            /**
+             * Format: int32
+             * @description Its total time, where it states one.
+             */
+            totalMinutes?: number | null;
+            /**
+             * Format: double
+             * @description How much it makes.
+             */
+            yieldAmount: number;
+            /** @description `servings` or `pieces`. */
+            yieldKind: string;
+            /** @description The recipe's own word for what it makes, or null for the usual one. */
+            yieldLabel?: string | null;
+            /** @description Its tag slugs. */
+            tags: string[];
+            /**
+             * Format: int32
+             * @description How many times the person asking has made it.
+             */
+            cookCount: number;
+            /**
+             * Format: date-time
+             * @description When the person asking last made it, or null.
+             */
+            lastCookedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When it was last changed.
+             */
+            updatedAt: string;
+            reason: components["schemas"]["RecipesGetRelatedRelatedReason"];
+        };
+        /** @description The recipes of the same household most like one of its own. */
+        RecipesGetRelatedResponse: {
+            /** @description The closest first. Empty when nothing is alike enough to say so. */
+            items: components["schemas"]["RecipesGetRelatedRelatedRecipe"][];
         };
         /** @description A recipe as whoever follows the link sees it. */
         RecipesGetSharedResponse: {
@@ -5971,6 +6057,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipesGetCompletionsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRelatedRecipesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetRelatedResponse"];
                 };
             };
             /** @description Unauthorized */

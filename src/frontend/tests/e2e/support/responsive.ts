@@ -182,6 +182,9 @@ export async function responsiveData(
     // a list — it decides the order — so an unanswered one leaves the page on
     // its skeleton forever, which is exactly what these fixtures must not do.
     if (path === '/suggestions') return reply({ items: [] });
+    // Nothing alike enough, so the shelf under a recipe stays away and the
+    // page ends where the recipe does.
+    if (path.endsWith('/related')) return reply({ items: [] });
     // The library toolbar asks for these on every page that carries it. An
     // empty list is the fixture worth having: a household with saved searches
     // renders a row of chips that changes the height of everything below it,
