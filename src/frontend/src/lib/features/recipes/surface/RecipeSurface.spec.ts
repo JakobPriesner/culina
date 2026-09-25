@@ -190,7 +190,12 @@ describe('reading a recipe', () => {
   });
 
   it('keeps the occasional actions in one menu, closed until it is asked for', () => {
-    render({ editable: true, onshare: () => {}, onaddtocookbook: () => {} });
+    render({
+      editable: true,
+      onshare: () => {},
+      onaddtocookbook: () => {},
+      onaddtoplan: () => {}
+    });
 
     // One control on the page, and nothing behind it reachable until it is
     // pressed.
@@ -204,6 +209,7 @@ describe('reading a recipe', () => {
     const hidden = { hidden: true } as const;
 
     expect(screen.getByRole('button', { name: 'Add to cookbook', ...hidden })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to plan', ...hidden })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Share', ...hidden })).toBeInTheDocument();
 
     // A link, not a button: a recipe you are about to rewrite is one people

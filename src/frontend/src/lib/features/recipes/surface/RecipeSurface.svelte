@@ -89,6 +89,8 @@
     onaddtolist?: () => void;
     /** Opens the sheet that says which cookbooks this recipe is on. */
     onaddtocookbook?: () => void;
+    /** Opens the week at the servings currently shown on this recipe. */
+    onaddtoplan?: () => void;
     /** Opens the sheet that hands out, and takes back, the link to this recipe. */
     onshare?: () => void;
     /**
@@ -129,6 +131,7 @@
     onstartcooking,
     onaddtolist,
     onaddtocookbook,
+    onaddtoplan,
     onshare,
     photo,
     editable = false,
@@ -192,7 +195,9 @@
    * The same question for the other end of the page: the supporting actions
    * are offered to whoever owns the recipe, and to nobody else.
    */
-  const inMenu = $derived(!cooking && Boolean(editable || onaddtocookbook || onshare));
+  const inMenu = $derived(
+    !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare)
+  );
   const hasSupportingActions = $derived(inMenu || Boolean(!cooking && onaddtolist));
 
   /**
@@ -472,6 +477,26 @@
               {/snippet}
 
               <div class="menu">
+                {#if onaddtoplan}
+                  <button class="item" type="button" onclick={(e) => choose(e, onaddtoplan)}>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
+                      <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+                      <path d="m9 15 2 2 4-4" />
+                    </svg>
+
+                    {m['plan.recipe.action']()}
+                  </button>
+                {/if}
+
                 {#if onaddtocookbook}
                   <button class="item" type="button" onclick={(e) => choose(e, onaddtocookbook)}>
                     <svg
