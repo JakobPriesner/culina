@@ -25,7 +25,18 @@ internal static class ShoppingMappings
                     Unit = Recipes.RecipeWords.Of(item.Quantity.Unit),
                     Section = ShoppingWords.Of(item.Section),
                     IsChecked = item.IsChecked,
-                    IsManual = item.IsManual
+                    IsManual = item.IsManual,
+                    Sources = [.. item.Sources.Select(source => new SourceContract
+                    {
+                        RecipeId = source.RecipeId,
+                        RecipeTitle = source.RecipeTitle,
+                        Quantity = source.Quantity.Amount,
+                        Unit = Recipes.RecipeWords.Of(source.Quantity.Unit),
+                        PlannedDate = source.PlannedDate,
+                        PlannedSlot = source.PlannedSlot is { } slot
+                            ? Planning.PlanningWords.Of(slot)
+                            : null
+                    })]
                 })],
             Version = list.Version
         };

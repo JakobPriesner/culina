@@ -1,5 +1,27 @@
 namespace Contracts.Shopping;
 
+/// <summary>One recipe contribution to a shopping-list line.</summary>
+public sealed record SourceContract
+{
+    /// <summary>The recipe that asked for it.</summary>
+    public required Guid RecipeId { get; init; }
+
+    /// <summary>What that recipe is called.</summary>
+    public required string RecipeTitle { get; init; }
+
+    /// <summary>How much this recipe contributed, unrounded.</summary>
+    public decimal? Quantity { get; init; }
+
+    /// <summary>In what, or null for a bare count.</summary>
+    public string? Unit { get; init; }
+
+    /// <summary>Which planned day it is for, or null when added directly.</summary>
+    public DateOnly? PlannedDate { get; init; }
+
+    /// <summary>Breakfast, lunch or dinner, or null when added directly.</summary>
+    public string? PlannedSlot { get; init; }
+}
+
 /// <summary>One line on the list.</summary>
 public sealed record ItemContract
 {
@@ -30,6 +52,9 @@ public sealed record ItemContract
 
     /// <summary>Whether a person typed it rather than a recipe contributing it.</summary>
     public required bool IsManual { get; init; }
+
+    /// <summary>Which recipes asked for it, and how much each contributed.</summary>
+    public required IReadOnlyList<SourceContract> Sources { get; init; }
 }
 
 /// <summary>A household's shopping list.</summary>

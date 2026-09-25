@@ -83,7 +83,8 @@ internal sealed class AddPlannedMealsToListCommandHandler(
         {
             var entry = planned.Entry;
 
-            if (list.IsShoppedFor(entry.Id) || list.CountFor(entry.RecipeId, entry.Id))
+            if (list.IsShoppedFor(entry.Id) ||
+                list.CountFor(entry.RecipeId, entry.Id, entry.Date, entry.Slot))
             {
                 continue;
             }
@@ -99,6 +100,8 @@ internal sealed class AddPlannedMealsToListCommandHandler(
                 recipe,
                 entry.Servings ?? recipe.Yield.Amount,
                 entry.Id,
+                entry.Date,
+                entry.Slot,
                 overrides));
         }
 
