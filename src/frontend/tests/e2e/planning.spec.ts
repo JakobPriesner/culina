@@ -132,6 +132,39 @@ test.describe('planning a week', () => {
     await expect(page.getByRole('listitem').filter({ hasText: flour })).toContainText(/250\s*g/);
   });
 
+  test('plans directly from a scaled recipe and keeps that serving count', async () => {
+    const plannedTitle = unique('Scaled plan');
+    const recipeId = await seedRecipe(page, {
+      title: plannedTitle,
+      yieldAmount: 2,
+      ingredients: [{ quantity: 100, unit: 'g', name: unique('Rice') }],
+      steps: ['Cook it.']
+    });
+
+    await page.goto(`/recipes/${recipeId}?yield=5`);
+    await page.getByRole('button', { name: /more actions|weitere aktionen/i }).click();
+    await page.getByRole('button', { name: /add to plan|einplanen/i }).click();
+
+    const sheet = page.getByRole('dialog', { name: new RegExp(plannedTitle) });
+
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('radio').first().check();
+
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().endsWith('/meal-plan') && response.request().method() === 'POST'
+      ),
+      sheet.getByRole('button', { name: /add to week|zur woche hinzufügen/i }).click()
+    ]);
+
+    await page.goto('/plan');
+
+    await expect(page.getByRole('link', { name: new RegExp(plannedTitle) })).toContainText(
+      /5 servings|5 Portionen/i
+    );
+  });
+
   test('moves a meal to another day by dragging it there', async () => {
     await page.goto('/plan');
 
