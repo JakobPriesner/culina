@@ -19,9 +19,11 @@
    */
   interface Props {
     recipeId: string;
+    /** Cook mode keeps the note but leaves attempt history on the detail page. */
+    variant?: 'detail' | 'cook';
   }
 
-  let { recipeId }: Props = $props();
+  let { recipeId, variant = 'detail' }: Props = $props();
 
   const autosave = createAutosave(() => notes.save(recipeId));
 
@@ -32,7 +34,10 @@
 
   $effect(() => {
     void notes.load(recipeId);
-    void cookLog.load(recipeId);
+
+    if (variant === 'detail') {
+      void cookLog.load(recipeId);
+    }
   });
 
   const lastMade = $derived(
@@ -40,11 +45,15 @@
   );
 </script>
 
-<section class="notes" aria-label={m['notes.title']()}>
-  <header class="head">
-    <h2 class="title">{m['notes.title']()}</h2>
+<section class="notes" class:compact={variant === 'cook'} aria-label={m['notes.title']()}>
+  {#if variant === 'detail'}
+    <header class="head">
+      <h2 class="title">{m['notes.title']()}</h2>
+      <p class="status" role="status">{autosave.state === 'saved' ? m['notes.saved']() : ''}</p>
+    </header>
+  {:else}
     <p class="status" role="status">{autosave.state === 'saved' ? m['notes.saved']() : ''}</p>
-  </header>
+  {/if}
 
   <p class="hint">{m['notes.hint']()}</p>
 
@@ -52,13 +61,15 @@
        empty box; this is the same words in a form paper can carry. -->
   {#if notes.overall}<p class="written">{notes.overall}</p>{/if}
 
-  <AttemptStrip {recipeId} />
+  {#if variant === 'detail'}
+    <AttemptStrip {recipeId} />
 
-  {#if cookLog.count > 0}
-    <p class="history">
-      {m['notes.madeCount']({ count: cookLog.count })}{#if lastMade}
-        · {m['notes.lastMade']({ date: lastMade })}{/if}
-    </p>
+    {#if cookLog.count > 0}
+      <p class="history">
+        {m['notes.madeCount']({ count: cookLog.count })}{#if lastMade}
+          · {m['notes.lastMade']({ date: lastMade })}{/if}
+      </p>
+    {/if}
   {/if}
 
   <TextArea
@@ -84,6 +95,15 @@
     gap: var(--space-2);
     padding-top: var(--space-6);
     border-top: 1px solid var(--border);
+  }
+
+  .notes.compact {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .compact .status:empty {
+    display: none;
   }
 
   .head {
