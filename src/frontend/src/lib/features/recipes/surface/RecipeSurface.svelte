@@ -322,7 +322,25 @@
     const moved = arrived;
     arrived = true;
 
-    void resized(list).then(() => reveal(list.children[index], moved));
+    let current = true;
+
+    void resized(list).then(() => {
+      if (!current) {
+        return;
+      }
+
+      const step = list.children[index];
+
+      reveal(step, moved);
+
+      if (moved) {
+        step?.querySelector<HTMLElement>('[aria-current="step"]')?.focus({ preventScroll: true });
+      }
+    });
+
+    return () => {
+      current = false;
+    };
   });
 
   /**

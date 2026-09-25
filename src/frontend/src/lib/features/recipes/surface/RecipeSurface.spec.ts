@@ -471,6 +471,7 @@ describe('cooking a recipe', () => {
       await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
 
       expect(scrollIntoView.mock.contexts[0]).toHaveTextContent('Step 2');
+      expect(screen.getByRole('button', { current: 'step' })).toHaveFocus();
     });
 
     it('leaves the page where the reader put it while reading', async () => {
