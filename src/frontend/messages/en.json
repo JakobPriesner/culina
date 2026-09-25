@@ -1252,5 +1252,8 @@
   "editor.tags.remove": "Remove {name}",
   "editor.tags.new": "New tag",
   "editor.tags.add": "Add",
-  "editor.tags.suggested": "This recipe could also be tagged"
+  "editor.tags.suggested": "This recipe could also be tagged",
+  "search.shelf.make": "Save as a cookbook",
+  "search.shelf.behind": "A cookbook cannot ask for {words}; the rest comes along.",
+  "search.shelf.word": "“{word}”"
 }

@@ -3,8 +3,12 @@
 
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Image, Sheet } from '$ds';
-  import { m } from '$shell/i18n';
+  import { Button, Image, Sheet } from '$ds';
+  import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
+  import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
+  import type { CookbookRules } from '$features/cookbooks/types';
+  import { formatList, m } from '$shell/i18n';
+  import { toaster } from '$shell/toaster.svelte';
 
   import { imageUrl } from '../recipeImage';
   import { metaLineFor } from '../recipeMeta';
@@ -13,6 +17,7 @@
   import { recentSearches, rememberSearch } from './recentSearches';
   import SearchChips from './SearchChips.svelte';
   import SearchNotice from './SearchNotice.svelte';
+  import { shelfFrom, shelvable } from './shelf';
   import { createCompletionStore } from './stores/completions.svelte';
   import Highlighted from './Highlighted.svelte';
   import { cuisineLabel, reasonLine, withoutChip } from './wording';
@@ -58,6 +63,41 @@
   let searching: ReturnType<typeof setTimeout> | undefined;
 
   const asking = $derived(applied.trim().length > 0 || tags.length > 0);
+
+  /**
+   * This search, as the cookbook that would ask the same question — offered
+   * only when a shelf could ask any of it, and with what it could not named.
+   */
+  const shelf = $derived(shelfFrom(asking ? recipes.interpretation : null, tags));
+
+  /** The shelf being made from this search, while its sheet is open. */
+  let shelving = $state<{ name: string; rules: CookbookRules } | null>(null);
+  let shelvingBusy = $state(false);
+
+  async function makeCookbook(
+    name: string,
+    description: string | null,
+    rules: CookbookRules | null
+  ) {
+    if (!rules) {
+      return;
+    }
+
+    shelvingBusy = true;
+
+    const made = await cookbooks.create(householdId, name, description ?? undefined, rules);
+
+    shelvingBusy = false;
+
+    if (made) {
+      shelving = null;
+      toaster.show({ message: () => m['saved.promoted']({ name }) });
+
+      return;
+    }
+
+    toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
+  }
 
   type Option =
     | { readonly key: string; readonly kind: 'completion'; readonly completion: Completion }
@@ -331,6 +371,31 @@
       {/if}
     </p>
 
+    {#if asking && recipes.status === 'ready' && recipes.total > 0 && shelvable(shelf)}
+      <!-- The one door from a search to a shelf. What a shelf cannot ask is
+           said beside it rather than discovered on the cookbook later. -->
+      <div class="shelf">
+        <Button
+          size="sm"
+          variant="ghost"
+          onclick={() =>
+            (shelving = {
+              name: applied.trim() || tags.map((tag) => tag.name).join(', '),
+              rules: shelf.rules
+            })}
+        >
+          {m['search.shelf.make']()}
+        </Button>
+        {#if shelf.behind.length > 0}
+          <p class="behind">
+            {m['search.shelf.behind']({
+              words: formatList(shelf.behind.map((word) => m['search.shelf.word']({ word })))
+            })}
+          </p>
+        {/if}
+      </div>
+    {/if}
+
     <ul class="list" id="{id}-list" role="listbox" aria-label={m['search.group.results']()}>
       {#each groups as group (group.kind)}
         {@const members = options.filter(
@@ -471,6 +536,15 @@
   </div>
 </Sheet>
 
+<CookbookSheet
+  open={shelving !== null}
+  {householdId}
+  preset={shelving}
+  saving={shelvingBusy}
+  onsave={(name, description, rules) => void makeCookbook(name, description, rules)}
+  onclose={() => (shelving = null)}
+/>
+
 <style>
   .search {
     display: flex;
@@ -508,6 +582,18 @@
   input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
+  }
+
+  .shelf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .behind {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   /* One row that scrolls rather than wraps, so chips never push the results
