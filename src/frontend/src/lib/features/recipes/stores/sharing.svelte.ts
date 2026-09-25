@@ -40,70 +40,39 @@ class Sharing {
   }
 
   /**
-   * Asks whether this recipe is shared.
+   * Publishes the recipe, or returns the link it already had.
    *
-   * A 404 is the ordinary answer and means "not shared" — so it settles the
-   * store into `ready` with no link, rather than into `failed`. Read from the
-   * status rather than the code, because the two 404s the endpoint can give
-   * ("no link" and "no such recipe") are the same answer to the only question
-   * the sheet asks. Anything else is a real failure and says so.
+   * This is also how the sheet asks whether a recipe is shared: opening it is
+   * the decision to share, so there is no separate "is it?" question to ask
+   * first. Idempotent on the server, so reopening the sheet, or a double tap,
+   * hands back the same link rather than a second one nobody can account for.
    */
-  async load(recipeId: string): Promise<void> {
+  async share(recipeId: string): Promise<AppError | null> {
     this.#recipeId = recipeId;
     this.#token = null;
     this.#status = 'loading';
     this.#error = null;
-
-    const result = await request(() =>
-      http.GET('/api/v1/recipes/{recipeId}/share', { params: { path: { recipeId } } })
-    );
-
-    if (this.#recipeId !== recipeId) {
-      return;
-    }
-
-    if (result.ok) {
-      this.#token = result.value.token;
-      this.#status = 'ready';
-
-      return;
-    }
-
-    if (result.error.status === 404) {
-      this.#status = 'ready';
-
-      return;
-    }
-
-    this.#error = result.error;
-    this.#status = 'failed';
-  }
-
-  /**
-   * Publishes the recipe, or returns the link it already had.
-   *
-   * Idempotent on the server too, so a double tap is free rather than a second
-   * link nobody can account for.
-   */
-  async share(recipeId: string): Promise<AppError | null> {
     this.#working = true;
 
     const result = await request(() =>
       http.PUT('/api/v1/recipes/{recipeId}/share', { params: { path: { recipeId } } })
     );
 
+    if (this.#recipeId !== recipeId) {
+      return null;
+    }
+
     this.#working = false;
 
     if (!result.ok) {
       this.#error = result.error;
+      this.#status = 'failed';
 
       return result.error;
     }
 
-    this.#recipeId = recipeId;
     this.#token = result.value.token;
     this.#status = 'ready';
-    this.#error = null;
 
     return null;
   }
