@@ -137,11 +137,22 @@ test.describe('cooking a recipe', () => {
       steps: ['Soften {0} slowly.']
     });
 
+    await page.goto(`/recipes/${recipeId}/edit`);
+
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/v1/recipes/${recipeId}`) &&
+        response.request().method() === 'PUT'
+    );
+
+    await page.getByRole('spinbutton', { name: /timer for step 1|timer für schritt 1/i }).fill('2');
+    await saved;
+
     await page.goto(`/recipes/${recipeId}/cook`);
 
-    // No duration on this step, so no timer: a timer offered for an instruction
-    // that does not wait is a button that teaches people to ignore buttons.
-    await expect(page.getByRole('button', { name: /min timer|timer über/i })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: /start 2 min timer|timer über 2 min\. starten/i })
+    ).toBeVisible();
   });
 
   test('puts the biggest target under the thumb that is pressed most', async () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
 
-  import { IconButton, TextInput } from '$ds';
+  import { Field, IconButton, TextInput } from '$ds';
 
   import { m } from '$shell/i18n';
   import MentionField from './MentionField.svelte';
@@ -60,6 +60,18 @@
 
   function setUses(index: number, uses: string[]) {
     onchange(steps.map((step, candidate) => (candidate === index ? { ...step, uses } : step)));
+  }
+
+  function setDuration(index: number, written: string) {
+    const minutes = Number(written);
+    const durationSeconds =
+      written.trim() === '' || !Number.isFinite(minutes) || minutes <= 0
+        ? null
+        : Math.min(86_400, Math.round(minutes * 60));
+
+    onchange(
+      steps.map((step, candidate) => (candidate === index ? { ...step, durationSeconds } : step))
+    );
   }
 
   /**
@@ -160,6 +172,33 @@
               oninput={(text) => update(index, text)}
               onadd={onaddingredient}
             />
+
+            <div class="timer">
+              <Field
+                id="step-{index}-duration"
+                label={m['editor.stepDuration']({ number: index + 1 })}
+                hint={m['editor.stepDuration.hint']()}
+                optionalText={m['editor.optional']()}
+              >
+                {#snippet children({ id, describedBy, invalid })}
+                  <div class="duration-control">
+                    <TextInput
+                      {id}
+                      type="number"
+                      inputmode="decimal"
+                      min={0.1}
+                      max={1440}
+                      step={0.5}
+                      value={step.durationSeconds === null ? '' : String(step.durationSeconds / 60)}
+                      {describedBy}
+                      {invalid}
+                      oninput={(value) => setDuration(index, value)}
+                    />
+                    <span>{m['editor.stepDuration.unit']()}</span>
+                  </div>
+                {/snippet}
+              </Field>
+            </div>
 
             <StepIngredients
               {step}
@@ -280,6 +319,19 @@
        reaches the point of wrapping — it just gets wider than the screen. */
     max-width: 100%;
     gap: var(--space-1);
+  }
+
+  .timer {
+    max-width: 16rem;
+  }
+
+  .duration-control {
+    display: grid;
+    grid-template-columns: minmax(0, 7rem) auto;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   /* Three buttons per step is nine down a three-step recipe, and a method that
