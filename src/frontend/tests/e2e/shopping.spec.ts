@@ -112,17 +112,19 @@ test.describe('the shopping list', () => {
 
   test('merges the same ingredient across two recipes', async () => {
     const butter = unique('Butter');
+    const cakeTitle = unique('Cake');
+    const biscuitsTitle = unique('Biscuits');
 
     // Two recipes that share an ingredient, at different amounts and in
     // different units: 200 g and 0.05 kg is 250 g of one thing, not two lines.
     const cake = await seedRecipe(page, {
-      title: unique('Cake'),
+      title: cakeTitle,
       yieldAmount: 4,
       ingredients: [{ quantity: 200, unit: 'g', name: butter }]
     });
 
     const biscuits = await seedRecipe(page, {
-      title: unique('Biscuits'),
+      title: biscuitsTitle,
       yieldAmount: 4,
       ingredients: [{ quantity: 0.05, unit: 'kg', name: butter }]
     });
@@ -141,6 +143,12 @@ test.describe('the shopping list', () => {
     // three lines of butter is how a list stops being worth carrying.
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(/250\s*g/);
+
+    // The merged line stays compact until its explanation is wanted, then
+    // every contribution leads back to the recipe that asked for it.
+    await row.getByRole('button', { name: /2 recipes|2 Rezepte/i }).click();
+    await expect(row.getByRole('link', { name: cakeTitle })).toBeVisible();
+    await expect(row.getByRole('link', { name: biscuitsTitle })).toBeVisible();
 
     await row.getByRole('button', { name: /remove|entfernen/i }).click();
     await expect(row).toHaveCount(0);

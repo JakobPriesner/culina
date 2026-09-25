@@ -1,3 +1,4 @@
+using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -181,6 +182,8 @@ public sealed class ShoppingList
     /// </summary>
     /// <param name="recipeId">The planned recipe.</param>
     /// <param name="planEntryId">The planned meal.</param>
+    /// <param name="plannedDate">The day the meal is planned for.</param>
+    /// <param name="plannedSlot">The meal of that day.</param>
     /// <returns>Whether the recipe was here to count.</returns>
     /// <remarks>
     /// Somebody who put the waffles on the list from the recipe and then planned
@@ -188,13 +191,17 @@ public sealed class ShoppingList
     /// would double every ingredient, silently, and the list would be wrong in
     /// exactly the way nobody checks until the shop.
     /// </remarks>
-    public bool CountFor(Guid recipeId, Guid planEntryId)
+    public bool CountFor(
+        Guid recipeId,
+        Guid planEntryId,
+        DateOnly plannedDate,
+        MealSlot plannedSlot)
     {
         var counted = false;
 
         foreach (var item in items)
         {
-            counted |= item.CountFor(recipeId, planEntryId);
+            counted |= item.CountFor(recipeId, planEntryId, plannedDate, plannedSlot);
         }
 
         if (counted)

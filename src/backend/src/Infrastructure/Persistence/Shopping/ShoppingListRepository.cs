@@ -1,7 +1,9 @@
 using Application.Abstractions;
+using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shared;
 using Domain.Shopping;
+using Infrastructure.Persistence.Planning;
 
 namespace Infrastructure.Persistence.Shopping;
 
@@ -34,7 +36,13 @@ internal sealed record ShoppingSourceRow
 
     public Guid RecipeId { get; init; }
 
+    public string RecipeTitle { get; init; } = string.Empty;
+
     public Guid? PlanEntryId { get; init; }
+
+    public DateOnly? PlannedDate { get; init; }
+
+    public string? PlannedSlot { get; init; }
 
     public decimal? Quantity { get; init; }
 
@@ -88,9 +96,13 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
 
         var sources = await executor.QueryAsync<ShoppingSourceRow>(
             """
-            select s.item_id, s.recipe_id, s.plan_entry_id, s.quantity, s.unit
+            select s.item_id, s.recipe_id, r.title as recipe_title,
+                   s.plan_entry_id, p.on_date as planned_date, p.slot as planned_slot,
+                   s.quantity, s.unit
             from shopping_list_item_sources s
             join shopping_list_items i on i.id = s.item_id
+            join recipes r on r.id = s.recipe_id
+            left join meal_plan_entries p on p.id = s.plan_entry_id
             where i.list_id = @listId;
             """,
             new { listId = row.Id },
@@ -238,7 +250,13 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
 
     private static Result<ShoppingItemSource> ToSource(ShoppingSourceRow row) =>
         Quantity.Create(row.Quantity, ShoppingWords.ToUnit(row.Unit))
-            .Map(quantity => new ShoppingItemSource(row.RecipeId, row.PlanEntryId, quantity));
+            .Map(quantity => new ShoppingItemSource(
+                row.RecipeId,
+                row.RecipeTitle,
+                row.PlanEntryId,
+                row.PlannedDate,
+                row.PlannedSlot is null ? null : PlanningCodes.ToSlot(row.PlannedSlot),
+                quantity));
 
     private sealed record SectionOverrideRow
     {
