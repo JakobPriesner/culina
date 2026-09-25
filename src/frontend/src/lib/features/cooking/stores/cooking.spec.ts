@@ -67,7 +67,7 @@ describe('moving through the steps', () => {
   it('moves immediately, before the server has answered', async () => {
     await cooking.resume();
 
-    cooking.moveTo(2);
+    cooking.moveTo('r1', 2);
 
     // Not awaited: tapping next must feel instant, and the server's answer
     // changes nothing the cook can see.
@@ -90,9 +90,9 @@ describe('moving through the steps', () => {
 
     await cooking.resume();
 
-    cooking.moveTo(1);
-    cooking.moveTo(2);
-    cooking.moveTo(3);
+    cooking.moveTo('r1', 1);
+    cooking.moveTo('r1', 2);
+    cooking.moveTo('r1', 3);
 
     resolve(json(session({ currentStepIndex: 1 })));
     await vi.waitFor(() => expect(sent.filter((one) => one.method === 'PATCH')).toHaveLength(2));
@@ -102,6 +102,15 @@ describe('moving through the steps', () => {
     const last = sent.filter((one) => one.method === 'PATCH').at(-1)!;
 
     expect(await last.json()).toEqual({ currentStepIndex: 3 });
+  });
+
+  it('never moves the session of a different recipe', async () => {
+    await cooking.resume();
+
+    cooking.moveTo('another-recipe', 2);
+
+    expect(cooking.session?.currentStepIndex).toBe(0);
+    expect(sent.filter((one) => one.method === 'PATCH')).toHaveLength(0);
   });
 });
 

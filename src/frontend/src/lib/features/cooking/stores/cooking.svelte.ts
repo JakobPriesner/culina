@@ -82,8 +82,8 @@ class CookingStore {
    * four taps would deliver them out of order and land the cook somewhere they
    * were not.
    */
-  moveTo(index: number): void {
-    if (!this.#session) {
+  moveTo(recipeId: string, index: number): void {
+    if (this.#session?.recipeId !== recipeId) {
       return;
     }
 

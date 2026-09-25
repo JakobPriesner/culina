@@ -67,6 +67,12 @@ test.describe('cooking a recipe', () => {
 
     const next = page.getByRole('button', { name: /^(next step|nächster schritt)$/i });
 
+    // Arrow keys belong to the servings control while it has focus. The page
+    // must not treat changing a field as a request to leave the current step.
+    await page.getByRole('spinbutton', { name: /servings|portionen/i }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByText(/step 1 of 3|schritt 1 von 3/i)).toBeVisible();
+
     // The step lands on screen at once and reaches the server behind it. Both
     // are waited for here: the first is what the cook sees, the second is what
     // survives the page going away a moment later. A phone that locks keeps the
@@ -86,6 +92,7 @@ test.describe('cooking a recipe', () => {
     ]);
 
     await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
+    await expect(page.locator('[aria-current="step"]')).toBeFocused();
 
     // The phone goes away — a different screen, a lock, a call.
     await page.goto('/shopping');

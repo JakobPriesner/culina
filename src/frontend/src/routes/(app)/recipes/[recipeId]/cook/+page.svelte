@@ -120,8 +120,8 @@
   }
 
   function move(index: number) {
-    if (index >= 0 && index < totalSteps) {
-      cooking.moveTo(index);
+    if (ready && index >= 0 && index < totalSteps) {
+      cooking.moveTo(recipeId, index);
     }
   }
 
@@ -186,6 +186,29 @@
    * all change it.
    */
   let controlsHeight = $state(0);
+
+  function stepFromKeyboard(event: KeyboardEvent) {
+    if (!ready || event.defaultPrevented) {
+      return;
+    }
+
+    const target = event.target;
+
+    if (
+      target instanceof HTMLElement &&
+      target.closest('input, textarea, select, button, a, [contenteditable="true"]')
+    ) {
+      return;
+    }
+
+    if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+      event.preventDefault();
+      move(currentStep + 1);
+    } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+      event.preventDefault();
+      move(currentStep - 1);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -195,15 +218,7 @@
 <!-- The whole screen advances, because a cook's hands are busy and the target
      should be the phone rather than a button on it. Arrow keys for a laptop
      propped on the counter. -->
-<svelte:window
-  onkeydown={(event) => {
-    if (event.key === 'ArrowRight' || event.key === 'PageDown') {
-      move(currentStep + 1);
-    } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
-      move(currentStep - 1);
-    }
-  }}
-/>
+<svelte:window onkeydown={stepFromKeyboard} />
 
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
