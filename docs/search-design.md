@@ -3289,6 +3289,19 @@ stores. One button in the overlay footer — "Als Sammlung speichern" — turns 
 search into a shelf, and `SmartShelfSql` keeps the shelf and the search
 agreeing about what a tag means, as it already does.
 
+**As built (culina-v2-0r34.3.4).** Not every chip is a rule. A shelf asks for
+tags, ingredients and a time limit — what it can count and draw per card
+without running the search engine (see the saved-search amendment) — so the
+overlay maps exactly those and names the rest: a time chip becomes
+`maxMinutes` (the shorter of two), an ingredient chip an ingredient rule, the
+overlay's tag filters its tags. A diet, cuisine, meal, "quick" or exclusion
+chip, and the free words, stay with the search, and the line beside "Als
+Kochbuch speichern" says which: *Ein Kochbuch kann nicht nach „vegetarisch“
+und „Auflauf“ fragen – der Rest kommt mit.* A search with nothing a shelf can
+ask for is not offered the button at all. The button opens the ordinary
+`CookbookSheet` with the rules preset and the query as the name, so a shelf
+made this way is made like every other (`search/shelf.ts`).
+
 ### 19.5 Contextual suggestions on the home screen
 
 Only where they are honest and labelled:
