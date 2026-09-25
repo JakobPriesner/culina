@@ -4,9 +4,10 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, IconButton, Skeleton } from '$ds';
+  import { Button, IconButton, Sheet, Skeleton } from '$ds';
   import { busy } from '$shell/busy.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
+  import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import StepTimer from '$features/cooking/StepTimer.svelte';
   import { createTimers } from '$features/cooking/timers.svelte';
@@ -186,6 +187,7 @@
    * all change it.
    */
   let controlsHeight = $state(0);
+  let notesOpen = $state(false);
 
   function stepFromKeyboard(event: KeyboardEvent) {
     if (!ready || event.defaultPrevented) {
@@ -249,6 +251,18 @@
         </p>
 
         <div class="moves">
+          <IconButton
+            label={m['notes.title']()}
+            size="lg"
+            bordered
+            onclick={() => (notesOpen = true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 4.5h14v15H5z" stroke-linejoin="round" />
+              <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
+            </svg>
+          </IconButton>
+
           <!-- The largest control size, because these are pressed with a wet
              thumb while looking at a pan rather than at the screen.
              Measured at 320 px, "Previous step" used to be the *wider* of the
@@ -318,6 +332,15 @@
     </div>
   {/if}
 </Page>
+
+<Sheet
+  open={notesOpen}
+  title={m['notes.title']()}
+  closeLabel={m['picker.close']()}
+  onclose={() => (notesOpen = false)}
+>
+  <PersonalNotePanel {recipeId} variant="cook" />
+</Sheet>
 
 <style>
   /* What the controls stand over: their own height, the gap they float at and
