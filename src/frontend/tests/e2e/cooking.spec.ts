@@ -162,6 +162,32 @@ test.describe('cooking a recipe', () => {
     ).toBeVisible();
   });
 
+  test('keeps private notes within reach while cooking', async () => {
+    const note = unique('Use the heavy pan');
+    const recipeId = await seedRecipe(page, {
+      title: unique('Cook with notes'),
+      ingredients: [{ quantity: 1, unit: 'piece', name: 'Onion' }],
+      steps: ['Soften {0}.']
+    });
+
+    await page.goto(`/recipes/${recipeId}`);
+
+    const notes = page.getByRole('region', { name: /your notes|deine notizen/i });
+
+    await notes.getByRole('textbox').fill(note);
+    await expect(notes.getByRole('status')).toContainText(/saved|gespeichert/i);
+
+    await page.getByRole('button', { name: /^(start cooking|kochen starten)$/i }).click();
+    await page.getByRole('button', { name: /your notes|deine notizen/i }).click();
+
+    const sheet = page.getByRole('dialog', { name: /your notes|deine notizen/i });
+
+    await expect(sheet.getByRole('textbox')).toHaveValue(note);
+
+    await sheet.getByRole('button', { name: /^(close|schließen)$/i }).click();
+    await page.getByRole('button', { name: /^(done cooking|fertig gekocht)$/i }).click();
+  });
+
   test('puts the biggest target under the thumb that is pressed most', async () => {
     const recipeId = await seedRecipe(page, {
       title: unique('Wet hands'),
