@@ -21,10 +21,10 @@ public sealed class PostgresFixture : IAsyncLifetime
     private const string RoleName = "culina_app";
     private const string RolePassword = "culina_test_password";
 
+    // The container's own user is the superuser, as in production; the app
+    // connects as a role created from it below.
     private readonly PostgreSqlContainer container = new PostgreSqlBuilder("postgres:18-alpine")
         .WithDatabase(DatabaseName)
-        .WithUsername(RoleName)
-        .WithPassword(RolePassword)
         .Build();
 
     private CulinaApiFactory? api;
@@ -46,15 +46,31 @@ public sealed class PostgresFixture : IAsyncLifetime
     {
         await container.StartAsync();
 
-        // citext, pg_trgm and unaccent need superuser rights, so in production
-        // the database's init script installs them rather than a migration.
-        // Creating them here gives the tests the same starting state.
-        await container.ExecScriptAsync(
-            """
-            CREATE EXTENSION IF NOT EXISTS citext;
-            CREATE EXTENSION IF NOT EXISTS pg_trgm;
-            CREATE EXTENSION IF NOT EXISTS unaccent;
-            """);
+        // What scripts/db-init.sh does in production, and nothing more: an
+        // ordinary role that owns the schema. The migrations then run as that
+        // role, extensions included, so a migration that quietly needs a
+        // superuser fails here rather than on someone's server.
+        await ExecuteAsSuperuserAsync(
+            $"""
+            CREATE ROLE {RoleName} LOGIN PASSWORD '{RolePassword}';
+            GRANT ALL ON DATABASE {DatabaseName} TO {RoleName};
+            ALTER SCHEMA public OWNER TO {RoleName};
+            """,
+            CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Runs SQL as the server's superuser, for arranging what the application
+    /// role may not do itself — creating a database, say.
+    /// </summary>
+    public async Task ExecuteAsSuperuserAsync(string sql, CancellationToken cancellationToken)
+    {
+        var result = await container.ExecScriptAsync(sql, cancellationToken);
+
+        if (result.ExitCode != 0 || result.Stderr.Contains("ERROR", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Superuser SQL failed: {result.Stderr}");
+        }
     }
 
     /// <summary>
@@ -115,7 +131,24 @@ public sealed class PostgresFixture : IAsyncLifetime
         }
     }
 
-    private NpgsqlDataSource DataSource => dataSource ??= CulinaDataSource.Build(Settings);
+    /// <summary>
+    /// Built only once the host has migrated: a pool learns the server's types
+    /// on its first connection, and one opened before the first migration
+    /// installed citext cannot read a citext column.
+    /// </summary>
+    private NpgsqlDataSource DataSource
+    {
+        get
+        {
+            if (dataSource is null)
+            {
+                _ = Api.Services;
+                dataSource = CulinaDataSource.Build(Settings);
+            }
+
+            return dataSource;
+        }
+    }
 
     /// <summary>
     /// Returns the instance to a clean state: every table empty, and every
