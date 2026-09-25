@@ -48,7 +48,14 @@ internal sealed class AddRecipeToListCommandHandler(
                     unitOfWork,
                     command.HouseholdId,
                     (list, _) => Task.FromResult(
-                        RecipeContribution.Add(list, found, command.Servings, planEntryId: null, overrides)),
+                        RecipeContribution.Add(
+                            list,
+                            found,
+                            command.Servings,
+                            planEntryId: null,
+                            plannedDate: null,
+                            plannedSlot: null,
+                            overrides)),
                     cancellationToken),
                 error => Task.FromResult(Result<Response>.Failure(error)))
             .ConfigureAwait(false);

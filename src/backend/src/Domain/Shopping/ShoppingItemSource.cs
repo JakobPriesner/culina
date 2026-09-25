@@ -1,3 +1,4 @@
+using Domain.Planning;
 using Domain.Recipes;
 
 namespace Domain.Shopping;
@@ -20,8 +21,17 @@ namespace Domain.Shopping;
 /// </para>
 /// </remarks>
 /// <param name="RecipeId">The recipe that asked for it.</param>
+/// <param name="RecipeTitle">What that recipe is currently called.</param>
 /// <param name="PlanEntryId">
 /// The planned meal it is for, or null for a recipe put on the list by itself.
 /// </param>
+/// <param name="PlannedDate">Which day it is planned for, when it is planned.</param>
+/// <param name="PlannedSlot">Which meal it is planned for, when it is planned.</param>
 /// <param name="Quantity">How much it asked for.</param>
-public sealed record ShoppingItemSource(Guid RecipeId, Guid? PlanEntryId, Quantity Quantity);
+public sealed record ShoppingItemSource(
+    Guid RecipeId,
+    string RecipeTitle,
+    Guid? PlanEntryId,
+    DateOnly? PlannedDate,
+    MealSlot? PlannedSlot,
+    Quantity Quantity);

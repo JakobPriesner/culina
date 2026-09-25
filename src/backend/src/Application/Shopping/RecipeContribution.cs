@@ -1,3 +1,4 @@
+using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shared;
 using Domain.Shopping;
@@ -19,12 +20,16 @@ internal static class RecipeContribution
     /// <param name="recipe">The recipe.</param>
     /// <param name="servings">How many it is being made for.</param>
     /// <param name="planEntryId">The planned meal it is for, or null for the recipe by itself.</param>
+    /// <param name="plannedDate">Which day that meal is planned for.</param>
+    /// <param name="plannedSlot">Which meal of that day it is.</param>
     /// <param name="overrides">Where this household says things are found.</param>
     internal static Result Add(
         ShoppingList list,
         Recipe recipe,
         decimal servings,
         Guid? planEntryId,
+        DateOnly? plannedDate,
+        MealSlot? plannedSlot,
         IReadOnlyDictionary<string, ShoppingSection> overrides)
     {
         // Exact decimal arithmetic, and the sum is stored unrounded. A recipe
@@ -43,7 +48,13 @@ internal static class RecipeContribution
                     .Create(ingredient.Name)
                     .Bind(name => list.Add(
                         name,
-                        new ShoppingItemSource(recipe.Id, planEntryId, Scale(ingredient.Quantity, factor)),
+                        new ShoppingItemSource(
+                            recipe.Id,
+                            recipe.Title.Value,
+                            planEntryId,
+                            plannedDate,
+                            plannedSlot,
+                            Scale(ingredient.Quantity, factor)),
                         AddShoppingItemCommandHandler.SectionFor(name, overrides)))
                     .Bind(_ => Result.Success())));
     }

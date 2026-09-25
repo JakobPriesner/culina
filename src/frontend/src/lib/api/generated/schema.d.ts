@@ -3855,6 +3855,8 @@ export interface components {
             isChecked: boolean;
             /** @description Whether a person typed it rather than a recipe contributing it. */
             isManual: boolean;
+            /** @description Which recipes asked for it, and how much each contributed. */
+            sources: components["schemas"]["ShoppingSourceContract"][];
         };
         /** @description A household's shopping list. */
         ShoppingResponse: {
@@ -3870,6 +3872,30 @@ export interface components {
              * @description The entity version, for If-Match on a change.
              */
             version: number;
+        };
+        /** @description One recipe contribution to a shopping-list line. */
+        ShoppingSourceContract: {
+            /**
+             * Format: uuid
+             * @description The recipe that asked for it.
+             */
+            recipeId: string;
+            /** @description What that recipe is called. */
+            recipeTitle: string;
+            /**
+             * Format: double
+             * @description How much this recipe contributed, unrounded.
+             */
+            quantity?: number | null;
+            /** @description In what, or null for a bare count. */
+            unit?: string | null;
+            /**
+             * Format: date
+             * @description Which planned day it is for, or null when added directly.
+             */
+            plannedDate?: string | null;
+            /** @description Breakfast, lunch or dinner, or null when added directly. */
+            plannedSlot?: string | null;
         };
         /** @description A change to one line. */
         ShoppingUpdateItemRequest: {

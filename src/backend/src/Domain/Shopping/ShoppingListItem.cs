@@ -1,3 +1,4 @@
+using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -168,8 +169,14 @@ public sealed class ShoppingListItem
     /// </summary>
     /// <param name="recipeId">The recipe.</param>
     /// <param name="planEntryId">The planned meal it is now for.</param>
+    /// <param name="plannedDate">The day the meal is planned for.</param>
+    /// <param name="plannedSlot">The meal of that day.</param>
     /// <returns>Whether anything was counted.</returns>
-    public bool CountFor(Guid recipeId, Guid planEntryId)
+    public bool CountFor(
+        Guid recipeId,
+        Guid planEntryId,
+        DateOnly plannedDate,
+        MealSlot plannedSlot)
     {
         var counted = false;
 
@@ -177,7 +184,12 @@ public sealed class ShoppingListItem
         {
             if (sources[index].RecipeId == recipeId && sources[index].PlanEntryId is null)
             {
-                sources[index] = sources[index] with { PlanEntryId = planEntryId };
+                sources[index] = sources[index] with
+                {
+                    PlanEntryId = planEntryId,
+                    PlannedDate = plannedDate,
+                    PlannedSlot = plannedSlot
+                };
                 counted = true;
             }
         }

@@ -1255,5 +1255,17 @@
   "editor.tags.suggested": "Passt vielleicht auch",
   "search.shelf.make": "Als Kochbuch speichern",
   "search.shelf.behind": "Ein Kochbuch kann nicht nach {words} fragen – der Rest kommt mit.",
-  "search.shelf.word": "„{word}“"
+  "search.shelf.word": "„{word}“",
+  "shopping.sources.show": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept",
+        "countPlural=*": "{count} Rezepte"
+      }
+    }
+  ],
+  "shopping.sources.hide": "Rezepte ausblenden",
+  "shopping.source.planned": "{date} · {slot}"
 }

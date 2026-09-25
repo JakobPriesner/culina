@@ -85,6 +85,51 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task AddPlannedMeals_ShouldExposeEveryRecipesAmountAndDay()
+    {
+        // Arrange
+        // One line in the shop, two reasons for it. The response has to retain
+        // both reasons or a merged amount cannot answer what it is for.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var biscuits = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
+
+        await PlanAsync(client, householdId, cake, Monday);
+        await PlanAsync(client, householdId, biscuits, Monday.AddDays(1));
+
+        // Act
+        await AddWeekAsync(client, householdId);
+        var response = await client.GetAsync(
+            $"/api/v1/households/{householdId}/shopping-list",
+            Token);
+
+        // Assert
+        var sources = Butter(response).GetProperty("sources").EnumerateArray()
+            .OrderBy(source => source.GetProperty("recipeTitle").GetString())
+            .ToList();
+
+        Assert.Collection(
+            sources,
+            source =>
+            {
+                Assert.Equal("Biscuits", source.GetProperty("recipeTitle").GetString());
+                Assert.Equal(50m, source.GetProperty("quantity").GetDecimal());
+                Assert.Equal("g", source.GetProperty("unit").GetString());
+                Assert.Equal("2026-09-15", source.GetProperty("plannedDate").GetString());
+                Assert.Equal("dinner", source.GetProperty("plannedSlot").GetString());
+            },
+            source =>
+            {
+                Assert.Equal("Cake", source.GetProperty("recipeTitle").GetString());
+                Assert.Equal(200m, source.GetProperty("quantity").GetDecimal());
+                Assert.Equal("g", source.GetProperty("unit").GetString());
+                Assert.Equal("2026-09-14", source.GetProperty("plannedDate").GetString());
+                Assert.Equal("dinner", source.GetProperty("plannedSlot").GetString());
+            });
+    }
+
+    [Fact]
     public async Task AddRecipe_Twice_ShouldContributeTwice()
     {
         // Arrange

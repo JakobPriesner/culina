@@ -1,3 +1,4 @@
+using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shopping;
 
@@ -17,6 +18,8 @@ public class ShoppingItemSourceTests
     private static readonly Guid Pasta = Guid.CreateVersion7();
     private static readonly Guid Saturday = Guid.CreateVersion7();
     private static readonly Guid Sunday = Guid.CreateVersion7();
+    private static readonly DateOnly SaturdayDate = new(2026, 9, 26);
+    private static readonly DateOnly SundayDate = SaturdayDate.AddDays(1);
 
     [Fact]
     public void Add_ShouldRememberEveryRecipeALineIsTheSumOf()
@@ -59,13 +62,14 @@ public class ShoppingItemSourceTests
         list.Add(Name("Mehl"), For(Waffles, planEntryId: null, 250), ShoppingSection.DryGoods);
 
         // Act
-        var counted = list.CountFor(Waffles, Saturday);
+        var counted = list.CountFor(Waffles, Saturday, SaturdayDate, MealSlot.Dinner);
 
         // Assert
         // Counted, not added again: Saturday is shopped for once.
         Assert.True(counted);
         Assert.True(list.IsShoppedFor(Saturday));
         Assert.Equal(250m, Assert.Single(list.Items).Quantity.Amount);
+        Assert.Equal(SaturdayDate, Assert.Single(list.Items).Sources[0].PlannedDate);
     }
 
     [Fact]
@@ -78,7 +82,7 @@ public class ShoppingItemSourceTests
 
         // Act & Assert
         // Waffles twice in a week is two meals, and each needs its own flour.
-        Assert.False(list.CountFor(Waffles, Sunday));
+        Assert.False(list.CountFor(Waffles, Sunday, SundayDate, MealSlot.Dinner));
     }
 
     [Fact]
@@ -146,7 +150,10 @@ public class ShoppingItemSourceTests
     private static ShoppingItemSource For(Guid recipeId, Guid? planEntryId, decimal? amount, Unit? unit = null) =>
         new(
             recipeId,
+            recipeId == Waffles ? "Waffles" : "Pasta",
             planEntryId,
+            planEntryId is null ? null : planEntryId == Saturday ? SaturdayDate : SundayDate,
+            planEntryId is null ? null : MealSlot.Dinner,
             Quantity.Create(amount, amount is null ? null : unit ?? Unit.Gram)
                 .Match(quantity => quantity, error => throw new InvalidOperationException(error.Code)));
 }

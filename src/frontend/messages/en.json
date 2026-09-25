@@ -1255,5 +1255,17 @@
   "editor.tags.suggested": "This recipe could also be tagged",
   "search.shelf.make": "Save as a cookbook",
   "search.shelf.behind": "A cookbook cannot ask for {words}; the rest comes along.",
-  "search.shelf.word": "“{word}”"
+  "search.shelf.word": "“{word}”",
+  "shopping.sources.show": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} recipe",
+        "countPlural=*": "{count} recipes"
+      }
+    }
+  ],
+  "shopping.sources.hide": "Hide recipes",
+  "shopping.source.planned": "{date} · {slot}"
 }
