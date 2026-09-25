@@ -138,6 +138,11 @@ extensions:
 > The app never connects as a superuser: a SQL injection that reached the
 > database should not also be able to create extensions…
 
+*(Since 2026-09-25: all three are trusted extensions, so migration
+`0000_extensions` installs them as the application role and `db-init.sh` only
+creates the role. Untrusted extensions such as `pgvector` still need a
+superuser, so the pgvector conclusion in §D is unchanged.)*
+
 Twenty-six tables exist. The ones that matter here:
 
 ```

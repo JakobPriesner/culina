@@ -300,10 +300,12 @@ From `README.md`, `Dockerfile` and `compose.prod.yaml`:
   packaging convenience — it is what removes CORS and makes the cookie/CSRF
   model sound. A second container for search is a real cost against a stated
   architectural commitment.
-- **`postgres:18-alpine`**, superuser-installed extensions in
-  [`scripts/db-init.sh`](../scripts/db-init.sh): `citext`, `pg_trgm`,
-  **`unaccent`**. The app role is not a superuser and cannot create extensions.
-  *`unaccent` is already installed and currently unused.*
+- **`postgres:18-alpine`**, with the extensions `citext`, `pg_trgm`,
+  **`unaccent`**. *`unaccent` is already installed and currently unused.*
+  *(Since 2026-09-25 these are installed by migration `0000_extensions` as the
+  application role — all three are trusted extensions — rather than by
+  [`scripts/db-init.sh`](../scripts/db-init.sh) as superuser. The app role is
+  still not a superuser and cannot install untrusted extensions.)*
 - **`--locale=C`** on the cluster. Deterministic collation only. Text search
   configurations are independent of collation, so this does not constrain FTS,
   but it does mean `ORDER BY title` is byte order — worth knowing, unchanged
@@ -3563,7 +3565,7 @@ happening in a house.
 | New containers | 0 |
 | New volumes | 0 |
 | New ports | 0 |
-| New extensions | 0 — `pg_trgm` and `unaccent` are already in `db-init.sh` |
+| New extensions | 0 — `pg_trgm` and `unaccent` are already installed (now by migration `0000_extensions`) |
 | Change to `compose.yaml` | none |
 | Change to `compose.prod.yaml` | none |
 | Change to the backup procedure | none — the table is in the same `pg_dump` |

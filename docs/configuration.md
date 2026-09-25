@@ -41,9 +41,11 @@ to it, and the log says so as a warning. The screen asks for:
 
 1. **The database.** Culina connects before saving anything, and refuses a
    database it could not run in: a wrong password, a host that does not
-   resolve, the `citext`, `pg_trgm` or `unaccent` extensions missing, or a
-   role that may not create tables — each with the reason and, where there is
-   one, the SQL a superuser has to run. Then it restarts into the real app.
+   resolve, a role that may not install the `citext`, `pg_trgm` and `unaccent`
+   extensions (trusted extensions, which the first migration installs as the
+   application role given `CREATE` on the database), or a role that may not
+   create tables — each with the reason and, where there is one, the SQL a
+   superuser has to run. Then it restarts into the real app.
 2. **How people reach it**: secure cookies (defaulted from whether the browser
    is on `https://`) and which proxy to trust (it shows the address requests
    actually arrive from). Everything else is folded away with its defaults.

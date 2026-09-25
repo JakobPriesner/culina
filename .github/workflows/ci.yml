@@ -161,19 +161,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: src/frontend
 
-      # A service container runs no init scripts, so the three extensions that
-      # scripts/db-init.sh creates everywhere else have to be created here.
-      # Without them the first migration fails on `type "citext" does not exist`
-      # and the contract is never exported at all.
-      - name: The extensions the migrations expect
-        env:
-          PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -d culina -v ON_ERROR_STOP=1 \
-            -c 'CREATE EXTENSION IF NOT EXISTS citext' \
-            -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm' \
-            -c 'CREATE EXTENSION IF NOT EXISTS unaccent'
-
       # The document is produced by enumerating the endpoints of a *started*
       # host, which is why this job needs a database at all.
       - name: Export the OpenAPI document
