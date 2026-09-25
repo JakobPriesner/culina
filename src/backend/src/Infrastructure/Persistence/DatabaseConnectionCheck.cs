@@ -12,8 +12,9 @@ namespace Infrastructure.Persistence;
 internal sealed class DatabaseConnectionCheck : IDatabaseConnectionCheck
 {
     /// <summary>
-    /// What the schema is built on and the application role cannot install:
-    /// <c>scripts/db-init.sh</c> creates them as a superuser.
+    /// What the schema is built on. They are trusted extensions, so the first
+    /// migration installs them as the application role — provided it may
+    /// create things in the database.
     /// </summary>
     private static readonly string[] Extensions = ["citext", "pg_trgm", "unaccent"];
 
@@ -31,7 +32,7 @@ internal sealed class DatabaseConnectionCheck : IDatabaseConnectionCheck
 
                 await using (connection.ConfigureAwait(false))
                 {
-                    return await SuitabilityAsync(connection, settings.Username, cancellationToken)
+                    return await SuitabilityAsync(connection, settings, cancellationToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -49,13 +50,14 @@ internal sealed class DatabaseConnectionCheck : IDatabaseConnectionCheck
 
     private static async Task<Result> SuitabilityAsync(
         NpgsqlConnection connection,
-        string username,
+        DatabaseSettings settings,
         CancellationToken cancellationToken)
     {
         var command = new NpgsqlCommand(
             """
             select
                 array(select extname from pg_extension where extname = any(@extensions)) as installed,
+                has_database_privilege(current_database(), 'CREATE') as may_install,
                 has_schema_privilege('public', 'CREATE') as may_create;
             """,
             connection);
@@ -71,23 +73,23 @@ internal sealed class DatabaseConnectionCheck : IDatabaseConnectionCheck
                 await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
                 var installed = await reader.GetFieldValueAsync<string[]>(0, cancellationToken).ConfigureAwait(false);
-                var mayCreate = await reader.GetFieldValueAsync<bool>(1, cancellationToken).ConfigureAwait(false);
+                var mayInstall = await reader.GetFieldValueAsync<bool>(1, cancellationToken).ConfigureAwait(false);
+                var mayCreate = await reader.GetFieldValueAsync<bool>(2, cancellationToken).ConfigureAwait(false);
                 var missing = Extensions.Except(installed).ToList();
 
-                if (missing.Count > 0)
+                if (missing.Count > 0 && !mayInstall)
                 {
                     return SettingsErrors.DatabaseUnsuitable(
-                        $"it lacks the {string.Join(", ", missing)} extension{(missing.Count == 1 ? "" : "s")}, "
-                        + "which only a superuser can create ("
-                        + string.Join(" ", missing.Select(name => $"CREATE EXTENSION IF NOT EXISTS {name};"))
-                        + ")");
+                        $"the role {settings.Username} may not install the {string.Join(", ", missing)} "
+                        + $"extension{(missing.Count == 1 ? "" : "s")} "
+                        + $"(as a superuser: GRANT CREATE ON DATABASE {settings.Name} TO {settings.Username};)");
                 }
 
                 return mayCreate
                     ? Result.Success()
                     : SettingsErrors.DatabaseUnsuitable(
-                        $"the role {username} may not create tables in the public schema "
-                        + $"(as a superuser: ALTER SCHEMA public OWNER TO {username};)");
+                        $"the role {settings.Username} may not create tables in the public schema "
+                        + $"(as a superuser: ALTER SCHEMA public OWNER TO {settings.Username};)");
             }
         }
     }
