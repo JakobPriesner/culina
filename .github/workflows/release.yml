@@ -20,7 +20,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE: ${{ github.repository }}
 
 jobs:
   publish:
@@ -37,6 +36,13 @@ jobs:
         with:
           # The notes are written from what changed since the previous tag.
           fetch-depth: 0
+
+      # A registry reference must be lowercase, and `github.repository` keeps
+      # the case the repository was named with — `JakobPriesner/culina` does
+      # not parse. The metadata action folds it for the push on its own; every
+      # step after the push that names the image does not.
+      - name: Image name
+        run: echo "IMAGE=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       # arm64 matters: a great many self-hosted instances are a Raspberry Pi or
       # an ARM VPS, and an amd64-only image simply does not run there.
@@ -129,7 +135,9 @@ jobs:
             echo
             echo '```bash'
             echo "cosign verify ${REGISTRY}/${IMAGE}:${GITHUB_REF_NAME} \\"
-            echo "  --certificate-identity-regexp '^https://github.com/${IMAGE}/' \\"
+            # The signing identity keeps the repository's own case, unlike the
+            # image reference above.
+            echo "  --certificate-identity-regexp '^https://github.com/${GITHUB_REPOSITORY}/' \\"
             echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
             echo '```'
           } > notes.md
