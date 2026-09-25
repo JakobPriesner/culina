@@ -5636,7 +5636,7 @@
           "RecipeSources"
         ],
         "summary": "Bring recipes over from a connected library",
-        "description": "Names the whole selection, and comes back as soon as the import has an id and a shelf — usually in milliseconds. The recipes arrive afterwards, brought over by a background worker a few at a time. Follow it at `/recipe-sources/{sourceId}/imports/{importId}/events`, which is where every outcome is reported.\n\nThe import belongs to the server, not to the tab that asked for it. Nobody has to stay and watch: a closed laptop costs the progress display and nothing else.\n\nIdempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later, and why an import that was interrupted can simply be asked for again.\n\nEverything from one import lands on a cookbook named after where it came from and when, and this answer says which — so the way out of the screen exists before the first recipe does. The shelf is what makes an import something you can look at, check, and throw away.\n\nA recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.\n\nOne recipe failing never undoes the others: each is written in its own transaction, and reported on its own line.",
+        "description": "Names the whole selection, and comes back as soon as the import has an id and a shelf — usually in milliseconds. The recipes arrive afterwards, brought over by a background worker a few at a time. Follow it at `/recipe-sources/{sourceId}/imports/{importId}/events`, which is where every outcome is reported.\n\nThe import belongs to the server, not to the tab that asked for it. Nobody has to stay and watch: a closed laptop costs the progress display and nothing else.\n\nIdempotent by construction: a recipe already brought into this household comes back as `already_here` rather than a second copy or an error. That is also how somebody catches up on what is new a month later, and why an import that was interrupted can simply be asked for again.\n\nEverything from one import lands on a cookbook named after where it came from and when, and this answer says which — so the way out of the screen exists before the first recipe does. The shelf is what makes an import something you can look at, check, and throw away.\n\nA recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.\n\nOne recipe failing never undoes the others: each is written in its own transaction, and reported on its own line.\n\nA recipe that looks like one the household already has — the same name once folded, nearly the same name and most of the same ingredients, or the same dish from nearly all the same ingredients — is held back as `looks_like`, naming the recipe it resembles, and nothing about it is written. It is a question for a person, never a decision: asking again with `allowLookalikes` brings it over, and `cookbookId` lands it on the earlier import's shelf instead of a new one.",
         "operationId": "importFromRecipeSourceV1",
         "parameters": [
           {
@@ -9108,9 +9108,44 @@
               "type": "string"
             },
             "description": "Which of their recipes, by the id the browse gave back."
+          },
+          "allowLookalikes": {
+            "type": "boolean",
+            "description": "Bring them over even where one looks like a recipe already here."
+          },
+          "cookbookId": {
+            "type": "string",
+            "description": "The shelf of an earlier import to land on, instead of a new one.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "description": "Asks for some of their recipes to be brought over."
+      },
+      "RecipesSourcesImportLookalike": {
+        "required": [
+          "title",
+          "sharedIngredients",
+          "cookCount"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Its title."
+          },
+          "sharedIngredients": {
+            "type": "integer",
+            "description": "How many ingredients the two have in common.",
+            "format": "int32"
+          },
+          "cookCount": {
+            "type": "integer",
+            "description": "How often the person importing has made it.",
+            "format": "int32"
+          }
+        },
+        "description": "A recipe already here that an imported one looks like — \"Sieht aus wie\n„Spaghetti Bolognese“ (12× gekocht, 4 gleiche Zutaten)\"."
       },
       "RecipesSourcesImportStartedResponse": {
         "required": [
@@ -9156,13 +9191,26 @@
           },
           "outcome": {
             "type": "string",
-            "description": "`imported`, `already_here`, or `failed`."
+            "description": "`imported`, `already_here`, `looks_like` or `failed`."
           },
           "recipeId": {
             "type": "string",
-            "description": "The recipe here, when there is one.",
+            "description": "The recipe here, when there is one: the one it became, the one it\nalready was, or the one it looks like.",
             "format": "uuid",
             "nullable": true
+          },
+          "looksLike": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesSourcesImportLookalike"
+              }
+            ]
           },
           "title": {
             "type": "string",

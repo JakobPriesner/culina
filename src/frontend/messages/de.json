@@ -1211,5 +1211,39 @@
   "problem.settings.database_unreachable": "Culina konnte sich nicht mit dieser Datenbank verbinden.",
   "problem.settings.database_unsuitable": "Culina kann in dieser Datenbank noch nicht laufen.",
   "related.reason.kinds": "Auch: {shared}",
-  "related.reason.ingredients": "Teilt {shared}"
+  "related.reason.ingredients": "Teilt {shared}",
+  "import.run.held": "Ähnliches schon da",
+  "import.held.lead": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept sieht aus wie eines, das du schon hast",
+        "countPlural=*": "{count} Rezepte sehen aus wie welche, die du schon hast"
+      }
+    }
+  ],
+  "import.held.hint": "Davon wurde nichts übernommen. Hake an, was du trotzdem möchtest.",
+  "import.held.like": "Sieht aus wie „{title}“",
+  "import.held.shared": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} gleiche Zutat",
+        "countPlural=*": "{count} gleiche Zutaten"
+      }
+    }
+  ],
+  "import.held.compare": "Vergleichen",
+  "import.held.anyway": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} trotzdem importieren",
+        "countPlural=*": "{count} trotzdem importieren"
+      }
+    }
+  ]
 }

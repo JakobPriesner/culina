@@ -62,7 +62,13 @@ internal sealed class ImportFromRecipeSourceEndpoint : IEndpoint
                 + "complete in every other way, exactly like one somebody typed without a "
                 + "photo.\n\n"
                 + "One recipe failing never undoes the others: each is written in its own "
-                + "transaction, and reported on its own line.")
+                + "transaction, and reported on its own line.\n\n"
+                + "A recipe that looks like one the household already has — the same name once "
+                + "folded, nearly the same name and most of the same ingredients, or the same dish "
+                + "from nearly all the same ingredients — is held back as `looks_like`, naming "
+                + "the recipe it resembles, and nothing about it is written. It is a question for "
+                + "a person, never a decision: asking again with `allowLookalikes` brings it over, "
+                + "and `cookbookId` lands it on the earlier import's shelf instead of a new one.")
             .RequireRateLimiting(RateLimitExtensions.Source)
             .Produces<ImportStartedResponse>(StatusCodes.Status202Accepted)
             .ProducesProblem(StatusCodes.Status400BadRequest)
