@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Fixtures;
 
@@ -37,6 +38,32 @@ internal sealed record Kitchen(ApiClient Client, Guid HouseholdId)
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
 
         return new Kitchen(client, householdId);
+    }
+
+    /// <summary>
+    /// Another cook, signed in and in no household of this kitchen — the one a
+    /// recipe has to be invisible to.
+    /// </summary>
+    internal static async Task<ApiClient> StrangerAsync(PostgresFixture postgres)
+    {
+        ArgumentNullException.ThrowIfNull(postgres);
+
+        var settings = postgres.Api.Services
+            .GetRequiredService<Application.Abstractions.Settings.RegistrationSettings>();
+        settings.OpenRegistration = true;
+        settings.RequireInvitation = false;
+
+        var client = postgres.Api.NewApiClient();
+        await client.PostAsync(
+            "/api/v1/users",
+            new { email = "grace@example.com", displayName = "Grace", password = Password },
+            Token);
+        await client.PostAsync(
+            "/api/v1/sessions",
+            new { email = "grace@example.com", password = Password },
+            Token);
+
+        return client;
     }
 
     /// <summary>Creates a recipe and fills it in, as the editor would.</summary>
