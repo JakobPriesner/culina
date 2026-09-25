@@ -12,6 +12,7 @@ import type {
   Recipe,
   RecipeReading,
   RecipeSummary,
+  RelatedRecipe,
   SearchChip,
   Step,
   StepSegment,
@@ -35,6 +36,7 @@ type WireIngredient = components['schemas']['RecipesIngredientContract'];
 type WireStep = components['schemas']['RecipesStepContract'];
 type WireSegment = components['schemas']['RecipesStepSegmentContract'];
 type WireSuggestion = components['schemas']['SuggestionsGetAllSuggestion'];
+type WireRelated = components['schemas']['RecipesGetRelatedRelatedRecipe'];
 type WireShared = components['schemas']['RecipesGetSharedResponse'];
 type WireInterpretation = components['schemas']['RecipesGetAllInterpretation'];
 type WireChip = components['schemas']['RecipesGetAllAppliedInference'];
@@ -166,6 +168,25 @@ export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
   reason: wire.reason
     ? { code: wire.reason.code as SuggestionReasonCode, subject: wire.reason.subject ?? null }
     : null
+});
+
+export const toRelated = (wire: WireRelated): RelatedRecipe => ({
+  id: wire.recipeId,
+  title: wire.title,
+  imageId: wire.imageId ?? null,
+  totalMinutes: wire.totalMinutes ?? null,
+  yieldAmount: wire.yieldAmount,
+  yieldKind: wire.yieldKind as YieldKind,
+  yieldLabel: wire.yieldLabel ?? null,
+  tags: wire.tags,
+  cookCount: wire.cookCount,
+  lastCookedAt: wire.lastCookedAt ?? null,
+  updatedAt: wire.updatedAt,
+  match: null,
+  reason: {
+    kind: wire.reason.kind === 'kinds' ? 'kinds' : 'ingredients',
+    shared: wire.reason.shared
+  }
 });
 
 export const toRecipe = (wire: WireRecipe): Recipe => ({

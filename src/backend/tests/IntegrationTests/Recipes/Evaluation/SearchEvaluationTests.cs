@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using IntegrationTests.Fixtures;
@@ -44,20 +43,9 @@ public class SearchEvaluationTests(PostgresFixture postgres)
     public async Task Search_ShouldMeetItsQualityTargets_OverTheGoldenLibrary()
     {
         // Arrange
-        var golden = Golden.Load();
+        var golden = GoldenLibrary.Load();
         var kitchen = await Kitchen.OpenAsync(postgres);
-
-        foreach (var recipe in golden.Recipes)
-        {
-            await kitchen.SaveAsync(
-                recipe.Title,
-                recipe.Language,
-                recipe.Prep,
-                recipe.Cook,
-                [.. recipe.Ingredients.Select(name => (name, (string?)null))],
-                [.. recipe.Tags],
-                recipe.Step);
-        }
+        await golden.SeedAsync(kitchen);
 
         // Act
         var outcomes = new List<Outcome>();
@@ -183,33 +171,4 @@ public class SearchEvaluationTests(PostgresFixture postgres)
         bool Disciplined,
         bool EmptyAsExpected,
         bool ChipsAsExpected);
-
-    private sealed record GoldenRecipe(
-        string Title,
-        string Language,
-        int? Prep,
-        int? Cook,
-        List<string> Tags,
-        List<string> Ingredients,
-        string Step);
-
-    private sealed record GoldenQuery(
-        string Query,
-        string Class,
-        Dictionary<string, int> Grades,
-        bool Empty,
-        List<string> Never,
-        List<string>? Chips);
-
-    private sealed record Golden(List<GoldenRecipe> Recipes, List<GoldenQuery> Queries)
-    {
-        private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
-
-        internal static Golden Load()
-        {
-            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("golden-library.json")!;
-
-            return JsonSerializer.Deserialize<Golden>(stream, Options)!;
-        }
-    }
 }
