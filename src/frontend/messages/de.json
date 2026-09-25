@@ -1245,5 +1245,12 @@
         "countPlural=*": "{count} trotzdem importieren"
       }
     }
-  ]
+  ],
+  "editor.tags": "Schlagwörter",
+  "editor.tags.none": "In dieser Küche gibt es noch keine Schlagwörter – leg unten das erste an.",
+  "editor.tags.added": "Neu hinzugefügte Schlagwörter",
+  "editor.tags.remove": "{name} entfernen",
+  "editor.tags.new": "Neues Schlagwort",
+  "editor.tags.add": "Hinzufügen",
+  "editor.tags.suggested": "Passt vielleicht auch"
 }
