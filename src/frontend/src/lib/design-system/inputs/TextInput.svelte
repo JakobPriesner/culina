@@ -8,7 +8,7 @@
   interface Props {
     id: string;
     value: string;
-    type?: 'text' | 'email' | 'password' | 'url' | 'search' | 'tel';
+    type?: 'text' | 'email' | 'password' | 'url' | 'search' | 'tel' | 'number';
     placeholder?: string;
     describedBy?: string | undefined;
     invalid?: boolean;
@@ -18,6 +18,9 @@
     autocomplete?: HTMLInputElement['autocomplete'];
     inputmode?: 'text' | 'numeric' | 'decimal' | 'email' | 'url' | 'search';
     maxlength?: number;
+    min?: number;
+    max?: number;
+    step?: number;
     /** Bound by a caller that needs to move focus here. */
     element?: HTMLInputElement;
     /**
@@ -59,6 +62,9 @@
     autocomplete,
     inputmode,
     maxlength,
+    min,
+    max,
+    step,
     element = $bindable(),
     label,
     size = 'md',
@@ -80,6 +86,9 @@
   {autocomplete}
   {inputmode}
   {maxlength}
+  {min}
+  {max}
+  {step}
   bind:value
   aria-label={label}
   aria-describedby={describedBy}
