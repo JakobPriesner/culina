@@ -6,6 +6,7 @@
   import AddToCookbookSheet from '$features/cookbooks/AddToCookbookSheet.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
+  import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import ShareRecipeSheet from '$features/recipes/ShareRecipeSheet.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
@@ -29,6 +30,7 @@
   const servings = $derived(yieldFrom(page.url, recipes.detail));
 
   let addingToCookbook = $state(false);
+  let addingToPlan = $state(false);
   let sharing = $state(false);
 
   $effect(() => {
@@ -128,6 +130,7 @@
       onservings={scale}
       onstartcooking={startCooking}
       onaddtolist={addToShoppingList}
+      onaddtoplan={() => (addingToPlan = true)}
       onaddtocookbook={() => (addingToCookbook = true)}
       onshare={() => (sharing = true)}
       editable
@@ -150,6 +153,15 @@
 />
 
 {#if session.activeHouseholdId}
+  <PlanRecipeSheet
+    open={addingToPlan}
+    householdId={session.activeHouseholdId}
+    {recipeId}
+    title={recipes.detail?.title ?? ''}
+    {servings}
+    onclose={() => (addingToPlan = false)}
+  />
+
   <AddToCookbookSheet
     open={addingToCookbook}
     householdId={session.activeHouseholdId}

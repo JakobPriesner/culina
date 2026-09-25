@@ -1267,5 +1267,14 @@
     }
   ],
   "shopping.sources.hide": "Rezepte ausblenden",
-  "shopping.source.planned": "{date} · {slot}"
+  "shopping.source.planned": "{date} · {slot}",
+  "plan.recipe.action": "Einplanen",
+  "plan.recipe.title": "„{title}“ einplanen",
+  "plan.recipe.day": "Tag",
+  "plan.recipe.cancel": "Abbrechen",
+  "plan.recipe.confirm": "Zur Woche hinzufügen",
+  "plan.recipe.close": "Schließen",
+  "plan.recipe.loading": "Woche wird geladen",
+  "plan.recipe.done": "Für {day} eingeplant.",
+  "plan.recipe.failed": "Dieses Rezept konnte nicht eingeplant werden."
 }
