@@ -9,8 +9,6 @@ export interface SuggestionQuery {
   readonly slot?: 'breakfast' | 'lunch' | 'dinner';
   /** A ceiling on total time. Honoured exactly, never treated as a preference. */
   readonly maxMinutes?: number;
-  /** Recipes like this one, rather than recipes for this person. */
-  readonly likeRecipeId?: string;
   /** What the caller already has on screen or already planned. */
   readonly exclude?: readonly string[];
   readonly limit?: number;
@@ -22,7 +20,6 @@ function keyOf(householdId: string, query: SuggestionQuery): string {
     householdId,
     query.slot ?? '',
     query.maxMinutes ?? '',
-    query.likeRecipeId ?? '',
     (query.exclude ?? []).join(','),
     query.limit ?? ''
   ].join('|');
@@ -47,8 +44,8 @@ class SuggestionStore {
    *
    * Status is per question rather than one flag for the store, because two
    * occasions are regularly in flight at once — the panel at the top of the
-   * library and the strip on a recipe page — and a shared flag would have each
-   * of them reporting the other's progress.
+   * library and the plan's picker — and a shared flag would have each of them
+   * reporting the other's progress.
    */
   #answers = $state<Record<string, Answer>>({});
   #error = $state<AppError | null>(null);
@@ -186,7 +183,6 @@ class SuggestionStore {
             householdId,
             slot: query.slot,
             maxMinutes: query.maxMinutes,
-            likeRecipeId: query.likeRecipeId,
             exclude: query.exclude ? [...query.exclude] : undefined,
             limit: query.limit
           }

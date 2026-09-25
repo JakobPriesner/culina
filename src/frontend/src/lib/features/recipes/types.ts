@@ -207,6 +207,21 @@ export interface Suggestion extends RecipeSummary {
   readonly reason: SuggestionReason | null;
 }
 
+/**
+ * Why a recipe is shown beside another: what both of them are, or what both
+ * are made from — at most three things, worded by the server in the language
+ * of the recipe being read.
+ */
+export interface RelatedReason {
+  readonly kind: 'kinds' | 'ingredients';
+  readonly shared: readonly string[];
+}
+
+/** A recipe like the one being read, and why. */
+export interface RelatedRecipe extends RecipeSummary {
+  readonly reason: RelatedReason;
+}
+
 /** How well a recipe fits what you said you have. */
 export interface IngredientMatch {
   readonly matched: number;

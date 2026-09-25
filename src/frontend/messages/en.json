@@ -1209,5 +1209,7 @@
   "problem.settings.not_writable": "These settings can't be saved: Culina's configuration directory isn't writable.",
   "problem.settings.setup_required": "Culina isn't set up yet.",
   "problem.settings.database_unreachable": "Culina couldn't connect to that database.",
-  "problem.settings.database_unsuitable": "Culina can't run in that database yet."
+  "problem.settings.database_unsuitable": "Culina can't run in that database yet.",
+  "related.reason.kinds": "Also: {shared}",
+  "related.reason.ingredients": "Shares {shared}"
 }

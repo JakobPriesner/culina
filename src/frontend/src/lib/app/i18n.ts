@@ -45,6 +45,7 @@ export function applyLocale(locale: Locale): void {
  */
 const numberFormats = new Map<string, Intl.NumberFormat>();
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
+const listFormats = new Map<string, Intl.ListFormat>();
 
 /** `1.5` in English, `1,5` in German — the same number, read correctly. */
 export function formatNumber(value: number, options: Intl.NumberFormatOptions = {}): string {
@@ -61,6 +62,15 @@ export function formatDate(value: Date, options: Intl.DateTimeFormatOptions = {}
     options,
     (locale) => new Intl.DateTimeFormat(locale, options)
   ).format(value);
+}
+
+/** "Hackfleisch, Tomate und Zwiebel" — a list joined the way the reader's language joins one. */
+export function formatList(values: readonly string[]): string {
+  return formatter(
+    listFormats,
+    {},
+    (locale) => new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' })
+  ).format(values);
 }
 
 function formatter<TFormat>(

@@ -2735,6 +2735,19 @@ A sub-resource of a recipe, ETag-able, and the same service underneath (§19.1).
 `reason` is not decoration: "shares Hackfleisch, Tomaten, Zwiebel" is a better
 explanation of a suggestion than any number, and it is free.
 
+**As built (culina-v2-0r34.3.1).** Three things differ from the sketch above.
+There is no `limit`: the only reader is the shelf under a recipe, which holds
+three, so the server returns up to three and the page shows nothing below
+three. The kind is `kinds` rather than `concepts`, because ingredients are
+concepts too — `kinds` is what the two recipes *are*, `ingredients` what they
+are *made from*. And every item is a full recipe summary (yield, tags, the
+reader's cook count), so the shelf draws the same card as every other list.
+`shared` holds at most three words, already in the language of the recipe
+being read. It is not ETag-able after all: nothing versions "the rest of the
+household", so it is uncached, like the recipe's cookbooks. It replaced
+`GET /suggestions?likeRecipeId=` as the source of the recipe page's "Similar
+recipes"; whether the ranker's `like` purpose stays is culina-v2-8tff.
+
 ### 17.5 Errors
 
 Unchanged. RFC 9457 problem documents, `QueryParameterGuardMiddleware` still
@@ -3152,6 +3165,32 @@ happens to share three tins.
 The reason is returned and shown: `Teilt Hackfleisch, Tomaten, Zwiebel`. A
 recommendation you can see the reason for is a recommendation you can disagree
 with, which is what makes it feel like a tool rather than a slot machine.
+
+**As built (culina-v2-0r34.3.1), measured on the golden library.** The query
+above does not survive contact with `concepts`, which carries every concept
+*with its ancestors*: nearly every recipe is a vegetable dish of some sort, so a
+plain overlap fraction makes everything related to everything. What shipped
+(`Infrastructure/Persistence/Recipes/RelatedRecipes.cs`):
+
+- The 0.6 / 0.4 split is kept, but both halves are concepts: 0.6 for what a
+  recipe *is* (dish, cuisine, meal, method, diet, character), 0.4 for what it is
+  *made from* (ingredient concepts). Raw ingredient-name equality was dropped —
+  the lexicon already knows that *passierte Tomaten* and *Tomaten* are one thing.
+- Every shared concept is weighted by its inverse document frequency in the
+  household, `ln((N + 1) / (df + 1))`, and each half is the share of the first
+  recipe's own weight the other matches. What every recipe carries counts for
+  nothing; what two share with few others counts most. No stop-list, which
+  would be wrong in a kitchen that cooks nothing but soup.
+- A floor of 0.1 on the combined score. At 0.15 a salmon recipe lost the fish
+  tacos and the Frikadellen lost every other mince recipe; at 0.1 all sixty
+  golden recipes have at least three, each with a reason.
+- A reason names only *telling* concepts — carried by at most half the
+  kitchen — drops a concept that is only there as an ancestor of another shared
+  one ("Hähnchen", never "Hähnchen, Geflügel, Fleisch"), and names at most
+  three. A candidate with nothing telling to say is not offered.
+
+The design's own example holds: Spaghetti Bolognese → Lasagne Bolognese, the
+Bolognese sauce and the Ragù, with Chili con Carne below them.
 
 ### 19.2 Duplicate detection at import
 

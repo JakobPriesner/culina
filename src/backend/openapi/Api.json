@@ -2556,6 +2556,59 @@
         }
       }
     },
+    "/api/v1/recipes/{recipeId}/related": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Recipes like this one",
+        "description": "Up to three recipes of the same household, the closest first, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so. Not cached: it changes with every other recipe in the household.",
+        "operationId": "getRelatedRecipesV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetRelatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipe-imports": {
       "post": {
         "tags": [
@@ -8274,6 +8327,120 @@
           }
         },
         "description": "A note attached to one step."
+      },
+      "RecipesGetRelatedRelatedReason": {
+        "required": [
+          "kind",
+          "shared"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`kinds` when what they are is what they share most — both pasta\n        bakes, both Italian — or `ingredients` when it is what they are\n        made from."
+          },
+          "shared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "At most three things they share, the most telling first, worded in the\nlanguage of the recipe being read."
+          }
+        },
+        "description": "Why two recipes are related, in words a person can disagree with."
+      },
+      "RecipesGetRelatedRelatedRecipe": {
+        "required": [
+          "recipeId",
+          "title",
+          "yieldAmount",
+          "yieldKind",
+          "tags",
+          "cookCount",
+          "updatedAt",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "Which recipe.",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string",
+            "description": "Its title."
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Its picture, if it has one.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "totalMinutes": {
+            "type": "integer",
+            "description": "Its total time, where it states one.",
+            "format": "int32",
+            "nullable": true
+          },
+          "yieldAmount": {
+            "type": "number",
+            "description": "How much it makes.",
+            "format": "double"
+          },
+          "yieldKind": {
+            "type": "string",
+            "description": "`servings` or `pieces`."
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The recipe's own word for what it makes, or null for the usual one.",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Its tag slugs."
+          },
+          "cookCount": {
+            "type": "integer",
+            "description": "How many times the person asking has made it.",
+            "format": "int32"
+          },
+          "lastCookedAt": {
+            "type": "string",
+            "description": "When the person asking last made it, or null.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When it was last changed.",
+            "format": "date-time"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/RecipesGetRelatedRelatedReason"
+          }
+        },
+        "description": "A recipe like the one being read, and why."
+      },
+      "RecipesGetRelatedResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetRelatedRelatedRecipe"
+            },
+            "description": "The closest first. Empty when nothing is alike enough to say so."
+          }
+        },
+        "description": "The recipes of the same household most like one of its own."
       },
       "RecipesGetSharedResponse": {
         "required": [
