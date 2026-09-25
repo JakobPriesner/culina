@@ -1252,5 +1252,8 @@
   "editor.tags.remove": "{name} entfernen",
   "editor.tags.new": "Neues Schlagwort",
   "editor.tags.add": "Hinzufügen",
-  "editor.tags.suggested": "Passt vielleicht auch"
+  "editor.tags.suggested": "Passt vielleicht auch",
+  "search.shelf.make": "Als Kochbuch speichern",
+  "search.shelf.behind": "Ein Kochbuch kann nicht nach {words} fragen – der Rest kommt mit.",
+  "search.shelf.word": "„{word}“"
 }
