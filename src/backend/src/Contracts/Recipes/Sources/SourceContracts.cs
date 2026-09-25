@@ -147,6 +147,26 @@ public sealed record ImportFromSourceRequest
     /// and the recipes arrive afterwards, over the stream.
     /// </remarks>
     public required IReadOnlyList<string> ExternalIds { get; init; }
+
+    /// <summary>
+    /// Bring them over even where one looks like a recipe already here.
+    /// </summary>
+    /// <remarks>
+    /// Off unless somebody said so, recipe by recipe, having been shown what
+    /// each one looks like: a household may genuinely want two Bolognese, and
+    /// only a person can say that it does.
+    /// </remarks>
+    public bool AllowLookalikes { get; init; }
+
+    /// <summary>
+    /// The shelf of an earlier import to land on, instead of a new one.
+    /// </summary>
+    /// <remarks>
+    /// What "import these anyway" sends, so the recipes held back from an
+    /// import end up beside the ones that came over with them rather than on a
+    /// second shelf with the same name.
+    /// </remarks>
+    public Guid? CookbookId { get; init; }
 }
 
 /// <summary>An import that has been accepted and is now running.</summary>
@@ -208,22 +228,46 @@ public sealed record ImportedRecipe
     public required string ExternalId { get; init; }
 
     /// <summary>
-    /// <c>imported</c>, <c>already_here</c>, or <c>failed</c>.
+    /// <c>imported</c>, <c>already_here</c>, <c>looks_like</c> or <c>failed</c>.
     /// </summary>
     /// <remarks>
-    /// Three outcomes and not two, because "we already had it" is not a failure
-    /// and must not be counted as one. Told per recipe rather than as a total,
-    /// so twelve that could not be read can be shown by name instead of as a
-    /// number.
+    /// "We already had it" is not a failure and must not be counted as one.
+    /// Nor is <c>looks_like</c>: the recipe was read and could have been
+    /// written, and was held back only because the household has one like it —
+    /// a question for a person, not something that went wrong. Told per recipe
+    /// rather than as a total, so twelve that could not be read can be shown
+    /// by name instead of as a number.
     /// </remarks>
     public required string Outcome { get; init; }
 
-    /// <summary>The recipe here, when there is one.</summary>
+    /// <summary>
+    /// The recipe here, when there is one: the one it became, the one it
+    /// already was, or the one it looks like.
+    /// </summary>
     public Guid? RecipeId { get; init; }
+
+    /// <summary>What it looks like, for <c>looks_like</c>.</summary>
+    public ImportLookalike? LooksLike { get; init; }
 
     /// <summary>What it is called, for showing the failures by name.</summary>
     public string? Title { get; init; }
 
     /// <summary>Why it failed, as an error code.</summary>
     public string? Reason { get; init; }
+}
+
+/// <summary>
+/// A recipe already here that an imported one looks like — "Sieht aus wie
+/// „Spaghetti Bolognese“ (12× gekocht, 4 gleiche Zutaten)".
+/// </summary>
+public sealed record ImportLookalike
+{
+    /// <summary>Its title.</summary>
+    public required string Title { get; init; }
+
+    /// <summary>How many ingredients the two have in common.</summary>
+    public required int SharedIngredients { get; init; }
+
+    /// <summary>How often the person importing has made it.</summary>
+    public required int CookCount { get; init; }
 }

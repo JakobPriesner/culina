@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import ImportProgress from './ImportProgress.svelte';
 import type { AppError } from '$api';
@@ -17,6 +18,7 @@ const run = (over: Partial<ImportRun> = {}): ImportRun => ({
   imported: 38,
   skipped: 1,
   failures: ['Oma’s Kuchen'],
+  held: [],
   cookbookId: 'cb1',
   cookbookName: 'recipes.example.com · 17 September 2026',
   finished: true,
@@ -37,7 +39,12 @@ const lost = (code: string, detail: string): AppError => ({
 describe('an import as it runs', () => {
   it('counts in recipes, not in requests', () => {
     renderWithProviders(ImportProgress, {
-      props: { run: run({ done: 15, finished: false }), ondone: () => {}, onlook: () => {} }
+      props: {
+        run: run({ done: 15, finished: false }),
+        ondone: () => {},
+        onlook: () => {},
+        onanyway: () => {}
+      }
     });
 
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '15 of 40');
@@ -45,7 +52,12 @@ describe('an import as it runs', () => {
 
   it('offers the way out while it is still going', () => {
     renderWithProviders(ImportProgress, {
-      props: { run: run({ done: 15, finished: false }), ondone: () => {}, onlook: () => {} }
+      props: {
+        run: run({ done: 15, finished: false }),
+        ondone: () => {},
+        onlook: () => {},
+        onanyway: () => {}
+      }
     });
 
     // The import belongs to the server, so watching it is optional — and the
@@ -95,7 +107,7 @@ describe('an import as it runs', () => {
 
   it('ends at the cookbook everything landed on', () => {
     renderWithProviders(ImportProgress, {
-      props: { run: run(), ondone: () => {}, onlook: () => {} }
+      props: { run: run(), ondone: () => {}, onlook: () => {}, onanyway: () => {} }
     });
 
     expect(screen.getByRole('link', { name: /Open recipes\.example\.com/ })).toHaveAttribute(
@@ -106,7 +118,7 @@ describe('an import as it runs', () => {
 
   it('names what could not be read, rather than counting it', () => {
     renderWithProviders(ImportProgress, {
-      props: { run: run(), ondone: () => {}, onlook: () => {} }
+      props: { run: run(), ondone: () => {}, onlook: () => {}, onanyway: () => {} }
     });
 
     // Twelve that failed is a statistic; twelve titles is a list somebody can
@@ -116,10 +128,64 @@ describe('an import as it runs', () => {
 
   it('does not call what was already here a failure', () => {
     renderWithProviders(ImportProgress, {
-      props: { run: run(), ondone: () => {}, onlook: () => {} }
+      props: { run: run(), ondone: () => {}, onlook: () => {}, onanyway: () => {} }
     });
 
     expect(screen.getByText('Already imported')).toBeInTheDocument();
     expect(screen.getByText('Imported')).toBeInTheDocument();
+  });
+});
+
+describe('recipes held back because one like them is already here', () => {
+  const held = run({
+    held: [
+      {
+        externalId: '7',
+        title: 'Spaghetti Bolognese',
+        recipeId: 'r-mine',
+        looksLike: { title: 'Spaghetti Bolognese', sharedIngredients: 4, cookCount: 12 }
+      },
+      {
+        externalId: '9',
+        title: 'Omas Käsekuchen',
+        recipeId: 'r-cake',
+        looksLike: { title: 'Käsekuchen', sharedIngredients: 0, cookCount: 0 }
+      }
+    ]
+  });
+
+  it('says what each looks like, and lets it be compared with the one already here', () => {
+    renderWithProviders(ImportProgress, {
+      props: { run: held, ondone: () => {}, onlook: () => {}, onanyway: () => {} }
+    });
+
+    expect(
+      screen.getByText(/Looks like “Spaghetti Bolognese” · Made 12× · 4 ingredients in common/)
+    ).toBeInTheDocument();
+    // Nothing to count is nothing said: no "Made 0×", no "0 in common".
+    expect(screen.getByText(/^Looks like “Käsekuchen”/)).toBeInTheDocument();
+    expect(screen.queryByText(/Made 0×/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Compare' })[0]).toHaveAttribute(
+      'href',
+      '/recipes/r-mine'
+    );
+  });
+
+  it('brings nothing over until somebody chooses', async () => {
+    const onanyway = vi.fn();
+
+    renderWithProviders(ImportProgress, {
+      props: { run: held, ondone: () => {}, onlook: () => {}, onanyway }
+    });
+
+    // Never automatic: a household may want two Bolognese, but only somebody
+    // who has looked at both can say so.
+    expect(screen.getByRole('checkbox', { name: 'Spaghetti Bolognese' })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /anyway/ })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Omas Käsekuchen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Import 1 anyway' }));
+
+    expect(onanyway).toHaveBeenCalledWith(['9']);
   });
 });

@@ -346,7 +346,11 @@ class SourceStore {
    * which cookbook everything is landing on, and closing the laptop costs the
    * progress bar and nothing else.
    */
-  async import(sourceId: string, externalIds: readonly string[]): Promise<void> {
+  async import(
+    sourceId: string,
+    externalIds: readonly string[],
+    anyway?: { readonly cookbookId: string }
+  ): Promise<void> {
     if (this.#importing || externalIds.length === 0) {
       return;
     }
@@ -357,7 +361,11 @@ class SourceStore {
     const result = await request(() =>
       http.POST('/api/v1/recipe-sources/{sourceId}/imports', {
         params: { path: { sourceId } },
-        body: { externalIds: [...externalIds] }
+        body: {
+          externalIds: [...externalIds],
+          allowLookalikes: anyway !== undefined,
+          cookbookId: anyway?.cookbookId
+        }
       })
     );
 
@@ -376,6 +384,7 @@ class SourceStore {
       imported: 0,
       skipped: 0,
       failures: [],
+      held: [],
       cookbookId: result.value.cookbookId,
       cookbookName: result.value.cookbookName,
       finished: false,
@@ -385,6 +394,23 @@ class SourceStore {
     this.#following = { sourceId, importId: result.value.importId };
 
     this.#listen();
+  }
+
+  /**
+   * Brings over the recipes somebody chose from those an import held back.
+   *
+   * Onto the same shelf as the rest of that import, and only because a person
+   * looked at each one beside the recipe it resembles and said so.
+   */
+  async importAnyway(externalIds: readonly string[]): Promise<void> {
+    const following = this.#following;
+    const cookbookId = this.#run?.cookbookId;
+
+    if (!following || !cookbookId) {
+      return;
+    }
+
+    await this.import(following.sourceId, externalIds, { cookbookId });
   }
 
   /**
@@ -538,7 +564,19 @@ class SourceStore {
       failures:
         outcome.outcome === 'failed'
           ? [...run.failures, outcome.title ?? outcome.externalId]
-          : run.failures
+          : run.failures,
+      held:
+        outcome.outcome === 'looks_like' && outcome.recipeId && outcome.looksLike
+          ? [
+              ...run.held,
+              {
+                externalId: outcome.externalId,
+                title: outcome.title ?? outcome.externalId,
+                recipeId: outcome.recipeId,
+                looksLike: outcome.looksLike
+              }
+            ]
+          : run.held
     };
   }
 }
@@ -579,6 +617,7 @@ interface ImportedRecipeWire {
   recipeId?: string | null;
   title?: string | null;
   reason?: string | null;
+  looksLike?: { title: string; sharedIngredients: number; cookCount: number } | null;
 }
 
 /** One event as the stream sends it. */
@@ -594,7 +633,14 @@ const toOutcome = (wire: ImportedRecipeWire): ImportOutcome => ({
   outcome: wire.outcome as ImportOutcome['outcome'],
   recipeId: wire.recipeId ?? null,
   title: wire.title ?? null,
-  reason: wire.reason ?? null
+  reason: wire.reason ?? null,
+  looksLike: wire.looksLike
+    ? {
+        title: wire.looksLike.title,
+        sharedIngredients: wire.looksLike.sharedIngredients,
+        cookCount: wire.looksLike.cookCount
+      }
+    : null
 });
 
 const toEvent = (wire: ImportEventWire): ImportEvent => ({

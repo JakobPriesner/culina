@@ -75,7 +75,12 @@
 <Page width="reading">
   <div class="stack">
     {#if sources.run}
-      <ImportProgress run={sources.run} ondone={again} onlook={() => sources.reconnect()} />
+      <ImportProgress
+        run={sources.run}
+        ondone={again}
+        onlook={() => sources.reconnect()}
+        onanyway={(externalIds) => void sources.importAnyway(externalIds)}
+      />
     {:else if sources.open}
       <div>
         <Button variant="ghost" onclick={() => sources.closeLibrary()}>

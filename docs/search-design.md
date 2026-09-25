@@ -3218,6 +3218,34 @@ Never automatic. A household may genuinely want two Bolognese recipes, and
 silently dropping one is unrecoverable. This costs one query per imported
 recipe against an index that already exists.
 
+**As built (culina-v2-0r34.3.2).** The check runs in the import worker, just
+before a recipe that has been read and mapped would be written
+(`RecipeImporter` → `ILookalikeRecipes`), because the browse only has titles
+and the second and third tests need ingredients. The three tests are as above,
+with two changes:
+
+- *Almost the same name* is `word_similarity` taken in both directions, so
+  "Omas Spaghetti Bolognese" finds "Spaghetti Bolognese" and the reverse.
+- The two tests that do not rest on the name also need **at least three shared
+  ingredients**. Without it, two small recipes with the same few ingredients —
+  and every fixture recipe of the import tests, which is salt and nothing else
+  — read as one dish. The same name is always worth asking about, so the first
+  test does not need it.
+
+Ingredient overlap is shared folded names over the larger of the two lists.
+A recipe that looks like one here is held back as `looks_like`, naming the
+recipe it resembles, how often the importer has made it and how many
+ingredients they share, and nothing about it is written — not even its origin
+row, so asking for it again brings it over as if the first time. The review
+lists the held ones unticked, each with a link to the recipe it resembles, and
+"import anyway" starts a second run of just the ticked ones with
+`allowLookalikes`, landing on the first run's cookbook (`cookbookId`) instead
+of a second shelf with the same name.
+
+Measured with `IntegrationTests/Import/LookalikeRecipeTests` — ten near
+duplicates and nine near misses of golden-library recipes, the ambiguous pairs
+left out rather than ruled on: recall 1.00, no false positive.
+
 ### 19.3 Tag suggestions
 
 When editing, offer the concepts the document carries that the recipe is not
