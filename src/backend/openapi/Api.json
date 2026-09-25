@@ -2609,6 +2609,59 @@
         }
       }
     },
+    "/api/v1/recipes/{recipeId}/tag-suggestions": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Tags this recipe could carry",
+        "description": "Up to five tags for what the recipe is — its dish, cuisine, meal, method or diet — read from the recipe as it was last saved, leaving out whatever its tags already say. Where the household already uses a tag for one of them, that tag is offered, with its slug; otherwise the lexicon's word in the recipe's language, with none. Offered, never applied: nothing is tagged until somebody saves the recipe with it.",
+        "operationId": "getRecipeTagSuggestionsV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetTagSuggestionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipe-imports": {
       "post": {
         "tags": [
@@ -8540,6 +8593,40 @@
           }
         },
         "description": "A recipe as whoever follows the link sees it."
+      },
+      "RecipesGetTagSuggestionsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetTagSuggestionsTagSuggestion"
+            },
+            "description": "At most five, the household's own tags first."
+          }
+        },
+        "description": "Tags a recipe could carry and does not, for somebody to add with one tap."
+      },
+      "RecipesGetTagSuggestionsTagSuggestion": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to show and, when added, what to save: the household's own name for\nit where it has one, or the lexicon's word in the recipe's language."
+          },
+          "slug": {
+            "type": "string",
+            "description": "The household's tag, when it already uses one for this; null for a tag\nthat adding would create.",
+            "nullable": true
+          }
+        },
+        "description": "One tag worth offering."
       },
       "RecipesGetTagsResponse": {
         "required": [

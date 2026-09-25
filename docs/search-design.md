@@ -3260,6 +3260,26 @@ Suggested, never applied. The household's tags stay the household's, which is
 what §12.4 depends on: if the lexicon started writing tags, the "household
 vocabulary beats the lexicon" rule would be the lexicon beating itself.
 
+**As built (culina-v2-0r34.3.3).** The editor had no tag field at all — a
+recipe's tags came only from imports and were carried through every save
+untouched — so this shipped one: the kitchen's tags through the same
+`TagChooser` the filters and smart-cookbook rules use, a field for a new one,
+and the suggestions beneath, from `GET /recipes/{recipeId}/tag-suggestions`,
+asked again after each save. What is offered:
+
+- Only what a recipe *is* — dish, cuisine, meal, method, diet. Not ingredients,
+  which the search finds without a tag, and not characters, since "warm" is
+  true of half of everything.
+- Only what the recipe names and one step above it: a Lasagne is offered
+  Lasagne, Auflauf and Italienisch, not everything a Lasagne is ultimately a
+  kind of.
+- Nothing its tags already name, read the query way (`Recognise`, no
+  ancestors), so a recipe tagged "Lasagne" is still offered "Auflauf".
+- The household's own tag wherever one of its tags is a name of the concept —
+  its lower-case "italienisch" rather than the lexicon's "Italienisch" — sent
+  with its slug, those first; otherwise the lexicon's word in the recipe's
+  language. At most five.
+
 ### 19.4 Smart cookbooks from a search
 
 The overlay's chips *are* a smart cookbook's rules. `[Vegetarisch] [< 30 Min.]`
