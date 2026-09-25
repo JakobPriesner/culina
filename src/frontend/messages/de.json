@@ -1209,5 +1209,7 @@
   "problem.settings.not_writable": "Diese Einstellungen lassen sich nicht speichern: Das Konfigurationsverzeichnis von Culina ist nicht beschreibbar.",
   "problem.settings.setup_required": "Culina ist noch nicht eingerichtet.",
   "problem.settings.database_unreachable": "Culina konnte sich nicht mit dieser Datenbank verbinden.",
-  "problem.settings.database_unsuitable": "Culina kann in dieser Datenbank noch nicht laufen."
+  "problem.settings.database_unsuitable": "Culina kann in dieser Datenbank noch nicht laufen.",
+  "related.reason.kinds": "Auch: {shared}",
+  "related.reason.ingredients": "Teilt {shared}"
 }

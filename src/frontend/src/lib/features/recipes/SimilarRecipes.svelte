@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { session } from '$features/auth/session.svelte';
-  import { m } from '$shell/i18n';
+  import { formatList, m } from '$shell/i18n';
 
   import RecipeCard from './RecipeCard.svelte';
-  import { suggestions } from './stores/suggestions.svelte';
+  import { related } from './stores/related.svelte';
+  import type { RelatedReason } from './types';
 
   /**
    * Recipes close to the one being read.
@@ -14,10 +14,11 @@
    * scroller inside the page, focus revealing the whole card, and snapping
    * disabled while focus is inside it.
    *
-   * Similarity is shared ingredients and tags, not "people who cooked this also
-   * cooked" — with two to eight people the co-occurrence between two recipes is
-   * zero or a coincidence, whereas "uses eleven of the same twelve ingredients"
-   * is a fact, and one that can be explained.
+   * Similarity is what the recipes are and what they are made from, as the
+   * search reads them — never "people who cooked this also cooked": with two to
+   * eight people the co-occurrence between two recipes is zero or a
+   * coincidence, whereas "also a Bolognese" is a fact, and one that can be
+   * explained. So it is explained, under every card.
    */
   interface Props {
     recipeId: string;
@@ -25,15 +26,18 @@
 
   let { recipeId }: Props = $props();
 
-  const householdId = $derived(session.activeHouseholdId);
-  const query = $derived({ likeRecipeId: recipeId, limit: 3 });
-  const items = $derived(suggestions.for(householdId, query));
+  const items = $derived(related.of(recipeId));
 
   $effect(() => {
-    if (householdId && recipeId) {
-      void suggestions.ask(householdId, query);
+    if (recipeId) {
+      void related.load(recipeId);
     }
   });
+
+  const because = (reason: RelatedReason) =>
+    reason.kind === 'kinds'
+      ? m['related.reason.kinds']({ shared: formatList(reason.shared) })
+      : m['related.reason.ingredients']({ shared: formatList(reason.shared) });
 </script>
 
 <!--
@@ -50,8 +54,11 @@
     <h2 id="similar-heading">{m['suggestions.similar.title']()}</h2>
 
     <ul class="shelf">
-      {#each items as suggestion (suggestion.id)}
-        <li><RecipeCard recipe={suggestion} /></li>
+      {#each items as recipe (recipe.id)}
+        <li>
+          <RecipeCard {recipe} />
+          <p class="because">{because(recipe.reason)}</p>
+        </li>
       {/each}
     </ul>
   </section>
@@ -92,8 +99,17 @@
   }
 
   .shelf > li {
+    display: flex;
+    flex-direction: column;
     scroll-snap-align: start;
     min-width: 0;
+  }
+
+  /* Under the card rather than in it: the card is the same one every list
+     draws, and this line is the one thing only this list has to say. */
+  .because {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   @media (min-width: 64rem) {

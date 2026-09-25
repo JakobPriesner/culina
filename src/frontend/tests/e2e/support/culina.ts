@@ -267,7 +267,7 @@ export async function seedRecipe(page: Page, recipe: SeedRecipe): Promise<string
       yieldKind: stored.yieldKind,
       groups: [{ ingredients: kept }],
       steps,
-      tags: []
+      tags: recipe.tags ?? []
     }
   });
 
