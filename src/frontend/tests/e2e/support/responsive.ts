@@ -185,6 +185,9 @@ export async function responsiveData(
     // Nothing alike enough, so the shelf under a recipe stays away and the
     // page ends where the recipe does.
     if (path.endsWith('/related')) return reply({ items: [] });
+    // Nothing to suggest, so the editor's tag section is the same height on
+    // every run.
+    if (path.endsWith('/tag-suggestions')) return reply({ items: [] });
     // The library toolbar asks for these on every page that carries it. An
     // empty list is the fixture worth having: a household with saved searches
     // renders a row of chips that changes the height of everything below it,

@@ -10,6 +10,9 @@
   import IngredientEditor from '$features/recipes/editor/IngredientEditor.svelte';
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
+  import TagEditor from '$features/recipes/editor/TagEditor.svelte';
+  import { tags } from '$features/cookbooks/stores/tags.svelte';
+  import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
   import { withIngredients } from '$features/recipes/editor/ingredientGroups';
   import { withoutIngredients } from '$features/recipes/editor/stepUsage';
   import type { SaveTone } from '$features/recipes/editor/SaveState.svelte';
@@ -89,6 +92,16 @@
   $effect(() => {
     if (draft) {
       void units.load(draft.householdId);
+    }
+  });
+
+  // The kitchen's tags, for the tag field, and what the recipe as last saved
+  // could be tagged with — asked again after every save, since a new title is
+  // a new answer once the server has it.
+  $effect(() => {
+    if (draft) {
+      void tags.load(draft.householdId);
+      void tagSuggestions.load(draft.id, draft.version);
     }
   });
 
@@ -431,7 +444,8 @@
     { id: 'recipe', label: m['editor.section.recipe']() },
     { id: 'photo', label: m['editor.photo']() },
     { id: 'ingredients', label: m['editor.ingredients'](), count: firstGroup.length },
-    { id: 'steps', label: m['editor.steps'](), count: draft?.steps.length ?? 0 }
+    { id: 'steps', label: m['editor.steps'](), count: draft?.steps.length ?? 0 },
+    { id: 'tags', label: m['editor.tags'](), count: draft?.tags.length ?? 0 }
   ]);
 
   /**
@@ -740,6 +754,15 @@
             ingredients={current.groups.flatMap((group) => group.ingredients)}
             onchange={(steps: Step[]) => change({ steps })}
             onaddingredient={addIngredient}
+          />
+        </EditorSection>
+
+        <EditorSection id="tags" title={m['editor.tags']()} count={current.tags.length}>
+          <TagEditor
+            tags={current.tags}
+            household={tags.items}
+            suggestions={tagSuggestions.of(current.id, current.version)}
+            onchange={(next) => change({ tags: next })}
           />
         </EditorSection>
 

@@ -670,6 +670,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipes/{recipeId}/tag-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tags this recipe could carry
+         * @description Up to five tags for what the recipe is — its dish, cuisine, meal, method or diet — read from the recipe as it was last saved, leaving out whatever its tags already say. Where the household already uses a tag for one of them, that tag is offered, with its slug; otherwise the lexicon's word in the recipe's language, with none. Offered, never applied: nothing is tagged until somebody saves the recipe with it.
+         */
+        get: operations["getRecipeTagSuggestionsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipe-imports": {
         parameters: {
             query?: never;
@@ -2612,6 +2632,24 @@ export interface components {
             tags: string[];
             /** @description The address it was imported from, when it was imported. */
             sourceUrl?: string | null;
+        };
+        /** @description Tags a recipe could carry and does not, for somebody to add with one tap. */
+        RecipesGetTagSuggestionsResponse: {
+            /** @description At most five, the household's own tags first. */
+            items: components["schemas"]["RecipesGetTagSuggestionsTagSuggestion"][];
+        };
+        /** @description One tag worth offering. */
+        RecipesGetTagSuggestionsTagSuggestion: {
+            /**
+             * @description What to show and, when added, what to save: the household's own name for
+             *     it where it has one, or the lexicon's word in the recipe's language.
+             */
+            name: string;
+            /**
+             * @description The household's tag, when it already uses one for this; null for a tag
+             *     that adding would create.
+             */
+            slug?: string | null;
         };
         /** @description The tags a household's recipes carry. */
         RecipesGetTagsResponse: {
@@ -6126,6 +6164,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipesGetRelatedResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRecipeTagSuggestionsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetTagSuggestionsResponse"];
                 };
             };
             /** @description Unauthorized */

@@ -28,6 +28,7 @@ using Application.Recipes.GetById;
 using Application.Recipes.GetCompletions;
 using Application.Recipes.GetCookLog;
 using Application.Recipes.GetRelated;
+using Application.Recipes.GetTagSuggestions;
 using Application.Recipes.GetImage;
 using Application.Recipes.GetIngredients;
 using Application.Recipes.GetNotes;
@@ -216,6 +217,8 @@ public static class DependencyInjection
                 GetCompletionsQueryHandler>()
             .AddScoped<IQueryHandler<GetRelatedRecipesQuery, Contracts.Recipes.GetRelated.Response>,
                 GetRelatedRecipesQueryHandler>()
+            .AddScoped<IQueryHandler<GetTagSuggestionsQuery, Contracts.Recipes.GetTagSuggestions.Response>,
+                GetTagSuggestionsQueryHandler>()
             .AddScoped<IQueryHandler<GetNotesQuery, Contracts.Recipes.GetNotes.Response>,
                 GetNotesQueryHandler>()
             .AddScoped<ICommandHandler<SaveNotesCommand, Contracts.Recipes.GetNotes.Response>,

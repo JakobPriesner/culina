@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using IntegrationTests.Fixtures;
 using IntegrationTests.Recipes.Evaluation;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Recipes;
 
@@ -20,8 +19,6 @@ namespace IntegrationTests.Recipes;
 [Collection(RequiresDatabase.Name)]
 public class RelatedRecipeTests(PostgresFixture postgres)
 {
-    private const string Password = "correct horse battery staple";
-
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -86,7 +83,7 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await kitchen.SaveAsync(
             "Spaghetti Bolognese", "de", 15, 45, [("Hackfleisch", "g")], ["pasta"], "Anbraten.");
-        using var stranger = await StrangerAsync();
+        using var stranger = await Kitchen.StrangerAsync(postgres);
 
         // Act
         var response = await stranger.GetAsync($"/api/v1/recipes/{recipeId}/related", Token);
@@ -130,25 +127,5 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         }
 
         return report.ToString();
-    }
-
-    private async Task<ApiClient> StrangerAsync()
-    {
-        var settings = postgres.Api.Services
-            .GetRequiredService<Application.Abstractions.Settings.RegistrationSettings>();
-        settings.OpenRegistration = true;
-        settings.RequireInvitation = false;
-
-        var client = postgres.Api.NewApiClient();
-        await client.PostAsync(
-            "/api/v1/users",
-            new { email = "grace@example.com", displayName = "Grace", password = Password },
-            Token);
-        await client.PostAsync(
-            "/api/v1/sessions",
-            new { email = "grace@example.com", password = Password },
-            Token);
-
-        return client;
     }
 }
