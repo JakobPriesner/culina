@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Sheet } from '$ds';
+  import { Button, Sheet, Skeleton } from '$ds';
 
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -9,12 +9,11 @@
   /**
    * Handing one recipe to somebody who does not have Culina.
    *
-   * A sheet rather than a copied link straight from the dock, because sharing a
-   * recipe is two decisions and not one: the first tap publishes it to anyone
-   * holding the address, and that has to be said in a sentence before it
-   * happens. Afterwards the sheet is where the link is read back and where it
-   * is taken away again — the one place that answers "is this recipe out
-   * there?".
+   * Opening the sheet is the decision to share: the link is made as it opens,
+   * so the address is on screen without a second tap, beside the sentence that
+   * says anyone holding it can read the recipe. The sheet is also where the
+   * link is read back and where it is taken away again — the one place that
+   * answers "is this recipe out there?".
    *
    * The link is deliberately re-readable, unlike a household invitation, which
    * is shown once. See the sharing store for why.
@@ -33,7 +32,7 @@
   // more request on every recipe page nobody asked for.
   $effect(() => {
     if (open) {
-      void sharing.load(recipeId);
+      void share();
     }
   });
 
@@ -117,7 +116,13 @@
       </div>
 
       <p class="note">{m['recipe.share.revokeHint']()}</p>
+    {:else if sharing.status === 'loading'}
+      <!-- The shape of the shared state, so the link lands where it is drawn. -->
+      <Skeleton width="100%" height="1rem" />
+      <Skeleton width="100%" height="2.5rem" />
+      <Skeleton width="10rem" height="2.5rem" />
     {:else}
+      <!-- Only after the link was taken back, or could not be made. -->
       <p class="lead">{m['recipe.share.off']()}</p>
 
       <Button variant="primary" onclick={share} loading={sharing.working}>
