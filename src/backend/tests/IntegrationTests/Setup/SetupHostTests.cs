@@ -118,37 +118,64 @@ public class SetupHostTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Database_ShouldBeRefused_WhenItLacksTheExtensionsTheSchemaNeeds()
+    public async Task Database_ShouldBeAccepted_WhenTheExtensionsAreMissingButTheRoleMayInstallThem()
     {
         // Arrange
-        var bare = $"bare_{Guid.CreateVersion7():n}";
-        await postgres.ExecuteAsync($"create database {bare};", Token);
+        // Owning the database is what the production init script arranges, and
+        // it is enough: the first migration installs the extensions itself.
+        var fresh = $"fresh_{Guid.CreateVersion7():n}";
+        await postgres.ExecuteAsSuperuserAsync($"create database {fresh} owner {postgres.Settings.Username};", Token);
 
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
-        var settings = postgres.Settings;
 
         // Act
-        var response = await client.PutAsync(
-            "/api/v1/settings/database",
-            new
-            {
-                host = settings.Host,
-                port = settings.Port,
-                name = bare,
-                username = settings.Username,
-                password = settings.Password,
-                requireSsl = false,
-                maxPoolSize = 20
-            },
-            Token);
+        var response = await client.PutAsync("/api/v1/settings/database", DatabaseRequest(fresh), Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(1, factory.Restarts.Scheduled);
+    }
+
+    [Fact]
+    public async Task Database_ShouldBeRefused_WhenTheRoleMayNotInstallTheExtensionsTheSchemaNeeds()
+    {
+        // Arrange
+        // Created by someone else, so the application role has no CREATE on it.
+        var foreign = $"foreign_{Guid.CreateVersion7():n}";
+        await postgres.ExecuteAsSuperuserAsync($"create database {foreign};", Token);
+
+        using var factory = new SetupApiFactory();
+        using var client = factory.NewApiClient();
+
+        // Act
+        var response = await client.PutAsync("/api/v1/settings/database", DatabaseRequest(foreign), Token);
 
         // Assert
         // Found now, while the setup screen can still say so — not by the
         // migrations after the restart, as a process that stops on every start.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("settings.database_unsuitable", response.ProblemCode);
-        Assert.Contains("CREATE EXTENSION IF NOT EXISTS citext;", response.Body, StringComparison.Ordinal);
+        Assert.Contains(
+            $"GRANT CREATE ON DATABASE {foreign} TO {postgres.Settings.Username};",
+            response.Body,
+            StringComparison.Ordinal);
+    }
+
+    private object DatabaseRequest(string name)
+    {
+        var settings = postgres.Settings;
+
+        return new
+        {
+            host = settings.Host,
+            port = settings.Port,
+            name,
+            username = settings.Username,
+            password = settings.Password,
+            requireSsl = false,
+            maxPoolSize = 20
+        };
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
