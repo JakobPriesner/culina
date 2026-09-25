@@ -1267,5 +1267,14 @@
     }
   ],
   "shopping.sources.hide": "Hide recipes",
-  "shopping.source.planned": "{date} · {slot}"
+  "shopping.source.planned": "{date} · {slot}",
+  "plan.recipe.action": "Add to plan",
+  "plan.recipe.title": "Plan “{title}”",
+  "plan.recipe.day": "Day",
+  "plan.recipe.cancel": "Cancel",
+  "plan.recipe.confirm": "Add to week",
+  "plan.recipe.close": "Close",
+  "plan.recipe.loading": "Loading this week",
+  "plan.recipe.done": "Added to {day}.",
+  "plan.recipe.failed": "This recipe couldn't be added to the plan."
 }
