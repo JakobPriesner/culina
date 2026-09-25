@@ -10961,7 +10961,8 @@
           "name",
           "section",
           "isChecked",
-          "isManual"
+          "isManual",
+          "sources"
         ],
         "type": "object",
         "properties": {
@@ -11009,6 +11010,13 @@
           "isManual": {
             "type": "boolean",
             "description": "Whether a person typed it rather than a recipe contributing it."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShoppingSourceContract"
+            },
+            "description": "Which recipes asked for it, and how much each contributed."
           }
         },
         "description": "One line on the list."
@@ -11040,6 +11048,47 @@
           }
         },
         "description": "A household's shopping list."
+      },
+      "ShoppingSourceContract": {
+        "required": [
+          "recipeId",
+          "recipeTitle"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe that asked for it.",
+            "format": "uuid"
+          },
+          "recipeTitle": {
+            "type": "string",
+            "description": "What that recipe is called."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "How much this recipe contributed, unrounded.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "In what, or null for a bare count.",
+            "nullable": true
+          },
+          "plannedDate": {
+            "type": "string",
+            "description": "Which planned day it is for, or null when added directly.",
+            "format": "date",
+            "nullable": true
+          },
+          "plannedSlot": {
+            "type": "string",
+            "description": "Breakfast, lunch or dinner, or null when added directly.",
+            "nullable": true
+          }
+        },
+        "description": "One recipe contribution to a shopping-list line."
       },
       "ShoppingUpdateItemRequest": {
         "type": "object",

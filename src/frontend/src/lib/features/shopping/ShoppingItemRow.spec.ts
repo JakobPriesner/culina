@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { preferences } from '$shell/preferences.svelte';
@@ -13,7 +14,8 @@ const milk: ShoppingItem = {
   unit: 'ml',
   section: 'dairy_eggs',
   isChecked: false,
-  isManual: false
+  isManual: false,
+  sources: []
 };
 
 const row = (item: ShoppingItem) =>
@@ -36,5 +38,40 @@ describe('a line on the shopping list', () => {
     row(milk);
 
     expect(screen.getByText(/^~2\scups$/)).toBeInTheDocument();
+  });
+
+  it('reveals which recipes contributed a merged line only when asked', async () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    row({
+      ...milk,
+      sources: [
+        {
+          recipeId: 'r1',
+          recipeTitle: 'Waffles',
+          quantity: 300,
+          unit: 'ml',
+          plannedDate: '2026-09-26',
+          plannedSlot: 'breakfast'
+        },
+        {
+          recipeId: 'r2',
+          recipeTitle: 'Custard',
+          quantity: 200,
+          unit: 'ml',
+          plannedDate: null,
+          plannedSlot: null
+        }
+      ]
+    });
+
+    expect(screen.queryByRole('link', { name: 'Waffles' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '2 recipes' }));
+
+    expect(screen.getByRole('link', { name: 'Waffles' })).toHaveAttribute('href', '/recipes/r1');
+    expect(screen.getByRole('link', { name: 'Custard' })).toHaveAttribute('href', '/recipes/r2');
+    expect(screen.getByText(/Sat, Sep 26 · Breakfast/)).toBeInTheDocument();
+    expect(screen.getByText(/^300\sml$/)).toBeInTheDocument();
   });
 });

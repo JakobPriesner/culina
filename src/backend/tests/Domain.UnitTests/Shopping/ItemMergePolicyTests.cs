@@ -181,7 +181,13 @@ public class ItemMergePolicyTests
         Quantity.Create(amount, unit).Match(q => q, error => throw new InvalidOperationException(error.Code));
 
     private static ShoppingItemSource Asked(decimal? amount, Unit? unit) =>
-        new(Guid.CreateVersion7(), PlanEntryId: null, Amount(amount, unit));
+        new(
+            Guid.CreateVersion7(),
+            "Recipe",
+            PlanEntryId: null,
+            PlannedDate: null,
+            PlannedSlot: null,
+            Amount(amount, unit));
 
     private static ShoppingListItem Item(string name, decimal? amount, Unit? unit) =>
         ShoppingListItem.Asked(Name(name), Asked(amount, unit), ShoppingSection.Other, 1);
