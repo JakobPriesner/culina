@@ -126,7 +126,10 @@ const started = (total: number) => ({
 });
 
 /** Every import request this test saw, in order, and how many reads there were. */
-let asked: { url: string; body: { externalIds: string[]; cookbookId?: string } }[] & {
+let asked: {
+  url: string;
+  body: { externalIds: string[]; allowLookalikes?: boolean; cookbookId?: string };
+}[] & {
   gets: number;
 } = Object.assign([], { gets: 0 });
 
@@ -364,6 +367,60 @@ describe('importing', () => {
     });
 
     await vi.waitFor(() => expect(sources.run?.failures).toEqual(['Oma’s Kuchen']));
+  });
+
+  it('holds a lookalike back for somebody to decide, rather than counting it as a failure', async () => {
+    importServer({ start: json(started(2)) });
+
+    await sources.import(source.sourceId, ['1', '2']);
+    await settle();
+
+    FakeStream.last!.send({ recipe: imported('1'), done: 1, total: 2 });
+    FakeStream.last!.send({
+      recipe: {
+        externalId: '2',
+        outcome: 'looks_like',
+        recipeId: 'r-mine',
+        title: 'Spaghetti Bolognese',
+        looksLike: { title: 'Spaghetti Bolognese', sharedIngredients: 4, cookCount: 12 }
+      },
+      done: 2,
+      total: 2
+    });
+
+    await vi.waitFor(() => expect(sources.run?.done).toBe(2));
+    expect(sources.run?.failures).toEqual([]);
+    expect(sources.run?.held).toEqual([
+      {
+        externalId: '2',
+        title: 'Spaghetti Bolognese',
+        recipeId: 'r-mine',
+        looksLike: { title: 'Spaghetti Bolognese', sharedIngredients: 4, cookCount: 12 }
+      }
+    ]);
+  });
+
+  it('brings the chosen lookalikes over onto the shelf the rest landed on', async () => {
+    importServer({ start: json(started(1)) });
+
+    await sources.import(source.sourceId, ['2']);
+    await settle();
+
+    FakeStream.last!.send({ done: 1, total: 1, finished: true });
+    await vi.waitFor(() => expect(sources.run?.finished).toBe(true));
+
+    await sources.importAnyway(['2']);
+
+    // Said out loud, and onto the same cookbook: a second shelf with the same
+    // name for the three recipes somebody chose would be two imports where
+    // they asked for one.
+    expect(asked).toHaveLength(2);
+    expect(asked[1]!.url).toContain('/recipe-sources/s1/imports');
+    expect(asked[1]!.body).toEqual({
+      externalIds: ['2'],
+      allowLookalikes: true,
+      cookbookId: 'cb1'
+    });
   });
 
   it('ignores the ticks that only keep the connection open', async () => {

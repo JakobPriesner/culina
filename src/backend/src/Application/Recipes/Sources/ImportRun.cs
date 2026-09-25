@@ -93,6 +93,15 @@ public sealed class ImportRun
     /// <summary>When it was asked for. Used to forget it later.</summary>
     public DateTimeOffset StartedAt { get; }
 
+    /// <summary>
+    /// Whether a recipe that looks like one already here is written anyway.
+    /// </summary>
+    /// <remarks>
+    /// Only ever true for a run somebody started after being shown what each
+    /// of its recipes looks like.
+    /// </remarks>
+    public bool AllowLookalikes { get; init; }
+
     /// <summary>How many recipes were asked for.</summary>
     public int Total => ExternalIds.Count;
 

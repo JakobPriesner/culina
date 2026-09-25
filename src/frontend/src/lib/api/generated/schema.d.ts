@@ -1347,6 +1347,8 @@ export interface paths {
          *     A recipe's photo comes with it when it can be had: fetched from the connected server only, never from an address that server merely names, and put through the same decode-and-re-encode an upload gets. It is best effort — a picture that is missing, slow, too large or not a picture leaves a recipe that is complete in every other way, exactly like one somebody typed without a photo.
          *
          *     One recipe failing never undoes the others: each is written in its own transaction, and reported on its own line.
+         *
+         *     A recipe that looks like one the household already has — the same name once folded, nearly the same name and most of the same ingredients, or the same dish from nearly all the same ingredients — is held back as `looks_like`, naming the recipe it resembles, and nothing about it is written. It is a question for a person, never a decision: asking again with `allowLookalikes` brings it over, and `cookbookId` lands it on the earlier import's shelf instead of a new one.
          */
         post: operations["importFromRecipeSourceV1"];
         delete?: never;
@@ -2887,6 +2889,31 @@ export interface components {
         RecipesSourcesImportFromSourceRequest: {
             /** @description Which of their recipes, by the id the browse gave back. */
             externalIds: string[];
+            /** @description Bring them over even where one looks like a recipe already here. */
+            allowLookalikes?: boolean;
+            /**
+             * Format: uuid
+             * @description The shelf of an earlier import to land on, instead of a new one.
+             */
+            cookbookId?: string | null;
+        };
+        /**
+         * @description A recipe already here that an imported one looks like — "Sieht aus wie
+         *     „Spaghetti Bolognese“ (12× gekocht, 4 gleiche Zutaten)".
+         */
+        RecipesSourcesImportLookalike: {
+            /** @description Its title. */
+            title: string;
+            /**
+             * Format: int32
+             * @description How many ingredients the two have in common.
+             */
+            sharedIngredients: number;
+            /**
+             * Format: int32
+             * @description How often the person importing has made it.
+             */
+            cookCount: number;
         };
         /** @description An import that has been accepted and is now running. */
         RecipesSourcesImportStartedResponse: {
@@ -2912,13 +2939,15 @@ export interface components {
         RecipesSourcesImportedRecipe: {
             /** @description Which of theirs this is about. */
             externalId: string;
-            /** @description `imported`, `already_here`, or `failed`. */
+            /** @description `imported`, `already_here`, `looks_like` or `failed`. */
             outcome: string;
             /**
              * Format: uuid
-             * @description The recipe here, when there is one.
+             * @description The recipe here, when there is one: the one it became, the one it
+             *     already was, or the one it looks like.
              */
             recipeId?: string | null;
+            looksLike?: (null) | components["schemas"]["RecipesSourcesImportLookalike"];
             /** @description What it is called, for showing the failures by name. */
             title?: string | null;
             /** @description Why it failed, as an error code. */

@@ -2,6 +2,7 @@ using Application.Abstractions;
 using Contracts.Recipes.Sources;
 using Domain.Import;
 using Domain.Recipes;
+using Domain.Search;
 using Domain.Shared;
 
 namespace Application.Recipes.Sources;
@@ -12,6 +13,7 @@ namespace Application.Recipes.Sources;
 /// <param name="CookbookId">The shelf this import lands on.</param>
 /// <param name="UserId">Who asked for it.</param>
 /// <param name="Language">The language they read, which every recipe lands in.</param>
+/// <param name="AllowLookalikes">Whether a recipe like one already here is written anyway.</param>
 /// <remarks>
 /// Everything that is the same for every recipe in one import, passed once
 /// rather than threaded through six parameters per call. The language is here
@@ -24,7 +26,8 @@ public sealed record ImportInto(
     IRecipeLibrary Reader,
     Guid CookbookId,
     Guid UserId,
-    Language Language);
+    Language Language,
+    bool AllowLookalikes = false);
 
 /// <summary>
 /// One recipe: fetched, translated, written, and remembered.
@@ -45,6 +48,7 @@ public sealed record ImportInto(
 internal sealed class RecipeImporter(
     IRecipeOriginRepository origins,
     IRecipeRepository recipes,
+    ILookalikeRecipes lookalikes,
     ICookbookRepository cookbooks,
     IImageStore images,
     IUnitOfWork unitOfWork,
@@ -55,6 +59,7 @@ internal sealed class RecipeImporter(
 
     private const string Imported = "imported";
     private const string AlreadyHere = "already_here";
+    private const string LooksLike = "looks_like";
     private const string Failed = "failed";
 
     /// <summary>Brings one of their recipes over.</summary>
@@ -123,7 +128,9 @@ internal sealed class RecipeImporter(
                     })));
 
         return await built.Match(
-            recipe => StoreAsync(into, theirs, recipe, cancellationToken),
+            recipe => into.AllowLookalikes
+                ? StoreAsync(into, theirs, recipe, cancellationToken)
+                : UnlessAlikeAsync(into, theirs, recipe, cancellationToken),
             error => Task.FromResult(new ImportedRecipe
             {
                 ExternalId = theirs.ExternalId,
@@ -131,6 +138,50 @@ internal sealed class RecipeImporter(
                 Outcome = Failed,
                 Reason = error.Code
             })).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Writes the recipe, unless the household has one it looks like.
+    /// </summary>
+    /// <remarks>
+    /// Held back rather than written, and never dropped: nothing about it is
+    /// stored, not even its origin, so asking for it again — this time saying
+    /// "anyway" — brings it over exactly as it would have come.
+    /// </remarks>
+    private async Task<ImportedRecipe> UnlessAlikeAsync(
+        ImportInto into,
+        SourceRecipe theirs,
+        Recipe recipe,
+        CancellationToken cancellationToken)
+    {
+        var names = recipe.Groups.SelectMany(group => group.Ingredients).Select(one => one.Name).ToList();
+
+        var alike = await lookalikes
+            .FindAsync(
+                into.Source.HouseholdId,
+                into.UserId,
+                new LookalikeCandidate(
+                    recipe.Title.Value,
+                    names,
+                    CulinaryLexicon.Describe(recipe.Title.Value, theirs.Tags, names)),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return alike is null
+            ? await StoreAsync(into, theirs, recipe, cancellationToken).ConfigureAwait(false)
+            : new ImportedRecipe
+            {
+                ExternalId = theirs.ExternalId,
+                Title = recipe.Title.Value,
+                Outcome = LooksLike,
+                RecipeId = alike.RecipeId,
+                LooksLike = new ImportLookalike
+                {
+                    Title = alike.Title,
+                    SharedIngredients = alike.SharedIngredients,
+                    CookCount = alike.CookCount
+                }
+            };
     }
 
     private async Task<ImportedRecipe> StoreAsync(

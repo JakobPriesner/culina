@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using IntegrationTests.Fixtures;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Import;
 
@@ -35,6 +36,7 @@ public class BackgroundImportTests(PostgresFixture postgres)
 
     private static readonly string[] Four = ["1", "2", "3", "4"];
     private static readonly string[] Two = ["1", "2"];
+    private static readonly string[] TheSecond = ["2"];
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -152,6 +154,104 @@ public class BackgroundImportTests(PostgresFixture postgres)
     }
 
     /// <summary>
+    /// A recipe the household already has, under the same name, is held back
+    /// and named — and brought over after all when somebody says so.
+    /// </summary>
+    [Fact]
+    public async Task Import_ShouldHoldBackALookalike_AndBringItOverWhenAskedToAnyway()
+    {
+        // Arrange
+        using var tandoor = FakeTandoor.Start(recipes: 2, broken: null);
+        using var factory = Factory();
+        using var client = await SignedInAsync(factory);
+        var sourceId = await ConnectAsync(client, tandoor);
+        var householdId = await HouseholdIdAsync(client);
+
+        // Typed in by hand long before anybody connected Tandoor.
+        var typed = await client.PostAsync("/api/v1/recipes", new { householdId, title = "Recipe 2" }, Token);
+        var mine = typed.Json!.Value.GetProperty("recipeId").GetGuid();
+
+        // Act
+        var first = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = Two },
+            Token);
+        var cookbookId = first.Json!.Value.GetProperty("cookbookId").GetGuid();
+        var held = Outcomes(await WatchAsync(client, sourceId, first.Json!.Value.GetProperty("importId").GetGuid()));
+
+        var anyway = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = TheSecond, allowLookalikes = true, cookbookId },
+            Token);
+        var brought = Outcomes(await WatchAsync(client, sourceId, anyway.Json!.Value.GetProperty("importId").GetGuid()));
+
+        // Assert
+        Assert.Equal("imported", held["1"].GetProperty("outcome").GetString());
+
+        // Not written, not dropped: held, with what it looks like.
+        Assert.Equal("looks_like", held["2"].GetProperty("outcome").GetString());
+        Assert.Equal(mine, held["2"].GetProperty("recipeId").GetGuid());
+        Assert.Equal("Recipe 2", held["2"].GetProperty("looksLike").GetProperty("title").GetString());
+
+        // Then brought over after all, onto the shelf the rest landed on.
+        Assert.Equal("imported", brought["2"].GetProperty("outcome").GetString());
+        Assert.Equal(cookbookId, anyway.Json!.Value.GetProperty("cookbookId").GetGuid());
+
+        var shelf = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+        Assert.Equal(2, shelf.Json!.Value.GetProperty("recipeCount").GetInt32());
+
+        var shelves = await client.GetAsync($"/api/v1/cookbooks?householdId={householdId}", Token);
+        Assert.Single(shelves.Json!.Value.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Import_ShouldSayNotFound_WhenAskedToLandOnAnotherKitchensShelf()
+    {
+        // Arrange
+        using var tandoor = FakeTandoor.Start(recipes: 2, broken: null);
+        using var factory = Factory();
+        using var client = await SignedInAsync(factory);
+        var sourceId = await ConnectAsync(client, tandoor);
+
+        var settings = factory.Services
+            .GetRequiredService<Application.Abstractions.Settings.RegistrationSettings>();
+        settings.OpenRegistration = true;
+        settings.RequireInvitation = false;
+
+        using var stranger = factory.NewApiClient();
+        await stranger.PostAsync(
+            "/api/v1/users",
+            new { email = "grace@example.com", displayName = "Grace", password = Password },
+            Token);
+        await stranger.PostAsync(
+            "/api/v1/sessions",
+            new { email = "grace@example.com", password = Password },
+            Token);
+        var kitchen = await stranger.PostAsync("/api/v1/households", new { name = "Graces Küche" }, Token);
+        var theirs = await stranger.PostAsync(
+            "/api/v1/cookbooks",
+            new { householdId = kitchen.Json!.Value.GetProperty("householdId").GetGuid(), name = "Graces Sonntage" },
+            Token);
+
+        // Act
+        var started = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = Two, cookbookId = theirs.Json!.Value.GetProperty("cookbookId").GetGuid() },
+            Token);
+
+        // Assert
+        // Never somebody else's shelf, and never a hint that it exists.
+        Assert.Equal(HttpStatusCode.NotFound, started.StatusCode);
+        Assert.Equal("cookbooks.not_found", started.ProblemCode);
+    }
+
+    private static Dictionary<string, JsonElement> Outcomes(List<JsonElement> events) =>
+        events
+            .Where(one => one.TryGetProperty("recipe", out var recipe) && recipe.ValueKind != JsonValueKind.Null)
+            .Select(one => one.GetProperty("recipe"))
+            .ToDictionary(recipe => recipe.GetProperty("externalId").GetString()!);
+
+    /// <summary>
     /// Reads the stream to its end.
     /// </summary>
     /// <remarks>
@@ -206,10 +306,16 @@ public class BackgroundImportTests(PostgresFixture postgres)
         return client;
     }
 
-    private static async Task<Guid> ConnectAsync(ApiClient client, FakeTandoor tandoor)
+    private static async Task<Guid> HouseholdIdAsync(ApiClient client)
     {
         var me = await client.GetAsync("/api/v1/users/me", Token);
-        var householdId = me.Json!.Value.GetProperty("households")[0].GetProperty("householdId").GetGuid();
+
+        return me.Json!.Value.GetProperty("households")[0].GetProperty("householdId").GetGuid();
+    }
+
+    private static async Task<Guid> ConnectAsync(ApiClient client, FakeTandoor tandoor)
+    {
+        var householdId = await HouseholdIdAsync(client);
 
         var connected = await client.PostAsync(
             "/api/v1/recipe-sources",

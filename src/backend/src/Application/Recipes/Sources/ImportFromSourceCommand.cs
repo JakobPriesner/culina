@@ -113,7 +113,9 @@ internal sealed class ImportFromSourceCommandHandler(
         ImportFromSourceCommand command,
         CancellationToken cancellationToken)
     {
-        var shelf = await ShelfAsync(source, command.UserId, cancellationToken).ConfigureAwait(false);
+        var shelf = command.Draft.CookbookId is { } earlier
+            ? await EarlierShelfAsync(source, earlier, cancellationToken).ConfigureAwait(false)
+            : await ShelfAsync(source, command.UserId, cancellationToken).ConfigureAwait(false);
 
         return shelf.Map(cookbook =>
         {
@@ -123,7 +125,10 @@ internal sealed class ImportFromSourceCommandHandler(
                 cookbook.Id,
                 cookbook.Name.Value,
                 command.Draft.ExternalIds,
-                time.GetUtcNow());
+                time.GetUtcNow())
+            {
+                AllowLookalikes = command.Draft.AllowLookalikes
+            };
 
             runs.Start(run);
 
@@ -178,6 +183,27 @@ internal sealed class ImportFromSourceCommandHandler(
                     cancellationToken)
                 .ConfigureAwait(false),
             error => Task.FromResult(Result<Cookbook>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The shelf of an earlier import, for the recipes it held back.
+    /// </summary>
+    /// <remarks>
+    /// Only a shelf somebody fills by hand, and only this household's: a
+    /// cookbook of another kitchen is one that does not exist, and a smart one
+    /// has no room for a recipe its rules did not choose.
+    /// </remarks>
+    private async Task<Result<Cookbook>> EarlierShelfAsync(
+        RecipeSource source,
+        Guid cookbookId,
+        CancellationToken cancellationToken)
+    {
+        var found = await cookbooks.FindAsync(cookbookId, cancellationToken).ConfigureAwait(false);
+
+        return found.Bind(cookbook =>
+            cookbook.HouseholdId == source.HouseholdId && cookbook.Kind == CookbookKind.Manual
+                ? Result<Cookbook>.Success(cookbook)
+                : CookbookErrors.NotFound(cookbookId));
     }
 
     /// <summary>

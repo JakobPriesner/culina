@@ -120,7 +120,8 @@ public sealed class SourceImportRunner(
             {
                 await EachAsync(
                         run,
-                        new ImportInto(source, library, run.CookbookId, run.UserId, theirs.Language),
+                        new ImportInto(
+                            source, library, run.CookbookId, run.UserId, theirs.Language, run.AllowLookalikes),
                         cancellationToken)
                     .ConfigureAwait(false);
 

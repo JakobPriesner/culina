@@ -42,10 +42,34 @@ export interface SourceRecipe {
 /** What happened to one recipe in one import. */
 export interface ImportOutcome {
   readonly externalId: string;
-  readonly outcome: 'imported' | 'already_here' | 'failed';
+  readonly outcome: 'imported' | 'already_here' | 'looks_like' | 'failed';
   readonly recipeId: string | null;
   readonly title: string | null;
   readonly reason: string | null;
+  /** What it looks like, for `looks_like`. */
+  readonly looksLike: ImportLookalike | null;
+}
+
+/** A recipe already here that an imported one looks like. */
+export interface ImportLookalike {
+  readonly title: string;
+  readonly sharedIngredients: number;
+  /** How often the person importing has made it — why doubling it matters. */
+  readonly cookCount: number;
+}
+
+/**
+ * One of their recipes, held back because the household has one like it.
+ *
+ * Nothing about it was written, so bringing it over after all is simply
+ * asking for it again — and until somebody does, it is not here.
+ */
+export interface HeldRecipe {
+  readonly externalId: string;
+  readonly title: string;
+  /** The recipe here that it looks like. */
+  readonly recipeId: string;
+  readonly looksLike: ImportLookalike;
 }
 
 /**
@@ -75,6 +99,8 @@ export interface ImportRun {
   readonly imported: number;
   readonly skipped: number;
   readonly failures: readonly string[];
+  /** Held back because each looks like a recipe already here, for somebody to decide. */
+  readonly held: readonly HeldRecipe[];
   readonly cookbookId: string | null;
   readonly cookbookName: string | null;
   readonly finished: boolean;
