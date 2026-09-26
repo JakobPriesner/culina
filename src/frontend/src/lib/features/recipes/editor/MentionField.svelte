@@ -9,6 +9,7 @@
     pendingMention,
     suggest,
     toSegments,
+    writesOn,
     type PendingMention
   } from './mentions';
   import { formatQuantity } from '../formatQuantity';
@@ -69,10 +70,11 @@
    * name — but "@olive oil into the pan" is a sentence the author kept writing,
    * and offering to add all of it as an ingredient would be absurd. Matching
    * names keep the picker open on their own for as long as they match; this is
-   * only about what to do when nothing does.
+   * only about what to do when nothing does. Nor is a name already on the list
+   * followed by more words a new name: it is a mention that was finished.
    */
   const newName = $derived.by(() => {
-    if (!query || query.split(/\s+/).length > 2) {
+    if (!query || query.split(/\s+/).length > 2 || writesOn(query, ingredients)) {
       return null;
     }
 
