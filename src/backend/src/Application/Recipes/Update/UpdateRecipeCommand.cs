@@ -59,7 +59,7 @@ internal sealed class UpdateRecipeCommandHandler(
         using var tracked = UseCaseActivity.Start("Recipes.Update");
 
         var found = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .EditableAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var prepared = found.Bind(recipe => Apply(recipe, command).Map(() => recipe));

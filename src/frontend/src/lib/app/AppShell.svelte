@@ -1,12 +1,14 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
+  import { goto } from '$app/navigation';
   import { navigating, page } from '$app/state';
   import { resolve } from '$app/paths';
   import { Toaster } from '$ds';
 
   import type { Component } from 'svelte';
 
+  import HouseholdSwitcher from '$features/auth/HouseholdSwitcher.svelte';
   import { session } from '$features/auth/session.svelte';
   import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
@@ -108,6 +110,21 @@
     }
   }
   /**
+   * Where a change of household leaves the page.
+   *
+   * A list — the library, the plan, the shopping — stays put and shows the
+   * other household's. A page about one thing, whose route names it, goes back
+   * to the library instead: that recipe or that cookbook belongs to the
+   * household just left, and staying on it would be showing one kitchen's
+   * thing under another kitchen's name.
+   */
+  function switched() {
+    if (page.route.id?.includes('[')) {
+      void goto(resolve('/(app)'));
+    }
+  }
+
+  /**
    * How tall the window is, so the shell can tell when it is mostly furniture.
    */
   let viewportHeight = $state(0);
@@ -147,7 +164,10 @@
     {/if}
 
     <div class="header-inner">
-      <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
+      <div class="where">
+        <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
+        <div class="household"><HouseholdSwitcher onswitch={switched} /></div>
+      </div>
 
       <div class="wide-only"><Navigation placement="top" /></div>
 
@@ -293,6 +313,35 @@
     text-align: end;
   }
 
+  /* The brand and the household beside it: which app, and whose kitchen in
+     it. Takes pointer events back from the header for the menu's sake: the
+     household panel opens inside it, and would otherwise inherit the header's
+     "none" and pass every click through to the page beneath. */
+  .where {
+    grid-column: 1;
+    justify-self: start;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    max-width: 100%;
+    pointer-events: auto;
+  }
+
+  /* Shrinks before it wraps. A flex row wraps as soon as its items' natural
+     widths do not fit, long before any of them would shrink — so the name
+     starts from a pill's width and grows back to its own, and gives way to an
+     ellipsis on a narrow screen instead of taking a second row from the step
+     somebody is cooking. Only text enlarged past the point where even that
+     pill fits beside the brand moves it underneath. */
+  .household {
+    display: flex;
+    flex: 1 1 3rem;
+    min-width: 0;
+    max-width: max-content;
+  }
+
   /*
    * Stays, and stays on every page.
    *
@@ -309,8 +358,7 @@
    * sits in the same row of pills and does the same kind of thing.
    */
   .brand {
-    grid-column: 1;
-    justify-self: start;
+    min-width: 0;
     text-decoration: none;
     padding: var(--space-2) var(--space-3);
     margin-inline-start: calc(-1 * var(--space-3));

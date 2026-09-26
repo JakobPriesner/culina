@@ -12,13 +12,16 @@ public interface IRelatedRecipes
 {
     /// <summary>The recipes most like this one, the closest first.</summary>
     /// <param name="recipeId">Which recipe.</param>
-    /// <param name="householdId">Whose library it is compared with.</param>
+    /// <param name="library">
+    /// The households whose recipes it is compared with: its own, then those
+    /// its own inherits from.
+    /// </param>
     /// <param name="userId">Who is reading, whose cooking the summaries count.</param>
     /// <param name="limit">How many at most.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyList<RelatedRecipe>> FindAsync(
         Guid recipeId,
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         Guid userId,
         int limit,
         CancellationToken cancellationToken);

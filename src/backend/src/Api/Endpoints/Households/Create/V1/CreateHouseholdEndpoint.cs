@@ -21,7 +21,10 @@ internal sealed class CreateHouseholdEndpoint : IEndpoint
             {
                 var result = await handler
                     .Handle(
-                        new CreateHouseholdCommand(context.CurrentUser().UserId, request.Name),
+                        new CreateHouseholdCommand(
+                            context.CurrentUser().UserId,
+                            request.Name,
+                            request.InheritsFrom),
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -34,10 +37,13 @@ internal sealed class CreateHouseholdEndpoint : IEndpoint
             .WithName("createHouseholdV1")
             .WithTags(Tags.Households)
             .WithSummary("Create a household")
-            .WithDescription("The caller becomes its first owner.")
+            .WithDescription(
+                "The caller becomes its first owner. With inheritsFrom, it sees that household's "
+                + "recipes from the start; the caller must be in it.")
             .Produces<Response>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireAuthorization();
     }
 }

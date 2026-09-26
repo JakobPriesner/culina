@@ -15,13 +15,20 @@ public sealed class Household
 {
     private readonly List<HouseholdMember> members;
 
-    private Household(Guid id, HouseholdName name, DateTimeOffset createdAt, long version, List<HouseholdMember> members)
+    private Household(
+        Guid id,
+        HouseholdName name,
+        DateTimeOffset createdAt,
+        long version,
+        List<HouseholdMember> members,
+        Guid? inheritsFrom)
     {
         Id = id;
         Name = name;
         CreatedAt = createdAt;
         Version = version;
         this.members = members;
+        InheritsFrom = inheritsFrom;
     }
 
     /// <summary>The household's identifier.</summary>
@@ -39,6 +46,11 @@ public sealed class Household
     /// <summary>Who is in it.</summary>
     public IReadOnlyList<HouseholdMember> Members => members;
 
+    /// <summary>
+    /// The household whose recipes this one sees but does not edit, if any.
+    /// </summary>
+    public Guid? InheritsFrom { get; private set; }
+
     /// <summary>Creates a household with its first owner.</summary>
     /// <param name="name">The validated name.</param>
     /// <param name="ownerId">The person creating it.</param>
@@ -52,7 +64,8 @@ public sealed class Household
             name,
             createdAt,
             version: 1,
-            [new HouseholdMember(ownerId, HouseholdRole.Owner, createdAt)]);
+            [new HouseholdMember(ownerId, HouseholdRole.Owner, createdAt)],
+            inheritsFrom: null);
     }
 
     /// <summary>Rebuilds a household from storage.</summary>
@@ -61,17 +74,19 @@ public sealed class Household
     /// <param name="createdAt">When it was created.</param>
     /// <param name="version">The stored version.</param>
     /// <param name="members">Its members.</param>
+    /// <param name="inheritsFrom">The household it inherits recipes from, if any.</param>
     public static Household Restore(
         Guid id,
         HouseholdName name,
         DateTimeOffset createdAt,
         long version,
-        IEnumerable<HouseholdMember> members)
+        IEnumerable<HouseholdMember> members,
+        Guid? inheritsFrom)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(members);
 
-        return new Household(id, name, createdAt, version, [.. members]);
+        return new Household(id, name, createdAt, version, [.. members], inheritsFrom);
     }
 
     /// <summary>Renames the household. Owners only.</summary>
@@ -84,6 +99,29 @@ public sealed class Household
         return HouseholdMembershipPolicy.CanAdminister(this, actingUserId)
             .Tap(() => Name = name);
     }
+
+    /// <summary>
+    /// Sees every recipe another household sees, from now on. Owners only.
+    /// </summary>
+    /// <param name="parent">The household to inherit from.</param>
+    /// <param name="parentLibrary">
+    /// Every household whose recipes <paramref name="parent"/> sees, itself
+    /// included — what the cycle check needs to look through.
+    /// </param>
+    /// <param name="actingUserId">Who is asking.</param>
+    public Result Inherit(Household parent, IReadOnlyCollection<Guid> parentLibrary, Guid actingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+
+        return HouseholdMembershipPolicy.CanInherit(this, parent, parentLibrary, actingUserId)
+            .Tap(() => InheritsFrom = parent.Id);
+    }
+
+    /// <summary>Stops inheriting anybody's recipes. Owners only.</summary>
+    /// <param name="actingUserId">Who is asking.</param>
+    public Result StopInheriting(Guid actingUserId) =>
+        HouseholdMembershipPolicy.CanAdminister(this, actingUserId)
+            .Tap(() => InheritsFrom = null);
 
     /// <summary>Adds someone to the household.</summary>
     /// <param name="userId">Who is joining.</param>

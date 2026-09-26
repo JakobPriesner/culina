@@ -24,16 +24,17 @@ internal sealed class GetCurrentUserEndpoint : IEndpoint
                 return result.Match(
                     // The households and the assistant's availability are part
                     // of the body, so they are part of the tag: joining a
-                    // kitchen or an administrator switching the assistant on
-                    // does not change the account itself, and a tag made only
-                    // of the account's version would say "nothing changed".
+                    // kitchen, renaming one, changing whose recipes it inherits
+                    // or an administrator switching the assistant on does not
+                    // change the account itself, and a tag made only of the
+                    // account's version would say "nothing changed".
                     user => ETag.Ok(
                         context,
                         user,
                         user.Version,
                         user.UserId,
                         ETag.Fingerprint(user.Households
-                            .Select(h => $"{h.HouseholdId:N}:{h.Role}")
+                            .Select(HouseholdPart)
                             .Append(AssistancePart(user.Assistance)))),
                     CustomResults.Problem);
             })
@@ -49,6 +50,16 @@ internal sealed class GetCurrentUserEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
     }
+
+    private static string HouseholdPart(Contracts.Users.GetCurrent.HouseholdMembership household) =>
+        string.Join(
+            ':',
+            [
+                household.HouseholdId.ToString("N"),
+                household.Role,
+                household.Name,
+                .. household.InheritsFrom.Select(parent => $"{parent.HouseholdId:N}={parent.Name}")
+            ]);
 
     private static string AssistancePart(Contracts.Users.GetCurrent.AssistanceAvailability assistance) =>
         $"assistance:{assistance.Improve}:{assistance.Draft}:{assistance.Read}:{assistance.Draw}";

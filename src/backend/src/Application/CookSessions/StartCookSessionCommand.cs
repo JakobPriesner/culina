@@ -12,7 +12,8 @@ namespace Application.CookSessions;
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is cooking.</param>
 /// <param name="Servings">The scaling to cook at.</param>
-public sealed record StartCookSessionCommand(Guid RecipeId, Guid UserId, decimal Servings);
+/// <param name="HouseholdId">The household it is cooked in, or null for the recipe's own.</param>
+public sealed record StartCookSessionCommand(Guid RecipeId, Guid UserId, decimal Servings, Guid? HouseholdId);
 
 internal sealed class StartCookSessionCommandHandler(
     ICookSessionRepository sessions,
@@ -33,11 +34,16 @@ internal sealed class StartCookSessionCommandHandler(
         // Reading the recipe is not only for the title: it is the membership
         // check. A recipe the caller cannot see is a recipe they cannot cook.
         var recipe = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .VisibleInAsync(recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var started = recipe.Bind(found => CookSession
-            .Start(found.Id, command.UserId, found.HouseholdId, command.Servings, time.GetUtcNow())
+            .Start(
+                found.Id,
+                command.UserId,
+                command.HouseholdId ?? found.HouseholdId,
+                command.Servings,
+                time.GetUtcNow())
             .Map(session => (Session: session, Title: found.Title.Value)));
 
         var result = await started.Match(

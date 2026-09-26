@@ -94,3 +94,24 @@ describe('the end of the recipe list', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 });
+
+describe('recipes from another household', () => {
+  it('says where an inherited recipe comes from, and nothing on the household’s own', () => {
+    stubObserver();
+
+    renderWithProviders(RecipeGrid, {
+      props: {
+        recipes: [
+          { ...recipe('own'), householdId: 'h-flat' },
+          { ...recipe('inherited'), householdId: 'h-family' }
+        ],
+        inherited: { 'h-family': 'Family' }
+      }
+    });
+
+    const [own, inherited] = screen.getAllByRole('listitem');
+
+    expect(inherited).toHaveTextContent('From Family');
+    expect(own).not.toHaveTextContent('From');
+  });
+});

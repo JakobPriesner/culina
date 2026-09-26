@@ -56,7 +56,27 @@ v1 stores it and always renders metric — see `scaling-rules.md`).
 
 ### Household
 
-`Id`, `Name` (1–80 chars), `CreatedAt`, `Version`.
+`Id`, `Name` (1–80 chars), `CreatedAt`, `Version`, `InheritsFrom?`.
+
+**Inheritance.** A household may inherit one other household. It then sees
+every recipe that one sees — its own, and whatever it inherits in turn — and
+edits none of them. The household's *library* is itself followed by that chain;
+library search, tags, units, ingredient and title completion, suggestions,
+related recipes and cookbook shelves all read the library, while everything
+anybody *did* (cook log, plan, cookbook membership, cook sessions) stays with
+the household it happened in. Cooking an inherited recipe is stamped with the
+household it was cooked in, not the one it belongs to.
+
+- Reading a recipe needs membership of its household **or** of any household
+  that inherits from it (`RecipeAccess.VisibleAsync`).
+- Changing it — update, delete, image, sharing — needs membership of its own
+  household (`RecipeAccess.EditableAsync`).
+- Using it inside one household — plan, shopping list, cookbook, cooking —
+  needs membership of that household and the recipe in its library
+  (`RecipeAccess.VisibleInAsync`).
+- Only an owner of the inheriting household may set it, and only to a household
+  they are in; a loop is refused with `households.inheritance_cycle`. Deleting
+  the parent sets `InheritsFrom` to null.
 
 ### HouseholdMember
 

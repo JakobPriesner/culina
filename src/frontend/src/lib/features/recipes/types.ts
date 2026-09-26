@@ -78,6 +78,11 @@ export interface Step {
 /** What the list shows. Deliberately smaller than a recipe. */
 export interface RecipeSummary {
   readonly id: string;
+  /**
+   * The household it belongs to — another than the one being looked at when
+   * that one inherits it. Absent where the server does not say.
+   */
+  readonly householdId?: string;
   readonly title: string;
   readonly imageId: string | null;
   readonly totalMinutes: number | null;

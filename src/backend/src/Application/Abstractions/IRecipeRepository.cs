@@ -23,21 +23,23 @@ public interface IRecipeRepository
     Task<SearchFacets> FacetsAsync(RecipeSearch search, CancellationToken cancellationToken);
 
     /// <summary>
-    /// The units this household has written that are not built in.
+    /// The units this household and those it inherits from have written that
+    /// are not built in.
     /// </summary>
-    /// <param name="householdId">Whose kitchen.</param>
+    /// <param name="library">Whose recipes: a household, then every household it inherits from.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
     /// <remarks>
     /// Read from the recipes rather than from a table of its own. A unit exists
     /// because something is measured in it, so there is no list to maintain and
     /// no way for a catalogue to disagree with what the recipes actually say.
     /// </remarks>
-    Task<IReadOnlyList<string>> OwnUnitsAsync(Guid householdId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> OwnUnitsAsync(IReadOnlyList<Guid> library, CancellationToken cancellationToken);
 
     /// <summary>
-    /// The ingredient names this household has written, best match first.
+    /// The ingredient names this household and those it inherits from have
+    /// written, best match first.
     /// </summary>
-    /// <param name="householdId">Whose kitchen.</param>
+    /// <param name="library">Whose recipes: a household, then every household it inherits from.</param>
     /// <param name="query">What has been typed, which may be empty.</param>
     /// <param name="limit">At most this many.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
@@ -47,7 +49,7 @@ public interface IRecipeRepository
     /// recipes rather than from a catalogue, for the same reason units are.
     /// </remarks>
     Task<IReadOnlyList<string>> OwnIngredientNamesAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         string? query,
         int limit,
         CancellationToken cancellationToken);
