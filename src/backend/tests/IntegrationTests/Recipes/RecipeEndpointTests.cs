@@ -62,24 +62,59 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Equal("de", response.Json!.Value.GetProperty("language").GetString());
     }
 
-    [Fact]
-    public async Task Create_ShouldStartTheRecipeInEnglish_ForAnAccountThatNeverChoseALanguage()
+    /// <summary>
+    /// An account that never chose a language reads in its device's, so its
+    /// recipes start in whatever the device that started them asks for.
+    /// </summary>
+    [Theory]
+    [InlineData("de-AT,de;q=0.9,en;q=0.8", "de")]
+    [InlineData("fr-FR,de;q=0.5", "de")]
+    [InlineData("en;q=0.4,de;q=0.9", "de")]
+    [InlineData("de;q=0,en", "en")]
+    [InlineData("fr-FR", "en")]
+    [InlineData(null, "en")]
+    public async Task Create_ShouldStartTheRecipeInTheDevicesLanguage_ForAnAccountThatFollowsIt(
+        string? acceptLanguage,
+        string expected)
     {
         // Arrange
         using var client = await SignedInAsync();
         var householdId = await FirstHouseholdIdAsync(client);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/recipes")
+        {
+            Content = JsonContent.Create(new { householdId, title = "Bolognese" })
+        };
+
+        if (acceptLanguage is not null)
+        {
+            request.Headers.TryAddWithoutValidation("Accept-Language", acceptLanguage);
+        }
 
         // Act
-        var response = await client.PostAsync(
-            "/api/v1/recipes",
-            new { householdId, title = "Bolognese" },
-            Token);
+        var response = await client.SendAsync(request, Token);
 
         // Assert
-        // The default preference, arrived at honestly rather than hard-coded in
-        // the domain: an account that never opened the settings screen reads in
-        // English, so its recipes are written in English.
-        Assert.Equal("en", response.Json!.Value.GetProperty("language").GetString());
+        Assert.Equal(expected, response.Json!.Value.GetProperty("language").GetString());
+    }
+
+    [Fact]
+    public async Task Create_ShouldStartTheRecipeInTheChosenLanguage_WhateverTheDeviceAsksFor()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        await ReadInGermanAsync(client);
+        var householdId = await FirstHouseholdIdAsync(client);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/recipes")
+        {
+            Content = JsonContent.Create(new { householdId, title = "Linsensuppe" })
+        };
+        request.Headers.TryAddWithoutValidation("Accept-Language", "en-US");
+
+        // Act
+        var response = await client.SendAsync(request, Token);
+
+        // Assert
+        Assert.Equal("de", response.Json!.Value.GetProperty("language").GetString());
     }
 
     [Fact]

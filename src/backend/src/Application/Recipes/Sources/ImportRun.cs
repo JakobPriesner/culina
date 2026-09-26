@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Contracts.Recipes.Sources;
+using Domain.Shared;
 
 namespace Application.Recipes.Sources;
 
@@ -101,6 +102,12 @@ public sealed class ImportRun
     /// of its recipes looks like.
     /// </remarks>
     public bool AllowLookalikes { get; init; }
+
+    /// <summary>
+    /// The language of the device that asked, which the recipes land in when
+    /// the person asking reads in whatever their device reads.
+    /// </summary>
+    public Language DeviceLanguage { get; init; }
 
     /// <summary>How many recipes were asked for.</summary>
     public int Total => ExternalIds.Count;

@@ -45,7 +45,7 @@ public sealed class UserPreferences
 
     private UserPreferences(
         Guid userId,
-        Language language,
+        Language? language,
         string theme,
         ThemeMode mode,
         MeasurementSystem measurementSystem,
@@ -62,8 +62,17 @@ public sealed class UserPreferences
     /// <summary>Whose preferences these are.</summary>
     public Guid UserId { get; }
 
-    /// <summary>The language they read the interface in.</summary>
-    public Language Language { get; private set; }
+    /// <summary>
+    /// The language they read the interface in, or null when it follows
+    /// whichever device they are reading on.
+    /// </summary>
+    /// <remarks>
+    /// Null is a choice, not the absence of one, and it is where everybody
+    /// starts: a phone set to German and a laptop set to English can each read
+    /// in their own language. Anything the server has to write in a language
+    /// asks the device that is asking — see <c>Accept-Language</c>.
+    /// </remarks>
+    public Language? Language { get; private set; }
 
     /// <summary>
     /// The theme id. A free string rather than an enum, because themes are
@@ -92,20 +101,19 @@ public sealed class UserPreferences
     /// timing problem.
     /// </remarks>
     /// <param name="userId">Whose they are.</param>
-    /// <param name="language">Their language, usually guessed from Accept-Language.</param>
-    public static UserPreferences Default(Guid userId, Language language = Language.En) =>
-        new(userId, language, DefaultTheme, ThemeMode.System, MeasurementSystem.Metric, version: 0);
+    public static UserPreferences Default(Guid userId) =>
+        new(userId, language: null, DefaultTheme, ThemeMode.System, MeasurementSystem.Metric, version: 0);
 
     /// <summary>Rebuilds preferences from storage.</summary>
     /// <param name="userId">Whose they are.</param>
-    /// <param name="language">Their language.</param>
+    /// <param name="language">Their language, or null to follow the device.</param>
     /// <param name="theme">Their theme id.</param>
     /// <param name="mode">Their appearance choice.</param>
     /// <param name="measurementSystem">Their unit choice.</param>
     /// <param name="version">The stored version.</param>
     public static UserPreferences Restore(
         Guid userId,
-        Language language,
+        Language? language,
         string theme,
         ThemeMode mode,
         MeasurementSystem measurementSystem,
@@ -113,12 +121,12 @@ public sealed class UserPreferences
         new(userId, language, theme, mode, measurementSystem, version);
 
     /// <summary>Applies a change.</summary>
-    /// <param name="language">The chosen language.</param>
+    /// <param name="language">The chosen language, or null to follow the device.</param>
     /// <param name="theme">The chosen theme id.</param>
     /// <param name="mode">The chosen appearance.</param>
     /// <param name="measurementSystem">The chosen units.</param>
     public Result Change(
-        Language language,
+        Language? language,
         string theme,
         ThemeMode mode,
         MeasurementSystem measurementSystem)
