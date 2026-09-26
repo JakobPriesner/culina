@@ -27,7 +27,8 @@ internal sealed class RecordCookedEndpoint : IEndpoint
                             context.CurrentUser().UserId,
                             request?.MadeAt,
                             request?.Servings,
-                            request?.Note),
+                            request?.Note,
+                            request?.HouseholdId),
                         cancellationToken)
                     .ConfigureAwait(false);
 

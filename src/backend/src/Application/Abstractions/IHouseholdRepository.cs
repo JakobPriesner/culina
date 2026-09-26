@@ -21,7 +21,7 @@ public interface IHouseholdRepository
     /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result> AddAsync(Household household, CancellationToken cancellationToken);
 
-    /// <summary>Saves the name and the full membership list.</summary>
+    /// <summary>Saves the name, what it inherits from, and the full membership list.</summary>
     /// <param name="household">The changed household.</param>
     /// <param name="expectedVersion">The version the caller last saw.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
@@ -42,6 +42,30 @@ public interface IHouseholdRepository
     /// would make every recipe read pay for a members list nobody wanted.
     /// </remarks>
     Task<bool> IsMemberAsync(Guid householdId, Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether a user may see a household's recipes: they are in it, or in a
+    /// household that inherits from it, however indirectly.
+    /// </summary>
+    /// <param name="householdId">The household that owns the recipes.</param>
+    /// <param name="userId">Who is asking.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// Seeing, never changing: editing a recipe still needs
+    /// <see cref="IsMemberAsync"/> on the household it belongs to.
+    /// </remarks>
+    Task<bool> CanSeeRecipesAsync(Guid householdId, Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The households this one inherits recipes from, nearest first: the one it
+    /// inherits from, then the one that inherits from, and so on.
+    /// </summary>
+    /// <param name="householdId">Which household.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>Empty for a household that inherits nothing.</remarks>
+    Task<IReadOnlyList<InheritedHousehold>> AncestorsAsync(
+        Guid householdId,
+        CancellationToken cancellationToken);
 
     /// <summary>The household's members, with their names, for the members screen.</summary>
     /// <param name="householdId">Which household.</param>

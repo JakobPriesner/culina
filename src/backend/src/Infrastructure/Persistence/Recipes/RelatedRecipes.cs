@@ -42,11 +42,13 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
 
     public async Task<IReadOnlyList<RelatedRecipe>> FindAsync(
         Guid recipeId,
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         Guid userId,
         int limit,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(library);
+
         var concepts = await executor.QuerySingleOrDefaultAsync<string[]>(
             "select concepts from recipe_search_documents where recipe_id = @recipeId;",
             new { recipeId },
@@ -63,7 +65,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
 
         var rows = await executor.QueryAsync<Row>(
             Sql,
-            new { recipeId, householdId, userId, concepts, stuff, limit, floor = Floor },
+            new { recipeId, library = library.ToArray(), userId, concepts, stuff, limit, floor = Floor },
             cancellationToken).ConfigureAwait(false);
 
         return
@@ -71,6 +73,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
             .. rows.Select(row => new RelatedRecipe(
                 new RecipeSearchRow(
                     row.RecipeId,
+                    row.HouseholdId,
                     row.Title,
                     row.ImageId,
                     row.TotalMinutes,
@@ -107,7 +110,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
         with library as (
             select count(*)::float8 as size
             from recipe_search_documents
-            where household_id = @householdId),
+            where household_id = any(@library)),
         weighted as (
             select c.concept,
                    c.concept = any(@stuff) as stuff,
@@ -115,7 +118,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
             from unnest(@concepts::text[]) as c(concept)
             cross join library l
             left join recipe_search_documents d
-                   on d.household_id = @householdId and d.concepts @> array[c.concept]
+                   on d.household_id = any(@library) and d.concepts @> array[c.concept]
             group by c.concept, l.size),
         totals as (
             select coalesce(sum(weight) filter (where not stuff), 0) as kinds,
@@ -131,7 +134,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                    coalesce(sum(w.weight) filter (where w.stuff), 0) as stuff_weight
             from recipe_search_documents d
             join weighted w on d.concepts @> array[w.concept]
-            where d.household_id = @householdId
+            where d.household_id = any(@library)
               and d.recipe_id <> @recipeId
               and w.weight > 0
             group by d.recipe_id),
@@ -141,7 +144,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                    coalesce(s.stuff_weight / nullif(t.stuff, 0), 0) as stuff_score
             from shared s
             cross join totals t)
-        select r.id as recipe_id, r.title, r.image_id,
+        select r.id as recipe_id, r.household_id, r.title, r.image_id,
                case when r.prep_minutes is null and r.cook_minutes is null then null
                     else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) end as total_minutes,
                r.yield_amount, r.yield_kind, r.yield_label, r.updated_at,
@@ -169,6 +172,8 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
     private sealed record Row
     {
         public Guid RecipeId { get; init; }
+
+        public Guid HouseholdId { get; init; }
 
         public string Title { get; init; } = string.Empty;
 

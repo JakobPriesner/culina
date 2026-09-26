@@ -24,7 +24,8 @@ public sealed record RemoveRecipeFromCookbookCommand(Guid CookbookId, Guid Recip
 /// <summary>Which cookbooks a recipe is on.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
-public sealed record GetRecipeCookbooksQuery(Guid RecipeId, Guid UserId);
+/// <param name="HouseholdId">Whose shelves to look on, or null for the recipe's own household.</param>
+public sealed record GetRecipeCookbooksQuery(Guid RecipeId, Guid UserId, Guid? HouseholdId);
 
 internal sealed class AddRecipeToCookbookCommandHandler(
     ICookbookRepository cookbooks,
@@ -64,17 +65,17 @@ internal sealed class AddRecipeToCookbookCommandHandler(
         CancellationToken cancellationToken)
     {
         // Through the recipe, the way a planned meal is checked: one step
-        // proves both that the caller can see it and which household it is in.
+        // proves both that the caller can see it and that the shelf's
+        // household holds it, as its own or by inheritance.
         var recipe = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .VisibleInAsync(
+                recipes, households, command.RecipeId, shelf.Cookbook.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         return await recipe.Match(
-            found => found.HouseholdId == shelf.Cookbook.HouseholdId
-                ? unitOfWork.InTransactionAsync(
-                    token => WriteAsync(command, token),
-                    cancellationToken)
-                : Task.FromResult(Result.Failure(RecipeErrors.NotFound(command.RecipeId))),
+            _ => unitOfWork.InTransactionAsync(
+                token => WriteAsync(command, token),
+                cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
     }
 
@@ -163,14 +164,16 @@ internal sealed class GetRecipeCookbooksQueryHandler(
         using var tracked = UseCaseActivity.Start("Cookbooks.GetForRecipe");
 
         var recipe = await RecipeAccess
-            .VisibleAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
+            .VisibleInAsync(recipes, households, query.RecipeId, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await recipe.Match(
             async found =>
             {
+                // The shelves of the household asking: an inherited recipe
+                // is on this kitchen's shelves, not on the ones it came from.
                 var shelves = await cookbooks
-                    .ContainingAsync(found.Id, found.HouseholdId, cancellationToken)
+                    .ContainingAsync(found.Id, query.HouseholdId ?? found.HouseholdId, cancellationToken)
                     .ConfigureAwait(false);
 
                 return Result<RecipeCookbooksResponse>.Success(shelves.ToResponse());

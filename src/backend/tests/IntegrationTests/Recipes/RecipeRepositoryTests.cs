@@ -208,7 +208,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
 
         // Act
-        var own = await scope.Recipes.OwnUnitsAsync(recipe.HouseholdId, Token);
+        var own = await scope.Recipes.OwnUnitsAsync([recipe.HouseholdId], Token);
 
         // Assert
         // The built-ins are excluded in the query, not afterwards: a household
@@ -239,7 +239,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
 
         // Act
-        var found = await scope.Recipes.OwnIngredientNamesAsync(recipe.HouseholdId, "butter", 10, Token);
+        var found = await scope.Recipes.OwnIngredientNamesAsync([recipe.HouseholdId], "butter", 10, Token);
 
         // Assert
         // Somebody typing "butter" means the butter, not the peanut butter that
@@ -256,12 +256,12 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
 
         // Act
         var found = await scope.Recipes
-            .OwnIngredientNamesAsync(CulinaId.New(), "butter", 10, Token);
+            .OwnIngredientNamesAsync([CulinaId.New()], "butter", 10, Token);
 
         // Assert
         Assert.Empty(found);
         Assert.NotEmpty(await scope.Recipes
-            .OwnIngredientNamesAsync(recipe.HouseholdId, "butter", 10, Token));
+            .OwnIngredientNamesAsync([recipe.HouseholdId], "butter", 10, Token));
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;

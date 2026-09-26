@@ -438,6 +438,7 @@
       query={libraryView.query}
       loading={!arranged}
       onmore={autoLoads ? more : undefined}
+      inherited={session.inheritedFrom}
     />
 
     {#if recipes.moreFailed}

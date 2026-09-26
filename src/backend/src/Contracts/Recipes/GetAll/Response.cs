@@ -144,6 +144,13 @@ public sealed record RecipeSummary
     /// <summary>The recipe's id.</summary>
     public required Guid RecipeId { get; init; }
 
+    /// <summary>
+    /// The household it belongs to. Another than the one asked about when that
+    /// one inherits it — readable and cookable there, changeable only in its
+    /// own.
+    /// </summary>
+    public required Guid HouseholdId { get; init; }
+
     /// <summary>What it is called.</summary>
     public required string Title { get; init; }
 

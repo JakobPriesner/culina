@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Cookbooks;
@@ -14,13 +15,14 @@ internal sealed class GetRecipeCookbooksEndpoint : IEndpoint
 
         app.MapGet($"{ApiPaths.V1}/recipes/{{recipeId:guid}}/cookbooks", async (
                 Guid recipeId,
+                Guid? householdId,
                 HttpContext context,
                 IQueryHandler<GetRecipeCookbooksQuery, RecipeCookbooksResponse> handler,
                 CancellationToken cancellationToken) =>
             {
                 var result = await handler
                     .Handle(
-                        new GetRecipeCookbooksQuery(recipeId, context.CurrentUser().UserId),
+                        new GetRecipeCookbooksQuery(recipeId, context.CurrentUser().UserId, householdId),
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -32,8 +34,12 @@ internal sealed class GetRecipeCookbooksEndpoint : IEndpoint
             .WithDescription(
                 "Not paged. A recipe is on a handful of shelves or none, and this answers the tick "
                 + "marks in the add-to-cookbook sheet and the line under a recipe's title — a "
-                + "cursor would be machinery for a list that fits on one screen.")
+                + "cursor would be machinery for a list that fits on one screen. householdId names "
+                + "whose shelves to look on, for a recipe that household inherits; left out, the "
+                + "recipe's own household.")
+            .WithQueryParameters("householdId")
             .Produces<RecipeCookbooksResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireAuthorization();

@@ -45,12 +45,21 @@ class CookLogStore {
     this.#log = result.ok ? result.value : null;
   }
 
-  /** One tap. The response carries the new count, so nothing has to be refetched. */
-  async record(recipeId: string, servings: number): Promise<Recorded | null> {
+  /**
+   * One tap. The response carries the new count, so nothing has to be refetched.
+   *
+   * Written into the household it was cooked in, which for an inherited recipe
+   * is not the one it belongs to: the history is this kitchen's.
+   */
+  async record(
+    recipeId: string,
+    servings: number,
+    householdId: string | null = null
+  ): Promise<Recorded | null> {
     const result = await request(() =>
       http.POST('/api/v1/recipes/{recipeId}/cook-log', {
         params: { path: { recipeId } },
-        body: { servings }
+        body: { servings, householdId }
       })
     );
 

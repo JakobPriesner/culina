@@ -99,6 +99,7 @@ public class ShortlistQualityTests
         new(
             new RecipeSearchRow(
                 recipeId,
+                HouseholdId: Guid.Empty,
                 "Recipe",
                 ImageId: null,
                 TotalMinutes: 30,

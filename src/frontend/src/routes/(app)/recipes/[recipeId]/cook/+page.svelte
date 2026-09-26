@@ -6,6 +6,7 @@
   import { page } from '$app/state';
   import { Button, IconButton, Sheet, Skeleton } from '$ds';
   import { busy } from '$shell/busy.svelte';
+  import { session } from '$features/auth/session.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
@@ -103,7 +104,7 @@
     }
 
     if (cooking.session?.recipeId !== recipeId) {
-      void cooking.start(recipeId, servings).then(() => timers.load());
+      void cooking.start(recipeId, servings, session.activeHouseholdId).then(() => timers.load());
     } else {
       timers.load();
     }
@@ -133,7 +134,7 @@
     timers.clear();
 
     if (completed) {
-      const recorded = await cookLog.record(recipeId, servings);
+      const recorded = await cookLog.record(recipeId, servings, session.activeHouseholdId);
 
       // Both halves of "I made it" are reported on, not just the one that
       // happens to have a toast. Saying it was added when the attempt never

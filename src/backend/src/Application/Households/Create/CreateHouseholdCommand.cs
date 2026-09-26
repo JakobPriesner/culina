@@ -10,7 +10,8 @@ namespace Application.Households.Create;
 /// <summary>Creates a household with the caller as its owner.</summary>
 /// <param name="UserId">Who is creating it.</param>
 /// <param name="Name">What to call it.</param>
-public sealed record CreateHouseholdCommand(Guid UserId, string Name);
+/// <param name="InheritsFrom">A household whose recipes it sees from the start, if any.</param>
+public sealed record CreateHouseholdCommand(Guid UserId, string Name, Guid? InheritsFrom);
 
 internal sealed class CreateHouseholdCommandHandler(
     IHouseholdRepository households,
@@ -29,7 +30,7 @@ internal sealed class CreateHouseholdCommandHandler(
         var name = HouseholdName.Create(command.Name);
 
         var result = await name.Match(
-            value => StoreAsync(value, command.UserId, cancellationToken),
+            value => StoreAsync(value, command, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
@@ -37,15 +38,22 @@ internal sealed class CreateHouseholdCommandHandler(
 
     private async Task<Result<Response>> StoreAsync(
         HouseholdName name,
-        Guid ownerId,
+        CreateHouseholdCommand command,
         CancellationToken cancellationToken)
     {
+        var ownerId = command.UserId;
         var household = Household.Create(name, ownerId, time.GetUtcNow());
 
         return await unitOfWork.InTransactionAsync(
             async token =>
             {
-                var added = await households.AddAsync(household, token).ConfigureAwait(false);
+                var inheriting = await HouseholdInheritance
+                    .ApplyAsync(households, household, command.InheritsFrom, ownerId, token)
+                    .ConfigureAwait(false);
+
+                var added = await inheriting.Match(
+                    () => households.AddAsync(household, token),
+                    error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 
                 return added.Bind(() => Result<Response>.Success(new Response
                 {

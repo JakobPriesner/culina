@@ -13,12 +13,17 @@ namespace Application.Recipes.RecordCooked;
 /// <param name="MadeAt">When, or null for now.</param>
 /// <param name="Servings">How much was made.</param>
 /// <param name="Note">Anything worth remembering.</param>
+/// <param name="HouseholdId">
+/// The household it was cooked in, or null for the recipe's own. An inherited
+/// recipe cooked in the heir is the heir's history, not the parent's.
+/// </param>
 public sealed record RecordCookedCommand(
     Guid RecipeId,
     Guid UserId,
     DateTimeOffset? MadeAt,
     decimal? Servings,
-    string? Note);
+    string? Note,
+    Guid? HouseholdId);
 
 internal sealed class RecordCookedCommandHandler(
     IRecipeRepository recipes,
@@ -37,13 +42,16 @@ internal sealed class RecordCookedCommandHandler(
         using var tracked = UseCaseActivity.Start("Recipes.RecordCooked");
 
         var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .VisibleInAsync(recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
+        // Stamped with the kitchen it was cooked in. Stamping the recipe's own
+        // household instead would put somebody who only inherits it into the
+        // parent's suggestions by name, in a household they are not part of.
         var prepared = visible.Bind(recipe => CookLogEntry.Record(
             recipe.Id,
             command.UserId,
-            recipe.HouseholdId,
+            command.HouseholdId ?? recipe.HouseholdId,
             command.MadeAt ?? time.GetUtcNow(),
             command.Servings,
             command.Note));

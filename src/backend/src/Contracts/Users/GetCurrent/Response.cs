@@ -77,4 +77,22 @@ public sealed record HouseholdMembership
 
     /// <summary>What this user may do in it.</summary>
     public required string Role { get; init; }
+
+    /// <summary>
+    /// Whose recipes it sees besides its own, nearest first: the household it
+    /// inherits from, then the one that inherits from, and so on. Empty when
+    /// it inherits nothing. Those recipes can be read and cooked here, never
+    /// changed.
+    /// </summary>
+    public required IReadOnlyList<InheritedHousehold> InheritsFrom { get; init; }
+}
+
+/// <summary>A household whose recipes another one sees.</summary>
+public sealed record InheritedHousehold
+{
+    /// <summary>Which household.</summary>
+    public required Guid HouseholdId { get; init; }
+
+    /// <summary>What it is called, so a recipe can say where it comes from.</summary>
+    public required string Name { get; init; }
 }

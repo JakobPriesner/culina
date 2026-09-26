@@ -47,6 +47,12 @@ internal sealed class GetRecipesQueryHandler(
                 Result<Response>.Failure(HouseholdErrors.NotFound(query.Search.HouseholdId)));
         }
 
+        // The household's own recipes and every one it inherits, searched as
+        // one library.
+        var ancestors = await households
+            .AncestorsAsync(query.Search.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
         // Reading inside a cookbook means one of two things, and only the
         // cookbook knows which: a shelf somebody filled names rows, and one
         // that fills itself names conditions. Resolved here so the searcher
@@ -66,6 +72,7 @@ internal sealed class GetRecipesQueryHandler(
 
         var search = query.Search with
         {
+            InheritedFrom = [.. ancestors.Select(ancestor => ancestor.HouseholdId)],
             Query = intent.FreeText,
             Ingredients = [.. query.Search.Ingredients, .. intent.Ingredients],
             MaxMinutes = Min(query.Search.MaxMinutes, intent.MaxMinutes),
@@ -210,6 +217,7 @@ internal static class RecipeListMappings
     private static RecipeSummary ToSummary(this RecipeSearchRow row, int requestedIngredients) => new()
     {
         RecipeId = row.RecipeId,
+        HouseholdId = row.HouseholdId,
         Title = row.Title,
         ImageId = row.ImageId,
         TotalMinutes = row.TotalMinutes,

@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Suggestions.GetAll;
 using Domain.Households;
@@ -44,8 +45,15 @@ internal sealed class GetSuggestionsQueryHandler(
                 Result<Response>.Failure(HouseholdErrors.NotFound(context.HouseholdId)));
         }
 
+        var library = await HouseholdAccess
+            .LibraryAsync(households, context.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Ranked over everything this household sees, inherited recipes too.
+        context = context with { InheritedFrom = [.. library.Skip(1)] };
+
         // "Recipes like this one" needs the one, and it has to be one of THIS
-        // household's.
+        // household's — its own or one it inherits.
         //
         // Membership alone is not enough, because a person may belong to
         // several households: naming a recipe from their other kitchen would
@@ -60,7 +68,7 @@ internal sealed class GetSuggestionsQueryHandler(
             var found = await recipes.FindAsync(likeId, cancellationToken).ConfigureAwait(false);
 
             var here = found.Match(
-                recipe => recipe.HouseholdId == context.HouseholdId,
+                recipe => library.Contains(recipe.HouseholdId),
                 _ => false);
 
             if (!here)

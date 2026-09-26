@@ -60,6 +60,15 @@ public static class HouseholdErrors
         "A member is either an owner or a member.",
         ErrorType.Validation);
 
+    /// <summary>
+    /// The household to inherit from already sees this one's recipes, or is
+    /// this one.
+    /// </summary>
+    public static readonly Error InheritanceCycle = new(
+        "households.inheritance_cycle",
+        "A household cannot inherit from itself, or from a household that already inherits from it.",
+        ErrorType.Conflict);
+
     /// <summary>The household name is blank or too long.</summary>
     public static readonly Error InvalidName = new(
         "households.invalid_name",

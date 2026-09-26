@@ -60,8 +60,12 @@ internal sealed class GetCompletionsQueryHandler(
             return new Response { Items = [] };
         }
 
+        var library = await HouseholdAccess
+            .LibraryAsync(households, query.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
         var found = await vocabulary
-            .CompletionsAsync(query.HouseholdId, typed, PerKind, cancellationToken)
+            .CompletionsAsync(library, typed, PerKind, cancellationToken)
             .ConfigureAwait(false);
 
         return new Response

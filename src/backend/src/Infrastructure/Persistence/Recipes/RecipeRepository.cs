@@ -23,9 +23,11 @@ internal sealed class RecipeRepository(
         searcher.FacetsAsync(search, cancellationToken);
 
     public async Task<IReadOnlyList<string>> OwnUnitsAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(library);
+
         // The built-ins are excluded here rather than in C# so the query does
         // the counting: a household with four hundred recipes should not send
         // four hundred rows back to have thirteen of them filtered out.
@@ -35,23 +37,25 @@ internal sealed class RecipeRepository(
             from recipe_ingredients i
             join ingredient_groups g on g.id = i.group_id
             join recipes r on r.id = g.recipe_id
-            where r.household_id = @householdId
+            where r.household_id = any(@library)
               and i.unit is not null
               and lower(i.unit) <> all (@builtIn)
             order by i.unit;
             """,
-            new { householdId, builtIn = Unit.BuiltIn.Select(unit => unit.Code).ToArray() },
+            new { library = library.ToArray(), builtIn = Unit.BuiltIn.Select(unit => unit.Code).ToArray() },
             cancellationToken).ConfigureAwait(false);
 
         return [.. written];
     }
 
     public async Task<IReadOnlyList<string>> OwnIngredientNamesAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         string? query,
         int limit,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(library);
+
         // The most-used spelling of each name wins, which is what stops one
         // stray "Olivenoel" from displacing the "Olivenöl" written forty times.
         // The trigram index on the name column is what makes the LIKE cheap.
@@ -61,13 +65,13 @@ internal sealed class RecipeRepository(
             from recipe_ingredients i
             join ingredient_groups g on g.id = i.group_id
             join recipes r on r.id = g.recipe_id
-            where r.household_id = @householdId
+            where r.household_id = any(@library)
               and (@query = '' or i.name ilike '%' || @query || '%')
             group by i.name
             order by (lower(i.name) like lower(@query) || '%') desc, count(*) desc, i.name
             limit @limit;
             """,
-            new { householdId, query = query?.Trim() ?? string.Empty, limit },
+            new { library = library.ToArray(), query = query?.Trim() ?? string.Empty, limit },
             cancellationToken).ConfigureAwait(false);
 
         return [.. names];

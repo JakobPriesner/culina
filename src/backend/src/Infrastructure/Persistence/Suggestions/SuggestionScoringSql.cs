@@ -40,8 +40,8 @@ internal static class SuggestionScoringSql
     /// so a caller can append its own.
     /// </summary>
     /// <remarks>
-    /// Reads <c>@householdId</c> and <c>@userId</c>, which both callers already
-    /// pass, plus the <c>sc*</c> and <c>w*</c> parameters from
+    /// Reads <c>@householdId</c>, <c>@library</c> and <c>@userId</c>, which
+    /// both callers already pass, plus the <c>sc*</c> and <c>w*</c> parameters from
     /// <see cref="Parameters"/>.
     /// </remarks>
     internal const string Ctes = """
@@ -80,11 +80,17 @@ internal static class SuggestionScoringSql
 
             union all
 
-            -- Nobody annotates a recipe they are indifferent to.
+            -- Nobody annotates a recipe they are indifferent to. On an
+            -- inherited recipe only this household's own people count: the
+            -- other kitchen's notes are that kitchen's history.
             select n.recipe_id, n.user_id, 0.4, n.updated_at, true
             from personal_notes n
             join recipes nr on nr.id = n.recipe_id
             where nr.household_id = @householdId::uuid
+               or (nr.household_id = any(@library::uuid[])
+                   and n.user_id in (
+                       select hm.user_id from household_members hm
+                       where hm.household_id = @householdId::uuid))
 
             union all
 
@@ -170,7 +176,7 @@ internal static class SuggestionScoringSql
             from recipes r
             join recipe_tags rt on rt.recipe_id = r.id
             join tags t on t.id = rt.tag_id
-            where r.household_id = @householdId::uuid
+            where r.household_id = any(@library::uuid[])
 
             union
 
@@ -181,7 +187,7 @@ internal static class SuggestionScoringSql
             from recipes r
             join ingredient_groups g on g.recipe_id = r.id
             join recipe_ingredients i on i.group_id = g.id
-            where r.household_id = @householdId::uuid and btrim(i.name) <> ''
+            where r.household_id = any(@library::uuid[]) and btrim(i.name) <> ''
         ),
 
         -- Inverse document frequency, and it matters more here than anywhere
@@ -191,7 +197,7 @@ internal static class SuggestionScoringSql
         sc_idf as (
             select f.kind,
                    f.feature,
-                   ln((1 + (select count(*) from recipes where household_id = @householdId::uuid)::numeric)
+                   ln((1 + (select count(*) from recipes where household_id = any(@library::uuid[]))::numeric)
                       / (1 + count(*))) as idf
             from sc_features f
             group by f.kind, f.feature
@@ -268,7 +274,7 @@ internal static class SuggestionScoringSql
             -- kitchen, which the people in it can check.
             select rt.recipe_id, max(least((ts.share * 12 - 1) / 2, 1)) as value
             from sc_tag_season ts
-            join tags t on t.household_id = @householdId::uuid and t.slug = ts.slug
+            join tags t on t.household_id = any(@library::uuid[]) and t.slug = ts.slug
             join recipe_tags rt on rt.tag_id = t.id
             where ts.share >= @scSeasonMinShare::numeric
             group by rt.recipe_id
@@ -299,7 +305,7 @@ internal static class SuggestionScoringSql
                        + (least((select count(*) from steps s where s.recipe_id = r.id), 12)::numeric
                           / 12.0) * 0.3) as value
             from recipes r
-            where r.household_id = @householdId::uuid
+            where r.household_id = any(@library::uuid[])
         ),
 
         -- The features of the one recipe somebody is looking at, for "more like
@@ -426,7 +432,7 @@ internal static class SuggestionScoringSql
             left join sc_content_top ct on ct.recipe_id = r.id and ct.kind = 'tag'
             left join sc_content_top ci on ci.recipe_id = r.id and ci.kind = 'ingredient'
             left join sc_dismissed on sc_dismissed.recipe_id = r.id
-            where r.household_id = @householdId::uuid
+            where r.household_id = any(@library::uuid[])
         ),
 
         -- Rounded, and not as a tidiness measure.
@@ -470,8 +476,8 @@ internal static class SuggestionScoringSql
     /// The occasion and the weights, as parameters.
     /// </summary>
     /// <remarks>
-    /// Does <b>not</b> include <c>householdId</c> or <c>userId</c>: both callers
-    /// already pass those for their own filtering, and a second copy under a
+    /// Does <b>not</b> include <c>householdId</c>, <c>library</c> or
+    /// <c>userId</c>: both callers already pass those for their own filtering, and a second copy under a
     /// different name is two values that can disagree.
     /// </remarks>
     /// <param name="context">The occasion.</param>

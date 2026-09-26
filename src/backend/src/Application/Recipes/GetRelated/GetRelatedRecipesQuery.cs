@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Telemetry;
 using Contracts.Recipes.GetRelated;
 using Domain.Search;
@@ -42,8 +43,14 @@ internal sealed class GetRelatedRecipesQueryHandler(
         var result = await visible.Match(
             async recipe =>
             {
+                // The recipe's own library, which anybody who can see it can
+                // see all of: an heir sees everything its parent does.
+                var library = await HouseholdAccess
+                    .LibraryAsync(households, recipe.HouseholdId, cancellationToken)
+                    .ConfigureAwait(false);
+
                 var found = await related
-                    .FindAsync(recipe.Id, recipe.HouseholdId, query.UserId, Limit, cancellationToken)
+                    .FindAsync(recipe.Id, library, query.UserId, Limit, cancellationToken)
                     .ConfigureAwait(false);
 
                 return Result<Response>.Success(new Response

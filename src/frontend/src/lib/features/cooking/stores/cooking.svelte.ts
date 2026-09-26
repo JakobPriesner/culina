@@ -48,8 +48,12 @@ class CookingStore {
   /** In flight, so a second ask joins the first rather than starting again. */
   #starting: Promise<AppError | null> | null = null;
 
-  async start(recipeId: string, servings: number): Promise<AppError | null> {
-    this.#starting ??= this.#begin(recipeId, servings);
+  async start(
+    recipeId: string,
+    servings: number,
+    householdId: string | null = null
+  ): Promise<AppError | null> {
+    this.#starting ??= this.#begin(recipeId, servings, householdId);
 
     try {
       return await this.#starting;
@@ -58,9 +62,14 @@ class CookingStore {
     }
   }
 
-  async #begin(recipeId: string, servings: number): Promise<AppError | null> {
+  /** In the household it is cooked in, which an inherited recipe is not its own. */
+  async #begin(
+    recipeId: string,
+    servings: number,
+    householdId: string | null
+  ): Promise<AppError | null> {
     const result = await request(() =>
-      http.POST('/api/v1/cook-sessions', { body: { recipeId, servings } })
+      http.POST('/api/v1/cook-sessions', { body: { recipeId, servings, householdId } })
     );
 
     if (!result.ok) {

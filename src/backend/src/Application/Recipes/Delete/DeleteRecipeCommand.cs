@@ -25,7 +25,7 @@ internal sealed class DeleteRecipeCommandHandler(
         using var tracked = UseCaseActivity.Start("Recipes.Delete");
 
         var found = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .EditableAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await found.Match(

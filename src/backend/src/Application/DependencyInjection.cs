@@ -16,6 +16,7 @@ using Application.Households.RedeemInvitation;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
+using Application.Households.SetInheritance;
 using Application.Planning;
 using Application.Recipes;
 using Application.Recipes.Create;
@@ -130,6 +131,8 @@ public static class DependencyInjection
                 GetHouseholdQueryHandler>()
             .AddScoped<ICommandHandler<RenameHouseholdCommand, Contracts.Households.Rename.Response>,
                 RenameHouseholdCommandHandler>()
+            .AddScoped<ICommandHandler<SetInheritanceCommand, Contracts.Households.SetInheritance.Response>,
+                SetInheritanceCommandHandler>()
             .AddScoped<ICommandHandler<DeleteHouseholdCommand>, DeleteHouseholdCommandHandler>()
             .AddScoped<IQueryHandler<GetMembersQuery, Contracts.Households.GetMembers.Response>,
                 GetMembersQueryHandler>()

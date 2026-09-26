@@ -13,6 +13,8 @@ internal sealed record SuggestionRowData
 {
     public Guid RecipeId { get; init; }
 
+    public Guid HouseholdId { get; init; }
+
     public string Title { get; init; } = string.Empty;
 
     public Guid? ImageId { get; init; }
@@ -103,6 +105,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
             with {{SuggestionScoringSql.Ctes}}
             select
                 r.id as recipe_id,
+                r.household_id,
                 r.title,
                 r.image_id,
                 case
@@ -155,7 +158,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                 from cook_log_entries c
                 where c.recipe_id = r.id and c.user_id = @userId::uuid
             ) mine on true
-            where r.household_id = @householdId::uuid
+            where r.household_id = any(@library::uuid[])
               and not s.dismissed
               and r.id <> all (@excluded::uuid[])
               and (@likeRecipeId::uuid is null or r.id <> @likeRecipeId::uuid)
@@ -186,6 +189,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
         var parameters = SuggestionScoringSql.Parameters(context, weights);
 
         parameters.Add("householdId", context.HouseholdId);
+        parameters.Add("library", new[] { context.HouseholdId }.Concat(context.InheritedFrom).ToArray());
         parameters.Add("userId", context.UserId);
         parameters.Add("likeRecipeId", context.LikeRecipeId);
         parameters.Add("excluded", context.Exclude.ToArray());
@@ -206,6 +210,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
     private static ScoredRecipe ToScored(SuggestionRowData row) => new(
         new RecipeSearchRow(
             row.RecipeId,
+            row.HouseholdId,
             row.Title,
             row.ImageId,
             row.TotalMinutes,

@@ -70,7 +70,7 @@ internal sealed class DrawRecipeImageCommandHandler(
     /// Everything that can refuse this, before a byte of the answer goes out.
     /// </summary>
     /// <remarks>
-    /// The recipe has to be visible, the assistant has to be switched on for
+    /// The recipe has to be one the caller may change, the assistant has to be switched on for
     /// drawing, the provider has to be one that draws at all, and the month has
     /// to have budget left. Every one of those is a status code — a 404, a 400,
     /// a 429 with how long to wait on it — and none of them can be once the
@@ -80,11 +80,11 @@ internal sealed class DrawRecipeImageCommandHandler(
         DrawRecipeImageCommand command,
         CancellationToken cancellationToken)
     {
-        var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+        var editable = await RecipeAccess
+            .EditableAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        return await visible.Match(
+        return await editable.Match(
             async recipe =>
             {
                 var reserved = await assistant

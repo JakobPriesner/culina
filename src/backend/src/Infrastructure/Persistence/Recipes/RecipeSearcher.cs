@@ -13,6 +13,8 @@ internal sealed record RecipeSearchRowData
 {
     public Guid Id { get; init; }
 
+    public Guid HouseholdId { get; init; }
+
     public string Title { get; init; } = string.Empty;
 
     public Guid? ImageId { get; init; }
@@ -170,7 +172,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         join recipe_ingredients ri on ri.name ilike '%' || one.name || '%'
         join ingredient_groups g on g.id = ri.group_id
         join recipes owner on owner.id = g.recipe_id
-                          and owner.household_id = @householdId
+                          and owner.household_id = any(@library)
         group by g.recipe_id
         """;
 
@@ -203,7 +205,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     /// is a total of.
     /// </remarks>
     private static string Rules(bool scored) => $$"""
-        where r.household_id = @householdId
+        where r.household_id = any(@library)
           -- Hidden from the suggested order and from nowhere else: the recipe
           -- is still the household's, still searchable and still on its
           -- shelves. "Stop suggesting this" is not "delete this".
@@ -221,8 +223,8 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
           -- A shelf is a filter over the collection, not a second collection.
           -- Everything else here — the search, the tags, the time ceiling, the
           -- ingredient ranking — therefore works inside a cookbook for free,
-          -- and a cookbook belonging to another household matches nothing
-          -- because the household predicate above has already applied.
+          -- and a cookbook's rows outside this household's library match
+          -- nothing because the household predicate above has already applied.
           and (@cookbookId is null or exists (
                 select 1 from cookbook_recipes cr
                 where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id))
@@ -283,6 +285,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     private static string Candidates(bool scored) => $$"""
         select
             r.id,
+            r.household_id,
             r.title,
             r.image_id,
             case
@@ -555,6 +558,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         var parameters = new DynamicParameters(new
         {
             householdId = search.HouseholdId,
+            library = search.Library.ToArray(),
             userId = search.UserId,
             query,
             concepts = ConceptsAskedFor(query),
@@ -606,7 +610,10 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
                         search.Ingredients,
                         LikeRecipeId: null,
                         Exclude: [],
-                        search.Limit),
+                        search.Limit)
+                    {
+                        InheritedFrom = search.InheritedFrom
+                    },
                     weights));
         }
 
@@ -656,6 +663,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
 
     private static RecipeSearchRow ToRow(RecipeSearchRowData data) => new RecipeSearchRow(
         data.Id,
+        data.HouseholdId,
         data.Title,
         data.ImageId,
         data.TotalMinutes,

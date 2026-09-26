@@ -457,7 +457,7 @@
           "Households"
         ],
         "summary": "Create a household",
-        "description": "The caller becomes its first owner.",
+        "description": "The caller becomes its first owner. With inheritsFrom, it sees that household's recipes from the start; the caller must be in it.",
         "operationId": "createHouseholdV1",
         "requestBody": {
           "content": {
@@ -492,6 +492,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -703,6 +713,109 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/inheritance": {
+      "put": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Choose which household's recipes this one inherits",
+        "description": "Owners only, and only from a household you are in. The household then sees every recipe the other one sees — its own and whatever it inherits in turn — without being able to change them. Send null to inherit nothing.",
+        "operationId": "setHouseholdInheritanceV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdsSetInheritanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsSetInheritanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5347,7 +5460,7 @@
           "Cookbooks"
         ],
         "summary": "Which cookbooks a recipe is on",
-        "description": "Not paged. A recipe is on a handful of shelves or none, and this answers the tick marks in the add-to-cookbook sheet and the line under a recipe's title — a cursor would be machinery for a list that fits on one screen.",
+        "description": "Not paged. A recipe is on a handful of shelves or none, and this answers the tick marks in the add-to-cookbook sheet and the line under a recipe's title — a cursor would be machinery for a list that fits on one screen. householdId names whose shelves to look on, for a recipe that household inherits; left out, the recipe's own household.",
         "operationId": "getRecipeCookbooksV1",
         "parameters": [
           {
@@ -5358,6 +5471,22 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5367,6 +5496,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CookbooksRecipeCookbooksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -6607,6 +6746,12 @@
             "type": "number",
             "description": "The scaling to cook at, so resuming reopens at the same numbers.",
             "format": "double"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household it is being cooked in, for a recipe that household\ninherits. Left out, the recipe's own household.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "description": "What to start cooking."
@@ -7017,6 +7162,12 @@
           "name": {
             "type": "string",
             "description": "What to call it."
+          },
+          "inheritsFrom": {
+            "type": "string",
+            "description": "A household you are in whose recipes the new one should see from the\nstart, or null for none.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "description": "A new household."
@@ -7223,6 +7374,25 @@
         },
         "description": "A household as it appears in a list."
       },
+      "HouseholdsInheritedHousehold": {
+        "required": [
+          "householdId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Which household.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          }
+        },
+        "description": "A household whose recipes another one sees."
+      },
       "HouseholdsMember": {
         "required": [
           "userId",
@@ -7300,6 +7470,65 @@
         ],
         "type": "object",
         "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household's id.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "memberCount": {
+            "type": "integer",
+            "description": "How many people are in it.",
+            "format": "int32"
+          },
+          "yourRole": {
+            "type": "string",
+            "description": "What the caller may do in it."
+          },
+          "version": {
+            "type": "integer",
+            "description": "The entity version, for If-Match on an update.",
+            "format": "int64"
+          }
+        },
+        "description": "The household after the change."
+      },
+      "HouseholdsSetInheritanceRequest": {
+        "required": [
+          "householdId"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "The household whose recipes this one should see, or null to inherit\nnothing. Required either way, so a missing field is never mistaken for\n\"stop inheriting\".",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "description": "Which household to inherit recipes from."
+      },
+      "HouseholdsSetInheritanceResponse": {
+        "required": [
+          "inheritsFrom",
+          "householdId",
+          "name",
+          "memberCount",
+          "yourRole",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "inheritsFrom": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsInheritedHousehold"
+            },
+            "description": "Whose recipes it now sees, nearest first: the household it inherits\nfrom, then the one that household inherits from, and so on. Empty when\nit inherits nothing."
+          },
           "householdId": {
             "type": "string",
             "description": "The household's id.",
@@ -8016,6 +8245,7 @@
       "RecipesGetAllRecipeSummary": {
         "required": [
           "recipeId",
+          "householdId",
           "title",
           "yieldAmount",
           "yieldKind",
@@ -8028,6 +8258,11 @@
           "recipeId": {
             "type": "string",
             "description": "The recipe's id.",
+            "format": "uuid"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household it belongs to. Another than the one asked about when that\none inherits it — readable and cookable there, changeable only in its\nown.",
             "format": "uuid"
           },
           "title": {
@@ -9030,6 +9265,12 @@
           "note": {
             "type": "string",
             "description": "Anything worth remembering.",
+            "nullable": true
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household it was cooked in, for a recipe that household inherits.\nLeft out, the recipe's own household.",
+            "format": "uuid",
             "nullable": true
           }
         },
@@ -11289,7 +11530,8 @@
         "required": [
           "householdId",
           "name",
-          "role"
+          "role",
+          "inheritsFrom"
         ],
         "type": "object",
         "properties": {
@@ -11305,9 +11547,35 @@
           "role": {
             "type": "string",
             "description": "What this user may do in it."
+          },
+          "inheritsFrom": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsersGetCurrentInheritedHousehold"
+            },
+            "description": "Whose recipes it sees besides its own, nearest first: the household it\ninherits from, then the one that inherits from, and so on. Empty when\nit inherits nothing. Those recipes can be read and cooked here, never\nchanged."
           }
         },
         "description": "One household the user belongs to."
+      },
+      "UsersGetCurrentInheritedHousehold": {
+        "required": [
+          "householdId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Which household.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called, so a recipe can say where it comes from."
+          }
+        },
+        "description": "A household whose recipes another one sees."
       },
       "UsersGetCurrentResponse": {
         "required": [

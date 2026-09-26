@@ -15,12 +15,12 @@ public interface ISearchVocabulary
     /// The household's nearest word to each of some folded words that its
     /// recipes do not use, where one is near enough.
     /// </summary>
-    /// <param name="householdId">Whose recipes.</param>
+    /// <param name="library">Whose recipes: a household, then every household it inherits from.</param>
     /// <param name="words">Folded query words.</param>
     /// <param name="cancellationToken">Cancels the lookup.</param>
     /// <returns>Each correctable word, and what it most likely meant.</returns>
     Task<IReadOnlyDictionary<string, string>> SpellingsAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         IReadOnlyList<string> words,
         CancellationToken cancellationToken);
 
@@ -28,12 +28,12 @@ public interface ISearchVocabulary
     /// What a half-typed word could become: recipes, ingredients and tags of
     /// this household with a word that begins with it.
     /// </summary>
-    /// <param name="householdId">Whose recipes.</param>
+    /// <param name="library">Whose recipes: a household, then every household it inherits from.</param>
     /// <param name="typed">The word so far, as typed.</param>
     /// <param name="perKind">How many of each kind at most.</param>
     /// <param name="cancellationToken">Cancels the lookup.</param>
     Task<Completions> CompletionsAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         string typed,
         int perKind,
         CancellationToken cancellationToken);

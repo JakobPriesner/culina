@@ -106,6 +106,20 @@
     }
   });
 
+  /**
+   * The household it belongs to, when that is not the one being looked at.
+   *
+   * Such a recipe is inherited here, and not this household's to change: the
+   * server would refuse every save. The link to this page is not offered for
+   * it, but an address can still be typed or kept from before, so the editor
+   * says so rather than opening a form whose every keystroke would fail.
+   */
+  const inheritedFrom = $derived(
+    recipes.detail?.id === recipeId && recipes.detail.householdId !== session.activeHouseholdId
+      ? recipes.detail.householdId
+      : null
+  );
+
   /** Whether what is on screen exists only on this device. */
   let unsent = $state(false);
 
@@ -137,7 +151,7 @@
   $effect(() => {
     const loaded = recipes.detail;
 
-    if (!loaded || loaded.id !== recipeId || draft?.id === loaded.id) {
+    if (!loaded || loaded.id !== recipeId || draft?.id === loaded.id || inheritedFrom) {
       return;
     }
 
@@ -538,10 +552,23 @@
   }
 </script>
 
-<svelte:head><title>{draft?.title ?? m['editor.new']()}</title></svelte:head>
+<svelte:head>
+  <title
+    >{draft?.title ?? (inheritedFrom ? recipes.detail?.title : null) ?? m['editor.new']()}</title
+  >
+</svelte:head>
 
 <Page>
-  {#if draft}
+  {#if inheritedFrom}
+    {@const owner = session.householdName(inheritedFrom)}
+    <div class="inherited">
+      <h1 class="inherited-title">{m['editor.inherited.title']()}</h1>
+      <p class="inherited-body">
+        {owner ? m['recipe.inherited.note']({ household: owner }) : m['recipe.inherited.unknown']()}
+      </p>
+      <Button variant="primary" href={back}>{m['editor.inherited.back']()}</Button>
+    </div>
+  {:else if draft}
     <!-- Bound once so the snippets below, which are separate closures, can see
          that it is there. -->
     {@const current = draft}
@@ -1081,5 +1108,22 @@
     .meta {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
+  }
+
+  .inherited {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    max-width: var(--measure);
+    padding-block: var(--space-8);
+  }
+
+  .inherited-title {
+    font-size: var(--text-2xl);
+  }
+
+  .inherited-body {
+    color: var(--text-muted);
   }
 </style>

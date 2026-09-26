@@ -69,13 +69,19 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     /// the same conditions the recipe search applies — asked here rather than
     /// remembered anywhere, which is the whole of "it fills itself".
     /// </para>
+    /// <para>
+    /// Either way only over the shelf's household's library: its own recipes
+    /// and the ones it inherits. A recipe that stops being inherited drops off
+    /// the shelves it was put on rather than lingering there unopenable, and
+    /// comes back if the inheritance does.
+    /// </para>
     /// </remarks>
     private static readonly string OnTheShelf = $"""
         select r.id, r.image_id, cr.added_at
         from recipes r
         left join cookbook_recipes cr
                on cr.cookbook_id = c.id and cr.recipe_id = r.id
-        where r.household_id = c.household_id
+        where r.household_id = any(array(select household_library(c.household_id)))
           and (
             case when c.kind = 'manual' then cr.recipe_id is not null
             else

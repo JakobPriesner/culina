@@ -2,6 +2,7 @@
   import { Avatar, Badge } from '$ds';
 
   import ArchivePanel from '$features/archive/ArchivePanel.svelte';
+  import InheritancePanel from '$features/auth/InheritancePanel.svelte';
   import InvitePanel from '$features/auth/InvitePanel.svelte';
   import MembersPanel from '$features/auth/MembersPanel.svelte';
   import { members } from '$features/auth/members.svelte';
@@ -62,6 +63,14 @@
 
   <SettingsSection title={m['me.invite.title']()} description={m['me.invite.body']()} bare>
     <InvitePanel householdId={household.householdId} />
+  </SettingsSection>
+
+  <SettingsSection
+    title={m['household.inherit.title']()}
+    description={m['household.inherit.body']()}
+    bare
+  >
+    <InheritancePanel householdId={household.householdId} />
   </SettingsSection>
 
   <SettingsSection title={m['archive.title']()} description={m['archive.hint']()} bare>

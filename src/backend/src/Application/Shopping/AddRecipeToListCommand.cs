@@ -33,8 +33,12 @@ internal sealed class AddRecipeToListCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Shopping.AddRecipe");
 
+        // In the list's household, not merely somewhere the caller can see it:
+        // that one check is both "you are in this kitchen" and "this recipe is
+        // its own or one it inherits".
         var recipe = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .VisibleInAsync(
+                recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var overrides = await lists

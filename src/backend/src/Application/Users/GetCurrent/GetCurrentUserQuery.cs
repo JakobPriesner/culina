@@ -36,12 +36,24 @@ internal sealed class GetCurrentUserQueryHandler(
                 var memberships = await households
                     .ForUserAsync(user.Id, cancellationToken)
                     .ConfigureAwait(false);
+
+                // One short walk per household. A person is in two or three,
+                // and each chain is a link or two long.
+                var ancestors = new Dictionary<Guid, IReadOnlyList<InheritedHousehold>>();
+
+                foreach (var household in memberships)
+                {
+                    ancestors[household.Id] = await households
+                        .AncestorsAsync(household.Id, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
                 var isAdmin = await users
                     .IsAdminAsync(user.Id, cancellationToken)
                     .ConfigureAwait(false);
 
                 return Result<Response>.Success(
-                    user.ToGetCurrentResponse(isAdmin, memberships, assistance));
+                    user.ToGetCurrentResponse(isAdmin, memberships, ancestors, assistance));
             },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
@@ -56,10 +68,12 @@ internal static class CurrentUserMappings
         this User user,
         bool isAdmin,
         IReadOnlyList<Household> households,
+        IReadOnlyDictionary<Guid, IReadOnlyList<InheritedHousehold>> ancestors,
         AssistanceSettings assistance)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(households);
+        ArgumentNullException.ThrowIfNull(ancestors);
         ArgumentNullException.ThrowIfNull(assistance);
 
         return new Response
@@ -69,7 +83,8 @@ internal static class CurrentUserMappings
             DisplayName = user.DisplayName.Value,
             IsAdmin = isAdmin,
             CreatedAt = user.CreatedAt,
-            Households = [.. households.Select(household => household.ToMembership(user.Id))],
+            Households = [.. households.Select(household =>
+                household.ToMembership(user.Id, ancestors[household.Id]))],
             Assistance = assistance.ToAvailability(),
             Version = user.Version
         };
@@ -96,11 +111,17 @@ internal static class CurrentUserMappings
 
     private static Contracts.Users.GetCurrent.HouseholdMembership ToMembership(
         this Household household,
-        Guid userId) =>
+        Guid userId,
+        IReadOnlyList<InheritedHousehold> ancestors) =>
         new()
         {
             HouseholdId = household.Id,
             Name = household.Name.Value,
-            Role = household.Find(userId)?.Role == HouseholdRole.Owner ? "owner" : "member"
+            Role = household.Find(userId)?.Role == HouseholdRole.Owner ? "owner" : "member",
+            InheritsFrom = [.. ancestors.Select(ancestor => new Contracts.Users.GetCurrent.InheritedHousehold
+            {
+                HouseholdId = ancestor.HouseholdId,
+                Name = ancestor.Name
+            })]
         };
 }

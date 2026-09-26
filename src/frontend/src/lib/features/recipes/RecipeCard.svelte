@@ -27,9 +27,15 @@
     pending?: boolean;
     /** What was searched for, so the words that found it can be seen. */
     query?: string;
+    /**
+     * The household it comes from, when it is inherited rather than this
+     * household's own — said on the card, so nobody opens it expecting to
+     * change it.
+     */
+    from?: string | null;
   }
 
-  let { recipe, pending = false, query = '' }: Props = $props();
+  let { recipe, pending = false, query = '', from = null }: Props = $props();
 
   const meta = $derived(metaLineFor(recipe));
   const match = $derived(matchLineFor(recipe));
@@ -85,6 +91,10 @@
   {#if reason}
     <p class="reason"><Highlighted text={reason} {query} /></p>
   {/if}
+
+  {#if from}
+    <p class="from">{m['recipes.card.from']({ household: from })}</p>
+  {/if}
 </article>
 
 <style>
@@ -130,6 +140,11 @@
 
   .photo {
     margin-bottom: var(--space-2);
+  }
+
+  .from {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   .eyebrow {

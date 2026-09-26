@@ -151,7 +151,7 @@ export interface paths {
         put?: never;
         /**
          * Create a household
-         * @description The caller becomes its first owner.
+         * @description The caller becomes its first owner. With inheritsFrom, it sees that household's recipes from the start; the caller must be in it.
          */
         post: operations["createHouseholdV1"];
         delete?: never;
@@ -186,6 +186,26 @@ export interface paths {
          * @description Owners only. Requires If-Match with the version you last read.
          */
         patch: operations["renameHouseholdV1"];
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/inheritance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose which household's recipes this one inherits
+         * @description Owners only, and only from a household you are in. The household then sees every recipe the other one sees — its own and whatever it inherits in turn — without being able to change them. Send null to inherit nothing.
+         */
+        put: operations["setHouseholdInheritanceV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/households/{householdId}/members": {
@@ -1256,7 +1276,7 @@ export interface paths {
         };
         /**
          * Which cookbooks a recipe is on
-         * @description Not paged. A recipe is on a handful of shelves or none, and this answers the tick marks in the add-to-cookbook sheet and the line under a recipe's title — a cursor would be machinery for a list that fits on one screen.
+         * @description Not paged. A recipe is on a handful of shelves or none, and this answers the tick marks in the add-to-cookbook sheet and the line under a recipe's title — a cursor would be machinery for a list that fits on one screen. householdId names whose shelves to look on, for a recipe that household inherits; left out, the recipe's own household.
          */
         get: operations["getRecipeCookbooksV1"];
         put?: never;
@@ -1632,6 +1652,12 @@ export interface components {
              * @description The scaling to cook at, so resuming reopens at the same numbers.
              */
             servings: number;
+            /**
+             * Format: uuid
+             * @description The household it is being cooked in, for a recipe that household
+             *     inherits. Left out, the recipe's own household.
+             */
+            householdId?: string | null;
         };
         /** @description A change to a session in progress. */
         CookSessionsUpdateRequest: {
@@ -1821,6 +1847,12 @@ export interface components {
         HouseholdsCreateRequest: {
             /** @description What to call it. */
             name: string;
+            /**
+             * Format: uuid
+             * @description A household you are in whose recipes the new one should see from the
+             *     start, or null for none.
+             */
+            inheritsFrom?: string | null;
         };
         /** @description The household that was created. */
         HouseholdsCreateResponse: {
@@ -1933,6 +1965,16 @@ export interface components {
              */
             version: number;
         };
+        /** @description A household whose recipes another one sees. */
+        HouseholdsInheritedHousehold: {
+            /**
+             * Format: uuid
+             * @description Which household.
+             */
+            householdId: string;
+            /** @description What it is called. */
+            name: string;
+        };
         /** @description One person in a household. */
         HouseholdsMember: {
             /**
@@ -1972,6 +2014,44 @@ export interface components {
         };
         /** @description The household after the change. */
         HouseholdsRenameResponse: {
+            /**
+             * Format: uuid
+             * @description The household's id.
+             */
+            householdId: string;
+            /** @description What it is called. */
+            name: string;
+            /**
+             * Format: int32
+             * @description How many people are in it.
+             */
+            memberCount: number;
+            /** @description What the caller may do in it. */
+            yourRole: string;
+            /**
+             * Format: int64
+             * @description The entity version, for If-Match on an update.
+             */
+            version: number;
+        };
+        /** @description Which household to inherit recipes from. */
+        HouseholdsSetInheritanceRequest: {
+            /**
+             * Format: uuid
+             * @description The household whose recipes this one should see, or null to inherit
+             *     nothing. Required either way, so a missing field is never mistaken for
+             *     "stop inheriting".
+             */
+            householdId: string | null;
+        };
+        /** @description The household after the change. */
+        HouseholdsSetInheritanceResponse: {
+            /**
+             * @description Whose recipes it now sees, nearest first: the household it inherits
+             *     from, then the one that household inherits from, and so on. Empty when
+             *     it inherits nothing.
+             */
+            inheritsFrom: components["schemas"]["HouseholdsInheritedHousehold"][];
             /**
              * Format: uuid
              * @description The household's id.
@@ -2348,6 +2428,13 @@ export interface components {
              * @description The recipe's id.
              */
             recipeId: string;
+            /**
+             * Format: uuid
+             * @description The household it belongs to. Another than the one asked about when that
+             *     one inherits it — readable and cookable there, changeable only in its
+             *     own.
+             */
+            householdId: string;
             /** @description What it is called. */
             title: string;
             /**
@@ -2851,6 +2938,12 @@ export interface components {
             servings?: number | null;
             /** @description Anything worth remembering. */
             note?: string | null;
+            /**
+             * Format: uuid
+             * @description The household it was cooked in, for a recipe that household inherits.
+             *     Left out, the recipe's own household.
+             */
+            householdId?: string | null;
         };
         /** @description The entry that was recorded. */
         RecipesRecordCookedResponse: {
@@ -4002,6 +4095,23 @@ export interface components {
             name: string;
             /** @description What this user may do in it. */
             role: string;
+            /**
+             * @description Whose recipes it sees besides its own, nearest first: the household it
+             *     inherits from, then the one that inherits from, and so on. Empty when
+             *     it inherits nothing. Those recipes can be read and cooked here, never
+             *     changed.
+             */
+            inheritsFrom: components["schemas"]["UsersGetCurrentInheritedHousehold"][];
+        };
+        /** @description A household whose recipes another one sees. */
+        UsersGetCurrentInheritedHousehold: {
+            /**
+             * Format: uuid
+             * @description Which household.
+             */
+            householdId: string;
+            /** @description What it is called, so a recipe can say where it comes from. */
+            name: string;
         };
         /** @description The signed-in user, and where they can cook. */
         UsersGetCurrentResponse: {
@@ -4580,6 +4690,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
         };
     };
     getHouseholdByIdV1: {
@@ -4747,6 +4866,86 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setHouseholdInheritanceV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdsSetInheritanceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdsSetInheritanceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8244,7 +8443,9 @@ export interface operations {
     };
     getRecipeCookbooksV1: {
         parameters: {
-            query?: never;
+            query?: {
+                householdId?: string;
+            };
             header?: never;
             path: {
                 recipeId: string;
@@ -8260,6 +8461,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CookbooksRecipeCookbooksResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */

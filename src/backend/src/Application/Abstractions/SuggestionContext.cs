@@ -56,6 +56,17 @@ public sealed record SuggestionContext(
     IReadOnlyList<Guid> Exclude,
     int Count)
 {
+    /// <summary>
+    /// The households whose recipes this one inherits, which are ranked with
+    /// its own. Empty for a household that inherits nothing.
+    /// </summary>
+    /// <remarks>
+    /// Only the candidates widen. What anybody did — cooked, planned,
+    /// shelved — is still read from this household alone, because the
+    /// history being ranked on is this kitchen's.
+    /// </remarks>
+    public IReadOnlyList<Guid> InheritedFrom { get; init; } = [];
+
     /// <summary>The most any one screen may ask for.</summary>
     /// <remarks>
     /// Twelve is already more than a person chooses between. Past that the

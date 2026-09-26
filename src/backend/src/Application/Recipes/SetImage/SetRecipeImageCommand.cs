@@ -26,11 +26,11 @@ internal sealed class SetRecipeImageCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.SetImage");
 
-        var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+        var editable = await RecipeAccess
+            .EditableAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await visible.Match(
+        var result = await editable.Match(
             _ => images.AttachAsync(command.RecipeId, command.Content, cancellationToken),
             error => Task.FromResult(Result<RecipeDetail>.Failure(error))).ConfigureAwait(false);
 
