@@ -94,10 +94,7 @@
   style:left="{coords.left}px"
 >
   <div class="header">
-    <div class="title-group">
-      <span class="badge">@</span>
-      <h4 class="name">{name}</h4>
-    </div>
+    <h4 class="name">{name}</h4>
     <button
       type="button"
       class="close-btn"
@@ -110,62 +107,54 @@
     </button>
   </div>
 
-  <div class="metrics">
-    <div class="metric-primary">
-      <span class="metric-label">{m['recipe.stepNeeds']()}</span>
-      <span class="metric-value">{stepAmount}</span>
-    </div>
+  {#if stepAmount}
+    <p class="amount">{stepAmount}</p>
+  {/if}
 
-    {#if hasDifferentTotal && totalAmount}
-      <div class="metric-secondary">
-        <span class="metric-label"
-          >{m['recipe.quickLookTotal']({ amount: '' }).replace(/:\s*$/, '')}</span
-        >
-        <span class="metric-value subtle">{totalAmount}</span>
-      </div>
-    {:else}
-      <div class="metric-secondary">
-        <span class="pill-all">{m['recipe.quickLookAllHere']()}</span>
-      </div>
-    {/if}
-  </div>
+  <!-- Only when the step takes part of it. Saying "all of it" otherwise would
+       be a claim the card cannot back: another step may well use it too. -->
+  {#if hasDifferentTotal && totalAmount}
+    <p class="total">{m['recipe.quickLookTotal']({ amount: totalAmount })}</p>
+  {/if}
 
   {#if note}
-    <p class="note">
-      <svg class="note-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 16v-4M12 8h.01" stroke-linecap="round" />
-      </svg>
-      <span>{note}</span>
-    </p>
+    <p class="note">{note}</p>
   {/if}
 
   {#if onlocate}
-    <div class="actions">
-      <button
-        type="button"
-        class="locate-btn"
-        onclick={() => {
-          onlocate?.();
-          onclose();
-        }}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
-        <span>{m['recipe.quickLookShowInList']()}</span>
-      </button>
-    </div>
+    <button
+      type="button"
+      class="locate-btn"
+      onclick={() => {
+        onlocate?.();
+        onclose();
+      }}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+      <span>{m['recipe.quickLookShowInList']()}</span>
+    </button>
   {/if}
 </div>
 
 <style>
+  /*
+   * The card is written inside the step's paragraph, next to the reference it
+   * belongs to, so it inherits everything that paragraph says about text —
+   * the significant whitespace above all, which would turn every line break in
+   * this markup into a blank line inside the card, and the bold or italic of a
+   * reference written inside emphasis. It resets all of that to its own.
+   */
   .quick-look {
     position: fixed;
-    z-index: var(--z-overlay, 100);
-    width: min(18rem, calc(100vw - 24px));
-    padding: var(--space-3) var(--space-4);
+    z-index: var(--z-overlay);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: min(16rem, calc(100vw - 24px));
+    padding: var(--space-3) var(--space-4) var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface-overlay-glass);
@@ -174,6 +163,12 @@
     box-shadow: var(--shadow-overlay);
     animation: popoverIn var(--duration-fast) var(--ease-out);
     color: var(--text);
+    font-size: var(--text-sm);
+    font-style: normal;
+    font-weight: var(--weight-regular);
+    line-height: var(--leading-normal);
+    text-align: start;
+    white-space: normal;
   }
 
   @keyframes popoverIn {
@@ -192,45 +187,28 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
-    margin-bottom: var(--space-3);
-  }
-
-  .title-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-  }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    border-radius: var(--radius-full);
-    background: var(--surface-highlight);
-    color: var(--accent);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
   }
 
   .name {
+    min-width: 0;
     margin: 0;
-    font-size: var(--text-base);
-    font-weight: var(--weight-semibold);
-    line-height: var(--leading-tight);
     overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-tight);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .close-btn {
     display: flex;
+    flex: none;
     align-items: center;
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
+    margin-inline-end: calc(-1 * var(--space-2));
     padding: 0;
     border: none;
     border-radius: var(--radius-full);
@@ -252,70 +230,24 @@
     height: 0.875rem;
   }
 
-  .metrics {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-3);
-    background: var(--surface-sunken);
-    border-radius: var(--radius-md);
-  }
-
-  .metric-primary,
-  .metric-secondary {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .metric-label {
-    font-size: 0.6875rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-subtle);
-  }
-
-  .metric-value {
-    font-size: var(--text-base);
+  /* What the step asks for, as the one thing on the card worth reading from
+     across the counter. */
+  .amount {
+    margin: 0;
+    font-size: var(--text-xl);
     font-weight: var(--weight-semibold);
     font-variant-numeric: tabular-nums;
-    color: var(--text);
+    line-height: var(--leading-tight);
   }
 
-  .metric-value.subtle {
-    font-size: var(--text-sm);
-    color: var(--text-muted);
-  }
-
-  .pill-all {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    color: var(--accent);
-  }
-
+  .total,
   .note {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-2);
-    margin: var(--space-2) 0 0;
-    padding-inline: var(--space-1);
+    margin: 0;
     color: var(--text-muted);
-    font-size: var(--text-xs);
-    line-height: var(--leading-normal);
   }
 
-  .note-icon {
-    flex: none;
-    width: 0.875rem;
-    height: 0.875rem;
-    margin-top: 0.125rem;
-    color: var(--text-subtle);
-  }
-
-  .actions {
-    margin-top: var(--space-3);
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--border);
+  .total {
+    font-variant-numeric: tabular-nums;
   }
 
   .locate-btn {
@@ -324,11 +256,13 @@
     justify-content: center;
     gap: var(--space-2);
     width: 100%;
+    margin-top: var(--space-2);
     padding: var(--space-2) var(--space-3);
     border: none;
     border-radius: var(--radius-md);
     background: var(--surface-hover);
     color: var(--text);
+    font: inherit;
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
     cursor: pointer;
