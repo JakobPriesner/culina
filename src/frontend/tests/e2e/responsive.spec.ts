@@ -119,6 +119,29 @@ test.describe('responsive production layouts @offline', () => {
     await expectReflow(page);
   });
 
+  test('a recipe starts within the readable part of a phone screen', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await responsiveData(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/recipes/${recipeId}`);
+
+    const ingredients = page.getByRole('heading', { name: 'Zutaten', level: 2 });
+    const resume = page.getByRole('link', { name: /Gerade am Kochen/ });
+    await expect(ingredients).toBeVisible();
+    await expect(resume).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kochen starten' })).toHaveCount(0);
+
+    const ingredientsBox = (await ingredients.boundingBox())!;
+    const resumeBox = (await resume.boundingBox())!;
+    expect(ingredientsBox.y + ingredientsBox.height).toBeLessThan(resumeBox.y);
+
+    const hero = (await page.locator('article.surface > .hero').boundingBox())!;
+    expect(hero.height).toBeLessThanOrEqual(hero.width / 3.9);
+    await expectReflow(page);
+    await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
+  });
+
   for (const [width, height] of [
     [320, 568],
     [375, 812],
