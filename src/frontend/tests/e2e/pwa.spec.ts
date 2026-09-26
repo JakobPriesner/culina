@@ -228,7 +228,7 @@ test.describe('a device two people use', () => {
     // case, and the reason signing *in* clears as well as signing out.
     await page.goto('/login');
     await page.getByLabel(/email|e-mail/i).fill(second.email);
-    await page.getByLabel(/password|passwort/i).fill(second.password);
+    await page.getByRole('textbox', { name: /password|passwort/i }).fill(second.password);
     await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
 
     await expect(page).toHaveURL(/\/(welcome)?$/);

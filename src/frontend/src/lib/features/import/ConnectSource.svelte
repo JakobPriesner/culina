@@ -139,6 +139,7 @@
             {describedBy}
             {invalid}
             type="password"
+            revealLabel={m['field.showPassword']()}
             autocomplete="off"
             bind:value={password}
           />
@@ -152,6 +153,7 @@
             {describedBy}
             {invalid}
             type="password"
+            revealLabel={m['field.showToken']()}
             autocomplete="off"
             bind:value={token}
           />

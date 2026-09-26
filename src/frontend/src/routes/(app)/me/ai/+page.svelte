@@ -285,6 +285,7 @@
                 {describedBy}
                 {invalid}
                 type="password"
+                revealLabel={m['field.showKey']()}
                 autocomplete="off"
                 placeholder={m['ai.apiKey.placeholder']()}
                 value={connection.apiKey ?? ''}

@@ -48,6 +48,7 @@
       {describedBy}
       {invalid}
       {type}
+      revealLabel={m['field.showPassword']()}
       {inputmode}
       {autocomplete}
       {placeholder}

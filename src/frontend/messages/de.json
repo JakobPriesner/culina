@@ -1279,5 +1279,8 @@
   "plan.recipe.close": "Schließen",
   "plan.recipe.loading": "Woche wird geladen",
   "plan.recipe.done": "Für {day} eingeplant.",
-  "plan.recipe.failed": "Dieses Rezept konnte nicht eingeplant werden."
+  "plan.recipe.failed": "Dieses Rezept konnte nicht eingeplant werden.",
+  "field.showPassword": "Passwort anzeigen",
+  "field.showToken": "Token anzeigen",
+  "field.showKey": "Schlüssel anzeigen"
 }

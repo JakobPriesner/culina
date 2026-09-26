@@ -112,7 +112,7 @@ export async function ensureAccount(
 export async function signIn(page: Page, who = credentials): Promise<void> {
   await page.goto('/login');
   await page.getByLabel(/email|e-mail/i).fill(who.email!);
-  await page.getByLabel(/password|passwort/i).fill(who.password!);
+  await page.getByRole('textbox', { name: /password|passwort/i }).fill(who.password!);
   await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
 
   // A fresh account has no household yet, and the app says so rather than
