@@ -11,7 +11,7 @@ import { needsBackend, skipReason } from './support/culina';
  */
 async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel(/email|e-mail/i).fill(email);
-  await page.getByLabel(/password|passwort/i).fill(password);
+  await page.getByRole('textbox', { name: /password|passwort/i }).fill(password);
   await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
 }
 
@@ -29,7 +29,7 @@ test.describe('the first-run path', () => {
     await page.goto('/register');
     await page.getByLabel(/call you|nennen/i).fill('Sam');
     await page.getByLabel(/email|e-mail/i).fill(email);
-    await page.getByLabel(/password|passwort/i).fill(password);
+    await page.getByRole('textbox', { name: /password|passwort/i }).fill(password);
     await page.getByRole('button', { name: /create account|konto erstellen/i }).click();
 
     // No household yet, so this must not be a dead end.
