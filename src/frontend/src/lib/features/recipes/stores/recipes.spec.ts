@@ -221,3 +221,73 @@ describe('signing out', () => {
     expect(recipes.status).toBe('idle');
   });
 });
+
+describe('deleting', () => {
+  const opened = {
+    recipeId: 'r1',
+    householdId: household,
+    title: 'Orzo',
+    language: 'en',
+    yieldAmount: 4,
+    yieldKind: 'servings',
+    groups: [],
+    steps: [],
+    tags: [],
+    createdBy: 'u1',
+    createdAt: '2026-09-12T00:00:00Z',
+    updatedAt: '2026-09-12T00:00:00Z',
+    version: 3
+  };
+
+  /** A listed and opened recipe, and a server that answers a DELETE with `deleted`. */
+  async function openOrzo(deleted: () => Response) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) => {
+        if (input.method === 'DELETE') {
+          return Promise.resolve(deleted());
+        }
+
+        return Promise.resolve(
+          input.url.includes('/recipes/r1')
+            ? new Response(JSON.stringify(opened), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+              })
+            : page([summary('r1', 'Orzo'), summary('r2', 'Soup')])
+        );
+      })
+    );
+
+    await recipes.list(household);
+    await recipes.load('r1');
+  }
+
+  it('lets go of the open recipe once it is gone, so it is not drawn again', async () => {
+    await openOrzo(() => new Response(null, { status: 204 }));
+
+    const failure = await recipes.remove('r1', 3);
+
+    expect(failure).toBeNull();
+    expect(recipes.detail).toBeNull();
+    expect(recipes.items.map((item) => item.title)).toEqual(['Soup']);
+    expect(recipes.total).toBe(1);
+  });
+
+  it('puts everything back when the server keeps it', async () => {
+    await openOrzo(
+      () =>
+        new Response(JSON.stringify({ code: 'recipes.unavailable', detail: 'No.' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/problem+json' }
+        })
+    );
+
+    const failure = await recipes.remove('r1', 3);
+
+    expect(failure?.code).toBe('recipes.unavailable');
+    expect(recipes.detail?.title).toBe('Orzo');
+    expect(recipes.items.map((item) => item.title)).toEqual(['Orzo', 'Soup']);
+    expect(recipes.total).toBe(2);
+  });
+});

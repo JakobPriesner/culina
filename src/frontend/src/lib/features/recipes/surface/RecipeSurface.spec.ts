@@ -194,7 +194,8 @@ describe('reading a recipe', () => {
       editable: true,
       onshare: () => {},
       onaddtocookbook: () => {},
-      onaddtoplan: () => {}
+      onaddtoplan: () => {},
+      ondelete: () => {}
     });
 
     // One control on the page, and nothing behind it reachable until it is
@@ -218,12 +219,18 @@ describe('reading a recipe', () => {
       'href',
       '/recipes/r1/edit'
     );
+
+    // Last, so the hand reaching for Edit does not land on it.
+    const remove = screen.getByRole('button', { name: 'Delete recipe', ...hidden });
+
+    expect(remove.parentElement?.lastElementChild).toBe(remove);
   });
 
   it('says nothing about editing when there is nowhere to edit', () => {
     render();
 
     expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete recipe' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 });
