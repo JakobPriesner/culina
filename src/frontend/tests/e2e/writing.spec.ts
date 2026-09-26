@@ -277,7 +277,7 @@ test.describe('writing a recipe', () => {
 
     const row = newIngredient(page);
     // Not anchored at the end: once a suggestion is arrowed to, the field's
-    // accessible name becomes "Ingredient Potatoes" — the highlighted option is
+    // accessible name becomes "Ingredient Tomatoes" — the highlighted option is
     // part of what a screen reader says — and a locator that insisted on the
     // label alone stopped matching the control it was already typing into.
     const field = row.getByRole('combobox', { name: /^\s*(ingredient|zutat)\b/i });
@@ -291,14 +291,17 @@ test.describe('writing a recipe', () => {
 
     // The seeded list is what an empty kitchen has, and it says where the
     // thing lives in a shop.
-    await field.fill('Potat');
-    await expect(list.getByRole('option', { name: /^Potatoes/ })).toBeVisible();
+    // A word that begins the same in both languages: the seeded list answers
+    // in the language the recipe is written in, which is the device's, and the
+    // suite's browser is German.
+    await field.fill('Tomat');
+    await expect(list.getByRole('option', { name: /^(Tomatoes|Tomaten)/ })).toBeVisible();
 
     // Arrowing to a row and pressing Enter takes it. Enter on its own adds
     // what was typed, which is what stops the list from overruling anybody.
     await field.press('ArrowDown');
     await field.press('Enter');
-    await expect(field).toHaveValue('Potatoes');
+    await expect(field).toHaveValue(/^(Tomatoes|Tomaten)$/);
 
     await field.press('Enter');
     await expect(ingredientsOf(page).getByText(/200\s*g/)).toBeVisible();
