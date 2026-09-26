@@ -58,6 +58,28 @@ describe('StepText', () => {
     }
   );
 
+  it.each([true, false])(
+    'puts no space before an ingredient that has no amount (interactive: %s)',
+    (interactive) => {
+      const salt = {
+        ...butter,
+        ingredientId: 'i-salt',
+        name: 'salt',
+        quantity: { value: null, unit: null }
+      };
+      const { container } = render(StepText, {
+        props: {
+          step: step([{ kind: 'text', text: 'a pinch of ' }, salt]),
+          scaling,
+          interactive
+        }
+      });
+
+      // Not "a pinch of  salt", with the gap an empty amount would leave.
+      expect(container.querySelector('p')?.textContent).toBe('a pinch of salt');
+    }
+  );
+
   it('adds no whitespace of its own between the segments', () => {
     const { container } = render(StepText, {
       props: {
