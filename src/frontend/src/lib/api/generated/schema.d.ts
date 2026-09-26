@@ -4142,7 +4142,7 @@ export interface components {
         };
         /** @description How this person wants the app to look and read. */
         UsersGetPreferencesResponse: {
-            /** @description The language they read in. */
+            /** @description The language they read in, or `system` to follow the device. */
             locale: string;
             /** @description The theme id. */
             theme: string;
@@ -4217,7 +4217,7 @@ export interface components {
         };
         /** @description The preferences to store. */
         UsersUpdatePreferencesRequest: {
-            /** @description The language to read in: `en` or `de`. */
+            /** @description The language to read in: `en`, `de`, or `system` to follow the device. */
             locale: string;
             /** @description The theme id. */
             theme: string;
@@ -4228,7 +4228,7 @@ export interface components {
         };
         /** @description How this person wants the app to look and read. */
         UsersUpdatePreferencesResponse: {
-            /** @description The language they read in. */
+            /** @description The language they read in, or `system` to follow the device. */
             locale: string;
             /** @description The theme id. */
             theme: string;

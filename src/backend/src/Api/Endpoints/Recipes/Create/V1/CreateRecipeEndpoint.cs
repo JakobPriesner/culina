@@ -25,6 +25,7 @@ internal sealed class CreateRecipeEndpoint : IEndpoint
                             request.HouseholdId,
                             request.Title,
                             context.CurrentUser().UserId,
+                            context.DeviceLanguage(),
                             request.DraftId),
                         cancellationToken)
                     .ConfigureAwait(false);

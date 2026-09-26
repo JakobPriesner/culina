@@ -7,7 +7,7 @@ namespace Contracts.Users.UpdatePreferences;
 /// </remarks>
 public sealed record Request
 {
-    /// <summary>The language to read in: <c>en</c> or <c>de</c>.</summary>
+    /// <summary>The language to read in: <c>en</c>, <c>de</c>, or <c>system</c> to follow the device.</summary>
     public required string Locale { get; init; }
 
     /// <summary>The theme id.</summary>

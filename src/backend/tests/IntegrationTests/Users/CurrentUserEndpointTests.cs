@@ -284,7 +284,9 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
 
         // Assert
         var settings = response.Json!.Value;
-        Assert.Equal("en", settings.GetProperty("locale").GetString());
+        // Follow the device, like the appearance: nobody should have to find a
+        // settings screen to read the app in the language their phone speaks.
+        Assert.Equal("system", settings.GetProperty("locale").GetString());
         Assert.Equal("warm-paper", settings.GetProperty("theme").GetString());
         Assert.Equal("system", settings.GetProperty("mode").GetString());
         Assert.Equal("metric", settings.GetProperty("measurementSystem").GetString());
@@ -307,6 +309,29 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Equal("de", read.Json!.Value.GetProperty("locale").GetString());
         Assert.Equal("dark", read.Json!.Value.GetProperty("mode").GetString());
+    }
+
+    [Fact]
+    public async Task Settings_ShouldGoBackToFollowingTheDevice_AfterALanguageWasChosen()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        await client.PutAsync(
+            "/api/v1/users/me/settings",
+            new { locale = "de", theme = "warm-paper", mode = "dark", measurementSystem = "metric" },
+            Token);
+
+        // Act
+        var saved = await client.PutAsync(
+            "/api/v1/users/me/settings",
+            new { locale = "system", theme = "warm-paper", mode = "dark", measurementSystem = "metric" },
+            Token);
+        var read = await client.GetAsync("/api/v1/users/me/settings", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        Assert.Equal("system", saved.Json!.Value.GetProperty("locale").GetString());
+        Assert.Equal("system", read.Json!.Value.GetProperty("locale").GetString());
     }
 
     [Fact]

@@ -1,4 +1,13 @@
-import { getLocale, locales, setLocale, type Locale } from '$lib/paraglide/runtime';
+import {
+  baseLocale,
+  defineCustomClientStrategy,
+  extractLocaleFromNavigator,
+  getLocale,
+  locales,
+  type Locale
+} from '$lib/paraglide/runtime';
+
+import { readDevice, writeDevice } from './deviceStorage';
 
 /**
  * Everything the app needs to say something in the reader's language.
@@ -15,26 +24,53 @@ import { getLocale, locales, setLocale, type Locale } from '$lib/paraglide/runti
 export { m } from '$lib/paraglide/messages';
 export { locales, type Locale };
 
+/** What a person chose. `system` is a choice: read whatever the device reads. */
+export type LocaleChoice = Locale | 'system';
+
 export const isLocale = (value: unknown): value is Locale =>
   typeof value === 'string' && (locales as readonly string[]).includes(value);
 
+export const isLocaleChoice = (value: unknown): value is LocaleChoice =>
+  value === 'system' || isLocale(value);
+
+/** Where this device remembers the choice, `system` included. */
+const choiceKey = 'culina.locale';
+
 /**
- * The language before a session is known: the last choice on this device, then
- * the browser's own preference, then English. A signed-in person's server
- * setting replaces it as soon as it arrives.
+ * The first link in the chain `vite.config.ts` gives Paraglide: the choice on
+ * this device, then the device's own language, then English. A signed-in
+ * person's server setting replaces the choice as soon as it arrives.
+ *
+ * Paraglide reads the choice but never writes it — the preferences store does
+ * — because `system` is not a locale, and Paraglide's own storage would
+ * replace it with whatever the device happened to read that day.
  */
-export const detectLocale = (): Locale => getLocale();
+defineCustomClientStrategy('custom-choice', {
+  getLocale: () => {
+    const chosen = readDevice(choiceKey);
 
-/** Switches language without a reload, and tells assistive technology. */
-export function applyLocale(locale: Locale): void {
-  setLocale(locale, { reload: false });
+    return isLocale(chosen) ? chosen : undefined;
+  },
+  setLocale: () => {}
+});
 
-  const root = globalThis.document?.documentElement;
+/** The choice this device remembers; `system` when it remembers none. */
+export function rememberedLocale(): LocaleChoice {
+  const chosen = readDevice(choiceKey);
 
-  if (root) {
-    root.lang = locale;
-  }
+  return isLocaleChoice(chosen) ? chosen : 'system';
 }
+
+/**
+ * Switches language without a reload — the next message rendered reads the
+ * choice — and remembers it on this device.
+ */
+export function applyLocale(choice: LocaleChoice): void {
+  writeDevice(choiceKey, choice);
+}
+
+/** The first language the device asks for that Culina speaks, or English. */
+export const deviceLocale = (): Locale => extractLocaleFromNavigator() ?? baseLocale;
 
 /**
  * Intl formatters, made once per locale.

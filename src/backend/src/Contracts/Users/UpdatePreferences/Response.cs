@@ -3,7 +3,7 @@ namespace Contracts.Users.UpdatePreferences;
 /// <summary>How this person wants the app to look and read.</summary>
 public sealed record Response
 {
-    /// <summary>The language they read in.</summary>
+    /// <summary>The language they read in, or <c>system</c> to follow the device.</summary>
     public required string Locale { get; init; }
 
     /// <summary>The theme id.</summary>

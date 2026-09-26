@@ -4,6 +4,7 @@ import { forgetCachedReads } from '$shell/connection.svelte';
 import { readDevice, writeDevice } from '$shell/deviceStorage';
 import { registerStore, resetAllStores } from '$shell/stores';
 import { preferences } from '$shell/preferences.svelte';
+import type { LocaleChoice } from '$shell/i18n';
 
 import type { components } from '$api/generated/schema';
 
@@ -234,7 +235,7 @@ class SessionStore {
     if (settings.ok) {
       preferences.adopt(
         {
-          locale: settings.value.locale,
+          locale: settings.value.locale as LocaleChoice,
           theme: settings.value.theme,
           mode: settings.value.mode as 'light' | 'dark' | 'system',
           measurementSystem: settings.value.measurementSystem as 'metric' | 'imperial'

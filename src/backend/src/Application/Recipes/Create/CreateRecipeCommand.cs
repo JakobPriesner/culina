@@ -13,11 +13,16 @@ namespace Application.Recipes.Create;
 /// <param name="HouseholdId">Which household will own it.</param>
 /// <param name="Title">What to call it.</param>
 /// <param name="UserId">Who is writing it down.</param>
+/// <param name="DeviceLanguage">
+/// The language of the device they are writing on, for someone whose interface
+/// follows it.
+/// </param>
 /// <param name="DraftId">The assistant draft it came from, when it came from one.</param>
 public sealed record CreateRecipeCommand(
     Guid HouseholdId,
     string Title,
     Guid UserId,
+    Language DeviceLanguage,
     Guid? DraftId = null);
 
 internal sealed class CreateRecipeCommandHandler(
@@ -77,7 +82,8 @@ internal sealed class CreateRecipeCommandHandler(
         // which is what makes the create form something people finish.
         var now = time.GetUtcNow();
         var theirs = await preferences.GetAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        var recipe = Recipe.Create(command.HouseholdId, title, command.UserId, theirs.Language, now);
+        var recipe = Recipe.Create(
+            command.HouseholdId, title, command.UserId, theirs.Language ?? command.DeviceLanguage, now);
 
         return await unitOfWork.InTransactionAsync(
             async token =>

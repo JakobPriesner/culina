@@ -11642,7 +11642,7 @@
         "properties": {
           "locale": {
             "type": "string",
-            "description": "The language they read in."
+            "description": "The language they read in, or `system` to follow the device."
           },
           "theme": {
             "type": "string",
@@ -11781,7 +11781,7 @@
         "properties": {
           "locale": {
             "type": "string",
-            "description": "The language to read in: `en` or `de`."
+            "description": "The language to read in: `en`, `de`, or `system` to follow the device."
           },
           "theme": {
             "type": "string",
@@ -11810,7 +11810,7 @@
         "properties": {
           "locale": {
             "type": "string",
-            "description": "The language they read in."
+            "description": "The language they read in, or `system` to follow the device."
           },
           "theme": {
             "type": "string",

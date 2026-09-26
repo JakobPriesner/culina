@@ -25,7 +25,8 @@ internal sealed class ImportFromRecipeSourceEndpoint : IEndpoint
                         new ImportFromSourceCommand(
                             sourceId,
                             context.CurrentUser().UserId,
-                            request),
+                            request,
+                            context.DeviceLanguage()),
                         cancellationToken)
                     .ConfigureAwait(false);
 

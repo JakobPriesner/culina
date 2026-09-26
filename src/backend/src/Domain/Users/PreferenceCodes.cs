@@ -12,9 +12,13 @@ namespace Domain.Users;
 /// </remarks>
 public static class PreferenceCodes
 {
-    /// <summary>The code for a language.</summary>
-    public static string Of(Language language) => language switch
+    /// <summary>The code for following the device, for a language or an appearance.</summary>
+    public const string System = "system";
+
+    /// <summary>The code for a language, or <c>system</c> when it follows the device.</summary>
+    public static string Of(Language? language) => language switch
     {
+        null => System,
         Language.De => "de",
         _ => "en"
     };
@@ -24,7 +28,7 @@ public static class PreferenceCodes
     {
         ThemeMode.Light => "light",
         ThemeMode.Dark => "dark",
-        _ => "system"
+        _ => System
     };
 
     /// <summary>The code for a unit system.</summary>
@@ -34,7 +38,10 @@ public static class PreferenceCodes
         _ => "metric"
     };
 
-    /// <summary>Reads a language code, or null when it is not one.</summary>
+    /// <summary>
+    /// Reads a language code, or null when it is not one — <c>system</c>
+    /// included, which leaves the language to the device.
+    /// </summary>
     public static Language? ToLanguage(string? code) => code switch
     {
         "en" => Language.En,
@@ -47,7 +54,7 @@ public static class PreferenceCodes
     {
         "light" => ThemeMode.Light,
         "dark" => ThemeMode.Dark,
-        "system" => ThemeMode.System,
+        System => ThemeMode.System,
         _ => null
     };
 
