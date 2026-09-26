@@ -42,11 +42,12 @@
     text-decoration: none;
     transition:
       color var(--duration-fast) var(--ease-out),
-      background-color var(--duration-fast) var(--ease-out);
+      background-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
   }
 
   .destination:hover {
-    color: var(--text);
+    color: var(--accent-hover);
   }
 
   .icon {
@@ -76,13 +77,14 @@
     font-weight: var(--weight-medium);
   }
 
-  .top .destination:hover {
-    background: var(--surface-hover);
-  }
-
   .top .destination.active {
     background: var(--surface-raised);
     color: var(--text);
+    box-shadow: var(--shadow-card);
+  }
+
+  .top .destination:hover {
+    background: var(--surface-selected);
     box-shadow: var(--shadow-card);
   }
 
@@ -111,7 +113,9 @@
     height: calc(var(--space-6) + 2 * var(--space-1));
     padding: var(--space-1);
     border-radius: var(--radius-full);
-    transition: background-color var(--duration-fast) var(--ease-out);
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
   }
 
   .bottom .destination.active {
@@ -120,6 +124,11 @@
 
   .bottom .destination.active .icon {
     background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+  }
+
+  .bottom .destination:hover .icon {
+    background: var(--surface-selected);
     box-shadow: var(--shadow-card);
   }
 
