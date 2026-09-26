@@ -12,10 +12,15 @@ namespace Application.Users;
 /// </remarks>
 internal static class PreferenceWords
 {
-    internal static Result<Language> ToLanguage(string? value) =>
-        PreferenceCodes.ToLanguage(value) is { } language
-            ? language
-            : Invalid("locale", "Locale must be 'en' or 'de'.");
+    /// <summary>
+    /// Checks a language choice. <c>system</c> is one, but has no
+    /// <see cref="Language"/> to parse to: it leaves the language to whichever
+    /// device is reading.
+    /// </summary>
+    internal static Result CheckLanguage(string? value) =>
+        value == PreferenceCodes.System || PreferenceCodes.ToLanguage(value) is not null
+            ? Result.Success()
+            : Invalid("locale", "Locale must be 'system', 'en' or 'de'.");
 
     internal static Result<ThemeMode> ToMode(string? value) =>
         PreferenceCodes.ToMode(value) is { } mode

@@ -1,7 +1,15 @@
 import { http, request } from '$api';
 
 import { readDevice, writeDevice } from './deviceStorage';
-import { applyLocale, detectLocale, isLocale } from './i18n';
+import {
+  applyLocale,
+  deviceLocale,
+  isLocale,
+  isLocaleChoice,
+  rememberedLocale,
+  type Locale,
+  type LocaleChoice
+} from './i18n';
 import {
   defaultAppearance,
   parseAppearance,
@@ -21,14 +29,14 @@ import {
 export type MeasurementSystem = 'metric' | 'imperial';
 
 interface Preferences {
-  locale: string;
+  locale: LocaleChoice;
   theme: string;
   mode: Mode;
   measurementSystem: MeasurementSystem;
 }
 
 const initial: Preferences = {
-  locale: 'en',
+  locale: 'system',
   ...defaultAppearance,
   measurementSystem: 'metric'
 };
@@ -38,6 +46,9 @@ class PreferencesStore {
 
   /** What the device asks for, watched so `system` follows it live. */
   #deviceMode = $state<ResolvedMode>('light');
+
+  /** The language the device reads, watched for the same reason. */
+  #deviceLocale = $state<Locale>(deviceLocale());
 
   /** True when a change could not be sent and is waiting for the network. */
   #unsynced = $state(false);
@@ -52,7 +63,15 @@ class PreferencesStore {
     return this.#values.mode;
   }
 
-  get locale(): string {
+  /** The language everything is read in: the one chosen, or the device's. */
+  get locale(): Locale {
+    const chosen = this.#values.locale;
+
+    return isLocale(chosen) ? chosen : this.#deviceLocale;
+  }
+
+  /** What was chosen, which may be `system`. */
+  get localeChoice(): LocaleChoice {
     return this.#values.locale;
   }
 
@@ -77,13 +96,21 @@ class PreferencesStore {
     this.#values = {
       ...this.#values,
       ...parseAppearance(readDevice(storageKey)),
-      locale: detectLocale()
+      locale: rememberedLocale()
     };
+
+    const followLanguage = () => {
+      this.#deviceLocale = deviceLocale();
+      this.#paint();
+    };
+
+    followLanguage();
+    globalThis.addEventListener?.('languagechange', followLanguage);
 
     const query = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
 
     if (!query) {
-      return () => {};
+      return () => globalThis.removeEventListener?.('languagechange', followLanguage);
     }
 
     const follow = () => {
@@ -97,6 +124,7 @@ class PreferencesStore {
 
     return () => {
       query.removeEventListener('change', follow);
+      globalThis.removeEventListener?.('languagechange', followLanguage);
       globalThis.removeEventListener?.('online', this.#retry);
     };
   }
@@ -110,11 +138,6 @@ class PreferencesStore {
    */
   adopt(values: Partial<Preferences>, options: { signedIn: boolean }): void {
     this.#signedIn = options.signedIn;
-
-    if (values.locale && isLocale(values.locale)) {
-      applyLocale(values.locale);
-    }
-
     this.#values = { ...this.#values, ...values };
     this.#cache();
     this.#paint();
@@ -129,12 +152,9 @@ class PreferencesStore {
   }
 
   setLocale(locale: string): void {
-    if (!isLocale(locale)) {
-      return;
+    if (isLocaleChoice(locale)) {
+      this.#change({ locale });
     }
-
-    applyLocale(locale);
-    this.#change({ locale });
   }
 
   setMeasurementSystem(measurementSystem: MeasurementSystem): void {
@@ -146,6 +166,7 @@ class PreferencesStore {
     this.#signedIn = false;
     this.#unsynced = false;
     this.#values = { ...initial };
+    this.#deviceLocale = deviceLocale();
     this.#paint();
   }
 
@@ -169,12 +190,14 @@ class PreferencesStore {
     if (root) {
       root.dataset['theme'] = this.#values.theme;
       root.dataset['mode'] = this.resolvedMode;
-      root.lang = this.#values.locale;
+      root.lang = this.locale;
     }
   }
 
+  /** The language too: it is what Paraglide reads, so it is written before anything re-renders. */
   #cache(): void {
     writeDevice(storageKey, JSON.stringify({ theme: this.#values.theme, mode: this.#values.mode }));
+    applyLocale(this.#values.locale);
   }
 
   async #push(): Promise<void> {

@@ -9,7 +9,7 @@ internal sealed record UserPreferencesRow
 {
     public Guid UserId { get; init; }
 
-    public string Locale { get; init; } = "en";
+    public string Locale { get; init; } = PreferenceCodes.System;
 
     public string Theme { get; init; } = UserPreferences.DefaultTheme;
 
@@ -91,8 +91,9 @@ internal static class UserPreferencesRowMappings
             row.UserId,
             // An unrecognised stored value falls back to the default rather
             // than throwing: a preference is not worth failing a request over,
-            // and the next save corrects it.
-            PreferenceCodes.ToLanguage(row.Locale) ?? Language.En,
+            // and the next save corrects it. For the language the default is
+            // null — follow the device — which is also what "system" reads as.
+            PreferenceCodes.ToLanguage(row.Locale),
             row.Theme,
             PreferenceCodes.ToMode(row.Mode) ?? ThemeMode.System,
             PreferenceCodes.ToMeasurementSystem(row.MeasurementSystem) ?? MeasurementSystem.Metric,

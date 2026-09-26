@@ -13,10 +13,14 @@ namespace Application.Recipes.Sources;
 /// <param name="SourceId">Which connection.</param>
 /// <param name="UserId">Who is importing.</param>
 /// <param name="Draft">Which recipes.</param>
+/// <param name="DeviceLanguage">
+/// The language of the device that asked, for someone whose interface follows it.
+/// </param>
 public sealed record ImportFromSourceCommand(
     Guid SourceId,
     Guid UserId,
-    ImportFromSourceRequest Draft);
+    ImportFromSourceRequest Draft,
+    Language DeviceLanguage);
 
 /// <summary>
 /// Accepts an import, and hands it to the worker.
@@ -127,7 +131,8 @@ internal sealed class ImportFromSourceCommandHandler(
                 command.Draft.ExternalIds,
                 time.GetUtcNow())
             {
-                AllowLookalikes = command.Draft.AllowLookalikes
+                AllowLookalikes = command.Draft.AllowLookalikes,
+                DeviceLanguage = command.DeviceLanguage
             };
 
             runs.Start(run);

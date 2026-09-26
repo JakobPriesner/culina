@@ -1257,5 +1257,6 @@
   "recipes.card.from": "From {household}",
   "editor.inherited.title": "This recipe can't be changed here",
   "problem.households.inheritance_cycle": "That household already sees this one's recipes, so this one can't inherit from it.",
-  "editor.inherited.back": "Back to the recipe"
+  "editor.inherited.back": "Back to the recipe",
+  "locale.system": "System"
 }
