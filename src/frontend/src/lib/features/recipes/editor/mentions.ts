@@ -151,6 +151,22 @@ export function pendingMention(text: string, caret: number): PendingMention | nu
   return null;
 }
 
+/**
+ * Whether a query is a name already written in full, and then the sentence.
+ *
+ * Coming back to a step that ends in "@butter " and typing on puts the cursor
+ * after that `@` again, so the query reads "butter melt." — a mention the
+ * author finished long ago, followed by the rest of what they are writing, not
+ * an ingredient called "butter melt.".
+ */
+export const writesOn = (query: string, ingredients: readonly Ingredient[]): boolean =>
+  ingredients.some(
+    (one) =>
+      one.name &&
+      query.toLowerCase().startsWith(one.name.toLowerCase()) &&
+      /\s/.test(query[one.name.length] ?? '')
+  );
+
 /** A sentence with a mention written into it, and where to put the cursor. */
 export interface Insertion {
   readonly text: string;
