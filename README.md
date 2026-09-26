@@ -82,8 +82,9 @@ docker compose -f compose.yaml -f compose.prod.yaml up -d
 ```
 
 Culina is at `http://localhost:8080`. Point your proxy at it — TLS is the
-proxy's job, deliberately. The first visit opens a **setup screen** — which
-proxy to trust, whether cookies need HTTPS, and your account. **Whoever
+proxy's job, deliberately. The first visit opens a **setup screen** — the
+database password you put in `.env`, which proxy to trust, whether cookies need
+HTTPS, and your account. **Whoever
 finishes it becomes the administrator**, and whether anyone else may register is
 then that person's decision, made in the app. The server settings stay there
 too, under Settings → Server.
@@ -91,7 +92,7 @@ too, under Settings → Server.
 Three volumes are mandatory, and the compose file declares all of them:
 `/data/images` holds the only copy of every photograph, and losing it on a
 redeploy would say nothing at all; `/data/config` holds what was set up in the
-app.
+app, the database password among it.
 
 [`docs/operations.md`](docs/operations.md) has installing, upgrading, backup,
 a tested restore, and the proxy configuration the app expects.

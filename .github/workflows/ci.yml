@@ -240,6 +240,11 @@ jobs:
           docker build -t culina:ci --build-arg REVISION="${GITHUB_SHA::7}" .
           CULINA_IMAGE=culina:ci docker compose up -d --wait
 
+      # The setup screen's first step: compose says where the database is, and
+      # the role and password are for the app to be told.
+      - name: Point it at its database
+        run: scripts/setup-database.sh "http://localhost:${CULINA_PORT}"
+
       # The signed-in suites need an account, and the first account on a fresh
       # instance is always the administrator. Origin has to match the address
       # actually used, because the server checks that the two agree.

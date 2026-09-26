@@ -60,9 +60,12 @@ docker compose -f compose.yaml -f compose.prod.yaml up -d
 The database starts, the app waits for it to be healthy, applies its migrations
 and begins serving on `${CULINA_PORT:-8080}`. Point your proxy at that.
 
-Open it in a browser and the **setup screen** walks you through the rest: how
-people reach the server (secure cookies, which proxy to trust), and the first
-account. **Whoever finishes setup becomes the administrator** and gets a
+Open it in a browser and the **setup screen** walks you through the rest. First
+the database: the compose file fixes where it is, and the screen asks for the
+role and password the `db` service created from `.env` — `culina_app` unless you
+set `Database__Username`, and your `Database__Password` — with TLS off, which
+the database on the compose network does not speak. Then how people reach the
+server (secure cookies, which proxy to trust), and the first account. **Whoever finishes setup becomes the administrator** and gets a
 household of its own — so do it before the instance is reachable by anyone
 else. Whether anyone else may register is then that administrator's decision,
 made in the app, not a setting in a file.
@@ -74,8 +77,10 @@ database first, and saves it there. See `configuration.md` for what it checks.
 
 Everything under **Settings → Server** — cookies, proxies, rate limits,
 telemetry, the database — is saved to `/data/config/culina.json` and applied by
-a restart of a second or two. A variable in `.env` still wins over it, and is
-how you undo a setting that locked you out.
+a restart of a second or two. A variable passed to the app still wins over it,
+and is how you undo a setting that locked you out. The compose file passes the
+database's role, password and TLS setting through to nobody but the `db`
+service, so those three stay the app's to change.
 
 ### A reverse proxy, minimally
 
@@ -171,6 +176,11 @@ docker compose -f compose.yaml -f compose.prod.yaml exec -T db \
 docker run --rm -v culina_culina-images:/data -v "$PWD":/backup alpine \
     tar xzf /backup/culina-images-2026-09-13.tar.gz -C /data
 
+# What was set up in the app. Without it Culina comes back to the setup
+# screen, asking for the database's password again.
+docker run --rm -v culina_culina-config:/data -v "$PWD":/backup alpine \
+    tar xzf /backup/culina-config-2026-09-13.tar.gz -C /data
+
 docker compose -f compose.yaml -f compose.prod.yaml up -d
 ```
 
@@ -188,7 +198,7 @@ scripts/restore-rehearsal.sh
 ```
 
 Stands up a clean instance in a project of its own, puts real data in it, takes
-the three backups above, destroys every volume, restores, and then checks what
+the backups above, destroys every volume, restores, and then checks what
 came back: the password still signs in, every recipe and every member is there,
 and the photograph is served to the person who uploaded it and still refused to
 a stranger. It tears itself down and touches nothing you are running.
