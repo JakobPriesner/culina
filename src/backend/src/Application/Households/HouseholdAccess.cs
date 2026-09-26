@@ -41,4 +41,24 @@ internal static class HouseholdAccess
         await households.IsMemberAsync(householdId, userId, cancellationToken).ConfigureAwait(false)
             ? Result.Success()
             : HouseholdErrors.NotFound(householdId);
+
+    /// <summary>
+    /// Every household whose recipes this one sees: itself first, then what it
+    /// inherits, nearest first.
+    /// </summary>
+    /// <param name="households">The household repository.</param>
+    /// <param name="householdId">The household whose library it is.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <remarks>
+    /// Says nothing about the caller: ask <see cref="MemberOfAsync"/> first.
+    /// </remarks>
+    internal static async Task<IReadOnlyList<Guid>> LibraryAsync(
+        IHouseholdRepository households,
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        var ancestors = await households.AncestorsAsync(householdId, cancellationToken).ConfigureAwait(false);
+
+        return [householdId, .. ancestors.Select(ancestor => ancestor.HouseholdId)];
+    }
 }

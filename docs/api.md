@@ -37,10 +37,11 @@ served from the same origin.
 | Method | Path | Notes |
 | --- | --- | --- |
 | `GET` | `/households` | The ones you belong to. |
-| `POST` | `/households` | `201`. Creator becomes `owner`. |
+| `POST` | `/households` | `201`. Creator becomes `owner`. Optional `inheritsFrom`: a household you are in whose recipes the new one sees from the start. |
 | `GET` | `/households/{householdId}` | `200` + ETag. |
 | `PATCH` | `/households/{householdId}` | Rename. Owner only. `If-Match`. |
-| `DELETE` | `/households/{householdId}` | Owner only. Cascades. |
+| `PUT` | `/households/{householdId}/inheritance` | `{ householdId }`, or `null` to inherit nothing. Owner of this household, and a member of the other (`households.not_found` otherwise). `households.inheritance_cycle` when the other already sees this one's recipes. `200` with the chain it now inherits, nearest first. |
+| `DELETE` | `/households/{householdId}` | Owner only. Cascades. A household inheriting from it stops inheriting. |
 | `GET` | `/households/{householdId}/members` | |
 | `DELETE` | `/households/{householdId}/members/{userId}` | Owner removes anyone; a member may remove themselves. `households.last_owner` if it would leave none. |
 | `PATCH` | `/households/{householdId}/members/{userId}` | Role change. Owner only. |
@@ -51,6 +52,15 @@ served from the same origin.
 
 `POST /invitations/{code}/redemptions` is the "non-CRUD action as a created
 sub-resource" pattern, not a verb route: redeeming *creates a redemption*.
+
+`GET /users/me` carries each membership's `inheritsFrom` chain, so the app can
+name where an inherited recipe comes from without a second request. Recipe
+summaries in `GET /recipes` carry `householdId`, the household that owns each
+one; in a household that inherits, that is not always the one asked about.
+`POST /recipes/{id}/cook-log` and `POST /cook-sessions` take an optional
+`householdId`, the household the recipe is cooked in, and
+`GET /recipes/{id}/cookbooks` an optional `?householdId=` for whose shelves to
+look on.
 
 ## Recipes
 

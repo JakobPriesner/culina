@@ -205,11 +205,11 @@ internal sealed class ComposeRecipeDraftCommandHandler(
             return AssistanceErrors.NothingToWorkFrom;
         }
 
-        var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, recipeId, command.UserId, cancellationToken)
+        var editable = await RecipeAccess
+            .EditableAsync(recipes, households, recipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        return visible.Map(recipe => new Composition
+        return editable.Map(recipe => new Composition
         {
             Capability = Capability.Improve,
             // What it is stored as, which is the caller's business and not the

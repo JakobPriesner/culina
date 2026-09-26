@@ -8,6 +8,12 @@ public sealed record StartRequest
 
     /// <summary>The scaling to cook at, so resuming reopens at the same numbers.</summary>
     public required decimal Servings { get; init; }
+
+    /// <summary>
+    /// The household it is being cooked in, for a recipe that household
+    /// inherits. Left out, the recipe's own household.
+    /// </summary>
+    public Guid? HouseholdId { get; init; }
 }
 
 /// <summary>A change to a session in progress.</summary>

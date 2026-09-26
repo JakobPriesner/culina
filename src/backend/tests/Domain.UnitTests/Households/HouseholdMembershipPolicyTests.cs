@@ -179,10 +179,104 @@ public class HouseholdMembershipPolicyTests
         Assert.Equal("Kitchen", household.Name.Value);
     }
 
-    private static Household AHousehold()
+    [Fact]
+    public void Inherit_ShouldPointAtTheParent_WhenAnOwnerOfTheHeirIsInTheParent()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var parent = AHousehold("Parents");
+
+        // Act
+        var result = heir.Inherit(parent, [parent.Id], actingUserId: Owner);
+
+        // Assert
+        result.ShouldBeSuccess();
+        Assert.Equal(parent.Id, heir.InheritsFrom);
+    }
+
+    [Fact]
+    public void Inherit_ShouldFail_WhenTheCallerIsOnlyAMemberOfTheHeir()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var parent = AHousehold("Parents");
+
+        // Act
+        var result = heir.Inherit(parent, [parent.Id], actingUserId: Member);
+
+        // Assert
+        result.ShouldBeFailure(HouseholdErrors.NotOwner);
+        Assert.Null(heir.InheritsFrom);
+    }
+
+    [Fact]
+    public void Inherit_ShouldSayTheParentDoesNotExist_WhenTheCallerIsNotInIt()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var strangers = Household.Create(HouseholdName.Create("Strangers").ShouldBeSuccess(), Stranger, Now);
+
+        // Act
+        var result = heir.Inherit(strangers, [strangers.Id], actingUserId: Owner);
+
+        // Assert
+        // Inheriting shows the parent's recipes to everybody in the heir, so
+        // only somebody who can already see them may do it, and a stranger to
+        // the parent learns nothing about whether it exists.
+        result.ShouldBeFailure(HouseholdErrors.NotFound(strangers.Id));
+        Assert.Null(heir.InheritsFrom);
+    }
+
+    [Fact]
+    public void Inherit_ShouldFail_WhenTheHouseholdWouldInheritFromItself()
+    {
+        // Arrange
+        var household = AHousehold();
+
+        // Act
+        var result = household.Inherit(household, [household.Id], actingUserId: Owner);
+
+        // Assert
+        result.ShouldBeFailure(HouseholdErrors.InheritanceCycle);
+    }
+
+    [Fact]
+    public void Inherit_ShouldFail_WhenTheParentAlreadySeesTheHeirsRecipes()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var parent = AHousehold("Parents");
+        var grandparentLibrary = new[] { parent.Id, Guid.CreateVersion7(), heir.Id };
+
+        // Act
+        var result = heir.Inherit(parent, grandparentLibrary, actingUserId: Owner);
+
+        // Assert
+        // A loop would leave "whose recipe is this" with no answer.
+        result.ShouldBeFailure(HouseholdErrors.InheritanceCycle);
+        Assert.Null(heir.InheritsFrom);
+    }
+
+    [Fact]
+    public void StopInheriting_ShouldFail_WhenTheCallerIsOnlyAMember()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var parent = AHousehold("Parents");
+        heir.Inherit(parent, [parent.Id], actingUserId: Owner).ShouldBeSuccess();
+
+        // Act
+        var result = heir.StopInheriting(actingUserId: Member);
+
+        // Assert
+        result.ShouldBeFailure(HouseholdErrors.NotOwner);
+        Assert.Equal(parent.Id, heir.InheritsFrom);
+    }
+
+    private static Household AHousehold(string name = "Kitchen")
     {
         var household = Household.Create(
-            HouseholdName.Create("Kitchen").ShouldBeSuccess(),
+            HouseholdName.Create(name).ShouldBeSuccess(),
             Owner,
             Now);
 

@@ -405,6 +405,7 @@
         query={view.query}
         loading={shelf.status === 'loading' && shelf.items.length === 0}
         onmore={autoLoads ? more : undefined}
+        inherited={session.inheritedFrom}
       />
     {/if}
   {/if}

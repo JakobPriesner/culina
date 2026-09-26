@@ -63,8 +63,12 @@ internal sealed class GetIngredientsQueryHandler(
         // the worst it can do is name the seeded ones in English.
         var language = RecipeWords.ToLanguage(query.Language).Match(one => one, _ => Language.En);
 
+        var library = await HouseholdAccess
+            .LibraryAsync(households, query.HouseholdId, cancellationToken)
+            .ConfigureAwait(false);
+
         var own = await recipes
-            .OwnIngredientNamesAsync(query.HouseholdId, query.Query, Limit, cancellationToken)
+            .OwnIngredientNamesAsync(library, query.Query, Limit, cancellationToken)
             .ConfigureAwait(false);
 
         var taken = own.Select(ItemName.Fold).ToHashSet(StringComparer.Ordinal);

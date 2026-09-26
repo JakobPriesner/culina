@@ -38,6 +38,18 @@ public sealed record RecipeSearch(
     /// having to say that it did not.
     /// </remarks>
     public RecipeConstraints Constraints { get; init; } = RecipeConstraints.None;
+
+    /// <summary>
+    /// The households whose recipes this one inherits, searched with its own.
+    /// </summary>
+    /// <remarks>
+    /// Empty unless a caller asks, so a search that must stay within the
+    /// household's own recipes — the archive export — does without saying so.
+    /// </remarks>
+    public IReadOnlyList<Guid> InheritedFrom { get; init; } = [];
+
+    /// <summary>Every household whose recipes are searched: this one, then what it inherits.</summary>
+    public IReadOnlyList<Guid> Library => [HouseholdId, .. InheritedFrom];
 }
 
 /// <summary>
@@ -135,6 +147,10 @@ public sealed record RecipePage(
 
 /// <summary>One matching recipe, with everything a card needs.</summary>
 /// <param name="RecipeId">Its id.</param>
+/// <param name="HouseholdId">
+/// The household it belongs to — not always the one searching, when that one
+/// inherits recipes.
+/// </param>
 /// <param name="Title">What it is called.</param>
 /// <param name="ImageId">Its hero image.</param>
 /// <param name="TotalMinutes">Prep plus cook, or null.</param>
@@ -155,6 +171,7 @@ public sealed record RecipePage(
 /// </param>
 public sealed record RecipeSearchRow(
     Guid RecipeId,
+    Guid HouseholdId,
     string Title,
     Guid? ImageId,
     int? TotalMinutes,

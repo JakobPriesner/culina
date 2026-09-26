@@ -253,3 +253,48 @@ describe('signing in', () => {
     expect(session.households).toHaveLength(2);
   });
 });
+
+describe('households that inherit recipes', () => {
+  const inheriting = {
+    ...me,
+    households: [
+      { householdId: 'h1', name: 'Home', role: 'owner', inheritsFrom: [] },
+      {
+        householdId: 'h2',
+        name: 'Allotment',
+        role: 'member',
+        inheritsFrom: [
+          { householdId: 'h1', name: 'Home' },
+          { householdId: 'p1', name: 'Grandma' }
+        ]
+      }
+    ]
+  };
+
+  it('names what the household on screen inherits from, and only that', async () => {
+    serverAnswers((url) => (url.endsWith('/settings') ? json(settings) : json(inheriting)));
+    await session.refresh();
+
+    session.selectHousehold('h2');
+
+    expect(session.inheritedFrom).toEqual({ h1: 'Home', p1: 'Grandma' });
+    // Grandma's kitchen is not one this person is in, and is still named:
+    // their library is full of its recipes.
+    expect(session.householdName('p1')).toBe('Grandma');
+    expect(session.householdName('elsewhere')).toBeNull();
+
+    session.selectHousehold('h1');
+
+    expect(session.inheritedFrom).toEqual({});
+    expect(session.householdName('p1')).toBeNull();
+  });
+
+  it('treats an answer from before households could inherit as inheriting nothing', async () => {
+    // The offline copy of /users/me outlives a deploy, so one without the
+    // chain can still be what a device boots from.
+    await session.refresh();
+
+    expect(session.inheritedFrom).toEqual({});
+    expect(session.households.every((h) => h.inheritsFrom.length === 0)).toBe(true);
+  });
+});

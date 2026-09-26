@@ -35,7 +35,7 @@
   $effect(() => {
     if (open) {
       void cookbooks.list(householdId);
-      void cookbooks.loadMemberships(recipeId);
+      void cookbooks.loadMemberships(recipeId, householdId);
     }
   });
 

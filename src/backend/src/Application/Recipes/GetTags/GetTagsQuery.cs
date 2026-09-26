@@ -28,9 +28,11 @@ internal sealed class GetTagsQueryHandler(ITagRepository tags, IHouseholdReposit
         var result = await allowed.Match(
             async () =>
             {
-                var used = await tags
-                    .InUseAsync(query.HouseholdId, cancellationToken)
+                var library = await HouseholdAccess
+                    .LibraryAsync(households, query.HouseholdId, cancellationToken)
                     .ConfigureAwait(false);
+
+                var used = await tags.InUseAsync(library, cancellationToken).ConfigureAwait(false);
 
                 return Result<Response>.Success(new Response
                 {

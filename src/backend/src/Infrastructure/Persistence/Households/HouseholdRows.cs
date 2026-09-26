@@ -12,6 +12,16 @@ internal sealed record HouseholdRow
     public DateTimeOffset CreatedAt { get; init; }
 
     public long Version { get; init; }
+
+    public Guid? InheritsFrom { get; init; }
+}
+
+/// <summary>One household in another's chain of inheritance.</summary>
+internal sealed record InheritedHouseholdRow
+{
+    public Guid Id { get; init; }
+
+    public string Name { get; init; } = string.Empty;
 }
 
 /// <summary>The <c>household_members</c> row as PostgreSQL returns it.</summary>
@@ -64,7 +74,8 @@ internal static class HouseholdRowMappings
             name,
             row.CreatedAt,
             row.Version,
-            members.Select(member => member.ToDomain()));
+            members.Select(member => member.ToDomain()),
+            row.InheritsFrom);
     }
 
     internal static Application.Abstractions.HouseholdMemberView ToView(this HouseholdMemberViewRow row)

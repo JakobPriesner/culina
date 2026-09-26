@@ -24,7 +24,8 @@ internal sealed class StartCookSessionEndpoint : IEndpoint
                         new StartCookSessionCommand(
                             request.RecipeId,
                             context.CurrentUser().UserId,
-                            request.Servings),
+                            request.Servings,
+                            request.HouseholdId),
                         cancellationToken)
                     .ConfigureAwait(false);
 

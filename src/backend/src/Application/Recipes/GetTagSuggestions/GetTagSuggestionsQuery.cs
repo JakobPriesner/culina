@@ -65,7 +65,7 @@ internal sealed class GetTagSuggestionsQueryHandler(
         var result = await visible.Match(
             async recipe =>
             {
-                var used = await tags.InUseAsync(recipe.HouseholdId, cancellationToken).ConfigureAwait(false);
+                var used = await tags.InUseAsync([recipe.HouseholdId], cancellationToken).ConfigureAwait(false);
 
                 return Result<Response>.Success(new Response
                 {

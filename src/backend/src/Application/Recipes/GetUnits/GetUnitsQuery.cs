@@ -31,13 +31,20 @@ internal sealed class GetUnitsQueryHandler(
             .ConfigureAwait(false);
 
         var result = await allowed.Match(
-            async () => Result<Response>.Success(new Response
+            async () =>
             {
-                BuiltIn = [.. Unit.BuiltIn.Select(unit => unit.Code)],
-                Own = await recipes
-                    .OwnUnitsAsync(query.HouseholdId, cancellationToken)
-                    .ConfigureAwait(false)
-            }),
+                // Inherited recipes are read here too, and their units have to
+                // be ones this kitchen can name.
+                var library = await HouseholdAccess
+                    .LibraryAsync(households, query.HouseholdId, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return Result<Response>.Success(new Response
+                {
+                    BuiltIn = [.. Unit.BuiltIn.Select(unit => unit.Code)],
+                    Own = await recipes.OwnUnitsAsync(library, cancellationToken).ConfigureAwait(false)
+                });
+            },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);

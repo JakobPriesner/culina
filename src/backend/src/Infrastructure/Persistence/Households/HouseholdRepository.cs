@@ -14,7 +14,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         // a household is never useful without its members.
         var reader = await executor.QueryMultipleAsync(
             """
-            select id, name, created_at, version from households where id = @householdId;
+            select id, name, created_at, version, inherits_from from households where id = @householdId;
             select household_id, user_id, role, joined_at
             from household_members where household_id = @householdId;
             """,
@@ -42,7 +42,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
     {
         var reader = await executor.QueryMultipleAsync(
             """
-            select h.id, h.name, h.created_at, h.version
+            select h.id, h.name, h.created_at, h.version, h.inherits_from
             from households h
             join household_members m on m.household_id = h.id
             where m.user_id = @userId
@@ -72,10 +72,16 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
 
         await executor.ExecuteAsync(
             """
-            insert into households (id, name, created_at, version)
-            values (@id, @name, @createdAt, 1);
+            insert into households (id, name, created_at, version, inherits_from)
+            values (@id, @name, @createdAt, 1, @inheritsFrom);
             """,
-            new { id = household.Id, name = household.Name.Value, createdAt = household.CreatedAt },
+            new
+            {
+                id = household.Id,
+                name = household.Name.Value,
+                createdAt = household.CreatedAt,
+                inheritsFrom = household.InheritsFrom
+            },
             cancellationToken).ConfigureAwait(false);
 
         await ReplaceMembersAsync(household, cancellationToken).ConfigureAwait(false);
@@ -93,11 +99,17 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         var version = await executor.ExecuteScalarAsync<long?>(
             """
             update households
-            set name = @name, version = version + 1
+            set name = @name, inherits_from = @inheritsFrom, version = version + 1
             where id = @id and version = @expectedVersion
             returning version;
             """,
-            new { id = household.Id, name = household.Name.Value, expectedVersion },
+            new
+            {
+                id = household.Id,
+                name = household.Name.Value,
+                inheritsFrom = household.InheritsFrom,
+                expectedVersion
+            },
             cancellationToken).ConfigureAwait(false);
 
         if (version is null)
@@ -122,6 +134,57 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
             """,
             new { householdId, userId },
             cancellationToken).ConfigureAwait(false);
+
+    public async Task<bool> CanSeeRecipesAsync(
+        Guid householdId,
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        // Downwards from the owner, through everything that inherits from it:
+        // the caller is in one of those or sees nothing. union rather than
+        // union all, so a repeated household ends the walk instead of looping.
+        await executor.ExecuteScalarAsync<bool>(
+            """
+            with recursive heirs (id) as (
+                select @householdId::uuid
+                union
+                select h.id from households h join heirs on h.inherits_from = heirs.id
+            )
+            select exists (
+                select 1 from household_members m
+                join heirs on heirs.id = m.household_id
+                where m.user_id = @userId);
+            """,
+            new { householdId, userId },
+            cancellationToken).ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<InheritedHousehold>> AncestorsAsync(
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        // Upwards, one parent at a time. The cycle clause is belt and braces:
+        // the application refuses a loop, and this stops at a repeat anyway
+        // rather than walking one forever.
+        var rows = await executor.QueryAsync<InheritedHouseholdRow>(
+            """
+            with recursive chain (id, name, inherits_from, depth) as (
+                select p.id, p.name, p.inherits_from, 1
+                from households h
+                join households p on p.id = h.inherits_from
+                where h.id = @householdId
+                union all
+                select p.id, p.name, p.inherits_from, c.depth + 1
+                from chain c
+                join households p on p.id = c.inherits_from
+            ) cycle id set looped using path
+            select id, name from chain
+            where not looped and id <> @householdId
+            order by depth;
+            """,
+            new { householdId },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. rows.Select(row => new InheritedHousehold(row.Id, row.Name))];
+    }
 
     public async Task<IReadOnlyList<HouseholdMemberView>> MembersAsync(
         Guid householdId,

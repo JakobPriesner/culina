@@ -217,18 +217,18 @@ internal static class RecipeSearchLanes
     internal const string Hits = $"""
         -- Lexical, by the document's own language: what the stemmer can see.
         select d.recipe_id from recipe_search_documents d
-        where d.household_id = @householdId and d.language = 'de'
+        where d.household_id = any(@library) and d.language = 'de'
           and d.document @@ websearch_to_tsquery('culina_de', @query::text)
         union
         select d.recipe_id from recipe_search_documents d
-        where d.household_id = @householdId and d.language <> 'de'
+        where d.household_id = any(@library) and d.language <> 'de'
           and d.document @@ websearch_to_tsquery('culina_en', @query::text)
         union
         -- A term inside any word of the recipe: compounds, everywhere.
         select d.recipe_id
         from unnest(culina_search_terms(@query::text)) as term
         join recipe_search_documents d on d.fuzzy_text like '%' || term || '%'
-        where d.household_id = @householdId
+        where d.household_id = any(@library)
         union
         -- A term near enough to a word of the title: typos. The operator is
         -- the index's way in and the comparison after it is the rule — see
@@ -236,7 +236,7 @@ internal static class RecipeSearchLanes
         select d.recipe_id
         from unnest(culina_search_terms(@query::text)) as term
         join recipe_search_documents d on term <<% d.title_ae
-        where d.household_id = @householdId
+        where d.household_id = any(@library)
           and strict_word_similarity(term, d.title_ae) >= @fuzzyThreshold
         union
         -- What the recipe is rather than what it says: every concept the
@@ -246,7 +246,7 @@ internal static class RecipeSearchLanes
         -- either. An empty array is contained in everything, so a query the
         -- lexicon cannot read is kept out by name rather than by accident.
         select d.recipe_id from recipe_search_documents d
-        where d.household_id = @householdId
+        where d.household_id = any(@library)
           and cardinality(@concepts::text[]) > 0
           and d.concepts @> @concepts::text[]
         union
@@ -254,7 +254,7 @@ internal static class RecipeSearchLanes
         select d.recipe_id from q
         cross join recipe_search_documents d
         where cardinality(culina_search_terms(@query::text)) = 0
-          and d.household_id = @householdId
+          and d.household_id = any(@library)
           and ({TitleWord})
         """;
 
