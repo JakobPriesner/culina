@@ -258,8 +258,9 @@ describe('what a step needs', () => {
     const stepTwo = steps().getAllByRole('listitem')[1]!;
 
     // Normalised by the query: the amount itself is joined with a
-    // non-breaking space, so it never wraps away from its unit.
-    expect(within(stepTwo).getByText('600 g')).toBeInTheDocument();
+    // non-breaking space, so it never wraps away from its unit. Twice: once
+    // in the list of what the step needs, once where the sentence names it.
+    expect(within(stepTwo).getAllByText('600 g')).toHaveLength(2);
   });
 
   it('says nothing for a step that needs nothing', () => {
