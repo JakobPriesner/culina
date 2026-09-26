@@ -42,9 +42,11 @@
      * that most evenings never happens.
      */
     priority?: boolean;
+    /** The household it comes from, when it is inherited rather than this one's own. */
+    from?: string | null;
   }
 
-  let { recipe, reason = null, ondismiss, priority = false }: Props = $props();
+  let { recipe, reason = null, ondismiss, priority = false, from = null }: Props = $props();
 
   const headingId = $props.id();
 </script>
@@ -54,6 +56,9 @@
     <p class="eyebrow">{reason ?? m['recipes.featured.eyebrow']()}</p>
     <h2 id={headingId}>{recipe.title}</h2>
     <p class="meta">{metaLineFor(recipe)}</p>
+    {#if from}
+      <p class="meta">{m['recipes.card.from']({ household: from })}</p>
+    {/if}
     <div class="actions">
       <a class="feature-link" href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}>
         {m['recipes.featured.open']()}

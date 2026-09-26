@@ -154,6 +154,30 @@
     await goto(resolve('/(app)'));
   }
 
+  /**
+   * Makes the household on screen its own copy of an inherited recipe, and
+   * opens it where it can be changed — the reason anybody asks for a copy.
+   */
+  async function copy() {
+    const householdId = session.activeHouseholdId;
+
+    if (!householdId) {
+      return;
+    }
+
+    const copied = await recipes.copy(recipeId, householdId);
+
+    if ('code' in copied) {
+      toaster.show({ message: () => explain(copied), tone: 'danger' });
+
+      return;
+    }
+
+    toaster.show({ message: () => m['recipe.copy.done'](), tone: 'success' });
+
+    await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: copied.id }));
+  }
+
   /** The yield travels with you, so cooking opens at the number you chose. */
   function startCooking() {
     const target = new URL(resolve('/(app)/recipes/[recipeId]/cook', { recipeId }), page.url);
@@ -192,6 +216,7 @@
         onswitch={session.households.some((h) => h.householdId === owner)
           ? () => session.selectHousehold(owner)
           : undefined}
+        oncopy={() => void copy()}
       />
     {/if}
 
@@ -204,6 +229,7 @@
       onaddtoplan={() => (addingToPlan = true)}
       onaddtocookbook={() => (addingToCookbook = true)}
       onshare={inheritedFrom ? undefined : () => (sharing = true)}
+      oncopy={inheritedFrom ? () => void copy() : undefined}
       ondelete={inheritedFrom
         ? undefined
         : () => {
@@ -216,7 +242,7 @@
 
     <PersonalNotePanel {recipeId} />
 
-    <SimilarRecipes {recipeId} />
+    <SimilarRecipes {recipeId} inherited={session.inheritedFrom} />
   {:else}
     <RecipeSurfaceSkeleton />
   {/if}

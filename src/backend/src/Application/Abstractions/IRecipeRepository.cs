@@ -82,6 +82,25 @@ public interface IRecipeRepository
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Gives one recipe the picture another has, when it has one.
+    /// </summary>
+    /// <param name="fromRecipeId">The recipe whose picture it is.</param>
+    /// <param name="toRecipeId">The recipe that gets it too.</param>
+    /// <param name="now">The injected current time.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <remarks>
+    /// A second row pointing at the same stored file, never a second file:
+    /// storage is content-addressed, and a file is only deleted once nothing
+    /// points at it, so either recipe can change or lose its picture without
+    /// touching the other's.
+    /// </remarks>
+    Task CopyImageAsync(
+        Guid fromRecipeId,
+        Guid toRecipeId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
+
     /// <summary>Removes a recipe's image.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="now">The injected current time.</param>

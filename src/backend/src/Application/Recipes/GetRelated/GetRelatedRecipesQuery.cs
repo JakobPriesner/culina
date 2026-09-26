@@ -83,6 +83,7 @@ internal sealed class GetRelatedRecipesQueryHandler(
             : new RelatedRecipe
             {
                 RecipeId = found.Recipe.RecipeId,
+                HouseholdId = found.Recipe.HouseholdId,
                 Title = found.Recipe.Title,
                 ImageId = found.Recipe.ImageId,
                 TotalMinutes = found.Recipe.TotalMinutes,

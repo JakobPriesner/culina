@@ -827,6 +827,134 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/heirs": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "List the households that inherit this one's recipes",
+        "description": "Members only. Every household that sees this one's recipes: those inheriting from it, then those inheriting from them. Not paged: a handful at most.",
+        "operationId": "getHouseholdHeirsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetHeirsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/heirs/{heirId}": {
+      "delete": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Stop a household inheriting this one's recipes",
+        "description": "Owners of this household only, and only a household that inherits from it directly; any household inheriting through that one stops seeing the recipes too. 404 for a household that does not inherit from this one.",
+        "operationId": "removeHouseholdHeirV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "heirId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/members": {
       "get": {
         "tags": [
@@ -2167,6 +2295,79 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RecipesGetAllResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipes/{recipeId}/copies": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Copy a recipe into a household",
+        "description": "Any recipe you can read, into any household you are in — how a household changes a recipe it only inherits. The copy has its own ingredient lines and steps, and shares the picture; nothing links it back to the original.",
+        "operationId": "copyRecipeV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesCopyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesRecipeDetail"
                 }
               }
             }
@@ -7274,6 +7475,47 @@
         },
         "description": "One household, with everyone in it."
       },
+      "HouseholdsGetHeirsHeir": {
+        "required": [
+          "householdId",
+          "name",
+          "inheritsFrom"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Which household.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "What it is called."
+          },
+          "inheritsFrom": {
+            "type": "string",
+            "description": "The household it inherits from directly. The one asked about for a\ndirect heir — the only kind its owners can cut loose — or the heir it\ninherits through.",
+            "format": "uuid"
+          }
+        },
+        "description": "A household that inherits this one's recipes, directly or not."
+      },
+      "HouseholdsGetHeirsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsGetHeirsHeir"
+            },
+            "description": "Those inheriting from it first, then those inheriting from them."
+          }
+        },
+        "description": "The households that see this one's recipes."
+      },
       "HouseholdsGetInvitationsInvitationSummary": {
         "required": [
           "invitationId",
@@ -7781,6 +8023,20 @@
           }
         },
         "description": "An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded."
+      },
+      "RecipesCopyRequest": {
+        "required": [
+          "householdId"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "A household you are in. The copy is its own, to change as it likes.",
+            "format": "uuid"
+          }
+        },
+        "description": "Where the copy goes."
       },
       "RecipesCreateRequest": {
         "required": [
@@ -8640,6 +8896,7 @@
       "RecipesGetRelatedRelatedRecipe": {
         "required": [
           "recipeId",
+          "householdId",
           "title",
           "yieldAmount",
           "yieldKind",
@@ -8653,6 +8910,11 @@
           "recipeId": {
             "type": "string",
             "description": "Which recipe.",
+            "format": "uuid"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household it belongs to. Another than the one asked about when that\none inherits it, which is what a card says \"from\" about.",
             "format": "uuid"
           },
           "title": {
@@ -11397,6 +11659,7 @@
       "SuggestionsGetAllSuggestion": {
         "required": [
           "recipeId",
+          "householdId",
           "title",
           "yieldAmount",
           "yieldKind",
@@ -11409,6 +11672,11 @@
           "recipeId": {
             "type": "string",
             "description": "The recipe's id.",
+            "format": "uuid"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household it belongs to. Another than the one asked about when that\none inherits it, which is what a card says \"from\" about.",
             "format": "uuid"
           },
           "title": {

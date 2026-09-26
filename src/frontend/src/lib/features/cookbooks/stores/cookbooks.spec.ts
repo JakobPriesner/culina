@@ -174,3 +174,39 @@ describe('signing out', () => {
     expect(cookbooks.membershipsOf('r1')).toHaveLength(0);
   });
 });
+
+describe('switching households', () => {
+  it('shows the skeleton rather than the other household’s shelves', async () => {
+    serverAnswers(() => listOf(shelf('c1', 'Their Christmas', 4)));
+    await cookbooks.list('h-theirs');
+
+    serverAnswers(() => listOf(shelf('c2', 'Our weeknights', 2)));
+    const reading = cookbooks.list('h-ours');
+
+    expect(cookbooks.items).toEqual([]);
+    expect(cookbooks.status).toBe('loading');
+
+    await reading;
+
+    expect(cookbooks.items.map((one) => one.name)).toEqual(['Our weeknights']);
+  });
+
+  it('forgets which shelves a recipe is on in the household just left', async () => {
+    serverAnswers(() => json({ items: [{ cookbookId: 'c1', name: 'Their Christmas' }] }));
+    await cookbooks.loadMemberships('r1', 'h-theirs');
+
+    let answer: (response: Response) => void = () => undefined;
+    const pending = new Promise<Response>((resolve) => (answer = resolve));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => pending)
+    );
+
+    const reading = cookbooks.loadMemberships('r1', 'h-ours');
+
+    expect(cookbooks.membershipsOf('r1')).toEqual([]);
+
+    answer(json({ items: [] }));
+    await reading;
+  });
+});

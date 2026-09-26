@@ -89,12 +89,11 @@ test.describe('cookbooks', () => {
     // This is the payoff of reading a cookbook through the recipe list: the box
     // works here without a line of code that knows about cookbooks.
     await page.getByRole('searchbox').fill('zzz-nothing-matches');
-    await expect(page.getByText(/nothing here matched|hier passt nichts/i)).toBeVisible();
+    await expect(page.getByText(/nothing here matched|keine treffer/i)).toBeVisible();
 
-    await page
-      .getByRole('button', { name: /clear|leeren|löschen/i })
-      .first()
-      .click();
+    // By its whole name: in German "löschen" is also the button that deletes
+    // the cookbook, and the first match on a loose pattern was that one.
+    await page.getByRole('button', { name: /^(clear search|suche zurücksetzen)$/i }).click();
     await expect(page.getByRole('link', { name: new RegExp(onTheShelf) })).toBeVisible();
   });
 

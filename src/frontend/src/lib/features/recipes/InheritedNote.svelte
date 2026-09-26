@@ -16,9 +16,11 @@
     household: string | null;
     /** Given when they are in that household, to go and look at it from there. */
     onswitch?: () => void;
+    /** Makes this household its own copy, which it can change. */
+    oncopy?: () => void;
   }
 
-  let { household, onswitch }: Props = $props();
+  let { household, onswitch, oncopy }: Props = $props();
 </script>
 
 <aside class="note">
@@ -26,10 +28,17 @@
     {household ? m['recipe.inherited.note']({ household }) : m['recipe.inherited.unknown']()}
   </p>
 
-  {#if onswitch && household}
-    <Button variant="secondary" size="sm" onclick={onswitch}>
-      {m['recipe.inherited.switch']({ household })}
-    </Button>
+  {#if oncopy || (onswitch && household)}
+    <div class="actions">
+      {#if oncopy}
+        <Button variant="secondary" size="sm" onclick={oncopy}>{m['recipe.copy.action']()}</Button>
+      {/if}
+      {#if onswitch && household}
+        <Button variant="ghost" size="sm" onclick={onswitch}>
+          {m['recipe.inherited.switch']({ household })}
+        </Button>
+      {/if}
+    </div>
   {/if}
 </aside>
 
@@ -50,5 +59,11 @@
 
   p {
     max-width: var(--measure);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
   }
 </style>

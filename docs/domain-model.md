@@ -77,6 +77,15 @@ household it was cooked in, not the one it belongs to.
 - Only an owner of the inheriting household may set it, and only to a household
   they are in; a loop is refused with `households.inheritance_cycle`. Deleting
   the parent sets `InheritsFrom` to null.
+- The household being inherited from sees every household that reads its
+  recipes, and its owners may cut a direct heir loose
+  (`Household.StopInheritingFrom`) without being in it. One inheriting through
+  another is that one's to cut.
+- A recipe that stops being inherited drops off the heir's cookbook shelves and
+  meal plan. The rows are kept, so it comes back if the inheritance does.
+- To change an inherited recipe, a household copies it (`Recipe.CopyInto`): new
+  ingredient ids, steps pointing at them, and a second image row for the same
+  stored file. Nothing links the copy back.
 
 ### HouseholdMember
 

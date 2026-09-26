@@ -67,6 +67,14 @@ public interface IHouseholdRepository
         Guid householdId,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Every household that sees this one's recipes: those that inherit from
+    /// it, and those that inherit from them, nearest first.
+    /// </summary>
+    /// <param name="householdId">Which household.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<IReadOnlyList<Heir>> HeirsAsync(Guid householdId, CancellationToken cancellationToken);
+
     /// <summary>The household's members, with their names, for the members screen.</summary>
     /// <param name="householdId">Which household.</param>
     /// <param name="cancellationToken">Cancels the query.</param>

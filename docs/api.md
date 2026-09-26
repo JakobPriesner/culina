@@ -41,6 +41,8 @@ served from the same origin.
 | `GET` | `/households/{householdId}` | `200` + ETag. |
 | `PATCH` | `/households/{householdId}` | Rename. Owner only. `If-Match`. |
 | `PUT` | `/households/{householdId}/inheritance` | `{ householdId }`, or `null` to inherit nothing. Owner of this household, and a member of the other (`households.not_found` otherwise). `households.inheritance_cycle` when the other already sees this one's recipes. `200` with the chain it now inherits, nearest first. |
+| `GET` | `/households/{householdId}/heirs` | Every household that sees this one's recipes: those inheriting from it, then those inheriting from them, each with the household it inherits from directly. Members only. |
+| `DELETE` | `/households/{householdId}/heirs/{heirId}` | Stops a household inheriting from this one. Owners of this household, and only for a direct heir (`households.not_found` otherwise); anything inheriting through it stops too. `204`. |
 | `DELETE` | `/households/{householdId}` | Owner only. Cascades. A household inheriting from it stops inheriting. |
 | `GET` | `/households/{householdId}/members` | |
 | `DELETE` | `/households/{householdId}/members/{userId}` | Owner removes anyone; a member may remove themselves. `households.last_owner` if it would leave none. |
@@ -68,6 +70,7 @@ look on.
 | --- | --- | --- |
 | `GET` | `/recipes` | See query parameters below. Cursor-paginated, wrapped. |
 | `POST` | `/recipes` | `201` + `Location`. Only `householdId` and `title` are required. |
+| `POST` | `/recipes/{recipeId}/copies` | `{ householdId }`. `201` + `Location` with the new recipe: any recipe you can read, copied into a household you are in, with its own ingredient lines and steps and the same picture. How a household changes a recipe it only inherits. |
 | `GET` | `/recipes/{recipeId}` | `200` + ETag, `304` on `If-None-Match`. Full detail incl. step segments. |
 | `PUT` | `/recipes/{recipeId}` | Full replace incl. ingredients and steps. `If-Match` required; missing → `428`, stale → `412`. |
 | `DELETE` | `/recipes/{recipeId}` | `204`, and `204` again when already gone. |

@@ -5,6 +5,7 @@
   import { m } from '$shell/i18n';
   import { toaster } from '$shell/toaster.svelte';
   import FormFailure from './FormFailure.svelte';
+  import HeirsList from './HeirsList.svelte';
   import { setInheritance } from './households.svelte';
   import { session } from './session.svelte';
 
@@ -112,6 +113,8 @@
   {:else}
     <p class="hint">{m['problem.households.not_owner']()}</p>
   {/if}
+
+  <HeirsList {householdId} {owner} />
 </div>
 
 <style>

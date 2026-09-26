@@ -240,6 +240,29 @@ internal sealed class RecipeRepository(
         return new ImageReplacement(previous);
     }
 
+    public Task CopyImageAsync(
+        Guid fromRecipeId,
+        Guid toRecipeId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) =>
+        // Without touching the version: this runs in the transaction that
+        // creates the recipe, so no version of it has been seen yet that this
+        // could be newer than.
+        executor.ExecuteAsync(
+            """
+            insert into recipe_images
+                (id, recipe_id, content_hash, width, height, byte_size, content_type, created_at)
+            select @imageId, @toRecipeId, i.content_hash, i.width, i.height, i.byte_size, i.content_type, @now
+            from recipes r
+            join recipe_images i on i.id = r.image_id
+            where r.id = @fromRecipeId;
+
+            update recipes set image_id = @imageId
+            where id = @toRecipeId and exists (select 1 from recipe_images where id = @imageId);
+            """,
+            new { imageId = CulinaId.New(), fromRecipeId, toRecipeId, now },
+            cancellationToken);
+
     public async Task<Result<ImageReplacement>> RemoveImageAsync(
         Guid recipeId,
         DateTimeOffset now,

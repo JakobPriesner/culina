@@ -22,6 +22,13 @@ class Members {
   #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
+  /**
+   * Whose items these are. Plain rather than $state: it is read before the
+   * first await of a method an effect calls, and a tracked read there would
+   * make the method's own writes call it again.
+   */
+  #householdId: string | null = null;
+
   get items(): readonly Member[] {
     return this.#items;
   }
@@ -35,6 +42,12 @@ class Members {
   }
 
   async load(householdId: string): Promise<void> {
+    // Another kitchen's people are not the ones to show while this one's load.
+    if (this.#householdId !== householdId) {
+      this.#householdId = householdId;
+      this.#items = [];
+    }
+
     this.#status = 'loading';
 
     const result = await request(() =>
@@ -56,6 +69,7 @@ class Members {
   }
 
   reset(): void {
+    this.#householdId = null;
     this.#items = [];
     this.#status = 'idle';
     this.#error = null;

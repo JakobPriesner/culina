@@ -10,15 +10,18 @@ using Application.Households.CreateInvitation;
 using Application.Households.Delete;
 using Application.Households.GetAll;
 using Application.Households.GetById;
+using Application.Households.GetHeirs;
 using Application.Households.GetInvitations;
 using Application.Households.GetMembers;
 using Application.Households.RedeemInvitation;
+using Application.Households.RemoveHeir;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
 using Application.Households.SetInheritance;
 using Application.Planning;
 using Application.Recipes;
+using Application.Recipes.Copy;
 using Application.Recipes.Create;
 using Application.Recipes.CreateShare;
 using Application.Recipes.Delete;
@@ -133,6 +136,9 @@ public static class DependencyInjection
                 RenameHouseholdCommandHandler>()
             .AddScoped<ICommandHandler<SetInheritanceCommand, Contracts.Households.SetInheritance.Response>,
                 SetInheritanceCommandHandler>()
+            .AddScoped<IQueryHandler<GetHeirsQuery, Contracts.Households.GetHeirs.Response>,
+                GetHeirsQueryHandler>()
+            .AddScoped<ICommandHandler<RemoveHeirCommand>, RemoveHeirCommandHandler>()
             .AddScoped<ICommandHandler<DeleteHouseholdCommand>, DeleteHouseholdCommandHandler>()
             .AddScoped<IQueryHandler<GetMembersQuery, Contracts.Households.GetMembers.Response>,
                 GetMembersQueryHandler>()
@@ -205,6 +211,8 @@ public static class DependencyInjection
             // Recipes
             .AddScoped<ICommandHandler<CreateRecipeCommand, Contracts.Recipes.RecipeDetail>,
                 CreateRecipeCommandHandler>()
+            .AddScoped<ICommandHandler<CopyRecipeCommand, Contracts.Recipes.RecipeDetail>,
+                CopyRecipeCommandHandler>()
             .AddScoped<IQueryHandler<GetRecipesQuery, Contracts.Recipes.GetAll.Response>,
                 GetRecipesQueryHandler>()
             .AddScoped<IQueryHandler<GetRecipeQuery, Contracts.Recipes.RecipeDetail>,

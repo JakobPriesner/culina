@@ -67,6 +67,16 @@ class CookbookStore {
    */
   #loaded = false;
 
+  /**
+   * Whose items these are. Plain rather than $state: it is read before the
+   * first await of a method an effect calls, and a tracked read there would
+   * make the method's own writes call it again.
+   */
+  #householdId: string | null = null;
+
+  /** Whose shelves the memberships were read from. Plain, for the same reason. */
+  #membershipsFor: string | null = null;
+
   get items(): readonly Cookbook[] {
     return this.#items;
   }
@@ -106,6 +116,15 @@ class CookbookStore {
   }
 
   async list(householdId: string): Promise<void> {
+    // Another household's shelves are not the ones to keep while this one's
+    // arrive, so a change of household gets the skeleton a first read gets.
+    if (this.#householdId !== householdId) {
+      this.#householdId = householdId;
+      this.#items = [];
+      this.#cursor = null;
+      this.#loaded = false;
+    }
+
     // The shelves already on screen stay while the next answer arrives:
     // replacing them with a skeleton to show the same shelves again loses your
     // place for nothing. Only the very first read shows one.
@@ -286,6 +305,12 @@ class CookbookStore {
    * an inherited recipe can be on too, or of the recipe's own household.
    */
   async loadMemberships(recipeId: string, householdId: string | null = null): Promise<void> {
+    // The same recipe is on different shelves in different households.
+    if (this.#membershipsFor !== householdId) {
+      this.#membershipsFor = householdId;
+      this.#memberships = {};
+    }
+
     const result = await request(() =>
       http.GET('/api/v1/recipes/{recipeId}/cookbooks', {
         params: { path: { recipeId }, query: householdId ? { householdId } : {} }
@@ -381,6 +406,8 @@ class CookbookStore {
     this.#memberships = {};
     this.#members = {};
     this.#loaded = false;
+    this.#householdId = null;
+    this.#membershipsFor = null;
   }
 
   #remember(recipeId: string, shelves: CookbookMembership[]): void {

@@ -19,6 +19,12 @@ public sealed record Suggestion
     /// <summary>The recipe's id.</summary>
     public required Guid RecipeId { get; init; }
 
+    /// <summary>
+    /// The household it belongs to. Another than the one asked about when that
+    /// one inherits it, which is what a card says "from" about.
+    /// </summary>
+    public required Guid HouseholdId { get; init; }
+
     /// <summary>What it is called.</summary>
     public required string Title { get; init; }
 

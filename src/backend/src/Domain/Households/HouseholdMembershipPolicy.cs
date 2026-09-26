@@ -75,6 +75,29 @@ public static class HouseholdMembershipPolicy
     }
 
     /// <summary>
+    /// An owner of the household being inherited from may cut an heir loose.
+    /// </summary>
+    /// <param name="heir">The household that inherits.</param>
+    /// <param name="parent">The household it inherits from.</param>
+    /// <param name="actingUserId">Who is asking.</param>
+    /// <remarks>
+    /// Only a direct heir: one that inherits through another household is that
+    /// household's to cut, and cutting the one in between cuts it too. An heir
+    /// that does not inherit from this household is not found, like anything
+    /// else the caller has no say over.
+    /// </remarks>
+    public static Result CanCutInheritance(Household heir, Household parent, Guid actingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(heir);
+        ArgumentNullException.ThrowIfNull(parent);
+
+        return CanAdminister(parent, actingUserId)
+            .Bind(() => heir.InheritsFrom == parent.Id
+                ? Result.Success()
+                : HouseholdErrors.NotFound(heir.Id));
+    }
+
+    /// <summary>
     /// An owner may remove anyone; anyone may remove themselves. Neither may
     /// leave the household without an owner.
     /// </summary>

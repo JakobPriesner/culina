@@ -93,6 +93,11 @@
     onaddtoplan?: () => void;
     /** Opens the sheet that hands out, and takes back, the link to this recipe. */
     onshare?: () => void;
+    /**
+     * Makes this household its own copy, for a recipe it can read but not
+     * change: what "Edit" becomes when editing is somebody else's.
+     */
+    oncopy?: () => void;
     /** Asks whether to delete it. The page asks; the surface only offers. */
     ondelete?: () => void;
     /**
@@ -135,6 +140,7 @@
     onaddtocookbook,
     onaddtoplan,
     onshare,
+    oncopy,
     ondelete,
     photo,
     editable = false,
@@ -199,7 +205,7 @@
    * are offered to whoever owns the recipe, and to nobody else.
    */
   const inMenu = $derived(
-    !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare || ondelete)
+    !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare || oncopy || ondelete)
   );
   const hasSupportingActions = $derived(inMenu || Boolean(!cooking && onaddtolist));
 
@@ -562,6 +568,26 @@
                     </svg>
 
                     {m['recipe.share.action']()}
+                  </button>
+                {/if}
+
+                {#if oncopy}
+                  <button class="item" type="button" onclick={(e) => choose(e, oncopy)}>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <!-- Two sheets, one over the other. -->
+                      <rect x="8.5" y="8.5" width="11" height="12" rx="2" />
+                      <path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2" />
+                    </svg>
+
+                    {m['recipe.copy.action']()}
                   </button>
                 {/if}
 

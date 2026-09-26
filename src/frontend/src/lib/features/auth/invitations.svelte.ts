@@ -25,6 +25,13 @@ class Invitations {
   /** The code of the invitation made in this session, if any. */
   #fresh = $state<string | null>(null);
 
+  /**
+   * Whose items these are. Plain rather than $state: it is read before the
+   * first await of a method an effect calls, and a tracked read there would
+   * make the method's own writes call it again.
+   */
+  #householdId: string | null = null;
+
   get items(): readonly Invitation[] {
     return this.#items;
   }
@@ -42,6 +49,7 @@ class Invitations {
   }
 
   async load(householdId: string): Promise<void> {
+    this.#adopt(householdId);
     this.#status = 'loading';
 
     const result = await request(() =>
@@ -73,6 +81,7 @@ class Invitations {
       return result.error;
     }
 
+    this.#adopt(householdId);
     this.#fresh = result.value.code;
     this.#error = null;
 
@@ -104,7 +113,22 @@ class Invitations {
     return null;
   }
 
+  /**
+   * Starts holding another household's invitations, if it is another.
+   *
+   * A link made for one household is not one to show under another's name:
+   * whoever it was sent to would join the wrong kitchen.
+   */
+  #adopt(householdId: string): void {
+    if (this.#householdId !== householdId) {
+      this.#householdId = householdId;
+      this.#items = [];
+      this.#fresh = null;
+    }
+  }
+
   reset(): void {
+    this.#householdId = null;
     this.#items = [];
     this.#status = 'idle';
     this.#error = null;

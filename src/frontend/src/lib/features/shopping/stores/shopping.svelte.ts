@@ -25,6 +25,13 @@ export interface SectionGroup {
 class ShoppingStore {
   #list = $state<ShoppingList | null>(null);
   #status = $state<LoadStatus>('idle');
+
+  /**
+   * Whose items these are. Plain rather than $state: it is read before the
+   * first await of a method an effect calls, and a tracked read there would
+   * make the method's own writes call it again.
+   */
+  #householdId: string | null = null;
   #error = $state<AppError | null>(null);
 
   get status() {
@@ -57,6 +64,13 @@ class ShoppingStore {
   }
 
   async load(householdId: string): Promise<void> {
+    // Another household's list is not one to go on showing while this one's
+    // arrives. Ticking something on it in that moment would tick the wrong list.
+    if (this.#householdId !== householdId) {
+      this.#householdId = householdId;
+      this.#list = null;
+    }
+
     this.#status = 'loading';
     this.#error = null;
 
@@ -216,6 +230,7 @@ class ShoppingStore {
   }
 
   reset(): void {
+    this.#householdId = null;
     this.#list = null;
     this.#status = 'idle';
     this.#error = null;

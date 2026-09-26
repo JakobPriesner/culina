@@ -153,6 +153,7 @@ export const toCompletion = (wire: WireCompletion): Completion | null => {
 
 export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
   id: wire.recipeId,
+  householdId: wire.householdId,
   title: wire.title,
   imageId: wire.imageId ?? null,
   totalMinutes: wire.totalMinutes ?? null,
@@ -173,6 +174,7 @@ export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
 
 export const toRelated = (wire: WireRelated): RelatedRecipe => ({
   id: wire.recipeId,
+  householdId: wire.householdId,
   title: wire.title,
   imageId: wire.imageId ?? null,
   totalMinutes: wire.totalMinutes ?? null,

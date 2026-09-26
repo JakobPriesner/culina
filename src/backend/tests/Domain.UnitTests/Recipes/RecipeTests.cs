@@ -427,6 +427,55 @@ public class RecipeTests
         Assert.Equal("finely chopped", ingredient.Note);
     }
 
+    [Fact]
+    public void CopyInto_ShouldGiveTheCopyLinesOfItsOwn_WithEveryStepPointingAtThem()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        recipe.Describe(Details(prep: 15, cook: 60) with { Tags = ["pasta"] }, Now).ShouldBeSuccess();
+        var butter = AnIngredient("Butter");
+        var salt = AnIngredient("Salt");
+        recipe.SetContents(
+            [AGroup(butter, salt)],
+            [AStep(0, [new TextSegment("Melt "), new IngredientSegment(butter.Id)], salt.Id)],
+            Now).ShouldBeSuccess();
+        var flat = Guid.CreateVersion7();
+
+        // Act
+        var copy = recipe.CopyInto(flat, Author, Now).ShouldBeSuccess();
+
+        // Assert
+        Assert.NotEqual(recipe.Id, copy.Id);
+        Assert.Equal(flat, copy.HouseholdId);
+        Assert.Equal(["Butter", "Salt"], copy.Ingredients.Select(line => line.Name));
+        Assert.Equal(["pasta"], copy.Tags);
+        Assert.Equal(15, copy.PrepMinutes);
+
+        // The copy's steps point at the copy's own lines. Pointing at the
+        // original's would break the first time its household changed it.
+        var copied = copy.Ingredients.ToDictionary(line => line.Name, line => line.Id);
+        Assert.DoesNotContain(copy.Ingredients, line => line.Id == butter.Id || line.Id == salt.Id);
+        var step = Assert.Single(copy.Steps);
+        Assert.Equal(copied["Butter"], Assert.IsType<IngredientSegment>(step.Segments[1]).RecipeIngredientId);
+        Assert.Contains(copied["Salt"], step.Uses);
+    }
+
+    [Fact]
+    public void CopyInto_ShouldLeaveTheOriginalAsItWas()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var butter = AnIngredient("Butter");
+        recipe.SetContents([AGroup(butter)], [], Now).ShouldBeSuccess();
+
+        // Act
+        recipe.CopyInto(Guid.CreateVersion7(), Author, Now).ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal(Household, recipe.HouseholdId);
+        Assert.Equal(butter.Id, Assert.Single(recipe.Ingredients).Id);
+    }
+
     private static Recipe ARecipe() =>
         Recipe.Create(
             Household,

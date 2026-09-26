@@ -208,6 +208,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/heirs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the households that inherit this one's recipes
+         * @description Members only. Every household that sees this one's recipes: those inheriting from it, then those inheriting from them. Not paged: a handful at most.
+         */
+        get: operations["getHouseholdHeirsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/heirs/{heirId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stop a household inheriting this one's recipes
+         * @description Owners of this household only, and only a household that inherits from it directly; any household inheriting through that one stops seeing the recipes too. 404 for a household that does not inherit from this one.
+         */
+        delete: operations["removeHouseholdHeirV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/members": {
         parameters: {
             query?: never;
@@ -556,6 +596,26 @@ export interface paths {
          * @description Only a household and a title are required. Everything else is added later, which is what makes the create form something people finish.
          */
         post: operations["createRecipeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{recipeId}/copies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy a recipe into a household
+         * @description Any recipe you can read, into any household you are in — how a household changes a recipe it only inherits. The copy has its own ingredient lines and steps, and shares the picture; nothing links it back to the original.
+         */
+        post: operations["copyRecipeV1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1910,6 +1970,28 @@ export interface components {
              */
             version: number;
         };
+        /** @description A household that inherits this one's recipes, directly or not. */
+        HouseholdsGetHeirsHeir: {
+            /**
+             * Format: uuid
+             * @description Which household.
+             */
+            householdId: string;
+            /** @description What it is called. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description The household it inherits from directly. The one asked about for a
+             *     direct heir — the only kind its owners can cut loose — or the heir it
+             *     inherits through.
+             */
+            inheritsFrom: string;
+        };
+        /** @description The households that see this one's recipes. */
+        HouseholdsGetHeirsResponse: {
+            /** @description Those inheriting from it first, then those inheriting from them. */
+            items: components["schemas"]["HouseholdsGetHeirsHeir"][];
+        };
         /** @description An open invitation. */
         HouseholdsGetInvitationsInvitationSummary: {
             /**
@@ -2191,6 +2273,14 @@ export interface components {
                 code: string;
                 detail: string;
             }[] | null;
+        };
+        /** @description Where the copy goes. */
+        RecipesCopyRequest: {
+            /**
+             * Format: uuid
+             * @description A household you are in. The copy is its own, to change as it likes.
+             */
+            householdId: string;
         };
         /** @description A new recipe. */
         RecipesCreateRequest: {
@@ -2626,6 +2716,12 @@ export interface components {
              * @description Which recipe.
              */
             recipeId: string;
+            /**
+             * Format: uuid
+             * @description The household it belongs to. Another than the one asked about when that
+             *     one inherits it, which is what a card says "from" about.
+             */
+            householdId: string;
             /** @description Its title. */
             title: string;
             /**
@@ -4019,6 +4115,12 @@ export interface components {
              * @description The recipe's id.
              */
             recipeId: string;
+            /**
+             * Format: uuid
+             * @description The household it belongs to. Another than the one asked about when that
+             *     one inherits it, which is what a card says "from" about.
+             */
+            householdId: string;
             /** @description What it is called. */
             title: string;
             /**
@@ -4937,6 +5039,103 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdHeirsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdsGetHeirsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeHouseholdHeirV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                heirId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6000,6 +6199,59 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RecipesCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesRecipeDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    copyRecipeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesCopyRequest"];
             };
         };
         responses: {

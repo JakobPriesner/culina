@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using IntegrationTests.Fixtures;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -312,6 +313,28 @@ public class RecipeImageTests(PostgresFixture postgres)
         // Assert
         var served = await client.GetAsync($"/api/v1/recipes/{second}/image?w=800", Token);
 
+        Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+    }
+
+    [Fact]
+    public async Task Copy_ShouldShareThePicture_AndKeepItWhenTheOriginalLosesItsOwn()
+    {
+        // Arrange
+        var (client, original) = await SeedAsync();
+        var householdId = (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        await UploadAsync(client, original, PngBytes(600, 400), "photo.png", "image/png");
+
+        // Act
+        var copied = await client.PostAsync($"/api/v1/recipes/{original}/copies", new { householdId }, Token);
+        var copy = copied.Json!.Value.GetProperty("recipeId").GetGuid();
+        await client.DeleteAsync($"/api/v1/recipes/{original}/image", Token);
+
+        // Assert
+        // One file and two rows, like any picture two recipes share: the copy
+        // is not left pointing at nothing when the original lets go of it.
+        Assert.NotEqual(JsonValueKind.Null, copied.Json!.Value.GetProperty("imageId").ValueKind);
+        var served = await client.GetAsync($"/api/v1/recipes/{copy}/image?w=800", Token);
         Assert.Equal(HttpStatusCode.OK, served.StatusCode);
     }
 

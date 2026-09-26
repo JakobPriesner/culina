@@ -126,6 +126,13 @@ class MealPlanStore {
   #error = $state<AppError | null>(null);
   #loading = $state(false);
 
+  /**
+   * Whose items these are. Plain rather than $state: it is read before the
+   * first await of a method an effect calls, and a tracked read there would
+   * make the method's own writes call it again.
+   */
+  #householdId: string | null = null;
+
   get days(): readonly PlannedDay[] {
     return this.#week?.days ?? [];
   }
@@ -155,7 +162,13 @@ class MealPlanStore {
 
   async load(householdId: string, from?: string): Promise<void> {
     // The week already on screen stays while the next one arrives. Replacing it
-    // with a skeleton to show the same seven days again loses your place.
+    // with a skeleton to show the same seven days again loses your place — but
+    // only within one household: another household's week is not your place.
+    if (this.#householdId !== householdId) {
+      this.#householdId = householdId;
+      this.#week = null;
+    }
+
     this.#loading = true;
 
     const result = await request(() =>
@@ -253,6 +266,7 @@ class MealPlanStore {
   }
 
   reset(): void {
+    this.#householdId = null;
     this.#week = null;
     this.#error = null;
     this.#loading = false;
