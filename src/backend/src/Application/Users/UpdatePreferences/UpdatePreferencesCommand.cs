@@ -9,7 +9,7 @@ namespace Application.Users.UpdatePreferences;
 
 /// <summary>Replaces one person's preferences.</summary>
 /// <param name="UserId">Whose preferences.</param>
-/// <param name="Locale">The chosen language.</param>
+/// <param name="Locale">The chosen language, or <c>system</c> to follow the device.</param>
 /// <param name="Theme">The chosen theme id.</param>
 /// <param name="Mode">The chosen appearance.</param>
 /// <param name="MeasurementSystem">The chosen units.</param>
@@ -31,15 +31,16 @@ internal sealed class UpdatePreferencesCommandHandler(IUserPreferencesRepository
 
         using var tracked = UseCaseActivity.Start("Users.UpdatePreferences");
 
-        var language = PreferenceWords.ToLanguage(command.Locale);
+        var language = PreferenceWords.CheckLanguage(command.Locale);
         var mode = PreferenceWords.ToMode(command.Mode);
         var measurement = PreferenceWords.ToMeasurementSystem(command.MeasurementSystem);
 
         var chosen = Result.Combine(
-                Ignoring(language),
+                language,
                 Ignoring(mode),
                 Ignoring(measurement))
-            .Bind(() => language.Bind(l => mode.Bind(m => measurement.Map(s => (Language: l, Mode: m, System: s)))));
+            .Bind(() => mode.Bind(m => measurement.Map(s =>
+                (Language: PreferenceCodes.ToLanguage(command.Locale), Mode: m, System: s))));
 
         var result = await chosen.Match(
             choice => SaveAsync(command, choice, cancellationToken),
@@ -50,7 +51,7 @@ internal sealed class UpdatePreferencesCommandHandler(IUserPreferencesRepository
 
     private async Task<Result<Response>> SaveAsync(
         UpdatePreferencesCommand command,
-        (Language Language, ThemeMode Mode, MeasurementSystem System) choice,
+        (Language? Language, ThemeMode Mode, MeasurementSystem System) choice,
         CancellationToken cancellationToken)
     {
         var stored = await preferences.GetAsync(command.UserId, cancellationToken).ConfigureAwait(false);
