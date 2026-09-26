@@ -51,10 +51,12 @@ to it, and the log says so as a warning. The screen asks for:
    actually arrive from). Everything else is folded away with its defaults.
 3. **The first account**, which administers the instance.
 
-If the database is configured through the environment — the production compose
-file does this — the first step is skipped. **Whoever finishes setup first
-becomes the administrator**, exactly as the first registration always did, so
-finish it before the instance is reachable by anyone else.
+If the database is configured through the environment, the first step is
+skipped. The production compose file sets only where the database is — host,
+port and name — so the step still asks for the role, the password and TLS, and
+they stay editable under Settings → Server afterwards. **Whoever finishes setup
+first becomes the administrator**, exactly as the first registration always
+did, so finish it before the instance is reachable by anyone else.
 
 ## Undoing a setting that locked you out
 

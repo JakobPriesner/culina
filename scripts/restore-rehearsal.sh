@@ -2,7 +2,7 @@
 #
 # Proves the backup is a backup.
 #
-# Stands up a clean instance, puts real data in it, takes the three backups the
+# Stands up a clean instance, puts real data in it, takes the four backups the
 # runbook names, destroys everything a failed disk would destroy, restores, and
 # then checks that what came back is what went in — counts, and a photograph
 # that the person who uploaded it can still fetch and a stranger still cannot.
@@ -60,6 +60,7 @@ say "Starting a clean instance on ${BASE}"
 compose down -v >/dev/null 2>&1 || true
 compose up -d >/dev/null
 wait_for_ready
+"$ROOT/scripts/setup-database.sh" "$BASE"
 
 # ── Something worth losing ───────────────────────────────────────────────────
 say "Putting data in"
@@ -99,6 +100,8 @@ docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" alpine \
   tar czf /backup/images.tar.gz -C /data . >/dev/null
 docker run --rm -v "${PROJECT}_culina-keys:/data" -v "$WORK:/backup" alpine \
   tar czf /backup/keys.tar.gz -C /data . >/dev/null
+docker run --rm -v "${PROJECT}_culina-config:/data" -v "$WORK:/backup" alpine \
+  tar czf /backup/config.tar.gz -C /data . >/dev/null
 
 echo "  $(du -h "$WORK/culina.dump" | cut -f1) database, $(du -h "$WORK/images.tar.gz" | cut -f1) images"
 
@@ -121,6 +124,9 @@ docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" alpine \
   tar xzf /backup/images.tar.gz -C /data >/dev/null
 docker run --rm -v "${PROJECT}_culina-keys:/data" -v "$WORK:/backup" alpine \
   tar xzf /backup/keys.tar.gz -C /data >/dev/null
+# Without it the app comes back to the setup screen, asking for the database.
+docker run --rm -v "${PROJECT}_culina-config:/data" -v "$WORK:/backup" alpine \
+  tar xzf /backup/config.tar.gz -C /data >/dev/null
 
 compose up -d >/dev/null
 wait_for_ready
