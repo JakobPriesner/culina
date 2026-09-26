@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { insertMention, pendingMention, suggest, toSegments, toText } from './mentions';
+import { insertMention, pendingMention, suggest, toSegments, toText, writesOn } from './mentions';
 import type { Ingredient, Step } from '../types';
 
 const ingredient = (id: string, name: string, value: number | null = 200): Ingredient => ({
@@ -166,5 +166,25 @@ describe('what the picker offers', () => {
 
   it('never offers a line the server has not seen', () => {
     expect(suggest('', [{ ...butter, id: '' }])).toEqual([]);
+  });
+});
+
+describe('a mention already written, and the sentence after it', () => {
+  it('is a known name followed by more words', () => {
+    expect(writesOn('butter melt.', list)).toBe(true);
+  });
+
+  it('is not a name still being typed', () => {
+    expect(writesOn('butte', list)).toBe(false);
+    expect(writesOn('butter', list)).toBe(false);
+  });
+
+  it('still leaves a longer name to the suggestions', () => {
+    expect(writesOn('olive o', [ingredient('i-olive', 'olive'), oliveOil])).toBe(true);
+    expect(suggest('olive o', [ingredient('i-olive', 'olive'), oliveOil])).toEqual([oliveOil]);
+  });
+
+  it('is not a word that merely begins like a name', () => {
+    expect(writesOn('buttermilk please', list)).toBe(false);
   });
 });
