@@ -281,10 +281,15 @@ class CookbookStore {
     return false;
   }
 
-  /** Which cookbooks a recipe is on. */
-  async loadMemberships(recipeId: string): Promise<void> {
+  /**
+   * Which cookbooks a recipe is on: the shelves of the household named, which
+   * an inherited recipe can be on too, or of the recipe's own household.
+   */
+  async loadMemberships(recipeId: string, householdId: string | null = null): Promise<void> {
     const result = await request(() =>
-      http.GET('/api/v1/recipes/{recipeId}/cookbooks', { params: { path: { recipeId } } })
+      http.GET('/api/v1/recipes/{recipeId}/cookbooks', {
+        params: { path: { recipeId }, query: householdId ? { householdId } : {} }
+      })
     );
 
     if (result.ok) {

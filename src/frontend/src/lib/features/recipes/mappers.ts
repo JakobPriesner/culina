@@ -47,6 +47,7 @@ type WireCompletion = components['schemas']['RecipesGetCompletionsCompletion'];
 
 export const toSummary = (wire: WireSummary): RecipeSummary => ({
   id: wire.recipeId,
+  householdId: wire.householdId,
   title: wire.title,
   imageId: wire.imageId ?? null,
   totalMinutes: wire.totalMinutes ?? null,

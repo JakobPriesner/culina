@@ -90,16 +90,20 @@ internal sealed class PlanMealCommandHandler(
         using var tracked = UseCaseActivity.Start("Planning.PlanMeal");
 
         // Through the recipe, not the household: it proves in one step both
-        // that the caller is a member and that the recipe is one they can see.
+        // that the caller is a member and that the recipe is this household's
+        // own or one it inherits.
         var recipe = await RecipeAccess
-            .VisibleAsync(recipes, households, command.Draft.RecipeId, command.UserId, cancellationToken)
+            .VisibleInAsync(
+                recipes,
+                households,
+                command.Draft.RecipeId,
+                command.HouseholdId,
+                command.UserId,
+                cancellationToken)
             .ConfigureAwait(false);
 
         var result = await recipe.Match(
-            found => found.HouseholdId == command.HouseholdId
-                ? AddAsync(command, cancellationToken)
-                : Task.FromResult(Result<MealPlanResponse>.Failure(
-                    Domain.Recipes.RecipeErrors.NotFound(command.Draft.RecipeId))),
+            _ => AddAsync(command, cancellationToken),
             error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);

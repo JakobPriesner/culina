@@ -34,10 +34,11 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
     internal const double Threshold = 0.4d;
 
     public async Task<IReadOnlyDictionary<string, string>> SpellingsAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         IReadOnlyList<string> words,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(library);
         ArgumentNullException.ThrowIfNull(words);
 
         var rows = await executor.QueryAsync<Spelling>(
@@ -46,17 +47,17 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
                 select distinct word from (
                     select unnest(string_to_array(d.title_ae, ' ')) as word
                     from recipe_search_documents d
-                    where d.household_id = @householdId
+                    where d.household_id = any(@library)
                     union all
                     select unnest(string_to_array(culina_fold_ae(i.name), ' '))
                     from recipe_ingredients i
                     join ingredient_groups g on g.id = i.group_id
                     join recipes r on r.id = g.recipe_id
-                    where r.household_id = @householdId
+                    where r.household_id = any(@library)
                     union all
                     select unnest(string_to_array(culina_fold_ae(t.name), ' '))
                     from tags t
-                    where t.household_id = @householdId
+                    where t.household_id = any(@library)
                 ) as every_word
                 where length(word) >= 4)
             select distinct on (typed) typed, v.word as meant
@@ -68,19 +69,21 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
               and not exists (select 1 from vocabulary known where known.word = typed)
             order by typed, similarity(typed, v.word) desc, v.word;
             """,
-            new { householdId, words = words.ToArray(), threshold = Threshold },
+            new { library = library.ToArray(), words = words.ToArray(), threshold = Threshold },
             cancellationToken).ConfigureAwait(false);
 
         return rows.ToDictionary(row => row.Typed, row => row.Meant, StringComparer.Ordinal);
     }
 
     public async Task<Completions> CompletionsAsync(
-        Guid householdId,
+        IReadOnlyList<Guid> library,
         string typed,
         int perKind,
         CancellationToken cancellationToken)
     {
-        var parameters = new { householdId, typed, perKind };
+        ArgumentNullException.ThrowIfNull(library);
+
+        var parameters = new { library = library.ToArray(), typed, perKind };
 
         // A word of the name that begins with what was typed, in either fold:
         // "häh" finds Hähnchen-Curry and Brathähnchen alike, and "haeh" and
@@ -94,7 +97,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             from recipe_search_documents d
             cross join typed t
             join recipes r on r.id = d.recipe_id
-            where d.household_id = @householdId
+            where d.household_id = any(@library)
               and ({Begins("d.title_ae", "d.title_a")})
             -- A title that starts with the word, then the shortest: the one
             -- most nearly called what was typed.
@@ -117,7 +120,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             cross join typed t
             join ingredient_groups g on g.id = i.group_id
             join recipes r on r.id = g.recipe_id
-            where r.household_id = @householdId
+            where r.household_id = any(@library)
               and ({Begins("i.name_ae", "i.name_a")})
             group by i.name_ae
             order by recipe_count desc, name
@@ -129,14 +132,16 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
         var tags = await executor.QueryAsync<TagCompletion>(
             $"""
             with {Typed}
-            select tg.slug, tg.name, count(rt.recipe_id)::int as recipe_count
+            select tg.slug, min(tg.name) as name, count(rt.recipe_id)::int as recipe_count
             from tags tg
             cross join typed t
             left join recipe_tags rt on rt.tag_id = tg.id
-            where tg.household_id = @householdId
+            where tg.household_id = any(@library)
               and ({Begins("culina_fold_ae(tg.name)", "culina_fold_a(tg.name)")})
-            group by tg.id
-            order by recipe_count desc, tg.name
+            -- By slug, not by row: an inherited household may carry the same
+            -- tag, and it is one word to filter by, not two.
+            group by tg.slug
+            order by recipe_count desc, name
             limit @perKind;
             """,
             parameters,

@@ -18,4 +18,10 @@ public sealed record Request
 
     /// <summary>Anything worth remembering.</summary>
     public string? Note { get; init; }
+
+    /// <summary>
+    /// The household it was cooked in, for a recipe that household inherits.
+    /// Left out, the recipe's own household.
+    /// </summary>
+    public Guid? HouseholdId { get; init; }
 }

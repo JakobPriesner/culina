@@ -191,7 +191,7 @@ public static class SearchRecovery
         }
 
         var spellings = await vocabulary
-            .SpellingsAsync(search.HouseholdId, folded, cancellationToken)
+            .SpellingsAsync(search.Library, folded, cancellationToken)
             .ConfigureAwait(false);
 
         if (spellings.Count == 0)

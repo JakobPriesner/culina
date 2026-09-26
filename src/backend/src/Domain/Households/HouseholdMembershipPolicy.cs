@@ -42,6 +42,39 @@ public static class HouseholdMembershipPolicy
     }
 
     /// <summary>
+    /// Inheriting is an owner's decision about their own household, made with
+    /// recipes they can already see.
+    /// </summary>
+    /// <param name="household">The household that would inherit.</param>
+    /// <param name="parent">The household it would inherit from.</param>
+    /// <param name="parentLibrary">Every household whose recipes the parent sees, itself included.</param>
+    /// <param name="actingUserId">Who is asking.</param>
+    /// <remarks>
+    /// The caller must be in the parent, because inheriting shows its recipes
+    /// to everybody in the heir: a stranger to the parent could otherwise open
+    /// somebody else's kitchen to their own friends. A non-member of the parent
+    /// is told it does not exist, as everywhere else. A parent that already
+    /// sees this household's recipes would close a loop, and a loop has no
+    /// answer to "whose recipe is this".
+    /// </remarks>
+    public static Result CanInherit(
+        Household household,
+        Household parent,
+        IReadOnlyCollection<Guid> parentLibrary,
+        Guid actingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(household);
+        ArgumentNullException.ThrowIfNull(parent);
+        ArgumentNullException.ThrowIfNull(parentLibrary);
+
+        return CanAdminister(household, actingUserId)
+            .Bind(() => CanView(parent, actingUserId))
+            .Bind(() => parent.Id == household.Id || parentLibrary.Contains(household.Id)
+                ? HouseholdErrors.InheritanceCycle
+                : Result.Success());
+    }
+
+    /// <summary>
     /// An owner may remove anyone; anyone may remove themselves. Neither may
     /// leave the household without an owner.
     /// </summary>

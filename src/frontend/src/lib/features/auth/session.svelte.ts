@@ -87,6 +87,29 @@ class SessionStore {
   }
 
   /**
+   * The households the one being looked at inherits recipes from, by id, with
+   * their names: what a recipe card needs to say where it comes from.
+   */
+  get inheritedFrom(): Readonly<Record<string, string>> {
+    return Object.fromEntries(
+      (this.activeHousehold?.inheritsFrom ?? []).map((h) => [h.householdId, h.name])
+    );
+  }
+
+  /**
+   * What a household is called, as far as this person can know: one they are
+   * in, or one the household they are looking at inherits recipes from. Null
+   * for anything else, which a recipe from somewhere unexpected can be.
+   */
+  householdName(householdId: string): string | null {
+    return (
+      this.households.find((h) => h.householdId === householdId)?.name ??
+      this.activeHousehold?.inheritsFrom.find((h) => h.householdId === householdId)?.name ??
+      null
+    );
+  }
+
+  /**
    * Reads the session again.
    *
    * For the cases where the server now knows something the store does not — a
@@ -195,7 +218,13 @@ class SessionStore {
       return;
     }
 
-    this.#user = me.value;
+    // The offline copy of this answer outlives a deploy on purpose, so a device
+    // that last read it before households could inherit may be handed one
+    // without the chain. Such a household simply inherits nothing.
+    this.#user = {
+      ...me.value,
+      households: me.value.households.map((h) => ({ ...h, inheritsFrom: h.inheritsFrom ?? [] }))
+    };
     this.#status = 'authenticated';
     writeDevice(bootHintKey, 'app');
     this.#activeHouseholdId = this.#chooseHousehold(me.value.households);

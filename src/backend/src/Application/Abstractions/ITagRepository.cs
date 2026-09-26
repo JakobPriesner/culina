@@ -8,10 +8,10 @@ namespace Application.Abstractions;
 /// </remarks>
 public interface ITagRepository
 {
-    /// <summary>The household's tags, most used first.</summary>
-    /// <param name="householdId">Whose vocabulary.</param>
+    /// <summary>The tags a household's recipes carry, most used first, one per slug.</summary>
+    /// <param name="library">Whose recipes: a household, then every household it inherits from.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    Task<IReadOnlyList<TagUsage>> InUseAsync(Guid householdId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TagUsage>> InUseAsync(IReadOnlyList<Guid> library, CancellationToken cancellationToken);
 }
 
 /// <summary>One tag, and how many recipes carry it.</summary>

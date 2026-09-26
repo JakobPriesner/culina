@@ -9,6 +9,7 @@
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
   import DeleteRecipeDialog from '$features/recipes/DeleteRecipeDialog.svelte';
+  import InheritedNote from '$features/recipes/InheritedNote.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import ShareRecipeSheet from '$features/recipes/ShareRecipeSheet.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
@@ -58,12 +59,25 @@
 
   // Which shelves it is on, for the line under the title. Asked here rather
   // than by the sheet alone, because the line is visible before anybody opens
-  // the sheet.
+  // the sheet. This household's shelves, which an inherited recipe can be on.
   $effect(() => {
     if (recipeId) {
-      void cookbooks.loadMemberships(recipeId);
+      void cookbooks.loadMemberships(recipeId, session.activeHouseholdId);
     }
   });
+
+  /**
+   * Whose recipe it is, when it is not this household's own.
+   *
+   * An inherited recipe is read, cooked, planned and shopped for here like any
+   * other; editing, deleting and publishing it are its own household's. Null
+   * for a recipe of the household being looked at.
+   */
+  const inheritedFrom = $derived(
+    recipes.detail && recipes.detail.householdId !== session.activeHouseholdId
+      ? recipes.detail.householdId
+      : null
+  );
 
   const shelves = $derived(cookbooks.membershipsOf(recipeId));
 
@@ -171,6 +185,16 @@
       {/snippet}
     </ErrorState>
   {:else if recipes.detail && recipes.detail.id === recipeId}
+    {#if inheritedFrom}
+      {@const owner = inheritedFrom}
+      <InheritedNote
+        household={session.householdName(owner)}
+        onswitch={session.households.some((h) => h.householdId === owner)
+          ? () => session.selectHousehold(owner)
+          : undefined}
+      />
+    {/if}
+
     <RecipeSurface
       recipe={recipes.detail}
       {servings}
@@ -179,12 +203,14 @@
       onaddtolist={addToShoppingList}
       onaddtoplan={() => (addingToPlan = true)}
       onaddtocookbook={() => (addingToCookbook = true)}
-      onshare={() => (sharing = true)}
-      ondelete={() => {
-        doomed = recipes.detail;
-        deleteFailure = null;
-      }}
-      editable
+      onshare={inheritedFrom ? undefined : () => (sharing = true)}
+      ondelete={inheritedFrom
+        ? undefined
+        : () => {
+            doomed = recipes.detail;
+            deleteFailure = null;
+          }}
+      editable={!inheritedFrom}
       cookbooks={shelves}
     />
 
