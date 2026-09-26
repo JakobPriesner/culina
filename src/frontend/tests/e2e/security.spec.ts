@@ -87,7 +87,7 @@ test.describe('the way in', () => {
     await expect(strangersPage).toHaveURL(/\/login\?next=%2Fshopping/);
 
     await strangersPage.getByLabel(/email|e-mail/i).fill(who.email);
-    await strangersPage.getByLabel(/password|passwort/i).fill(who.password);
+    await strangersPage.getByRole('textbox', { name: /password|passwort/i }).fill(who.password);
     await strangersPage.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
 
     // And the whole way back, not to the front page.

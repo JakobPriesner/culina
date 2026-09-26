@@ -1279,5 +1279,8 @@
   "plan.recipe.close": "Close",
   "plan.recipe.loading": "Loading this week",
   "plan.recipe.done": "Added to {day}.",
-  "plan.recipe.failed": "This recipe couldn't be added to the plan."
+  "plan.recipe.failed": "This recipe couldn't be added to the plan.",
+  "field.showPassword": "Show password",
+  "field.showToken": "Show token",
+  "field.showKey": "Show key"
 }
