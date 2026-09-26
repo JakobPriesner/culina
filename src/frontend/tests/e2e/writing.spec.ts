@@ -31,6 +31,12 @@ const ingredientsOf = (page: Page) =>
 const newIngredient = (page: Page) =>
   page.getByRole('group', { name: /new ingredient|neue zutat/i });
 
+/** A one-pixel PNG, which is a real image and weighs nothing. */
+const png = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+);
+
 interface Written {
   readonly amount?: string;
   readonly unit?: string;
@@ -169,6 +175,50 @@ test.describe('writing a recipe', () => {
     await page.getByRole('button', { name: /^(one more|eine mehr)$/i }).click();
 
     await expect(method).toContainText(/250\s*g\s*Butter/);
+  });
+
+  test('keeps saving after the photo is added or removed', async () => {
+    const title = unique('Photographed');
+
+    await page.goto('/recipes/new');
+    await page.getByLabel(/^\s*(title|titel)\s*$/i).fill(title);
+    await page.getByRole('button', { name: /create recipe|rezept erstellen/i }).click();
+    await expect(page).toHaveURL(/\/edit/);
+
+    await write(page, { amount: '200', unit: 'g', name: 'Butter' });
+    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+
+    // Saved by its own endpoint, and a change to the recipe all the same: the
+    // version moves on, and every save after it used to be refused as though
+    // somebody else had written in between.
+    await page
+      .getByLabel(/choose a photo|foto auswählen/i)
+      .setInputFiles({ name: 'dish.png', mimeType: 'image/png', buffer: png });
+    await expect(
+      page.getByRole('button', { name: /remove the photo|foto entfernen/i })
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: /add a step|schritt hinzufügen/i }).click();
+
+    const step = page.getByRole('combobox', { name: /step 1|schritt 1/i });
+
+    await step.fill('Schmilz @But');
+    await step.press('Enter');
+    await step.pressSequentially('in der Pfanne.');
+
+    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /remove the photo|foto entfernen/i }).click();
+    await expect(
+      page.getByRole('button', { name: /choose a photo|foto auswählen/i })
+    ).toBeVisible();
+
+    await step.pressSequentially(' Dann servieren.');
+
+    await expect(page.getByText(/^(saved|gespeichert)$/i)).toBeVisible();
+    await expect(
+      page.getByText(/someone changed this recipe|jemand hat dieses rezept geändert/i)
+    ).toHaveCount(0);
   });
 
   test('measures in a unit this kitchen invented, and scales it', async () => {
