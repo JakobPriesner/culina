@@ -80,6 +80,7 @@
   );
 
   const shelves = $derived(cookbooks.membershipsOf(recipeId));
+  const alreadyCooking = $derived(cooking.session?.recipeId === recipeId);
 
   /**
    * Replaced, not pushed: scaling is a view of the recipe, and every tap of the
@@ -192,7 +193,10 @@
 
 <Page>
   <p class="back">
-    <a href={resolve('/(app)')}>← {m['recipe.back']()}</a>
+    <a href={resolve('/(app)')} aria-label={m['recipe.back']()}>
+      <span aria-hidden="true">←</span>
+      <span class="back-label">{m['recipe.back']()}</span>
+    </a>
   </p>
 
   {#if recipes.status === 'failed'}
@@ -224,7 +228,7 @@
       recipe={recipes.detail}
       {servings}
       onservings={scale}
-      onstartcooking={startCooking}
+      onstartcooking={alreadyCooking ? undefined : startCooking}
       onaddtolist={addToShoppingList}
       onaddtoplan={() => (addingToPlan = true)}
       onaddtocookbook={() => (addingToCookbook = true)}
@@ -295,6 +299,30 @@
 
   .back a:hover {
     color: var(--text);
+  }
+
+  /* Keep the explicit way back that preserves the library's search state, but
+     let the arrow carry it on a phone. The link's aria-label remains the full
+     name, so compact is only visual. */
+  @media (width < 52rem) {
+    .back {
+      margin-bottom: var(--space-2);
+    }
+
+    .back a {
+      display: inline-grid;
+      place-items: center;
+      width: var(--control-sm);
+      min-height: var(--control-sm);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      background: var(--surface);
+      font-size: var(--text-lg);
+    }
+
+    .back-label {
+      display: none;
+    }
   }
 
   /* Paper cannot be navigated. */

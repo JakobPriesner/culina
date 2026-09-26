@@ -425,7 +425,12 @@
   };
 </script>
 
-<article class="surface" class:cooking class:perStep>
+<article
+  class="surface"
+  class:cooking
+  class:perStep
+  class:photographed={Boolean(recipe.imageId && !cooking)}
+>
   <!--
     The photo comes first while reading and disappears while cooking: it is what
     makes you choose the recipe, and it is dead weight once you are standing at
@@ -1417,11 +1422,97 @@
    * control down there is given the whole line to land on.
    */
   @media (width < 52rem) {
-    /* Under the title rather than beside it: a heading set at display size and
-       a worded button cannot share a phone's line, and squeezing the heading to
-       make them is giving up the wrong one. */
+    /* Reading is the job here, so the phone keeps the recipe's identity without
+       spending its whole first screenful on it. The photograph becomes a wide
+       banner, the title steps down one size, and the labelled supporting action
+       becomes the same familiar basket icon used by the shopping tab. Its
+       aria-label remains the complete name. */
+    .surface {
+      position: relative;
+      gap: var(--space-4);
+    }
+
+    .hero {
+      aspect-ratio: 4 / 1;
+      max-height: 7rem;
+      border-radius: var(--radius-md);
+    }
+
     .titleRow {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: var(--space-2);
+    }
+
+    .title {
+      font-size: var(--text-3xl);
+      line-height: var(--leading-tight);
+    }
+
+    .actions {
+      gap: var(--space-1);
+    }
+
+    /* The photo already owns this strip of the first screen. Putting the two
+       small controls on it keeps them immediately available and gives even a
+       long recipe name the whole line below. Recipes without a photo keep the
+       actions beside their title, where there is no image to carry them. */
+    .photographed .actions {
+      position: absolute;
+      inset-block-start: var(--space-2);
+      inset-inline-end: var(--space-2);
+      z-index: var(--z-sticky);
+    }
+
+    .actions :global(.button) {
+      width: var(--control-md);
+      padding-inline: 0;
+    }
+
+    .actions :global(.button .label) {
+      display: none;
+    }
+
+    .meta,
+    .description,
+    .shelves {
+      margin-top: var(--space-2);
+    }
+
+    /* A long shelf name is context, not the recipe itself. Keep it available
+       in the link while preventing it from taking four lines before the first
+       ingredient on a phone. */
+    .shelves {
+      display: flex;
+      align-items: baseline;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .shelves a {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .shelves-label {
+      flex: none;
+    }
+
+    .origin {
+      margin-top: var(--space-1);
+    }
+
+    .servings {
+      gap: var(--space-2);
+      padding-block: var(--space-3);
+    }
+
+    .servings :global(.button) {
+      min-height: var(--control-sm);
+      padding-inline: var(--space-3);
+      font-size: var(--text-sm);
     }
 
     .foot {
