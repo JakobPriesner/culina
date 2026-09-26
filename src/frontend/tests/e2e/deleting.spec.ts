@@ -6,7 +6,8 @@ import {
   seedRecipe,
   signInWithHousehold,
   skipReason,
-  unique
+  unique,
+  writeHeaders
 } from './support/culina';
 
 /**
@@ -77,5 +78,34 @@ test.describe('deleting a recipe', () => {
 
   test('is gone from the server, not only from the screen', async () => {
     expect((await page.request.get(`/api/v1/recipes/${recipeId}`)).status()).toBe(404);
+  });
+
+  test('takes the "now cooking" bar with it when it was being cooked', async () => {
+    title = unique('Gazpacho');
+    recipeId = await seedRecipe(page, { title });
+
+    const started = await page.request.post('/api/v1/cook-sessions', {
+      headers: await writeHeaders(page),
+      data: { recipeId, servings: 2 }
+    });
+
+    expect(started.ok(), await started.text()).toBe(true);
+
+    const bar = page.getByRole('link', { name: /keep cooking|weiterkochen/i });
+    const dialog = await askToDelete();
+
+    // Behind the question, still offering to go back to the hob.
+    await expect(bar).toBeVisible();
+
+    await dialog.getByRole('button', { name: /^(delete|löschen)$/i }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(bar).toBeHidden();
+
+    // And not merely hidden here: the server ended the session with the
+    // recipe, so a fresh page has nothing to offer either.
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(bar).toBeHidden();
   });
 });

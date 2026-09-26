@@ -154,6 +154,20 @@ class CookingStore {
     return result.ok;
   }
 
+  /**
+   * Lets go of the session for a recipe that has been deleted.
+   *
+   * The server ended it along with the recipe, so there is nothing to send;
+   * the bar offering to resume it is all that is left, and it would resume
+   * onto nothing.
+   */
+  forget(recipeId: string): void {
+    if (this.#session?.recipeId === recipeId) {
+      this.#session = null;
+      this.#pendingStep = null;
+    }
+  }
+
   reset(): void {
     this.#session = null;
     this.#resolved = false;

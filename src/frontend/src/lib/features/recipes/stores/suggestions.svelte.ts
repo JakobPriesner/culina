@@ -121,12 +121,7 @@ class SuggestionStore {
   async dismiss(recipeId: string): Promise<AppError | null> {
     const before = this.#answers;
 
-    this.#answers = Object.fromEntries(
-      Object.entries(before).map(([key, answer]) => [
-        key,
-        { ...answer, items: answer.items.filter((item) => item.id !== recipeId) }
-      ])
-    );
+    this.#answers = this.#without(recipeId);
 
     const result = await request(() =>
       http.PUT('/api/v1/recipes/{recipeId}/suggestion-dismissal', {
@@ -161,6 +156,26 @@ class SuggestionStore {
     this.#asked.clear();
 
     return null;
+  }
+
+  /**
+   * Stops suggesting a recipe that has been deleted.
+   *
+   * Each question is asked once, so without this the library would go on
+   * offering a recipe that opens onto nothing until the next reload.
+   */
+  forget(recipeId: string): void {
+    this.#answers = this.#without(recipeId);
+  }
+
+  /** Every answer, with one recipe taken out of all of them. */
+  #without(recipeId: string): Record<string, Answer> {
+    return Object.fromEntries(
+      Object.entries(this.#answers).map(([key, answer]) => [
+        key,
+        { ...answer, items: answer.items.filter((item) => item.id !== recipeId) }
+      ])
+    );
   }
 
   reset(): void {

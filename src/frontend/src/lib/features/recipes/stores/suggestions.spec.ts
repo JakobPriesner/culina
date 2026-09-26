@@ -169,3 +169,23 @@ describe('mapping', () => {
     expect(suggestions.for(household, { limit: 1 })[0]?.reason).toBeNull();
   });
 });
+
+describe('a deleted recipe', () => {
+  it('is taken out of every answer, without asking the server anything', async () => {
+    // Each question is asked once, so an answer kept from before the delete
+    // would go on offering a recipe that opens onto nothing.
+    serverAnswers(() => answer([suggestion('a'), suggestion('b')]));
+
+    await suggestions.ask(household, { limit: 2 });
+    await suggestions.ask(household, { limit: 2, slot: 'dinner' });
+
+    const fetched = serverAnswers(() => answer([]));
+    suggestions.forget('a');
+
+    expect(suggestions.for(household, { limit: 2 }).map((item) => item.id)).toEqual(['b']);
+    expect(suggestions.for(household, { limit: 2, slot: 'dinner' }).map((item) => item.id)).toEqual(
+      ['b']
+    );
+    expect(fetched).not.toHaveBeenCalled();
+  });
+});

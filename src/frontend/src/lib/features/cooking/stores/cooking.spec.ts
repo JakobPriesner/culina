@@ -146,3 +146,23 @@ describe('finishing', () => {
     expect(cooking.session).toBeNull();
   });
 });
+
+describe('when the recipe is deleted', () => {
+  it('lets go of its session, which the server ended along with it', async () => {
+    await cooking.resume();
+
+    serverAnswers(() => json({}));
+    cooking.forget('r1');
+
+    expect(cooking.session).toBeNull();
+    expect(sent).toEqual([]);
+  });
+
+  it('keeps cooking anything else', async () => {
+    await cooking.resume();
+
+    cooking.forget('r2');
+
+    expect(cooking.session?.recipeId).toBe('r1');
+  });
+});
