@@ -517,7 +517,6 @@
   "recipes.list.recent": "Newest first",
   "recipe.stepNeeds": "For this step",
   "recipe.quickLookTotal": "Total: {amount}",
-  "recipe.quickLookAllHere": "All used in this step",
   "recipe.quickLookShowInList": "Show in ingredient list",
   "recipe.quickLookClose": "Close details",
   "picker.search": "Find a recipe",

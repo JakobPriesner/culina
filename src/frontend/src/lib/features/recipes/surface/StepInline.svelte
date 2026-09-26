@@ -19,6 +19,8 @@
    * The whitespace in this file is significant: a step is laid out with
    * `white-space: pre-wrap`, so a line break written here for tidiness would be
    * a line break on the page. That is why the tags below are packed together.
+   * Svelte also trims a space at the end of a block, which is why a reference
+   * with no amount is its own branch rather than an amount that may be empty.
    */
   interface Props {
     nodes: readonly Inline[];
@@ -60,27 +62,32 @@
 <!-- A link in a step goes off site by construction: the parser only keeps the
      ones that do, and resolve() is for this app's own routes. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
-{#each nodes as node, index (index)}{#if node.kind === 'text'}{node.text}{:else if node.kind === 'ingredient'}{#if interactive}<button
+{#each nodes as node, index (index)}{#if node.kind === 'text'}{node.text}{:else if node.kind === 'ingredient'}{@const amount =
+      scaling.show(node.quantity).text}{#if interactive}<button
         bind:this={buttonRefs[index]}
         class="ingredient"
-        class:is-highlighted={highlighted === node.ingredientId}
+        class:is-highlighted={highlighted === node.ingredientId || activeQuickLook === index}
         type="button"
+        aria-haspopup="dialog"
+        aria-expanded={activeQuickLook === index}
         onmouseenter={() => onhighlight?.(node.ingredientId)}
         onmouseleave={() => onhighlight?.(null)}
         onfocus={() => onhighlight?.(node.ingredientId)}
         onblur={() => onhighlight?.(null)}
         onclick={() => (activeQuickLook = activeQuickLook === index ? null : index)}
-        >{scaling.show(node.quantity).text} {node.name}</button
+        >{#if amount}<span class="amount">{amount}</span>
+          <span class="name">{node.name}</span>{:else}<span class="name">{node.name}</span
+          >{/if}</button
       >{#if activeQuickLook === index && buttonRefs[index]}<IngredientQuickLook
           anchor={buttonRefs[index]}
           name={node.name}
-          stepAmount={scaling.show(node.quantity).text}
+          stepAmount={amount}
           totalAmount={totalFor(node.ingredientId)}
           note={noteFor(node.ingredientId)}
           onclose={() => (activeQuickLook = null)}
           onlocate={onlocate ? () => onlocate?.(node.ingredientId) : undefined}
         />{/if}{:else}<strong class="ingredient-plain"
-        >{scaling.show(node.quantity).text} {node.name}</strong
+        >{#if amount}{amount} {node.name}{:else}{node.name}{/if}</strong
       >{/if}{:else if node.kind === 'code'}<code>{node.text}</code
     >{:else if node.kind === 'link'}{#if interactive}<a
         href={node.href}
@@ -137,39 +144,52 @@
 
 <style>
   /*
-   * Apple-grade inline ingredient capsule:
-   * A tactile, translucent pill with tabular numbers and an elegant hover glow.
-   * Fits smoothly into pre-wrap running text without distorting line height.
+   * An ingredient reference is part of the sentence, so it is set as marked
+   * words rather than as a control dropped into them: a pale accent wash with
+   * a quiet edge along the baseline, the way a highlighter marks a line on
+   * paper. A box drawn all the way round made every reference read as a form
+   * field, and a paragraph with four of them as a form.
+   *
+   * The amount carries the weight, because it is the part that changes as the
+   * recipe scales and the part the eye comes back for mid-step. The name stays
+   * at the paragraph's own weight — it is a word of the sentence.
+   *
+   * Nothing moves on hover. Lifting a word by half a pixel shifts it against
+   * its neighbours on the line, and running text should hold still.
+   *
+   * A button is laid out as one box whatever its display says, so it sets its
+   * own tighter line height: wash and padding together stay shorter than the
+   * paragraph's line, and a line with a reference in it is no taller than one
+   * without — nor does a reference touch the one on the line below.
    */
   .ingredient {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.25em;
-    padding: 0.08em 0.45em;
-    margin: -0.08em 0.1em;
-    border: 1px solid var(--border-accent);
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.1em 0.3em;
+    margin: 0 0.05em;
+    border: 0;
     border-radius: var(--radius-sm);
     background: var(--surface-accent-subtle);
+    box-shadow: inset 0 -1px 0 var(--border-accent);
     color: var(--text);
     font: inherit;
-    line-height: inherit;
-    cursor: pointer;
+    line-height: var(--leading-tight);
+    text-align: inherit;
     vertical-align: baseline;
+    cursor: pointer;
     transition:
       background-color var(--duration-fast) var(--ease-out),
-      border-color var(--duration-fast) var(--ease-out),
-      box-shadow var(--duration-fast) var(--ease-out),
-      transform var(--duration-fast) var(--ease-spatial);
+      box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .ingredient .amount {
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .ingredient:hover {
     background: var(--surface-highlight);
-    border-color: var(--accent);
-    transform: translateY(-0.5px);
-  }
-
-  .ingredient:active {
-    transform: translateY(0.5px) scale(0.98);
   }
 
   .ingredient:focus-visible {
@@ -178,15 +198,15 @@
   }
 
   /*
-   * Active bidirectional highlight:
-   * When hovering an ingredient in the ingredients list, all mentions of it
-   * across the steps illuminate with this warm, vibrant Apple glow.
+   * Pointed at from its line in the ingredient list, every mention of it lights
+   * up at once. The one whose quick look is open stays lit while it is, so the
+   * card is never left pointing at a word that looks like all the others.
    */
   .ingredient.is-highlighted {
     background: var(--surface-highlight);
-    border-color: var(--accent);
-    box-shadow: var(--shadow-highlight);
-    transform: translateY(-0.5px);
+    box-shadow:
+      inset 0 -1px 0 var(--accent),
+      var(--shadow-highlight);
   }
 
   .ingredient-plain {
@@ -236,7 +256,6 @@
       background: none;
       color: inherit;
       box-shadow: none;
-      transform: none;
     }
   }
 </style>
