@@ -6,6 +6,7 @@
   import AddToCookbookSheet from '$features/cookbooks/AddToCookbookSheet.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
+  import { cooking } from '$features/cooking/stores/cooking.svelte';
   import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
   import DeleteRecipeDialog from '$features/recipes/DeleteRecipeDialog.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
@@ -13,6 +14,8 @@
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
   import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { related } from '$features/recipes/stores/related.svelte';
+  import { suggestions } from '$features/recipes/stores/suggestions.svelte';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -123,6 +126,13 @@
     if (deleteFailure) {
       return;
     }
+
+    // What the server deleted along with it, taken out of the answers this
+    // browser keeps and would not ask for again. Everything else that showed
+    // the recipe reads afresh when it is next opened.
+    cooking.forget(recipe.id);
+    suggestions.forget(recipe.id);
+    related.forget(recipe.id);
 
     doomed = null;
     toaster.show({ message: () => m['recipe.delete.done']({ title: recipe.title }) });

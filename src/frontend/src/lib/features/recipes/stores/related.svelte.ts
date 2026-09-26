@@ -59,6 +59,23 @@ class RelatedStore {
     };
   }
 
+  /**
+   * Takes a deleted recipe off every shelf it was on.
+   *
+   * Each recipe's shelf is asked for once, so without this the recipe next
+   * door would go on showing one that opens onto nothing.
+   */
+  forget(recipeId: string): void {
+    this.#answers = Object.fromEntries(
+      Object.entries(this.#answers)
+        .filter(([key]) => key !== recipeId)
+        .map(([key, answer]) => [
+          key,
+          { ...answer, items: answer.items.filter((item) => item.id !== recipeId) }
+        ])
+    );
+  }
+
   reset(): void {
     this.#answers = {};
     this.#asked.clear();
