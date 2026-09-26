@@ -270,6 +270,161 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(0, list.Json!.Value.GetProperty("items").GetArrayLength());
     }
 
+    [Fact]
+    public async Task Heirs_ShouldListEveryHouseholdThatSeesTheRecipes_ForAnyMember()
+    {
+        // Arrange
+        var (ada, grace, flat, _) = await FlatAsync();
+        var gracesKitchen = await GracesKitchenInheritingAsync(grace, flat);
+
+        // Act
+        var heirs = await ada.Client.GetAsync($"/api/v1/households/{ada.HouseholdId}/heirs", Token);
+        var stranger = await grace.GetAsync($"/api/v1/households/{ada.HouseholdId}/heirs", Token);
+
+        // Assert
+        // Through the flat too: Grace's kitchen reads Ada's recipes, so Ada's
+        // kitchen is told about it.
+        var items = Items(heirs);
+        Assert.Equal([flat, gracesKitchen], items.Select(item => item.GetProperty("householdId").GetGuid()));
+        Assert.Equal(ada.HouseholdId, items[0].GetProperty("inheritsFrom").GetGuid());
+        Assert.Equal(flat, items[1].GetProperty("inheritsFrom").GetGuid());
+        Assert.Equal(HttpStatusCode.NotFound, stranger.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemoveHeir_ShouldLetAnOwnerOfTheParentCutLooseAHouseholdTheyAreNotIn()
+    {
+        // Arrange
+        var (ada, grace, flat, bolognese) = await FlatAsync();
+        var gracesKitchen = await GracesKitchenInheritingAsync(grace, flat);
+
+        // Act
+        // Ada owns the flat and is nowhere near Grace's kitchen.
+        var response = await ada.Client.DeleteAsync($"/api/v1/households/{flat}/heirs/{gracesKitchen}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var library = await grace.GetAsync($"/api/v1/recipes?householdId={gracesKitchen}", Token);
+        Assert.DoesNotContain(Items(library), item => item.GetProperty("recipeId").GetGuid() == bolognese);
+        var heirs = await ada.Client.GetAsync($"/api/v1/households/{flat}/heirs", Token);
+        Assert.Empty(Items(heirs));
+    }
+
+    [Fact]
+    public async Task RemoveHeir_ShouldBeRefused_ForAPlainMemberOfTheParent()
+    {
+        // Arrange
+        var (_, grace, flat, _) = await FlatAsync();
+        var gracesKitchen = await GracesKitchenInheritingAsync(grace, flat);
+
+        // Act
+        var response = await grace.DeleteAsync($"/api/v1/households/{flat}/heirs/{gracesKitchen}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("households.not_owner", response.ProblemCode);
+    }
+
+    [Fact]
+    public async Task RemoveHeir_ShouldSayNotFound_ForAHouseholdThatInheritsThroughAnother()
+    {
+        // Arrange
+        var (ada, grace, flat, _) = await FlatAsync();
+        var gracesKitchen = await GracesKitchenInheritingAsync(grace, flat);
+
+        // Act
+        var response = await ada.Client.DeleteAsync(
+            $"/api/v1/households/{ada.HouseholdId}/heirs/{gracesKitchen}",
+            Token);
+
+        // Assert
+        // That link is the flat's to cut; cutting the flat would take it too.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("households.not_found", response.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Copy_ShouldGiveTheHeirARecipeOfItsOwn_ThatItCanChange()
+    {
+        // Arrange
+        var (ada, grace, flat, bolognese) = await FlatAsync();
+
+        // Act
+        var copied = await grace.PostAsync($"/api/v1/recipes/{bolognese}/copies", new { householdId = flat }, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, copied.StatusCode);
+        var copy = copied.Json!.Value;
+        var copyId = copy.GetProperty("recipeId").GetGuid();
+        Assert.NotEqual(bolognese, copyId);
+        Assert.Equal(flat, copy.GetProperty("householdId").GetGuid());
+        Assert.Equal("Bolognese", copy.GetProperty("title").GetString());
+
+        var read = await grace.GetAsync($"/api/v1/recipes/{copyId}", Token);
+        var renamed = await PutAsync(
+            grace,
+            $"/api/v1/recipes/{copyId}",
+            read.ETag,
+            new { title = "Grace's Bolognese", language = "en", yieldAmount = 4, yieldKind = "servings", groups = Array.Empty<object>(), steps = Array.Empty<object>(), tags = Array.Empty<string>() });
+        Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
+
+        // The original is Ada's, and is exactly as she wrote it.
+        var original = await ada.Client.GetAsync($"/api/v1/recipes/{bolognese}", Token);
+        Assert.Equal("Bolognese", original.Json!.Value.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task Copy_ShouldSayNotFound_ForAHouseholdTheCallerIsNotIn()
+    {
+        // Arrange
+        var (ada, grace, _, bolognese) = await FlatAsync();
+
+        // Act
+        var response = await grace.PostAsync(
+            $"/api/v1/recipes/{bolognese}/copies",
+            new { householdId = ada.HouseholdId },
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Plan_ShouldDropAMealOfARecipeNoLongerInherited_AndBringItBackWithIt()
+    {
+        // Arrange
+        var (ada, grace, flat, bolognese) = await FlatAsync();
+        await grace.PostAsync(
+            $"/api/v1/households/{flat}/meal-plan",
+            new { date = "2026-10-01", recipeId = bolognese },
+            Token);
+
+        // Act
+        await ada.Client.PutAsync($"/api/v1/households/{flat}/inheritance", new { householdId = (Guid?)null }, Token);
+        var cut = await grace.GetAsync($"/api/v1/households/{flat}/meal-plan?from=2026-10-01", Token);
+
+        await ada.Client.PutAsync($"/api/v1/households/{flat}/inheritance", new { householdId = ada.HouseholdId }, Token);
+        var restored = await grace.GetAsync($"/api/v1/households/{flat}/meal-plan?from=2026-10-01", Token);
+
+        // Assert
+        Assert.DoesNotContain(bolognese, Planned(cut));
+        Assert.Contains(bolognese, Planned(restored));
+    }
+
+    [Fact]
+    public async Task Suggestions_ShouldSayWhoseAnInheritedRecipeIs()
+    {
+        // Arrange
+        var (ada, grace, flat, bolognese) = await FlatAsync();
+
+        // Act
+        var suggestions = await grace.GetAsync($"/api/v1/suggestions?householdId={flat}", Token);
+
+        // Assert
+        var suggested = Assert.Single(Items(suggestions), item => item.GetProperty("recipeId").GetGuid() == bolognese);
+        Assert.Equal(ada.HouseholdId, suggested.GetProperty("householdId").GetGuid());
+    }
+
     /// <summary>
     /// Ada's kitchen with a Bolognese in it, the flat that inherits it, and
     /// Grace in the flat and in a kitchen of her own.
@@ -293,6 +448,22 @@ public class InheritanceTests(PostgresFixture postgres)
 
         return (ada, grace, flat, bolognese);
     }
+
+    /// <summary>Grace's own kitchen, made to inherit the flat.</summary>
+    private static async Task<Guid> GracesKitchenInheritingAsync(ApiClient grace, Guid flat)
+    {
+        var kitchen = await FirstHouseholdIdAsync(grace, except: flat);
+        var set = await grace.PutAsync($"/api/v1/households/{kitchen}/inheritance", new { householdId = flat }, Token);
+
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+
+        return kitchen;
+    }
+
+    private static List<Guid> Planned(ApiResponse week) =>
+        [.. week.Json!.Value.GetProperty("days").EnumerateArray()
+            .SelectMany(day => day.GetProperty("meals").EnumerateArray())
+            .Select(meal => meal.GetProperty("recipeId").GetGuid())];
 
     private static async Task<Guid> CreateAsync(ApiClient client, string name, Guid? inheritsFrom) =>
         (await client.PostAsync("/api/v1/households", new { name, inheritsFrom }, Token))

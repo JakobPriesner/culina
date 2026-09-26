@@ -57,6 +57,13 @@ class RecipeStore {
   #items = $state<RecipeSummary[]>([]);
   #detail = $state<Recipe | null>(null);
   #status = $state<LoadStatus>('idle');
+
+  /**
+   * Whose items these are. Plain rather than $state: it is read before the
+   * first await of a method an effect calls, and a tracked read there would
+   * make the method's own writes call it again.
+   */
+  #householdId: string | null = null;
   #error = $state<AppError | null>(null);
   #total = $state(0);
   #cursor = $state<string | null>(null);
@@ -147,6 +154,15 @@ class RecipeStore {
   /** Replaces the list. Used when the filters change. */
   async list(householdId: string, filters: RecipeFilters = {}): Promise<void> {
     const token = this.#beginRead();
+
+    // Another household's recipes are not a list to keep on screen while this
+    // one's arrive: for that moment they would be under the wrong name.
+    if (this.#householdId !== householdId) {
+      this.#householdId = householdId;
+      this.#items = [];
+      this.#total = 0;
+      this.#cursor = null;
+    }
 
     this.#status = 'loading';
     this.#error = null;
@@ -260,6 +276,31 @@ class RecipeStore {
   }
 
   /**
+   * Makes a household its own copy of a recipe it can read — how a household
+   * changes a recipe it only inherits.
+   *
+   * The copy becomes the open recipe, trusted from the answer as a new one is.
+   */
+  async copy(recipeId: string, householdId: string): Promise<Recipe | AppError> {
+    const result = await request(() =>
+      http.POST('/api/v1/recipes/{recipeId}/copies', {
+        params: { path: { recipeId } },
+        body: { householdId }
+      })
+    );
+
+    if (!result.ok) {
+      return result.error;
+    }
+
+    const copied = toRecipe(result.value);
+
+    this.#detail = copied;
+
+    return copied;
+  }
+
+  /**
    * Applies a change here first, then sends it.
    *
    * The whole recipe is snapshotted before the change and that exact snapshot
@@ -356,6 +397,7 @@ class RecipeStore {
   }
 
   reset(): void {
+    this.#householdId = null;
     this.#items = [];
     this.#detail = null;
     this.#status = 'idle';

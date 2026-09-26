@@ -123,6 +123,24 @@ public sealed class Household
         HouseholdMembershipPolicy.CanAdminister(this, actingUserId)
             .Tap(() => InheritsFrom = null);
 
+    /// <summary>
+    /// Stops inheriting from a household whose owner has asked it to.
+    /// </summary>
+    /// <param name="parent">The household it inherits from.</param>
+    /// <param name="actingUserId">An owner of <paramref name="parent"/>.</param>
+    /// <remarks>
+    /// The other half of <see cref="Inherit"/>. Inheriting is set up from the
+    /// heir's side, by somebody who can see both kitchens; this is how the
+    /// kitchen being read keeps a say over who reads it.
+    /// </remarks>
+    public Result StopInheritingFrom(Household parent, Guid actingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+
+        return HouseholdMembershipPolicy.CanCutInheritance(this, parent, actingUserId)
+            .Tap(() => InheritsFrom = null);
+    }
+
     /// <summary>Adds someone to the household.</summary>
     /// <param name="userId">Who is joining.</param>
     /// <param name="role">What they may do.</param>

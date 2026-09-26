@@ -2,6 +2,7 @@
   import { formatList, m } from '$shell/i18n';
 
   import RecipeCard from './RecipeCard.svelte';
+  import { inheritedFrom } from './recipeMeta';
   import { related } from './stores/related.svelte';
   import type { RelatedReason } from './types';
 
@@ -22,9 +23,14 @@
    */
   interface Props {
     recipeId: string;
+    /**
+     * The households this one inherits recipes from, by id, with their names.
+     * A recipe from one of them says so.
+     */
+    inherited?: Readonly<Record<string, string>>;
   }
 
-  let { recipeId }: Props = $props();
+  let { recipeId, inherited = {} }: Props = $props();
 
   const items = $derived(related.of(recipeId));
 
@@ -56,7 +62,7 @@
     <ul class="shelf">
       {#each items as recipe (recipe.id)}
         <li>
-          <RecipeCard {recipe} />
+          <RecipeCard {recipe} from={inheritedFrom(recipe, inherited)} />
           <p class="because">{because(recipe.reason)}</p>
         </li>
       {/each}

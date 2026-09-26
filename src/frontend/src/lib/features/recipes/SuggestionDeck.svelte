@@ -3,6 +3,7 @@
 
   import { m } from '$shell/i18n';
   import FeaturedRecipe from './FeaturedRecipe.svelte';
+  import { inheritedFrom } from './recipeMeta';
   import { reasonLinesFor } from './suggestionReason';
   import type { Suggestion } from './types';
 
@@ -38,9 +39,14 @@
     items: readonly Suggestion[];
     /** Stops suggesting one. The only thing here that writes anything down. */
     ondismiss?: (recipeId: string) => void;
+    /**
+     * The households this one inherits recipes from, by id, with their names.
+     * A recipe from one of them says so.
+     */
+    inherited?: Readonly<Record<string, string>>;
   }
 
-  let { items, ondismiss }: Props = $props();
+  let { items, ondismiss, inherited = {} }: Props = $props();
 
   let track = $state<HTMLUListElement>();
   let scrolled = $state(0);
@@ -99,6 +105,7 @@
           reason={reasons[position]}
           priority={position === 0}
           ondismiss={ondismiss ? () => ondismiss(suggestion.id) : undefined}
+          from={inheritedFrom(suggestion, inherited)}
         />
       </li>
     {/each}

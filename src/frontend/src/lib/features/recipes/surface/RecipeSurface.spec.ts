@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/svelte';
+import { fireEvent, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -224,6 +224,19 @@ describe('reading a recipe', () => {
     const remove = screen.getByRole('button', { name: 'Delete recipe', ...hidden });
 
     expect(remove.parentElement?.lastElementChild).toBe(remove);
+  });
+
+  it('offers a copy instead of editing, for a recipe the household only inherits', async () => {
+    const oncopy = vi.fn();
+    render({ oncopy, onaddtoplan: () => {} });
+
+    const hidden = { hidden: true } as const;
+
+    expect(screen.queryByRole('link', { name: 'Edit', ...hidden })).not.toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Make my own copy', ...hidden }));
+
+    expect(oncopy).toHaveBeenCalledOnce();
   });
 
   it('says nothing about editing when there is nowhere to edit', () => {

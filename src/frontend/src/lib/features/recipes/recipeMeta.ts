@@ -47,3 +47,13 @@ export function matchLineFor(recipe: RecipeSummary): string | null {
 
   return m['recipes.match.missing']({ count: recipe.match.missing });
 }
+
+/**
+ * Where a recipe comes from, when it is inherited: the name of the household
+ * it belongs to, if that is one the household on screen inherits from, and
+ * null for its own recipes and for a list that does not say.
+ */
+export const inheritedFrom = (
+  recipe: Pick<RecipeSummary, 'householdId'>,
+  inherited: Readonly<Record<string, string>>
+): string | null => (recipe.householdId ? (inherited[recipe.householdId] ?? null) : null);
