@@ -87,6 +87,22 @@ describe('mentioning an ingredient in a step', () => {
     expect(step()).toHaveValue('Sprinkle @saffron ');
   });
 
+  it('does not offer to add a finished mention and the words after it', async () => {
+    const onadd = vi.fn();
+
+    renderWithProviders(MentionHarness, { props: { value: 'Melt @butter ', onadd } });
+
+    await userEvent.click(step());
+    await userEvent.keyboard('{End}melt.');
+
+    expect(screen.queryByRole('option', { name: /Add/ })).not.toBeInTheDocument();
+
+    await userEvent.keyboard('{Enter}');
+
+    expect(onadd).not.toHaveBeenCalled();
+    expect(step()).toHaveValue('Melt @butter melt.\n');
+  });
+
   it('does not offer to add a name the recipe already has', async () => {
     renderWithProviders(MentionHarness, {});
 
