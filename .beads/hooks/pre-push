@@ -1,4 +1,18 @@
 #!/usr/bin/env sh
+# Whatever is on its way to main passes CI's gates here first:
+# scripts/ci-local.sh, against the commit being pushed. `git push --no-verify`
+# skips it. Outside the beads markers, which bd keeps across reinstalls.
+refs="$(mktemp)"
+cat >"$refs"
+while read -r _ local_sha remote_ref _; do
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac # deleting the branch
+  if [ "$remote_ref" = refs/heads/main ]; then
+    scripts/ci-local.sh "$local_sha" </dev/null || { rm -f "$refs"; exit 1; }
+  fi
+done <"$refs"
+# bd reads the same refs.
+exec <"$refs"
+rm -f "$refs"
 # --- BEGIN BEADS INTEGRATION v1.1.0 ---
 # This section is managed by beads. Do not remove these markers.
 if command -v bd >/dev/null 2>&1; then

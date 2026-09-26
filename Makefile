@@ -35,7 +35,7 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help dev db-up db-down db-reset db-shell backend frontend \
-        build test test-backend test-frontend test-e2e lint format api \
+        build test test-backend test-frontend test-e2e ci lint format api \
         image image-run clean
 
 help: ## Show this help
@@ -104,6 +104,10 @@ test-e2e: ## Run the Playwright suite against a running stack
 	@# The first-run suite needs that account to be an administrator — it opens
 	@# registration before it can register anyone.
 	cd $(FRONTEND) && pnpm test:e2e
+
+ci: ## Run every gate CI holds main to, end to end included, against HEAD
+	@# The same run the pre-push hook makes before anything reaches main.
+	scripts/ci-local.sh
 
 # ── Quality ──────────────────────────────────────────────────────────────────
 
