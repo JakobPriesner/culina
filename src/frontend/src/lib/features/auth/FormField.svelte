@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Field, TextInput } from '$ds';
+  import { m } from '$shell/i18n';
 
   import type { Submission } from './submission.svelte';
 
@@ -66,6 +67,7 @@
       {describedBy}
       {invalid}
       {type}
+      revealLabel={m['field.showPassword']()}
       {autocomplete}
       {inputmode}
       {required}
