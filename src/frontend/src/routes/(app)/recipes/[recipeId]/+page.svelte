@@ -7,6 +7,7 @@
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
+  import DeleteRecipeDialog from '$features/recipes/DeleteRecipeDialog.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import ShareRecipeSheet from '$features/recipes/ShareRecipeSheet.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
@@ -15,6 +16,8 @@
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { toaster } from '$shell/toaster.svelte';
+  import type { Recipe } from '$features/recipes/types';
+  import type { AppError } from '$api';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -32,6 +35,17 @@
   let addingToCookbook = $state(false);
   let addingToPlan = $state(false);
   let sharing = $state(false);
+
+  /**
+   * The recipe the delete question is about, taken when it is asked.
+   *
+   * Held rather than read off the store, because the store lets go of the
+   * recipe the moment it is deleted, and the question should not lose its
+   * title in the instant before it closes.
+   */
+  let doomed = $state<Recipe | null>(null);
+  let deleting = $state(false);
+  let deleteFailure = $state<AppError | null>(null);
 
   $effect(() => {
     if (recipeId) {
@@ -93,6 +107,29 @@
     });
   }
 
+  async function remove() {
+    const recipe = doomed;
+
+    if (!recipe || deleting) {
+      return;
+    }
+
+    deleting = true;
+    deleteFailure = await recipes.remove(recipe.id, recipe.version);
+    deleting = false;
+
+    // The question stays open on a failure: the recipe is still there, and
+    // trying again is the likeliest next thing.
+    if (deleteFailure) {
+      return;
+    }
+
+    doomed = null;
+    toaster.show({ message: () => m['recipe.delete.done']({ title: recipe.title }) });
+
+    await goto(resolve('/(app)'));
+  }
+
   /** The yield travels with you, so cooking opens at the number you chose. */
   function startCooking() {
     const target = new URL(resolve('/(app)/recipes/[recipeId]/cook', { recipeId }), page.url);
@@ -133,6 +170,10 @@
       onaddtoplan={() => (addingToPlan = true)}
       onaddtocookbook={() => (addingToCookbook = true)}
       onshare={() => (sharing = true)}
+      ondelete={() => {
+        doomed = recipes.detail;
+        deleteFailure = null;
+      }}
       editable
       cookbooks={shelves}
     />
@@ -144,6 +185,15 @@
     <RecipeSurfaceSkeleton />
   {/if}
 </Page>
+
+<DeleteRecipeDialog
+  open={doomed !== null}
+  title={doomed?.title ?? ''}
+  {deleting}
+  error={deleteFailure}
+  onconfirm={() => void remove()}
+  onclose={() => (doomed = null)}
+/>
 
 <ShareRecipeSheet
   open={sharing}

@@ -330,6 +330,13 @@ class RecipeStore {
     if (outcome.ok) {
       this.#total = Math.max(0, this.#total - 1);
 
+      // Only once it is really gone: the recipe is still on screen behind the
+      // question while it is being asked. Afterwards, going back to its
+      // address asks the server rather than drawing a recipe that is not there.
+      if (this.#detail?.id === recipeId) {
+        this.#detail = null;
+      }
+
       return null;
     }
 
