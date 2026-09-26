@@ -51,11 +51,39 @@
     padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
   }
   .header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
     display: flex;
     justify-content: space-between;
     align-items: center;
     min-height: var(--space-24);
     gap: var(--space-4);
+  }
+  /* The same fade the app's own header uses, so the form scrolls out under the
+     brand instead of being cut off at its edge. */
+  .header::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: calc(100% + var(--space-8));
+    background: linear-gradient(to bottom, var(--surface) 35%, transparent);
+    pointer-events: none;
+  }
+  /* Positioned, so they paint above the fade rather than under it. */
+  .header > :global(*) {
+    position: relative;
+  }
+  /* In landscape or with a keyboard open, give the form its height back. */
+  @media screen and (max-height: 32rem) {
+    .header {
+      position: relative;
+      top: auto;
+    }
+    .header::before {
+      display: none;
+    }
   }
   .preferences {
     display: flex;
