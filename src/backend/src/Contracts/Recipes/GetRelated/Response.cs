@@ -13,6 +13,12 @@ public sealed record RelatedRecipe
     /// <summary>Which recipe.</summary>
     public required Guid RecipeId { get; init; }
 
+    /// <summary>
+    /// The household it belongs to. Another than the one asked about when that
+    /// one inherits it, which is what a card says "from" about.
+    /// </summary>
+    public required Guid HouseholdId { get; init; }
+
     /// <summary>Its title.</summary>
     public required string Title { get; init; }
 

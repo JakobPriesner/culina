@@ -1258,5 +1258,12 @@
   "editor.inherited.title": "Dieses Rezept kann hier nicht geändert werden",
   "problem.households.inheritance_cycle": "Dieser Haushalt sieht die Rezepte von diesem hier schon, deshalb kann dieser nicht von ihm erben.",
   "editor.inherited.back": "Zurück zum Rezept",
-  "locale.system": "System"
+  "locale.system": "System",
+  "household.heirs.title": "Haushalte, die diese Rezepte sehen",
+  "household.heirs.none": "Kein anderer Haushalt sieht sie.",
+  "household.heirs.through": "über {name}",
+  "household.heirs.remove": "Nicht mehr teilen",
+  "household.heirs.removed": "{name} sieht diese Rezepte nicht mehr.",
+  "recipe.copy.action": "Eigene Kopie anlegen",
+  "recipe.copy.done": "Kopiert. Diese hier könnt ihr ändern."
 }

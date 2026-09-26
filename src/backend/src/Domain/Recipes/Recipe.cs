@@ -236,6 +236,54 @@ public sealed class Recipe
         return Result.Success();
     }
 
+    /// <summary>
+    /// The same recipe in another household, with ids of its own.
+    /// </summary>
+    /// <param name="householdId">The household the copy belongs to.</param>
+    /// <param name="createdBy">Who is making the copy.</param>
+    /// <param name="now">The injected current time.</param>
+    /// <remarks>
+    /// Independent from the moment it exists: every ingredient line gets a new
+    /// id, and every step's mentions and needs are carried over to the copy's
+    /// own lines. A step still pointing at the original's lines would break the
+    /// first time the other household changed its recipe — and changing it is
+    /// exactly what they are still free to do. The picture is not the domain's
+    /// to copy; it is a stored file, shared by reference.
+    /// </remarks>
+    public Result<Recipe> CopyInto(Guid householdId, Guid createdBy, DateTimeOffset now)
+    {
+        var copy = Create(householdId, Title, createdBy, Language, now);
+        var renamed = new Dictionary<Guid, Guid>();
+
+        var groups = Groups
+            .Select(group => group.Ingredients
+                .Select(line => RecipeIngredient
+                    .Create(null, line.SortOrder, line.Quantity, line.Name, line.Note)
+                    .Tap(created => renamed[line.Id] = created.Id))
+                .Collect()
+                .Bind(lines => IngredientGroup.Create(null, group.Name, group.SortOrder, lines)))
+            .Collect();
+
+        var steps = groups.Bind(_ => Steps
+            .Select(step => Step.Create(
+                null,
+                step.SortOrder,
+                [.. step.Segments.Select(segment => segment is IngredientSegment mention
+                    ? new IngredientSegment(renamed[mention.RecipeIngredientId])
+                    : segment)],
+                [.. step.Uses.Select(id => renamed[id])],
+                step.DurationSeconds,
+                step.Title))
+            .Collect());
+
+        return groups.Bind(lines => steps
+            .Bind(written => copy.Describe(
+                    new RecipeDetails(Title, Description, Language, Yield, PrepMinutes, CookMinutes, Tags),
+                    now)
+                .Bind(() => copy.SetContents(lines, written, now))
+                .Map(() => copy)));
+    }
+
     /// <summary>Attaches or clears the hero image.</summary>
     /// <param name="imageId">The stored image, or null to remove it.</param>
     /// <param name="now">The injected current time.</param>

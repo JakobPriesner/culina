@@ -46,6 +46,12 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
     {
         // Joined, not fetched per card: a week view is seven cards, and seven
         // round trips is a plan that flickers in one at a time.
+        //
+        // Only recipes still in the household's library. A meal planned from
+        // an inherited recipe drops off the week when the inheritance is cut,
+        // the way it drops off the shelves, rather than staying as a card that
+        // opens onto "not found" and shops for a recipe nobody here can read.
+        // The row is kept, so the meal comes back if the inheritance does.
         var rows = await executor.QueryAsync<PlannedRow>(
             """
             select p.id, p.household_id, p.on_date, p.recipe_id, p.servings, p.slot, p.sort_order,
@@ -56,6 +62,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
             from meal_plan_entries p
             join recipes r on r.id = p.recipe_id
             where p.household_id = @householdId
+              and r.household_id = any(array(select household_library(@householdId)))
               and p.on_date >= @from
               and p.on_date < @until
             order by p.on_date, p.sort_order;

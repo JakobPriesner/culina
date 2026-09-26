@@ -291,3 +291,41 @@ describe('deleting', () => {
     expect(recipes.total).toBe(2);
   });
 });
+
+describe('switching households', () => {
+  it('lets go of the other household’s recipes before this one’s arrive', async () => {
+    serverAnswers(() => page([summary('r1', 'Their orzo')]));
+    await recipes.list('h-theirs');
+
+    let answer: (response: Response) => void = () => undefined;
+    const pending = new Promise<Response>((resolve) => (answer = resolve));
+    serverAnswers(() => pending);
+
+    const reading = recipes.list('h-ours');
+
+    // Nothing of the household just left is on screen while this one loads.
+    expect(recipes.items).toEqual([]);
+    expect(recipes.status).toBe('loading');
+
+    answer(page([summary('r2', 'Our soup')]));
+    await reading;
+
+    expect(recipes.items.map((item) => item.title)).toEqual(['Our soup']);
+  });
+
+  it('keeps the list on screen while the same household is asked again', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')]));
+    await recipes.list(household);
+
+    let answer: (response: Response) => void = () => undefined;
+    const pending = new Promise<Response>((resolve) => (answer = resolve));
+    serverAnswers(() => pending);
+
+    const reading = recipes.list(household, { query: 'orz' });
+
+    expect(recipes.items.map((item) => item.title)).toEqual(['Orzo']);
+
+    answer(page([summary('r1', 'Orzo')]));
+    await reading;
+  });
+});

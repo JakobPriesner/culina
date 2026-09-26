@@ -4,6 +4,7 @@
 
   import RecipeCard from './RecipeCard.svelte';
   import RecipeCardSkeleton from './RecipeCardSkeleton.svelte';
+  import { inheritedFrom } from './recipeMeta';
   import type { RecipeSummary } from './types';
 
   /**
@@ -63,7 +64,7 @@
           {recipe}
           {query}
           pending={pending.includes(recipe.id)}
-          from={recipe.householdId ? (inherited[recipe.householdId] ?? null) : null}
+          from={inheritedFrom(recipe, inherited)}
         />
       </li>
     {/each}

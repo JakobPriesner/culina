@@ -1,8 +1,11 @@
-import { http, request, type AppError } from '$api';
+import { http, ok, request, type AppError, type Result } from '$api';
 import type { components } from '$api/generated/schema';
 
 /** The household an invitation leads to, and whether the caller was already in it. */
 export type Redemption = components['schemas']['HouseholdsRedeemInvitationResponse'];
+
+/** A household that sees another's recipes, and the one it inherits them from directly. */
+export type Heir = components['schemas']['HouseholdsGetHeirsHeir'];
 
 /**
  * The two ways out of having no household, and the way into another one.
@@ -40,6 +43,29 @@ export async function setInheritance(
     http.PUT('/api/v1/households/{householdId}/inheritance', {
       params: { path: { householdId } },
       body: { householdId: parentId }
+    })
+  );
+
+  return result.ok ? null : result.error;
+}
+
+/**
+ * Every household that sees this one's recipes: those inheriting from it, then
+ * those inheriting from them.
+ */
+export async function heirsOf(householdId: string): Promise<Result<readonly Heir[]>> {
+  const result = await request(() =>
+    http.GET('/api/v1/households/{householdId}/heirs', { params: { path: { householdId } } })
+  );
+
+  return result.ok ? ok(result.value.items) : result;
+}
+
+/** Stops a household that inherits from this one directly seeing its recipes. */
+export async function removeHeir(householdId: string, heirId: string): Promise<AppError | null> {
+  const result = await request(() =>
+    http.DELETE('/api/v1/households/{householdId}/heirs/{heirId}', {
+      params: { path: { householdId, heirId } }
     })
   );
 
