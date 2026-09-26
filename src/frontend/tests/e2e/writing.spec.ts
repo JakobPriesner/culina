@@ -245,7 +245,7 @@ test.describe('writing a recipe', () => {
     await unit.fill('Schu');
     await expect(
       page
-        .getByRole('listbox', { name: /unit suggestions|einheitenvorschläge/i })
+        .getByRole('listbox', { name: /unit suggestions|vorschläge für einheiten/i })
         .getByRole('option', { name: 'Schuss' })
     ).toBeVisible();
 
