@@ -170,7 +170,8 @@ test.describe('an automatic cookbook', () => {
       'aria-pressed',
       'true'
     );
-    await page.getByRole('button', { name: /create cookbook|anlegen/i }).click();
+    // Anchored: "anlegen" is also the end of "Erstes Kochbuch anlegen".
+    await page.getByRole('button', { name: /^(create cookbook|anlegen)$/i }).click();
 
     // Opened rather than assumed: making a cookbook leaves you on the shelf of
     // them, which is a reasonable place to be left and not what this test is

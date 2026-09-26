@@ -185,15 +185,16 @@ test.describe('measured the way the reader measures', () => {
     const ingredients = page.getByRole('region', { name: /ingredients|zutaten/i });
 
     await expect(ingredients).toContainText(/8\s*oz/);
-    await expect(ingredients).toContainText(/1\s*cup/);
+    // Case aside: a German page writes the unit as a noun, "1 Cup".
+    await expect(ingredients).toContainText(/1\s*cup/i);
     // A spoon is a spoon in both systems, and a clove is a clove.
     await expect(ingredients).toContainText(/2\s*(tbsp|EL)/);
-    await expect(ingredients).toContainText(/3\s*cloves/);
+    await expect(ingredients).toContainText(/3\s*(cloves|zehen)/i);
 
     // Never cups for a mass: a cup of flour is between 120 g and 150 g
     // depending on how it was packed, so "in cups" is a number nobody can act
     // on. The butter is ounces.
-    await expect(ingredients).not.toContainText('cup Butter');
+    await expect(ingredients).not.toContainText(/cup\s*butter/i);
 
     // The step carries the converted amount too, because it carries the
     // ingredient rather than a number somebody typed into it.

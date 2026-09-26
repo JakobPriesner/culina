@@ -63,7 +63,7 @@ test.describe('a photo of how yours turned out', () => {
     // An attempt exists because somebody cooked it, so this goes the way a
     // person does: start, walk to the last step, say you made it.
     await page.getByRole('button', { name: /start cooking|kochen starten/i }).click();
-    await page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i }).click();
+    await page.getByRole('button', { name: /^(i made it|hab ich gekocht)$/i }).click();
 
     // Waited for, not assumed: navigating the moment the button is pressed
     // races the write that creates the attempt this test is about.
