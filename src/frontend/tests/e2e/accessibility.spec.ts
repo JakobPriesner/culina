@@ -401,8 +401,9 @@ test.describe('reaching everything with a keyboard', () => {
 
     await expect(page.getByText(/step 2 of 2|schritt 2 von 2/i)).toBeVisible();
 
-    // And the control that finishes is where the one that advanced was, so the
-    // hand does not have to go looking.
-    await expect(page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i })).toBeFocused();
+    // Focus follows the cook to the step they moved to, so a screen reader reads
+    // it out, and the control that finishes has taken the advancing one's place.
+    await expect(page.locator('[aria-current="step"]')).toBeFocused();
+    await expect(page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i })).toBeEnabled();
   });
 });
