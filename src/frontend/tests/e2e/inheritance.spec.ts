@@ -76,6 +76,20 @@ test.describe('a household that inherits another', () => {
         page.getByRole('button', { name: /^(delete recipe|rezept löschen)$/i })
       ).toHaveCount(0);
       await expect(page.getByRole('button', { name: /^(share|teilen)$/i })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+
+      // A copy is the flat's own, and opens where it can be changed.
+      await page
+        .getByRole('button', { name: /^(make my own copy|eigene kopie anlegen)$/i })
+        .click();
+      await expect(page).toHaveURL(/\/recipes\/[^/]+\/edit$/);
+      await expect(page.getByRole('textbox', { name: /^(title|titel)/i })).toHaveValue(title);
+
+      // And the kitchen being read is told who reads it.
+      await page.getByRole('button', { name: /switch household|haushalt wechseln/i }).click();
+      await page.getByRole('button', { name: kitchen, exact: true }).click();
+      await page.goto('/me/household');
+      await expect(page.getByRole('listitem').filter({ hasText: flat })).toBeVisible();
     } finally {
       await removeFlats(page);
     }

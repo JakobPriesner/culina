@@ -430,6 +430,7 @@
       <SuggestionDeck
         items={lead}
         ondismiss={shortlist.length > 0 ? (recipeId) => void hide(recipeId) : undefined}
+        inherited={session.inheritedFrom}
       />
     {/if}
 

@@ -273,6 +273,61 @@ public class HouseholdMembershipPolicyTests
         Assert.Equal(parent.Id, heir.InheritsFrom);
     }
 
+    [Fact]
+    public void StopInheritingFrom_ShouldLetAnOwnerOfTheParentCutAnHeirLoose()
+    {
+        // Arrange
+        var parent = AHousehold("Parents");
+        var heir = Household.Restore(
+            Guid.CreateVersion7(),
+            HouseholdName.Create("Flat").ShouldBeSuccess(),
+            Now,
+            version: 1,
+            [new HouseholdMember(Stranger, HouseholdRole.Owner, Now)],
+            inheritsFrom: parent.Id);
+
+        // Act
+        var result = heir.StopInheritingFrom(parent, actingUserId: Owner);
+
+        // Assert
+        // The owner of the kitchen being read keeps a say over who reads it,
+        // without being in the household that does.
+        result.ShouldBeSuccess();
+        Assert.Null(heir.InheritsFrom);
+    }
+
+    [Fact]
+    public void StopInheritingFrom_ShouldFail_WhenTheCallerIsOnlyAMemberOfTheParent()
+    {
+        // Arrange
+        var parent = AHousehold("Parents");
+        var heir = Household.Restore(Guid.CreateVersion7(), HouseholdName.Create("Flat").ShouldBeSuccess(), Now, 1, [], parent.Id);
+
+        // Act
+        var result = heir.StopInheritingFrom(parent, actingUserId: Member);
+
+        // Assert
+        result.ShouldBeFailure(HouseholdErrors.NotOwner);
+        Assert.Equal(parent.Id, heir.InheritsFrom);
+    }
+
+    [Fact]
+    public void StopInheritingFrom_ShouldSayTheHeirDoesNotExist_WhenItDoesNotInheritFromThisOne()
+    {
+        // Arrange
+        var parent = AHousehold("Parents");
+        var elsewhere = Guid.CreateVersion7();
+        var heir = Household.Restore(Guid.CreateVersion7(), HouseholdName.Create("Flat").ShouldBeSuccess(), Now, 1, [], elsewhere);
+
+        // Act
+        var result = heir.StopInheritingFrom(parent, actingUserId: Owner);
+
+        // Assert
+        // Inheriting through another household is that household's to cut.
+        result.ShouldBeFailure(HouseholdErrors.NotFound(heir.Id));
+        Assert.Equal(elsewhere, heir.InheritsFrom);
+    }
+
     private static Household AHousehold(string name = "Kitchen")
     {
         var household = Household.Create(

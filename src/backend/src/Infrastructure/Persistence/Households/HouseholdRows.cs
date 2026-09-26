@@ -24,6 +24,16 @@ internal sealed record InheritedHouseholdRow
     public string Name { get; init; } = string.Empty;
 }
 
+/// <summary>One household inheriting, directly or not, from another.</summary>
+internal sealed record HeirRow
+{
+    public Guid Id { get; init; }
+
+    public string Name { get; init; } = string.Empty;
+
+    public Guid InheritsFrom { get; init; }
+}
+
 /// <summary>The <c>household_members</c> row as PostgreSQL returns it.</summary>
 internal sealed record HouseholdMemberRow
 {

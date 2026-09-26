@@ -22,6 +22,7 @@ internal static class SuggestionMappings
         return new Suggestion
         {
             RecipeId = scored.Recipe.RecipeId,
+            HouseholdId = scored.Recipe.HouseholdId,
             Title = scored.Recipe.Title,
             ImageId = scored.Recipe.ImageId,
             TotalMinutes = scored.Recipe.TotalMinutes,

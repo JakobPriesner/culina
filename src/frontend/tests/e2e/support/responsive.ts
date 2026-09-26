@@ -204,6 +204,18 @@ export async function responsiveData(
           }
         ]
       });
+    // One household reading this one's recipes, with a long name, so the list
+    // and the owner's button beside it are measured at every width.
+    if (path.endsWith('/heirs'))
+      return reply({
+        items: [
+          {
+            householdId: 'heir-1',
+            name: 'Wohngemeinschaft in der Altstadt',
+            inheritsFrom: householdId
+          }
+        ]
+      });
     if (path.endsWith('/invitations'))
       return reply({ items: [{ invitationId: 'invite-1', expiresAt: '2026-10-14T12:00:00Z' }] });
     if (path.endsWith('/shopping-list'))

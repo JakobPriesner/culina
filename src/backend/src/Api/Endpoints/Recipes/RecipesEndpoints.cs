@@ -1,4 +1,5 @@
 using Api.Endpoints.Recipes.CookPhoto.V1;
+using Api.Endpoints.Recipes.Copy.V1;
 using Api.Endpoints.Recipes.Create.V1;
 using Api.Endpoints.Recipes.CreateShare.V1;
 using Api.Endpoints.Recipes.Delete.V1;
@@ -32,6 +33,7 @@ internal static class RecipesEndpoints
     internal static IServiceCollection AddRecipesEndpoints(this IServiceCollection services) =>
         services
             .AddSingleton<IEndpoint, CreateRecipeEndpoint>()
+            .AddSingleton<IEndpoint, CopyRecipeEndpoint>()
             .AddSingleton<IEndpoint, GetRecipeEndpoint>()
             .AddSingleton<IEndpoint, GetRecipesEndpoint>()
             .AddSingleton<IEndpoint, GetTagsEndpoint>()
