@@ -1282,5 +1282,14 @@
   "plan.recipe.failed": "Dieses Rezept konnte nicht eingeplant werden.",
   "field.showPassword": "Passwort anzeigen",
   "field.showToken": "Token anzeigen",
-  "field.showKey": "Schlüssel anzeigen"
+  "field.showKey": "Schlüssel anzeigen",
+  "recipe.delete.action": "Rezept löschen",
+  "recipe.delete.title": "„{title}“ löschen?",
+  "recipe.delete.body": "Es ist dann endgültig weg, mit Kochhistorie, Notizen und Fotos. Es verschwindet auch aus der Woche und aus jedem Kochbuch, und ein geteilter Link funktioniert nicht mehr.",
+  "recipe.delete.permanent": "Das lässt sich nicht rückgängig machen.",
+  "recipe.delete.confirm": "Löschen",
+  "recipe.delete.cancel": "Behalten",
+  "recipe.delete.close": "Schließen",
+  "recipe.delete.done": "„{title}“ wurde gelöscht.",
+  "recipe.delete.failed": "Das Rezept konnte nicht gelöscht werden."
 }

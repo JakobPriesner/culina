@@ -1282,5 +1282,14 @@
   "plan.recipe.failed": "This recipe couldn't be added to the plan.",
   "field.showPassword": "Show password",
   "field.showToken": "Show token",
-  "field.showKey": "Show key"
+  "field.showKey": "Show key",
+  "recipe.delete.action": "Delete recipe",
+  "recipe.delete.title": "Delete {title}?",
+  "recipe.delete.body": "It goes for good, with its cooking history, notes and photos. It also comes off the week and out of every cookbook, and a shared link stops working.",
+  "recipe.delete.permanent": "This can't be undone.",
+  "recipe.delete.confirm": "Delete",
+  "recipe.delete.cancel": "Keep it",
+  "recipe.delete.close": "Close",
+  "recipe.delete.done": "{title} was deleted.",
+  "recipe.delete.failed": "That recipe couldn't be deleted."
 }
