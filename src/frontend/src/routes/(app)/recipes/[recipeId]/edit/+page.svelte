@@ -56,10 +56,11 @@
       return null;
     }
 
+    const sent = draft.version;
     const failure = await recipes.update(draft);
 
     if (!failure) {
-      adoptSaved();
+      adoptSaved(sent);
     }
 
     // Dropped only once the server has it. A failed save leaves the journal
@@ -158,6 +159,9 @@
    * and the server hands out a new one each time. A draft that keeps the
    * version it opened with saves exactly once and then tells the author that
    * somebody else changed their recipe, which is both wrong and alarming.
+   * A photo written while the save was in the air moved it on past the answer
+   * — see `photoWritten` — and those steps are kept rather than taken back:
+   * `sent` is the version this save went out with.
    *
    * The **ingredient ids**, because a line with no id cannot be mentioned in a
    * step. Without them the author would have to reload the page before they
@@ -166,7 +170,7 @@
    * mid-save can at worst miss an id rather than inherit the wrong one; the
    * next save fills it in.
    */
-  function adoptSaved() {
+  function adoptSaved(sent: number) {
     const saved = recipes.detail;
 
     if (!draft || saved?.id !== draft.id) {
@@ -190,7 +194,7 @@
 
     draft = {
       ...draft,
-      version: saved.version,
+      version: saved.version + (draft.version - sent),
       groups: draft.groups.map((group) => ({
         ...group,
         ingredients: group.ingredients.map((one) =>
@@ -198,6 +202,34 @@
         )
       }))
     };
+  }
+
+  /**
+   * Keeps the draft in step with a photo saved by its own endpoint.
+   *
+   * Not through `change`: that would write the whole recipe again for a change
+   * it does not own. But the photo is part of the recipe, so writing it moves
+   * the recipe on one version, and a draft left on the old one sent a stale
+   * `If-Match` with every save after it — a 412 on each keystroke, for a
+   * conflict nobody else caused.
+   *
+   * Exactly one step, never the version a response names. If somebody else
+   * wrote in between, the server is further on than that, the next save is
+   * refused, and the author is asked — rather than their change being quietly
+   * saved over.
+   */
+  function photoWritten(imageId: string | null) {
+    if (!draft) {
+      return;
+    }
+
+    draft = { ...draft, imageId, version: draft.version + 1 };
+
+    // What this device kept is opened in place of the server's copy next
+    // time, so it has to know about the step too.
+    if (unsent && session.user) {
+      remember(session.user.userId, recipeId, draft);
+    }
   }
 
   /**
@@ -726,16 +758,7 @@
         </EditorSection>
 
         <EditorSection id="photo" title={m['editor.photo']()}>
-          <PhotoField
-            {recipeId}
-            imageId={current.imageId}
-            onchange={(imageId) => {
-              // The image is saved by its own endpoint, so this only keeps the
-              // draft in step — touching autosave would write the recipe again
-              // for a change it does not own.
-              draft = draft ? { ...draft, imageId } : draft;
-            }}
-          />
+          <PhotoField {recipeId} imageId={current.imageId} onchange={photoWritten} />
         </EditorSection>
 
         <EditorSection id="ingredients" title={m['editor.ingredients']()} count={firstGroup.length}>

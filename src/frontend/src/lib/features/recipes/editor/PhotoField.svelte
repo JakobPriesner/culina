@@ -21,6 +21,7 @@
   interface Props {
     recipeId: string;
     imageId: string | null;
+    /** Called only once a photo has been saved or removed, which moves the recipe's version on. */
     onchange: (imageId: string | null) => void;
   }
 
