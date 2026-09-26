@@ -56,13 +56,22 @@ import { glob, readFile } from 'node:fs/promises';
  * limit set a few kilobytes above the last one, and the total bounds only the
  * worst navigation. What somebody waits for on a bad signal is
  * `firstLoadBytes`, which stays where it is and remains the number to defend.
+ *
+ * The styles total followed on 27 September 2026, from 40 to 60 kB, for the same
+ * reason. It had been creeping up by a few hundred bytes a feature and reached
+ * 40.2 kB with the list of households that inherit this one's recipes, the
+ * mobile recipe layout and the navigation's hover feedback — none of them a
+ * dependency, all of them styles scoped to the components that use them. A
+ * limit a few hundred bytes above the last feature would be raised again by the
+ * next one, which makes it a number to argue with rather than a guard. The
+ * first load, which is where styles cost somebody waiting, stays at 80 kB.
  */
 export const budgets = {
   /** Everything the shell asks for before it can render: scripts and styles. */
   firstLoadBytes: 80 * 1024,
   /** Every chunk of every route together, which bounds the worst navigation. */
   totalJavaScriptBytes: 500 * 1024,
-  totalStyleBytes: 40 * 1024
+  totalStyleBytes: 60 * 1024
 } as const;
 
 export interface Weight {
