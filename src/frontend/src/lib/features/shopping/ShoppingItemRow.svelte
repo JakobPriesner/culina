@@ -249,7 +249,7 @@
       grid-template-columns: minmax(0, 1fr) auto auto;
     }
 
-    .row :global(.ds-checkbox) {
+    .row > :global(:first-child) {
       grid-column: 1 / -1;
     }
 

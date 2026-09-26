@@ -52,6 +52,11 @@ internal static class OpenApiExport
             await using (writer.ConfigureAwait(false))
             {
                 document.SerializeAsV3(new OpenApiJsonWriter(writer));
+
+                // .editorconfig asks every file to end in a newline, and an
+                // editor that saves the document adds one. Written here too, or
+                // that save is a diff the contract check fails on.
+                await writer.WriteAsync('\n').ConfigureAwait(false);
                 await writer.FlushAsync().ConfigureAwait(false);
             }
         }
