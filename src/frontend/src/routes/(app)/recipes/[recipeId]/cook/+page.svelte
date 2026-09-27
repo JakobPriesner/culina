@@ -17,6 +17,7 @@
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
+  import { haptics } from '$shell/haptics';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -123,12 +124,17 @@
 
   function move(index: number) {
     if (ready && index >= 0 && index < totalSteps) {
+      haptics.step();
       cooking.moveTo(recipeId, index);
     }
   }
 
   async function finish(completed: boolean) {
     over = true;
+
+    if (completed) {
+      haptics.celebrate();
+    }
 
     const closed = await cooking.end(completed);
     timers.clear();

@@ -22,6 +22,7 @@ html {
   /* The viewer's chrome — scrollbars, form controls, the caret — follows the
      chosen mode rather than the operating system's. */
   color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html[data-mode='dark'] {
@@ -38,6 +39,32 @@ body {
   -webkit-font-smoothing: antialiased;
   /* User content (including unbroken names and URLs) must be able to reflow. */
   overflow-wrap: anywhere;
+}
+
+/*
+ * Native touch ergonomics on mobile.
+ *
+ * Removes the 300ms double-tap zoom delay on interactive controls and avoids
+ * accidental text selection on chrome elements (buttons, navigation) when
+ * tapping with wet or floury fingers.
+ */
+button,
+a,
+input,
+select,
+textarea,
+summary,
+[role='button'],
+[role='tab'] {
+  touch-action: manipulation;
+}
+
+button,
+[role='button'],
+[role='tab'],
+nav {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 h1,
