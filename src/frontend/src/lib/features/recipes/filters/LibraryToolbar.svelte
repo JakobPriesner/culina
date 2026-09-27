@@ -50,6 +50,8 @@
      */
     interpretation?: Interpretation | null;
     total?: number;
+    /** The cookbook this list is, drawn as the first chip of a search inside it. */
+    scope?: string;
     /** The reader turned the server's correction of their words down. */
     onastyped?: () => void;
     onpromote?: (search: SavedSearch) => void;
@@ -66,6 +68,7 @@
     summary,
     interpretation = null,
     total = 0,
+    scope,
     onastyped,
     onpromote
   }: Props = $props();
@@ -198,7 +201,7 @@
   </div>
 
   {#if interpretation}
-    <SearchChips chips={interpretation.chips} onremove={removeChip} />
+    <SearchChips chips={interpretation.chips} {scope} onremove={removeChip} />
     <SearchNotice
       {interpretation}
       {total}

@@ -201,6 +201,12 @@ public sealed record RecipeSearchRow(
     /// title match and for every row of a search without words.
     /// </summary>
     public MatchReason? Reason { get; init; }
+
+    /// <summary>
+    /// The diet the query asked for, when the recipe keeps it only by
+    /// presumption — nothing in it refutes the diet, and nobody said so.
+    /// </summary>
+    public string? PresumedDiet { get; init; }
 }
 
 /// <summary>Why a recipe answers a query it does not name in its title.</summary>

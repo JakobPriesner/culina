@@ -248,6 +248,7 @@ internal static class RecipeListMappings
                     ? (reason.Language == "de" ? concept.De : concept.En)[0]
                     : reason.Term
             }
-            : null
+            : null,
+        PresumedDiet = row.PresumedDiet
     };
 }

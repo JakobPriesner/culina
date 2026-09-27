@@ -79,6 +79,58 @@ public static class SearchText
         return Words(stripped);
     }
 
+    /// <summary>
+    /// What each compound word of a query is about, when its head says
+    /// nothing: "Sommergericht" is about <em>sommer</em>, "Sonntagsessen" about
+    /// <em>sonntag</em>. Folded the ä → ae way.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A German compound is a kind of its last part — a Fischsuppe is a soup —
+    /// so its first part can only be read on its own when the last part adds
+    /// nothing: a Gericht, an Essen, a Rezept is every recipe. That is what lets
+    /// a household's own tag answer the word it is buried in, and nothing more:
+    /// a tag "Fisch" is no answer to "Fischsuppe".
+    /// </para>
+    /// <para>
+    /// A modifier ending in s gives two readings, because German joins with an
+    /// s (Sonntag·s·essen) and some words simply end in one (Mais·gericht).
+    /// Whichever is not a tag matches nothing.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<string> Modifiers(string text)
+    {
+        var found = new List<string>();
+
+        foreach (var word in FoldAe(text).Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var head = EmptyHeads.FirstOrDefault(head =>
+                word.EndsWith(head, StringComparison.Ordinal) && word.Length - head.Length >= ShortestModifier);
+
+            if (head is null)
+            {
+                continue;
+            }
+
+            var modifier = word[..^head.Length];
+            found.Add(modifier);
+
+            if (modifier.EndsWith('s') && modifier.Length > ShortestModifier)
+            {
+                found.Add(modifier[..^1]);
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>The heads of a compound that say nothing, each plural before its singular.</summary>
+    private static readonly string[] EmptyHeads =
+        ["gerichte", "gericht", "essen", "rezepte", "rezept", "kueche", "ideen", "idee", "speisen", "speise"];
+
+    /// <summary>Four letters, as short as a tag worth finding this way can be: "Ofen".</summary>
+    private const int ShortestModifier = 4;
+
     private static char Translate(char character)
     {
         var at = Accented.IndexOf(character, StringComparison.Ordinal);

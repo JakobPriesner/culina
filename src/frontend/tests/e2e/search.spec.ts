@@ -95,6 +95,53 @@ test.describe('search @offline', () => {
     await expect(page.getByRole('dialog')).toBeHidden();
   });
 
+  test('Tab takes the top completion, and Backspace in an empty field takes the last chip back', async ({
+    page
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'One keyboard walk is enough.');
+    await responsiveData(page);
+    const tagsAsked: string[][] = [];
+
+    await page.route('**/api/v1/households/*/completions**', (route) =>
+      route.fulfill({
+        json: { items: [{ kind: 'tag', label: 'Sommer', slug: 'sommer', recipeCount: 3 }] }
+      })
+    );
+    await page.route('**/api/v1/recipes?**', async (route) => {
+      const url = new URL(route.request().url());
+
+      if (url.searchParams.get('query') === null && url.searchParams.getAll('tag').length === 0) {
+        return route.fallback();
+      }
+
+      tagsAsked.push(url.searchParams.getAll('tag'));
+
+      return route.fulfill({ json: { items: [], total: 0 } });
+    });
+
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    await page.keyboard.press('ControlOrMeta+k');
+    const field = page.getByRole('combobox', { name: 'Rezepte durchsuchen' });
+    await field.fill('somm');
+    await expect(page.getByRole('option', { name: /Sommer/ })).toBeVisible();
+
+    // Taken into the search without leaving the field: the half-typed word
+    // becomes the tag it was on its way to.
+    await field.press('Tab');
+    const chip = page.getByRole('button', { name: '„Sommer“ entfernen' });
+    await expect(chip).toBeVisible();
+    await expect(field).toHaveValue('');
+    await expect(field).toBeFocused();
+    await expect.poll(() => tagsAsked.at(-1)).toEqual(['sommer']);
+
+    // Nothing left to delete in the field, so the chip goes.
+    await field.press('Backspace');
+    await expect(chip).toBeHidden();
+    await expect(field).toBeFocused();
+  });
+
   test('opens on "/" but never on the cooking screen', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Keyboard shortcuts.');
     await responsiveData(page);

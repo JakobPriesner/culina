@@ -12,6 +12,7 @@ import {
 import type { Facets, Interpretation, Recipe, RecipeSummary } from '../types';
 
 import { toWireSort, type RecipeSort } from './libraryView.svelte';
+import { presumedDiets } from './presumedDiets.svelte';
 
 /**
  * The recipes a household has, and the one being looked at.
@@ -449,6 +450,10 @@ class RecipeStore {
         }
       })
     );
+
+    if (result.ok) {
+      presumedDiets.note(result.value.items.map(toSummary));
+    }
 
     return {
       match: <TOut>(

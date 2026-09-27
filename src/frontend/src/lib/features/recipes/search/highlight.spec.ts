@@ -16,6 +16,11 @@ describe('marking what a search matched', () => {
     expect(marked('Crème brûlée', 'creme brulee')).toEqual(['Crème', 'brûlée']);
   });
 
+  it('marks an umlaut the query spelt out, as the search reads it', () => {
+    expect(marked('Käsekuchen', 'Kaesekuchen')).toEqual(['Käsekuchen']);
+    expect(marked('Hähnchen-Curry', 'haehnchen')).toEqual(['Hähnchen']);
+  });
+
   it('marks every word of the query, wherever it is', () => {
     expect(marked('Reis mit Tomaten und Reisnudeln', 'reis tomaten')).toEqual([
       'Reis',
