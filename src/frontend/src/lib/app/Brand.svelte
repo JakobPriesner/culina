@@ -39,6 +39,6 @@
     white-space: nowrap;
   }
   .dot {
-    color: var(--accent);
+    color: var(--brand-accent);
   }
 </style>

@@ -46,6 +46,7 @@
     --accent-hover: var(--c-black);
     --accent-active: var(--c-black);
     --accent-contrast: var(--c-white);
+    --brand-accent: var(--c-black);
 
     --danger: var(--c-black);
     --danger-hover: var(--c-black);
