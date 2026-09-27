@@ -48,7 +48,7 @@ public static class CulinaryLexicon
     /// The version of this table. Raise it with any change to an entry or to
     /// how text is matched against them.
     /// </summary>
-    public const int Version = 3;
+    public const int Version = 4;
 
     private static readonly Compiled Index = new(Entries());
 
@@ -86,6 +86,31 @@ public static class CulinaryLexicon
     /// </para>
     /// </remarks>
     public static IReadOnlySet<string> Recognise(string query) => Read(query, whole: true);
+
+    /// <summary>
+    /// What a recipe may be to answer a query that names this concept: the
+    /// concept itself, and for a dish, the dishes it is a kind of.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A goulash is a stew, so a stew is a fair answer to <em>Gulasch</em>, and
+    /// a Bolognese is a fair answer to <em>Tomatensoße</em> because both are
+    /// sauces. One level up and no further: <em>Bolognese</em> may be answered
+    /// by a pasta sauce, but not by every sauce a pasta sauce is a kind of.
+    /// </para>
+    /// <para>
+    /// Only a dish, and only through another dish. An ingredient's parent is a
+    /// family — tomato is a vegetable — and nobody searching for
+    /// <em>Tomaten</em> wants every vegetable. A dish's ingredient parent is
+    /// what it is made from, not what it is: <em>Risotto</em> does not want
+    /// every rice dish. And its cuisine or character — Italian, warm — is
+    /// nothing it could be swapped for.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<string> AnsweredBy(string key) =>
+        Find(key) is { Kind: ConceptKind.Dish } dish
+            ? [key, .. dish.Parents.Where(parent => Find(parent)?.Kind == ConceptKind.Dish)]
+            : [key];
 
     /// <summary>
     /// The concept this text is a name of, or null.
@@ -664,6 +689,10 @@ public static class CulinaryLexicon
         Ingredient("gelatine", ["Gelatine", "Blattgelatine"], ["gelatine", "gelatin"], "animal_product"),
         Ingredient("stock", ["Brühe", "Fond", "Bouillon"], ["stock", "broth", "bouillon"]),
         Ingredient("soy_sauce", ["Sojasauce", "Sojasoße", "Shoyu", "Tamari"], ["soy sauce", "tamari"], "soy"),
+        // Condiments, not sauces a cook makes: listed so that the fish is still
+        // found, and a Pad Thai is not a sauce.
+        Ingredient("fish_sauce", ["Fischsauce", "Fischsoße"], ["fish sauce"], "fish"),
+        Ingredient("oyster_sauce", ["Austernsauce", "Austernsoße"], ["oyster sauce"], "seafood"),
         Ingredient("vinegar", ["Essig", "Balsamico"], ["vinegar", "balsamic"]),
         Ingredient("mustard", ["Senf", "Dijonsenf"], ["mustard", "Dijon"]),
         Ingredient("mayonnaise", ["Mayonnaise", "Mayo", "Aioli", "Remoulade"], ["mayonnaise", "mayo", "aioli"], "egg"),

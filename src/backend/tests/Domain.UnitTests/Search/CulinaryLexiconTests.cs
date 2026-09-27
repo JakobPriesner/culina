@@ -174,6 +174,8 @@ public class CulinaryLexiconTests
     [InlineData("Eisbein", "ice_cream")]
     // "ohne Fleisch" is a diet, not a request for meat.
     [InlineData("ohne Fleisch", "meat")]
+    // A condiment, not a sauce anybody cooks: a Pad Thai is not a sauce dish.
+    [InlineData("Fischsauce", "sauce")]
     public void Describe_ShouldNotFindWhatAWordMerelyContains(string text, string unexpected)
     {
         // Act & Assert
@@ -244,6 +246,8 @@ public class CulinaryLexiconTests
     [InlineData("Salami")]
     [InlineData("Putenbrust")]
     [InlineData("Thunfisch")]
+    [InlineData("Fischsauce")]
+    [InlineData("Austernsauce")]
     public void Describe_ShouldKnowWhatIsAnAnimal(string ingredient)
     {
         // Act
@@ -255,5 +259,37 @@ public class CulinaryLexiconTests
         Assert.True(
             concepts.Contains("meat") || concepts.Contains("fish") || concepts.Contains("seafood"),
             $"{ingredient}: {string.Join(", ", concepts)}");
+    }
+
+    [Theory]
+    // A dish is answered by the dish it is a kind of.
+    [InlineData("goulash", new[] { "goulash", "stew" })]
+    [InlineData("tomato_sauce", new[] { "tomato_sauce", "sauce" })]
+    // One level only: a Bolognese by a pasta sauce, not by every sauce.
+    [InlineData("bolognese", new[] { "bolognese", "pasta_sauce" })]
+    // Not by what it is made from, nor by its cuisine.
+    [InlineData("risotto", new[] { "risotto" })]
+    // And an ingredient only by itself: Tomaten do not want every vegetable.
+    [InlineData("tomato", new[] { "tomato" })]
+    public void AnsweredBy_ShouldLetADishStandInForTheDishItIsAKindOf(string key, string[] expected)
+    {
+        // Act & Assert
+        Assert.Equal(expected, CulinaryLexicon.AnsweredBy(key));
+    }
+
+    [Fact]
+    public void MealRules_ShouldTellWhatADinnerLooksLike_AndWhatItIsNot()
+    {
+        // Act
+        var like = MealRules.LookLike("dinner");
+        var unlike = MealRules.Unlike("dinner");
+
+        // Assert
+        Assert.Contains("lunch", like);
+        Assert.Contains("warm", like);
+        Assert.Contains("breakfast", unlike);
+        Assert.Contains("dessert", unlike);
+        Assert.DoesNotContain("lunch", unlike);
+        Assert.DoesNotContain("dinner", unlike);
     }
 }
