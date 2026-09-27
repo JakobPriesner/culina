@@ -160,6 +160,25 @@ worker.addEventListener('message', (event) => {
   }
 });
 
+/**
+ * Brings the cooking app back to the front when a notification is clicked.
+ */
+worker.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    worker.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+
+      return worker.clients.openWindow?.(document);
+    })
+  );
+});
+
 worker.addEventListener('fetch', (event) => {
   const request = event.request;
 
