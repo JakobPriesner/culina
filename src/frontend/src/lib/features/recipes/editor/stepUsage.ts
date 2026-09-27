@@ -23,12 +23,17 @@ export function namedIn(step: Step): Set<string> {
  *
  * Numbered rather than indexed because these are shown to a person, and the
  * step above the text already says "Step 1".
+ *
+ * A step needs what it lists and everything its words name, as `Step.Create`
+ * reads it on the server. Counting `uses` alone said "in no step" beside an
+ * ingredient a sentence had just mentioned, until a reload brought the
+ * server's union back.
  */
 export function usageOf(steps: readonly Step[]): Map<string, number[]> {
   const usage = new Map<string, number[]>();
 
   steps.forEach((step, index) => {
-    for (const id of step.uses) {
+    for (const id of new Set([...step.uses, ...namedIn(step)])) {
       const found = usage.get(id);
 
       if (found) {
