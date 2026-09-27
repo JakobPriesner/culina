@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+
   import { IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
@@ -44,9 +46,17 @@
      * A recipe from one of them says so.
      */
     inherited?: Readonly<Record<string, string>>;
+    /**
+     * Asks for the next few, once the last one is on screen.
+     *
+     * Given only while there are more to ask for, and free to call while its
+     * own request is still running. Coming to the end of a shortlist and
+     * wanting another idea is the same "what else?" that walking it was.
+     */
+    onmore?: () => void;
   }
 
-  let { items, ondismiss, inherited = {} }: Props = $props();
+  let { items, ondismiss, inherited = {}, onmore }: Props = $props();
 
   let track = $state<HTMLUListElement>();
   let scrolled = $state(0);
@@ -66,6 +76,15 @@
    * the track, racing the browser to move it the same way.
    */
   const at = $derived(Math.max(0, Math.min(items.length - 1, scrolled)));
+
+  // Only once somebody has walked there: a single answer is already its own
+  // last one, and asking for more before anyone has looked past it is a
+  // request for a list nobody asked to see.
+  $effect(() => {
+    if (onmore && walkable && at === items.length - 1) {
+      untrack(onmore);
+    }
+  });
 
   /**
    * Where the track has come to rest.

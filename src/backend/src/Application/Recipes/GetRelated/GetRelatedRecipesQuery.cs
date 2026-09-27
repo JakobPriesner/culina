@@ -13,7 +13,9 @@ namespace Application.Recipes.GetRelated;
 /// <summary>Asks which recipes of the same household are most like this one.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
-public sealed record GetRelatedRecipesQuery(Guid RecipeId, Guid UserId);
+/// <param name="Cursor">Where the previous page ended, or null for the first.</param>
+/// <param name="Limit">How many at most.</param>
+public sealed record GetRelatedRecipesQuery(Guid RecipeId, Guid UserId, string? Cursor, int Limit);
 
 internal sealed class GetRelatedRecipesQueryHandler(
     IRecipeRepository recipes,
@@ -21,12 +23,6 @@ internal sealed class GetRelatedRecipesQueryHandler(
     IRelatedRecipes related)
     : IQueryHandler<GetRelatedRecipesQuery, Response>
 {
-    /// <summary>
-    /// Three: the shelf under a recipe, which is a few ideas for what to cook
-    /// instead, not a second library to scroll.
-    /// </summary>
-    private const int Limit = 3;
-
     /// <summary>How many shared things a reason names: enough to be a reason, few enough to read.</summary>
     private const int Named = 3;
 
@@ -49,14 +45,25 @@ internal sealed class GetRelatedRecipesQueryHandler(
                     .LibraryAsync(households, recipe.HouseholdId, cancellationToken)
                     .ConfigureAwait(false);
 
-                var found = await related
-                    .FindAsync(recipe.Id, library, query.UserId, Limit, cancellationToken)
-                    .ConfigureAwait(false);
+                // Read on until the page is full or the kitchen runs out. A
+                // related recipe with nothing to say for itself is left out, and
+                // a page left short by that would read as the end of the shelf
+                // when it is not.
+                List<RelatedRecipe> items = [];
+                var cursor = query.Cursor;
 
-                return Result<Response>.Success(new Response
+                do
                 {
-                    Items = [.. found.Select(one => Describe(one, recipe.Language)).OfType<RelatedRecipe>()]
-                });
+                    var page = await related
+                        .FindAsync(recipe.Id, library, query.UserId, cursor, query.Limit - items.Count, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    items.AddRange(page.Items.Select(one => Describe(one, recipe.Language)).OfType<RelatedRecipe>());
+                    cursor = page.NextCursor;
+                }
+                while (items.Count < query.Limit && cursor is not null);
+
+                return Result<Response>.Success(new Response { Items = items, NextCursor = cursor });
             },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 

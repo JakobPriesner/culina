@@ -40,14 +40,17 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
     /// </remarks>
     internal const double Floor = 0.1d;
 
-    public async Task<IReadOnlyList<RelatedRecipe>> FindAsync(
+    public async Task<RelatedPage> FindAsync(
         Guid recipeId,
         IReadOnlyList<Guid> library,
         Guid userId,
+        string? cursor,
         int limit,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(library);
+
+        var resume = RelatedCursor.Decode(cursor);
 
         var concepts = await executor.QuerySingleOrDefaultAsync<string[]>(
             "select concepts from recipe_search_documents where recipe_id = @recipeId;",
@@ -56,21 +59,38 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
 
         if (concepts.Length == 0)
         {
-            return [];
+            return new RelatedPage([], null);
         }
 
         var stuff = concepts
             .Where(key => CulinaryLexicon.Find(key)?.Kind == ConceptKind.Ingredient)
             .ToArray();
 
-        var rows = await executor.QueryAsync<Row>(
-            Sql,
-            new { recipeId, library = library.ToArray(), userId, concepts, stuff, limit, floor = Floor },
-            cancellationToken).ConfigureAwait(false);
+        // One more than asked for, to know whether there is a next page
+        // without counting the whole kitchen for it.
+        var rows = (await executor.QueryAsync<Row>(
+            Sql.Replace("{resume}", resume is null ? string.Empty : Resume, StringComparison.Ordinal),
+            new
+            {
+                recipeId,
+                library = library.ToArray(),
+                userId,
+                concepts,
+                stuff,
+                limit = limit + 1,
+                floor = Floor,
+                score = resume?.Score ?? 0m,
+                updatedAt = resume?.UpdatedAt ?? DateTimeOffset.MinValue,
+                cursorId = resume?.Id ?? Guid.Empty
+            },
+            cancellationToken).ConfigureAwait(false)).ToList();
 
-        return
+        var page = rows.Take(limit).ToList();
+        var next = rows.Count > limit ? new RelatedCursor(page[^1].Score, page[^1].UpdatedAt, page[^1].RecipeId).Encode() : null;
+
+        return new RelatedPage(
         [
-            .. rows.Select(row => new RelatedRecipe(
+            .. page.Select(row => new RelatedRecipe(
                 new RecipeSearchRow(
                     row.RecipeId,
                     row.HouseholdId,
@@ -91,8 +111,12 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                 row.Stuff,
                 row.KindScore,
                 row.StuffScore))
-        ];
+        ],
+            next);
     }
+
+    /// <summary>Starts after the row the previous page ended on, in the same order.</summary>
+    private const string Resume = "and (s.score, r.updated_at, r.id) < (@score, @updatedAt, @cursorId)";
 
     /// <remarks>
     /// A concept's weight is its inverse document frequency in the household,
@@ -105,6 +129,10 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
     /// The shared concepts are listed only where they are telling — carried by
     /// no more than half the kitchen. They still count towards the score, but
     /// "vegetable" is true of half of everything and is not a reason.
+    ///
+    /// The score is rounded to six places so that a cursor can carry it
+    /// exactly: a page cut on a float would be resumed on a number near it,
+    /// and skip the row after it or return it twice.
     /// </remarks>
     private const string Sql = """
         with library as (
@@ -143,7 +171,11 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                    coalesce(s.kind_weight / nullif(t.kinds, 0), 0) as kind_score,
                    coalesce(s.stuff_weight / nullif(t.stuff, 0), 0) as stuff_score
             from shared s
-            cross join totals t)
+            cross join totals t),
+        ranked as (
+            select s.*,
+                   round((0.6 * s.kind_score + 0.4 * s.stuff_score)::numeric, 6) as score
+            from scored s)
         select r.id as recipe_id, r.household_id, r.title, r.image_id,
                case when r.prep_minutes is null and r.cook_minutes is null then null
                     else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) end as total_minutes,
@@ -155,8 +187,8 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                coalesce(mine.cook_count, 0) as cook_count,
                mine.last_cooked_at,
                d.ingredient_count,
-               s.kinds, s.stuff, s.kind_score, s.stuff_score
-        from scored s
+               s.kinds, s.stuff, s.kind_score, s.stuff_score, s.score
+        from ranked s
         join recipes r on r.id = s.recipe_id
         join recipe_search_documents d on d.recipe_id = s.recipe_id
         left join lateral (
@@ -165,7 +197,8 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
             where c.recipe_id = r.id and c.user_id = @userId
         ) mine on true
         where 0.6 * s.kind_score + 0.4 * s.stuff_score >= @floor
-        order by 0.6 * s.kind_score + 0.4 * s.stuff_score desc, r.updated_at desc, r.id
+          {resume}
+        order by s.score desc, r.updated_at desc, r.id desc
         limit @limit;
         """;
 
@@ -204,5 +237,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
         public double KindScore { get; init; }
 
         public double StuffScore { get; init; }
+
+        public decimal Score { get; init; }
     }
 }
