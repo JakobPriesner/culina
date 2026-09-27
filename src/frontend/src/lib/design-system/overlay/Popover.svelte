@@ -30,17 +30,9 @@
     children: Snippet;
     /** Which edge of the trigger it lines up with. Flips if there is no room. */
     placement?: 'bottom-start' | 'bottom-end';
-    /**
-     * Lets the trigger give way in a crowded row instead of pushing it wider.
-     *
-     * Only for a trigger whose own content can shrink — a label that truncates.
-     * An icon cannot, and an anchor narrower than its icon would let the row
-     * lay the next control over it.
-     */
-    shrinks?: boolean;
   }
 
-  let { trigger, children, placement = 'bottom-start', shrinks = false }: Props = $props();
+  let { trigger, children, placement = 'bottom-start' }: Props = $props();
 
   const id = $props.id();
   let anchor = $state<HTMLDivElement>();
@@ -140,7 +132,7 @@
   });
 </script>
 
-<div class="anchor" class:shrinks bind:this={anchor}>
+<div class="anchor" bind:this={anchor}>
   {@render trigger({ popovertarget: id })}
 
   <div
@@ -159,10 +151,6 @@
 <style>
   .anchor {
     display: inline-flex;
-  }
-
-  .shrinks {
-    min-width: 0;
   }
 
   .panel {
