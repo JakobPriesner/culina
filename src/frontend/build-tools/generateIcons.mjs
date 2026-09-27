@@ -10,82 +10,53 @@ const tempDir = join(__dirname, '../.icon-temp');
 
 execSync(`mkdir -p "${tempDir}"`);
 
-const MARK_INNER_SVG = `
-  <!-- Steam plumes: smooth organic vapor with tapered ends -->
-  <path d="M15.5 16.1 C13.2 13.1 17.5 10.4 15.5 6.6 C14.7 5.2 13.8 4.4 13.2 3.8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-  <path d="M24.5 16.1 C22.2 13.1 26.5 10.4 24.5 6.6 C23.7 5.2 22.8 4.4 22.2 3.8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-  <!-- Bowl Rim with gentle lip -->
-  <rect x="5.5" y="18.6" width="29" height="3.2" rx="1.6" fill="currentColor" />
-  <!-- Solid Ceramic Bowl Body -->
-  <path d="M7.5 20.1 C8.3 28.1 13.8 32.4 20 32.4 C26.2 32.4 31.7 28.1 32.5 20.1 Z" fill="currentColor" />
-  <!-- Distinct Ceramic Foot with 1.4 unit gap -->
-  <rect x="14.5" y="33.8" width="11" height="2.4" rx="1.2" fill="currentColor" />
-`;
+function getStandaloneSvg(shape = 'rounded') {
+  const radius = shape === 'rounded' ? 112 : 0;
 
-function getStandaloneSvg(size = 512, shape = 'circle') {
-  const isMaskable = shape === 'maskable';
-  const targetRatio = isMaskable ? 0.5 : 0.68;
-  const scale = (size * targetRatio) / 40;
-  const tx = (size - 40 * scale) / 2;
-  const ty = (size - 40 * scale) / 2;
-
-  let bgShape = '';
-  if (isMaskable || shape === 'squircle') {
-    // Full bleed square for Android adaptive icons and iOS apple-touch-icon
-    bgShape = `
-      <rect width="${size}" height="${size}" fill="url(#culina-grad)" />
-      <rect width="${size}" height="${size}" fill="url(#culina-ambient)" />
-    `;
-  } else if (shape === 'circle') {
-    // Circular badge with warm olive gradient and crisp border ring
-    const r = size * 0.47;
-    const c = size / 2;
-    bgShape = `
-      <circle cx="${c}" cy="${c}" r="${r}" fill="url(#culina-grad)" />
-      <circle cx="${c}" cy="${c}" r="${r}" fill="url(#culina-ambient)" />
-      <circle cx="${c}" cy="${c}" r="${r - 0.75}" fill="none" stroke="#718b56" stroke-width="${Math.max(1, size * 0.015)}" stroke-opacity="0.75" />
-    `;
-  }
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="Culina">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Culina">
   <!--
-    A porcelain bowl with rising steam in the Culina warm olive seal.
-    Scalable vector icon used as modern SVG favicon and PWA brand mark.
+    Culina's c-period monogram: an open, continuous gesture that can read as a
+    page turning or a spoon moving through a bowl, without drawing either one.
+    The period connects the app icon to the punctuation in the wordmark.
 
-    Literal colours, not token names: this file is fetched by the browser as an
-    image and never sees the app stylesheet. Ground is the olive 700/900 pair
-    (#4d6239 to #2c3a1e); the mark is sand 50 (#fdfbf7), the warm porcelain
-    paper tone.
-
-    Keep the token names themselves out of this comment. XML forbids a double
-    hyphen inside a comment, every one of those names begins with two, and the
-    whole document fails to parse over it. That is not a warning anywhere: the
-    browser simply has no icon.
+    Literal colours are intentional. This file is fetched as an image and does
+    not inherit the app stylesheet. Clay moves the identity away from the green
+    circular seals common to recipe sites; warm paper keeps the mark at home in
+    Culina's interface.
   -->
   <defs>
-    <linearGradient id="culina-grad" x1="15%" y1="0%" x2="85%" y2="100%">
-      <stop offset="0%" stop-color="#4d6239" />
-      <stop offset="50%" stop-color="#3d4f2c" />
-      <stop offset="100%" stop-color="#2c3a1e" />
+    <linearGradient id="culina-ground" x1="88" y1="48" x2="430" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d77a55" />
+      <stop offset="0.52" stop-color="#bf5a3a" />
+      <stop offset="1" stop-color="#963c28" />
     </linearGradient>
-    <radialGradient id="culina-ambient" cx="50%" cy="20%" r="80%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.16" />
-      <stop offset="55%" stop-color="#ffffff" stop-opacity="0" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.22" />
+    <radialGradient id="culina-light" cx="0" cy="0" r="1" gradientTransform="translate(174 112) rotate(51) scale(366 350)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" stop-opacity="0.18" />
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="1" stop-color="#46180d" stop-opacity="0.18" />
     </radialGradient>
+    <filter id="culina-shadow" x="56" y="67" width="404" height="392" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#521d10" flood-opacity="0.18" />
+    </filter>
   </defs>
 
-  ${bgShape}
-
-  <g transform="translate(${tx}, ${ty}) scale(${scale})" color="#fdfbf7">
-    ${MARK_INNER_SVG}
-  </g>
+  <rect width="512" height="512" rx="${radius}" fill="url(#culina-ground)" />
+  <rect width="512" height="512" rx="${radius}" fill="url(#culina-light)" />
+  <path
+    d="M348 164C321 132 286 112 245 112C163 112 103 176 103 256C103 336 163 400 245 400C282 400 316 385 340 360"
+    fill="none"
+    stroke="#fffaf2"
+    stroke-width="76"
+    stroke-linecap="round"
+    filter="url(#culina-shadow)"
+  />
+  <circle cx="410" cy="367" r="27" fill="#fffaf2" />
+  <path d="M128 72C224 26 350 43 429 122" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-opacity="0.16" />
 </svg>`;
 }
 
-const iconSvg = getStandaloneSvg(512, 'circle');
-const maskableSvg = getStandaloneSvg(512, 'maskable');
-const appleTouchSvg = getStandaloneSvg(180, 'squircle');
+const iconSvg = getStandaloneSvg('rounded');
+const platformSvg = getStandaloneSvg('full');
 
 // Write icon.svg
 await writeFile(join(staticDir, 'icon.svg'), iconSvg, 'utf8');
@@ -110,15 +81,19 @@ async function renderPng(svgContent, width, height, targetPath) {
     </html>
   `;
   await page.setContent(html);
+  // Two paint frames keep SVG filter output deterministic in headless Chromium.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  );
   await page.screenshot({ path: targetPath, omitBackground: true });
   await page.close();
 }
 
 console.log('Rendering raster icons...');
-await renderPng(iconSvg, 512, 512, join(staticDir, 'icon-512.png'));
-await renderPng(iconSvg, 192, 192, join(staticDir, 'icon-192.png'));
-await renderPng(maskableSvg, 512, 512, join(staticDir, 'icon-maskable-512.png'));
-await renderPng(appleTouchSvg, 180, 180, join(staticDir, 'apple-touch-icon.png'));
+await renderPng(platformSvg, 512, 512, join(staticDir, 'icon-512.png'));
+await renderPng(platformSvg, 192, 192, join(staticDir, 'icon-192.png'));
+await renderPng(platformSvg, 512, 512, join(staticDir, 'icon-maskable-512.png'));
+await renderPng(platformSvg, 180, 180, join(staticDir, 'apple-touch-icon.png'));
 await renderPng(iconSvg, 32, 32, join(staticDir, 'favicon-32.png'));
 
 // Render temporary PNGs for multi-resolution favicon.ico
