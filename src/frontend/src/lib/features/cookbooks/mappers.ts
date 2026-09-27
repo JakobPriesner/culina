@@ -30,7 +30,7 @@ export const toCookbook = (wire: WireSummary): Cookbook => ({
   kind: wire.kind as CookbookKind,
   rules: toRules(wire.rules),
   recipeCount: wire.recipeCount,
-  coverRecipeIds: wire.coverRecipeIds,
+  cover: wire.coverPictures,
   updatedAt: wire.updatedAt
 });
 
@@ -42,7 +42,7 @@ export const toDetail = (wire: WireDetail): CookbookDetail => ({
   kind: wire.kind as CookbookKind,
   rules: toRules(wire.rules),
   recipeCount: wire.recipeCount,
-  coverRecipeIds: wire.coverRecipeIds,
+  cover: wire.coverPictures,
   updatedAt: wire.updatedAt,
   version: wire.version
 });

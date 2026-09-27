@@ -5,16 +5,11 @@ using Domain.Shared;
 
 namespace Application.Recipes.GetImage;
 
-/// <summary>Writes a recipe's image to a destination.</summary>
+/// <summary>Finds a recipe's image, for a caller who may see it.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
 /// <param name="Width">Which rendition.</param>
-/// <param name="Destination">Where to write it.</param>
-public sealed record GetRecipeImageQuery(
-    Guid RecipeId,
-    Guid UserId,
-    int Width,
-    Stream Destination);
+public sealed record GetRecipeImageQuery(Guid RecipeId, Guid UserId, int Width);
 
 internal sealed class GetRecipeImageQueryHandler(
     IRecipeRepository recipes,
@@ -41,24 +36,26 @@ internal sealed class GetRecipeImageQueryHandler(
             recipe => recipes.ImageHashAsync(recipe.Id, cancellationToken),
             error => Task.FromResult(Result<string>.Failure(error))).ConfigureAwait(false);
 
-        var result = await hash.Match(
-            async contentHash =>
-            {
-                var written = await images
-                    .CopyToAsync(contentHash, query.Width, query.Destination, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return written.Map(() => new ImageDelivery(contentHash));
-            },
-            error => Task.FromResult(Result<ImageDelivery>.Failure(error))).ConfigureAwait(false);
-
-        return tracked.Record(result);
+        return tracked.Record(hash.Map(contentHash => ImageDelivery.Of(images, contentHash, query.Width)));
     }
 }
 
-/// <summary>What was served, so the response can carry a cache validator.</summary>
+/// <summary>An image the caller may see, not yet read.</summary>
 /// <param name="ContentHash">
 /// The image's address, which is also its ETag: content-addressed storage means
 /// the bytes can never change under the same hash.
 /// </param>
-public sealed record ImageDelivery(string ContentHash);
+/// <param name="WriteToAsync">Writes the rendition that was asked for.</param>
+/// <remarks>
+/// The access check and the hash lookup are done by the time this exists; the
+/// file is not. Most image reads are a browser revalidating a picture it
+/// already has, and answering those with 304 needs only the hash — reading the
+/// file first, as this used to, paid a full disk read to throw it away.
+/// </remarks>
+public sealed record ImageDelivery(
+    string ContentHash,
+    Func<Stream, CancellationToken, Task<Result>> WriteToAsync)
+{
+    internal static ImageDelivery Of(IImageStore images, string contentHash, int width) =>
+        new(contentHash, (destination, token) => images.CopyToAsync(contentHash, width, destination, token));
+}

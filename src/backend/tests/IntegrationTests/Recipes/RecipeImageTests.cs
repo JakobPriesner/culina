@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using IntegrationTests.Fixtures;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace IntegrationTests.Recipes;
@@ -24,7 +23,7 @@ public class RecipeImageTests(PostgresFixture postgres)
         var (client, recipeId) = await SeedAsync();
 
         // Act
-        var uploaded = await UploadAsync(client, recipeId, PngBytes(1200, 800), "photo.png", "image/png");
+        var uploaded = await UploadAsync(client, recipeId, TestImages.Png(1200, 800), "photo.png", "image/png");
         var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=800", Token);
 
         // Assert
@@ -56,7 +55,7 @@ public class RecipeImageTests(PostgresFixture postgres)
     {
         // Arrange
         var (client, recipeId) = await SeedAsync();
-        await UploadAsync(client, recipeId, PngBytes(600, 400), "photo.png", "image/png");
+        await UploadAsync(client, recipeId, TestImages.Png(600, 400), "photo.png", "image/png");
 
         // Act
         var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image", Token);
@@ -72,7 +71,7 @@ public class RecipeImageTests(PostgresFixture postgres)
     {
         // Arrange
         var (client, recipeId) = await SeedAsync();
-        await UploadAsync(client, recipeId, PngBytes(600, 400), "photo.png", "image/png");
+        await UploadAsync(client, recipeId, TestImages.Png(600, 400), "photo.png", "image/png");
 
         // Act
         var response = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=1234", Token);
@@ -102,7 +101,7 @@ public class RecipeImageTests(PostgresFixture postgres)
     {
         // Arrange
         var (client, recipeId) = await SeedAsync();
-        await UploadAsync(client, recipeId, PngBytes(600, 400), "photo.png", "image/png");
+        await UploadAsync(client, recipeId, TestImages.Png(600, 400), "photo.png", "image/png");
 
         // Act
         var removed = await client.DeleteAsync($"/api/v1/recipes/{recipeId}/image", Token);
@@ -124,7 +123,7 @@ public class RecipeImageTests(PostgresFixture postgres)
         var response = await UploadAsync(
             client,
             foreignRecipeId,
-            PngBytes(600, 400),
+            TestImages.Png(600, 400),
             "photo.png",
             "image/png");
 
@@ -195,7 +194,7 @@ public class RecipeImageTests(PostgresFixture postgres)
         var response = await UploadAsync(
             client,
             recipeId,
-            PngBytes(10_000, 10_000),
+            TestImages.Png(10_000, 10_000),
             "huge.png",
             "image/png");
 
@@ -247,16 +246,6 @@ public class RecipeImageTests(PostgresFixture postgres)
         return buffer.ToArray();
     }
 
-    private static byte[] PngBytes(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        using var buffer = new MemoryStream();
-
-        image.Save(buffer, new PngEncoder());
-
-        return buffer.ToArray();
-    }
-
     [Fact]
     public async Task ReplacingOneRecipesPhoto_ShouldNotBreakAnotherUsingTheSameFile()
     {
@@ -273,13 +262,13 @@ public class RecipeImageTests(PostgresFixture postgres)
                 Token))
             .Json!.Value.GetProperty("recipeId").GetGuid();
 
-        var shared = PngBytes(500, 500);
+        var shared = TestImages.Png(500, 500);
 
         await UploadAsync(client, first, shared, "photo.png", "image/png");
         await UploadAsync(client, second, shared, "photo.png", "image/png");
 
         // Act
-        await UploadAsync(client, first, PngBytes(640, 480), "other.png", "image/png");
+        await UploadAsync(client, first, TestImages.Png(640, 480), "other.png", "image/png");
 
         // Assert
         var served = await client.GetAsync($"/api/v1/recipes/{second}/image?w=800", Token);
@@ -302,7 +291,7 @@ public class RecipeImageTests(PostgresFixture postgres)
                 Token))
             .Json!.Value.GetProperty("recipeId").GetGuid();
 
-        var shared = PngBytes(500, 500);
+        var shared = TestImages.Png(500, 500);
 
         await UploadAsync(client, first, shared, "photo.png", "image/png");
         await UploadAsync(client, second, shared, "photo.png", "image/png");
@@ -323,7 +312,7 @@ public class RecipeImageTests(PostgresFixture postgres)
         var (client, original) = await SeedAsync();
         var householdId = (await client.GetAsync("/api/v1/households", Token))
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
-        await UploadAsync(client, original, PngBytes(600, 400), "photo.png", "image/png");
+        await UploadAsync(client, original, TestImages.Png(600, 400), "photo.png", "image/png");
 
         // Act
         var copied = await client.PostAsync($"/api/v1/recipes/{original}/copies", new { householdId }, Token);

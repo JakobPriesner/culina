@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Application.Abstractions.Settings;
 using IntegrationTests.Fixtures;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Recipes;
 
@@ -27,7 +26,7 @@ public class CookPhotoTests(PostgresFixture postgres)
     {
         // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
-        await UploadAsync(client, recipeId, entryId, PngBytes(600, 400));
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
         // Act
         var served = await client.GetAsync(Photo(recipeId, entryId), Token);
@@ -50,7 +49,7 @@ public class CookPhotoTests(PostgresFixture postgres)
     {
         // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
-        await UploadAsync(client, recipeId, entryId, PngBytes(600, 400));
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
         var first = await client.GetAsync(Photo(recipeId, entryId), Token);
 
@@ -66,16 +65,48 @@ public class CookPhotoTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Served_ShouldAnswerNotModified_WithoutReadingTheFile()
+    {
+        // Arrange
+        var (client, recipeId, entryId) = await SeedAsync();
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(610, 410));
+
+        var first = await client.GetAsync(Photo(recipeId, entryId), Token);
+        var hash = first.ETag!.Trim('"');
+
+        // Take the file away. A 304 that still reads it now fails with a 404.
+        var storage = postgres.Api.Services.GetRequiredService<StorageSettings>();
+
+        foreach (var file in Directory.GetFiles(
+                     Path.Combine(storage.ImagePath, hash[..2], hash[2..4]),
+                     $"{hash}-*.webp"))
+        {
+            File.Delete(file);
+        }
+
+        // Act
+        var request = new HttpRequestMessage(HttpMethod.Get, Photo(recipeId, entryId));
+        request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(first.ETag!));
+        var again = await client.SendAsync(request, Token);
+
+        // Assert
+        // The hash is enough to know the caller has these bytes; the file was
+        // only ever read to be thrown away.
+        Assert.Equal(HttpStatusCode.NotModified, again.StatusCode);
+        Assert.Equal(first.ETag, again.ETag);
+    }
+
+    [Fact]
     public async Task Served_ShouldSendTheNewPicture_WhenThePhotoWasReplaced()
     {
         // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
-        await UploadAsync(client, recipeId, entryId, PngBytes(600, 400));
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
         var before = await client.GetAsync(Photo(recipeId, entryId), Token);
 
         // Act
-        await UploadAsync(client, recipeId, entryId, PngBytes(320, 240));
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(320, 240));
 
         var request = new HttpRequestMessage(HttpMethod.Get, Photo(recipeId, entryId));
         request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(before.ETag!));
@@ -93,7 +124,7 @@ public class CookPhotoTests(PostgresFixture postgres)
     {
         // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
-        await UploadAsync(client, recipeId, entryId, PngBytes(600, 400));
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
         // Act
         var response = await client.GetAsync($"{Photo(recipeId, entryId)}?w=1234", Token);
@@ -126,16 +157,6 @@ public class CookPhotoTests(PostgresFixture postgres)
         };
 
         return await client.SendAsync(request, Token);
-    }
-
-    private static byte[] PngBytes(int width, int height)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        using var buffer = new MemoryStream();
-
-        image.Save(buffer, new PngEncoder());
-
-        return buffer.ToArray();
     }
 
     private async Task<(ApiClient Client, Guid RecipeId, Guid EntryId)> SeedAsync()

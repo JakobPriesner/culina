@@ -25,26 +25,15 @@ internal sealed class GetRecipeImageEndpoint : IEndpoint
                     return CustomResults.Problem(Domain.Recipes.ImageErrors.UnknownWidth);
                 }
 
-                // The body is written straight to the response, so a large image
-                // never sits in memory on its way out.
-                var buffer = new MemoryStream();
+                var result = await handler
+                    .Handle(
+                        new GetRecipeImageQuery(recipeId, context.CurrentUser().UserId, width),
+                        cancellationToken)
+                    .ConfigureAwait(false);
 
-                await using (buffer.ConfigureAwait(false))
-                {
-                    var result = await handler
-                        .Handle(
-                            new GetRecipeImageQuery(
-                                recipeId,
-                                context.CurrentUser().UserId,
-                                width,
-                                buffer),
-                            cancellationToken)
-                        .ConfigureAwait(false);
-
-                    return result.Match(
-                        delivery => ImageResponse.Served(context, buffer, delivery),
-                        CustomResults.Problem);
-                }
+                return await result.Match(
+                    delivery => ImageResponse.ServedAsync(context, delivery, cancellationToken),
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getRecipeImageV1")
             .WithTags(Tags.Recipes)

@@ -23,7 +23,7 @@
 </script>
 
 <article class="cookbook" class:pending aria-busy={pending || undefined}>
-  <CookbookCover recipeIds={cookbook.coverRecipeIds} name={cookbook.name} />
+  <CookbookCover pictures={cookbook.cover} name={cookbook.name} />
 
   <h3 class="title">
     <a

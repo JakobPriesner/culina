@@ -35,6 +35,8 @@ internal sealed record CookbookRow
 
     public Guid[] CoverRecipeIds { get; init; } = [];
 
+    public Guid[] CoverImageIds { get; init; } = [];
+
     public int TotalCount { get; init; }
 }
 
@@ -112,7 +114,14 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
                        where pictured.image_id is not null
                        order by pictured.added_at nulls last, pictured.id
                        limit @coverPictures),
-                   '{}') as cover_recipe_ids
+                   '{}') as cover_recipe_ids,
+               coalesce(
+                   array(
+                       select pictured.image_id from ({{OnTheShelf}}) as pictured
+                       where pictured.image_id is not null
+                       order by pictured.added_at nulls last, pictured.id
+                       limit @coverPictures),
+                   '{}') as cover_image_ids
         from cookbooks c
         """;
 
@@ -347,11 +356,16 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             new { recipeId, householdId },
             cancellationToken).ConfigureAwait(false);
 
-        return [.. rows.Select(row => new CookbookOnAShelf(ToCookbook(row), row.RecipeCount, row.CoverRecipeIds))];
+        return [.. rows.Select(ToShelf)];
     }
 
+    // Two arrays in one order rather than one array of pairs: the driver reads
+    // an array of uuids, and a composite would need a type mapping of its own.
     private static CookbookOnAShelf ToShelf(CookbookRow row) =>
-        new(ToCookbook(row), row.RecipeCount, row.CoverRecipeIds);
+        new(
+            ToCookbook(row),
+            row.RecipeCount,
+            [.. row.CoverRecipeIds.Zip(row.CoverImageIds, (recipeId, imageId) => new CoverPicture(recipeId, imageId))]);
 
     private static Cookbook ToCookbook(CookbookRow row) =>
         Cookbook.Restore(

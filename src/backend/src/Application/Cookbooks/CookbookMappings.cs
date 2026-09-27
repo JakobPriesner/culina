@@ -22,7 +22,8 @@ internal static class CookbookMappings
         Kind = CookbookWords.Of(shelf.Cookbook.Kind),
         Rules = ToContract(shelf.Cookbook),
         RecipeCount = shelf.RecipeCount,
-        CoverRecipeIds = shelf.CoverRecipeIds,
+        CoverRecipeIds = [.. shelf.Cover.Select(picture => picture.RecipeId)],
+        CoverPictures = [.. shelf.Cover.Select(ToContract)],
         UpdatedAt = shelf.Cookbook.UpdatedAt
     };
 
@@ -35,11 +36,18 @@ internal static class CookbookMappings
         Kind = CookbookWords.Of(shelf.Cookbook.Kind),
         Rules = ToContract(shelf.Cookbook),
         RecipeCount = shelf.RecipeCount,
-        CoverRecipeIds = shelf.CoverRecipeIds,
+        CoverRecipeIds = [.. shelf.Cover.Select(picture => picture.RecipeId)],
+        CoverPictures = [.. shelf.Cover.Select(ToContract)],
         CreatedBy = shelf.Cookbook.CreatedBy,
         CreatedAt = shelf.Cookbook.CreatedAt,
         UpdatedAt = shelf.Cookbook.UpdatedAt,
         Version = shelf.Cookbook.Version
+    };
+
+    private static CookbookCoverPicture ToContract(CoverPicture picture) => new()
+    {
+        RecipeId = picture.RecipeId,
+        ImageId = picture.ImageId
     };
 
     /// <summary>The rules, but only for a shelf that has any.</summary>
