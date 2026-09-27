@@ -9,6 +9,22 @@ namespace Domain.UnitTests.Search;
 public class CulinaryLexiconTests
 {
     [Fact]
+    public void EnglishLabel_ShouldBeCapitalised_ForEveryCuisine()
+    {
+        // Arrange
+        // "Also: italian" reads as a typo to an English reader. German labels
+        // are written as a person writes them already; English ones were
+        // matching forms, all lower case, until they doubled as labels.
+        var cuisines = CulinaryLexicon.All.Where(concept => concept.Kind == ConceptKind.Cuisine);
+
+        // Act
+        var lowercase = cuisines.Select(concept => concept.En[0]).Where(label => !char.IsUpper(label[0])).ToList();
+
+        // Assert
+        Assert.Empty(lowercase);
+    }
+
+    [Fact]
     public void Lexicon_ShouldHaveNoSurfaceFormInTwoConcepts()
     {
         // Arrange
@@ -95,6 +111,8 @@ public class CulinaryLexiconTests
     [InlineData("Vegetarische Küche", "vegetarian")]
     [InlineData("ohne Fleisch", "vegetarian")]
     [InlineData("italienische", "italian")]
+    [InlineData("italian", "italian")]
+    [InlineData("brussels sprouts", "brussels_sprouts")]
     [InlineData("sweet potatoes", "sweet_potato")]
     [InlineData("Gockel", "chicken")]
     public void Recognise_ShouldFindTheConceptAQueryWordNames(string query, string expected)
