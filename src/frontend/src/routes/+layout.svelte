@@ -32,6 +32,12 @@
     const stopWatchingForUpdates = dev ? () => {} : watchForUpdates();
     const stopFollowingTheNetwork = connection.start();
 
+    // Ask for persistent storage so the browser does not evict cached recipes
+    // and offline shopping data under storage pressure or after inactivity.
+    if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+      void navigator.storage.persist();
+    }
+
     // The API layer decides *when* a session has ended; what happens next is
     // the app's business, and keeping that here is what stops the client from
     // having to know that a router exists.

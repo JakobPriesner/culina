@@ -223,6 +223,9 @@ const readable = [
   // with no network, not that it appears instantly with one.
   one(/^\/api\/v1\/recipes\/[^/]+$/, 'network-first'),
   one(/^\/api\/v1\/recipes$/, 'network-first'),
+  // The household shopping list: supermarkets often have poor or no cellular
+  // reception. Network-first lets an offline device display the list as last seen.
+  one(/^\/api\/v1\/households\/[^/]+\/shopping-list$/, 'network-first'),
   // Who is signed in. Without this a cold start with no network cannot tell
   // "offline" from "signed out", and answers the second one — which locks
   // somebody out of the recipes this cache exists to have kept for them.
