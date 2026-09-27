@@ -863,6 +863,10 @@ public static class CulinaryLexicon
         Diet("gluten_free", ["glutenfrei", "ohne Gluten"], ["gluten free", "coeliac"]),
         Diet("lactose_free", ["laktosefrei", "ohne Laktose", "milchfrei"], ["lactose free", "dairy free"]),
         Diet("low_carb", ["Low Carb", "kohlenhydratarm", "Keto"], ["low carb", "keto"]),
+        // What a household answers when asked whether a presumed-vegetarian
+        // recipe is one: a tag that refutes the diet the name could not.
+        Diet("not_vegetarian", ["nicht vegetarisch"], ["not vegetarian", "non vegetarian"]),
+        Diet("not_vegan", ["nicht vegan"], ["not vegan", "non vegan"]),
 
         // ── Character: what vague queries resolve to ─────────────────────────
         // Written on the dishes rather than here: a stew is warm, hearty,

@@ -25,8 +25,11 @@ public static class DietRules
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Refuted =
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
         {
-            ["vegetarian"] = ["meat", "fish", "seafood", "gelatine"],
-            ["vegan"] = ["meat", "fish", "seafood", "gelatine", "dairy", "egg", "animal_product"]
+            ["vegetarian"] = ["meat", "fish", "seafood", "gelatine", "not_vegetarian"],
+            ["vegan"] =
+            [
+                "meat", "fish", "seafood", "gelatine", "dairy", "egg", "animal_product", "not_vegetarian", "not_vegan"
+            ]
         };
 
     /// <summary>

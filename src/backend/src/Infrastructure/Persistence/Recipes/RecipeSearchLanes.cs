@@ -191,6 +191,17 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
+    /// Whether the recipe carries a tag a query word is built on — see
+    /// <see cref="Domain.Search.SearchText.Modifiers"/>.
+    /// </summary>
+    private const string TagNamed = """
+        cardinality(@tagWords::text[]) > 0 and exists (
+            select 1 from recipe_tags rt
+            join tags t on t.id = rt.tag_id
+            where rt.recipe_id = r.id and culina_fold_ae(t.name) = any(@tagWords::text[]))
+        """;
+
+    /// <summary>
     /// Which recipes are candidates at all: one index scan per lane, and the
     /// ids they found.
     /// </summary>
@@ -270,6 +281,15 @@ internal static class RecipeSearchLanes
           and d.concepts && @conceptAnswers::text[]
           and {ConceptHit}
         union
+        -- A tag of the household's that a query word is built on, when the
+        -- rest of the word says nothing: "Sommergericht" for what the
+        -- household tagged "Sommer". Its own word for a thing, which is a
+        -- better answer than anything the lexicon can infer.
+        select rt.recipe_id from tags t
+        join recipe_tags rt on rt.tag_id = t.id
+        where t.household_id = any(@library)
+          and culina_fold_ae(t.name) = any(@tagWords::text[])
+        union
         -- The title, for a query too short to have a term of its own.
         select d.recipe_id from q
         cross join recipe_search_documents d
@@ -289,6 +309,7 @@ internal static class RecipeSearchLanes
         coalesce(d.document @@ lang.tsq, false)          as lexical_hit,
         coalesce({FuzzyTitle}, false)                    as fuzzy_title,
         coalesce({FuzzyBody}, false)                     as fuzzy_body,
+        coalesce({TagNamed}, false)                      as tag_named,
         coalesce(cardinality(@concepts::text[]) > 0 and {ConceptHit}, false) as concept_hit,
         coalesce(cardinality(@diets::text[]) > 0 and d.concepts @> @diets::text[], false) as diet_asserted,
         coalesce(@quick and d.concepts @> array['quick'], false) as quick_asserted,
@@ -359,7 +380,9 @@ internal static class RecipeSearchLanes
     /// </para>
     /// <para>
     /// A match through the lexicon alone is last (tier 5), below a word merely
-    /// found somewhere in the recipe. The lexicon is a guess about what words
+    /// found somewhere in the recipe, and below a tag of the household's that
+    /// a query word is built on — the household's own word for a thing beats
+    /// the lexicon's guess at it. The lexicon is a guess about what words
     /// mean and a substring is a fact about what the recipe says, so however
     /// right the guess is, it never outranks the fact — and when it is wrong,
     /// the wrong recipe is at the bottom of the list rather than at the top.
@@ -372,7 +395,7 @@ internal static class RecipeSearchLanes
             when title_word or title_hit       then 1
             when fuzzy_title or tag_hit        then 2
             when lexical_hit                   then 3
-            when fuzzy_body                    then 4
+            when fuzzy_body or tag_named       then 4
             else                                    5
         end
         """;
