@@ -155,7 +155,10 @@
    * at the paragraph's own weight — it is a word of the sentence.
    *
    * Nothing moves on hover. Lifting a word by half a pixel shifts it against
-   * its neighbours on the line, and running text should hold still.
+   * its neighbours on the line, and running text should hold still. It lights
+   * quickly and lets go slowly, the same as its line in the ingredient list,
+   * so reading along a step with the pointer leaves a short fading trail
+   * rather than words blinking on and off.
    *
    * A button is laid out as one box whatever its display says, so it sets its
    * own tighter line height: wash and padding together stay shorter than the
@@ -178,8 +181,8 @@
     vertical-align: baseline;
     cursor: pointer;
     transition:
-      background-color var(--duration-fast) var(--ease-out),
-      box-shadow var(--duration-fast) var(--ease-out);
+      background-color var(--duration-slow) ease,
+      box-shadow var(--duration-slow) ease;
   }
 
   .ingredient .amount {
@@ -188,25 +191,26 @@
     white-space: nowrap;
   }
 
-  .ingredient:hover {
-    background: var(--surface-highlight);
-  }
-
   .ingredient:focus-visible {
     outline: 2px solid var(--border-focus);
     outline-offset: 1px;
   }
 
   /*
-   * Pointed at from its line in the ingredient list, every mention of it lights
-   * up at once. The one whose quick look is open stays lit while it is, so the
-   * card is never left pointing at a word that looks like all the others.
+   * Pointed at — directly, or from its line in the ingredient list, which
+   * lights up every mention of it at once — the wash deepens and the baseline
+   * edge becomes a firm stroke of the accent. Drawn inside the capsule, not as
+   * a ring around it: a glow outside the word crowded the ones beside it and
+   * read as a focus ring, which is a different thing and already has its own
+   * look. The one whose quick look is open stays lit while it is, so the card
+   * is never left pointing at a word that looks like all the others.
    */
+  .ingredient:hover,
   .ingredient.is-highlighted {
     background: var(--surface-highlight);
-    box-shadow:
-      inset 0 -1px 0 var(--accent),
-      var(--shadow-highlight);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
   }
 
   .ingredient-plain {
