@@ -5,23 +5,23 @@
     The period connects the app icon to the punctuation in the wordmark.
 
     Literal colours are intentional. This file is fetched as an image and does
-    not inherit the app stylesheet. Clay moves the identity away from the green
-    circular seals common to recipe sites; warm paper keeps the mark at home in
-    Culina's interface.
+    not inherit the app stylesheet. Warm charcoal makes the mark feel editorial
+    rather than promotional; the clay period carries the culinary warmth in one
+    deliberate point instead of turning the whole icon into a food-category cue.
   -->
   <defs>
     <linearGradient id="culina-ground" x1="88" y1="48" x2="430" y2="472" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d77a55" />
-      <stop offset="0.52" stop-color="#bf5a3a" />
-      <stop offset="1" stop-color="#963c28" />
+      <stop stop-color="#39352f" />
+      <stop offset="0.52" stop-color="#27241f" />
+      <stop offset="1" stop-color="#171512" />
     </linearGradient>
     <radialGradient id="culina-light" cx="0" cy="0" r="1" gradientTransform="translate(174 112) rotate(51) scale(366 350)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ffffff" stop-opacity="0.18" />
+      <stop stop-color="#ffffff" stop-opacity="0.08" />
       <stop offset="0.55" stop-color="#ffffff" stop-opacity="0" />
-      <stop offset="1" stop-color="#46180d" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#000000" stop-opacity="0.12" />
     </radialGradient>
     <filter id="culina-shadow" x="56" y="67" width="404" height="392" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#521d10" flood-opacity="0.18" />
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.28" />
     </filter>
   </defs>
 
@@ -35,6 +35,5 @@
     stroke-linecap="round"
     filter="url(#culina-shadow)"
   />
-  <circle cx="410" cy="367" r="27" fill="#fffaf2" />
-  <path d="M128 72C224 26 350 43 429 122" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-opacity="0.16" />
+  <circle cx="410" cy="367" r="27" fill="#dd8462" />
 </svg>
