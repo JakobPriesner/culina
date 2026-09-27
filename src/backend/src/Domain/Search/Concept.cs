@@ -34,7 +34,13 @@ public enum ConceptKind
 /// The German surface forms, written as a person writes them. The first is the
 /// one a German reader is shown.
 /// </param>
-/// <param name="En">The English surface forms; the first is the one shown.</param>
+/// <param name="En">
+/// The English surface forms; the first is the one an English reader is shown.
+/// Lower case, as English writes a common noun mid-sentence, except where
+/// English writes a capital: a cuisine, a place, a holiday — "Also: Italian",
+/// "Bolognese", "Brussels sprouts". Matching folds case, so this is only ever
+/// about how a label reads.
+/// </param>
 /// <param name="Parents">
 /// What it is a kind of, one level up. A recipe that uses chicken also counts
 /// as using poultry, and poultry as meat; the lexicon closes the chain once, at
