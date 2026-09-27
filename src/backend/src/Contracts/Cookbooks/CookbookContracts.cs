@@ -63,8 +63,26 @@ public sealed record CookbookSummary
     /// </remarks>
     public required IReadOnlyList<Guid> CoverRecipeIds { get; init; }
 
+    /// <summary>The same pictures, with which picture each recipe has now.</summary>
+    /// <remarks>
+    /// The image id belongs in the picture's address, as it does on a recipe
+    /// card: a replaced picture is then a new address, and an unchanged one can
+    /// be kept without asking the server again.
+    /// </remarks>
+    public required IReadOnlyList<CookbookCoverPicture> CoverPictures { get; init; }
+
     /// <summary>When it, or what is on it, last changed.</summary>
     public required DateTimeOffset UpdatedAt { get; init; }
+}
+
+/// <summary>One picture on a cookbook's cover.</summary>
+public sealed record CookbookCoverPicture
+{
+    /// <summary>Whose picture.</summary>
+    public required Guid RecipeId { get; init; }
+
+    /// <summary>Which picture the recipe has now.</summary>
+    public required Guid ImageId { get; init; }
 }
 
 
@@ -113,6 +131,9 @@ public sealed record CookbookDetail
 
     /// <summary>Up to four photographed recipes for the cover, oldest first.</summary>
     public required IReadOnlyList<Guid> CoverRecipeIds { get; init; }
+
+    /// <summary>The same pictures, with which picture each recipe has now.</summary>
+    public required IReadOnlyList<CookbookCoverPicture> CoverPictures { get; init; }
 
     /// <summary>Whose idea it was.</summary>
     public required Guid CreatedBy { get; init; }

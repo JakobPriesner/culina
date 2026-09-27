@@ -1732,6 +1732,19 @@ export interface components {
              */
             servings?: number | null;
         };
+        /** @description One picture on a cookbook's cover. */
+        CookbooksCookbookCoverPicture: {
+            /**
+             * Format: uuid
+             * @description Whose picture.
+             */
+            recipeId: string;
+            /**
+             * Format: uuid
+             * @description Which picture the recipe has now.
+             */
+            imageId: string;
+        };
         /** @description One cookbook, with everything its own page needs. */
         CookbooksCookbookDetail: {
             /**
@@ -1758,6 +1771,8 @@ export interface components {
             recipeCount: number;
             /** @description Up to four photographed recipes for the cover, oldest first. */
             coverRecipeIds: string[];
+            /** @description The same pictures, with which picture each recipe has now. */
+            coverPictures: components["schemas"]["CookbooksCookbookCoverPicture"][];
             /**
              * Format: uuid
              * @description Whose idea it was.
@@ -1817,6 +1832,8 @@ export interface components {
             recipeCount: number;
             /** @description Up to four photographed recipes for the cover, oldest first. */
             coverRecipeIds: string[];
+            /** @description The same pictures, with which picture each recipe has now. */
+            coverPictures: components["schemas"]["CookbooksCookbookCoverPicture"][];
             /**
              * Format: date-time
              * @description When it, or what is on it, last changed.

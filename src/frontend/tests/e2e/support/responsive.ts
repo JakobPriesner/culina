@@ -65,6 +65,7 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
   kind: 'manual',
   recipeCount: 6,
   coverRecipeIds: [recipeId],
+  coverPictures: [{ recipeId, imageId: 'image-1' }],
   createdBy: userId,
   createdAt: stamp,
   updatedAt: stamp,

@@ -6,7 +6,7 @@ using Domain.Shared;
 
 namespace Application.Recipes.GetSharedImage;
 
-/// <summary>Writes a published recipe's photograph to a destination.</summary>
+/// <summary>Finds a published recipe's photograph.</summary>
 /// <remarks>
 /// Its own query rather than a flag on <see cref="GetRecipeImageQuery"/>,
 /// because that one's whole job is to check household membership on every
@@ -16,8 +16,7 @@ namespace Application.Recipes.GetSharedImage;
 /// </remarks>
 /// <param name="Token">The secret out of the link.</param>
 /// <param name="Width">Which rendition.</param>
-/// <param name="Destination">Where to write it.</param>
-public sealed record GetSharedImageQuery(string Token, int Width, Stream Destination);
+public sealed record GetSharedImageQuery(string Token, int Width);
 
 internal sealed class GetSharedImageQueryHandler(
     IRecipeShareRepository shares,
@@ -41,17 +40,6 @@ internal sealed class GetSharedImageQueryHandler(
             link => recipes.ImageHashAsync(link.RecipeId, cancellationToken),
             error => Task.FromResult(Result<string>.Failure(error))).ConfigureAwait(false);
 
-        var result = await hash.Match(
-            async contentHash =>
-            {
-                var written = await images
-                    .CopyToAsync(contentHash, query.Width, query.Destination, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return written.Map(() => new ImageDelivery(contentHash));
-            },
-            error => Task.FromResult(Result<ImageDelivery>.Failure(error))).ConfigureAwait(false);
-
-        return tracked.Record(result);
+        return tracked.Record(hash.Map(contentHash => ImageDelivery.Of(images, contentHash, query.Width)));
     }
 }

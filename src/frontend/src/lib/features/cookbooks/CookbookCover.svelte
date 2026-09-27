@@ -3,6 +3,8 @@
 
   import { imageSrcset, imageUrl } from '$features/recipes/recipeImage';
 
+  import type { CoverPicture } from './types';
+
   /**
    * The face of a cookbook.
    *
@@ -17,15 +19,20 @@
    * not doing the one job a cover has.
    */
   interface Props {
-    /** Up to four photographed recipes, oldest first. */
-    recipeIds: readonly string[];
+    /**
+     * Up to four photographed recipes, oldest first. Each carries the id of
+     * the picture it has now, which goes into the address the same way it
+     * does on a recipe card: a replaced picture is a new address, so an
+     * unchanged cover is drawn from cache without asking the server.
+     */
+    pictures: readonly CoverPicture[];
     /** Shown when the shelf has nothing photographed on it yet. */
     name: string;
   }
 
-  let { recipeIds, name }: Props = $props();
+  let { pictures, name }: Props = $props();
 
-  const shown = $derived(recipeIds.slice(0, 4));
+  const shown = $derived(pictures.slice(0, 4));
   const tiles = $derived(shown.length >= 4 ? 4 : shown.length >= 2 ? 2 : 1);
 </script>
 
@@ -45,11 +52,11 @@
       quarters rather than four photographs laid side by side. Only the outside
       is curved, and the cover itself does that by clipping.
     -->
-    {#each shown as recipeId (recipeId)}
+    {#each shown as { recipeId, imageId } (recipeId)}
       <div class="tile">
         <Image
-          src={imageUrl(recipeId, 400)}
-          srcset={imageSrcset(recipeId)}
+          src={imageUrl(recipeId, 400, imageId)}
+          srcset={imageSrcset(recipeId, imageId)}
           sizes="(min-width: 64rem) 10rem, 22vw"
           alt=""
           fill

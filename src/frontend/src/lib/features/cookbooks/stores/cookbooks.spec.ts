@@ -16,6 +16,7 @@ const shelf = (id: string, name: string, recipeCount = 0) => ({
   description: null,
   recipeCount,
   coverRecipeIds: [],
+  coverPictures: [],
   updatedAt: '2026-09-14T00:00:00Z'
 });
 

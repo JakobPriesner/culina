@@ -48,8 +48,8 @@ internal static class ImageResponse
     /// Sends the bytes, or says the client already has them.
     /// </summary>
     /// <param name="context">The current request.</param>
-    /// <param name="buffer">The image the handler wrote.</param>
-    /// <param name="delivery">What was served, and its content hash.</param>
+    /// <param name="delivery">What to serve, and its content hash.</param>
+    /// <param name="cancellationToken">Cancels reading the file.</param>
     /// <remarks>
     /// <para>
     /// No-cache rather than an hour's freshness. A picture is replaced under the
@@ -59,22 +59,40 @@ internal static class ImageResponse
     /// arrived.
     /// </para>
     /// <para>
-    /// It costs a request per view and almost no bytes: the tag is the content
-    /// hash, so an unchanged picture answers 304 and is not sent again.
+    /// It costs a request per view and almost nothing else: the tag is the
+    /// content hash, so an unchanged picture answers 304 before the file is
+    /// ever opened.
     /// </para>
     /// </remarks>
-    internal static IResult Served(HttpContext context, MemoryStream buffer, ImageDelivery delivery)
+    internal static async Task<IResult> ServedAsync(
+        HttpContext context,
+        ImageDelivery delivery,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(buffer);
+        ArgumentNullException.ThrowIfNull(delivery);
 
         var tag = $"\"{delivery.ContentHash}\"";
 
         context.Response.Headers.ETag = tag;
         context.Response.Headers.CacheControl = "private, no-cache";
 
-        return ETag.Matches(context.Request.Headers.IfNoneMatch, tag)
-            ? Results.StatusCode(StatusCodes.Status304NotModified)
-            : Results.Bytes(buffer.ToArray(), "image/webp");
+        if (ETag.Matches(context.Request.Headers.IfNoneMatch, tag))
+        {
+            return Results.StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        // Buffered rather than streamed to the body, so a rendition missing
+        // from the store is still a 404 and not a 200 cut off halfway.
+        var buffer = new MemoryStream();
+
+        await using (buffer.ConfigureAwait(false))
+        {
+            var written = await delivery.WriteToAsync(buffer, cancellationToken).ConfigureAwait(false);
+
+            return written.Match(
+                () => Results.Bytes(buffer.ToArray(), "image/webp"),
+                CustomResults.Problem);
+        }
     }
 }

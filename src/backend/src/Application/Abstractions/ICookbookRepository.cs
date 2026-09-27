@@ -110,16 +110,22 @@ public interface ICookbookRepository
 /// <summary>A cookbook with what a card needs to draw it.</summary>
 /// <param name="Cookbook">The shelf itself.</param>
 /// <param name="RecipeCount">How many recipes are on it.</param>
-/// <param name="CoverRecipeIds">
+/// <param name="Cover">
 /// Up to four photographed recipes, oldest first — so a cover stops moving once
-/// there are four, rather than changing face every time something is added. The
-/// recipes and not their images, because a picture is served from the recipe's
-/// own address.
+/// there are four, rather than changing face every time something is added.
 /// </param>
 public sealed record CookbookOnAShelf(
     Cookbook Cookbook,
     int RecipeCount,
-    IReadOnlyList<Guid> CoverRecipeIds);
+    IReadOnlyList<CoverPicture> Cover);
+
+/// <summary>One picture on a cookbook's cover.</summary>
+/// <param name="RecipeId">Whose picture: it is served from the recipe's own address.</param>
+/// <param name="ImageId">
+/// Which picture the recipe has now. It goes into the address, so a replaced
+/// picture is a new address and a cached one can be kept without asking.
+/// </param>
+public sealed record CoverPicture(Guid RecipeId, Guid ImageId);
 
 /// <summary>A page of cookbooks.</summary>
 /// <param name="Items">The cookbooks on it.</param>

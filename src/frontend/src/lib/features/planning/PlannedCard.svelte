@@ -64,7 +64,7 @@
   <a class="body" href={resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId })}>
     {#if meal.imageId}
       <div class="thumb">
-        <Image src={imageUrl(meal.recipeId, 400)} alt="" ratio={1} />
+        <Image src={imageUrl(meal.recipeId, 400, meal.imageId)} alt="" ratio={1} />
       </div>
     {/if}
 

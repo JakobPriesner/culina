@@ -26,12 +26,11 @@ public sealed record SetCookPhotoCommand(Guid EntryId, Guid UserId, Stream Conte
 /// <param name="UserId">Whose it must be.</param>
 public sealed record RemoveCookPhotoCommand(Guid EntryId, Guid UserId);
 
-/// <summary>Writes an attempt's picture to a destination.</summary>
+/// <summary>Finds an attempt's picture.</summary>
 /// <param name="EntryId">Which attempt.</param>
 /// <param name="UserId">Whose it must be.</param>
 /// <param name="Width">Which rendition.</param>
-/// <param name="Destination">Where to write it.</param>
-public sealed record GetCookPhotoQuery(Guid EntryId, Guid UserId, int Width, Stream Destination);
+public sealed record GetCookPhotoQuery(Guid EntryId, Guid UserId, int Width);
 
 internal sealed class SetCookPhotoCommandHandler(
     ICookLogRepository log,
@@ -155,21 +154,11 @@ internal sealed class GetCookPhotoQueryHandler(ICookLogRepository log, IImageSto
             .FindAsync(query.EntryId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await found.Match(
-            async entry =>
-            {
-                if (entry.Photo is not { } photo)
-                {
-                    return Result<ImageDelivery>.Failure(CookingErrors.EntryNotFound);
-                }
-
-                var written = await images
-                    .CopyToAsync(photo.ContentHash, query.Width, query.Destination, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return written.Map(() => new ImageDelivery(photo.ContentHash));
-            },
-            error => Task.FromResult(Result<ImageDelivery>.Failure(error))).ConfigureAwait(false);
+        var result = found.Match(
+            entry => entry.Photo is { } photo
+                ? ImageDelivery.Of(images, photo.ContentHash, query.Width)
+                : Result<ImageDelivery>.Failure(CookingErrors.EntryNotFound),
+            Result<ImageDelivery>.Failure);
 
         return tracked.Record(result);
     }

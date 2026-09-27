@@ -90,6 +90,37 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Cover_ShouldNameThePictureAndChangeTheTag_WhenAPictureIsReplaced()
+    {
+        // Arrange
+        // The picture's id goes into the cover's image address, so a cached
+        // cover is kept without asking. That is only safe while the id is
+        // current — and replacing a recipe's picture is not a write to the
+        // cookbook, so a tag of the cookbook's version alone would 304 over it.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cookbookId = await CookbookAsync(client, householdId, "Wochentags");
+        var recipeId = await RecipeAsync(client, householdId, "Linsensuppe");
+
+        await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
+        var firstImageId = await PhotographAsync(client, recipeId, TestImages.Png(620, 420));
+        var before = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+
+        // Act
+        var secondImageId = await PhotographAsync(client, recipeId, TestImages.Png(630, 430));
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/cookbooks/{cookbookId}");
+        request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(before.ETag!));
+        var after = await client.SendAsync(request, Token);
+
+        // Assert
+        Assert.Equal(firstImageId, CoverImageId(before));
+        Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+        Assert.Equal(secondImageId, CoverImageId(after));
+        Assert.NotEqual(before.ETag, after.ETag);
+    }
+
+    [Fact]
     public async Task AddRecipe_ShouldRefuseOneFromAnotherHousehold()
     {
         // Arrange
@@ -355,6 +386,30 @@ public class CookbookEndpointTests(PostgresFixture postgres)
             Token);
 
         return created.Json!.Value.GetProperty("cookbookId").GetGuid();
+    }
+
+    /// <summary>Gives a recipe a picture, and says which one it now has.</summary>
+    private static async Task<Guid> PhotographAsync(ApiClient client, Guid recipeId, byte[] png)
+    {
+        var file = new ByteArrayContent(png);
+        file.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
+
+        var content = new MultipartFormDataContent { { file, "file", "photo.png" } };
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}/image")
+        {
+            Content = content
+        };
+
+        var uploaded = await client.SendAsync(request, Token);
+
+        return uploaded.Json!.Value.GetProperty("imageId").GetGuid();
+    }
+
+    private static Guid CoverImageId(ApiResponse cookbook)
+    {
+        var picture = Assert.Single(cookbook.Json!.Value.GetProperty("coverPictures").EnumerateArray());
+
+        return picture.GetProperty("imageId").GetGuid();
     }
 
     private static async Task<Guid> RecipeAsync(ApiClient client, Guid householdId, string title)

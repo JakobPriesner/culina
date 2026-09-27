@@ -33,8 +33,14 @@ export interface Cookbook {
   readonly rules: CookbookRules | null;
   readonly recipeCount: number;
   /** Up to four photographed recipes for the cover, oldest first. */
-  readonly coverRecipeIds: readonly string[];
+  readonly cover: readonly CoverPicture[];
   readonly updatedAt: string;
+}
+
+/** One picture on a cover: the recipe it belongs to, and which picture that recipe has now. */
+export interface CoverPicture {
+  readonly recipeId: string;
+  readonly imageId: string;
 }
 
 /** One cookbook, with the version its next write has to quote. */

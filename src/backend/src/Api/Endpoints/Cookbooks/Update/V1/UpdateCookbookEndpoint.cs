@@ -35,7 +35,7 @@ internal sealed class UpdateCookbookEndpoint : IEndpoint
                             .ConfigureAwait(false);
 
                         return result.Match(
-                            cookbook => ETag.Ok(context, cookbook, cookbook.Version),
+                            cookbook => CookbookTag.Ok(context, cookbook),
                             CustomResults.Problem);
                     },
                     error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
