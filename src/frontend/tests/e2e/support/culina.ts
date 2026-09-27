@@ -100,7 +100,12 @@ export async function ensureAccount(
       data: { email: who.email, displayName: name, password: who.password }
     });
 
-    expect(created.ok(), await created.text()).toBe(true);
+    // `known` is per worker, so on a fresh stack two workers can both miss the
+    // sign-in and both create the account. The one that loses gets a 409 for an
+    // account that now exists with exactly these credentials.
+    const madeElsewhere = created.status() === 409;
+
+    expect(created.ok() || madeElsewhere, await created.text()).toBe(true);
     known.set(name, who);
 
     return who;
