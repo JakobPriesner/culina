@@ -6975,6 +6975,26 @@
         },
         "description": "A change to a session in progress."
       },
+      "CookbooksCookbookCoverPicture": {
+        "required": [
+          "recipeId",
+          "imageId"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "description": "Whose picture.",
+            "format": "uuid"
+          },
+          "imageId": {
+            "type": "string",
+            "description": "Which picture the recipe has now.",
+            "format": "uuid"
+          }
+        },
+        "description": "One picture on a cookbook's cover."
+      },
       "CookbooksCookbookDetail": {
         "required": [
           "cookbookId",
@@ -6983,6 +7003,7 @@
           "kind",
           "recipeCount",
           "coverRecipeIds",
+          "coverPictures",
           "createdBy",
           "createdAt",
           "updatedAt",
@@ -7038,6 +7059,13 @@
               "format": "uuid"
             },
             "description": "Up to four photographed recipes for the cover, oldest first."
+          },
+          "coverPictures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CookbooksCookbookCoverPicture"
+            },
+            "description": "The same pictures, with which picture each recipe has now."
           },
           "createdBy": {
             "type": "string",
@@ -7112,6 +7140,7 @@
           "kind",
           "recipeCount",
           "coverRecipeIds",
+          "coverPictures",
           "updatedAt"
         ],
         "type": "object",
@@ -7159,6 +7188,13 @@
               "format": "uuid"
             },
             "description": "Up to four photographed recipes for the cover, oldest first."
+          },
+          "coverPictures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CookbooksCookbookCoverPicture"
+            },
+            "description": "The same pictures, with which picture each recipe has now."
           },
           "updatedAt": {
             "type": "string",

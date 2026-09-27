@@ -12,7 +12,7 @@ const cookbook = (over: Partial<Cookbook> = {}): Cookbook => ({
   kind: 'manual',
   rules: null,
   recipeCount: 3,
-  coverRecipeIds: [],
+  cover: [],
   updatedAt: '2026-09-14T00:00:00Z',
   ...over
 });
@@ -35,7 +35,14 @@ describe('a cookbook on the shelf', () => {
 
   it('draws a cover from the recipes on it', () => {
     renderWithProviders(CookbookCard, {
-      props: { cookbook: cookbook({ coverRecipeIds: ['r1', 'r2'] }) }
+      props: {
+        cookbook: cookbook({
+          cover: [
+            { recipeId: 'r1', imageId: 'i1' },
+            { recipeId: 'r2', imageId: 'i2' }
+          ]
+        })
+      }
     });
 
     // Decoration beside a title that already names the thing: every tile is
@@ -46,6 +53,16 @@ describe('a cookbook on the shelf', () => {
     // And nothing of it reaches a screen reader, which reads the cookbook's
     // name once rather than the name and two empty pictures.
     expect(screen.queryAllByRole('presentation')).toHaveLength(0);
+  });
+
+  it('addresses each cover picture by the picture it is, so a replaced one is fetched again', () => {
+    renderWithProviders(CookbookCard, {
+      props: { cookbook: cookbook({ cover: [{ recipeId: 'r1', imageId: 'i1' }] }) }
+    });
+
+    const [tile] = screen.getAllByRole('presentation', { hidden: true });
+
+    expect(tile).toHaveAttribute('src', expect.stringContaining('/recipes/r1/image?w=400&v=i1'));
   });
 
   it('falls back to the initial rather than a grey box when nothing is photographed', () => {

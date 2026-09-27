@@ -209,8 +209,8 @@ type CachePolicy = 'cache-first' | 'network-first';
 const one = (pattern: RegExp, policy: CachePolicy) => ({ pattern, policy }) as const;
 
 const readable = [
-  // Content-addressed and immutable: the URL carries the width and the recipe's
-  // version, so what is cached can never be the wrong picture.
+  // Content-addressed and immutable: the URL carries the width and the
+  // picture's id, so what is cached can never be the wrong picture.
   one(/^\/api\/v1\/recipes\/[^/]+\/image$/, 'cache-first'),
   // The recipe, the list, and who is signed in: the network wins whenever
   // there is one, and the cache only ever catches a fall.
@@ -237,8 +237,17 @@ const readable = [
 
 function policyFor(url: URL): CachePolicy | null {
   const path = url.pathname.slice(base.length);
+  const policy = readable.find((candidate) => candidate.pattern.test(path))?.policy ?? null;
 
-  return readable.find((candidate) => candidate.pattern.test(path))?.policy ?? null;
+  // Cache first is only true of an address that names its content. A picture
+  // asked for without `v` is whatever the recipe has now, and keeping that
+  // forever showed a replaced picture forever. Left to the browser instead,
+  // it revalidates against the image's ETag and costs a 304.
+  if (policy === 'cache-first' && !url.searchParams.has('v')) {
+    return null;
+  }
+
+  return policy;
 }
 
 /**
