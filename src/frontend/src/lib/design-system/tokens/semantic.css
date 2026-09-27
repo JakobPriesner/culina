@@ -60,6 +60,9 @@
   --accent-active: var(--c-olive-700);
   --accent-contrast: var(--c-white);
 
+  /* Brand punctuation, separate from the action colour used by controls. */
+  --brand-accent: var(--c-terracotta-600);
+
   /* Status. Colour is never the only carrier of meaning; these support an icon
      or a word rather than replacing one. */
   --danger: var(--c-rust-600);
