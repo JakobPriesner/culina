@@ -5,7 +5,7 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Recipes.Evaluation;
 
 /// <summary>
-/// The sixty recipes and forty judged queries of <c>golden-library.json</c>.
+/// The sixty recipes and forty-four judged queries of <c>golden-library.json</c>.
 /// </summary>
 /// <remarks>
 /// A library built to be difficult — see <see cref="SearchEvaluationTests"/> —
