@@ -72,9 +72,13 @@
     {/if}
   {/if}
 
+  <!-- Not to be typed into before the note has been read: the answer would
+       replace what was typed, and the save after it would send that emptiness
+       back as the note, under "Saved". -->
   <TextArea
     id="overall-note"
     value={notes.overall}
+    readonly={!notes.loaded}
     rows={3}
     placeholder={m['notes.placeholder']()}
     oninput={(text) => {

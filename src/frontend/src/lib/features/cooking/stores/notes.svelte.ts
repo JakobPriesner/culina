@@ -12,6 +12,11 @@ import { registerStore } from '$shell/stores';
 class NotesStore {
   #overall = $state('');
   #loaded = $state(false);
+  /**
+   * The save still on its way. Plain rather than `$state`, because `load()`
+   * reads it before its first await, from inside an effect.
+   */
+  #saving: Promise<unknown> | null = null;
 
   get overall(): string {
     return this.#overall;
@@ -23,6 +28,11 @@ class NotesStore {
 
   async load(recipeId: string): Promise<void> {
     this.#loaded = false;
+
+    // Leaving the recipe for cook mode sends what was typed last as the page
+    // closes, and cook mode reads the note straight back. A read that overtook
+    // that write would show the note as it was before.
+    await this.#saving;
 
     const result = await request(() =>
       http.GET('/api/v1/recipes/{recipeId}/notes', { params: { path: { recipeId } } })
@@ -38,7 +48,7 @@ class NotesStore {
   }
 
   async save(recipeId: string): Promise<AppError | null> {
-    const result = await request(() =>
+    const saving = request(() =>
       http.PUT('/api/v1/recipes/{recipeId}/notes', {
         params: { path: { recipeId } },
         // Blank means "no note" rather than an empty one: a note nobody wrote
@@ -47,12 +57,21 @@ class NotesStore {
       })
     );
 
+    this.#saving = saving;
+
+    const result = await saving;
+
+    if (this.#saving === saving) {
+      this.#saving = null;
+    }
+
     return result.ok ? null : result.error;
   }
 
   reset(): void {
     this.#overall = '';
     this.#loaded = false;
+    this.#saving = null;
   }
 }
 

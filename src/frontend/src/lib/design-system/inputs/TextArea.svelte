@@ -12,6 +12,14 @@
     describedBy?: string | undefined;
     invalid?: boolean;
     disabled?: boolean;
+    /**
+     * Readable, focusable, and not yet typed into.
+     *
+     * For text that is still being read: `disabled` would grey the box out for
+     * the moment a read takes, on every visit, and letting it be typed into
+     * means a late answer overwrites what was typed.
+     */
+    readonly?: boolean;
     /** How tall it starts. It never gets shorter than this. */
     rows?: number;
     maxlength?: number;
@@ -50,6 +58,7 @@
     describedBy,
     invalid = false,
     disabled = false,
+    readonly = false,
     rows = 3,
     maxlength,
     oninput,
@@ -77,6 +86,7 @@
   {id}
   {placeholder}
   {disabled}
+  {readonly}
   {rows}
   {maxlength}
   bind:value
