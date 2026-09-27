@@ -73,6 +73,16 @@ public sealed record RecipeConstraints(
 {
     /// <summary>Nothing beyond the words.</summary>
     public static RecipeConstraints None { get; } = new([], [], [], [], [], [], Quick: false);
+
+    /// <summary>
+    /// Lexicon meals set aside because no recipe was one: what resembles them
+    /// still comes first. Never a filter.
+    /// </summary>
+    /// <remarks>
+    /// A property rather than a parameter, because only a search that had to
+    /// set its meal aside ever has one.
+    /// </remarks>
+    public IReadOnlyList<string> PreferredMeals { get; init; } = [];
 }
 
 /// <summary>The orders a recipe list can be returned in.</summary>

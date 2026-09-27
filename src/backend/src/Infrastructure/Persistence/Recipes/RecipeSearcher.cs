@@ -520,7 +520,15 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             end as kind,
             case
                 when not page.has_text or page.tier <= 1 or page.fuzzy_title then null
-                when page.tier = 5 then (@concepts::text[])[1]
+                -- What the recipe is that answered, which for a stand-in is
+                -- not what was asked: a Beef Stew answers "Gulasch" as a stew.
+                when page.tier = 5 then (
+                    select answer.concept
+                    from unnest(@conceptAnswers::text[]) with ordinality as answer(concept, at)
+                    join recipe_search_documents d on d.recipe_id = page.id
+                    where answer.concept = any(d.concepts)
+                    order by answer.at
+                    limit 1)
                 else coalesce(found_ingredient.name, found_tag.name)
             end as term
         from (select 1) as one
@@ -554,6 +562,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
 
         var query = string.IsNullOrWhiteSpace(search.Query) ? null : search.Query.Trim();
         var constraints = search.Constraints;
+        var concepts = ConceptsAskedFor(query);
 
         var parameters = new DynamicParameters(new
         {
@@ -561,7 +570,11 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             library = search.Library.ToArray(),
             userId = search.UserId,
             query,
-            concepts = ConceptsAskedFor(query),
+            concepts,
+            conceptAnswers = concepts.SelectMany(CulinaryLexicon.AnsweredBy).ToArray(),
+            conceptAsked = concepts
+                .SelectMany((concept, asked) => CulinaryLexicon.AnsweredBy(concept).Select(_ => asked))
+                .ToArray(),
             diets = constraints.Diets.ToArray(),
             dietPresumable = constraints.Diets.All(diet => DietRules.RefutedBy(diet) is not null),
             dietRefutedBy = constraints.Diets
@@ -574,6 +587,11 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             excludedConcepts = constraints.ExcludedConcepts.ToArray(),
             excludedTerms = constraints.ExcludedTerms.ToArray(),
             quick = constraints.Quick,
+            mealsLike = constraints.PreferredMeals.SelectMany(MealRules.LookLike).Distinct().ToArray(),
+            mealsUnlike = constraints.PreferredMeals
+                .SelectMany(MealRules.Unlike)
+                .Except(constraints.PreferredMeals.SelectMany(MealRules.LookLike))
+                .ToArray(),
             fuzzyThreshold = FuzzyThreshold,
             tags,
             tagCount = tags.Length,
@@ -629,7 +647,9 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     /// rice dish by what rice is.
     /// </remarks>
     private static string[] ConceptsAskedFor(string? query) =>
-        query is null ? [] : [.. CulinaryLexicon.Recognise(Excluded().Replace(query, " "))];
+        query is null
+            ? []
+            : [.. CulinaryLexicon.Recognise(Excluded().Replace(query, " ")).Order(StringComparer.Ordinal)];
 
     [GeneratedRegex(@"(?<!\S)-\S+")]
     private static partial Regex Excluded();

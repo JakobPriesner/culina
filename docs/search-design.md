@@ -1648,6 +1648,24 @@ and independently testable.
 `personalisation` is deliberately outside the sum. It participates only in the
 sort, after `score`, and only where scores are within 0.05 — see §13.
 
+**As built (culina-v2-0r34.5).** Three changes for the three golden queries
+that were still weak, each measured before and after (P@3 0.94 → 0.99,
+NDCG@10 0.93 → 0.97 over the forty queries of the time):
+
+- **A dish may be answered by the dish it is a kind of**, in the concept lane
+  only. `Gulasch` finds a Beef Stew, whose reason line names it a stew rather than a goulash;
+  `Nudeln mit Tomatensoße` finds the Bolognese, a sauce. One level up, and
+  only through another dish (`CulinaryLexicon.AnsweredBy`): a dish's
+  ingredient parent is what it is made from — `Risotto` does not want every
+  rice dish — and an ingredient's parent is a family — `Tomaten` does not want
+  every vegetable. The lexicon also learned that `Fischsauce` and
+  `Austernsauce` are condiments rather than sauces, which had made every Pad
+  Thai a sauce dish.
+- **A household's `schnell` beats a short cook time.** Like a diet a title or a
+  tag asserts, a recipe that says it is quick is lifted above one whose times
+  merely add up to little — a nudge, zero unless "schnell" was asked.
+- **A relaxed meal stays a preference**; see §22.2.
+
 ### 11.3 The worked example
 
 Library:
@@ -3681,6 +3699,15 @@ search in a recipe app is normally a dead end. Culina has a recipe editor and
 an importer, and `/recipes/import` is under active development. "You have no
 Schnitzel — write one down, or import one" turns the worst moment in search
 into the start of a task. It costs two buttons.
+
+**As built (culina-v2-0r34.5).** Rung 4 used to make a relaxed meal vanish:
+nobody tags a recipe *Abendessen*, so `schnelles Abendessen` set the meal aside
+and ranked the quickest things in the library first — yoghurt bowls. A meal set
+aside now stays a preference (`RecipeConstraints.PreferredMeals`): a recipe
+that says it is some other meal — breakfast, dessert, a snack — comes last,
+one that looks like the meal comes first, and the rest sit between.
+`Domain/Search/MealRules` says what a meal looks like: lunch and dinner
+resemble each other and are usually something warm.
 
 ### 22.3 What is never done
 

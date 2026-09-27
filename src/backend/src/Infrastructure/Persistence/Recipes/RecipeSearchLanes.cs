@@ -173,6 +173,24 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
+    /// Whether a recipe answers every concept the query names, each by itself
+    /// or by what may stand in for it.
+    /// </summary>
+    /// <remarks>
+    /// <c>@conceptAnswers</c> lists what may answer each concept, and
+    /// <c>@conceptAsked</c> says, position for position, which concept of
+    /// <c>@concepts</c> each one answers — see
+    /// <see cref="Domain.Search.CulinaryLexicon.AnsweredBy"/>. "Gulasch" is
+    /// answered by a goulash or a stew; "Nudeln mit Tomatensoße" by something
+    /// that is pasta and is a tomato sauce or some other sauce.
+    /// </remarks>
+    private const string ConceptHit = """
+        (select count(distinct answer.asked)
+         from unnest(@conceptAnswers::text[], @conceptAsked::int[]) as answer(concept, asked)
+         where answer.concept = any(d.concepts)) = cardinality(@concepts::text[])
+        """;
+
+    /// <summary>
     /// Which recipes are candidates at all: one index scan per lane, and the
     /// ids they found.
     /// </summary>
@@ -243,12 +261,14 @@ internal static class RecipeSearchLanes
         -- query names, among the ones its title, tags and ingredients do.
         -- Waffeln for "Nachtisch", Hähnchen for "chicken". Every, not any:
         -- "Hähnchen Reis" is a chicken dish with rice, not every dish with
-        -- either. An empty array is contained in everything, so a query the
-        -- lexicon cannot read is kept out by name rather than by accident.
+        -- either. The overlap is the index's way in and the count after it
+        -- is the rule. A query the lexicon cannot read names nothing, and is
+        -- kept out by name rather than by accident.
         select d.recipe_id from recipe_search_documents d
         where d.household_id = any(@library)
           and cardinality(@concepts::text[]) > 0
-          and d.concepts @> @concepts::text[]
+          and d.concepts && @conceptAnswers::text[]
+          and {ConceptHit}
         union
         -- The title, for a query too short to have a term of its own.
         select d.recipe_id from q
@@ -269,8 +289,10 @@ internal static class RecipeSearchLanes
         coalesce(d.document @@ lang.tsq, false)          as lexical_hit,
         coalesce({FuzzyTitle}, false)                    as fuzzy_title,
         coalesce({FuzzyBody}, false)                     as fuzzy_body,
-        coalesce(cardinality(@concepts::text[]) > 0 and d.concepts @> @concepts::text[], false) as concept_hit,
+        coalesce(cardinality(@concepts::text[]) > 0 and {ConceptHit}, false) as concept_hit,
         coalesce(cardinality(@diets::text[]) > 0 and d.concepts @> @diets::text[], false) as diet_asserted,
+        coalesce(@quick and d.concepts @> array['quick'], false) as quick_asserted,
+        {MealFit}                                        as meal_fit,
         {TitleSimilarity}                                as title_similarity,
         coalesce({Rank}, 0)::float8                      as lexical_rank,
         {QueryCoverage}                                  as query_coverage,
@@ -367,11 +389,14 @@ internal static class RecipeSearchLanes
     /// places makes the tuning of one silently undo the other.
     /// </para>
     /// <para>
-    /// Three nudges sit outside the four weights, each zero unless its
+    /// Five nudges sit outside the four weights, each zero unless its
     /// question was asked: "schnell" (<see cref="QuickFit"/>), the closer
-    /// spelling within the typo tier (<see cref="TitleSimilarity"/>), and a
-    /// diet somebody asserted — a title or a tag that says vegetarisch — ahead
-    /// of one that is only presumed because nothing in the recipe refutes it.
+    /// spelling within the typo tier (<see cref="TitleSimilarity"/>), a meal
+    /// that had to be set aside (<see cref="MealFit"/>), and twice the same
+    /// rule — what somebody asserted comes ahead of what is only presumed. A
+    /// title or a tag that says vegetarisch beats a recipe nothing in which
+    /// refutes it, and one that says schnell beats one whose times merely add
+    /// up to little: a household's own words are the better answer.
     /// </para>
     /// <para>
     /// Every term is bounded in [0, 1] and computed per row, so nothing is
@@ -389,6 +414,8 @@ internal static class RecipeSearchLanes
         + 0.10 * quick_fit
         + 0.10 * title_similarity
         + 0.10 * case when diet_asserted then 1.0 else 0.0 end
+        + 0.10 * case when quick_asserted then 1.0 else 0.0 end
+        + 0.10 * meal_fit
         """;
 
     /// <summary>
@@ -429,6 +456,24 @@ internal static class RecipeSearchLanes
             when total_minutes <= 30 then 1.0::float8
             when total_minutes <= 45 then 0.5::float8
             else 0.0::float8
+        end
+        """;
+
+    /// <summary>
+    /// How well a recipe suits a meal that no recipe said it was.
+    /// </summary>
+    /// <remarks>
+    /// Zero for everybody unless a meal was set aside, and then: a recipe that
+    /// is some other meal is last, one that looks like the meal — for dinner,
+    /// a lunch or something warm — is first, and the rest sit between. See
+    /// <see cref="Domain.Search.MealRules"/>.
+    /// </remarks>
+    private const string MealFit = """
+        case
+            when cardinality(@mealsLike::text[]) = 0 then 0.0::float8
+            when coalesce(d.concepts && @mealsUnlike::text[], false) then 0.0::float8
+            when coalesce(d.concepts && @mealsLike::text[], false) then 1.0::float8
+            else 0.5::float8
         end
         """;
 

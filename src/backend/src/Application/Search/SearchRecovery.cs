@@ -216,7 +216,12 @@ public static class SearchRecovery
         return kind switch
         {
             InferenceKind.Cuisine => search with { Constraints = constraints with { Cuisines = [] } },
-            InferenceKind.Meal => search with { Constraints = constraints with { Meals = [] } },
+            // Still preferred, so "schnelles Abendessen" with no recipe
+            // tagged dinner still puts the curry above the yoghurt bowl.
+            InferenceKind.Meal => search with
+            {
+                Constraints = constraints with { Meals = [], PreferredMeals = constraints.Meals }
+            },
             // Still counted by the ranking, so what uses them still comes
             // first; only no longer required.
             InferenceKind.Ingredient => search with { Constraints = constraints with { Ingredients = [] } },
