@@ -886,8 +886,9 @@
         <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
       {:else if canCook}
         <!--
-          One button, alone, and the only thing this page parks at the bottom of
-          the screen.
+          One button, alone, after the recipe. On wide screens it stays within
+          reach while the recipe is read; on compact screens it remains in the
+          document instead of forming a second action bar above navigation.
 
           It is here rather than beside the title because the decision is made
           at the end of the reading, not at the start of it: you look at the
@@ -1337,8 +1338,9 @@
   }
 
   /*
-   * Clear of whatever the shell has already parked at the bottom of the
-   * viewport — the cooking bar, the phone's navigation bar, or both.
+   * On a wide screen, stay within reach while the recipe is read. Compact
+   * screens put their navigation at the bottom, so the responsive rule below
+   * returns this to the document flow instead of stacking two action bars.
    *
    * No enclosure of its own any more. A panel around four controls was what
    * held them together as a bar; around one accented button it is a box drawn
@@ -1370,6 +1372,13 @@
    * undoing these rules to get them back.
    */
   @media screen and (width < 64rem) {
+    /* The shell already owns the bottom edge with its primary navigation.
+       Keeping this action in flow gives the recipe one clear ending instead
+       of floating a second bar immediately above the first. */
+    .foot {
+      position: static;
+    }
+
     .body {
       grid-template-columns: 1fr;
       gap: var(--space-8);

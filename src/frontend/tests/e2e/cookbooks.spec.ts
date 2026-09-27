@@ -69,11 +69,22 @@ test.describe('cookbooks', () => {
     // showing an empty list and leaving it there.
     await page.getByRole('button', { name: /new cookbook|neues kochbuch/i }).click();
     await page.getByRole('textbox', { name: /^(name)$/i }).fill(name);
+
+    // The tick is optimistic, so seeing it is not enough before the next test
+    // leaves the page. Wait for the membership itself to reach the server.
+    const membershipWritten = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' &&
+        /\/cookbooks\/[^/]+\/recipes\/[^/]+$/.test(new URL(response.url()).pathname) &&
+        response.ok()
+    );
+
     await page.getByRole('button', { name: /create cookbook|anlegen/i }).click();
 
     // Made and ticked in one move: making a cookbook is never the goal, putting
     // this recipe somewhere is.
     await expect(page.getByRole('checkbox', { name })).toBeChecked();
+    await membershipWritten;
   });
 
   test('it holds what was put on it, and nothing else', async () => {
@@ -98,7 +109,17 @@ test.describe('cookbooks', () => {
   });
 
   test('deleting the shelf deletes no food', async () => {
+    await page
+      .getByRole('button', { name: /more cookbook actions|weitere kochbuchaktionen/i })
+      .click();
     await page.getByRole('button', { name: /delete this cookbook|kochbuch löschen/i }).click();
+
+    const question = page.getByRole('dialog', { name: new RegExp(name) });
+
+    await expect(question).toContainText(
+      /recipes stay in your library|rezepte bleiben in deiner sammlung/i
+    );
+    await question.getByRole('button', { name: /delete this cookbook|kochbuch löschen/i }).click();
 
     await expect(page).toHaveURL(/\/cookbooks$/);
     await expect(

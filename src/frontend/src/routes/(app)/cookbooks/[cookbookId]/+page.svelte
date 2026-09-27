@@ -1,9 +1,11 @@
 <script lang="ts">
+  import type { AppError } from '$api';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, EmptyState, ErrorState, Skeleton } from '$ds';
+  import { Button, EmptyState, ErrorState, IconButton, Popover, Skeleton } from '$ds';
   import { session } from '$features/auth/session.svelte';
+  import DeleteCookbookDialog from '$features/cookbooks/DeleteCookbookDialog.svelte';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
   import type { CookbookRules } from '$features/cookbooks/types';
@@ -54,6 +56,9 @@
   let saving = $state(false);
   let picking = $state(false);
   let shopping_ = $state(false);
+  let confirmingDelete = $state(false);
+  let deleting = $state(false);
+  let deleteFailure = $state<AppError | null>(null);
 
   const cookbook = $derived(cookbooks.open?.id === cookbookId ? cookbooks.open : null);
 
@@ -159,18 +164,34 @@
     });
   }
 
+  /** Closes the overflow before its choice opens the next surface. */
+  function choose(event: MouseEvent, run: () => void) {
+    const panel = (event.currentTarget as HTMLElement).closest('[popover]');
+
+    if (panel instanceof HTMLElement && typeof panel.hidePopover === 'function') {
+      panel.hidePopover();
+    }
+
+    run();
+  }
+
   async function remove() {
+    if (deleting) {
+      return;
+    }
+
     const name = cookbook?.name ?? '';
+    deleting = true;
     const done = await cookbooks.remove(cookbookId);
+    deleting = false;
 
     if (!done) {
-      toaster.show({ message: () => m['cookbooks.delete.failed'](), tone: 'danger' });
+      deleteFailure = cookbooks.error;
 
       return;
     }
 
-    // Said plainly, because "delete" next to a list of recipes is a frightening
-    // word and the reassurance is the true part.
+    confirmingDelete = false;
     toaster.show({ message: () => m['cookbooks.delete.done']({ name }) });
 
     await goto(resolve('/(app)/cookbooks'));
@@ -307,38 +328,133 @@
       </div>
 
       <div class="actions">
-        <!-- The one accented thing on the screen. On a shelf you fill, that is
-             putting something on it; on one that fills itself, there is nothing
-             to put, so the rules are the thing you came to change. -->
+        <!-- The two recurring loops stay visible. Editing and deletion are
+             occasional cookbook management, so they share the menu beside them. -->
         {#if automatic}
           <Button variant="primary" onclick={() => (renaming = true)}>
+            {#snippet icon()}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+                <circle cx="16" cy="7" r="2" />
+                <circle cx="8" cy="17" r="2" />
+              </svg>
+            {/snippet}
+
             {m['cookbooks.rules.edit']()}
           </Button>
         {:else}
           <Button variant="primary" onclick={() => (picking = true)}>
+            {#snippet icon()}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6.5 3.5H17a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"
+                />
+                <path d="M8 3.5v17M13 9v6M10 12h6" />
+              </svg>
+            {/snippet}
+
             {m['cookbooks.addRecipes.action']()}
           </Button>
         {/if}
 
         <Button loading={shopping_} onclick={() => void addToShoppingList()}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
+              <path d="M9 8 12 3l3 5" />
+            </svg>
+          {/snippet}
+
           {m['cookbooks.shopping.add']()}
         </Button>
 
-        {#if !automatic}
-          <Button variant="ghost" onclick={() => (renaming = true)}>
-            {m['cookbooks.edit.action']()}
-          </Button>
-        {/if}
+        <Popover placement="bottom-end">
+          {#snippet trigger({ popovertarget })}
+            <IconButton bordered label={m['cookbooks.moreActions']()} {popovertarget}>
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.6" />
+                <circle cx="12" cy="12" r="1.6" />
+                <circle cx="12" cy="19" r="1.6" />
+              </svg>
+            </IconButton>
+          {/snippet}
 
-        <!-- Quiet, and last. Loudness is not the same as safety: a filled red
-             button is the first thing the eye lands on, which is exactly wrong
-             for the one action nobody comes here to perform. There is no
-             confirmation because there is nothing much to lose — the recipes
-             all survive, and what goes is a name and a description — and the
-             toast says so in those words. -->
-        <Button variant="ghost" onclick={() => void remove()}>
-          {m['cookbooks.delete.action']()}
-        </Button>
+          <div class="menu">
+            {#if !automatic}
+              <button
+                class="item"
+                type="button"
+                onclick={(event) => choose(event, () => (renaming = true))}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+                  <path d="m15 6 3 3" />
+                </svg>
+
+                {m['cookbooks.edit.title']()}
+              </button>
+
+              <hr class="separator" />
+            {/if}
+
+            <button
+              class="item danger"
+              type="button"
+              onclick={(event) =>
+                choose(event, () => {
+                  deleteFailure = null;
+                  confirmingDelete = true;
+                })}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13" />
+                <path d="M10 11v5M14 11v5" />
+              </svg>
+
+              {m['cookbooks.delete.action']()}
+            </button>
+          </div>
+        </Popover>
       </div>
 
       <div class="tools">
@@ -411,6 +527,15 @@
   {/if}
 </Page>
 
+<DeleteCookbookDialog
+  open={confirmingDelete}
+  name={cookbook?.name ?? ''}
+  {deleting}
+  error={deleteFailure}
+  onconfirm={() => void remove()}
+  onclose={() => (confirmingDelete = false)}
+/>
+
 <CookbookSheet
   open={renaming}
   householdId={householdId ?? ''}
@@ -450,6 +575,7 @@
   }
 
   .heading {
+    flex: 1 1 24rem;
     min-width: 0;
   }
 
@@ -496,7 +622,52 @@
   .actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  .menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 13rem;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
     gap: var(--space-3);
+    min-height: var(--control-sm);
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-align: start;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .item:hover {
+    background: var(--surface-hover);
+  }
+
+  .item svg {
+    flex: none;
+    width: var(--space-4);
+    height: var(--space-4);
+  }
+
+  .item.danger {
+    color: var(--text-danger);
+  }
+
+  .separator {
+    margin: var(--space-1) var(--space-3);
+    border: none;
+    border-top: 1px solid var(--border);
   }
 
   .tools {
@@ -506,5 +677,12 @@
   .count {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  @media (width < 36rem) {
+    .actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
   }
 </style>
