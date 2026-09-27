@@ -75,7 +75,7 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
 export async function responsiveData(
   page: Page,
   locale: 'de' | 'en' = 'de',
-  { extraIngredients = 0 } = {}
+  { extraIngredients = 0, activeCooking = true } = {}
 ) {
   const detail = {
     ...recipe,
@@ -148,7 +148,12 @@ export async function responsiveData(
     if (path === `/cookbooks/${cookbookId}`) return reply(cookbook);
     if (path === `/recipes/${recipeId}/cookbooks`)
       return reply({ items: [{ cookbookId, name: cookbook.name }] });
-    if (path === '/cook-sessions/current') return reply(cooking);
+    if (path === '/cook-sessions/current') {
+      if (!activeCooking) {
+        return route.fulfill({ status: 404, json: { type: 'not-found' } });
+      }
+      return reply(cooking);
+    }
     if (path === '/cook-sessions/session-1') {
       cooking = { ...cooking, ...route.request().postDataJSON() };
       return reply(cooking);

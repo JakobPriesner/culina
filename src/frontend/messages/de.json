@@ -418,6 +418,7 @@
   "cookbooks.detail.filtered.title": "Keine Treffer",
   "cookbooks.detail.filtered.body": "Kein Rezept in diesem Kochbuch passt zu dieser Suche.",
   "cookbooks.search": "In diesem Kochbuch suchen",
+  "cookbooks.moreActions": "Weitere Kochbuchaktionen",
   "cookbooks.new.action": "Neues Kochbuch",
   "cookbooks.new.title": "Neues Kochbuch",
   "cookbooks.new.save": "Anlegen",
@@ -468,7 +469,7 @@
   "cookbooks.addRecipes.added": "{title} ist im Kochbuch.",
   "cookbooks.recipe.inLabel": "Abgelegt in",
   "cookbooks.picker.all": "Alle Rezepte",
-  "cookbooks.shopping.add": "Alle Zutaten zur Einkaufsliste hinzufügen",
+  "cookbooks.shopping.add": "Zur Einkaufsliste hinzufügen",
   "cookbooks.shopping.empty": "Hier gibt es nichts hinzuzufügen.",
   "cookbooks.shopping.done": [
     {
@@ -482,6 +483,10 @@
   ],
   "cookbooks.shopping.partial": "Zur Einkaufsliste hinzugefügt: {done} von {total}.",
   "cookbooks.delete.action": "Kochbuch löschen",
+  "cookbooks.delete.title": "„{name}“ löschen?",
+  "cookbooks.delete.body": "Das Kochbuch und seine Zusammenstellung werden gelöscht. Deine Rezepte bleiben in deiner Sammlung.",
+  "cookbooks.delete.cancel": "Kochbuch behalten",
+  "cookbooks.delete.close": "Schließen",
   "cookbooks.delete.done": "„{name}“ ist gelöscht. Deine Rezepte bleiben erhalten.",
   "cookbooks.delete.failed": "Das Kochbuch konnte nicht gelöscht werden.",
   "recipes.collection.subtitle": "Alles, was du gerne kochst. An einem Ort.",

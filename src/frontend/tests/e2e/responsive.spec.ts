@@ -151,6 +151,28 @@ test.describe('responsive production layouts @offline', () => {
     await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
   });
 
+  test('start cooking stays in the recipe instead of floating above mobile navigation', async ({
+    page
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await responsiveData(page, 'de', { activeCooking: false });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/recipes/${recipeId}`);
+
+    const start = page.getByRole('button', { name: 'Kochen starten', exact: true });
+    const action = page.locator('article.surface > footer.foot');
+    await expect(start).toBeVisible();
+    await expect(start).not.toBeInViewport();
+    expect(await action.evaluate((element) => getComputedStyle(element).position)).toBe('static');
+
+    await start.scrollIntoViewIfNeeded();
+    const actionBox = (await action.boundingBox())!;
+    const navigationBox = (await page.locator('nav.bottom').boundingBox())!;
+    expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(navigationBox.y);
+    await expectReflow(page);
+  });
+
   for (const [width, height] of [
     [320, 568],
     [375, 812],

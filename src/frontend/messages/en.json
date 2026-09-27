@@ -418,6 +418,7 @@
   "cookbooks.detail.filtered.title": "Nothing here matched",
   "cookbooks.detail.filtered.body": "No recipe in this cookbook matches that search.",
   "cookbooks.search": "Search this cookbook",
+  "cookbooks.moreActions": "More cookbook actions",
   "cookbooks.new.action": "New cookbook",
   "cookbooks.new.title": "New cookbook",
   "cookbooks.new.save": "Create cookbook",
@@ -468,7 +469,7 @@
   "cookbooks.addRecipes.added": "{title} is in the cookbook.",
   "cookbooks.recipe.inLabel": "Filed in",
   "cookbooks.picker.all": "All recipes",
-  "cookbooks.shopping.add": "Add all ingredients to the shopping list",
+  "cookbooks.shopping.add": "Add to shopping list",
   "cookbooks.shopping.empty": "There is nothing here to add.",
   "cookbooks.shopping.done": [
     {
@@ -482,6 +483,10 @@
   ],
   "cookbooks.shopping.partial": "Added to the shopping list: {done} of {total}.",
   "cookbooks.delete.action": "Delete this cookbook",
+  "cookbooks.delete.title": "Delete “{name}”?",
+  "cookbooks.delete.body": "The cookbook and its arrangement will be deleted. Your recipes stay in your library.",
+  "cookbooks.delete.cancel": "Keep cookbook",
+  "cookbooks.delete.close": "Close",
   "cookbooks.delete.done": "{name} is gone. The recipes are still there.",
   "cookbooks.delete.failed": "That cookbook could not be deleted.",
   "recipes.collection.subtitle": "Good things to cook. All in one place.",
