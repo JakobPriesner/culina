@@ -1,6 +1,7 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
 import { galleryOnly } from './build-tools/gallery.js';
+import { paraglideOptions } from './build-tools/paraglide.js';
 import { siteFiles } from './build-tools/siteFiles.js';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
@@ -23,17 +24,8 @@ const apiProxy = {
 
 function messages(outputStructure: 'message-modules' | 'locale-modules') {
   return paraglideVitePlugin({
-    project: './project.inlang',
-    outdir: './src/lib/paraglide',
-    outputStructure,
-    emitTsDeclarations: true,
-    // The locale a signed-in person chose is applied by the preferences
-    // store once the session is known. Before that — and for a visitor who
-    // has never signed in — the last choice on this device wins, then the
-    // browser's own language, then English. `custom-choice` is defined in
-    // src/lib/app/i18n.ts; it reads nothing for `system`, which is how the
-    // device's language gets through.
-    strategy: ['custom-choice', 'preferredLanguage', 'baseLocale']
+    ...paraglideOptions,
+    outputStructure
   });
 }
 
