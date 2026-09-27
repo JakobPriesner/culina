@@ -181,7 +181,8 @@
    * panel was right when the panel could not change; now a swipe would push one
    * recipe into the grid and pull another out of it, and the page would
    * rearrange itself below the thumb every time somebody looked at the next
-   * idea. A set chosen once is a grid that sits still.
+   * idea. A set chosen once is a grid that sits still — it only grows when
+   * somebody walks to the end of the shortlist and the next few are asked for.
    */
   const library = $derived(
     lead.length > 0
@@ -431,6 +432,9 @@
         items={lead}
         ondismiss={shortlist.length > 0 ? (recipeId) => void hide(recipeId) : undefined}
         inherited={session.inheritedFrom}
+        onmore={householdId && suggestions.hasMore(householdId, featuredQuery)
+          ? () => void suggestions.more(householdId, featuredQuery)
+          : undefined}
       />
     {/if}
 

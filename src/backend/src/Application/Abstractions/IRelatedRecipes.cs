@@ -10,22 +10,29 @@ namespace Application.Abstractions;
 /// </remarks>
 public interface IRelatedRecipes
 {
-    /// <summary>The recipes most like this one, the closest first.</summary>
+    /// <summary>One page of the recipes most like this one, the closest first.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="library">
     /// The households whose recipes it is compared with: its own, then those
     /// its own inherits from.
     /// </param>
     /// <param name="userId">Who is reading, whose cooking the summaries count.</param>
+    /// <param name="cursor">Where the previous page ended, or null for the first.</param>
     /// <param name="limit">How many at most.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    Task<IReadOnlyList<RelatedRecipe>> FindAsync(
+    Task<RelatedPage> FindAsync(
         Guid recipeId,
         IReadOnlyList<Guid> library,
         Guid userId,
+        string? cursor,
         int limit,
         CancellationToken cancellationToken);
 }
+
+/// <summary>One page of related recipes.</summary>
+/// <param name="Items">The closest first.</param>
+/// <param name="NextCursor">Where this page ended, or null when nothing else is alike enough.</param>
+public sealed record RelatedPage(IReadOnlyList<RelatedRecipe> Items, string? NextCursor);
 
 /// <summary>A recipe like another, and what the two have in common.</summary>
 /// <param name="Recipe">The recipe, as every list of recipes shows one.</param>

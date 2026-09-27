@@ -25,10 +25,25 @@ function keyOf(householdId: string, query: SuggestionQuery): string {
   ].join('|');
 }
 
+/** How many the server answers with when nobody says. */
+const DefaultLimit = 5;
+
+/**
+ * The most one question is walked to.
+ *
+ * The next page is asked for by naming everything already shown, so the list
+ * cannot grow without the address growing with it. Sixty is twelve pages of
+ * five and well inside what a request line may carry — and far past the point
+ * where the answer to "what should I cook?" is still a shortlist.
+ */
+const Most = 60;
+
 /** One question's answer, and how far along it is. */
 interface Answer {
   readonly items: Suggestion[];
   readonly status: LoadStatus;
+  /** Whether asking again, past what is shown, may find more. */
+  readonly more: boolean;
 }
 
 /**
@@ -65,6 +80,9 @@ class SuggestionStore {
    */
   #asked = new Set<string>();
 
+  /** Which questions have their next page on its way. Plain for the same reason as {@link #asked}. */
+  #fetchingMore = new Set<string>();
+
   get error(): AppError | null {
     return this.#error;
   }
@@ -90,6 +108,62 @@ class SuggestionStore {
     const status = this.statusOf(householdId, query);
 
     return status === 'ready' || status === 'failed';
+  }
+
+  /** Whether the answer goes on past what is shown. */
+  hasMore(householdId: string | null, query: SuggestionQuery = {}): boolean {
+    return householdId ? (this.#answers[keyOf(householdId, query)]?.more ?? false) : false;
+  }
+
+  /**
+   * The next few, after the ones already shown.
+   *
+   * Not a cursor: the suggestions are not paged, but they answer by the day,
+   * so the same question with everything already shown excluded is exactly
+   * the rest of today's list. Free to call while a page is on its way.
+   *
+   * A failure ends the list rather than being reported. What is already
+   * shown is still right, and the shortlist was complete without the rest.
+   */
+  async more(householdId: string, query: SuggestionQuery = {}): Promise<void> {
+    const key = keyOf(householdId, query);
+    const shown = this.#answers[key];
+
+    if (!shown?.more || this.#fetchingMore.has(key)) {
+      return;
+    }
+
+    this.#fetchingMore.add(key);
+
+    const size = query.limit ?? DefaultLimit;
+    const result = await this.#request(householdId, query, [
+      ...(query.exclude ?? []),
+      ...shown.items.map((item) => item.id)
+    ]);
+
+    this.#fetchingMore.delete(key);
+
+    const answer = this.#answers[key];
+
+    if (!answer) {
+      return;
+    }
+
+    const next = result.ok
+      ? result.value.items
+          .map(toSuggestion)
+          .filter((item) => !answer.items.some((one) => one.id === item.id))
+      : [];
+    const items = [...answer.items, ...next];
+
+    this.#answers = {
+      ...this.#answers,
+      [key]: {
+        ...answer,
+        items,
+        more: result.ok && result.value.items.length >= size && items.length < Most
+      }
+    };
   }
 
   /** Asks a question once. Calling it again with the same one does nothing. */
@@ -182,33 +256,26 @@ class SuggestionStore {
     this.#answers = {};
     this.#error = null;
     this.#asked.clear();
+    this.#fetchingMore.clear();
   }
 
   async #fetch(householdId: string, query: SuggestionQuery, key: string): Promise<void> {
     this.#answers = {
       ...this.#answers,
-      [key]: { items: this.#answers[key]?.items ?? [], status: 'loading' }
+      [key]: { items: this.#answers[key]?.items ?? [], status: 'loading', more: false }
     };
     this.#error = null;
 
-    const result = await request(() =>
-      http.GET('/api/v1/suggestions', {
-        params: {
-          query: {
-            householdId,
-            slot: query.slot,
-            maxMinutes: query.maxMinutes,
-            exclude: query.exclude ? [...query.exclude] : undefined,
-            limit: query.limit
-          }
-        }
-      })
-    );
+    const result = await this.#request(householdId, query, query.exclude);
 
     if (result.ok) {
       this.#answers = {
         ...this.#answers,
-        [key]: { items: result.value.items.map(toSuggestion), status: 'ready' }
+        [key]: {
+          items: result.value.items.map(toSuggestion),
+          status: 'ready',
+          more: result.value.items.length >= (query.limit ?? DefaultLimit)
+        }
       };
 
       return;
@@ -217,8 +284,24 @@ class SuggestionStore {
     this.#error = result.error;
     this.#answers = {
       ...this.#answers,
-      [key]: { items: this.#answers[key]?.items ?? [], status: 'failed' }
+      [key]: { items: this.#answers[key]?.items ?? [], status: 'failed', more: false }
     };
+  }
+
+  #request(householdId: string, query: SuggestionQuery, exclude: readonly string[] | undefined) {
+    return request(() =>
+      http.GET('/api/v1/suggestions', {
+        params: {
+          query: {
+            householdId,
+            slot: query.slot,
+            maxMinutes: query.maxMinutes,
+            exclude: exclude ? [...exclude] : undefined,
+            limit: query.limit
+          }
+        }
+      })
+    );
   }
 }
 

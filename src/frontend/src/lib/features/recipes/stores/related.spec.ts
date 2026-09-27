@@ -56,3 +56,86 @@ describe('a deleted recipe', () => {
     expect(related.statusOf('r3')).toBe('idle');
   });
 });
+
+/** Answers one shelf page by page, each page keyed by the cursor that asks for it. */
+function serverPages(pages: Record<string, { ids: string[]; next: string | null } | 'fails'>) {
+  const fetched = vi.fn((input: Request) => {
+    const page = pages[new URL(input.url).searchParams.get('cursor') ?? ''];
+
+    return Promise.resolve(
+      page === 'fails' || !page
+        ? new Response(JSON.stringify({ title: 'Down' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/problem+json' }
+          })
+        : new Response(JSON.stringify({ items: page.ids.map(item), nextCursor: page.next }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          })
+    );
+  });
+
+  vi.stubGlobal('fetch', fetched);
+
+  return fetched;
+}
+
+describe('the end of a shelf', () => {
+  it('adds the next page after the ones already showing, until there is none', async () => {
+    serverPages({
+      '': { ids: ['r2', 'r3', 'r4'], next: 'c1' },
+      c1: { ids: ['r5', 'r6', 'r7'], next: 'c2' },
+      c2: { ids: ['r8'], next: null }
+    });
+
+    await related.load('r1');
+    await related.more('r1');
+    await related.more('r1');
+
+    expect(related.of('r1').map((one) => one.id)).toEqual([
+      'r2',
+      'r3',
+      'r4',
+      'r5',
+      'r6',
+      'r7',
+      'r8'
+    ]);
+    expect(related.hasMore('r1')).toBe(false);
+  });
+
+  it('asks once for a page, however often the end comes into view', async () => {
+    const fetched = serverPages({
+      '': { ids: ['r2', 'r3', 'r4'], next: 'c1' },
+      c1: { ids: ['r5'], next: null }
+    });
+
+    await related.load('r1');
+    await Promise.all([related.more('r1'), related.more('r1')]);
+
+    expect(fetched).toHaveBeenCalledTimes(2);
+    expect(related.of('r1').map((one) => one.id)).toEqual(['r2', 'r3', 'r4', 'r5']);
+  });
+
+  it('does not show a recipe twice when the kitchen changed between pages', async () => {
+    serverPages({
+      '': { ids: ['r2', 'r3', 'r4'], next: 'c1' },
+      c1: { ids: ['r4', 'r5'], next: null }
+    });
+
+    await related.load('r1');
+    await related.more('r1');
+
+    expect(related.of('r1').map((one) => one.id)).toEqual(['r2', 'r3', 'r4', 'r5']);
+  });
+
+  it('keeps what it has and stops asking by itself once a page fails', async () => {
+    serverPages({ '': { ids: ['r2', 'r3', 'r4'], next: 'c1' }, c1: 'fails' });
+
+    await related.load('r1');
+    await related.more('r1');
+
+    expect(related.of('r1').map((one) => one.id)).toEqual(['r2', 'r3', 'r4']);
+    expect(related.hasMore('r1')).toBe(false);
+  });
+});
