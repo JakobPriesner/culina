@@ -529,11 +529,12 @@ test.describe('writing a recipe', () => {
 
     // Theirs is what is on screen, and this device is no longer holding a draft
     // that would come back on the next reload and conflict all over again.
-    await expect(page.getByText('Mehl')).toBeVisible();
+    // Exactly, because the German editor's hint says "200 g Mehl" too.
+    await expect(page.getByText('Mehl', { exact: true })).toBeVisible();
     await expect(page.getByText('Butter')).toHaveCount(0);
 
     await page.reload();
-    await expect(page.getByText('Mehl')).toBeVisible();
+    await expect(page.getByText('Mehl', { exact: true })).toBeVisible();
     await expect(page.getByText('Butter')).toHaveCount(0);
 
     await theirs.close();
