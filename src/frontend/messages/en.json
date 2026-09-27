@@ -374,6 +374,7 @@
   "plan.move.failed": "That move did not work. The meal is still on its original day.",
   "import.url.label": "A link to a recipe",
   "import.url.read": "Import recipe",
+  "import.url.pasteClipboard": "Paste copied link",
   "import.url.or": "or paste the recipe text",
   "import.url.failed": "That page could not be opened. It may be private or no longer available.",
   "archive.title": "Your recipes, as a file",

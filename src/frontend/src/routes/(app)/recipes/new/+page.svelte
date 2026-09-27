@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import { http, request } from '$api';
   import { Button, Field, TextInput } from '$ds';
   import FormFailure from '$features/auth/FormFailure.svelte';
@@ -48,6 +49,9 @@
   let describing = $state(false);
   let photographing = $state(false);
 
+  let incomingUrl = $state('');
+  let incomingText = $state('');
+
   const submission = createSubmission();
 
   onDestroy(() => submission.dispose());
@@ -62,6 +66,27 @@
 
   onMount(() => {
     void checkForUnfinishedDraft();
+
+    const sharedUrl = page.url.searchParams.get('url')?.trim() ?? '';
+    const sharedText = page.url.searchParams.get('text')?.trim() ?? '';
+    const sharedTitle = page.url.searchParams.get('title')?.trim() ?? '';
+
+    if (sharedTitle && !title) {
+      title = sharedTitle;
+    }
+
+    const extractedUrl =
+      sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://')
+        ? sharedUrl
+        : (sharedText.match(/https?:\/\/[^\s]+/)?.[0] ?? '');
+
+    if (extractedUrl) {
+      incomingUrl = extractedUrl;
+      pasting = true;
+    } else if (sharedText) {
+      incomingText = sharedText;
+      pasting = true;
+    }
   });
 
   async function checkForUnfinishedDraft() {
@@ -286,6 +311,8 @@
           bind:open={pasting}
           householdId={session.activeHouseholdId}
           busy={submission.showingProgress}
+          initialUrl={incomingUrl}
+          initialText={incomingText}
           onimport={(parsed) => void start(title.trim() || parsed.title, parsed)}
         />
       {:else if describing}
