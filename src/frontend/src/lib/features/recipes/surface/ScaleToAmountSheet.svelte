@@ -2,10 +2,14 @@
   import { Button, Field, Select, Sheet, TextInput } from '$ds';
 
   import { m } from '$shell/i18n';
-  import { targetYieldForAmount, yieldLabel } from '../scaling';
+  import { preferences } from '$shell/preferences.svelte';
+  import { formatQuantity } from '../formatQuantity';
+  import { quantityLabels, unitLabel } from '../quantityLabels';
+  import { scaleQuantity, targetYieldForAmount, yieldLabel } from '../scaling';
+  import { scales } from '../units';
   import { wordYield } from '../yieldWords';
   import { parseIngredientLine } from '../editor/parseIngredientLine';
-  import type { RecipeReading } from '../types';
+  import type { Quantity, RecipeReading } from '../types';
 
   /**
    * "I have 600 g of flour" — the whole recipe reshapes around it.
@@ -28,7 +32,8 @@
   const choices = $derived(
     recipe.groups
       .flatMap((group) => group.ingredients)
-      .filter((one) => one.quantity.value !== null)
+      // A pinch is not scaled, so nothing can be scaled from one either.
+      .filter((one) => one.quantity.value !== null && scales(one.quantity.unit))
       .map((one) => ({ value: one.id, label: one.name }))
   );
 
@@ -41,15 +46,55 @@
       .find((one) => one.id === (chosen || choices[0]?.value))
   );
 
-  const target = $derived.by(() => {
-    if (!ingredient || !typed.trim()) {
+  const written = (quantity: Quantity) =>
+    formatQuantity(scaleQuantity(quantity, 1), preferences.locale, quantityLabels).text;
+
+  /** The ingredient's own amount, as the example of what to type. */
+  const example = $derived(ingredient ? written(ingredient.quantity) : '');
+
+  /**
+   * What was typed, as an amount of the chosen ingredient.
+   *
+   * A bare number is in the ingredient's own unit: somebody looking at "600 g
+   * tomatoes" who types 300 means 300 g, and saying so beside the field makes
+   * that a reading they can see rather than a guess. A unit that was written is
+   * taken as written — kilos for grams is arithmetic, millilitres for grams is
+   * a guess about density, and that is refused out loud rather than silently.
+   */
+  const available = $derived.by((): Quantity | null => {
+    const trimmed = typed.trim();
+
+    if (!ingredient || !trimmed) {
       return null;
     }
 
-    const parsed = parseIngredientLine(typed);
+    const own = ingredient.quantity.unit ? [ingredient.quantity.unit] : [];
+    const parsed = parseIngredientLine(trimmed, own);
+    const bare = parsed.quantity.unit === null && parsed.name === trimmed;
 
-    return targetYieldForAmount(ingredient.quantity, parsed.quantity, recipe.yieldAmount);
+    return bare ? { ...parsed.quantity, unit: ingredient.quantity.unit } : parsed.quantity;
   });
+
+  const target = $derived(
+    ingredient && available
+      ? targetYieldForAmount(ingredient.quantity, available, recipe.yieldAmount)
+      : null
+  );
+
+  /** Why there is no answer yet, once something has been typed. */
+  const problem = $derived.by(() => {
+    if (!ingredient || !available || target !== null) {
+      return undefined;
+    }
+
+    return available.value && ingredient.quantity.unit
+      ? m['scaleTo.otherUnit']({ unit: unitLabel(ingredient.quantity.unit) })
+      : m['scaleTo.needsAmount']({ example });
+  });
+
+  const reading = $derived(
+    available && target !== null ? m['scaleTo.readAs']({ amount: written(available) }) : undefined
+  );
 
   const resultText = $derived(
     target === null
@@ -73,9 +118,9 @@
       {/snippet}
     </Field>
 
-    <Field label={m['scaleTo.amount']()}>
+    <Field label={m['scaleTo.amount']()} hint={reading} error={problem}>
       {#snippet children({ id, describedBy, invalid })}
-        <TextInput {id} {describedBy} {invalid} bind:value={typed} placeholder="600 g" />
+        <TextInput {id} {describedBy} {invalid} bind:value={typed} placeholder={example} />
       {/snippet}
     </Field>
   </div>
