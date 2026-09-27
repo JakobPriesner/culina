@@ -24,4 +24,31 @@ public class SearchTextTests
         Assert.Equal(umlaut, SearchText.FoldAe(input));
         Assert.Equal(stripped, SearchText.FoldA(input));
     }
+
+    [Theory]
+    [InlineData("Sommergericht", new[] { "sommer" })]
+    [InlineData("Winteressen", new[] { "winter" })]
+    [InlineData("Partyrezepte", new[] { "party" })]
+    // The linking s, or a word's own: both readings, and a tag decides.
+    [InlineData("Sonntagsessen", new[] { "sonntags", "sonntag" })]
+    [InlineData("Maisgericht", new[] { "mais" })]
+    [InlineData("schnelle Ofengerichte", new[] { "ofen" })]
+    public void Modifiers_ShouldReadWhatACompoundIsAbout_WhenItsHeadSaysNothing(string query, string[] expected)
+    {
+        // Act & Assert
+        Assert.Equal(expected, SearchText.Modifiers(query));
+    }
+
+    [Theory]
+    // A Fischsuppe is a soup, not something with fish: the head decides.
+    [InlineData("Fischsuppe")]
+    // Nothing left in front of the head, or too little to be a tag.
+    [InlineData("Gericht")]
+    [InlineData("Eisrezept")]
+    [InlineData("Sommer")]
+    public void Modifiers_ShouldReadNothing_WhenTheHeadMeansSomething(string query)
+    {
+        // Act & Assert
+        Assert.Empty(SearchText.Modifiers(query));
+    }
 }

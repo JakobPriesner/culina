@@ -1115,6 +1115,18 @@ than any curated table, and it is the same principle
 [`domain-model.md`](domain-model.md#ingredient-suggestions) already applies to
 ingredient vocabulary: after a few recipes, the household's own words win.
 
+**As built (culina-v2-0r34.6).** Each result of a diet search says whether it
+keeps the diet only by presumption (`presumedDiet` on the recipe summary: set
+when nothing in the title or tags asserts the diet). The client remembers
+those for the session, wherever the search was made — overlay, library,
+cookbook — and the recipe, once opened, asks the question quietly above
+itself. Either answer is a tag: `vegetarisch` for yes, and for no a tag the
+lexicon reads as refuting the diet — `nicht vegetarisch` and `nicht vegan` are
+Diet concepts of their own, listed in `DietRules` beside meat and fish, and
+found as phrases so the word *vegetarisch* inside them is never read as
+keeping it. An inherited recipe is not asked about: it is its own household's
+to tag.
+
 ### 7.6 If an LLM were ever added
 
 It is not, for the reasons in §5.12. Should that change, the only defensible
@@ -1474,10 +1486,11 @@ before any of them was run:
 | --- | --- | --- | --- | --- |
 | Phase 2 as shipped (`3a25302`) | **0.55** | 0.51 | 0.90 | 0.89 |
 | + the ranking fixes of `0r34.5` | 0.69 | 0.64 | 0.94 | 0.92 |
-| + the lexicon extended once | **0.78** | 0.73 | 0.98 | 0.94 |
+| + the lexicon extended once | 0.78 | 0.73 | 0.98 | 0.94 |
+| + household tags beat the lexicon (`0r34.6`) | **0.84** | 0.79 | 0.98 | 0.95 |
 
 - **Condition 1 fails.** NDCG@5 over the vague section was already 0.55 before
-  anything in this round, above the 0.50 line, and ends at 0.78. The
+  anything in this round, above the 0.50 line, and ends at 0.84. The
   prediction above had this condition the one likely to hold; it did not.
 - **Condition 2 is unmeasured, and stays so.** §21.2 forbids logging query
   text or giving a metric a query dimension, so there is no record of how
@@ -1961,6 +1974,17 @@ lexicon entry is a guess. This is the same principle
 ingredient suggestions: after a few recipes, a kitchen's own words are the
 better answer. It also means the lexicon can be wrong about a household without
 that household being stuck with it — they tag their way out.
+
+**As built (culina-v2-0r34.6).** The exact case already held — a query word
+that *is* a tag's name matches in the document's tag band, tier 2, above
+anything inferred. The missing case was the compound: `Sommergericht` for what
+the household tagged *Sommer*. A German compound is a kind of its last part, so
+its first part may be read alone only when the last part says nothing —
+`-gericht`, `-essen`, `-rezept(e)`, `-küche`, `-idee(n)`, `-speise(n)`, with or
+without the linking *s* (`Sonntagsessen`). `SearchText.Modifiers` reads those,
+and a recipe carrying a tag whose folded name is one of them is a candidate at
+tier 4 — above the concept lane, below a word found in the recipe — with the
+tag as its reason. A tag *Fisch* is deliberately no answer to `Fischsuppe`.
 
 ### 12.5 What is not modelled
 
@@ -2983,6 +3007,14 @@ than decorative. It works because §17.2 returns each chip's character span, so
 removing one is slicing the query string — the same operation the user would
 have done themselves, done for them.
 
+**As built (culina-v2-0r34.6).** The words stay in the field and the chips are
+readings of them, so an empty field has no text chips left to remove; `⌫` in an
+empty field takes back the last *tag* chip — the ones a completion or a
+refinement added. `Tab` takes the highlighted completion, or the first, into
+the search without navigating: a tag becomes a chip, an ingredient completes
+the word, a recipe's name is typed out rather than opened. With no completion
+to take, `Tab` leaves the field as it always does.
+
 ### 18.5 The result row
 
 ```
@@ -3053,6 +3085,12 @@ search-as-you-type is for.
 | **Import** | Duplicate detection (§19.2): "Du hast vielleicht schon *Spaghetti Bolognese*." |
 | **Recipe editor** | Tag field suggests tags the lexicon derived but the household has not applied (§19.3). |
 | **Cookbooks** | "Aus dieser Suche eine Sammlung machen" turns a query with chips into a smart cookbook's rules — the rule editor already speaks tags, ingredients and `maxMinutes`. |
+
+**As built (culina-v2-0r34.6).** The picker (plan, shopping, adding to a
+cookbook) shows the same chips and recovery notices as the library, each chip
+removable and a correction refusable. A cookbook page searches through the
+library's toolbar rather than the overlay, and shows the same chips there,
+led by the cookbook itself as a chip without an ×.
 
 That last one is the strongest product connection in the document. A smart
 cookbook is a *saved search*, and the rule editor's three fields are three of

@@ -9,11 +9,13 @@
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
   import DeleteRecipeDialog from '$features/recipes/DeleteRecipeDialog.svelte';
+  import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import InheritedNote from '$features/recipes/InheritedNote.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import ShareRecipeSheet from '$features/recipes/ShareRecipeSheet.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
   import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
+  import { presumedDiets } from '$features/recipes/stores/presumedDiets.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { related } from '$features/recipes/stores/related.svelte';
   import { suggestions } from '$features/recipes/stores/suggestions.svelte';
@@ -179,6 +181,49 @@
     await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: copied.id }));
   }
 
+  /**
+   * The diet a search only presumed this recipe keeps, when this household can
+   * answer for it: an inherited recipe is its own household's to tag.
+   */
+  const presumed = $derived(inheritedFrom ? null : presumedDiets.of(recipeId));
+  let answering = $state(false);
+
+  /**
+   * Writes the answer as a tag — the diet's own name, or its negation, which
+   * the search reads as ruling the diet out — so it is never presumed again.
+   */
+  async function answerDiet(keeps: boolean) {
+    const recipe = recipes.detail;
+
+    if (!recipe || !presumed) {
+      return;
+    }
+
+    const tag =
+      presumed === 'vegan'
+        ? keeps
+          ? m['recipe.diet.tag.vegan']()
+          : m['recipe.diet.tag.notVegan']()
+        : keeps
+          ? m['recipe.diet.tag.vegetarian']()
+          : m['recipe.diet.tag.notVegetarian']();
+
+    answering = true;
+
+    const failure = await recipes.update({ ...recipe, tags: [...recipe.tags, tag] });
+
+    answering = false;
+
+    if (failure) {
+      toaster.show({ message: () => m['recipe.diet.failed'](), tone: 'danger' });
+
+      return;
+    }
+
+    presumedDiets.settle(recipeId);
+    toaster.show({ message: () => m['recipe.diet.answered'](), tone: 'success' });
+  }
+
   /** The yield travels with you, so cooking opens at the number you chose. */
   function startCooking() {
     const target = new URL(resolve('/(app)/recipes/[recipeId]/cook', { recipeId }), page.url);
@@ -222,6 +267,10 @@
           : undefined}
         oncopy={() => void copy()}
       />
+    {/if}
+
+    {#if presumed}
+      <DietQuestion diet={presumed} busy={answering} onanswer={(keeps) => void answerDiet(keeps)} />
     {/if}
 
     <RecipeSurface

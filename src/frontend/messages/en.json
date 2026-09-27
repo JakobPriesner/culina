@@ -1273,5 +1273,19 @@
   "household.heirs.remove": "Stop sharing",
   "household.heirs.removed": "{name} no longer sees these recipes.",
   "recipe.copy.action": "Make my own copy",
-  "recipe.copy.done": "Copied. This one is yours to change."
+  "recipe.copy.done": "Copied. This one is yours to change.",
+  "recipe.diet.question.vegetarian": "Is this vegetarian?",
+  "recipe.diet.question.vegan": "Is this vegan?",
+  "recipe.diet.why": "Search only presumed it: nothing in the ingredients says otherwise, but nobody has said so either. Your answer is kept as a tag.",
+  "recipe.diet.yes": "Yes",
+  "recipe.diet.no": "No",
+  "recipe.diet.tag.vegetarian": "vegetarian",
+  "recipe.diet.tag.vegan": "vegan",
+  "recipe.diet.tag.notVegetarian": "not vegetarian",
+  "recipe.diet.tag.notVegan": "not vegan",
+  "recipe.diet.answered": "Noted.",
+  "recipe.diet.failed": "The answer could not be saved.",
+  "search.chip.diet.not_vegetarian": "Not vegetarian",
+  "search.chip.diet.not_vegan": "Not vegan",
+  "search.chip.scope": "Only in “{name}”"
 }

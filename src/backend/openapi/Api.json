@@ -8639,6 +8639,11 @@
                 "$ref": "#/components/schemas/RecipesGetAllMatchReason"
               }
             ]
+          },
+          "presumedDiet": {
+            "type": "string",
+            "description": "The diet the query asked for, when this recipe keeps it only because\nnothing in it says otherwise — `vegetarian` or `vegan`; null\nwhen somebody said so, and whenever no diet was asked for.",
+            "nullable": true
           }
         },
         "description": "A recipe as it appears in a list."

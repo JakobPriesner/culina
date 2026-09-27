@@ -208,6 +208,17 @@ public sealed record RecipeSummary
     /// match, and for a list without words.
     /// </summary>
     public MatchReason? MatchReason { get; init; }
+
+    /// <summary>
+    /// The diet the query asked for, when this recipe keeps it only because
+    /// nothing in it says otherwise — <c>vegetarian</c> or <c>vegan</c>; null
+    /// when somebody said so, and whenever no diet was asked for.
+    /// </summary>
+    /// <remarks>
+    /// What lets the client ask once, "Ist das vegetarisch?", and turn the
+    /// answer into a tag that makes the presumption a fact.
+    /// </remarks>
+    public string? PresumedDiet { get; init; }
 }
 
 /// <summary>Why a recipe is in a search it does not name in its title.</summary>

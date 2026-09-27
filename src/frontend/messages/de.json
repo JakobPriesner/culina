@@ -1273,5 +1273,19 @@
   "household.heirs.remove": "Nicht mehr teilen",
   "household.heirs.removed": "{name} sieht diese Rezepte nicht mehr.",
   "recipe.copy.action": "Eigene Kopie anlegen",
-  "recipe.copy.done": "Kopiert. Diese hier könnt ihr ändern."
+  "recipe.copy.done": "Kopiert. Diese hier könnt ihr ändern.",
+  "recipe.diet.question.vegetarian": "Ist das vegetarisch?",
+  "recipe.diet.question.vegan": "Ist das vegan?",
+  "recipe.diet.why": "Die Suche hat es nur vermutet: Nichts in den Zutaten spricht dagegen, gesagt hat es aber auch niemand. Die Antwort wird als Schlagwort gemerkt.",
+  "recipe.diet.yes": "Ja",
+  "recipe.diet.no": "Nein",
+  "recipe.diet.tag.vegetarian": "vegetarisch",
+  "recipe.diet.tag.vegan": "vegan",
+  "recipe.diet.tag.notVegetarian": "nicht vegetarisch",
+  "recipe.diet.tag.notVegan": "nicht vegan",
+  "recipe.diet.answered": "Gemerkt.",
+  "recipe.diet.failed": "Die Antwort konnte nicht gespeichert werden.",
+  "search.chip.diet.not_vegetarian": "Nicht vegetarisch",
+  "search.chip.diet.not_vegan": "Nicht vegan",
+  "search.chip.scope": "Nur in „{name}“"
 }
