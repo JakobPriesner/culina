@@ -219,11 +219,30 @@ describe('reading a recipe', () => {
       'href',
       '/recipes/r1/edit'
     );
+  });
 
-    // Last, so the hand reaching for Edit does not land on it.
-    const remove = screen.getByRole('button', { name: 'Delete recipe', ...hidden });
+  it('offers deleting on the page, last and outside the menu', async () => {
+    const ondelete = vi.fn();
+    render({ editable: true, onaddtoplan: () => {}, ondelete });
+
+    // Reachable without opening anything, and not among the menu's rows, so
+    // the hand reaching for Edit does not land on it.
+    const remove = screen.getByRole('button', { name: 'Delete recipe' });
+    const more = screen.getByRole('button', { name: 'More actions' });
 
     expect(remove.parentElement?.lastElementChild).toBe(remove);
+    expect(more.closest('.actions')).toBe(remove.parentElement);
+
+    await fireEvent.click(remove);
+
+    expect(ondelete).toHaveBeenCalledOnce();
+  });
+
+  it('offers deleting even when there is nothing for the menu to hold', () => {
+    render({ ondelete: () => {} });
+
+    expect(screen.getByRole('button', { name: 'Delete recipe' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
   });
 
   it('offers a copy instead of editing, for a recipe the household only inherits', async () => {
