@@ -27,6 +27,11 @@
      ground: this has to carry across a sunken card, and only while a finger or
      a cursor is on something else entirely. */
   --surface-highlight: var(--c-olive-200);
+  /* The band behind a line of a list that is being pointed at from somewhere
+     else — an ingredient row lit by a mention of it in the steps. A wash of the
+     accent rather than a step up the scale, so it says "this one" without
+     reading as a selected item; the accent mark beside it carries the rest. */
+  --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-sand-100);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
@@ -106,10 +111,6 @@
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
   --scrim: rgb(31 26 22 / 45%);
-  /* The glow on the thing being pointed at from somewhere else — an ingredient
-     in the list lighting up every mention of it in the steps. A ring rather
-     than a shadow: it says "this one", not "this is raised". */
-  --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
 
   /* The shimmer a skeleton animates between. */
   --skeleton-base: var(--c-sand-200);

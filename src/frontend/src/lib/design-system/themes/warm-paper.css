@@ -19,6 +19,7 @@
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-100);
   --surface-highlight: var(--c-olive-200);
+  --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-sand-100);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
@@ -69,7 +70,6 @@
 
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
-  --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   --scrim: rgb(31 26 22 / 45%);
 
   --skeleton-base: var(--c-sand-200);
@@ -90,6 +90,7 @@
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-800);
   --surface-highlight: var(--c-olive-700);
+  --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-sand-800);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
@@ -146,7 +147,6 @@
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
   --shadow-overlay: 0 8px 32px rgb(0 0 0 / 55%);
-  --shadow-highlight: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   --scrim: rgb(0 0 0 / 65%);
 
   --skeleton-base: var(--c-sand-800);
