@@ -5,6 +5,7 @@
   import { formatQuantity } from '$features/recipes/formatQuantity';
   import { quantityLabels } from '$features/recipes/quantityLabels';
   import { scaleQuantity } from '$features/recipes/scaling';
+  import { haptics } from '$shell/haptics';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
   import type { ShoppingItem } from './stores/shopping.svelte';
@@ -59,7 +60,10 @@
   <Checkbox
     checked={item.isChecked}
     label={item.name}
-    onchange={(isChecked) => oncheck(isChecked)}
+    onchange={(isChecked) => {
+      haptics.tick();
+      oncheck(isChecked);
+    }}
   />
 
   <!-- Beside the name rather than flushed to the far edge. Ranged right across
