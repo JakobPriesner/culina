@@ -81,8 +81,11 @@
     line-height: var(--leading-normal);
   }
 
+  /* Wraps rather than squeezing: a provider picker beside a model picker on
+     a phone left each too narrow to read what was chosen in it. */
   .control {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--space-2);
