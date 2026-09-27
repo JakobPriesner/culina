@@ -356,8 +356,9 @@ test.describe('writing a recipe', () => {
     await expect(page.getByRole('status')).toContainText(/4/);
     await expect(page.getByText('250 g', { exact: true })).toBeVisible();
     // A range is read as its lower bound: the one you can still add to. The
-    // unit is named in the reader's language, and the suite's browser is German.
-    await expect(page.getByText(/^1 (tbsp|EL)$/)).toBeVisible();
+    // unit is named in the reader's language, and the suite's browser is German;
+    // \s, because the space between an amount and its unit does not break.
+    await expect(page.getByText(/^1\s(tbsp|EL)$/)).toBeVisible();
 
     // The one in the paste panel, not the form's own: both say "Create recipe"
     // since the copy pass, and the form's is the empty-recipe button this
