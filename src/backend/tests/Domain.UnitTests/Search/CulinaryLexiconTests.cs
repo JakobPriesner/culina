@@ -115,6 +115,9 @@ public class CulinaryLexiconTests
     [InlineData("brussels sprouts", "brussels_sprouts")]
     [InlineData("sweet potatoes", "sweet_potato")]
     [InlineData("Gockel", "chicken")]
+    [InlineData("Winteressen", "winter")]
+    [InlineData("Sommergericht", "summer")]
+    [InlineData("comfort food", "comfort")]
     public void Recognise_ShouldFindTheConceptAQueryWordNames(string query, string expected)
     {
         // Act
@@ -291,5 +294,19 @@ public class CulinaryLexiconTests
         Assert.Contains("dessert", unlike);
         Assert.DoesNotContain("lunch", unlike);
         Assert.DoesNotContain("dinner", unlike);
+    }
+
+    [Theory]
+    // Nobody tags a recipe "comfort food": a character is found through the
+    // dishes that have it.
+    [InlineData("Rindereintopf", "comfort")]
+    [InlineData("Rindereintopf", "winter")]
+    [InlineData("Nudelauflauf", "comfort")]
+    [InlineData("Kartoffelpüree", "comfort")]
+    [InlineData("Gurkensalat", "summer")]
+    public void Describe_ShouldGiveADish_TheCharacterItHas(string title, string expected)
+    {
+        // Act & Assert
+        Assert.Contains(expected, CulinaryLexicon.Describe(title, [], []));
     }
 }

@@ -1689,6 +1689,68 @@
       "never": []
     },
     {
+      "query": "Sommergericht",
+      "class": "vague",
+      "grades": {
+        "Griechischer Salat": 2,
+        "Obstsalat": 1,
+        "Kartoffelsalat": 1,
+        "Caesar Salad": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "Winteressen",
+      "class": "vague",
+      "grades": {
+        "Grünkohl mit Mettwurst": 2,
+        "Rindergulasch": 1,
+        "Schweinebraten": 1,
+        "Beef Stew": 1,
+        "Linsensuppe": 1,
+        "Kürbissuppe": 1,
+        "Shepherd's Pie": 1,
+        "Chili con Carne": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "comfort food",
+      "class": "vague",
+      "grades": {
+        "Kartoffelgratin": 1,
+        "Nudelauflauf": 1,
+        "Lasagne Bolognese": 1,
+        "Spaghetti Bolognese": 1,
+        "Spätzle with Cheese": 1,
+        "Shepherd's Pie": 1,
+        "Beef Stew": 1,
+        "Rindergulasch": 1,
+        "Chicken Noodle Soup": 1,
+        "Milchreis": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
+      "query": "etwas Leichtes",
+      "class": "vague",
+      "grades": {
+        "Griechischer Salat": 2,
+        "Caesar Salad": 2,
+        "Kartoffelsalat": 1,
+        "Obstsalat": 1,
+        "Lachs mit Spinat": 1,
+        "Tomatensuppe": 1,
+        "Ofengemüse mit Feta": 1,
+        "Greek Yoghurt Bowl": 1
+      },
+      "empty": false,
+      "never": []
+    },
+    {
       "query": "vegetarisch mit Lachs",
       "class": "conflict",
       "grades": {},

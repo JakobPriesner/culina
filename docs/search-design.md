@@ -1464,6 +1464,41 @@ The prediction, recorded so that it can be checked: the first condition may
 well hold — vague queries are hard — and the **second will not**. Vague queries
 are rare in a corpus you wrote yourself.
 
+**Decided (culina-v2-0r34.4, 2026-09-27): the gate stays closed.** Measured
+on the §23 golden library, whose vague section was first grown from two
+queries to six (`schnelles Abendessen`, `warme Mahlzeit`, and new:
+`Sommergericht`, `Winteressen`, `comfort food`, `etwas Leichtes`), judged
+before any of them was run:
+
+| State | vague NDCG@5 | vague NDCG@10 | overall P@3 | overall NDCG@10 |
+| --- | --- | --- | --- | --- |
+| Phase 2 as shipped (`3a25302`) | **0.55** | 0.51 | 0.90 | 0.89 |
+| + the ranking fixes of `0r34.5` | 0.69 | 0.64 | 0.94 | 0.92 |
+| + the lexicon extended once | **0.78** | 0.73 | 0.98 | 0.94 |
+
+- **Condition 1 fails.** NDCG@5 over the vague section was already 0.55 before
+  anything in this round, above the 0.50 line, and ends at 0.78. The
+  prediction above had this condition the one likely to hold; it did not.
+- **Condition 2 is unmeasured, and stays so.** §21.2 forbids logging query
+  text or giving a metric a query dimension, so there is no record of how
+  often a real query is vague. It could be counted without text — a counter
+  of queries matching §9.5's definition of vague — but that was not built,
+  because the gate needs all three conditions and the first already fails.
+- **Condition 3 fails too: the extension helped** (+0.09 NDCG@5). It wrote
+  characters on the dishes that have them — a stew and a casserole are
+  comfort food and wintry, a roast is wintry, a salad and ice cream are
+  summery, mash and dumplings are comfort food — and named the compounds
+  people type for a season (`Sommergericht`, `Winteressen`). Nobody tags a
+  recipe *comfort food*; the dishes are the only way in.
+
+What stays weak, so it is not rediscovered: `comfort food` (NDCG@10 0.46)
+finds the right kind of dish but cannot order them — nothing in a recipe says
+which stew is more comforting, so the tier-5 ties fall to recency — and
+`etwas Leichtes` finds the salads but not the fish or the soups, because the
+lexicon does not claim fish is light, and should not. Neither is a problem an
+embedding model would solve for a library whose owner can type the dish's
+name.
+
 ### 9.5 The design, if the gate ever opens
 
 Not "add embeddings". **Query-conditional** embeddings, which is the only shape
@@ -3849,6 +3884,12 @@ Culina search evaluation · 60 recipes · 40 queries · lexicon v3
 
 The last block is the point. A weight change that improves the average and
 breaks `Gockel` is a change whose author gets told, by name, before it merges.
+
+**As built.** The test is `SearchEvaluationTests` (run with
+`dotnet test --project tests/IntegrationTests --filter-class
+IntegrationTests.Recipes.Evaluation.SearchEvaluationTests`). Since
+culina-v2-0r34.4 it reports NDCG@5 beside NDCG@10, because §9.4's gate is
+defined on it, and holds 44 queries: the vague section grew to six.
 
 ### 23.6 Reading the numbers honestly
 
