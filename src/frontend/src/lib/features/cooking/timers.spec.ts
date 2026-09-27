@@ -136,3 +136,19 @@ describe('a phone that was in a pocket', () => {
     expect(kitchen.remaining(kitchen.timers[0]!)).toBe(600);
   });
 });
+
+describe('when a timer expires', () => {
+  it('signals completion when the deadline passes', () => {
+    const kitchen = timers();
+    const stop = kitchen.tick();
+
+    kitchen.start(0, 5, 'Simmer');
+    expect(kitchen.isDone(kitchen.timers[0]!)).toBe(false);
+
+    vi.advanceTimersByTime(6000);
+
+    expect(kitchen.isDone(kitchen.timers[0]!)).toBe(true);
+
+    stop();
+  });
+});

@@ -1,3 +1,7 @@
+import { haptics } from '$shell/haptics';
+import { playKitchenChime, unlockAudio } from './kitchenAudio';
+import { notifyTimerDone, requestTimerNotificationPermission } from './timerNotification';
+
 /**
  * Kitchen timers.
  *
@@ -20,6 +24,21 @@ const storageKey = (sessionId: string) => `culina.timers.${sessionId}`;
 export function createTimers(sessionId: () => string | null) {
   let timers = $state<KitchenTimer[]>([]);
   let now = $state(Date.now());
+  const alerted = new Set<string>();
+
+  function checkAlarms() {
+    for (const timer of timers) {
+      if (timer.endsAt <= now) {
+        const key = `${timer.stepIndex}:${timer.endsAt}`;
+        if (!alerted.has(key)) {
+          alerted.add(key);
+          playKitchenChime();
+          haptics.alarm();
+          notifyTimerDone(timer.label);
+        }
+      }
+    }
+  }
 
   let ticking: ReturnType<typeof setInterval> | undefined;
 
@@ -72,6 +91,9 @@ export function createTimers(sessionId: () => string | null) {
     },
 
     start(stepIndex: number, seconds: number, label: string) {
+      unlockAudio();
+      void requestTimerNotificationPermission();
+
       timers = [
         ...timers.filter((timer) => timer.stepIndex !== stepIndex),
         { stepIndex, endsAt: Date.now() + seconds * 1000, label }
@@ -81,6 +103,9 @@ export function createTimers(sessionId: () => string | null) {
     },
 
     dismiss(stepIndex: number) {
+      for (const timer of timers.filter((t) => t.stepIndex === stepIndex)) {
+        alerted.delete(`${timer.stepIndex}:${timer.endsAt}`);
+      }
       timers = timers.filter((timer) => timer.stepIndex !== stepIndex);
       persist();
     },
@@ -95,7 +120,10 @@ export function createTimers(sessionId: () => string | null) {
      * timer showing the wrong number is worse than one showing none.
      */
     tick(): () => void {
-      const read = () => (now = Date.now());
+      const read = () => {
+        now = Date.now();
+        checkAlarms();
+      };
 
       ticking = setInterval(read, 1000);
 
@@ -117,6 +145,7 @@ export function createTimers(sessionId: () => string | null) {
       const id = sessionId();
 
       timers = [];
+      alerted.clear();
 
       if (id) {
         try {
