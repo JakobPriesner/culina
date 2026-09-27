@@ -39,6 +39,15 @@ test.describe('responsive production layouts @offline', () => {
             if (path === '/login' || path === '/register') return;
             await expect(page.locator('nav.nav:visible')).toHaveCount(1);
             await expect(page.locator(width < 1024 ? 'nav.bottom' : 'nav.top')).toBeVisible();
+            // A name, on one line: at 1024px its dot once wrapped below it.
+            const wordmark = page.locator('header .wordmark');
+            expect(
+              await wordmark.evaluate(
+                (element) =>
+                  element.getBoundingClientRect().height <
+                  1.5 * parseFloat(getComputedStyle(element).fontSize)
+              )
+            ).toBe(true);
             if (
               locale === 'de' &&
               [320, 768, 1280].includes(width) &&
