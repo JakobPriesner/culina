@@ -75,7 +75,15 @@
     </div>
   </div>
 
-  <div class="photo">
+  <!-- The photograph is what people reach for, so it opens the recipe too. A
+       second copy of the link above, kept out of the tab order and the
+       accessibility tree so a keyboard or screen reader meets it only once. -->
+  <a
+    class="photo"
+    href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}
+    tabindex="-1"
+    aria-hidden="true"
+  >
     <Image
       src={imageUrl(recipe.id, 1600, recipe.imageId)}
       srcset={imageSrcset(recipe.id, recipe.imageId)}
@@ -85,7 +93,7 @@
       fill
       rounded={false}
     />
-  </div>
+  </a>
 </section>
 
 <style>
