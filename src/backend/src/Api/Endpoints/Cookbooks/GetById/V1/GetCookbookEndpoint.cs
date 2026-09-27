@@ -25,7 +25,7 @@ internal sealed class GetCookbookEndpoint : IEndpoint
                     .ConfigureAwait(false);
 
                 return result.Match(
-                    cookbook => ETag.Ok(context, cookbook, cookbook.Version),
+                    cookbook => CookbookTag.Ok(context, cookbook),
                     CustomResults.Problem);
             })
             .WithName("getCookbookByIdV1")
