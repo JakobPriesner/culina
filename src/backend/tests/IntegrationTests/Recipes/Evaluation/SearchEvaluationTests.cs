@@ -11,7 +11,7 @@ namespace IntegrationTests.Recipes.Evaluation;
 /// <remarks>
 /// <para>
 /// Sixty recipes — forty German, twenty English, because the corpus is mixed
-/// and a monolingual fixture hides the interesting bugs — and forty queries
+/// and a monolingual fixture hides the interesting bugs — and forty-four queries
 /// across every kind people type, each with graded judgments: 2 for what the
 /// query is for, 1 for a fair answer, nothing for the rest. The library holds
 /// the traps on purpose: three Bolognese and a Ragù that is not one, compounds
@@ -56,7 +56,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
         }
 
         // Assert
-        var report = Report(outcomes);
+        var report = Report(outcomes, golden.Recipes.Count);
         TestContext.Current.SendDiagnosticMessage(report);
 
         var ranked = outcomes.Where(one => !one.Query.Empty).ToList();
@@ -87,8 +87,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
             ? 1.0
             : grades.Take(3).Count(grade => grade > 0) / (double)Math.Min(3, relevant);
 
-        var ideal = Dcg(query.Grades.Values.OrderDescending().Take(10));
-        var ndcg = ideal == 0 ? 1.0 : Dcg(grades.Take(10)) / ideal;
+        var ndcg = Ndcg(query, grades, 10);
 
         // A concept match never above a match of any other kind.
         var concept = items.Select(item =>
@@ -109,6 +108,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
             query,
             titles,
             precision,
+            Ndcg(query, grades, 5),
             ndcg,
             [.. titles.Intersect(query.Never, StringComparer.Ordinal)],
             disciplined,
@@ -116,14 +116,27 @@ public class SearchEvaluationTests(PostgresFixture postgres)
             query.Chips is null || query.Chips.SequenceEqual(chips, StringComparer.Ordinal));
     }
 
+    /// <summary>
+    /// Graded ranking quality over the first <paramref name="depth"/>, out of
+    /// the best order the judgments allow.
+    /// </summary>
+    private static double Ndcg(GoldenQuery query, List<int> grades, int depth)
+    {
+        var ideal = Dcg(query.Grades.Values.OrderDescending().Take(depth));
+
+        return ideal == 0 ? 1.0 : Dcg(grades.Take(depth)) / ideal;
+    }
+
     /// <summary>Discounted cumulative gain, with gains of 2^grade − 1.</summary>
     private static double Dcg(IEnumerable<int> grades) =>
         grades.Select((grade, rank) => (Math.Pow(2, grade) - 1) / Math.Log2(rank + 2)).Sum();
 
-    private static string Report(List<Outcome> outcomes)
+    private static string Report(List<Outcome> outcomes, int recipes)
     {
-        var report = new StringBuilder("\nCulina search evaluation · 60 recipes · 40 queries\n\n");
-        report.AppendLine(CultureInfo.InvariantCulture, $"  {"class",-20} {"P@3",6} {"NDCG@10",8} {"zero",6}");
+        var report = new StringBuilder(
+            $"\nCulina search evaluation · {recipes} recipes · {outcomes.Count} queries\n\n");
+        report.AppendLine(CultureInfo.InvariantCulture,
+            $"  {"class",-20} {"P@3",6} {"NDCG@5",7} {"NDCG@10",8} {"zero",6}");
 
         foreach (var group in outcomes.GroupBy(one => one.Query.Class))
         {
@@ -131,13 +144,14 @@ public class SearchEvaluationTests(PostgresFixture postgres)
 
             report.AppendLine(CultureInfo.InvariantCulture,
                 $"  {group.Key,-20} {Score(ranked, one => one.PrecisionAtThree),6} "
-                + $"{Score(ranked, one => one.NdcgAtTen),8} "
+                + $"{Score(ranked, one => one.NdcgAtFive),7} {Score(ranked, one => one.NdcgAtTen),8} "
                 + $"{group.Count(one => one.EmptyAsExpected)}/{group.Count(),-4}");
         }
 
         var all = outcomes.Where(one => !one.Query.Empty).ToList();
         report.AppendLine(CultureInfo.InvariantCulture,
-            $"  {"overall",-20} {Score(all, one => one.PrecisionAtThree),6} {Score(all, one => one.NdcgAtTen),8}");
+            $"  {"overall",-20} {Score(all, one => one.PrecisionAtThree),6} "
+            + $"{Score(all, one => one.NdcgAtFive),7} {Score(all, one => one.NdcgAtTen),8}");
         report.AppendLine(CultureInfo.InvariantCulture,
             $"  tier discipline {outcomes.Count(one => one.Disciplined)}/{outcomes.Count}");
 
@@ -166,6 +180,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
         GoldenQuery Query,
         List<string> Titles,
         double PrecisionAtThree,
+        double NdcgAtFive,
         double NdcgAtTen,
         List<string> Violations,
         bool Disciplined,
