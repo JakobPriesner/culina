@@ -166,7 +166,7 @@
     <div class="header-inner">
       <div class="where">
         <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
-        <div class="household"><HouseholdSwitcher onswitch={switched} /></div>
+        <HouseholdSwitcher onswitch={switched} />
       </div>
 
       <div class="wide-only"><Navigation placement="top" /></div>
@@ -327,19 +327,6 @@
     min-width: 0;
     max-width: 100%;
     pointer-events: auto;
-  }
-
-  /* Shrinks before it wraps. A flex row wraps as soon as its items' natural
-     widths do not fit, long before any of them would shrink — so the name
-     starts from a pill's width and grows back to its own, and gives way to an
-     ellipsis on a narrow screen instead of taking a second row from the step
-     somebody is cooking. Only text enlarged past the point where even that
-     pill fits beside the brand moves it underneath. */
-  .household {
-    display: flex;
-    flex: 1 1 3rem;
-    min-width: 0;
-    max-width: max-content;
   }
 
   /*

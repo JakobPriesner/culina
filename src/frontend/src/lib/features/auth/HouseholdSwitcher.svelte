@@ -11,8 +11,12 @@
    *
    * Beside the brand because it answers the same question the brand does —
    * where am I — and one level more precisely. It is there with a single
-   * household too: the name says whose recipes these are, and "New household"
-   * has to live somewhere a person would look for it.
+   * household too, because "New household" has to live somewhere a person
+   * would look for it.
+   *
+   * A house rather than the name: the header has no room for a name, and one
+   * cut down to "Cl's…" says less than an icon does. The name is in its label
+   * and tooltip, and ticked at the top of the menu it opens.
    *
    * Switching only changes which household is being looked at. Where that
    * leaves the page is the shell's business, not this menu's.
@@ -50,15 +54,15 @@
 </script>
 
 {#if active}
-  <Popover shrinks>
+  <Popover>
     {#snippet trigger({ popovertarget })}
       <button
         type="button"
         class="current"
         {popovertarget}
         aria-label={m['household.switch.label']({ name: active.name })}
+        title={active.name}
       >
-        <span class="name">{active.name}</span>
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -68,7 +72,9 @@
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <path d="m7 10 5 5 5-5" />
+          <path d="M4 10.5 12 4l8 6.5" />
+          <path d="M6 9v10h12V9" />
+          <path d="M10 19v-5h4v5" />
         </svg>
       </button>
     {/snippet}
@@ -148,24 +154,21 @@
 {/if}
 
 <style>
-  /* The brand's own pill, because it sits beside it and is the same kind of
-     thing: a fixed point that says where you are. */
+  /* The search button's round pill, because it is the same kind of thing: an
+     icon in the header's row of glass. */
   .current {
     display: inline-flex;
-    flex: 0 1 auto;
+    flex-shrink: 0;
     align-items: center;
-    gap: var(--space-1);
-    min-width: 0;
+    justify-content: center;
+    min-width: var(--control-sm);
     min-height: var(--control-sm);
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-2);
     border: 0;
     border-radius: var(--radius-full);
     background: var(--surface-nav-glass);
     backdrop-filter: blur(16px);
     color: var(--text);
-    font: inherit;
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
     cursor: pointer;
     pointer-events: auto;
     transition: background-color var(--duration-fast) var(--ease-out);
@@ -179,20 +182,9 @@
     background: var(--surface-hover);
   }
 
-  /* A long name gives way before the controls beside it do. */
-  .name {
-    min-width: 0;
-    max-width: 14ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .current svg {
-    flex: none;
     width: var(--space-4);
     height: var(--space-4);
-    color: var(--text-muted);
   }
 
   .menu {
