@@ -4,7 +4,7 @@
   import { onMount, type Snippet } from 'svelte';
 
   import { dev } from '$app/environment';
-  import { goto } from '$app/navigation';
+  import { goto, onNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import { handleSessionExpiry } from '$api';
   import { ErrorState } from '$ds';
@@ -20,6 +20,23 @@
   }
 
   let { children }: Props = $props();
+
+  onNavigate((navigation) => {
+    if (
+      typeof document === 'undefined' ||
+      !('startViewTransition' in document) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      document.startViewTransition(async () => {
+        resolve();
+        await navigation.complete;
+      });
+    });
+  });
 
   onMount(() => {
     // The static boot screen in app.html has done its job the moment there is
