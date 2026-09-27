@@ -355,8 +355,9 @@ test.describe('writing a recipe', () => {
     // recipe exists, so a wrong reading costs a keystroke rather than a delete.
     await expect(page.getByRole('status')).toContainText(/4/);
     await expect(page.getByText('250 g', { exact: true })).toBeVisible();
-    // A range is read as its lower bound: the one you can still add to.
-    await expect(page.getByText('1 tbsp', { exact: true })).toBeVisible();
+    // A range is read as its lower bound: the one you can still add to. The
+    // unit is named in the reader's language, and the suite's browser is German.
+    await expect(page.getByText(/^1 (tbsp|EL)$/)).toBeVisible();
 
     // The one in the paste panel, not the form's own: both say "Create recipe"
     // since the copy pass, and the form's is the empty-recipe button this
@@ -485,7 +486,7 @@ test.describe('writing a recipe', () => {
 
     // Still there, and still described honestly.
     await expect(page.getByText('Butter')).toBeVisible();
-    await expect(page.getByText(/unsaved changes|nicht gespeicherte änderungen/i)).toBeVisible();
+    await expect(page.getByText(/unsaved changes|nicht gespeicherten änderungen/i)).toBeVisible();
 
     // A language switch remounts the whole tree — the root layout is keyed by
     // locale so that compiled messages take effect without a reload — and the
