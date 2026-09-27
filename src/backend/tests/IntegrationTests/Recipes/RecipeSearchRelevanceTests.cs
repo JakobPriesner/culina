@@ -482,6 +482,49 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Search_ShouldKeepAMealItSetAside_AsAPreference()
+    {
+        // Arrange
+        // Both quick, neither a dinner. The yoghurt says it is breakfast; the
+        // soup is something warm, which is what a dinner usually is.
+        var world = await SeedAsync();
+        await world.SaveAsync("Joghurt mit Honig", "de", 5, null,
+            [("Joghurt", "g"), ("Honig", "EL")], ["frühstück"], "Verrühren.");
+        await world.SaveAsync("Erbsensuppe", "de", 10, 15,
+            [("Erbsen", "g"), ("Gemüsebrühe", "ml")], ["suppe"], "Pürieren.");
+
+        // Act
+        var titles = Titles(await SearchAsync(world, "schnelles Abendessen"));
+
+        // Assert
+        var soup = titles.IndexOf("Erbsensuppe");
+        var breakfast = titles.IndexOf("Joghurt mit Honig");
+
+        Assert.True(soup >= 0 && breakfast > soup, string.Join(" · ", titles));
+    }
+
+    [Fact]
+    public async Task Search_ShouldAnswerADish_ByTheDishItIsAKindOf()
+    {
+        // Arrange
+        // A household with no goulash has a stew, which is the next best thing;
+        // one with no risotto does not want every rice dish instead.
+        var world = await SeedAsync();
+        await world.SaveAsync("Beef Stew", "en", 20, 150,
+            [("beef", "g"), ("potatoes", "g"), ("red wine", "ml")], [], "Braise slowly.");
+
+        // Act
+        var goulash = await SearchAsync(world, "Gulasch");
+        var risotto = Titles(await SearchAsync(world, "Risotto"));
+
+        // Assert
+        Assert.Equal(["Beef Stew"], Titles(goulash));
+        // Named as what it is, not as what was asked for.
+        Assert.Equal("concept:stew", Reasons(goulash)["Beef Stew"]);
+        Assert.DoesNotContain("Hähnchenbrustfilet mit Reis", risotto);
+    }
+
+    [Fact]
     public async Task Search_ShouldNeverSetADietAside()
     {
         // Arrange
@@ -550,13 +593,16 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 
         // Act
         var bolognese = FacetTags(await SearchAsync(world, "Bolognese"));
-        var lasagne = FacetTags(await SearchAsync(world, "Lasagne"));
+        var bechamel = FacetTags(await SearchAsync(world, "Béchamel"));
 
         // Assert
         // Two of the three Bolognese are Italian: a chip worth a tap.
         Assert.Contains("italienisch", bolognese);
         // Both lasagnes are pasta: a chip that removes nothing is not offered.
-        Assert.DoesNotContain("pasta", lasagne);
+        // Asked by their sauce rather than by name, because "Lasagne" also
+        // finds the gratin — a lasagne is a casserole, and a casserole is the
+        // next best thing to one.
+        Assert.DoesNotContain("pasta", bechamel);
     }
 
     [Theory]
