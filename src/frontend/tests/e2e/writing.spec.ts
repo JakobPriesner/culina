@@ -293,9 +293,10 @@ test.describe('writing a recipe', () => {
     // thing lives in a shop.
     // A word that begins the same in both languages: the seeded list answers
     // in the language the recipe is written in, which is the device's, and the
-    // suite's browser is German.
+    // suite's browser is German. Whole names, because Tomatenmark begins the
+    // same way too.
     await field.fill('Tomat');
-    await expect(list.getByRole('option', { name: /^(Tomatoes|Tomaten)/ })).toBeVisible();
+    await expect(list.getByRole('option', { name: /^(Tomatoes|Tomaten)$/ })).toBeVisible();
 
     // Arrowing to a row and pressing Enter takes it. Enter on its own adds
     // what was typed, which is what stops the list from overruling anybody.
