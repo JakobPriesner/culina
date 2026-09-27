@@ -5,6 +5,9 @@ public sealed record Response
 {
     /// <summary>The closest first. Empty when nothing is alike enough to say so.</summary>
     public required IReadOnlyList<RelatedRecipe> Items { get; init; }
+
+    /// <summary>Where this page ended, or null when nothing else is alike enough to say so.</summary>
+    public string? NextCursor { get; init; }
 }
 
 /// <summary>A recipe like the one being read, and why.</summary>

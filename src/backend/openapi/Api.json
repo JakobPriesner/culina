@@ -2876,7 +2876,7 @@
           "Recipes"
         ],
         "summary": "Recipes like this one",
-        "description": "Up to three recipes of the same household, the closest first, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so. Not cached: it changes with every other recipe in the household.",
+        "description": "Recipes of the same household, the closest first, three to a page by default and cursor-paginated, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so. Not cached: it changes with every other recipe in the household.",
         "operationId": "getRelatedRecipesV1",
         "parameters": [
           {
@@ -2887,6 +2887,45 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -2896,6 +2935,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RecipesGetRelatedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -9029,6 +9078,11 @@
               "$ref": "#/components/schemas/RecipesGetRelatedRelatedRecipe"
             },
             "description": "The closest first. Empty when nothing is alike enough to say so."
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Where this page ended, or null when nothing else is alike enough to say so.",
+            "nullable": true
           }
         },
         "description": "The recipes of the same household most like one of its own."

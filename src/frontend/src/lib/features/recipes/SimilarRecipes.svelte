@@ -1,7 +1,9 @@
 <script lang="ts">
   import { formatList, m } from '$shell/i18n';
+  import { whenVisible } from '$shell/whenVisible';
 
   import RecipeCard from './RecipeCard.svelte';
+  import RecipeCardSkeleton from './RecipeCardSkeleton.svelte';
   import { inheritedFrom } from './recipeMeta';
   import { related } from './stores/related.svelte';
   import type { RelatedReason } from './types';
@@ -20,6 +22,10 @@
    * eight people the co-occurrence between two recipes is zero or a
    * coincidence, whereas "also a Bolognese" is a fact, and one that can be
    * explained. So it is explained, under every card.
+   *
+   * Reaching the end of the shelf asks for the next few, for as long as there
+   * are recipes alike enough to say so — the similarity floor, not a count,
+   * is what ends it.
    */
   interface Props {
     recipeId: string;
@@ -33,6 +39,8 @@
   let { recipeId, inherited = {} }: Props = $props();
 
   const items = $derived(related.of(recipeId));
+
+  const hasMore = $derived(related.hasMore(recipeId));
 
   $effect(() => {
     if (recipeId) {
@@ -66,6 +74,20 @@
           <p class="because">{because(recipe.reason)}</p>
         </li>
       {/each}
+
+      <!-- The next card, drawn as the one that is coming. Seeing it is what
+           fetches it. Keyed on the count so it is watched afresh after every
+           page: one that is still in view once the page has landed would
+           otherwise never say so again, and the shelf would stop there.
+           No margin, so it is asked for when somebody has reached the end
+           rather than whenever the bottom of the recipe is near. -->
+      {#if hasMore}
+        {#key items.length}
+          <li aria-hidden="true" {@attach whenVisible(() => void related.more(recipeId), '0px')}>
+            <RecipeCardSkeleton />
+          </li>
+        {/key}
+      {/if}
     </ul>
   </section>
 {/if}

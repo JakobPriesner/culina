@@ -177,4 +177,27 @@ describe('walking the shortlist', () => {
     expect(screen.queryByText('1 of 1')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Linsensuppe' })).toBeInTheDocument();
   });
+
+  it('asks for more once the last one is on screen, and not before', async () => {
+    const onmore = vi.fn();
+
+    renderWithProviders(SuggestionDeck, { props: { items: shortlist, onmore } });
+    layOut();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next suggestion' }));
+
+    expect(onmore).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next suggestion' }));
+
+    expect(onmore).toHaveBeenCalled();
+  });
+
+  it('does not ask for more of a single answer nobody has walked', () => {
+    const onmore = vi.fn();
+
+    renderWithProviders(SuggestionDeck, { props: { items: [shortlist[0]], onmore } });
+
+    expect(onmore).not.toHaveBeenCalled();
+  });
 });

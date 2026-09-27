@@ -739,7 +739,7 @@ export interface paths {
         };
         /**
          * Recipes like this one
-         * @description Up to three recipes of the same household, the closest first, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so. Not cached: it changes with every other recipe in the household.
+         * @description Recipes of the same household, the closest first, three to a page by default and cursor-paginated, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so. Not cached: it changes with every other recipe in the household.
          */
         get: operations["getRelatedRecipesV1"];
         put?: never;
@@ -2789,6 +2789,8 @@ export interface components {
         RecipesGetRelatedResponse: {
             /** @description The closest first. Empty when nothing is alike enough to say so. */
             items: components["schemas"]["RecipesGetRelatedRelatedRecipe"][];
+            /** @description Where this page ended, or null when nothing else is alike enough to say so. */
+            nextCursor?: string | null;
         };
         /** @description A recipe as whoever follows the link sees it. */
         RecipesGetSharedResponse: {
@@ -6648,7 +6650,10 @@ export interface operations {
     };
     getRelatedRecipesV1: {
         parameters: {
-            query?: never;
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
             header?: never;
             path: {
                 recipeId: string;
@@ -6664,6 +6669,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipesGetRelatedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */

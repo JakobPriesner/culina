@@ -189,3 +189,77 @@ describe('a deleted recipe', () => {
     expect(fetched).not.toHaveBeenCalled();
   });
 });
+
+describe('the end of the shortlist', () => {
+  /** A ranked kitchen of eight, answered the way the server does: without what is excluded. */
+  const kitchen = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+  const ranked = (url: string) => {
+    const query = new URL(url).searchParams;
+    const excluded = query.getAll('exclude');
+    const limit = Number(query.get('limit') ?? 5);
+
+    return answer(
+      kitchen
+        .filter((id) => !excluded.includes(id))
+        .slice(0, limit)
+        .map((id) => suggestion(id))
+    );
+  };
+
+  it('asks for the next few by naming the ones already shown', async () => {
+    const fetched = serverAnswers(ranked);
+
+    await suggestions.ask(household, { limit: 3 });
+    await suggestions.more(household, { limit: 3 });
+
+    expect(suggestions.for(household, { limit: 3 }).map((one) => one.id)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+      'f'
+    ]);
+    expect(new URL(fetched.mock.calls[1]?.[0].url ?? '').searchParams.getAll('exclude')).toEqual([
+      'a',
+      'b',
+      'c'
+    ]);
+  });
+
+  it('stops once an answer comes back short', async () => {
+    const fetched = serverAnswers(ranked);
+
+    await suggestions.ask(household, { limit: 3 });
+    await suggestions.more(household, { limit: 3 });
+    await suggestions.more(household, { limit: 3 });
+
+    expect(suggestions.for(household, { limit: 3 })).toHaveLength(8);
+    expect(suggestions.hasMore(household, { limit: 3 })).toBe(false);
+
+    await suggestions.more(household, { limit: 3 });
+
+    expect(fetched).toHaveBeenCalledTimes(3);
+  });
+
+  it('has nothing more to ask for when the first answer was already short', async () => {
+    serverAnswers(ranked);
+
+    await suggestions.ask(household, { limit: 12 });
+
+    expect(suggestions.hasMore(household, { limit: 12 })).toBe(false);
+  });
+
+  it('asks once for a page, however often the end is reached', async () => {
+    const fetched = serverAnswers(ranked);
+
+    await suggestions.ask(household, { limit: 3 });
+    await Promise.all([
+      suggestions.more(household, { limit: 3 }),
+      suggestions.more(household, { limit: 3 })
+    ]);
+
+    expect(fetched).toHaveBeenCalledTimes(2);
+  });
+});
