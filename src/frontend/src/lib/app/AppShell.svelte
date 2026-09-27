@@ -489,10 +489,15 @@
     }
   }
 
-  /* Expanded navigation needs room for the brand, labels and recipe creation. */
+  /* Expanded navigation needs room for the brand, labels and recipe creation.
+     The first column is never narrower than the brand: just past 64rem the
+     labelled destinations leave each side about 9rem, less than the brand
+     pill, which squeezed the wordmark's dot onto a line of its own. Wider than
+     the brand, both sides are equal and the destinations sit centred; at the
+     narrowest they give way by the few pixels the brand needs. */
   @media (min-width: 64rem) {
     .header-inner {
-      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
     }
 
     .library-controls {

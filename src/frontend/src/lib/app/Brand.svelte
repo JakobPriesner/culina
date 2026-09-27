@@ -34,6 +34,10 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  /* A name, not a sentence: it never breaks, least of all before its dot. */
+  .wordmark {
+    white-space: nowrap;
+  }
   .dot {
     color: var(--accent);
   }
