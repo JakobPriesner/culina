@@ -138,6 +138,11 @@
     max-width: 100%;
     padding-block: var(--space-2);
     white-space: normal;
+    /* Breaks a word only when the word alone is wider than the button can be.
+       The page's inherited 'anywhere' also counts those breaks as the
+       button's smallest size, so a row of controls squeezed it to "Ersetze"
+       over "n" while there was room to wrap somewhere else. */
+    overflow-wrap: break-word;
     text-align: center;
     letter-spacing: -0.01em;
     cursor: pointer;
