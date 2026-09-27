@@ -26,6 +26,13 @@ describe('which steps an ingredient ends up in', () => {
     expect(usage.get('flour')).toEqual([3]);
   });
 
+  it('counts an ingredient a step’s words name, as the server does', () => {
+    const usage = usageOf([step(['butter'], [mention('butter'), mention('salt')])]);
+
+    expect(usage.get('butter')).toEqual([1]);
+    expect(usage.get('salt')).toEqual([1]);
+  });
+
   it('says nothing about an ingredient no step needs', () => {
     // Salt to taste belongs to no step, and never will.
     expect(usageOf([step(['butter'])]).get('salt')).toBeUndefined();
