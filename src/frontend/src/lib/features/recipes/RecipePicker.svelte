@@ -5,9 +5,12 @@
   import { m } from '$shell/i18n';
 
   import { metaLineFor } from './recipeMeta';
+  import SearchChips from './search/SearchChips.svelte';
+  import SearchNotice from './search/SearchNotice.svelte';
+  import { withoutChip } from './search/wording';
   import { createRecipeStore } from './stores/recipes.svelte';
   import { suggestions } from './stores/suggestions.svelte';
-  import type { RecipeSummary } from './types';
+  import type { RecipeSummary, SearchChip } from './types';
 
   /**
    * Choosing one recipe out of all of them.
@@ -94,6 +97,8 @@
   /** What is in the box, which is not yet what has been searched for. */
   let typed = $state('');
   let query = $state('');
+  /** The query whose correction the reader turned down. */
+  let asTypedFor = $state<string | null>(null);
 
   let debounce: ReturnType<typeof setTimeout> | undefined;
 
@@ -119,7 +124,11 @@
   // nobody asked for, on every page that happens to mount one.
   $effect(() => {
     if (open && !suggesting) {
-      void recipes.list(householdId, { query, cookbookId });
+      void recipes.list(householdId, {
+        query,
+        cookbookId,
+        asTyped: asTypedFor !== null && asTypedFor === query
+      });
     }
   });
 
@@ -136,6 +145,7 @@
       clearTimeout(debounce);
       typed = '';
       query = '';
+      asTypedFor = null;
     }
   });
 
@@ -147,6 +157,25 @@
 
     // Long enough that a word is finished, short enough that it feels live.
     debounce = setTimeout(() => (query = value), 250);
+  }
+
+  /**
+   * What the server read the words to mean, and what it had to change to
+   * find anything — the same chips and notices as every other search, so
+   * "vegetarisch Donnerstag" reads the same way in the planner as in the
+   * library.
+   */
+  const interpretation = $derived(
+    !suggesting && query.trim().length > 0 && recipes.status === 'ready'
+      ? recipes.interpretation
+      : null
+  );
+
+  /** A reading removed is its characters removed from the query, at once. */
+  function remove(chip: SearchChip) {
+    clearTimeout(debounce);
+    typed = withoutChip(query, chip);
+    query = typed;
   }
 
   /**
@@ -174,6 +203,18 @@
       value={typed}
       oninput={type}
     />
+
+    {#if interpretation}
+      <SearchChips chips={interpretation.chips} onremove={remove} />
+      <SearchNotice
+        {interpretation}
+        total={recipes.total}
+        {query}
+        offer={false}
+        onastyped={() => (asTypedFor = query)}
+        onremove={remove}
+      />
+    {/if}
 
     {#if controls}
       {@render controls()}

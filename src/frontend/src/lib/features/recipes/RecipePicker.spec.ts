@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/svelte';
+import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -234,5 +234,53 @@ describe('the recipe picker', () => {
     await screen.findByRole('button', { name: /Orzo/ });
 
     expect(asked.some((url) => url.includes('cookbookId=c1'))).toBe(true);
+  });
+
+  /*
+   * "vegetarisch Abendessen" in the planner reads the same as in the library:
+   * each reading a removable chip, and a reading the search had to set aside
+   * said out loud rather than dropped quietly.
+   */
+  it('shows what it read the words to mean, and what it had to set aside', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) => {
+        const query = new URL(input.url).searchParams.get('query') ?? '';
+        asked.push(input.url);
+
+        const diet = { kind: 'diet', value: 'vegetarian', text: 'vegetarisch', start: 0, end: 11 };
+        const meal = { kind: 'meal', value: 'dinner', text: 'Abendessen', start: 12, end: 22 };
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [summary('r1', 'Orzo')],
+              nextCursor: null,
+              total: 1,
+              interpretation: query.includes('Abendessen')
+                ? { freeText: '', applied: [diet, meal], relaxed: [meal], conflict: [] }
+                : { freeText: '', applied: [diet], relaxed: [], conflict: [] }
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        );
+      })
+    );
+
+    const user = userEvent.setup();
+    renderWithProviders(RecipePicker, { props: props() });
+
+    await user.type(screen.getByRole('searchbox'), 'vegetarisch Abendessen');
+
+    const chips = await screen.findByRole('list', { name: 'Understood as' });
+    expect(await screen.findByText(/Nothing matched all of it/)).toBeInTheDocument();
+
+    // Removing a chip is removing its characters, and asking again at once.
+    await user.click(within(chips).getByRole('button', { name: 'Remove “Dinner”' }));
+
+    await waitFor(() =>
+      expect(new URL(asked.at(-1)!).searchParams.get('query')).toBe('vegetarisch')
+    );
+    expect(screen.getByRole('searchbox')).toHaveValue('vegetarisch');
   });
 });

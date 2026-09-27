@@ -53,6 +53,9 @@ internal sealed record RecipeSearchRowData
 
     public string? ReasonTerm { get; init; }
 
+    /// <summary>Whether the title or a tag says the diet asked for.</summary>
+    public bool DietAsserted { get; init; }
+
     /// <summary>Which kind of evidence put this row here. Lower is stronger.</summary>
     public int Tier { get; init; }
 
@@ -404,8 +407,12 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
 
         var page = rows.Take(limit).ToList();
 
+        // A diet is only ever presumed when every diet asked for can be: the
+        // rest are kept by assertion alone, so an unasserted row has none.
+        var presumable = search.Constraints.Diets is [var first, ..] ? first : null;
+
         return new RecipePage(
-            [.. page.Select(ToRow)],
+            [.. page.Select(data => ToRow(data) with { PresumedDiet = data.DietAsserted ? null : presumable })],
             NextCursorFor(search.Sort, rows.Count > limit, page),
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
@@ -545,9 +552,10 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             select t.name from recipe_tags rt
             join tags t on t.id = rt.tag_id
             where rt.recipe_id = page.id
-              and exists (select 1 from unnest(q.terms) as term
-                          where culina_fold_ae(t.name) like '%' || term || '%'
-                             or culina_fold_a(t.name) like '%' || term || '%')
+              and (exists (select 1 from unnest(q.terms) as term
+                           where culina_fold_ae(t.name) like '%' || term || '%'
+                              or culina_fold_a(t.name) like '%' || term || '%')
+                   or culina_fold_ae(t.name) = any(@tagWords::text[]))
             order by t.slug
             limit 1) found_tag on true
         """;
@@ -572,6 +580,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             query,
             concepts,
             conceptAnswers = concepts.SelectMany(CulinaryLexicon.AnsweredBy).ToArray(),
+            tagWords = query is null ? [] : SearchText.Modifiers(Excluded().Replace(query, " ")).Distinct().ToArray(),
             conceptAsked = concepts
                 .SelectMany((concept, asked) => CulinaryLexicon.AnsweredBy(concept).Select(_ => asked))
                 .ToArray(),

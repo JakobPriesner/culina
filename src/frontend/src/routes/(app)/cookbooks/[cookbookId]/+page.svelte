@@ -83,6 +83,9 @@
 
   const order = $derived(effectiveSort(view.sort, context));
 
+  /** The query whose correction the reader turned down. */
+  let asTypedFor = $state<string | null>(null);
+
   /**
    * Which list is on screen.
    *
@@ -94,7 +97,8 @@
     tags: view.tags,
     maxMinutes: view.maxMinutes ?? undefined,
     cookbookId,
-    sort: order
+    sort: order,
+    asTyped: asTypedFor !== null && asTypedFor === view.query
   });
 
   const autoLoads = $derived(shelf.hasMore && !shelf.moreFailed);
@@ -465,6 +469,10 @@
           {context}
           searchLabel={m['cookbooks.search']()}
           searchPlaceholder={m['cookbooks.search']()}
+          interpretation={shelf.status === 'ready' ? shelf.interpretation : null}
+          total={shelf.total}
+          scope={cookbook?.name}
+          onastyped={() => (asTypedFor = view.query)}
         >
           {#snippet summary()}
             {#if shelf.status === 'ready'}

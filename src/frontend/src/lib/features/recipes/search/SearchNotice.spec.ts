@@ -126,3 +126,17 @@ describe('the chips', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 });
+
+describe('the cookbook a search is inside', () => {
+  it('leads the chips, and cannot be removed like one', () => {
+    renderWithProviders(SearchChips, {
+      props: { chips: [vegetarian], scope: 'Sonntagsbraten', onremove: vi.fn() }
+    });
+
+    const items = screen.getAllByRole('listitem');
+
+    expect(items[0]).toHaveTextContent('Only in “Sonntagsbraten”');
+    expect(items[0]!.querySelector('button')).toBeNull();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+  });
+});

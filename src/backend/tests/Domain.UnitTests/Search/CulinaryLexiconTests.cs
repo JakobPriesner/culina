@@ -309,4 +309,19 @@ public class CulinaryLexiconTests
         // Act & Assert
         Assert.Contains(expected, CulinaryLexicon.Describe(title, [], []));
     }
+
+    [Fact]
+    public void Describe_ShouldReadANegativeAnswer_AsNoDiet()
+    {
+        // Act
+        // The answer "Nein" to "Ist das vegetarisch?" is a tag, and a tag that
+        // mentions a diet must not be read as keeping it.
+        var concepts = CulinaryLexicon.Describe("Kichererbsen-Eintopf", ["nicht vegetarisch"], []);
+
+        // Assert
+        Assert.Contains("not_vegetarian", concepts);
+        Assert.DoesNotContain("vegetarian", concepts);
+        Assert.Contains("not_vegetarian", DietRules.RefutedBy("vegetarian")!);
+        Assert.Contains("not_vegetarian", DietRules.RefutedBy("vegan")!);
+    }
 }

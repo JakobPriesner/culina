@@ -18,6 +18,17 @@ const foldChar = (character: string): string =>
 const fold = (text: string): string => [...text].map(foldChar).join('');
 
 /**
+ * A folded query word, and the same word as a German keyboard without umlauts
+ * writes it: "kaesekuchen" is also "kasekuchen", which is what "Käsekuchen"
+ * folds to. The search reads both spellings, so the marks do too.
+ */
+const spellings = (word: string): string[] => {
+  const plain = word.replaceAll('ae', 'a').replaceAll('oe', 'o').replaceAll('ue', 'u');
+
+  return plain === word ? [word] : [word, plain];
+};
+
+/**
  * Splits text into what the typed words matched and what they did not.
  *
  * For the words a person reads a result by — its title and the line saying
@@ -29,7 +40,7 @@ export function highlightMatches(text: string, query: string): readonly Stretch[
   const folded = fold(text);
   const marked = new Array<boolean>(characters.length).fill(false);
 
-  for (const word of fold(query).split(/\s+/)) {
+  for (const word of fold(query).split(/\s+/).flatMap(spellings)) {
     if (word.length < shortestWord) {
       continue;
     }

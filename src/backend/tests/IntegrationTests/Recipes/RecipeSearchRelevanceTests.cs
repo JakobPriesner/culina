@@ -525,6 +525,52 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Search_ShouldPreferTheHouseholdsOwnTag_ToWhatTheLexiconInfers()
+    {
+        // Arrange
+        // Both are summer dishes to the lexicon, because a salad is. Only one
+        // is to the household, which said so.
+        var world = await SeedAsync();
+        await world.SaveAsync("Gurkensalat", "de", 10, null,
+            [("Gurke", null), ("Dill", null)], [], "Hobeln.");
+        await world.SaveAsync("Wassermelone mit Feta", "de", 10, null,
+            [("Wassermelone", "g"), ("Feta", "g")], ["Sommer"], "Würfeln.");
+
+        // Act
+        var response = await SearchAsync(world, "Sommergericht");
+        var titles = Titles(response);
+
+        // Assert
+        Assert.Equal(["Wassermelone mit Feta", "Gurkensalat"], titles);
+        Assert.Equal("tag:Sommer", Reasons(response)["Wassermelone mit Feta"]);
+        Assert.Equal("concept:Sommer", Reasons(response)["Gurkensalat"]);
+    }
+
+    [Fact]
+    public async Task Search_ShouldSayWhichDietIsOnlyPresumed_AndTakeATagForAnAnswer()
+    {
+        // Arrange
+        // Nothing in the Müsliriegel says meat, and nobody has said it is
+        // vegetarian either; the Gemüselasagne is tagged. The Kichererbsen-Eintopf
+        // was cooked in chicken stock nobody wrote down, and the household
+        // answered the question with a tag.
+        var world = await SeedAsync();
+        await world.SaveAsync("Kichererbsen-Eintopf", "de", 10, 30,
+            [("Kichererbsen", "g"), ("Tomaten", "g")], ["nicht vegetarisch"], "Köcheln.");
+
+        // Act
+        var response = await SearchAsync(world, "vegetarisch");
+        var presumed = response.Json!.Value.GetProperty("items").EnumerateArray().ToDictionary(
+            item => item.GetProperty("title").GetString()!,
+            item => item.TryGetProperty("presumedDiet", out var diet) ? diet.GetString() : null);
+
+        // Assert
+        Assert.Equal("vegetarian", presumed["Müsliriegel"]);
+        Assert.Null(presumed["Gemüselasagne"]);
+        Assert.DoesNotContain("Kichererbsen-Eintopf", presumed.Keys);
+    }
+
+    [Fact]
     public async Task Search_ShouldNeverSetADietAside()
     {
         // Arrange

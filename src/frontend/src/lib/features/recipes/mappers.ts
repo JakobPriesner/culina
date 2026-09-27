@@ -65,7 +65,9 @@ export const toSummary = (wire: WireSummary): RecipeSummary => ({
         missing: wire.ingredientMatch.missing
       }
     : null,
-  matchReason: wire.matchReason ? toReason(wire.matchReason) : null
+  matchReason: wire.matchReason ? toReason(wire.matchReason) : null,
+  presumedDiet:
+    wire.presumedDiet === 'vegetarian' || wire.presumedDiet === 'vegan' ? wire.presumedDiet : null
 });
 
 const reasonKinds = new Set<MatchReason['kind']>(['ingredient', 'tag', 'text', 'concept']);

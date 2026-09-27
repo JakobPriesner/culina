@@ -260,6 +260,18 @@
     }
   }
 
+  /**
+   * A completion taken into the field without going anywhere: a recipe's
+   * name is typed out rather than opened, the rest do what choosing them does.
+   */
+  function accept(completion: Completion) {
+    if (completion.kind === 'recipe') {
+      set(completion.label);
+    } else {
+      activate({ key: '', kind: 'completion', completion });
+    }
+  }
+
   function keydown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -282,6 +294,24 @@
         recent = rememberSearch(typed);
         set(typed);
       }
+    } else if (
+      event.key === 'Tab' &&
+      !event.shiftKey &&
+      typed.trim().length > 0 &&
+      completions.items.length > 0
+    ) {
+      // The highlighted completion, or the first one. Only when there is one
+      // to take: otherwise Tab leaves the field as it always does.
+      event.preventDefault();
+
+      const option = options[highlighted];
+
+      accept(option?.kind === 'completion' ? option.completion : completions.items[0]!);
+    } else if (event.key === 'Backspace' && typed.length === 0 && tags.length > 0) {
+      // Nothing left to delete in the field, so the chip beside it goes —
+      // what deleting one more character looks like it should do.
+      event.preventDefault();
+      removeTag(tags.at(-1)!.slug);
     } else if (event.key === 'Escape' && typed.length > 0) {
       // Clear first, close second — the same as every other search field here.
       event.preventDefault();

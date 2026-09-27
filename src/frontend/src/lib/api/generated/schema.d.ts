@@ -2585,6 +2585,12 @@ export interface components {
             updatedAt: string;
             ingredientMatch?: (null) | components["schemas"]["RecipesGetAllIngredientMatch"];
             matchReason?: (null) | components["schemas"]["RecipesGetAllMatchReason"];
+            /**
+             * @description The diet the query asked for, when this recipe keeps it only because
+             *     nothing in it says otherwise — `vegetarian` or `vegan`; null
+             *     when somebody said so, and whenever no diet was asked for.
+             */
+            presumedDiet?: string | null;
         };
         /** @description A page of recipes. */
         RecipesGetAllResponse: {

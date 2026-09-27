@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { VisuallyHidden } from '$ds';
   import { m } from '$shell/i18n';
 
   import type { SearchChip } from '../types';
@@ -19,14 +20,38 @@
    */
   interface Props {
     chips: readonly SearchChip[];
+    /**
+     * The cookbook being searched, when it is one: drawn first and without an
+     * ×, because it is where the search is rather than something it read, and
+     * leaving it is leaving the page.
+     */
+    scope?: string;
     onremove: (chip: SearchChip) => void;
   }
 
-  let { chips, onremove }: Props = $props();
+  let { chips, scope, onremove }: Props = $props();
 </script>
 
 {#if chips.length > 0}
   <ul class="chips" aria-label={m['search.chips']()}>
+    {#if scope}
+      <li>
+        <span class="chip scope">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            aria-hidden="true"
+          >
+            <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z" />
+            <path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19" stroke-linecap="round" />
+          </svg>
+          <span aria-hidden="true">{scope}</span>
+          <VisuallyHidden>{m['search.chip.scope']({ name: scope })}</VisuallyHidden>
+        </span>
+      </li>
+    {/if}
     {#each chips as chip (`${chip.kind}:${chip.start}`)}
       <li>
         <button
@@ -71,6 +96,20 @@
 
   .chip:hover {
     border-color: var(--border-strong);
+  }
+
+  .scope {
+    background: transparent;
+    cursor: default;
+  }
+
+  .scope:hover {
+    border-color: var(--border);
+  }
+
+  .scope svg {
+    width: 1em;
+    height: 1em;
   }
 
   /* What is left out reads as a subtraction, not as one more filter. */

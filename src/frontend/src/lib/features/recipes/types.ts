@@ -102,7 +102,15 @@ export interface RecipeSummary {
    * and null for a title match.
    */
   readonly matchReason?: MatchReason | null;
+  /**
+   * The diet a search asked for, when this recipe keeps it only because
+   * nothing in it says otherwise. Absent outside a search with a diet.
+   */
+  readonly presumedDiet?: PresumableDiet | null;
 }
+
+/** The diets an ingredient list can refute, and so the only ones ever presumed. */
+export type PresumableDiet = 'vegetarian' | 'vegan';
 
 /**
  * Why a recipe is in a search it does not name in its title.
