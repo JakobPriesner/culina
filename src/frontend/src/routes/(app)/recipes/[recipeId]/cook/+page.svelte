@@ -218,6 +218,46 @@
       move(currentStep - 1);
     }
   }
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+
+  function handleTouchStart(event: TouchEvent) {
+    const touch = event.changedTouches[0];
+    if (!touch || !ready) return;
+
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      target.closest('input, textarea, select, button, a, [contenteditable="true"]')
+    ) {
+      return;
+    }
+
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+  }
+
+  function handleTouchEnd(event: TouchEvent) {
+    const touch = event.changedTouches[0];
+    if (!touch || !ready) return;
+
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+    const elapsed = Date.now() - touchStartTime;
+
+    // A deliberate horizontal swipe: at least 50px displacement, predominantly horizontal,
+    // and performed in under 600ms so slow vertical scrolling is not mistaken for a step move.
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && elapsed < 600) {
+      if (deltaX < 0) {
+        advance();
+      } else {
+        move(currentStep - 1);
+      }
+    }
+  }
 </script>
 
 <svelte:head>
@@ -226,8 +266,12 @@
 
 <!-- The whole screen advances, because a cook's hands are busy and the target
      should be the phone rather than a button on it. Arrow keys for a laptop
-     propped on the counter. -->
-<svelte:window onkeydown={stepFromKeyboard} />
+     propped on the counter, horizontal swipes for a phone on a stand. -->
+<svelte:window
+  onkeydown={stepFromKeyboard}
+  ontouchstart={handleTouchStart}
+  ontouchend={handleTouchEnd}
+/>
 
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
