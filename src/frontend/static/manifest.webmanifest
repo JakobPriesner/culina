@@ -6,7 +6,6 @@
     "start_url": "/",
     "scope": "/",
     "display": "standalone",
-    "orientation": "portrait-primary",
     "background_color": "#fdfbf7",
     "theme_color": "#fdfbf7",
     "categories": ["food", "lifestyle", "productivity"],
@@ -20,5 +19,40 @@
             "sizes": "512x512",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "shortcuts": [
+        {
+            "name": "Shopping List",
+            "short_name": "Shopping",
+            "url": "/shopping",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "New Recipe",
+            "short_name": "New",
+            "url": "/recipes/new",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Meal Plan",
+            "short_name": "Plan",
+            "url": "/plan",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Cookbooks",
+            "short_name": "Cookbooks",
+            "url": "/cookbooks",
+            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "share_target": {
+        "action": "/recipes/new",
+        "method": "GET",
+        "params": {
+            "title": "title",
+            "text": "text",
+            "url": "url"
+        }
+    }
 }

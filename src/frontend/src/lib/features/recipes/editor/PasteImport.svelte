@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Button, Field, TextArea, TextInput } from '$ds';
 
   import { http, request } from '$api';
@@ -35,14 +36,40 @@
      * has to be able to see that this one has been taken.
      */
     open?: boolean;
+    /** An initial URL to populate and immediately read (e.g. from the OS share target). */
+    initialUrl?: string;
+    /** An initial block of text to populate. */
+    initialText?: string;
   }
 
-  let { householdId, onimport, busy = false, open = $bindable(false) }: Props = $props();
+  let {
+    householdId,
+    onimport,
+    busy = false,
+    open = $bindable(false),
+    initialUrl = '',
+    initialText = ''
+  }: Props = $props();
 
   let text = $state('');
   let url = $state('');
   let reading = $state(false);
   let failure = $state<string | null>(null);
+
+  const canPasteClipboard =
+    typeof navigator !== 'undefined' &&
+    'clipboard' in navigator &&
+    typeof navigator.clipboard?.readText === 'function';
+
+  onMount(() => {
+    if (initialText) {
+      text = initialText;
+    }
+    if (initialUrl.trim()) {
+      url = initialUrl.trim();
+      void read();
+    }
+  });
 
   /**
    * What a website published, when a website published it.
@@ -113,6 +140,23 @@
     };
   }
 
+  async function pasteFromClipboard() {
+    if (!canPasteClipboard) return;
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      const trimmed = clipboardText.trim();
+      const match = trimmed.match(/https?:\/\/[^\s]+/);
+      if (match) {
+        url = match[0];
+        void read();
+      } else if (trimmed) {
+        text = trimmed;
+      }
+    } catch {
+      // Clipboard access denied or unavailable
+    }
+  }
+
   const shown = (quantity: Parameters<typeof scaleQuantity>[0]) =>
     formatQuantity(scaleQuantity(quantity, 1), preferences.locale, quantityLabels).text;
 
@@ -142,6 +186,12 @@
           />
         {/snippet}
       </Field>
+
+      {#if !url.trim() && canPasteClipboard}
+        <Button variant="ghost" onclick={() => void pasteFromClipboard()}>
+          {m['import.url.pasteClipboard']()}
+        </Button>
+      {/if}
 
       <Button loading={reading} disabled={!url.trim()} onclick={() => void read()}>
         {m['import.url.read']()}

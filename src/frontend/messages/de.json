@@ -374,6 +374,7 @@
   "plan.move.failed": "Das Verschieben hat nicht geklappt. Das Gericht bleibt am bisherigen Tag.",
   "import.url.label": "Link zum Rezept",
   "import.url.read": "Rezept abrufen",
+  "import.url.pasteClipboard": "Kopierten Link einfügen",
   "import.url.or": "oder Rezepttext einfügen",
   "import.url.failed": "Die Seite lässt sich nicht öffnen. Vielleicht ist sie nicht öffentlich oder nicht mehr verfügbar.",
   "archive.title": "Deine Rezepte als Datei",
