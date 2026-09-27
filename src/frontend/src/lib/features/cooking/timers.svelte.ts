@@ -1,3 +1,5 @@
+import { SvelteSet } from 'svelte/reactivity';
+
 import { haptics } from '$shell/haptics';
 import { playKitchenChime, unlockAudio } from './kitchenAudio';
 import { notifyTimerDone, requestTimerNotificationPermission } from './timerNotification';
@@ -24,7 +26,7 @@ const storageKey = (sessionId: string) => `culina.timers.${sessionId}`;
 export function createTimers(sessionId: () => string | null) {
   let timers = $state<KitchenTimer[]>([]);
   let now = $state(Date.now());
-  const alerted = new Set<string>();
+  const alerted = new SvelteSet<string>();
 
   function checkAlarms() {
     for (const timer of timers) {
