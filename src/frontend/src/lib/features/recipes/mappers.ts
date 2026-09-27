@@ -301,8 +301,18 @@ export const toWireGroups = (groups: readonly IngredientGroup[]): WireGroup[] =>
     }))
   }));
 
+/**
+ * Whether a step has anything in it to store.
+ *
+ * "Add a step" puts an empty one on screen for the author to write in, and the
+ * autosave can fire before they have. The server refuses a step with no text,
+ * so until there is some it stays on screen and out of the save.
+ */
+const saysAnything = (step: Step): boolean =>
+  step.segments.some((segment) => segment.kind === 'ingredient' || segment.text !== '');
+
 export const toWireSteps = (steps: readonly Step[]): WireStep[] =>
-  steps.map((step) => ({
+  steps.filter(saysAnything).map((step) => ({
     stepId: step.id ?? undefined,
     title: step.title ?? undefined,
     durationSeconds: step.durationSeconds ?? undefined,
