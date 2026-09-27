@@ -205,9 +205,9 @@
    * are offered to whoever owns the recipe, and to nobody else.
    */
   const inMenu = $derived(
-    !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare || oncopy || ondelete)
+    !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare || oncopy)
   );
-  const hasSupportingActions = $derived(inMenu || Boolean(!cooking && onaddtolist));
+  const hasSupportingActions = $derived(inMenu || Boolean(!cooking && (onaddtolist || ondelete)));
 
   /**
    * Closes the menu the pressed item is in, then does the thing.
@@ -621,33 +621,29 @@
                     {m['editor.edit']()}
                   </a>
                 {/if}
-
-                <!-- Last, and set apart from the rest: the one thing in here
-                     that cannot be taken back should not be where a hand
-                     reaching for "Edit" lands. -->
-                {#if ondelete}
-                  <hr class="separator" />
-
-                  <button class="item" type="button" onclick={(e) => choose(e, ondelete)}>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M4 7h16M10 11v6M14 11v6" />
-                      <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
-                      <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
-                    </svg>
-
-                    {m['recipe.delete.action']()}
-                  </button>
-                {/if}
               </div>
             </Popover>
+          {/if}
+
+          <!-- On the page rather than in the menu, so nobody has to go looking
+               for it — but last in the row, outside the menu, so the hand
+               reaching for "Edit" never lands on it. The dialog it opens is
+               the question; this only offers. -->
+          {#if ondelete}
+            <IconButton bordered label={m['recipe.delete.action']()} onclick={ondelete}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 7h16M10 11v6M14 11v6" />
+                <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+                <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
+              </svg>
+            </IconButton>
           {/if}
         </div>
       {/if}
@@ -1018,12 +1014,6 @@
     flex: none;
     width: var(--space-4);
     height: var(--space-4);
-  }
-
-  .separator {
-    margin: var(--space-1) var(--space-3);
-    border: none;
-    border-top: 1px solid var(--border);
   }
 
   .title {

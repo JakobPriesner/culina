@@ -48,7 +48,6 @@ test.describe('deleting a recipe', () => {
     await page.goto(`/recipes/${recipeId}`);
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
-    await page.getByRole('button', { name: /more actions|weitere aktionen/i }).click();
     await page.getByRole('button', { name: /^(delete recipe|rezept löschen)$/i }).click();
 
     return page.getByRole('dialog');
