@@ -18,19 +18,26 @@ internal sealed class DeleteCookbookEndpoint : IEndpoint
                 ICommandHandler<DeleteCookbookCommand> handler,
                 CancellationToken cancellationToken) =>
             {
-                var result = await handler
-                    .Handle(
-                        new DeleteCookbookCommand(cookbookId, context.CurrentUser().UserId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                var expected = ETag.RequireIfMatch(context);
 
-                return result.Match(
-                    Results.NoContent,
-                    // Deleting something already gone is the outcome the caller
-                    // wanted, so a second DELETE answers 204 rather than 404.
-                    error => error.Code == CookbookErrors.NotFound(cookbookId).Code
-                        ? Results.NoContent()
-                        : CustomResults.Problem(error));
+                return await expected.Match(
+                    async version =>
+                    {
+                        var result = await handler
+                            .Handle(
+                                new DeleteCookbookCommand(cookbookId, context.CurrentUser().UserId, version),
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        return result.Match(
+                            Results.NoContent,
+                            // Deleting something already gone is the outcome the caller
+                            // wanted, so a second DELETE answers 204 rather than 404.
+                            error => error.Code == CookbookErrors.NotFound(cookbookId).Code
+                                ? Results.NoContent()
+                                : CustomResults.Problem(error));
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("deleteCookbookV1")
             .WithTags(Tags.Cookbooks)
@@ -38,9 +45,13 @@ internal sealed class DeleteCookbookEndpoint : IEndpoint
             .WithDescription(
                 "The shelf only. Every recipe that was on it stays exactly where it was — a "
                 + "cookbook is a pointer, and deleting one deletes no food. Idempotent: deleting "
-                + "one that is already gone also answers 204.")
+                + "one that is already gone also answers 204. `If-Match` is required — missing is "
+                + "428, stale is 412.")
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status412PreconditionFailed)
+            .ProducesProblem(StatusCodes.Status428PreconditionRequired)
             .RequireAuthorization();
     }
 }

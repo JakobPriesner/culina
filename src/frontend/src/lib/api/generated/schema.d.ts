@@ -176,7 +176,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a household
-         * @description Owners only. Deletes the household and every recipe, tag and shopping list it owns. There is no undo.
+         * @description Owners only. Deletes the household and every recipe, tag and shopping list it owns. There is no undo, which is why `If-Match` is required — missing is 428, stale is 412.
          */
         delete: operations["deleteHouseholdV1"];
         options?: never;
@@ -642,7 +642,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a recipe
-         * @description Idempotent: deleting a recipe that is already gone also answers 204.
+         * @description Idempotent: deleting a recipe that is already gone also answers 204. `If-Match` is required — missing is 428, stale is 412 — so a recipe somebody else just changed is not deleted on the strength of the version you saw before.
          */
         delete: operations["deleteRecipeV1"];
         options?: never;
@@ -1269,7 +1269,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a cookbook
-         * @description The shelf only. Every recipe that was on it stays exactly where it was — a cookbook is a pointer, and deleting one deletes no food. Idempotent: deleting one that is already gone also answers 204.
+         * @description The shelf only. Every recipe that was on it stays exactly where it was — a cookbook is a pointer, and deleting one deletes no food. Idempotent: deleting one that is already gone also answers 204. `If-Match` is required — missing is 428, stale is 412.
          */
         delete: operations["deleteCookbookV1"];
         options?: never;
@@ -4893,6 +4893,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -4913,6 +4922,24 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6463,8 +6490,35 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8512,8 +8566,35 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

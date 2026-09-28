@@ -109,11 +109,29 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
         await scope.Households.AddAsync(household, Token);
 
         // Act
-        await scope.Households.DeleteAsync(household.Id, Token);
+        var result = await scope.Households.DeleteAsync(household.Id, household.Version, Token);
 
         // Assert
+        result.ShouldBeSuccess();
         var found = await scope.Households.FindAsync(household.Id, Token);
         found.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
+    }
+
+    [Fact]
+    public async Task Delete_ShouldKeepTheHousehold_WhenTheVersionIsStale()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var owner = await scope.AddUserAsync("owner@example.com");
+        var household = AHousehold(owner);
+        await scope.Households.AddAsync(household, Token);
+
+        // Act
+        var result = await scope.Households.DeleteAsync(household.Id, household.Version + 1, Token);
+
+        // Assert
+        result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);
+        (await scope.Households.FindAsync(household.Id, Token)).ShouldBeSuccess();
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
