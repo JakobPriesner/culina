@@ -272,6 +272,45 @@ test.describe('the shopping list', () => {
     await expect(row).toHaveCount(0);
   });
 
+  /*
+   * The section is a guess, and a household that shops differently corrects it
+   * once, on the line, in the aisle. The list remembers the name from then on,
+   * which is the whole point: a correction that has to be made every week is
+   * not one anybody makes twice.
+   */
+  test('remembers a line moved to another section for the next time it is added', async () => {
+    const name = unique('Erbsen');
+
+    await page.goto('/shopping');
+
+    const frozen = page
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: /frozen|tiefkühl/i }) });
+    const row = page.getByRole('listitem').filter({ hasText: name });
+
+    await write(page, { name });
+    await expect(row).toBeVisible();
+    await expect(frozen.getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
+
+    await row.getByRole('button', { name: /another section|anderen bereich/i }).click();
+    await page.getByRole('button', { name: /^(frozen|tiefkühlprodukte)$/i }).click();
+
+    await expect(frozen.getByRole('listitem').filter({ hasText: name })).toBeVisible();
+
+    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await expect(row).toHaveCount(0);
+
+    // Gone and written again, in whatever case it happens to be typed in: the
+    // correction belongs to the name, not to the line that was moved.
+    await write(page, { name: name.toLowerCase() });
+
+    await expect(
+      frozen.getByRole('listitem').filter({ hasText: new RegExp(name, 'i') })
+    ).toBeVisible();
+
+    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+  });
+
   test('keeps its rows clear of the bars pinned to the bottom', async () => {
     const name = unique('Mehl');
 

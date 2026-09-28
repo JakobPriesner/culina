@@ -10,10 +10,10 @@
   import { units } from '$features/recipes/stores/units.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
   import { session } from '$features/auth/session.svelte';
-  import { nameOf } from '$features/shopping/sections';
+  import { nameOf, type Section } from '$features/shopping/sections';
   import ShoppingItemRow from '$features/shopping/ShoppingItemRow.svelte';
   import ShoppingListSkeleton from '$features/shopping/ShoppingListSkeleton.svelte';
-  import { shopping } from '$features/shopping/stores/shopping.svelte';
+  import { shopping, type ShoppingItem } from '$features/shopping/stores/shopping.svelte';
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
@@ -141,6 +141,27 @@
     picking = false;
 
     toaster.show({ message: () => explain(failure), tone: 'danger' });
+  }
+
+  /**
+   * A line into the part of the shop it is actually in.
+   *
+   * Said out loud once it has gone through, because the line has just left
+   * the screen for another heading — and because the list will put the same
+   * name there next time, which nothing else on the page would tell anybody.
+   */
+  async function move(item: ShoppingItem, section: Section) {
+    if (!householdId) {
+      return;
+    }
+
+    const failure = await shopping.moveToSection(householdId, item.itemId, section);
+
+    toaster.show(
+      failure
+        ? { message: () => explain(failure), tone: 'danger' }
+        : { message: () => m['shopping.moved']({ name: item.name, section: nameOf(section) }) }
+    );
   }
 
   function stopPicking() {
@@ -297,6 +318,7 @@
               oncheck={(isChecked) =>
                 householdId && shopping.check(householdId, item.itemId, isChecked)}
               onremove={() => householdId && shopping.remove(householdId, item.itemId)}
+              onmove={(section) => void move(item, section)}
             />
           {/each}
         </ul>
@@ -328,6 +350,7 @@
               oncheck={(isChecked) =>
                 householdId && shopping.check(householdId, item.itemId, isChecked)}
               onremove={() => householdId && shopping.remove(householdId, item.itemId)}
+              onmove={(section) => void move(item, section)}
             />
           {/each}
         </ul>

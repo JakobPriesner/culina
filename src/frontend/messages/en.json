@@ -1288,5 +1288,8 @@
   "recipe.diet.failed": "The answer could not be saved.",
   "search.chip.diet.not_vegetarian": "Not vegetarian",
   "search.chip.diet.not_vegan": "Not vegan",
-  "search.chip.scope": "Only in “{name}”"
+  "search.chip.scope": "Only in “{name}”",
+  "shopping.move": "Move {name} to another section",
+  "shopping.move.heading": "Belongs under",
+  "shopping.moved": "{name} goes under {section} from now on."
 }

@@ -113,43 +113,26 @@ class ShoppingStore {
    * server's answer replaces it when it arrives.
    */
   async check(householdId: string, itemId: string, isChecked: boolean): Promise<void> {
-    const before = this.#list;
+    const failure = await this.#change(householdId, itemId, { isChecked });
 
-    if (this.#list) {
-      this.#list = {
-        ...this.#list,
-        items: this.#list.items.map((item) =>
-          item.itemId === itemId ? { ...item, isChecked } : item
-        )
-      };
-    }
-
-    const result = await request(() =>
-      http.PATCH('/api/v1/households/{householdId}/shopping-list/items/{itemId}', {
-        params: { path: { householdId, itemId } },
-        body: { isChecked }
-      })
-    );
-
-    if (result.ok) {
-      this.#list = result.value;
-    } else {
-      // Exactly what was there, not an inverse: inverses drift when something
-      // else changed in between.
-      this.#list = before;
-      this.#error = result.error;
+    if (failure) {
+      this.#error = failure;
     }
   }
 
-  async moveToSection(householdId: string, itemId: string, section: Section): Promise<void> {
-    const result = await request(() =>
-      http.PATCH('/api/v1/households/{householdId}/shopping-list/items/{itemId}', {
-        params: { path: { householdId, itemId } },
-        body: { section }
-      })
-    );
-
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+  /**
+   * Moves a line to another part of the shop, and the household's list
+   * remembers it: the same name lands there from now on.
+   *
+   * Optimistic for the same reason a tick is. The line leaves its section the
+   * moment the section is chosen, which is the receipt that it was.
+   */
+  async moveToSection(
+    householdId: string,
+    itemId: string,
+    section: Section
+  ): Promise<AppError | null> {
+    return this.#change(householdId, itemId, { section });
   }
 
   async remove(householdId: string, itemId: string): Promise<void> {
@@ -234,6 +217,43 @@ class ShoppingStore {
     this.#list = null;
     this.#status = 'idle';
     this.#error = null;
+  }
+
+  /** One line changed here first, then on the server, and put back exactly as it was if that fails. */
+  async #change(
+    householdId: string,
+    itemId: string,
+    change: Partial<Pick<ShoppingItem, 'isChecked' | 'section'>>
+  ): Promise<AppError | null> {
+    const before = this.#list;
+
+    if (this.#list) {
+      this.#list = {
+        ...this.#list,
+        items: this.#list.items.map((item) =>
+          item.itemId === itemId ? { ...item, ...change } : item
+        )
+      };
+    }
+
+    const result = await request(() =>
+      http.PATCH('/api/v1/households/{householdId}/shopping-list/items/{itemId}', {
+        params: { path: { householdId, itemId } },
+        body: change
+      })
+    );
+
+    if (result.ok) {
+      this.#list = result.value;
+
+      return null;
+    }
+
+    // Exactly what was there, not an inverse: inverses drift when something
+    // else changed in between.
+    this.#list = before;
+
+    return result.error;
   }
 
   #take(list: ShoppingList | null, error: AppError | null): void {

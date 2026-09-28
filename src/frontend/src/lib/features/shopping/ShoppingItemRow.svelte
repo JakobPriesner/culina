@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Checkbox, IconButton } from '$ds';
+  import { Checkbox, IconButton, Popover } from '$ds';
 
   import { formatQuantity } from '$features/recipes/formatQuantity';
   import { quantityLabels } from '$features/recipes/quantityLabels';
@@ -8,6 +8,7 @@
   import { haptics } from '$shell/haptics';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
+  import { nameOf, sectionOrder, type Section } from './sections';
   import type { ShoppingItem } from './stores/shopping.svelte';
 
   /**
@@ -17,14 +18,19 @@
    * read while walking. The amount is rounded here, at the last possible
    * moment — the server stores the exact sum so that adding three recipes does
    * not compound rounding error.
+   *
+   * The section is a guess, and the one place to correct it is where it shows
+   * up wrong: on the line, in the aisle. There is no settings screen for it —
+   * the household's list remembers the choice for that name from then on.
    */
   interface Props {
     item: ShoppingItem;
     oncheck: (isChecked: boolean) => void;
     onremove: () => void;
+    onmove: (section: Section) => void;
   }
 
-  let { item, oncheck, onremove }: Props = $props();
+  let { item, oncheck, onremove, onmove }: Props = $props();
 
   let showingSources = $state(false);
 
@@ -54,6 +60,19 @@
       date: dates.format(new Date(`${date}T12:00:00`)),
       slot: slot ? m[`plan.slot.${slot as 'breakfast' | 'lunch' | 'dinner'}`]() : ''
     });
+
+  /** Closes the menu the section was chosen in, then moves the line. */
+  function move(event: MouseEvent, section: Section) {
+    const panel = (event.currentTarget as HTMLElement).closest('[popover]');
+
+    if (panel instanceof HTMLElement && typeof panel.hidePopover === 'function') {
+      panel.hidePopover();
+    }
+
+    if (section !== item.section) {
+      onmove(section);
+    }
+  }
 </script>
 
 <li class="row" class:bought={item.isChecked}>
@@ -90,7 +109,59 @@
     </button>
   {/if}
 
-  <span class="remove">
+  <span class="actions">
+    <!-- Only while it is still to find: a bought line is not in any aisle any
+         more, and the list does not show one under a section. -->
+    {#if !item.isChecked}
+      <Popover placement="bottom-end">
+        {#snippet trigger({ popovertarget })}
+          <IconButton label={m['shopping.move']({ name: item.name })} size="sm" {popovertarget}>
+            <!-- Two arrows passing: this goes somewhere else, not away. -->
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
+            </svg>
+          </IconButton>
+        {/snippet}
+
+        <div class="menu">
+          <p class="menu-heading">{m['shopping.move.heading']()}</p>
+
+          {#each sectionOrder as section (section)}
+            {@const current = section === item.section}
+            <button
+              type="button"
+              class="menu-item"
+              aria-current={current || undefined}
+              onclick={(event) => move(event, section)}
+            >
+              <span class="mark" aria-hidden="true">
+                {#if current}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m5 12 5 5 9-10" />
+                  </svg>
+                {/if}
+              </span>
+              {nameOf(section)}
+            </button>
+          {/each}
+        </div>
+      </Popover>
+    {/if}
+
     <IconButton label={m['shopping.remove']({ name: item.name })} size="sm" onclick={onremove}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
@@ -229,23 +300,76 @@
   }
 
   /* Held back until the line is reached. A column of crosses down the edge of
-     a list reads as the thing to press, and it is the one action here that
-     cannot be undone. */
-  .remove {
+     a list reads as the thing to press, and removing is the one action here
+     that cannot be undone. Moving waits with it: both are corrections, not
+     what a line is for. */
+  .actions {
+    display: inline-flex;
+    align-items: center;
     opacity: 0;
     transition: opacity var(--duration-fast) var(--ease-out);
   }
 
-  .row:hover .remove,
-  .remove:focus-within {
+  .row:hover .actions,
+  .actions:focus-within,
+  .actions:has(:popover-open) {
     opacity: 1;
   }
 
   /* A finger has no hover, so on touch there is nothing to reveal it with. */
   @media (hover: none) {
-    .remove {
+    .actions {
       opacity: 1;
     }
+  }
+
+  /* Not struck through with the line it belongs to: it is a menu, not part of
+     the item. */
+  .menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 12rem;
+    text-decoration: none;
+  }
+
+  .menu-heading {
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--control-sm);
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .menu-item:hover {
+    background: var(--surface-hover);
+  }
+
+  .mark {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--space-4);
+    height: var(--space-4);
+    color: var(--accent);
+  }
+
+  .mark svg {
+    width: 100%;
+    height: 100%;
   }
 
   @media (width < 32rem) {

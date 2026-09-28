@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { preferences } from '$shell/preferences.svelte';
 
@@ -19,7 +19,7 @@ const milk: ShoppingItem = {
 };
 
 const row = (item: ShoppingItem) =>
-  render(ShoppingItemRow, { item, oncheck: () => {}, onremove: () => {} });
+  render(ShoppingItemRow, { item, oncheck: () => {}, onremove: () => {}, onmove: () => {} });
 
 describe('a line on the shopping list', () => {
   afterEach(() => preferences.reset());
@@ -73,5 +73,38 @@ describe('a line on the shopping list', () => {
     expect(screen.getByRole('link', { name: 'Custard' })).toHaveAttribute('href', '/recipes/r2');
     expect(screen.getByText(/Sat, Sep 26 · Breakfast/)).toBeInTheDocument();
     expect(screen.getByText(/^300\sml$/)).toBeInTheDocument();
+  });
+
+  it('moves a line to the section it was chosen for, and only when it changes', async () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    const onmove = vi.fn();
+
+    render(ShoppingItemRow, { item: milk, oncheck: () => {}, onremove: () => {}, onmove });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Move Milch to another section' }));
+
+    // Where it is now is ticked, so choosing it again is a no-op, not a move.
+    // jsdom has no popover, so the panel never opens; its contents are still
+    // there to be pressed.
+    const current = screen.getByRole('button', { name: 'Dairy & eggs', hidden: true });
+
+    expect(current).toHaveAttribute('aria-current', 'true');
+
+    await fireEvent.click(current);
+    expect(onmove).not.toHaveBeenCalled();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Frozen', hidden: true }));
+    expect(onmove).toHaveBeenCalledWith('frozen');
+  });
+
+  it('offers no move once the line is in the trolley', () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    row({ ...milk, isChecked: true });
+
+    expect(
+      screen.queryByRole('button', { name: 'Move Milch to another section' })
+    ).not.toBeInTheDocument();
   });
 });
