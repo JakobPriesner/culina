@@ -186,6 +186,7 @@
         chooseLabel="Choose a photo"
         replaceLabel="Replace the photo"
         removeLabel="Remove the photo"
+        dropLabel="Drop the photo here"
         src={chosen}
         onpick={(file) => (chosen = URL.createObjectURL(file))}
         onremove={() => (chosen = undefined)}
@@ -199,6 +200,7 @@
         chooseLabel="Choose a photo"
         replaceLabel="Replace"
         removeLabel="Remove"
+        dropLabel="Drop the photo here"
         src={specimenPhoto}
         onpick={() => {}}
         onremove={() => {}}
@@ -217,6 +219,7 @@
         chooseLabel="Choose a photo"
         replaceLabel="Replace"
         removeLabel="Remove"
+        dropLabel="Drop the photo here"
         generating={drawing}
         generatingLabel="Drawing…"
         onpick={() => {}}

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/svelte';
+import { fireEvent, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,8 @@ const labels = {
   hint: 'One picture of the finished dish.',
   chooseLabel: 'Choose a photo',
   replaceLabel: 'Replace the photo',
-  removeLabel: 'Remove the photo'
+  removeLabel: 'Remove the photo',
+  dropLabel: 'Drop the photo here'
 };
 
 const render = (props: Record<string, unknown> = {}) =>
@@ -123,6 +124,89 @@ describe('where the things you can do to a picture are', () => {
 
     expect(screen.getByRole('button', { name: 'Replace the photo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remove the photo' })).toBeInTheDocument();
+  });
+});
+
+describe('dropping a file onto the frame', () => {
+  const photo = new File(['bytes'], 'dinner.jpg', { type: 'image/jpeg' });
+
+  /** What a browser hands over while files are dragged: their kinds, and on the drop the files. */
+  const carrying = (...files: File[]) => ({
+    dataTransfer: {
+      types: ['Files'],
+      items: files.map((file) => ({ kind: 'file', type: file.type })),
+      files,
+      dropEffect: 'none'
+    }
+  });
+
+  const frame = () => screen.getByRole('group', { name: 'Photo' });
+
+  it('says where it will land while one is held over it', async () => {
+    render();
+
+    await fireEvent.dragEnter(frame(), carrying(photo));
+
+    expect(screen.getByText('Drop the photo here')).toBeInTheDocument();
+
+    await fireEvent.dragLeave(frame(), carrying(photo));
+
+    expect(screen.queryByText('Drop the photo here')).not.toBeInTheDocument();
+  });
+
+  it('reports a dropped photo as the one chosen', async () => {
+    const onpick = vi.fn();
+
+    render({ onpick });
+
+    await fireEvent.drop(frame(), carrying(photo));
+
+    expect(onpick).toHaveBeenCalledWith(photo);
+    expect(screen.queryByText('Drop the photo here')).not.toBeInTheDocument();
+  });
+
+  it('replaces a picture that is already there', async () => {
+    const onpick = vi.fn();
+
+    render({ src: 'https://example.test/photo.jpg', onpick });
+
+    await fireEvent.drop(frame(), carrying(photo));
+
+    expect(onpick).toHaveBeenCalledWith(photo);
+  });
+
+  it('takes the first file it accepts and ignores the rest', async () => {
+    const onpick = vi.fn();
+    const document = new File(['%PDF'], 'recipe.pdf', { type: 'application/pdf' });
+
+    render({ onpick });
+
+    await fireEvent.drop(frame(), carrying(document, photo));
+
+    expect(onpick).toHaveBeenCalledWith(photo);
+  });
+
+  it('will not take a file that is not a picture', async () => {
+    const onpick = vi.fn();
+    const document = new File(['%PDF'], 'recipe.pdf', { type: 'application/pdf' });
+
+    render({ onpick });
+
+    await fireEvent.dragEnter(frame(), carrying(document));
+    await fireEvent.drop(frame(), carrying(document));
+
+    expect(screen.queryByText('Drop the photo here')).not.toBeInTheDocument();
+    expect(onpick).not.toHaveBeenCalled();
+  });
+
+  it('will not take one while a picture is already on its way', async () => {
+    const onpick = vi.fn();
+
+    render({ busy: true, onpick });
+
+    await fireEvent.drop(frame(), carrying(photo));
+
+    expect(onpick).not.toHaveBeenCalled();
   });
 });
 

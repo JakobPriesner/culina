@@ -281,6 +281,7 @@
   "editor.photoChoose": "Choose a photo",
   "editor.photoReplace": "Replace the photo",
   "editor.photoRemove": "Remove the photo",
+  "editor.photoDrop": "Drop the photo here",
   "editor.photoHint": "Add a photo of the finished dish so it is easy to recognise later.",
   "editor.photoTooLarge": "That photo is too large. Try one under 10 MB.",
   "editor.photoFailed": "That photo could not be saved.",

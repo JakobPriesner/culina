@@ -281,6 +281,7 @@
   "editor.photoChoose": "Foto auswählen",
   "editor.photoReplace": "Foto ersetzen",
   "editor.photoRemove": "Foto entfernen",
+  "editor.photoDrop": "Foto hier ablegen",
   "editor.photoHint": "Ein Bild vom fertigen Gericht. Daran erkennst du es wieder.",
   "editor.photoTooLarge": "Das Foto ist zu groß. Versuch eins unter 10 MB.",
   "editor.photoFailed": "Das Foto konnte nicht gespeichert werden.",
