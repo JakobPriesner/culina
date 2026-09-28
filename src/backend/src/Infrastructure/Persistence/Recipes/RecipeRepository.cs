@@ -298,14 +298,17 @@ internal sealed class RecipeRepository(
             new { recipeId },
             cancellationToken);
 
-    public async Task<Result> DeleteAsync(Guid recipeId, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(
+        Guid recipeId,
+        long expectedVersion,
+        CancellationToken cancellationToken)
     {
-        await executor.ExecuteAsync(
-            "delete from recipes where id = @recipeId;",
-            new { recipeId },
+        var deleted = await executor.ExecuteAsync(
+            "delete from recipes where id = @recipeId and version = @expectedVersion;",
+            new { recipeId, expectedVersion },
             cancellationToken).ConfigureAwait(false);
 
-        return Result.Success();
+        return deleted == 0 ? ConcurrencyErrors.VersionMismatch : Result.Success();
     }
 
     private static object Parameters(Recipe recipe, long? expectedVersion = null) => new

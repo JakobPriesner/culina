@@ -138,6 +138,7 @@ public interface IRecipeRepository
 
     /// <summary>Deletes a recipe and everything under it.</summary>
     /// <param name="recipeId">Which recipe.</param>
+    /// <param name="expectedVersion">The version the caller saw; any other is a conflict.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    Task<Result> DeleteAsync(Guid recipeId, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(Guid recipeId, long expectedVersion, CancellationToken cancellationToken);
 }

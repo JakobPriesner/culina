@@ -73,7 +73,7 @@ public class InheritanceTests(PostgresFixture postgres)
             read.ETag,
             new { title = "Grace's now", language = "en", yieldAmount = 4, yieldKind = "servings", groups = Array.Empty<object>(), steps = Array.Empty<object>(), tags = Array.Empty<string>() });
         var share = await grace.PutAsync($"/api/v1/recipes/{bolognese}/share", new { }, Token);
-        var delete = await grace.DeleteAsync($"/api/v1/recipes/{bolognese}", Token);
+        var delete = await grace.DeleteAsync($"/api/v1/recipes/{bolognese}", read.ETag!, Token);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);

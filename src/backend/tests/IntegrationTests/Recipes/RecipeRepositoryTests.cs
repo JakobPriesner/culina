@@ -144,12 +144,30 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         var recipe = await scope.SeedRecipeAsync();
 
         // Act
-        await scope.Recipes.DeleteAsync(recipe.Id, Token);
+        var result = await scope.Recipes.DeleteAsync(recipe.Id, recipe.Version, Token);
 
         // Assert
+        result.ShouldBeSuccess();
         (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeFailure(RecipeErrors.NotFound(recipe.Id));
         Assert.Equal(0, await scope.CountAsync("select count(*) from recipe_ingredients;"));
         Assert.Equal(0, await scope.CountAsync("select count(*) from steps;"));
+    }
+
+    [Fact]
+    public async Task Delete_ShouldKeepTheRecipe_WhenTheVersionIsStale()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+        var seen = recipe.Version;
+        await scope.Recipes.UpdateAsync(recipe, seen, Token);
+
+        // Act
+        var result = await scope.Recipes.DeleteAsync(recipe.Id, seen, Token);
+
+        // Assert
+        result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);
+        (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
     }
 
     [Fact]

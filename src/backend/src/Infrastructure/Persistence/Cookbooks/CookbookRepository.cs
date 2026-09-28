@@ -261,11 +261,18 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         return version is null ? ConcurrencyErrors.VersionMismatch : version.Value;
     }
 
-    public Task DeleteAsync(Guid cookbookId, CancellationToken cancellationToken) =>
-        executor.ExecuteAsync(
-            "delete from cookbooks where id = @cookbookId;",
-            new { cookbookId },
-            cancellationToken);
+    public async Task<Result> DeleteAsync(
+        Guid cookbookId,
+        long expectedVersion,
+        CancellationToken cancellationToken)
+    {
+        var deleted = await executor.ExecuteAsync(
+            "delete from cookbooks where id = @cookbookId and version = @expectedVersion;",
+            new { cookbookId, expectedVersion },
+            cancellationToken).ConfigureAwait(false);
+
+        return deleted == 0 ? ConcurrencyErrors.VersionMismatch : Result.Success();
+    }
 
     public async Task<bool> AddRecipeAsync(
         Guid cookbookId,

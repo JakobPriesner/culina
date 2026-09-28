@@ -234,17 +234,20 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         return [.. rows.Select(row => row.ToView())];
     }
 
-    public async Task<Result> DeleteAsync(Guid householdId, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(
+        Guid householdId,
+        long expectedVersion,
+        CancellationToken cancellationToken)
     {
         // Recipes, tags and the shopping list cascade from here; there is no
         // soft delete, because an undo affordance in the UI is a better answer
         // than a deleted_at column every query has to remember.
-        await executor.ExecuteAsync(
-            "delete from households where id = @householdId;",
-            new { householdId },
+        var deleted = await executor.ExecuteAsync(
+            "delete from households where id = @householdId and version = @expectedVersion;",
+            new { householdId, expectedVersion },
             cancellationToken).ConfigureAwait(false);
 
-        return Result.Success();
+        return deleted == 0 ? ConcurrencyErrors.VersionMismatch : Result.Success();
     }
 
     /// <summary>

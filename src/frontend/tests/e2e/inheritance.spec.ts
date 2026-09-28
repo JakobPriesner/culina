@@ -112,8 +112,10 @@ async function removeFlats(page: Page): Promise<void> {
 
   for (const household of me.households as { householdId: string; name: string }[]) {
     if (household.name.startsWith('Flat ')) {
-      const removed = await page.request.delete(`/api/v1/households/${household.householdId}`, {
-        headers
+      const path = `/api/v1/households/${household.householdId}`;
+      const etag = (await page.request.get(path)).headers()['etag'] ?? '';
+      const removed = await page.request.delete(path, {
+        headers: { ...headers, 'If-Match': etag }
       });
 
       expect(removed.ok(), await removed.text()).toBe(true);

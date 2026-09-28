@@ -8,7 +8,8 @@ namespace Application.Recipes.Delete;
 /// <summary>Deletes a recipe.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
-public sealed record DeleteRecipeCommand(Guid RecipeId, Guid UserId);
+/// <param name="ExpectedVersion">The version the caller was holding.</param>
+public sealed record DeleteRecipeCommand(Guid RecipeId, Guid UserId, long ExpectedVersion);
 
 internal sealed class DeleteRecipeCommandHandler(
     IRecipeRepository recipes,
@@ -30,7 +31,7 @@ internal sealed class DeleteRecipeCommandHandler(
 
         var result = await found.Match(
             recipe => unitOfWork.InTransactionAsync(
-                token => recipes.DeleteAsync(recipe.Id, token),
+                token => recipes.DeleteAsync(recipe.Id, command.ExpectedVersion, token),
                 cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 

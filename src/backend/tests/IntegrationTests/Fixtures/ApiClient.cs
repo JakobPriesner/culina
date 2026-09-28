@@ -48,6 +48,32 @@ public sealed class ApiClient(HttpClient http) : IDisposable
     public Task<ApiResponse> DeleteAsync(string path, CancellationToken cancellationToken) =>
         SendAsync(new HttpRequestMessage(HttpMethod.Delete, path), cancellationToken);
 
+    /// <summary>Deletes with a precondition, for a resource whose delete requires one.</summary>
+    /// <param name="path">What to delete.</param>
+    /// <param name="ifMatch">The ETag the caller holds, quotes included.</param>
+    /// <param name="cancellationToken">Cancels the call.</param>
+    public Task<ApiResponse> DeleteAsync(string path, string ifMatch, CancellationToken cancellationToken)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, path);
+        request.Headers.TryAddWithoutValidation("If-Match", ifMatch);
+
+        return SendAsync(request, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads what is at <paramref name="path"/> and deletes that version of it:
+    /// the shape of somebody deleting the thing they are looking at.
+    /// </summary>
+    /// <param name="path">What to delete.</param>
+    /// <param name="cancellationToken">Cancels the calls.</param>
+    public async Task<ApiResponse> DeleteCurrentAsync(string path, CancellationToken cancellationToken)
+    {
+        var read = await GetAsync(path, cancellationToken);
+        var etag = read.ETag ?? throw new InvalidOperationException($"{path} answered {read.StatusCode} without an ETag.");
+
+        return await DeleteAsync(path, etag, cancellationToken);
+    }
+
     /// <summary>
     /// Sends a request built by the caller, for header-level tests. Takes
     /// ownership of the message, which is single-use.

@@ -17,24 +17,35 @@ internal sealed class DeleteHouseholdEndpoint : IEndpoint
                 ICommandHandler<DeleteHouseholdCommand> handler,
                 CancellationToken cancellationToken) =>
             {
-                var result = await handler
-                    .Handle(
-                        new DeleteHouseholdCommand(householdId, context.CurrentUser().UserId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                var expected = ETag.RequireIfMatch(context);
 
-                return result.Match(Results.NoContent, CustomResults.Problem);
+                return await expected.Match(
+                    async version =>
+                    {
+                        var result = await handler
+                            .Handle(
+                                new DeleteHouseholdCommand(householdId, context.CurrentUser().UserId, version),
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        return result.Match(Results.NoContent, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("deleteHouseholdV1")
             .WithTags(Tags.Households)
             .WithSummary("Delete a household")
             .WithDescription(
                 "Owners only. Deletes the household and every recipe, tag and shopping list it "
-                + "owns. There is no undo.")
+                + "owns. There is no undo, which is why `If-Match` is required — missing is 428, "
+                + "stale is 412.")
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status412PreconditionFailed)
+            .ProducesProblem(StatusCodes.Status428PreconditionRequired)
             .RequireAuthorization();
     }
 }
