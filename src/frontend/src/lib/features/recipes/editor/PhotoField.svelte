@@ -183,6 +183,7 @@
   chooseLabel={m['editor.photoChoose']()}
   replaceLabel={m['editor.photoReplace']()}
   removeLabel={m['editor.photoRemove']()}
+  dropLabel={m['editor.photoDrop']()}
   src={imageId ? imageUrl(recipeId, 800, imageId) : undefined}
   srcset={imageId ? imageSrcset(recipeId, imageId) : undefined}
   sizes="(min-width: 40rem) 30rem, 90vw"

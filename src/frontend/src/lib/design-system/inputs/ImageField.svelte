@@ -27,6 +27,9 @@
    * things nobody does twice. They are revealed by pointing at the picture,
    * by tabbing into it, and unconditionally where there is no pointer to
    * hover with.
+   *
+   * A file dragged onto the frame is the same as one chosen, in either state:
+   * the frame is where the picture goes, so it is where you drop it.
    */
   interface Props {
     label: string;
@@ -44,6 +47,8 @@
     chooseLabel: string;
     replaceLabel: string;
     removeLabel: string;
+    /** What the frame says while a file is held over it. */
+    dropLabel: string;
     /** The picture, when there is one. Absent means the template. */
     src?: string | undefined;
     srcset?: string | undefined;
@@ -89,6 +94,7 @@
     chooseLabel,
     replaceLabel,
     removeLabel,
+    dropLabel,
     src,
     srcset,
     sizes,
@@ -122,6 +128,86 @@
   const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)', false);
 
   const actionVariant = $derived<ButtonVariant>(compact.current ? 'secondary' : 'media');
+
+  /**
+   * How many of the frame's elements the dragged file is currently over.
+   *
+   * Counted rather than a flag, because moving from the frame onto the picture
+   * inside it is a `dragleave` from one and a `dragenter` into the other, and a
+   * flag cleared on every leave makes the drop target flicker.
+   */
+  let over = $state(0);
+  const dropping = $derived(over > 0);
+
+  /** Nothing can land while the frame is already busy being filled. */
+  const canDrop = $derived(!busy && !generating);
+
+  const accepted = (type: string) =>
+    accept
+      .split(',')
+      .map((entry) => entry.trim())
+      .some(
+        (entry) => entry === type || (entry.endsWith('/*') && type.startsWith(entry.slice(0, -1)))
+      );
+
+  /**
+   * Whether this drag is something the frame would take.
+   *
+   * Only files: dragging a word or a link across the form is not an upload. A
+   * browser may not say what kind of file it is until the drop, so an unknown
+   * type is given the benefit of the doubt here and checked again there.
+   */
+  function wanted(event: DragEvent) {
+    const transfer = event.dataTransfer;
+
+    if (!canDrop || !transfer?.types.includes('Files')) {
+      return false;
+    }
+
+    return [...transfer.items].some(
+      (item) => item.kind === 'file' && (!item.type || accepted(item.type))
+    );
+  }
+
+  function dragenter(event: DragEvent) {
+    if (wanted(event)) {
+      event.preventDefault();
+      over += 1;
+    }
+  }
+
+  function dragover(event: DragEvent) {
+    // Taking the event is what makes the frame a place a file can be dropped;
+    // not taking it leaves the browser's own "no" cursor, which is the answer.
+    if (wanted(event)) {
+      event.preventDefault();
+      event.dataTransfer!.dropEffect = 'copy';
+    }
+  }
+
+  function dragleave() {
+    over = Math.max(0, over - 1);
+  }
+
+  function drop(event: DragEvent) {
+    over = 0;
+
+    if (!wanted(event)) {
+      return;
+    }
+
+    // Otherwise the browser opens the photo in this tab, and the form with it
+    // is gone.
+    event.preventDefault();
+
+    const file = [...(event.dataTransfer?.files ?? [])].find((candidate) =>
+      accepted(candidate.type)
+    );
+
+    if (file) {
+      onpick(file);
+    }
+  }
 </script>
 
 <div class="field">
@@ -129,7 +215,19 @@
     <p class="label">{label}</p>
   {/if}
 
-  <div class="frame" class:filled={src}>
+  <!-- A group named by the field, which is what a screen reader passing through
+       the picture and its buttons hears. Dropping is a shortcut for the buttons
+       inside it, not a replacement: a keyboard still has every one of them. -->
+  <div
+    class="frame"
+    class:filled={src}
+    role="group"
+    aria-label={label}
+    ondragenter={dragenter}
+    ondragover={dragover}
+    ondragleave={dragleave}
+    ondrop={drop}
+  >
     {#if src}
       <Image {src} {srcset} {sizes} {alt} {ratio} />
 
@@ -191,6 +289,14 @@
             <GenerationStatus label={generatingLabel} tone="on-media" align="center" />
           </div>
         {/if}
+      </div>
+    {/if}
+
+    {#if dropping}
+      <!-- Over the picture as well as the template: dropping onto a photo
+           replaces it, and the frame says where it will land either way. -->
+      <div class="drop" aria-hidden="true">
+        <p class="drop-label">{dropLabel}</p>
       </div>
     {/if}
   </div>
@@ -319,6 +425,37 @@
     border-radius: var(--radius-lg);
     background: var(--surface-sunken);
     color: var(--text-muted);
+    text-align: center;
+  }
+
+  /*
+   * Where a held file will land.
+   *
+   * The same dashed outline as the empty template, in the accent: the frame
+   * saying "here" in the one convention it already uses for it. Not a target
+   * itself — the frame underneath is — so it never swallows the events that
+   * keep it on screen. Opaque, because whatever it covers — the template's
+   * hint or the photo about to go — showing through it is a second sentence
+   * under the one that matters.
+   */
+  .drop {
+    position: absolute;
+    z-index: 3;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius-lg);
+    background: var(--surface-overlay);
+    pointer-events: none;
+  }
+
+  .drop-label {
+    color: var(--text);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
     text-align: center;
   }
 
