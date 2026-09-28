@@ -462,6 +462,7 @@ jobs:
           build-args: |
             REVISION=${{ github.sha }}
             VERSION=0.0.0-edge
+            SOURCE=https://github.com/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: true

@@ -82,10 +82,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS runtime
 # Traceable to a commit, from `docker inspect`, without asking anyone.
 ARG REVISION=unknown
 ARG VERSION=0.0.0-dev
+ARG SOURCE=https://github.com/jakobpriesner/culina
 
 LABEL org.opencontainers.image.title="Culina" \
       org.opencontainers.image.description="Your recipes, the way you cook them." \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.source="${SOURCE}" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.version="${VERSION}"
 
