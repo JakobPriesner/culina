@@ -74,8 +74,9 @@ stage 3  dotnet/aspnet:10.0-noble-chiseled
   from a running server, so the image build needs no database.
 - Chiseled runtime: no shell, no package manager — a much smaller attack
   surface and a much smaller CVE feed.
-- Labels carry `org.opencontainers.image.revision` and `.version` so a running
-  container can always be traced back to a commit.
+- Labels carry `org.opencontainers.image.source`, `.revision` and `.version` so
+  GitHub Packages can link the image to this repository and a running container
+  can be traced back to a commit.
 
 ## Configuration
 
@@ -162,7 +163,8 @@ the generated frontend client cannot drift, because drift fails the build.
 Builds `linux/amd64` + `linux/arm64` with Buildx, pushes to GHCR tagged
 `vX.Y.Z`, `vX.Y` and `latest`, generates an SBOM (Syft), signs the image and the
 SBOM with Cosign (keyless OIDC), and attaches SLSA build provenance. The release
-notes are generated from the beads closed since the previous tag.
+links to the GitHub Packages image and gives both a versioned and a digest-pinned
+pull command. Its change notes are generated from commits since the previous tag.
 
 ### `nightly.yml`
 

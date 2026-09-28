@@ -74,6 +74,7 @@ jobs:
           build-args: |
             REVISION=${{ github.sha }}
             VERSION=${{ github.ref_name }}
+            SOURCE=https://github.com/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: true
@@ -115,11 +116,12 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      # Written from the beads closed since the previous tag, because that is
-      # where the reasons are. A changelog generated from commit subjects says
-      # what changed; this says why.
+      # The release points to the exact image built and signed above. Its
+      # change list comes from commits since the previous tag.
       - name: Release notes
         id: notes
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           previous=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
           {
@@ -130,6 +132,15 @@ jobs:
             else
               git log --no-merges --pretty='- %s'
             fi
+            echo
+            echo "## Container image"
+            echo
+            echo "[View in GitHub Packages](https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${IMAGE#*/})"
+            echo
+            echo '```bash'
+            echo "docker pull ${REGISTRY}/${IMAGE}:${GITHUB_REF_NAME}"
+            echo "docker pull ${REGISTRY}/${IMAGE}@${DIGEST}"
+            echo '```'
             echo
             echo "## Verifying this image"
             echo
