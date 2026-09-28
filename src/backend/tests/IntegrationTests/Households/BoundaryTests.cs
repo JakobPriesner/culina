@@ -116,8 +116,10 @@ public class BoundaryTests(PostgresFixture postgres)
         var recipeId = await RecipeAsync(owner, householdId);
 
         // Act
-        var theirs = await stranger.DeleteAsync($"/api/v1/recipes/{recipeId}", Token);
-        var imagined = await stranger.DeleteAsync($"/api/v1/recipes/{Guid.NewGuid()}", Token);
+        // A version a stranger could guess, so the answer is about access and
+        // not about a missing precondition.
+        var theirs = await stranger.DeleteAsync($"/api/v1/recipes/{recipeId}", "\"v1\"", Token);
+        var imagined = await stranger.DeleteAsync($"/api/v1/recipes/{Guid.NewGuid()}", "\"v1\"", Token);
 
         // Assert
         Assert.Equal(imagined.StatusCode, theirs.StatusCode);

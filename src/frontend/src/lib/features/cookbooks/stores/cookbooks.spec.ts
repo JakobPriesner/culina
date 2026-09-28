@@ -144,6 +144,28 @@ describe('deleting a shelf', () => {
   beforeEach(async () => {
     serverAnswers(() => listOf(shelf('c1', 'Christmas'), shelf('c2', 'Weeknights')));
     await cookbooks.list(household);
+
+    // A shelf is deleted from its own page, so it is open when it goes.
+    serverAnswers(() =>
+      json({ ...shelf('c1', 'Christmas'), householdId: household, kind: 'manual', version: 3 })
+    );
+    await cookbooks.load('c1');
+  });
+
+  it('quotes the version it was opened at, so a shelf changed since is not lost', async () => {
+    const sent: (string | null)[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) => {
+        sent.push(input.headers.get('If-Match'));
+
+        return Promise.resolve(noContent());
+      })
+    );
+
+    await cookbooks.remove('c1');
+
+    expect(sent).toEqual(['"v3"']);
   });
 
   it('takes it off the screen at once', async () => {

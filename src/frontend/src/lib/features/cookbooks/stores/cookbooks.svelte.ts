@@ -277,7 +277,18 @@ class CookbookStore {
     return true;
   }
 
+  /**
+   * Deletes the open cookbook, quoting the version it was opened at: somebody
+   * who renamed it or changed its rules in the meantime gets a 412 here, not a
+   * shelf that vanished under them.
+   */
   async remove(cookbookId: string): Promise<boolean> {
+    const current = this.#open;
+
+    if (!current || current.id !== cookbookId) {
+      return false;
+    }
+
     const removed = this.#items;
 
     // Gone from the screen before the server has agreed, and put back exactly
@@ -285,7 +296,10 @@ class CookbookStore {
     this.#items = this.#items.filter((shelf) => shelf.id !== cookbookId);
 
     const result = await request(() =>
-      http.DELETE('/api/v1/cookbooks/{cookbookId}', { params: { path: { cookbookId } } })
+      http.DELETE('/api/v1/cookbooks/{cookbookId}', {
+        params: { path: { cookbookId } },
+        headers: { 'If-Match': `"v${current.version}"` }
+      })
     );
 
     if (result.ok) {
