@@ -1328,32 +1328,59 @@
   }
 
   /*
-   * On a wide screen, stay within reach while the recipe is read. Compact
-   * screens put their navigation at the bottom, so the responsive rule below
-   * returns this to the document flow instead of stacking two action bars.
-   *
-   * No enclosure of its own any more. A panel around four controls was what
-   * held them together as a bar; around one accented button it is a box drawn
-   * around a box, and the button's own shadow already lifts it off the page.
+   * At the end of the recipe, in the document. Compact screens keep it here:
+   * the shell already owns their bottom edge with its navigation, and a second
+   * bar above the first gives the recipe two endings instead of one. So does
+   * cooking, whose step navigation is the page's own strip at that edge.
    */
   .foot {
-    position: sticky;
-    bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-6));
     max-width: 100%;
-    z-index: var(--z-sticky);
-    /* Breathing room under the button: while it floats, above whatever the
-       shell has parked at the bottom; once the page ends, below its resting
-       place. */
+    /* Below its resting place, once the page ends. */
     margin-block-end: var(--space-8);
     display: flex;
     justify-content: center;
     align-self: center;
   }
 
-  /* Step navigation is the cooking page's persistent action strip. Keeping
-     this footer sticky too would put both controls at the same bottom inset. */
-  .cooking .foot {
-    position: static;
+  /*
+   * On a wide screen, within reach while the recipe is read — and standing on
+   * a strip of its own rather than on the recipe.
+   *
+   * A button floating over the method sat in the middle of a line of it:
+   * "Eigelb zugeben" to its left, "bis der Zucker" to its right, and the words
+   * between them gone. That is a hole in the reading. A strip turns it into an
+   * edge, the same one the app's header draws at the top — the page fading out
+   * under the control instead of being cut through by it — so what passes
+   * behind reads as below the fold, not as covered. The steps already scroll
+   * themselves clear of it (`--controls-inset`).
+   *
+   * Not at the inline end, where the reading column is not: in the combined
+   * view that is the pinned ingredient list, and in the per-step view each
+   * step's own ingredients, so nothing in that column is free to stand on.
+   *
+   * Short screens keep it in flow too: on a laptop turned landscape-short, a
+   * strip is a fifth of what is left.
+   */
+  @media screen and (width >= 64rem) and (height >= 32rem) {
+    .surface:not(.cooking) .foot {
+      position: sticky;
+      bottom: max(var(--bottom-inset), env(safe-area-inset-bottom, 0px));
+      z-index: var(--z-sticky);
+      align-self: stretch;
+      padding-block: var(--space-8) var(--space-6);
+    }
+
+    /* A gradient and not a blur, for the header's reason: what passes under it
+       is a centred column on a flat background. Solid behind the button, so
+       no half-line shows around it; faded above, so the edge is soft. */
+    .surface:not(.cooking) .foot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(to top, var(--surface) 60%, transparent);
+      pointer-events: none;
+    }
   }
 
   /*
@@ -1362,13 +1389,6 @@
    * undoing these rules to get them back.
    */
   @media screen and (width < 64rem) {
-    /* The shell already owns the bottom edge with its primary navigation.
-       Keeping this action in flow gives the recipe one clear ending instead
-       of floating a second bar immediately above the first. */
-    .foot {
-      position: static;
-    }
-
     .body {
       grid-template-columns: 1fr;
       gap: var(--space-8);
@@ -1521,12 +1541,6 @@
 
     .foot :global(.button) {
       flex: 1;
-    }
-  }
-
-  @media screen and (max-height: 32rem) {
-    .foot {
-      position: static;
     }
   }
 
