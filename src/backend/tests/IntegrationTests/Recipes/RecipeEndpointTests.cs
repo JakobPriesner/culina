@@ -327,14 +327,38 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         // Arrange
         using var client = await SignedInAsync();
         var recipe = await CreateRecipeAsync(client);
+        var etag = (await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token)).ETag!;
 
         // Act
-        var first = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", Token);
-        var second = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", Token);
+        var first = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", etag, Token);
+        var second = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", etag, Token);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_ShouldRequireIfMatch_AndRejectAStaleOne()
+    {
+        // Arrange
+        // Deleting on the strength of an old read would throw away whatever
+        // somebody else just saved, with no way to see what it was.
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        await PutAsync(client, recipe.Id, recipe.ETag, FullRecipe(Guid.CreateVersion7()));
+
+        // Act
+        var missing = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", Token);
+        var stale = await client.DeleteAsync($"/api/v1/recipes/{recipe.Id}", recipe.ETag, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.PreconditionRequired, missing.StatusCode);
+        Assert.Equal(HttpStatusCode.PreconditionFailed, stale.StatusCode);
+
+        var stillThere = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
     }
 
     [Fact]

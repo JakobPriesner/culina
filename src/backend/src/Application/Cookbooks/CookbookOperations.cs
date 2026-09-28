@@ -45,7 +45,8 @@ public sealed record UpdateCookbookCommand(
 /// <summary>Removes a cookbook, leaving every recipe that was on it.</summary>
 /// <param name="CookbookId">Which one.</param>
 /// <param name="UserId">Who is asking.</param>
-public sealed record DeleteCookbookCommand(Guid CookbookId, Guid UserId);
+/// <param name="ExpectedVersion">The version the caller was holding.</param>
+public sealed record DeleteCookbookCommand(Guid CookbookId, Guid UserId, long ExpectedVersion);
 
 internal sealed class GetCookbooksQueryHandler(
     ICookbookRepository cookbooks,
@@ -280,15 +281,10 @@ internal sealed class DeleteCookbookCommandHandler(
 
         var result = await found.Match(
             shelf => unitOfWork.InTransactionAsync(
-                async token =>
-                {
-                    // Only the shelf. Every recipe that was on it stays exactly
-                    // where it was — a cookbook is a pointer, and deleting one
-                    // deletes no food.
-                    await cookbooks.DeleteAsync(shelf.Cookbook.Id, token).ConfigureAwait(false);
-
-                    return Result.Success();
-                },
+                // Only the shelf. Every recipe that was on it stays exactly
+                // where it was — a cookbook is a pointer, and deleting one
+                // deletes no food.
+                token => cookbooks.DeleteAsync(shelf.Cookbook.Id, command.ExpectedVersion, token),
                 cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 

@@ -155,7 +155,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
         await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
 
         // Act
-        var deleted = await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+        var deleted = await client.DeleteCurrentAsync($"/api/v1/cookbooks/{cookbookId}", Token);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
@@ -179,7 +179,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
         await client.PutAsync($"/api/v1/cookbooks/{second}/recipes/{recipeId}", new { }, Token);
 
         // Act
-        await client.DeleteAsync($"/api/v1/recipes/{recipeId}", Token);
+        await client.DeleteCurrentAsync($"/api/v1/recipes/{recipeId}", Token);
 
         // Assert
         // A shelf pointing at nothing is worse than a shorter shelf.
@@ -197,14 +197,38 @@ public class CookbookEndpointTests(PostgresFixture postgres)
         // Arrange
         using var client = await SignedInAsync();
         var cookbookId = await CookbookAsync(client, await HouseholdAsync(client), "Weg damit");
+        var etag = (await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token)).ETag!;
 
-        await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+        await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", etag, Token);
 
         // Act
-        var again = await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+        var again = await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", etag, Token);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, again.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_ShouldRequireIfMatch_AndRejectAStaleOne()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var cookbookId = await CookbookAsync(client, await HouseholdAsync(client), "Bleibt");
+        var stale = (await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token)).ETag!;
+
+        await RenameAsync(client, cookbookId, stale, "Umbenannt");
+
+        // Act
+        var missing = await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+        var outdated = await client.DeleteAsync($"/api/v1/cookbooks/{cookbookId}", stale, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.PreconditionRequired, missing.StatusCode);
+        Assert.Equal(HttpStatusCode.PreconditionFailed, outdated.StatusCode);
+
+        var stored = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
+
+        Assert.Equal(HttpStatusCode.OK, stored.StatusCode);
     }
 
     [Fact]

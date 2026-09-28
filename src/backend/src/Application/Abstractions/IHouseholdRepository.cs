@@ -84,6 +84,7 @@ public interface IHouseholdRepository
 
     /// <summary>Deletes a household and everything it owns.</summary>
     /// <param name="householdId">Which household.</param>
+    /// <param name="expectedVersion">The version the caller saw; any other is a conflict.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    Task<Result> DeleteAsync(Guid householdId, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(Guid householdId, long expectedVersion, CancellationToken cancellationToken);
 }
