@@ -1315,7 +1315,16 @@
   "me.recovery.title": "Wiederherstellungscodes",
   "me.recovery.body": "Culina kann dir keinen Link zum Zurücksetzen mailen. Mit diesen Codes kommst du wieder hinein, wenn du dein Passwort vergisst – bewahre sie sicher auf, nicht auf diesem Gerät.",
   "me.recovery.none": "Du hast noch keine Wiederherstellungscodes.",
-  "me.recovery.remaining": [{"declarations": ["input count", "input when", "local countPlural = count: plural"], "selectors": ["countPlural"], "match": {"countPlural=one": "Noch 1 Code übrig, erstellt am {when}.", "countPlural=*": "Noch {count} Codes übrig, erstellt am {when}."}}],
+  "me.recovery.remaining": [
+    {
+      "declarations": ["input count", "input when", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Noch 1 Code übrig, erstellt am {when}.",
+        "countPlural=*": "Noch {count} Codes übrig, erstellt am {when}."
+      }
+    }
+  ],
   "me.recovery.fresh": "Deine Wiederherstellungscodes",
   "me.recovery.once": "Jeder Code funktioniert einmal. Sie werden nur jetzt angezeigt – speichere oder drucke sie, bevor du die Seite verlässt.",
   "me.recovery.download": "Als Datei speichern",
