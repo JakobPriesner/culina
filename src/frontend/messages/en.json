@@ -793,7 +793,6 @@
   "ai.usage.person": "Person",
   "ai.usage.calls": "Requests",
   "ai.usage.cost": "Cost",
-  "ai.save": "Save",
   "ai.saved": "Saved",
   "ai.privacy.local": "With Ollama, Culina sends data only to the model at the address above, not to an external AI provider.",
   "assist.improve": "Improve",
@@ -1293,5 +1292,6 @@
   "shopping.move": "Move {name} to another section",
   "shopping.move.heading": "Belongs under",
   "shopping.moved": "{name} goes under {section} from now on.",
-  "notes.unreadable": "Your note could not be read, so it is not shown here."
+  "notes.unreadable": "Your note could not be read, so it is not shown here.",
+  "ai.apiKey.remove": "Remove key"
 }

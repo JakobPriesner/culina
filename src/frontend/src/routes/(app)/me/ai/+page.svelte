@@ -1,12 +1,15 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
+  import type { AppError } from '$api';
   import { Badge, Button, Disclosure, Field, Select, Switch, TextInput } from '$ds';
   import { explain } from '$shell/explain';
   import { formatNumber, m } from '$shell/i18n';
+  import { toaster } from '$shell/toaster.svelte';
 
   import { assistance } from '$features/assistance/stores/assistance.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { createAutosave } from '$features/recipes/editor/autosave.svelte';
   import {
     capabilities,
     providerFacts,
@@ -39,10 +42,27 @@
    * No endpoint returns it, so there is nothing to put in a box — a box rendered
    * empty would read as "no key", and saving would then look like it had wiped
    * one.
+   *
+   * There is no Save button. A choice — a switch, a provider, a model — is
+   * saved the moment it is made, and a typed field when focus leaves it: the
+   * page is a handful of independent settings, and a button at the bottom of
+   * it was a step that only existed to be forgotten on the way out.
    */
 
   let draft = $state<Assistance | null>(null);
-  let saved = $state(false);
+  /**
+   * The providers whose key field is open. Opening one is not an edit: an
+   * empty key means "take the stored one away", so nothing is owed until a
+   * key has actually been typed.
+   */
+  let keyOpen = $state<Provider[]>([]);
+  /** Edits made, and how many of them the server has. Plain: nothing renders them. */
+  let edits = 0;
+  let savedEdits = 0;
+  /** The last "Saved", replaced rather than stacked by the next one. */
+  let announced: string | null = null;
+
+  const autosave = createAutosave(save);
 
   onMount(async () => {
     await assistance.load();
@@ -50,13 +70,25 @@
     draft = assistance.settings ? structuredClone($state.snapshot(assistance.settings)) : null;
   });
 
+  onDestroy(() => {
+    commit();
+    autosave.dispose();
+  });
+
+  /** Sends what changed, if anything did — on leaving a field, or on a choice made. */
+  function commit(): void {
+    if (edits !== savedEdits) {
+      void autosave.flush();
+    }
+  }
+
   function editConnection(provider: Provider, patch: Partial<Connection>): void {
     if (!draft) return;
 
     draft.connections = draft.connections.map((one) =>
       one.provider === provider ? { ...one, ...patch } : one
     );
-    saved = false;
+    edits += 1;
   }
 
   function editUse(capability: Capability, patch: Partial<Use>): void {
@@ -65,7 +97,7 @@
     draft.uses = draft.uses.map((one) =>
       one.capability === capability ? { ...one, ...patch } : one
     );
-    saved = false;
+    edits += 1;
   }
 
   const connectionFor = (provider: Provider): Connection =>
@@ -194,14 +226,28 @@
     return value.trim().length === 0 || Number.isNaN(parsed) ? null : parsed;
   }
 
-  async function save(): Promise<void> {
-    if (!draft) return;
+  async function save(): Promise<AppError | null> {
+    if (!draft || edits === savedEdits) return null;
+
+    const at = edits;
+    const keysSent = draft.connections
+      .filter((one) => one.apiKey !== undefined)
+      .map((one) => one.provider);
 
     const failure = await assistance.save($state.snapshot(draft) as Assistance);
 
+    announce(failure);
+
     if (!failure) {
-      draft = assistance.settings ? structuredClone($state.snapshot(assistance.settings)) : draft;
-      saved = true;
+      savedEdits = at;
+
+      // Taken back from the server only when nothing was typed while it was
+      // away: adopting its answer then would wipe what was typed since, and
+      // the save that is owed for it sends the whole form again anyway.
+      if (edits === at && assistance.settings) {
+        draft = structuredClone($state.snapshot(assistance.settings));
+        keyOpen = keyOpen.filter((provider) => !keysSent.includes(provider));
+      }
 
       // What is set here is what decides whether the rest of the app shows an
       // assistant's buttons at all: the four switches travel with the signed-in
@@ -210,6 +256,20 @@
       // until somebody reloaded the page — and nothing on screen said so.
       await session.refresh();
     }
+
+    return failure;
+  }
+
+  function announce(failure: AppError | null): void {
+    if (announced) {
+      toaster.dismiss(announced);
+    }
+
+    announced = toaster.show(
+      failure
+        ? { message: () => explain(failure), tone: 'danger' }
+        : { message: () => m['ai.saved'](), tone: 'success' }
+    );
   }
 
   /**
@@ -232,6 +292,11 @@
 </script>
 
 <svelte:head><title>{m['me.ai']()}</title></svelte:head>
+
+<!-- Focus leaving any field is the moment a typed value is done. Heard on the
+     document rather than on a wrapper: commit() does nothing when nothing is
+     owed, so hearing the rest of the page costs nothing. -->
+<svelte:document onfocusout={commit} />
 
 {#if draft}
   {@const it = draft}
@@ -265,18 +330,28 @@
               />
             {/snippet}
           </Field>
-        {:else if connection.apiKey === undefined}
+        {:else if !keyOpen.includes(provider)}
           <!-- No field, because there is nothing to show in one. -->
           <span class="state">
             {connection.apiKeyConfigured ? m['ai.apiKey.set']() : m['ai.apiKey.none']()}
           </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onclick={() => editConnection(provider, { apiKey: '' })}
-          >
+          <Button variant="secondary" size="sm" onclick={() => (keyOpen = [...keyOpen, provider])}>
             {connection.apiKeyConfigured ? m['ai.apiKey.replace']() : m['ai.apiKey.add']()}
           </Button>
+          {#if connection.apiKeyConfigured}
+            <!-- Its own button, because an emptied field is a key nobody has
+                 typed yet, and leaving one must never take the stored key. -->
+            <Button
+              variant="ghost"
+              size="sm"
+              onclick={() => {
+                editConnection(provider, { apiKey: '' });
+                commit();
+              }}
+            >
+              {m['ai.apiKey.remove']()}
+            </Button>
+          {/if}
         {:else}
           <Field label={m['ai.apiKey']()}>
             {#snippet children({ id, describedBy, invalid })}
@@ -289,14 +364,17 @@
                 autocomplete="off"
                 placeholder={m['ai.apiKey.placeholder']()}
                 value={connection.apiKey ?? ''}
-                oninput={(value) => editConnection(provider, { apiKey: value })}
+                oninput={(value) => editConnection(provider, { apiKey: value || undefined })}
               />
             {/snippet}
           </Field>
           <Button
             variant="ghost"
             size="sm"
-            onclick={() => editConnection(provider, { apiKey: undefined })}
+            onclick={() => {
+              keyOpen = keyOpen.filter((one) => one !== provider);
+              editConnection(provider, { apiKey: undefined });
+            }}
           >
             {m['ai.apiKey.cancel']()}
           </Button>
@@ -335,7 +413,7 @@
               inline
               value={use.provider}
               options={choicesFor(capability)}
-              onchange={(value) =>
+              onchange={(value) => {
                 editUse(capability, {
                   provider: value as Provider | '',
                   // Choosing a provider is switching the job on; choosing
@@ -345,7 +423,9 @@
                   // The old model belonged to the old provider. Carrying it
                   // over would name something the new one has never heard of.
                   model: ''
-                })}
+                });
+                commit();
+              }}
             />
           {/snippet}
         </Field>
@@ -388,7 +468,10 @@
                   inline
                   value={use.model}
                   options={choices}
-                  onchange={(value) => editUse(capability, { model: value })}
+                  onchange={(value) => {
+                    editUse(capability, { model: value });
+                    commit();
+                  }}
                 />
               {/snippet}
             </Field>
@@ -455,7 +538,8 @@
         label={m['ai.enabled']()}
         onchange={(checked) => {
           it.enabled = checked;
-          saved = false;
+          edits += 1;
+          commit();
         }}
       />
     </SettingsRow>
@@ -477,7 +561,7 @@
               value={it.monthlyBudget?.toString() ?? ''}
               oninput={(value) => {
                 it.monthlyBudget = budget(value);
-                saved = false;
+                edits += 1;
               }}
             />
           </div>
@@ -499,7 +583,7 @@
               value={it.personalBudget?.toString() ?? ''}
               oninput={(value) => {
                 it.personalBudget = budget(value);
-                saved = false;
+                edits += 1;
               }}
             />
           </div>
@@ -507,18 +591,6 @@
       </Field>
     </SettingsRow>
   </SettingsSection>
-
-  <div class="actions">
-    <Button onclick={save} loading={assistance.saving}>{m['ai.save']()}</Button>
-
-    {#if saved}
-      <span class="state" role="status">{m['ai.saved']()}</span>
-    {/if}
-  </div>
-
-  {#if assistance.error}
-    <p class="failure" role="alert">{explain(assistance.error)}</p>
-  {/if}
 
   {#if assistance.usage}
     {@const usage = assistance.usage}
@@ -611,12 +683,6 @@
     max-width: var(--measure);
     color: var(--text-danger);
     font-size: var(--text-sm);
-  }
-
-  .actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
   }
 
   /* The unit beside the field rather than inside it: typing "$" into a box
