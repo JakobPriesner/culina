@@ -145,6 +145,27 @@ duration), enriched by an interceptor with the authenticated user id and the
 request id. One line per request, not one on arrival and one on completion.
 Request and response **bodies are never logged**, in any environment.
 
+## The web app's own records
+
+The browser never talks to a collector. `src/lib/app/telemetry.ts` batches
+uncaught errors, unhandled rejections, failed renders (the root
+`<svelte:boundary>` and `handleError` in `hooks.client.ts`), CSP violations and
+service-worker failures (posted to a page, since the worker never calls the
+API) to `POST /api/v1/log-records`. `CreateLogRecordsCommandHandler` writes one
+`WebAppLogs.Reported` line per record — category `Culina.WebApp`, event id
+1700 — so they leave with the server's exporter and logging scope.
+
+- The event is a closed set (`LogRecordVocabulary`); the server picks the level
+  from it. Never accept a level from the browser.
+- Anonymous on purpose (a sign-in page breaks too), so it has its own fixed
+  rate limit and every field a ceiling. Raise neither casually.
+- A browser stack travels as `WebAppException`, which is exported as
+  `exception.stacktrace`.
+- Send a route id (`/(app)/recipes/[recipeId]`), never `location.href`.
+
+Background work (migrations, session sweep, reindex, each import run) opens
+its own span, since there is no request for it to hang off.
+
 ## Redaction — what must never reach a log or a span
 
 Passwords and password hashes, session cookies and tokens, API keys and their

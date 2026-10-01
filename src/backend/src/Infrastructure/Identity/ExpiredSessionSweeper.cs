@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Application.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -39,6 +40,10 @@ internal sealed class ExpiredSessionSweeper(
 
     private async Task SweepAsync(CancellationToken cancellationToken)
     {
+        // No request to hang off, so the sweep is a trace of its own rather
+        // than a scatter of parentless database spans.
+        using var activity = CulinaTelemetry.ActivitySource.StartActivity("Sessions.Sweep");
+
         var scope = scopeFactory.CreateAsyncScope();
 
         await using (scope.ConfigureAwait(false))

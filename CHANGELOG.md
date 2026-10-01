@@ -36,3 +36,7 @@ Everything below is the first release, still being assembled.
   opened readable without one.
 - One container image serving the API and the app from the same origin, for
   `linux/amd64` and `linux/arm64`, signed and with an SBOM.
+- Errors in the browser reach the operator: the web app reports what nobody
+  caught, failed renders, service-worker failures and policy violations to the
+  server, which logs and exports them through the same OpenTelemetry pipeline
+  as its own.

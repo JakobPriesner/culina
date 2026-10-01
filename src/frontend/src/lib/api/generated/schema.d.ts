@@ -1643,6 +1643,26 @@ export interface paths {
         patch: operations["updateSavedSearchV1"];
         trace?: never;
     };
+    "/api/v1/log-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report from the web app
+         * @description Writes errors and policy violations the web app noticed into the server's log, which exports them with everything else when a collector is configured. Up to ten records per request. Signed in or not.
+         */
+        post: operations["createLogRecordsV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2173,6 +2193,30 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        /** @description One thing that went wrong in the browser. */
+        LogRecordsCreateRecord: {
+            /**
+             * @description What kind of thing; one of IReadOnlyList&lt;string&gt; LogRecordVocabulary.Events.
+             * @enum {string}
+             */
+            event: "uncaught_error" | "unhandled_rejection" | "render_failed" | "csp_violation" | "service_worker_failed";
+            /** @description What it said, at most 1,000 characters. */
+            message: string;
+            /** @description Where it was thrown, when there is a stack. At most 8,000 characters. */
+            stack?: string | null;
+            /**
+             * @description The route it happened on, as the router names it — `/recipes/[recipeId]`,
+             *     never the address with the id in it. At most 200 characters.
+             */
+            route?: string | null;
+        };
+        /** @description What the web app noticed since it last reported. */
+        LogRecordsCreateRequest: {
+            /** @description The build that noticed it, as the app knows its own version. */
+            appVersion: string;
+            /** @description One to ten records, oldest first. */
+            records: components["schemas"]["LogRecordsCreateRecord"][];
+        };
         /** @description A week of planned meals. */
         PlanningMealPlanResponse: {
             /**
@@ -9640,6 +9684,46 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createLogRecordsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogRecordsCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

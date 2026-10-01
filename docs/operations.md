@@ -272,6 +272,16 @@ previous release's dump.
 - **Telemetry.** Set a collector under Settings → Server, or
   `OTEL_EXPORTER_OTLP_ENDPOINT`, and traces, metrics and logs all export. Unset,
   nothing leaves the machine.
+- **What broke in somebody's browser.** The web app sends its uncaught errors,
+  failed renders, service-worker failures and content-security-policy
+  violations to the server, which logs them under the category
+  `Culina.WebApp`, event id 1700 — so they reach stdout and the collector with
+  everything else, carrying the same request id and user. Nothing goes from a
+  browser to the collector directly, and nothing new needs configuring. Each
+  line names the build, the browser and the route (`/recipes/[recipeId]`, never
+  the address with the id in it); a stack, when there is one, is the exported
+  exception. Background work — migrations, the session sweep, the search
+  reindex and each library import — is a trace of its own.
 - **`Cannot load library libgssapi_krb5.so.2` at boot is expected.** Npgsql
   probes for Kerberos and the chiseled runtime ships none. Culina authenticates
   to PostgreSQL with a password, so nothing needs it. Two lines at startup and

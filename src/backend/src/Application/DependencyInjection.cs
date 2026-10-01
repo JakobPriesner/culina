@@ -19,6 +19,7 @@ using Application.Households.RemoveMember;
 using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
 using Application.Households.SetInheritance;
+using Application.LogRecords.Create;
 using Application.Planning;
 using Application.Recipes;
 using Application.Recipes.Copy;
@@ -124,6 +125,9 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetSessionsQuery, Contracts.Sessions.GetAll.Response>,
                 GetSessionsQueryHandler>()
             .AddScoped<SignInDependencies>()
+
+            // Log records
+            .AddScoped<ICommandHandler<CreateLogRecordsCommand>, CreateLogRecordsCommandHandler>()
 
             // Households
             .AddScoped<IQueryHandler<GetHouseholdsQuery, Contracts.Households.GetAll.Response>,
