@@ -1292,5 +1292,6 @@
   "search.chip.scope": "Only in “{name}”",
   "shopping.move": "Move {name} to another section",
   "shopping.move.heading": "Belongs under",
-  "shopping.moved": "{name} goes under {section} from now on."
+  "shopping.moved": "{name} goes under {section} from now on.",
+  "notes.unreadable": "Your note could not be read, so it is not shown here."
 }
