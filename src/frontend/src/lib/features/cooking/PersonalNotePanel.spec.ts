@@ -1,4 +1,5 @@
-import { screen, waitFor } from '@testing-library/svelte';
+import { screen, waitFor, within } from '@testing-library/svelte';
+import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import PersonalNotePanel from './PersonalNotePanel.svelte';
@@ -38,5 +39,35 @@ describe('your note on a recipe', () => {
 
     await waitFor(() => expect(note).not.toHaveAttribute('readonly'));
     expect(note).toHaveValue('Use the heavy pan');
+  });
+
+  /*
+   * An empty note invites typing, and the save would replace the note the
+   * server still holds without it ever having been shown.
+   */
+  it('does not pass off a failed read as no note', async () => {
+    const answers = [
+      () => new Response(null, { status: 503 }),
+      () =>
+        new Response(JSON.stringify({ overall: 'Use the heavy pan', steps: [] }), {
+          headers: { 'Content-Type': 'application/json' }
+        })
+    ];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(answers.shift()?.() ?? new Response(null, { status: 500 })))
+    );
+
+    renderWithProviders(PersonalNotePanel, { props: { recipeId: 'r1', variant: 'cook' } });
+
+    const alert = await screen.findByRole('alert');
+
+    expect(screen.queryByRole('textbox')).toBeNull();
+
+    await userEvent.click(within(alert).getByRole('button'));
+
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('Use the heavy pan'));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
