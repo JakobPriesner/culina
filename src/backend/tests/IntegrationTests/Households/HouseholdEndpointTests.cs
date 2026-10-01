@@ -301,8 +301,48 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("households.not_owner", response.ProblemCode);
+        Assert.Equal(HttpStatusCode.OK, (await member.GetAsync($"/api/v1/households/{householdId}", Token)).StatusCode);
         owner.Dispose();
         member.Dispose();
+    }
+
+    [Fact]
+    public async Task Delete_ShouldAnswerTheSame_ForAStrangerAndForNothingAtAll()
+    {
+        // Arrange
+        var (owner, stranger) = await TwoUsersAsync();
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var etag = (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).ETag!;
+
+        // Act
+        var theirs = await stranger.DeleteAsync($"/api/v1/households/{householdId}", etag, Token);
+        var nothing = await stranger.DeleteAsync($"/api/v1/households/{Guid.NewGuid()}", etag, Token);
+
+        // Assert
+        // Telling the two apart would confirm which household ids exist; and
+        // the answer being a success must not mean anything was deleted.
+        Assert.Equal(nothing.StatusCode, theirs.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).StatusCode);
+        owner.Dispose();
+        stranger.Dispose();
+    }
+
+    [Fact]
+    public async Task Delete_ShouldAnswer204Again_ForAHouseholdAlreadyInTheBin()
+    {
+        // Arrange
+        using var owner = await FreshOwnerAsync();
+        var householdId = await CabinAsync(owner);
+        var etag = (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).ETag!;
+        await owner.DeleteAsync($"/api/v1/households/{householdId}", etag, Token);
+
+        // Act
+        // A second tap, with the version the first one was sent with.
+        var again = await owner.DeleteAsync($"/api/v1/households/{householdId}", etag, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, again.StatusCode);
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
