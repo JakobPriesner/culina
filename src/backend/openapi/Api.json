@@ -268,6 +268,153 @@
         }
       }
     },
+    "/api/v1/users/me/password": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Change your password",
+        "description": "Needs the current password. Every other session of the account is signed out; the one making the change stays signed in.",
+        "operationId": "changePasswordV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/recovery-codes": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Count your recovery codes",
+        "description": "How many unused codes are left, and when they were made. Never the codes.",
+        "operationId": "getRecoveryCodesV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersGetRecoveryCodesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Make recovery codes",
+        "description": "Needs the password. Returns ten one-time codes, each able to set a new password if this one is forgotten. They are shown once; any earlier set stops working.",
+        "operationId": "createRecoveryCodesV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersCreateRecoveryCodesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersCreateRecoveryCodesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sessions": {
       "post": {
         "tags": [
@@ -400,6 +547,123 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/password-resets": {
+      "post": {
+        "tags": [
+          "PasswordResets"
+        ],
+        "summary": "Set a new password with a recovery code",
+        "description": "Uses up the code and signs the account out everywhere; sign in with the new password afterwards. Failure is always auth.invalid_recovery_code, whether or not the address is registered.",
+        "operationId": "createPasswordResetV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetsCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recovery-codes": {
+      "post": {
+        "tags": [
+          "RecoveryCodes"
+        ],
+        "summary": "Help somebody back into their account",
+        "description": "The administrator's only. Returns a one-time code, good for 24 hours, that sets a new password for the account with this address. Pass it on yourself; Culina sends nothing.",
+        "operationId": "issueRecoveryCodeV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryCodesIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesIssueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -8077,6 +8341,29 @@
         },
         "description": "What the web app noticed since it last reported."
       },
+      "PasswordResetsCreateRequest": {
+        "required": [
+          "email",
+          "code",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account signs in with."
+          },
+          "code": {
+            "type": "string",
+            "description": "One of the account's saved recovery codes, or one the administrator\nissued. Case, spaces and dashes do not matter."
+          },
+          "password": {
+            "type": "string",
+            "description": "The new password. At least 12 characters."
+          }
+        },
+        "description": "A new password for an account, unlocked by a recovery code."
+      },
       "PlanningMealPlanResponse": {
         "required": [
           "from",
@@ -10394,6 +10681,38 @@
         },
         "description": "The recipe's complete new state."
       },
+      "RecoveryCodesIssueRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account signs in with."
+          }
+        },
+        "description": "Whose account the administrator is helping back in."
+      },
+      "RecoveryCodesIssueResponse": {
+        "required": [
+          "code",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code. Shown exactly once — only its digest is stored, so it cannot\nbe shown again."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "When it stops working.",
+            "format": "date-time"
+          }
+        },
+        "description": "A one-time code to pass on to the person who is locked out."
+      },
       "RegistrationGetPolicyResponse": {
         "required": [
           "openRegistration",
@@ -12052,6 +12371,59 @@
         },
         "description": "Why a recipe was suggested."
       },
+      "UsersChangePasswordRequest": {
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "The password the account has now."
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "What it becomes. At least 12 characters."
+          }
+        },
+        "description": "A new password, and the current one to prove it is you."
+      },
+      "UsersCreateRecoveryCodesRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "The password the account has now."
+          }
+        },
+        "description": "The password, because recovery codes outlive any session."
+      },
+      "UsersCreateRecoveryCodesResponse": {
+        "required": [
+          "codes",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The codes, each good for one password reset. Shown exactly once — only\ntheir digests are stored, so they cannot be shown again."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the set was made.",
+            "format": "date-time"
+          }
+        },
+        "description": "A new set of recovery codes. Any earlier set has stopped working."
+      },
       "UsersGetCurrentAssistanceAvailability": {
         "required": [
           "improve",
@@ -12217,6 +12589,26 @@
           }
         },
         "description": "How this person wants the app to look and read."
+      },
+      "UsersGetRecoveryCodesResponse": {
+        "required": [
+          "remaining"
+        ],
+        "type": "object",
+        "properties": {
+          "remaining": {
+            "type": "integer",
+            "description": "How many codes are still unused. Zero when none were ever made.",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the set was made, or null when there is none.",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "description": "What is left of your recovery codes. Never the codes themselves."
       },
       "UsersRegisterRequest": {
         "required": [
@@ -12394,6 +12786,12 @@
     },
     {
       "name": "Sessions"
+    },
+    {
+      "name": "PasswordResets"
+    },
+    {
+      "name": "RecoveryCodes"
     },
     {
       "name": "Households"

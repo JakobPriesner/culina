@@ -36,6 +36,8 @@ export interface AppError {
 export const ErrorCodes = {
   notAuthenticated: 'auth.not_authenticated',
   invalidCredentials: 'auth.invalid_credentials',
+  invalidRecoveryCode: 'auth.invalid_recovery_code',
+  incorrectPassword: 'users.incorrect_password',
   csrfInvalid: 'auth.csrf_invalid',
   versionMismatch: 'request.version_mismatch',
   /** The request never reached a server. */

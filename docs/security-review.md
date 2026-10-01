@@ -25,7 +25,8 @@ notice losing.
 | Sign-in does not disclose whether an account exists | Met | `SignIn_ShouldAnswerIdentically_WhetherOrNotTheAccountExists`, and `SignIn_ShouldCostTheSame_WhetherOrNotTheAccountExists` for the timing channel |
 | Brute force is limited | Met | Per address **and** per account: either alone leaves an attack open. `Registration_ShouldBeRefused_OnceTheHourlyLimitIsReached`, `RateLimitSettings` |
 | Rate-limit responses say when to retry | Met | `Rejection_ShouldSayWhenToRetry_SoAClientCanBackOffCorrectly` |
-| Account recovery does not disclose account existence | **Not applicable — no recovery exists** | There is no password reset and no "forgot password". See Exceptions. |
+| Account recovery does not disclose account existence | Met | One answer, `400 auth.invalid_recovery_code`, for an unknown address, a wrong, used, expired or foreign code; redemption is one statement whichever it is. `Reset_ShouldAnswerIdentically_ForAnUnknownAddressAndAWrongCode` |
+| Password change needs the current password | Met | `ChangePassword_ShouldBeRefused_WhenTheCurrentPasswordIsWrong`; making recovery codes needs it too, `RecoveryCodes_ShouldNeedThePassword_SoAStolenSessionCannotKeepTheAccount` |
 
 ## V3 — Session management
 
@@ -40,6 +41,7 @@ notice losing.
 | Sessions expire | Met | `Cookies__SessionDays`, `DeleteExpired_ShouldRemoveLapsedSessions_ButKeepLiveOnes` |
 | Expiry is idle time, not absolute | Met | Renewed on use, at most once per `Cookies__RenewAfterHours`. `AnAuthenticatedRequest_ShouldReissueBothCookies_OnceTheSessionIsDueForRenewal` |
 | Sign-out ends the session server-side | Met | `SignOut_ShouldEndTheSession_SoTheCookieStopsWorking` |
+| Changing or resetting a password ends other sessions | Met | Change keeps the caller's session and ends the rest, `ChangePassword_ShouldSignOutEveryOtherDevice_ButKeepThisOne`; a reset ends all of them, `Reset_ShouldSetANewPassword_AndSignOutEverySession` |
 
 ## V4 — Access control
 
@@ -63,6 +65,34 @@ notice losing.
 | Revocable | Met | `Revoke_ShouldStopACodeWorking_Immediately` |
 | Refusals are indistinguishable | Met | `Redeem_ShouldAnswerIdentically_ForUnknownAndUsedCodes` |
 | Only a member may invite | Met | `Invite_ShouldBeRefused_ForSomeoneWhoIsNotAMember` |
+
+## V2 — Account recovery
+
+Culina sends no mail, so recovery is something a person holds rather than
+something sent to them. The flow is custom, which is why it is recorded here.
+
+* **Saved codes.** Ten per account, made on the Password settings page after
+  re-entering the password. 80 random bits each (Crockford base 32, four
+  groups of four), so they can be copied by hand. They do not expire: they are
+  for the day the password is gone. Making a new set ends the old one.
+* **Issued codes.** The administrator makes one for an address on the Server
+  settings page and passes it on themselves. Same format, valid 24 hours,
+  because it has passed through somebody else's hands. This is the way back for
+  anyone without saved codes, except the administrator on an instance with no
+  other administrator — whose only way back is their own saved codes.
+* **Redeeming.** `POST /password-resets` with the address, the code and a new
+  password. The code is used up and every session of the account is revoked;
+  the web app then signs in with the new password.
+
+| Requirement | Verdict | Evidence |
+| --- | --- | --- |
+| Codes stored hashed | Met | `recovery_codes.code_hash`, SHA-256 of the normalised code; the plaintext is in one response only. `RecoveryCodes_ShouldBeShownOnce_AndOnlyCountedAfterwards` |
+| Single use, even under a race | Met | Redeeming is one `update … where used_at is null returning`. `Reset_ShouldUseUpTheCode_SoItWorksOnlyOnce` |
+| Issued codes expire | Met | `IssuedCode_ShouldBeRefused_OnceItHasExpired` |
+| A code unlocks only its own account | Met | The address is part of the same statement. `Reset_ShouldRefuseAnotherAccountsCode_EvenThoughTheCodeIsReal` |
+| Brute force is limited | Met | Per address by the sign-in limiter, and per account by the same budget sign-in and password confirmation draw on. `Reset_ShouldRefuseEvenTheRightCode_OnceTheAccountHasFailedTooOften`. Argon2 runs only after a code is known to be good, so guessing costs the server a lookup |
+| Only the administrator issues codes | Met | `IssuedCode_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator` |
+| Failures are counted | Met | `culina.auth.recovery_failures` |
 
 ## V5 — Validation and encoding
 
@@ -121,13 +151,13 @@ notice losing.
 
 ## Exceptions, with reasons
 
-**No account recovery.** There is no "forgot password" flow, and therefore no
-recovery oracle to get wrong. An email-based reset needs an SMTP configuration
-that a self-hoster would have to maintain, and a self-hosted instance's
-administrator can reset a password directly. This is a deliberate absence, not
-an oversight — but it does mean that on an instance with exactly one account,
-losing the password means losing the instance. Worth revisiting before there
-are many instances.
+**No email in account recovery.** A reset link by mail needs an SMTP
+configuration a self-hoster would have to keep working, and an expired mail
+password is a recovery flow that silently stops. Recovery codes and
+administrator-issued codes need nothing outside the app. The cost: an
+instance's only administrator who loses both their password and their saved
+codes still needs somebody with database access. Optional SMTP would close
+that gap and remains open as a separate decision.
 
 **No multi-factor authentication.** ASVS Level 2 expects it. Culina is a recipe
 app for a household, its sessions are opaque and revocable, and sign-in is rate

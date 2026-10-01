@@ -37,6 +37,17 @@ public interface ISessionStore
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
+    /// <summary>Ends every session of one account, except perhaps the caller's own.</summary>
+    /// <param name="userId">Whose sessions.</param>
+    /// <param name="keepSessionId">The session to leave running, or null to end them all.</param>
+    /// <param name="now">The injected current time.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    Task RevokeAllAsync(
+        Guid userId,
+        Guid? keepSessionId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
+
     /// <summary>Deletes sessions that lapsed, so the table does not grow forever.</summary>
     /// <param name="now">The injected current time.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
