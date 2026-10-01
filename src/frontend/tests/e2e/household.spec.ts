@@ -6,6 +6,7 @@ import {
   householdId,
   signIn,
   needsBackend,
+  opens,
   seedRecipe,
   signInWithHousehold,
   skipReason,
@@ -80,12 +81,9 @@ test.describe('sharing a kitchen', () => {
     // them in.
     await them.goto(url.pathname);
 
-    // Landed in the household, and the recipe is simply there. Asked for as a
-    // heading rather than as text anywhere: a shortlisted recipe carries its
-    // own "Stop suggesting {title}" button, so the title is on that page twice
-    // and only one of the two is the recipe.
+    // Landed in the household, and the recipe is simply there, in the library.
     await expect(them).toHaveURL(/\/$/);
-    await expect(them.getByRole('heading', { name: title })).toBeVisible();
+    await expect(them.getByRole('link', { name: opens(title) })).toBeVisible();
 
     await theirContext.close();
   });

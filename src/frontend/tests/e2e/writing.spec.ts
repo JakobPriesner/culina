@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   accountFor,
   needsBackend,
+  opens,
   signInWithHousehold,
   skipReason,
   unique
@@ -445,15 +446,12 @@ test.describe('writing a recipe', () => {
 
     await page.goto('/');
 
-    // As a heading: a recipe the shortlist picked up carries a "Stop suggesting
-    // {title}" button as well, so the title is on the page twice and only one
-    // of the two is the recipe.
-    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+    await expect(page.getByRole('link', { name: opens(title) })).toBeVisible();
 
     // And search finds it, which is what a list is for once there are forty.
     await page.getByRole('searchbox').fill(title.split(' ')[1]!);
 
-    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+    await expect(page.getByRole('link', { name: opens(title) })).toBeVisible();
   });
 
   test('does not lose what was typed to a reload, a language switch, or no signal', async ({

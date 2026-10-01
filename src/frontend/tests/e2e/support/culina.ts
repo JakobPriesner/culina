@@ -32,6 +32,15 @@ export const unique = (word: string): string =>
   `${word} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /**
+ * The name of a library card's link, in either language.
+ *
+ * The startpage lists every recipe, the ones it features above the list
+ * included, so a title can be on the page twice. Only the card's link is
+ * called "Open {title}".
+ */
+export const opens = (title: string): RegExp => new RegExp(`^(Open ${title}|${title} öffnen)$`);
+
+/**
  * An account of this suite's own, made once and reused after that.
  *
  * Some state belongs to a person and cannot be shared: only one recipe can be
