@@ -20,6 +20,10 @@ internal static class CulinaDataSource
             Username = settings.Username,
             Password = settings.Password,
             SslMode = settings.RequireSsl ? SslMode.Require : SslMode.Disable,
+            // Npgsql tries GSS encryption first unless told not to, which loads
+            // libgssapi_krb5 — absent from the chiseled image, so the process
+            // aborts on the first connection. Culina never uses Kerberos.
+            GssEncryptionMode = GssEncryptionMode.Disable,
             MaxPoolSize = settings.MaxPoolSize,
             // Named so a DBA looking at pg_stat_activity can tell which process
             // holds a connection.
