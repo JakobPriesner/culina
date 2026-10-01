@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Application.Abstractions;
+using Application.Telemetry;
 using Contracts.Recipes.Sources;
 using Domain.Import;
 using Domain.Shared;
@@ -53,6 +55,12 @@ public sealed class SourceImportRunner(
     {
         ArgumentNullException.ThrowIfNull(run);
 
+        // Its own trace: the request that queued it ended long ago, and the
+        // recipes it fetches would otherwise be spans belonging to nothing.
+        // Not "Recipes.Import", which is the paste-a-link handler.
+        using var activity = CulinaTelemetry.ActivitySource.StartActivity("Recipes.ImportRun");
+        activity?.SetTag("culina.import_id", run.Id);
+
         try
         {
             await ImportAllAsync(run, cancellationToken).ConfigureAwait(false);
@@ -67,6 +75,7 @@ public sealed class SourceImportRunner(
         catch (Exception failure)
 #pragma warning restore CA1031
         {
+            activity?.SetStatus(ActivityStatusCode.Error, failure.GetType().Name);
             ImportLogs.RunFailed(logger, run.Id, failure);
         }
         finally

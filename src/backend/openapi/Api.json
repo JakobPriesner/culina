@@ -6991,6 +6991,51 @@
           }
         }
       }
+    },
+    "/api/v1/log-records": {
+      "post": {
+        "tags": [
+          "LogRecords"
+        ],
+        "summary": "Report from the web app",
+        "description": "Writes errors and policy violations the web app noticed into the server's log, which exports them with everything else when a collector is configured. Up to ten records per request. Signed in or not.",
+        "operationId": "createLogRecordsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogRecordsCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7975,6 +8020,62 @@
       "IFormFile": {
         "type": "string",
         "format": "binary"
+      },
+      "LogRecordsCreateRecord": {
+        "required": [
+          "event",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "event": {
+            "enum": [
+              "uncaught_error",
+              "unhandled_rejection",
+              "render_failed",
+              "csp_violation",
+              "service_worker_failed"
+            ],
+            "type": "string",
+            "description": "What kind of thing; one of IReadOnlyList&lt;string&gt; LogRecordVocabulary.Events."
+          },
+          "message": {
+            "type": "string",
+            "description": "What it said, at most 1,000 characters."
+          },
+          "stack": {
+            "type": "string",
+            "description": "Where it was thrown, when there is a stack. At most 8,000 characters.",
+            "nullable": true
+          },
+          "route": {
+            "type": "string",
+            "description": "The route it happened on, as the router names it — `/recipes/[recipeId]`,\nnever the address with the id in it. At most 200 characters.",
+            "nullable": true
+          }
+        },
+        "description": "One thing that went wrong in the browser."
+      },
+      "LogRecordsCreateRequest": {
+        "required": [
+          "appVersion",
+          "records"
+        ],
+        "type": "object",
+        "properties": {
+          "appVersion": {
+            "type": "string",
+            "description": "The build that noticed it, as the app knows its own version."
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LogRecordsCreateRecord"
+            },
+            "description": "One to ten records, oldest first."
+          }
+        },
+        "description": "What the web app noticed since it last reported."
       },
       "PlanningMealPlanResponse": {
         "required": [
@@ -12332,6 +12433,9 @@
     },
     {
       "name": "Searches"
+    },
+    {
+      "name": "LogRecords"
     }
   ]
 }

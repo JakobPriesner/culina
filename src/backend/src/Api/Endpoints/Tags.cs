@@ -50,4 +50,6 @@ internal static class Tags
     internal const string Suggestions = "Suggestions";
 
     internal const string Searches = "Searches";
+
+    internal const string LogRecords = "LogRecords";
 }
