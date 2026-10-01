@@ -70,6 +70,37 @@
         "--strictPort"
       ],
       "port": 4173
+    },
+    {
+      "name": "culina-api-5050",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "ASPNETCORE_ENVIRONMENT=Development",
+        "ASPNETCORE_URLS=http://localhost:5050",
+        "dotnet",
+        "watch",
+        "--project",
+        "src/backend/src/Api",
+        "run",
+        "--non-interactive",
+        "--no-launch-profile"
+      ],
+      "port": 5050
+    },
+    {
+      "name": "culina-frontend-5050",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "CULINA_API=http://localhost:5050",
+        "pnpm",
+        "--dir",
+        "src/frontend",
+        "dev",
+        "--port",
+        "5176",
+        "--strictPort"
+      ],
+      "port": 5176
     }
   ]
 }
