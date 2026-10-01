@@ -18,6 +18,12 @@
             "type": "image/png",
             "sizes": "512x512",
             "purpose": "maskable"
+        },
+        {
+            "src": "/icon-monochrome-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "monochrome"
         }
     ],
     "shortcuts": [
@@ -49,10 +55,6 @@
     "share_target": {
         "action": "/recipes/new",
         "method": "GET",
-        "params": {
-            "title": "title",
-            "text": "text",
-            "url": "url"
-        }
+        "params": { "title": "title", "text": "text", "url": "url" }
     }
 }
