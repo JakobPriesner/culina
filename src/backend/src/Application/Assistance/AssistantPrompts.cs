@@ -213,7 +213,9 @@ internal static class AssistantPrompts
     /// The framing asks for textures positively — smooth, glossy, browned —
     /// rather than naming the ones to avoid. A picture model draws what the
     /// prompt says whether or not there is a "no" in front of it, so "not
-    /// grainy" is a way of asking for grain.
+    /// grainy" is a way of asking for grain. The camera is placed the same
+    /// way: a named angle, because "slightly above" came back as flat-lays and
+    /// straight-on shots alike, and neither shows how high a dish stands.
     /// </para>
     /// <para>
     /// A step's ingredient references are resolved back into names on the way
@@ -263,9 +265,9 @@ internal static class AssistantPrompts
             + madeOf
             + cooked
             + "Plated simply on a plain plate, natural daylight from one side, "
-            + "shot from slightly above, shallow depth of field, nothing else in "
-            + "the frame. A real photograph of food about to be eaten, every part "
-            + "of it with the texture its own step gives it: a pur\u00e9e smooth, a "
+            + "shot from the front at a 45-degree angle as a diner sees it, "
+            + "shallow depth of field, nothing else in the frame. A real "
+            + "photograph of food about to be eaten, every part of it with the texture its own step gives it: a pur\u00e9e smooth, a "
             + "sauce glossy, a roast browned. "
             + "No text, no watermark, no hands and no people.";
     }
