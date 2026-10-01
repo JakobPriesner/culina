@@ -50,7 +50,7 @@ export function effectiveSort(chosen: RecipeSort | null, context: SortContext): 
     return 'shelf';
   }
 
-  return context.ranks ? 'suggested' : 'recent';
+  return 'recent';
 }
 
 /** Which orders are worth offering, given what is being asked. */

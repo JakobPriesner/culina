@@ -149,7 +149,9 @@ describe('opening the library', () => {
     // Scoped to the note, because the filter panel ticks the very same words —
     // which is the point: the line above the grid and the control that sets it
     // cannot describe the list differently.
-    expect(screen.getByText('For tonight', { selector: '.collection-note' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Recently updated', { selector: '.collection-note' })
+    ).toBeInTheDocument();
   });
 
   it('keeps the old order, and says so, before the ranking has anything to say', async () => {
@@ -217,12 +219,7 @@ describe('opening the library', () => {
     ).toEqual(['PUT', 'DELETE']);
   });
 
-  it('keeps the grid still while the panel is walked', async () => {
-    // The panel used to hold one recipe that could not change, so hiding that
-    // one from the grid below was enough. A shortlist that is walked is not:
-    // hiding only the visible panel would push one recipe into the grid and
-    // pull another out of it on every swipe, and the page would rearrange
-    // itself under the thumb that was only looking at the next idea.
+  it('lists all recipes in the grid below the suggestion deck', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((input: Request) => {
@@ -258,16 +255,31 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Both shortlisted recipes are in the panel, as headings, and neither is
-    // also a card below it. The grid starts where the shortlist stops.
+    // Both shortlisted recipes are in the panel, as headings, and ALL recipes
+    // are also listed as cards in the grid below based on filter settings.
     expect(screen.getByRole('heading', { name: 'Linsensuppe' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Omelette' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Linsensuppe/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Omelette/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Linsensuppe/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Omelette/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Ratatouille/ })).toBeInTheDocument();
   });
 
-  it('asks the server for the suggested order once it is in it', async () => {
+  it('asks the server for the recent order by default', async () => {
+    const fetched = serverAnswers({ code: 'affinity', subject: null });
+
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const listed = fetched.mock.calls
+      .map(([request]) => request.url)
+      .filter((url) => url.includes('/recipes'));
+
+    expect(listed.some((url) => url.includes('sort=-updatedAt'))).toBe(true);
+  });
+
+  it('asks the server for the suggested order when explicitly chosen', async () => {
+    libraryView.forHousehold(household);
+    libraryView.sort = 'suggested';
     const fetched = serverAnswers({ code: 'affinity', subject: null });
 
     renderWithProviders(LibraryPage);
@@ -282,10 +294,8 @@ describe('opening the library', () => {
 });
 
 /*
- * When the list may be asked for. The shortlist decides the order nobody chose,
- * so the list used to wait for it on every visit — sign-in check, shortlist,
- * list, one after the other. Each test holds the shortlist back, forever, and
- * looks at what the page asked for in the meantime.
+ * When the list may be asked for. The shortlist does not decide the order,
+ * so the list is asked for alongside the shortlist rather than waiting for it.
  */
 describe('waiting for the shortlist', () => {
   /** A server whose shortlist never answers. */
@@ -302,28 +312,14 @@ describe('waiting for the shortlist', () => {
       fetched.mock.calls.map(([request]) => request.url).filter((url) => url.includes('/recipes?'));
   }
 
-  it('waits, on a device that has never been told', async () => {
+  it('asks for the list alongside the shortlist immediately', async () => {
     const listed = shortlistHeldBack();
 
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Listing now and again when the answer arrives would rearrange the page
-    // under somebody who is already reading it.
-    expect(listed()).toEqual([]);
-  });
-
-  it('asks for the list alongside the shortlist when this device remembers the answer', async () => {
-    localStorage.setItem(`culina.ranks.${household}`, 'yes');
-    const listed = shortlistHeldBack();
-
-    renderWithProviders(LibraryPage);
-    await settle();
-
-    // The round trip this exists to remove: the list is out before the
-    // shortlist is back, and in the order the remembered answer names.
     expect(listed()).toHaveLength(1);
-    expect(listed()[0]).toContain('sort=suggested');
+    expect(listed()[0]).toContain('sort=-updatedAt');
   });
 
   it('holds the grid back until the shortlist is in, even with the list back', async () => {
