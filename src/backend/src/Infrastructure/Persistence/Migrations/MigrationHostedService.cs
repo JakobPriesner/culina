@@ -1,3 +1,4 @@
+using Application.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
@@ -25,6 +26,10 @@ internal sealed class MigrationHostedService(IServiceScopeFactory scopeFactory, 
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        // Before any request exists, so its statements would otherwise be
+        // spans with no parent and no name an operator could look for.
+        using var activity = CulinaTelemetry.ActivitySource.StartActivity("Migrations.Apply");
+
         var scope = scopeFactory.CreateAsyncScope();
 
         await using (scope.ConfigureAwait(false))

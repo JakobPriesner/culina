@@ -64,6 +64,20 @@ internal static class RateLimitExtensions
     /// </remarks>
     internal const string Assistance = "assistance";
 
+    /// <summary>
+    /// The web app reporting what went wrong in it.
+    /// </summary>
+    /// <remarks>
+    /// Anonymous, because a sign-in page can break too, and every request
+    /// becomes up to ten log lines — so without a ceiling of its own, anybody
+    /// could fill the operator's disk through it. Fixed rather than a setting:
+    /// the app sends at most one batch every few seconds, so this is a limit on
+    /// misuse, never on the app, and nobody has a reason to tune it.
+    /// </remarks>
+    internal const string LogRecords = "log-records";
+
+    private const int LogRecordBatchesPerMinute = 20;
+
     internal static IServiceCollection AddCulinaRateLimiter(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -92,6 +106,9 @@ internal static class RateLimitExtensions
 
             options.AddPolicy(Assistance, context =>
                 PerClient(context, limits.AssistantRequestsPerHour, TimeSpan.FromHours(1)));
+
+            options.AddPolicy(LogRecords, context =>
+                PerClient(context, LogRecordBatchesPerMinute, TimeSpan.FromMinutes(1)));
 
             // A generous ceiling on everything else, so one misbehaving client
             // cannot exhaust the connection pool.

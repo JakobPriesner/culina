@@ -16,6 +16,7 @@ namespace Api.Infrastructure;
 ///   <item><term>1400-1499</term><description>Shopping</description></item>
 ///   <item><term>1500-1599</term><description>The assistant</description></item>
 ///   <item><term>1600-1699</term><description>Setup, and restarts to apply server settings</description></item>
+///   <item><term>1700-1799</term><description>What the web app reported about itself</description></item>
 ///   <item><term>1800-1899</term><description>Request pipeline and security</description></item>
 ///   <item><term>1900-1999</term><description>Infrastructure: migrations, storage</description></item>
 /// </list>
