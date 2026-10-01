@@ -51,6 +51,8 @@ const requiredContrast = [
   // status colours — which always accompany a word or an icon rather than
   // carrying the meaning alone.
   { foreground: '--accent', background: '--surface', minimum: forNonText },
+  // The dot after the name: decoration, but a dot nobody can see is a typo.
+  { foreground: '--brand-accent', background: '--surface', minimum: forNonText },
   { foreground: '--border-strong', background: '--surface', minimum: forNonText },
   { foreground: '--border-focus', background: '--surface', minimum: forNonText },
   { foreground: '--danger', background: '--surface', minimum: forNonText },
