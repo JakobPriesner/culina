@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Households.Delete;
+using Domain.Households;
 
 namespace Api.Endpoints.Households.Delete.V1;
 
@@ -28,7 +29,15 @@ internal sealed class DeleteHouseholdEndpoint : IEndpoint
                                 cancellationToken)
                             .ConfigureAwait(false);
 
-                        return result.Match(Results.NoContent, CustomResults.Problem);
+                        return result.Match(
+                            Results.NoContent,
+                            // Already in the bin, never there, or not the
+                            // caller's: one answer for all three, as a recipe
+                            // gives. A second tap on Delete is the outcome the
+                            // caller wanted, and a stranger learns nothing.
+                            error => error.Code == HouseholdErrors.NotFound(householdId).Code
+                                ? Results.NoContent()
+                                : CustomResults.Problem(error));
                     },
                     error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
@@ -36,9 +45,11 @@ internal sealed class DeleteHouseholdEndpoint : IEndpoint
             .WithTags(Tags.Households)
             .WithSummary("Delete a household")
             .WithDescription(
-                "Owners only. Deletes the household and every recipe, tag and shopping list it "
-                + "owns. There is no undo, which is why `If-Match` is required — missing is 428, "
-                + "stale is 412.")
+                "Owners only; a plain member gets 403. Puts the household in the bin for 30 days: "
+                + "every member loses access at once, and its recipes and cookbooks are hidden "
+                + "with it until an owner restores it. `If-Match` is required — missing is 428, "
+                + "stale is 412. Idempotent: a household already deleted, or one the caller is not "
+                + "in, also answers 204.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

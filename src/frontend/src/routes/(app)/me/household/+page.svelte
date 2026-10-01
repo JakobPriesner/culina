@@ -8,6 +8,9 @@
   import { members } from '$features/auth/members.svelte';
   import { session } from '$features/auth/session.svelte';
   import TrashPanel from '$features/trash/TrashPanel.svelte';
+  import DeleteHouseholdPanel from '$features/auth/DeleteHouseholdPanel.svelte';
+  import DeletedHouseholdList from '$features/auth/DeletedHouseholdList.svelte';
+  import { deletedHouseholds, type DeletedHousehold } from '$features/auth/households.svelte';
   import { m } from '$shell/i18n';
 
   import SettingsSection from '../SettingsSection.svelte';
@@ -34,6 +37,19 @@
     owner: m['me.role.owner'],
     member: m['me.role.member']
   };
+
+  /**
+   * The households in the bin this person owns. Asked once per visit; the
+   * read touches no state before it answers, so the effect cannot call it
+   * again.
+   */
+  let deleted = $state<readonly DeletedHousehold[]>([]);
+
+  $effect(() => {
+    void deletedHouseholds().then((result) => {
+      deleted = result.ok ? result.value : [];
+    });
+  });
 
   /** Said under the name once it is known, and nothing before then. */
   const size = $derived(members.status === 'ready' ? members.items.length : null);
@@ -81,8 +97,28 @@
   <SettingsSection title={m['archive.title']()} description={m['archive.hint']()} bare>
     <ArchivePanel householdId={household.householdId} />
   </SettingsSection>
+
+  {#if household.role === 'owner'}
+    <SettingsSection
+      title={m['household.delete.section']()}
+      description={m['household.delete.hint']()}
+      bare
+    >
+      <DeleteHouseholdPanel householdId={household.householdId} name={household.name} />
+    </SettingsSection>
+  {/if}
 {:else}
   <p class="none">{m['me.household.none']()}</p>
+{/if}
+
+{#if deleted.length > 0}
+  <SettingsSection
+    title={m['household.deleted.title']()}
+    description={m['household.deleted.body']()}
+    bare
+  >
+    <DeletedHouseholdList items={deleted} />
+  </SettingsSection>
 {/if}
 
 <style>

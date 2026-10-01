@@ -1361,5 +1361,18 @@
   "trash.until": "wiederherstellbar bis {when}",
   "trash.restore": "Wiederherstellen",
   "trash.restored": "„{name}“ ist wieder da.",
-  "trash.undo": "Rückgängig"
+  "trash.undo": "Rückgängig",
+  "household.delete.section": "Diesen Haushalt löschen",
+  "household.delete.hint": "Das kann nur ein Eigentümer. Alle im Haushalt verlieren sofort den Zugang.",
+  "household.delete.action": "Haushalt löschen",
+  "household.delete.title": "„{name}“ löschen?",
+  "household.delete.body": "Alle darin verlieren sofort den Zugang, und seine Rezepte, Kochbücher und die Einkaufsliste verschwinden mit ihm. Haushalte, die seine Rezepte erben, sehen sie nicht mehr.",
+  "household.delete.restorable": "30 Tage lang kann ein Eigentümer ihn mit allem darin wiederherstellen. Danach ist er endgültig weg.",
+  "household.delete.confirm": "Haushalt löschen",
+  "household.delete.cancel": "Behalten",
+  "household.delete.close": "Schließen",
+  "household.delete.failed": "Der Haushalt konnte nicht gelöscht werden.",
+  "household.delete.done": "„{name}“ wurde gelöscht.",
+  "household.deleted.title": "Gelöschte Haushalte",
+  "household.deleted.body": "Haushalte, die du als Eigentümer gelöscht hast. Beim Wiederherstellen kommen Mitglieder, Rezepte und Kochbücher zurück."
 }

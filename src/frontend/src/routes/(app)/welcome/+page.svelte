@@ -9,7 +9,13 @@
   import FormField from '$features/auth/FormField.svelte';
   import FormFailure from '$features/auth/FormFailure.svelte';
   import SubmitButton from '$features/auth/SubmitButton.svelte';
-  import { createHousehold, redeemInvitation } from '$features/auth/households.svelte';
+  import DeletedHouseholdList from '$features/auth/DeletedHouseholdList.svelte';
+  import {
+    createHousehold,
+    deletedHouseholds,
+    redeemInvitation,
+    type DeletedHousehold
+  } from '$features/auth/households.svelte';
   import { session } from '$features/auth/session.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
@@ -17,9 +23,10 @@
   /**
    * An account with nowhere to cook.
    *
-   * Reachable in one case: an instance that allows accounts without an
-   * invitation. It is never a dead end — both ways out are on the screen, and
-   * neither is hidden behind the other.
+   * Reachable in two cases: an instance that allows accounts without an
+   * invitation, and an owner who has just deleted their only household. It is
+   * never a dead end — both ways out are on the screen, neither is hidden
+   * behind the other, and the second case also finds the way back.
    */
   // An invitation link lands here with its code already in hand, so the second
   // tab opens with the field filled and nothing to copy out of a message.
@@ -32,6 +39,14 @@
   const submission = createSubmission();
 
   onDestroy(() => submission.dispose());
+
+  let deleted = $state<readonly DeletedHousehold[]>([]);
+
+  $effect(() => {
+    void deletedHouseholds().then((result) => {
+      deleted = result.ok ? result.value : [];
+    });
+  });
 
   async function join(attempt: () => Promise<string | AppError>) {
     const succeeded = await submission.run(async () => {
@@ -108,6 +123,17 @@
       {/if}
     {/snippet}
   </Tabs>
+
+  <!-- Where an owner who deleted their only household arrives, so the way
+       back has to be here as well as in the settings they can no longer
+       reach. Nothing at all for everybody else. -->
+  {#if deleted.length > 0}
+    <section class="deleted">
+      <h2 class="heading">{m['household.deleted.title']()}</h2>
+      <p class="body">{m['household.deleted.body']()}</p>
+      <DeletedHouseholdList items={deleted} />
+    </section>
+  {/if}
 </div>
 
 <style>
@@ -126,6 +152,17 @@
 
   .body {
     color: var(--text-muted);
+  }
+
+  .deleted {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-6);
+  }
+
+  .heading {
+    font-size: var(--text-lg);
   }
 
   .form {

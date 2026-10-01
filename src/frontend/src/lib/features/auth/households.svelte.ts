@@ -72,6 +72,58 @@ export async function removeHeir(householdId: string, heirId: string): Promise<A
   return result.ok ? null : result.error;
 }
 
+/** A household in the bin that the caller owns, and could bring back. */
+export type DeletedHousehold = components['schemas']['HouseholdsHouseholdSummary'];
+
+/**
+ * Puts a household in the bin. Owners only — the server says so too, and is
+ * the one that decides.
+ *
+ * Read immediately before deleting rather than trusting a version the page
+ * loaded earlier: the session's memberships carry none, and a household
+ * somebody renamed a minute ago should be deleted as it is now, not refused
+ * for a change nobody can see. The read is also what proves the caller can
+ * still see it at all.
+ */
+export async function deleteHousehold(householdId: string): Promise<AppError | null> {
+  const current = await request(() =>
+    http.GET('/api/v1/households/{householdId}', { params: { path: { householdId } } })
+  );
+
+  if (!current.ok) {
+    return current.error;
+  }
+
+  const result = await request(() =>
+    http.DELETE('/api/v1/households/{householdId}', {
+      params: { path: { householdId } },
+      headers: { 'If-Match': `"v${current.value.version}"` }
+    })
+  );
+
+  return result.ok ? null : result.error;
+}
+
+/** The deleted households this person owns, newest first. */
+export async function deletedHouseholds(): Promise<Result<readonly DeletedHousehold[]>> {
+  const result = await request(() =>
+    http.GET('/api/v1/households', { params: { query: { deleted: 'true' } } })
+  );
+
+  return result.ok ? ok(result.value.items) : result;
+}
+
+/** Takes a household out of the bin, with its members, recipes and cookbooks. Owners only. */
+export async function restoreHousehold(householdId: string): Promise<AppError | null> {
+  const result = await request(() =>
+    http.POST('/api/v1/households/{householdId}/restorations', {
+      params: { path: { householdId } }
+    })
+  );
+
+  return result.ok ? null : result.error;
+}
+
 export async function redeemInvitation(code: string): Promise<Redemption | AppError> {
   const result = await request(() =>
     http.POST('/api/v1/invitations/{code}/redemptions', { params: { path: { code } } })

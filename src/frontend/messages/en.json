@@ -1361,5 +1361,18 @@
   "trash.until": "can be restored until {when}",
   "trash.restore": "Restore",
   "trash.restored": "{name} is back.",
-  "trash.undo": "Undo"
+  "trash.undo": "Undo",
+  "household.delete.section": "Delete this household",
+  "household.delete.hint": "Only an owner can do this. Everyone in the household loses access straight away.",
+  "household.delete.action": "Delete household",
+  "household.delete.title": "Delete {name}?",
+  "household.delete.body": "Everyone in it loses access at once, and its recipes, cookbooks and shopping list go with it. Households that inherit its recipes stop seeing them.",
+  "household.delete.restorable": "For 30 days an owner can still restore it, with everything in it. After that it is gone for good.",
+  "household.delete.confirm": "Delete household",
+  "household.delete.cancel": "Keep it",
+  "household.delete.close": "Close",
+  "household.delete.failed": "The household couldn't be deleted.",
+  "household.delete.done": "{name} was deleted.",
+  "household.deleted.title": "Deleted households",
+  "household.deleted.body": "Households you deleted as an owner. Restoring one brings back its members, recipes and cookbooks."
 }
