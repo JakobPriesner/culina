@@ -150,6 +150,29 @@ public sealed class PostgresFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>Reads one value straight from the database, for asserting on what the API hides.</summary>
+    /// <typeparam name="TValue">The column's type.</typeparam>
+    /// <param name="sql">A statement selecting one value, written in test source.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    public async Task<TValue> QuerySingleAsync<TValue>(string sql, CancellationToken cancellationToken)
+    {
+        var connection = await DataSource.OpenConnectionAsync(cancellationToken);
+
+        await using (connection.ConfigureAwait(false))
+        {
+            var command = connection.CreateCommand();
+
+            await using (command.ConfigureAwait(false))
+            {
+#pragma warning disable CA2100
+                command.CommandText = sql;
+#pragma warning restore CA2100
+
+                return (TValue)(await command.ExecuteScalarAsync(cancellationToken))!;
+            }
+        }
+    }
+
     /// <summary>
     /// Returns the instance to a clean state: every table empty, and every
     /// instance-settings group back at its compiled-in defaults.

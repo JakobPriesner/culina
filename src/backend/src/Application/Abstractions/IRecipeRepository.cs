@@ -136,9 +136,16 @@ public interface IRecipeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<string>> ImageHashAsync(Guid recipeId, CancellationToken cancellationToken);
 
-    /// <summary>Deletes a recipe and everything under it.</summary>
+    /// <summary>Puts a recipe, and everything under it, in the bin.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="expectedVersion">The version the caller saw; any other is a conflict.</param>
+    /// <param name="deletedBy">Who is deleting it.</param>
+    /// <param name="now">The injected current time; the purge counts from it.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    Task<Result> DeleteAsync(Guid recipeId, long expectedVersion, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(
+        Guid recipeId,
+        long expectedVersion,
+        Guid deletedBy,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
 }

@@ -301,14 +301,35 @@ internal sealed class RecipeRepository(
     public async Task<Result> DeleteAsync(
         Guid recipeId,
         long expectedVersion,
+        Guid deletedBy,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        // Into the bin: the recipes view stops showing it. Its search document
+        // goes now rather than at the purge, because search, completions, the
+        // spelling hints, related recipes and the import's look-alikes all read
+        // documents — dropping the one row keeps a binned recipe out of every
+        // one of them. Restoring writes it again.
         var deleted = await executor.ExecuteAsync(
-            "delete from recipes where id = @recipeId and version = @expectedVersion;",
-            new { recipeId, expectedVersion },
+            """
+            update recipes
+            set deleted_at = @now, deleted_by = @deletedBy, version = version + 1
+            where id = @recipeId and version = @expectedVersion;
+            """,
+            new { recipeId, expectedVersion, deletedBy, now },
             cancellationToken).ConfigureAwait(false);
 
-        return deleted == 0 ? ConcurrencyErrors.VersionMismatch : Result.Success();
+        if (deleted == 0)
+        {
+            return ConcurrencyErrors.VersionMismatch;
+        }
+
+        await executor.ExecuteAsync(
+            "delete from recipe_search_documents where recipe_id = @recipeId;",
+            new { recipeId },
+            cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
     }
 
     private static object Parameters(Recipe recipe, long? expectedVersion = null) => new

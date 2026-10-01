@@ -264,7 +264,8 @@ internal sealed class UpdateCookbookCommandHandler(
 internal sealed class DeleteCookbookCommandHandler(
     ICookbookRepository cookbooks,
     IHouseholdRepository households,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    TimeProvider time)
     : ICommandHandler<DeleteCookbookCommand>
 {
     public async Task<Result> Handle(
@@ -284,7 +285,8 @@ internal sealed class DeleteCookbookCommandHandler(
                 // Only the shelf. Every recipe that was on it stays exactly
                 // where it was — a cookbook is a pointer, and deleting one
                 // deletes no food.
-                token => cookbooks.DeleteAsync(shelf.Cookbook.Id, command.ExpectedVersion, token),
+                token => cookbooks.DeleteAsync(
+                    shelf.Cookbook.Id, command.ExpectedVersion, command.UserId, time.GetUtcNow(), token),
                 cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 
