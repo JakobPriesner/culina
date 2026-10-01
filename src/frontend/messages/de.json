@@ -1292,5 +1292,6 @@
   "search.chip.scope": "Nur in „{name}“",
   "shopping.move": "{name} in einen anderen Bereich verschieben",
   "shopping.move.heading": "Gehört zu",
-  "shopping.moved": "{name} steht ab jetzt unter {section}."
+  "shopping.moved": "{name} steht ab jetzt unter {section}.",
+  "notes.unreadable": "Deine Notiz konnte nicht geladen werden, darum steht sie hier nicht."
 }

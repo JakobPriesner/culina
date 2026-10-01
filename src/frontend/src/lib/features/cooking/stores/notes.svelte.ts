@@ -13,6 +13,12 @@ class NotesStore {
   #overall = $state('');
   #loaded = $state(false);
   /**
+   * The read did not come back. Kept apart from "no note", because an empty
+   * note can be typed into and the save would replace whatever the server
+   * still holds — a note the person was never shown.
+   */
+  #failed = $state(false);
+  /**
    * The save still on its way. Plain rather than `$state`, because `load()`
    * reads it before its first await, from inside an effect.
    */
@@ -26,8 +32,13 @@ class NotesStore {
     return this.#loaded;
   }
 
+  get failed(): boolean {
+    return this.#failed;
+  }
+
   async load(recipeId: string): Promise<void> {
     this.#loaded = false;
+    this.#failed = false;
 
     // Leaving the recipe for cook mode sends what was typed last as the page
     // closes, and cook mode reads the note straight back. A read that overtook
@@ -38,7 +49,13 @@ class NotesStore {
       http.GET('/api/v1/recipes/{recipeId}/notes', { params: { path: { recipeId } } })
     );
 
-    this.#overall = result.ok ? (result.value.overall ?? '') : '';
+    if (!result.ok) {
+      this.#overall = '';
+      this.#failed = true;
+      return;
+    }
+
+    this.#overall = result.value.overall ?? '';
     this.#loaded = true;
   }
 
@@ -71,6 +88,7 @@ class NotesStore {
   reset(): void {
     this.#overall = '';
     this.#loaded = false;
+    this.#failed = false;
     this.#saving = null;
   }
 }
