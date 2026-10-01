@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
 
-  import { TextArea } from '$ds';
+  import { Button, TextArea } from '$ds';
 
   import { createAutosave } from '$features/recipes/editor/autosave.svelte';
   import { m } from '$shell/i18n';
@@ -74,18 +74,28 @@
 
   <!-- Not to be typed into before the note has been read: the answer would
        replace what was typed, and the save after it would send that emptiness
-       back as the note, under "Saved". -->
-  <TextArea
-    id="overall-note"
-    value={notes.overall}
-    readonly={!notes.loaded}
-    rows={3}
-    placeholder={m['notes.placeholder']()}
-    oninput={(text) => {
-      notes.set(text);
-      autosave.touch();
-    }}
-  />
+       back as the note, under "Saved". A read that failed offers no text area
+       at all, since an empty one says there is no note. -->
+  {#if notes.failed}
+    <div class="unread" role="alert">
+      <p>{m['notes.unreadable']()}</p>
+      <Button size="sm" variant="secondary" onclick={() => void notes.load(recipeId)}>
+        {m['error.retry']()}
+      </Button>
+    </div>
+  {:else}
+    <TextArea
+      id="overall-note"
+      value={notes.overall}
+      readonly={!notes.loaded}
+      rows={3}
+      placeholder={m['notes.placeholder']()}
+      oninput={(text) => {
+        notes.set(text);
+        autosave.touch();
+      }}
+    />
+  {/if}
 </section>
 
 <style>
@@ -123,6 +133,14 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
+  }
+
+  .unread {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
   }
 
   .status,
