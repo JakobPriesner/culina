@@ -20,6 +20,7 @@ using Application.Households.Rename;
 using Application.Households.RevokeInvitation;
 using Application.Households.SetInheritance;
 using Application.LogRecords.Create;
+using Application.PasswordResets.Create;
 using Application.Planning;
 using Application.Recipes;
 using Application.Recipes.Copy;
@@ -51,6 +52,7 @@ using Application.Recipes.SetImage;
 using Application.Recipes.Sources;
 using Application.Recipes.UndoCooked;
 using Application.Recipes.Update;
+using Application.RecoveryCodes.Issue;
 using Application.Registration.GetPolicy;
 using Application.Searches;
 using Application.Sessions.GetAll;
@@ -71,8 +73,12 @@ using Application.Setup.Get;
 using Application.Shopping;
 using Application.Suggestions.Dismiss;
 using Application.Suggestions.GetAll;
+using Application.Users;
+using Application.Users.ChangePassword;
+using Application.Users.CreateRecoveryCodes;
 using Application.Users.GetCurrent;
 using Application.Users.GetPreferences;
+using Application.Users.GetRecoveryCodes;
 using Application.Users.Register;
 using Application.Users.UpdateCurrent;
 using Application.Users.UpdatePreferences;
@@ -118,6 +124,17 @@ public static class DependencyInjection
                 GetPreferencesQueryHandler>()
             .AddScoped<ICommandHandler<UpdatePreferencesCommand, Contracts.Users.UpdatePreferences.Response>,
                 UpdatePreferencesCommandHandler>()
+            .AddScoped<ICommandHandler<ChangePasswordCommand>, ChangePasswordCommandHandler>()
+            .AddScoped<ICommandHandler<CreateRecoveryCodesCommand, Contracts.Users.CreateRecoveryCodes.Response>,
+                CreateRecoveryCodesCommandHandler>()
+            .AddScoped<IQueryHandler<GetRecoveryCodesQuery, Contracts.Users.GetRecoveryCodes.Response>,
+                GetRecoveryCodesQueryHandler>()
+            .AddScoped<PasswordConfirmation>()
+
+            // Account recovery
+            .AddScoped<ICommandHandler<IssueRecoveryCodeCommand, Contracts.RecoveryCodes.Issue.Response>,
+                IssueRecoveryCodeCommandHandler>()
+            .AddScoped<ICommandHandler<ResetPasswordCommand>, ResetPasswordCommandHandler>()
 
             // Sessions
             .AddScoped<ICommandHandler<SignInCommand, SignInOutcome>, SignInCommandHandler>()

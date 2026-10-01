@@ -43,6 +43,11 @@
       lead: m['me.appearance.lead']
     },
     {
+      href: resolve('/(app)/me/security'),
+      label: m['me.security'],
+      lead: m['me.security.lead']
+    },
+    {
       href: resolve('/(app)/me/household'),
       label: m['me.household'],
       lead: m['me.household.lead']
