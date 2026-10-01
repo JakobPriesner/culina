@@ -194,7 +194,15 @@ test.describe('planning a week', () => {
     await dragCardOnto(page, title, onto);
     await expect.poll(() => dayHolding(page, title)).toBe(onto);
 
-    await page.getByRole('button', { name: /^(undo|rückgängig)$/i }).click();
+    // The undo is drawn before it is saved, so the reload below has to wait for
+    // the save or it cancels it.
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes('/meal-plan/') && response.request().method() === 'PATCH'
+      ),
+      page.getByRole('button', { name: /^(undo|rückgängig)$/i }).click()
+    ]);
 
     // All the way back, including after a reload: an undo that only redraws is
     // an undo that lies.
