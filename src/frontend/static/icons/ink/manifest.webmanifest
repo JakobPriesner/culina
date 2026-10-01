@@ -1,0 +1,70 @@
+{
+    "name": "Culina",
+    "short_name": "Culina",
+    "description": "Your recipes, the way you cook them.",
+    "id": "/",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#fdfbf7",
+    "theme_color": "#fdfbf7",
+    "categories": ["food", "lifestyle", "productivity"],
+    "icons": [
+        { "src": "/icons/ink/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+        {
+            "src": "/icons/ink/icon-192.png",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/ink/icon-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/ink/icon-maskable-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/ink/icon-monochrome-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "monochrome"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Shopping List",
+            "short_name": "Shopping",
+            "url": "/shopping",
+            "icons": [{ "src": "/icons/ink/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "New Recipe",
+            "short_name": "New",
+            "url": "/recipes/new",
+            "icons": [{ "src": "/icons/ink/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Meal Plan",
+            "short_name": "Plan",
+            "url": "/plan",
+            "icons": [{ "src": "/icons/ink/icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Cookbooks",
+            "short_name": "Cookbooks",
+            "url": "/cookbooks",
+            "icons": [{ "src": "/icons/ink/icon-192.png", "sizes": "192x192" }]
+        }
+    ],
+    "share_target": {
+        "action": "/recipes/new",
+        "method": "GET",
+        "params": { "title": "title", "text": "text", "url": "url" }
+    }
+}

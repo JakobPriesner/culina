@@ -41,7 +41,7 @@
   --accent-hover: var(--c-olive-700);
   --accent-active: var(--c-olive-700);
   --accent-contrast: var(--c-white);
-  --brand-accent: var(--c-terracotta-600);
+  --brand-accent: var(--c-saffron-600);
 
   --danger: var(--c-rust-600);
   --danger-hover: var(--c-rust-500);
@@ -113,7 +113,7 @@
   --accent-hover: var(--c-olive-100);
   --accent-active: var(--c-olive-100);
   --accent-contrast: var(--c-sand-950);
-  --brand-accent: var(--c-terracotta-400);
+  --brand-accent: var(--c-saffron-400);
 
   --danger: #f08a85;
   --danger-hover: #f7aba7;

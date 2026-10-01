@@ -11,6 +11,7 @@
   import { loginUrlFor } from '$features/auth/redirectTarget';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
+  import { appIcon } from '$shell/appIcon.svelte';
   import { connection } from '$shell/connection.svelte';
   import { preferences } from '$shell/preferences.svelte';
   import { report } from '$shell/telemetry';
@@ -45,6 +46,7 @@
     document.getElementById('boot')?.remove();
 
     const stopFollowingTheDevice = preferences.start();
+    appIcon.start();
     // Not under the dev server: every rebuild there is a "new version", and a
     // prompt to reload after each save is noise the production app never has.
     const stopWatchingForUpdates = dev ? () => {} : watchForUpdates();
