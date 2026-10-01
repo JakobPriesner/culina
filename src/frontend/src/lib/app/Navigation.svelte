@@ -60,11 +60,11 @@
   /* The navbar: icon and label side by side, with room to breathe. */
   .top {
     padding: var(--space-1);
-    border: 1px solid var(--border);
     border-radius: var(--radius-full);
     background: var(--surface-nav-glass);
-    backdrop-filter: blur(16px);
-    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-glass);
     gap: var(--space-1);
   }
 

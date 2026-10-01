@@ -9,8 +9,9 @@
   /**
    * Which kitchen is on screen, and the way to another one.
    *
-   * Beside the brand because it answers the same question the brand does —
-   * where am I — and one level more precisely. It is there with a single
+   * In the header's glass capsule beside search, because both are about what
+   * is on screen: find something in this kitchen, or look at another one. It
+   * is there with a single
    * household too, because "New household" has to live somewhere a person
    * would look for it.
    *
@@ -54,7 +55,7 @@
 </script>
 
 {#if active}
-  <Popover>
+  <Popover placement="bottom-end">
     {#snippet trigger({ popovertarget })}
       <button
         type="button"
@@ -154,8 +155,8 @@
 {/if}
 
 <style>
-  /* The search button's round pill, because it is the same kind of thing: an
-     icon in the header's row of glass. */
+  /* Drawn like the search button it shares the header's capsule with: the
+     capsule is the glass, and this is only a lit circle under the pointer. */
   .current {
     display: inline-flex;
     flex-shrink: 0;
@@ -166,8 +167,7 @@
     padding: var(--space-2);
     border: 0;
     border-radius: var(--radius-full);
-    background: var(--surface-nav-glass);
-    backdrop-filter: blur(16px);
+    background: transparent;
     color: var(--text);
     cursor: pointer;
     pointer-events: auto;
@@ -183,8 +183,8 @@
   }
 
   .current svg {
-    width: var(--space-4);
-    height: var(--space-4);
+    width: calc(var(--space-4) + var(--space-1));
+    height: calc(var(--space-4) + var(--space-1));
   }
 
   .menu {

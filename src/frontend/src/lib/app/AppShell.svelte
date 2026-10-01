@@ -164,41 +164,44 @@
     {/if}
 
     <div class="header-inner">
-      <div class="where">
-        <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
-        <HouseholdSwitcher onswitch={switched} />
-      </div>
+      <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
 
       <div class="wide-only"><Navigation placement="top" /></div>
 
-      {#if creating || searchable}
-        <div class="library-controls">
-          {#if searchable}
-            <button
-              type="button"
-              class="search"
-              aria-label={m['search.open']()}
-              title="{m['search.open']()} (⌘K)"
-              aria-keyshortcuts="Meta+K Control+K /"
-              onclick={() => searchOverlay.show()}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                aria-hidden="true"
+      <!-- Takes pointer events back from the header for the household menu's
+           sake: its panel opens inside this, and would otherwise inherit the
+           header's "none" and pass every click through to the page beneath. -->
+      <div class="actions">
+        {#if session.activeHousehold}
+          <div class="tools">
+            {#if searchable}
+              <button
+                type="button"
+                class="search"
+                aria-label={m['search.open']()}
+                title="{m['search.open']()} (⌘K)"
+                aria-keyshortcuts="Meta+K Control+K /"
+                onclick={() => searchOverlay.show()}
               >
-                <circle cx="10.5" cy="10.5" r="6.5" />
-                <path d="m15.5 15.5 4 4" stroke-linecap="round" />
-              </svg>
-            </button>
-          {/if}
-          {#if creating}
-            <NewRecipeLink />
-          {/if}
-        </div>
-      {/if}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  aria-hidden="true"
+                >
+                  <circle cx="10.5" cy="10.5" r="6.5" />
+                  <path d="m15.5 15.5 4 4" stroke-linecap="round" />
+                </svg>
+              </button>
+            {/if}
+            <HouseholdSwitcher onswitch={switched} />
+          </div>
+        {/if}
+        {#if creating}
+          <NewRecipeLink />
+        {/if}
+      </div>
       {#if !connection.online}
         <div class="status"><p class="offline">{m['connection.offline']()}</p></div>
       {/if}
@@ -265,10 +268,11 @@
     background: linear-gradient(to bottom, var(--surface) 35%, transparent);
   }
 
-  /* Three floating groups share one row: brand, destinations, and — on the
-     library alone — the way to write a new recipe. The third column is declared
-     whether or not anything is in it, so the destinations stay centred on every
-     page rather than sliding across as the page changes. */
+  /* Three floating groups share one row: the brand, the destinations, and
+     the header's tools — the household and search in one capsule, and on the
+     library the way to write a new recipe beside it. The tools are there on
+     every page, so the destinations stay centred rather than sliding across as
+     the page changes. */
   .header-inner {
     /* Positioned, so the pills paint above the scrim rather than under it. */
     position: relative;
@@ -283,15 +287,35 @@
     padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
   }
 
-  .library-controls {
+  .actions {
     grid-column: 2;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    flex-wrap: wrap;
     gap: var(--space-2);
     min-width: 0;
     pointer-events: auto;
+  }
+
+  /*
+   * One pane of glass with two controls in it, after the grouped toolbar
+   * buttons of Apple's Liquid Glass.
+   *
+   * Search and the household are both about what is on screen — find
+   * something in this kitchen, or look at another one — and two lone circles
+   * at opposite ends of the header said they had nothing to do with each
+   * other. The capsule is the glass; the buttons inside are only a lit circle
+   * under the pointer, so the pair reads as one thing with two parts.
+   */
+  .tools {
+    display: flex;
+    align-items: center;
+    padding: var(--space-1);
+    border-radius: var(--radius-full);
+    background: var(--surface-nav-glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-glass);
   }
 
   /* Connection feedback gets its own small badge without moving the controls. */
@@ -313,22 +337,6 @@
     text-align: end;
   }
 
-  /* The brand and the household beside it: which app, and whose kitchen in
-     it. Takes pointer events back from the header for the menu's sake: the
-     household panel opens inside it, and would otherwise inherit the header's
-     "none" and pass every click through to the page beneath. */
-  .where {
-    grid-column: 1;
-    justify-self: start;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-    max-width: 100%;
-    pointer-events: auto;
-  }
-
   /*
    * Stays, and stays on every page.
    *
@@ -345,13 +353,20 @@
    * sits in the same row of pills and does the same kind of thing.
    */
   .brand {
+    grid-column: 1;
+    justify-self: start;
+    /* A flex box, not a line of text: a line box would add its strut to the
+       mark's height and leave this pill taller than the ones beside it. */
+    display: flex;
     min-width: 0;
+    max-width: 100%;
     text-decoration: none;
-    padding: var(--space-2) var(--space-3);
-    margin-inline-start: calc(-1 * var(--space-3));
+    padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
     border-radius: var(--radius-full);
     background: var(--surface-nav-glass);
-    backdrop-filter: blur(16px);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-glass);
     pointer-events: auto;
     transition: background-color var(--duration-fast) var(--ease-out);
   }
@@ -360,8 +375,17 @@
     background: var(--surface-selected);
   }
 
-  /* The same pill as the brand, because it sits in the same row and is the
-     same kind of thing: a way to somewhere, always there. */
+  .brand:active {
+    background: var(--surface-hover);
+  }
+
+  /* Concentric with the pill around it, the way nested glass is drawn: a
+     rounded square inside a capsule is two shapes that disagree. */
+  .brand :global(svg) {
+    border-radius: var(--radius-full);
+  }
+
+  /* The household's button beside it is drawn the same way, in its own file. */
   .search {
     display: inline-flex;
     align-items: center;
@@ -372,8 +396,7 @@
     padding: var(--space-2);
     border: 0;
     border-radius: var(--radius-full);
-    background: var(--surface-nav-glass);
-    backdrop-filter: blur(16px);
+    background: transparent;
     color: var(--text);
     cursor: pointer;
     transition: background-color var(--duration-fast) var(--ease-out);
@@ -383,13 +406,13 @@
     background: var(--surface-selected);
   }
 
-  .search svg {
-    width: var(--space-4);
-    height: var(--space-4);
+  .search:active {
+    background: var(--surface-hover);
   }
 
-  .brand:active {
-    background: var(--surface-hover);
+  .search svg {
+    width: calc(var(--space-4) + var(--space-1));
+    height: calc(var(--space-4) + var(--space-1));
   }
 
   .content {
@@ -489,8 +512,24 @@
     .header-inner {
       gap: var(--space-2);
     }
-    .library-controls {
-      flex-wrap: nowrap;
+  }
+
+  /*
+   * The narrowest phones keep the mark and let the word go.
+   *
+   * The wordmark needs about 155 of the 288 pixels a 320px screen leaves
+   * between its gutters, and the tools beside it take 164 — so something has
+   * to give, and squeezing the word only clips it. The mark alone in a circle
+   * is still the brand, still the way home, and drawn the same as every other
+   * pill in the row; the name is in its label for anyone who cannot see it.
+   */
+  @media (width < 22rem) {
+    .brand {
+      padding: var(--space-1);
+    }
+
+    .brand :global(.wordmark) {
+      display: none;
     }
   }
 
@@ -505,7 +544,7 @@
       grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
     }
 
-    .library-controls {
+    .actions {
       grid-column: 3;
     }
 

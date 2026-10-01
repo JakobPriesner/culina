@@ -109,6 +109,12 @@
   /* Effects. */
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
+  /* The header's floating glass: a lit rim along the top edge and a faint one
+     all round, so a pill reads as a pane of something rather than a flat
+     shape, over a shadow soft enough to lift it off whatever passes under. */
+  --shadow-glass:
+    inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 0 0 1px rgb(255 255 255 / 40%),
+    0 1px 2px rgb(31 26 22 / 6%), 0 6px 20px rgb(31 26 22 / 8%);
   --scrim: rgb(31 26 22 / 45%);
 
   /* The shimmer a skeleton animates between. */

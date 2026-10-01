@@ -67,6 +67,9 @@
 
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
+  --shadow-glass:
+    inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 0 0 1px rgb(255 255 255 / 40%),
+    0 1px 2px rgb(31 26 22 / 6%), 0 6px 20px rgb(31 26 22 / 8%);
   --scrim: rgb(31 26 22 / 45%);
 
   --skeleton-base: var(--c-sand-200);
@@ -141,6 +144,9 @@
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
   --shadow-overlay: 0 8px 32px rgb(0 0 0 / 55%);
+  --shadow-glass:
+    inset 0 1px 0 rgb(255 255 255 / 12%), inset 0 0 0 1px rgb(255 255 255 / 6%),
+    0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 35%);
   --scrim: rgb(0 0 0 / 65%);
 
   --skeleton-base: var(--c-sand-800);

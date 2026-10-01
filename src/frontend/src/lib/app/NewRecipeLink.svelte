@@ -22,14 +22,15 @@
     justify-content: center;
     flex-shrink: 0;
     gap: var(--space-2);
-    min-width: var(--control-sm);
-    min-height: var(--control-sm);
+    /* As tall as the glass capsules beside it: a control and their inset. */
+    min-width: calc(var(--control-sm) + var(--space-2));
+    min-height: calc(var(--control-sm) + var(--space-2));
     padding: var(--space-2);
-    border: 1px solid transparent;
+    border: 0;
     border-radius: var(--radius-full);
     background: var(--accent);
     color: var(--accent-contrast);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-glass);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     text-decoration: none;
