@@ -1315,7 +1315,16 @@
   "me.recovery.title": "Recovery codes",
   "me.recovery.body": "Culina can't email you a reset link. These codes are how you get back in if you forget your password — keep them somewhere safe, away from this device.",
   "me.recovery.none": "You don't have any recovery codes yet.",
-  "me.recovery.remaining": [{"declarations": ["input count", "input when", "local countPlural = count: plural"], "selectors": ["countPlural"], "match": {"countPlural=one": "1 code left, made {when}.", "countPlural=*": "{count} codes left, made {when}."}}],
+  "me.recovery.remaining": [
+    {
+      "declarations": ["input count", "input when", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "1 code left, made {when}.",
+        "countPlural=*": "{count} codes left, made {when}."
+      }
+    }
+  ],
   "me.recovery.fresh": "Your recovery codes",
   "me.recovery.once": "Each code works once. They're only shown now — save or print them before you leave this page.",
   "me.recovery.download": "Save as a file",
