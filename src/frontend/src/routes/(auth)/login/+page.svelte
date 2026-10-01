@@ -97,6 +97,10 @@
   <SubmitButton label={m['auth.signIn.submit']()} {submission} />
 
   <p class="alternative">
+    <a href={resolve('/(auth)/password-reset')}>{m['auth.signIn.forgot']()}</a>
+  </p>
+
+  <p class="alternative">
     {m['auth.signIn.noAccount']()}
     <a href={registerHref}>{m['auth.signIn.register']()}</a>
   </p>

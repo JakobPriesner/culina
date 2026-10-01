@@ -36,6 +36,11 @@ public static class CulinaTelemetry
         "culina.auth.login_failures",
         description: "Sign-in attempts rejected as invalid credentials.");
 
+    /// <summary>Password resets refused for a wrong, used or expired recovery code. Worth alerting on.</summary>
+    public static readonly Counter<long> RecoveryFailures = Meter.CreateCounter<long>(
+        "culina.auth.recovery_failures",
+        description: "Password resets rejected as an invalid recovery code.");
+
     /// <summary>Requests rejected by the CSRF check.</summary>
     public static readonly Counter<long> CsrfRejections = Meter.CreateCounter<long>(
         "culina.csrf.rejections",

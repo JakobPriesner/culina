@@ -118,6 +118,21 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
         return affected == 0 ? SessionErrors.SessionNotFound : Result.Success();
     }
 
+    public Task RevokeAllAsync(
+        Guid userId,
+        Guid? keepSessionId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) =>
+        executor.ExecuteAsync(
+            """
+            update sessions set revoked_at = @now
+            where user_id = @userId
+              and revoked_at is null
+              and (@keepSessionId::uuid is null or id <> @keepSessionId);
+            """,
+            new { userId, keepSessionId, now },
+            cancellationToken);
+
     public Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
         executor.ExecuteAsync(
             "delete from sessions where expires_at < @now or revoked_at is not null;",

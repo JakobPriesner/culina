@@ -31,6 +31,11 @@ served from the same origin.
 | `DELETE` | `/sessions/current` | Log out. Deletes the server-side session, then expires the cookie. `204`. |
 | `GET` | `/sessions` | Your active sessions — device, IP, last seen. Powers "sign out everywhere". |
 | `DELETE` | `/sessions/{sessionId}` | Revoke one. `204`. |
+| `PUT` | `/users/me/password` | Change password. Needs `currentPassword`; a wrong one is `400 users.incorrect_password`, never a `401` (which would sign the caller out). Revokes every other session; this one stays. `204`. |
+| `GET` | `/users/me/recovery-codes` | How many saved recovery codes are left, and when they were made. Never the codes. |
+| `POST` | `/users/me/recovery-codes` | Needs `password`. `201` with ten one-time codes, shown once; any earlier set stops working. |
+| `POST` | `/recovery-codes` | Administrator only. `201` with a one-time code for the account with that `email`, valid 24 hours. `404` when no account has the address — the administrator may know. |
+| `POST` | `/password-resets` | Anonymous. `email`, `code` (saved or issued; case, spaces and dashes ignored), `password`. Uses up the code, sets the password, revokes **every** session of the account. `204`. Failure is always `400 auth.invalid_recovery_code`, whether or not the address is registered. Rate limited like sign-in, per IP and per account. |
 
 ## Households
 

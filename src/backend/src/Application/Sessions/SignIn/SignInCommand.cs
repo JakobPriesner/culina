@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Settings;
@@ -39,7 +37,7 @@ internal sealed class SignInCommandHandler(
         using var tracked = UseCaseActivity.Start("Sessions.SignIn");
 
         var now = dependencies.Time.GetUtcNow();
-        var accountKey = AccountKey(command.Email);
+        var accountKey = AccountKey.For(command.Email);
 
         if (attempts.IsLockedOut(accountKey, now))
         {
@@ -132,12 +130,4 @@ internal sealed class SignInCommandHandler(
         return stored.Bind(() => Result<SignInOutcome>.Success(
             new SignInOutcome(user.ToSignInResponse(isAdmin, csrfToken), sessionToken)));
     }
-
-    /// <summary>
-    /// A digest of the normalised address, because the attempt counter lives in
-    /// memory and shows up in diagnostics, and neither should hold an email.
-    /// </summary>
-    private static string AccountKey(string rawEmail) =>
-        Convert.ToHexStringLower(
-            SHA256.HashData(Encoding.UTF8.GetBytes(rawEmail.Trim().ToLowerInvariant())));
 }

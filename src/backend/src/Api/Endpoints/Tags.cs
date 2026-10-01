@@ -13,6 +13,10 @@ internal static class Tags
 
     internal const string Sessions = "Sessions";
 
+    internal const string PasswordResets = "PasswordResets";
+
+    internal const string RecoveryCodes = "RecoveryCodes";
+
     internal const string Households = "Households";
 
     internal const string Recipes = "Recipes";

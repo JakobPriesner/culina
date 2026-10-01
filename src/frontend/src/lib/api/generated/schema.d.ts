@@ -72,6 +72,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change your password
+         * @description Needs the current password. Every other session of the account is signed out; the one making the change stays signed in.
+         */
+        put: operations["changePasswordV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count your recovery codes
+         * @description How many unused codes are left, and when they were made. Never the codes.
+         */
+        get: operations["getRecoveryCodesV1"];
+        put?: never;
+        /**
+         * Make recovery codes
+         * @description Needs the password. Returns ten one-time codes, each able to set a new password if this one is forgotten. They are shown once; any earlier set stops working.
+         */
+        post: operations["createRecoveryCodesV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions": {
         parameters: {
             query?: never;
@@ -131,6 +175,46 @@ export interface paths {
          * @description Ends one of your sessions. Another user's session is never visible.
          */
         delete: operations["revokeSessionV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/password-resets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a new password with a recovery code
+         * @description Uses up the code and signs the account out everywhere; sign in with the new password afterwards. Failure is always auth.invalid_recovery_code, whether or not the address is registered.
+         */
+        post: operations["createPasswordResetV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Help somebody back into their account
+         * @description The administrator's only. Returns a one-time code, good for 24 hours, that sets a new password for the account with this address. Pass it on yourself; Culina sends nothing.
+         */
+        post: operations["issueRecoveryCodeV1"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2217,6 +2301,18 @@ export interface components {
             /** @description One to ten records, oldest first. */
             records: components["schemas"]["LogRecordsCreateRecord"][];
         };
+        /** @description A new password for an account, unlocked by a recovery code. */
+        PasswordResetsCreateRequest: {
+            /** @description The address the account signs in with. */
+            email: string;
+            /**
+             * @description One of the account's saved recovery codes, or one the administrator
+             *     issued. Case, spaces and dashes do not matter.
+             */
+            code: string;
+            /** @description The new password. At least 12 characters. */
+            password: string;
+        };
         /** @description A week of planned meals. */
         PlanningMealPlanResponse: {
             /**
@@ -3398,6 +3494,24 @@ export interface components {
             /** @description Its tags. */
             tags: string[];
         };
+        /** @description Whose account the administrator is helping back in. */
+        RecoveryCodesIssueRequest: {
+            /** @description The address the account signs in with. */
+            email: string;
+        };
+        /** @description A one-time code to pass on to the person who is locked out. */
+        RecoveryCodesIssueResponse: {
+            /**
+             * @description The code. Shown exactly once — only its digest is stored, so it cannot
+             *     be shown again.
+             */
+            code: string;
+            /**
+             * Format: date-time
+             * @description When it stops working.
+             */
+            expiresAt: string;
+        };
         /** @description What a sign-up form needs to know before it draws itself. */
         RegistrationGetPolicyResponse: {
             /** @description Whether anyone may create an account. */
@@ -4244,6 +4358,31 @@ export interface components {
              */
             subject?: string | null;
         };
+        /** @description A new password, and the current one to prove it is you. */
+        UsersChangePasswordRequest: {
+            /** @description The password the account has now. */
+            currentPassword: string;
+            /** @description What it becomes. At least 12 characters. */
+            newPassword: string;
+        };
+        /** @description The password, because recovery codes outlive any session. */
+        UsersCreateRecoveryCodesRequest: {
+            /** @description The password the account has now. */
+            password: string;
+        };
+        /** @description A new set of recovery codes. Any earlier set has stopped working. */
+        UsersCreateRecoveryCodesResponse: {
+            /**
+             * @description The codes, each good for one password reset. Shown exactly once — only
+             *     their digests are stored, so they cannot be shown again.
+             */
+            codes: string[];
+            /**
+             * Format: date-time
+             * @description When the set was made.
+             */
+            createdAt: string;
+        };
         /** @description Which assistant capabilities are switched on. */
         UsersGetCurrentAssistanceAvailability: {
             /** @description Rewriting a recipe somebody already has. */
@@ -4326,6 +4465,19 @@ export interface components {
              * @description The entity version.
              */
             version: number;
+        };
+        /** @description What is left of your recovery codes. Never the codes themselves. */
+        UsersGetRecoveryCodesResponse: {
+            /**
+             * Format: int32
+             * @description How many codes are still unused. Zero when none were ever made.
+             */
+            remaining: number;
+            /**
+             * Format: date-time
+             * @description When the set was made, or null when there is none.
+             */
+            createdAt?: string | null;
         };
         /** @description What a new account needs. */
         UsersRegisterRequest: {
@@ -4656,6 +4808,135 @@ export interface operations {
             };
         };
     };
+    changePasswordV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsersChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRecoveryCodesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersGetRecoveryCodesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createRecoveryCodesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsersCreateRecoveryCodesRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersCreateRecoveryCodesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     getSessionsV1: {
         parameters: {
             query?: never;
@@ -4774,6 +5055,106 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createPasswordResetV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetsCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    issueRecoveryCodeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecoveryCodesIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodesIssueResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

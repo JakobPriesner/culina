@@ -253,6 +253,9 @@ public class CsrfGuardTests
         public Task<Result> RevokeAsync(Guid sessionId, Guid userId, DateTimeOffset now, CancellationToken cancellationToken) =>
             Task.FromResult(Result.Success());
 
+        public Task RevokeAllAsync(Guid userId, Guid? keepSessionId, DateTimeOffset now, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
         public Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
             Task.FromResult(0);
     }

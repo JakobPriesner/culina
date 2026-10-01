@@ -1,5 +1,8 @@
+using Api.Endpoints.Users.ChangePassword.V1;
+using Api.Endpoints.Users.CreateRecoveryCodes.V1;
 using Api.Endpoints.Users.GetCurrent.V1;
 using Api.Endpoints.Users.GetPreferences.V1;
+using Api.Endpoints.Users.GetRecoveryCodes.V1;
 using Api.Endpoints.Users.Register.V1;
 using Api.Endpoints.Users.UpdateCurrent.V1;
 using Api.Endpoints.Users.UpdatePreferences.V1;
@@ -21,5 +24,8 @@ internal static class UsersEndpoints
             .AddSingleton<IEndpoint, GetCurrentUserEndpoint>()
             .AddSingleton<IEndpoint, UpdateCurrentUserEndpoint>()
             .AddSingleton<IEndpoint, GetPreferencesEndpoint>()
-            .AddSingleton<IEndpoint, UpdatePreferencesEndpoint>();
+            .AddSingleton<IEndpoint, UpdatePreferencesEndpoint>()
+            .AddSingleton<IEndpoint, ChangePasswordEndpoint>()
+            .AddSingleton<IEndpoint, GetRecoveryCodesEndpoint>()
+            .AddSingleton<IEndpoint, CreateRecoveryCodesEndpoint>();
 }

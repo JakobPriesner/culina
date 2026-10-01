@@ -173,6 +173,7 @@ public static class DependencyInjection
             .AddScoped<IDatabaseProbe, DatabaseProbe>()
             .AddScoped<IUserRepository, UserRepository>()
             .AddScoped<IUserPreferencesRepository, UserPreferencesRepository>()
+            .AddScoped<IRecoveryCodeRepository, RecoveryCodeRepository>()
             .AddScoped<IHouseholdRepository, HouseholdRepository>()
             .AddScoped<IInvitationRepository, InvitationRepository>()
             .AddScoped<TagWriter>()

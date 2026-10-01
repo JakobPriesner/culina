@@ -22,6 +22,8 @@
     type ServerDraft
   } from '$features/server/types';
 
+  import IssueRecoveryCodePanel from '$features/auth/IssueRecoveryCodePanel.svelte';
+
   import SettingsSection from '../SettingsSection.svelte';
 
   /**
@@ -214,6 +216,12 @@
     {/each}
   </div>
 {/if}
+
+<!-- Outside the settings above: it changes no configuration, needs no restart,
+     and must still work while the configuration cannot be read. -->
+<SettingsSection title={m['server.recovery']()} description={m['server.recovery.hint']()} bare>
+  <IssueRecoveryCodePanel />
+</SettingsSection>
 
 <style>
   .fields {

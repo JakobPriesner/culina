@@ -65,4 +65,14 @@ public static class UserErrors
         "users.weak_password",
         "A password must be at least 12 characters.",
         ErrorType.Validation);
+
+    /// <summary>The current password given to confirm a change did not match.</summary>
+    /// <remarks>
+    /// A validation failure, not a 401: the caller is signed in, and an
+    /// unauthorised answer would make the client sign them out for a typo.
+    /// </remarks>
+    public static readonly Error IncorrectPassword = new(
+        "users.incorrect_password",
+        "That is not your current password.",
+        ErrorType.Validation);
 }
