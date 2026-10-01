@@ -74,24 +74,20 @@
   --warning-subtle: var(--c-amber-200);
 
   /*
-   * A picture being made.
+   * The assistant at work.
    *
-   * Three warm lights that drift under a frosted pane, plus the ground they
-   * drift on and the specular band that crosses them. Their own tokens rather
-   * than the accent at several strengths, because this is the one place in the
-   * app where colour is doing no work except saying "something is happening
-   * here" — and an interface that says that in one flat hue says it the way a
-   * progress bar from 1998 does.
+   * Four lights — orange, pink, violet, blue — that flow around whatever is
+   * being generated and drift under a picture being drawn, in the manner of
+   * Apple Intelligence's glow. Their own tokens rather than the accent at
+   * several strengths, because this is the one place in the app where colour
+   * says nothing except "the assistant is working here", and it should look
+   * like nothing else on the page.
    */
   --generating-ground: var(--c-sand-100);
-  --generating-1: var(--c-olive-200);
-  --generating-2: var(--c-terracotta-200);
-  --generating-3: var(--c-amber-200);
-  --generating-sheen: var(--c-white);
-  --generating-grid: rgb(255 255 255 / 4%);
-  --generating-vignette: rgb(0 0 0 / 22%);
-  --generating-glow: rgb(255 255 255 / 52%);
-  --generating-scan: rgb(255 255 255 / 20%);
+  --generating-1: rgb(255 153 82);
+  --generating-2: rgb(255 92 138);
+  --generating-3: rgb(176 112 255);
+  --generating-4: rgb(84 150 255);
   --generating-panel: rgb(20 17 14 / 44%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);

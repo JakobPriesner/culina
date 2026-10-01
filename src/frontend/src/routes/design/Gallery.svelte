@@ -6,6 +6,8 @@
     type ButtonVariant,
     Checkbox,
     Field,
+    GenerationAura,
+    GenerationStatus,
     IconButton,
     ImageField,
     RadioGroup,
@@ -251,6 +253,14 @@
       <FourStates state="filtered" />
       <FourStates state="error" />
       <FourStates state="loaded" refreshing />
+
+      <!-- Something the assistant is writing: the glow round the place the
+           work lands, and the status line inside it. -->
+      <div class="generated">
+        <GenerationAura active={drawing} />
+        <GenerationStatus label={drawing ? 'Writing…' : 'Written'} />
+        <p>Aubergine and feta bake, with whatever herbs are left.</p>
+      </div>
     </div>
   </section>
 </main>
@@ -269,6 +279,18 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+  }
+
+  .generated {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
   }
 
   .row {

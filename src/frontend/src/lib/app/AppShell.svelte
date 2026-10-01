@@ -429,16 +429,34 @@
     inset-inline: 0;
     height: 2px;
     background: var(--accent);
+    box-shadow: 0 0 0.5rem var(--accent);
     transform-origin: left center;
-    animation: advance 1.2s var(--ease-out) forwards;
+    /* Held back for the first 150 ms so a quick navigation shows nothing, then
+       a trickle that slows the further it gets: fast enough to read as
+       progress, never claiming to be finished before the page is. */
+    animation:
+      reveal var(--duration-base) var(--ease-out) 150ms both,
+      advance 8s cubic-bezier(0.1, 0.7, 0.2, 1) 150ms both;
+  }
+
+  @keyframes reveal {
+    from {
+      opacity: 0;
+    }
   }
 
   @keyframes advance {
-    from {
-      transform: scaleX(0.05);
+    0% {
+      transform: scaleX(0);
     }
-    to {
-      transform: scaleX(0.9);
+    10% {
+      transform: scaleX(0.35);
+    }
+    40% {
+      transform: scaleX(0.7);
+    }
+    100% {
+      transform: scaleX(0.94);
     }
   }
 
