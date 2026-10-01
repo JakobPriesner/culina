@@ -20,6 +20,17 @@ public interface ISecretTokens
     /// <summary>A fresh secret, safe to put in a cookie or a link.</summary>
     string NewToken();
 
+    /// <summary>
+    /// A fresh recovery code: 80 random bits a person can read off paper and
+    /// type, as four groups of four characters with no look-alike letters.
+    /// </summary>
+    /// <remarks>
+    /// Shorter than <see cref="NewToken"/> because a person copies it by hand.
+    /// Eighty bits is still far beyond what the per-address and per-account
+    /// limits let anybody guess, and beyond walking a stolen digest offline.
+    /// </remarks>
+    string NewRecoveryCode();
+
     /// <summary>The digest stored in place of the secret.</summary>
     /// <param name="token">The raw token.</param>
     ReadOnlyMemory<byte> Digest(string token);

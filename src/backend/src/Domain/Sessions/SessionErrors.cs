@@ -35,4 +35,25 @@ public static class SessionErrors
         "auth.csrf_invalid",
         "This request could not be verified. Reload the page and try again.",
         ErrorType.Forbidden);
+
+    /// <summary>
+    /// The address and recovery code do not unlock an account.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// One error for an unknown address, a wrong code, a used code, an expired
+    /// code and another account's code. Any distinction between them tells
+    /// whoever is guessing which guesses were close.
+    /// </para>
+    /// <para>
+    /// A validation failure rather than a 401, because nobody is signed in to
+    /// be told they are not: a 401 is what every client reads as "your session
+    /// ended", and answering a typo with that would throw the person off the
+    /// form they are filling in.
+    /// </para>
+    /// </remarks>
+    public static readonly Error InvalidRecoveryCode = new(
+        "auth.invalid_recovery_code",
+        "That email address and recovery code do not match.",
+        ErrorType.Validation);
 }
