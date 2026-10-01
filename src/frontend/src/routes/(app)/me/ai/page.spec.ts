@@ -159,6 +159,19 @@ function picker(row: HTMLElement, nth: number): HTMLElement {
   return found;
 }
 
+/** The bodies of every save the page sent, oldest first. */
+async function writes(fetched: ReturnType<typeof serverAnswers>) {
+  const sent = fetched.mock.calls
+    .map(([input]) => input)
+    .filter((input): input is Request => input instanceof Request && input.method === 'PUT');
+
+  return Promise.all(sent.map(async (request) => JSON.parse(await request.clone().text())));
+}
+
+/** A choice made, which saves the form: the assistant switch, flipped. */
+const flipTheSwitch = () =>
+  userEvent.click(screen.getByRole('switch', { name: 'Use the assistant' }));
+
 beforeEach(() => {
   assistance.reset();
 });
@@ -277,14 +290,10 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await flipTheSwitch();
     await settle();
 
-    const write = fetched.mock.calls
-      .map(([input]) => input)
-      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
-
-    const body = JSON.parse(await write!.clone().text());
+    const [body] = await writes(fetched);
     const sent = Object.fromEntries(
       body.uses.map((one: { capability: string; provider: string }) => [
         one.capability,
@@ -306,19 +315,83 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await flipTheSwitch();
     await settle();
-
-    const write = fetched.mock.calls
-      .map(([input]) => input)
-      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
 
     // Omitted, not empty: an empty string would take a stored key away, and
     // this is somebody saving the form for an unrelated reason.
-    const body = JSON.parse(await write!.clone().text());
+    const [body] = await writes(fetched);
     expect(body.connections.every((one: { apiKey?: string }) => one.apiKey === undefined)).toBe(
       true
     );
+  });
+
+  it('saves a typed field when focus leaves it, not on every keystroke', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const monthly = screen.getByRole('textbox', { name: 'Total per month' });
+    await userEvent.clear(monthly);
+    await userEvent.type(monthly, '35');
+    await settle();
+
+    expect(await writes(fetched)).toHaveLength(0);
+
+    await userEvent.tab();
+    await settle();
+
+    const sent = await writes(fetched);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].monthlyBudget).toBe(35);
+  });
+
+  it('sends nothing when focus merely passes through the form', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(screen.getByRole('textbox', { name: 'Total per month' }));
+    await userEvent.tab();
+    await settle();
+
+    expect(await writes(fetched)).toHaveLength(0);
+  });
+
+  it('keeps the stored key when a key field is opened and left empty', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(within(rowFor('Gemini')).getByRole('button', { name: 'Replace' }));
+    await userEvent.click(screen.getByPlaceholderText('Paste the key'));
+    await userEvent.tab();
+    await flipTheSwitch();
+    await settle();
+
+    // An empty key takes the stored one away, so an empty field must send none.
+    const sent = await writes(fetched);
+    const gemini = sent
+      .at(-1)
+      .connections.find((one: { provider: string }) => one.provider === 'gemini');
+    expect(gemini.apiKey).toBeUndefined();
+  });
+
+  it('takes a key away only when asked to', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(within(rowFor('Gemini')).getByRole('button', { name: 'Remove key' }));
+    await settle();
+
+    const [body] = await writes(fetched);
+    const gemini = body.connections.find((one: { provider: string }) => one.provider === 'gemini');
+    expect(gemini.apiKey).toBe('');
   });
 
   it('offers the models its provider listed, filtered to what the job needs', async () => {
@@ -361,15 +434,9 @@ describe('the assistant settings page', () => {
 
     const reading = picker(rowFor('Import recipe from photo'), 1);
     await userEvent.selectOptions(reading, 'gemini-3-flash-preview');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await settle();
 
-    const write = fetched.mock.calls
-      .map(([input]) => input)
-      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
-
-    const body = JSON.parse(await write!.clone().text());
+    const [body] = await writes(fetched);
     const read = body.uses.find((one: { capability: string }) => one.capability === 'read');
 
     expect(read.provider).toBe('gemini');
@@ -385,15 +452,9 @@ describe('the assistant settings page', () => {
     const row = rowFor('Import recipe from photo');
     await userEvent.selectOptions(picker(row, 1), 'gemini-3-flash-preview');
     await userEvent.selectOptions(picker(row, 0), 'openai');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await settle();
 
-    const write = fetched.mock.calls
-      .map(([input]) => input)
-      .find((input): input is Request => input instanceof Request && input.method === 'PUT');
-
-    const body = JSON.parse(await write!.clone().text());
+    const body = (await writes(fetched)).at(-1);
     const read = body.uses.find((one: { capability: string }) => one.capability === 'read');
 
     // Carrying it over would name a Gemini model at OpenAI.
@@ -460,7 +521,7 @@ describe('the assistant settings page', () => {
 
     await userEvent.click(within(rowFor('Gemini')).getByRole('button', { name: 'Replace' }));
     await userEvent.type(screen.getByPlaceholderText('Paste the key'), 'a-key');
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await userEvent.tab();
     await settle();
 
     const listings = fetched.mock.calls

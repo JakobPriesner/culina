@@ -793,7 +793,6 @@
   "ai.usage.person": "Person",
   "ai.usage.calls": "Anfragen",
   "ai.usage.cost": "Kosten",
-  "ai.save": "Speichern",
   "ai.saved": "Gespeichert",
   "ai.privacy.local": "Bei Ollama sendet Culina deine Daten nur an das Modell unter der oben angegebenen Adresse – nicht an einen externen KI-Anbieter.",
   "assist.improve": "Überarbeiten",
@@ -1293,5 +1292,6 @@
   "shopping.move": "{name} in einen anderen Bereich verschieben",
   "shopping.move.heading": "Gehört zu",
   "shopping.moved": "{name} steht ab jetzt unter {section}.",
-  "notes.unreadable": "Deine Notiz konnte nicht geladen werden, darum steht sie hier nicht."
+  "notes.unreadable": "Deine Notiz konnte nicht geladen werden, darum steht sie hier nicht.",
+  "ai.apiKey.remove": "Schlüssel entfernen"
 }
