@@ -10,17 +10,32 @@
     "theme_color": "#fdfbf7",
     "categories": ["food", "lifestyle", "productivity"],
     "icons": [
-        { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
-        { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
-        { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
         {
-            "src": "/icon-maskable-512.png",
+            "src": "/icons/paper/icon.svg",
+            "type": "image/svg+xml",
+            "sizes": "any",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/paper/icon-192.png",
+            "type": "image/png",
+            "sizes": "192x192",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/paper/icon-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/paper/icon-maskable-512.png",
             "type": "image/png",
             "sizes": "512x512",
             "purpose": "maskable"
         },
         {
-            "src": "/icon-monochrome-512.png",
+            "src": "/icons/paper/icon-monochrome-512.png",
             "type": "image/png",
             "sizes": "512x512",
             "purpose": "monochrome"
@@ -31,25 +46,25 @@
             "name": "Shopping List",
             "short_name": "Shopping",
             "url": "/shopping",
-            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+            "icons": [{ "src": "/icons/paper/icon-192.png", "sizes": "192x192" }]
         },
         {
             "name": "New Recipe",
             "short_name": "New",
             "url": "/recipes/new",
-            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+            "icons": [{ "src": "/icons/paper/icon-192.png", "sizes": "192x192" }]
         },
         {
             "name": "Meal Plan",
             "short_name": "Plan",
             "url": "/plan",
-            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+            "icons": [{ "src": "/icons/paper/icon-192.png", "sizes": "192x192" }]
         },
         {
             "name": "Cookbooks",
             "short_name": "Cookbooks",
             "url": "/cookbooks",
-            "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+            "icons": [{ "src": "/icons/paper/icon-192.png", "sizes": "192x192" }]
         }
     ],
     "share_target": {
