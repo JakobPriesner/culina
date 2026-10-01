@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Api.Infrastructure;
+using Contracts.LogRecords;
 using Contracts.Recipes;
 using Microsoft.OpenApi;
 
@@ -146,7 +147,8 @@ internal static class OpenApiContractFixes
         ("RecipesUpdateRequest", "language", RecipeVocabulary.Languages),
         ("RecipesStepSegmentContract", "type", RecipeVocabulary.StepSegmentKinds),
         ("ShoppingItemContract", "section", RecipeVocabulary.ShoppingSections),
-        ("ShoppingUpdateItemRequest", "section", RecipeVocabulary.ShoppingSections)
+        ("ShoppingUpdateItemRequest", "section", RecipeVocabulary.ShoppingSections),
+        ("LogRecordsCreateRecord", "event", LogRecordVocabulary.Events)
     ];
 
     private static void Describe(

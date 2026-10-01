@@ -98,8 +98,36 @@ const shell = [...build, ...files.filter((file) => linkedByTheDocument.has(file)
 worker.addEventListener('install', (event) => {
   // No skipWaiting: the running app decides when to hand over. See the message
   // handler below.
-  event.waitUntil(precache());
+  event.waitUntil(
+    precache().catch((failure: unknown) => {
+      // Still a failed install — an app that cannot open offline is not worth
+      // installing — but now one somebody hears about.
+      tell(failure);
+      throw failure;
+    })
+  );
 });
+
+/**
+ * Hands a failure to an open page, which reports it.
+ *
+ * Not reported from here: the worker never talks to the API (see the top of
+ * this file), and it has no CSRF token to do it with. One page rather than
+ * every open one, so three tabs do not make three records. With no page open
+ * the failure goes unheard, which is the trade for keeping the worker out of
+ * the API.
+ */
+function tell(failure: unknown): void {
+  const message = String(failure);
+  const stack = failure instanceof Error ? failure.stack : undefined;
+
+  void worker.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then(([page]) => page?.postMessage({ type: 'culina:failed', message, stack }));
+}
+
+worker.addEventListener('error', (event) => tell(event.error ?? event.message));
+worker.addEventListener('unhandledrejection', (event) => tell(event.reason));
 
 /**
  * Fills the cache for this build.

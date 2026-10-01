@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Application.Telemetry;
 using Domain.Search;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -37,6 +38,8 @@ internal sealed class LexiconReindexService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        using var activity = CulinaTelemetry.ActivitySource.StartActivity("Search.Reindex");
+
         var scope = scopeFactory.CreateAsyncScope();
 
         await using (scope.ConfigureAwait(false))
@@ -52,6 +55,8 @@ internal sealed class LexiconReindexService(
                 total += done;
             }
             while (done == BatchSize);
+
+            activity?.SetTag("culina.reindexed", total);
 
             if (total > 0)
             {

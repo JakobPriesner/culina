@@ -13,6 +13,7 @@
   import { m } from '$shell/i18n';
   import { connection } from '$shell/connection.svelte';
   import { preferences } from '$shell/preferences.svelte';
+  import { report } from '$shell/telemetry';
   import { watchForUpdates } from '$shell/updates.svelte';
 
   interface Props {
@@ -81,9 +82,10 @@
   <!--
     The last line of defence. A component that throws would otherwise leave a
     blank page with no way forward; this keeps something on screen that says
-    what happened and offers a way out.
+    what happened and offers a way out — and tells the operator, since a
+    boundary that catches an error is also the reason nothing else hears of it.
   -->
-  <svelte:boundary>
+  <svelte:boundary onerror={(error) => report('render_failed', error)}>
     {@render children()}
 
     {#snippet failed(_error, reset)}
