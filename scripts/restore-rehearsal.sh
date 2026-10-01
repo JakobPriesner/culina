@@ -144,6 +144,9 @@ RECIPES_AFTER="$(api "${BASE}/api/v1/recipes?householdId=${HOUSEHOLD}" | python3
 MEMBERS_AFTER="$(api "${BASE}/api/v1/households/${HOUSEHOLD}/members" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)["items"]))')"
 IMAGE_STATUS="$(api -o /dev/null -w '%{http_code}' "${BASE}/api/v1/recipes/${RECIPE}/image?w=800")"
 STRANGER_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE}/api/v1/recipes/${RECIPE}/image?w=800")"
+# /health/ready answers on the setup screen too, so only this says the restored
+# culina.json was read: the database it names is what the app started with.
+SETUP_STAGE="$(curl -sS "${BASE}/api/v1/setup" | python3 -c 'import sys,json; print(json.load(sys.stdin)["stage"])')"
 
 failed=0
 check() {
@@ -155,6 +158,7 @@ check() {
   fi
 }
 
+check "the settings came back with it"         "$SETUP_STAGE"     "complete"
 check "the password still signs in"            "$(api -o /dev/null -w '%{http_code}' "${BASE}/api/v1/users/me")" "200"
 check "every recipe is back"                   "$RECIPES_AFTER"   "$RECIPES_BEFORE"
 check "every member is back"                   "$MEMBERS_AFTER"   "$MEMBERS_BEFORE"
