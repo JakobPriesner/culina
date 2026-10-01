@@ -47,11 +47,18 @@ public interface ICookbookRepository
         long expectedVersion,
         CancellationToken cancellationToken);
 
-    /// <summary>Removes a cookbook, leaving every recipe that was on it.</summary>
+    /// <summary>Puts a cookbook in the bin, leaving every recipe that was on it.</summary>
     /// <param name="cookbookId">Which one.</param>
     /// <param name="expectedVersion">The version the caller saw; any other is a conflict.</param>
+    /// <param name="deletedBy">Who is deleting it.</param>
+    /// <param name="now">The injected current time; the purge counts from it.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    Task<Result> DeleteAsync(Guid cookbookId, long expectedVersion, CancellationToken cancellationToken);
+    Task<Result> DeleteAsync(
+        Guid cookbookId,
+        long expectedVersion,
+        Guid deletedBy,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Puts a recipe on a shelf, or leaves it where it already is.

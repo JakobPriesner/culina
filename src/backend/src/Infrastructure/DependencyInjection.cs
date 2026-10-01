@@ -18,6 +18,7 @@ using Infrastructure.Persistence.Searches;
 using Infrastructure.Persistence.Shopping;
 using Infrastructure.Persistence.Suggestions;
 using Infrastructure.Persistence.Tags;
+using Infrastructure.Persistence.Trash;
 using Infrastructure.Persistence.Users;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
@@ -174,6 +175,7 @@ public static class DependencyInjection
             .AddScoped<IUserRepository, UserRepository>()
             .AddScoped<IUserPreferencesRepository, UserPreferencesRepository>()
             .AddScoped<IRecoveryCodeRepository, RecoveryCodeRepository>()
+            .AddScoped<ITrashRepository, TrashRepository>()
             .AddScoped<IHouseholdRepository, HouseholdRepository>()
             .AddScoped<IInvitationRepository, InvitationRepository>()
             .AddScoped<TagWriter>()
@@ -211,5 +213,7 @@ public static class DependencyInjection
             .AddHostedService<MigrationHostedService>()
             // After the migrations, whose column it writes: rebuilds whatever
             // an older lexicon indexed before the first request is served.
-            .AddHostedService<LexiconReindexService>();
+            .AddHostedService<LexiconReindexService>()
+            // After the migrations too: it reads the tables they renamed.
+            .AddHostedService<TrashPurger>();
 }

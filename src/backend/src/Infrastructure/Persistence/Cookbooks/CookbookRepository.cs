@@ -264,11 +264,19 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     public async Task<Result> DeleteAsync(
         Guid cookbookId,
         long expectedVersion,
+        Guid deletedBy,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        // Into the bin: the cookbooks view stops showing it, and its shelf of
+        // recipes waits with it until it is restored or purged.
         var deleted = await executor.ExecuteAsync(
-            "delete from cookbooks where id = @cookbookId and version = @expectedVersion;",
-            new { cookbookId, expectedVersion },
+            """
+            update cookbooks
+            set deleted_at = @now, deleted_by = @deletedBy, version = version + 1
+            where id = @cookbookId and version = @expectedVersion;
+            """,
+            new { cookbookId, expectedVersion, deletedBy, now },
             cancellationToken).ConfigureAwait(false);
 
         return deleted == 0 ? ConcurrencyErrors.VersionMismatch : Result.Success();

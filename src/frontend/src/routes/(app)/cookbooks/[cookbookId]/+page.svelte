@@ -15,6 +15,7 @@
   import { createRecipeStore } from '$features/recipes/stores/recipes.svelte';
   import { effectiveSort, RecipeQuery } from '$features/recipes/stores/libraryView.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
+  import { restoreCookbook } from '$features/trash/trash';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
@@ -196,9 +197,24 @@
     }
 
     confirmingDelete = false;
-    toaster.show({ message: () => m['cookbooks.delete.done']({ name }) });
+    toaster.show({
+      message: () => m['cookbooks.delete.done']({ name }),
+      action: { label: () => m['trash.undo'](), run: () => void undoDelete(cookbookId) }
+    });
 
     await goto(resolve('/(app)/cookbooks'));
+  }
+
+  async function undoDelete(id: string) {
+    const failure = await restoreCookbook(id);
+
+    if (failure) {
+      toaster.show({ message: () => explain(failure), tone: 'danger' });
+
+      return;
+    }
+
+    await goto(resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: id }));
   }
 
   async function add(recipeId: string, title: string) {

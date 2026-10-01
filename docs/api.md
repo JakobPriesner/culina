@@ -41,14 +41,16 @@ served from the same origin.
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| `GET` | `/households` | The ones you belong to. |
+| `GET` | `/households` | The ones you belong to. `?deleted=true`: the deleted ones you own instead, each with `deletedAt` and `purgeAfter`. |
 | `POST` | `/households` | `201`. Creator becomes `owner`. Optional `inheritsFrom`: a household you are in whose recipes the new one sees from the start. |
 | `GET` | `/households/{householdId}` | `200` + ETag. |
 | `PATCH` | `/households/{householdId}` | Rename. Owner only. `If-Match`. |
 | `PUT` | `/households/{householdId}/inheritance` | `{ householdId }`, or `null` to inherit nothing. Owner of this household, and a member of the other (`households.not_found` otherwise). `households.inheritance_cycle` when the other already sees this one's recipes. `200` with the chain it now inherits, nearest first. |
 | `GET` | `/households/{householdId}/heirs` | Every household that sees this one's recipes: those inheriting from it, then those inheriting from them, each with the household it inherits from directly. Members only. |
 | `DELETE` | `/households/{householdId}/heirs/{heirId}` | Stops a household inheriting from this one. Owners of this household, and only for a direct heir (`households.not_found` otherwise); anything inheriting through it stops too. `204`. |
-| `DELETE` | `/households/{householdId}` | Owner only. Cascades. A household inheriting from it stops inheriting. |
+| `DELETE` | `/households/{householdId}` | Owner only. Into the bin for 30 days: every member loses access at once, and its recipes and cookbooks are hidden with it. A household inheriting from it sees none of its recipes while it is deleted. |
+| `POST` | `/households/{householdId}/restorations` | Owner only. Brings it back with its members, recipes and cookbooks — but not what was deleted inside it beforehand. `204`. |
+| `GET` | `/households/{householdId}/trash` | Any member. The recipes and cookbooks in this household's bin, newest first, each with `kind`, `deletedBy` and `purgeAfter`. |
 | `GET` | `/households/{householdId}/members` | |
 | `DELETE` | `/households/{householdId}/members/{userId}` | Owner removes anyone; a member may remove themselves. `households.last_owner` if it would leave none. |
 | `PATCH` | `/households/{householdId}/members/{userId}` | Role change. Owner only. |
@@ -78,7 +80,8 @@ look on.
 | `POST` | `/recipes/{recipeId}/copies` | `{ householdId }`. `201` + `Location` with the new recipe: any recipe you can read, copied into a household you are in, with its own ingredient lines and steps and the same picture. How a household changes a recipe it only inherits. |
 | `GET` | `/recipes/{recipeId}` | `200` + ETag, `304` on `If-None-Match`. Full detail incl. step segments. |
 | `PUT` | `/recipes/{recipeId}` | Full replace incl. ingredients and steps. `If-Match` required; missing → `428`, stale → `412`. |
-| `DELETE` | `/recipes/{recipeId}` | `204`, and `204` again when already gone. |
+| `DELETE` | `/recipes/{recipeId}` | `204`, and `204` again when already gone. Into the household's bin for 30 days: gone from every list, search, suggestion, plan, cookbook, completion and export, and its shared link stops working. |
+| `POST` | `/recipes/{recipeId}/restorations` | Any member of its household, until it is purged. Back everywhere it was. `204`; `404` when it is not in a bin the caller can open. |
 | `PUT` | `/recipes/{recipeId}/image` | `multipart/form-data`. JPEG/PNG/WebP, ≤ 10 MB, ≤ 8000 px. Re-encoded server-side — the uploaded bytes are never served back. |
 | `DELETE` | `/recipes/{recipeId}/image` | |
 | `GET` | `/recipes/{recipeId}/notes` | Your personal notes for this recipe. |
@@ -232,7 +235,8 @@ whole library has, with no second implementation of any of them.
 | `POST` | `/cookbooks` | `201` + `Location`. Only `householdId` and `name` are required. |
 | `GET` | `/cookbooks/{cookbookId}` | `200` + ETag, `304` on `If-None-Match`. The shelf's own metadata — **not** the recipes on it. |
 | `PATCH` | `/cookbooks/{cookbookId}` | Name and description together. `If-Match` required. |
-| `DELETE` | `/cookbooks/{cookbookId}` | `204`, and `204` again when already gone. **Every recipe that was on it survives.** |
+| `DELETE` | `/cookbooks/{cookbookId}` | `204`, and `204` again when already gone. **Every recipe that was on it survives.** Into the household's bin for 30 days. |
+| `POST` | `/cookbooks/{cookbookId}/restorations` | Any member of its household, until it is purged; back with the recipes it held. `204`. |
 | `PUT` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Put a recipe on. `204`. `409` on a cookbook that fills itself. |
 | `DELETE` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Take it off. `204`, and `204` when it was never on. `409` on a cookbook that fills itself. |
 | `GET` | `/recipes/{recipeId}/cookbooks` | Which cookbooks contain it. Not paged — a recipe is on a handful of shelves or none. |

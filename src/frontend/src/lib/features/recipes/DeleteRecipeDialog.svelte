@@ -38,7 +38,7 @@
   {onclose}
 >
   <p class="body">{m['recipe.delete.body']()}</p>
-  <p class="body">{m['recipe.delete.permanent']()}</p>
+  <p class="body">{m['recipe.delete.restorable']()}</p>
 
   {#if error}
     <p class="failure" role="alert">

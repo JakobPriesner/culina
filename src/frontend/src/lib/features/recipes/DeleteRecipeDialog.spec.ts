@@ -43,12 +43,12 @@ beforeEach(() => {
 });
 
 describe('deleting a recipe', () => {
-  it('names the recipe, and says that it cannot be taken back', () => {
+  it('names the recipe, and says how long it can still be brought back', () => {
     render();
 
     expect(screen.getByRole('dialog')).toHaveAccessibleName('Delete Lemon orzo?');
     expect(screen.getByText(/cooking history, notes and photos/)).toBeInTheDocument();
-    expect(screen.getByText("This can't be undone.")).toBeInTheDocument();
+    expect(screen.getByText(/For 30 days you can still restore it/)).toBeInTheDocument();
   });
 
   it('keeps the recipe when the ordinary answer is pressed', async () => {
