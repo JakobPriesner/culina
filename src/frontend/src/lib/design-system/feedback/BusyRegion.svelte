@@ -43,6 +43,7 @@
     overflow: hidden;
     border-radius: var(--radius-full);
     background: var(--surface-sunken);
+    animation: reveal var(--duration-base) var(--ease-out) 150ms both;
   }
 
   .bar::after {
@@ -52,13 +53,25 @@
     inline-size: 40%;
     border-radius: inherit;
     background: var(--accent);
-    animation: sweep 1.1s var(--ease-spatial) infinite;
+    animation: sweep 1.4s var(--ease-spatial) infinite;
+  }
+
+  /* On the content itself, not only on .busy, so the region also eases back
+     when the refresh lands instead of snapping to full strength. */
+  .content {
+    transition: opacity var(--duration-base) var(--ease-out);
   }
 
   /* Dimmed rather than hidden: still readable, visibly not current. */
   .content.busy {
     opacity: 0.7;
-    transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  /* Held back like every loading hint, so a quick refresh shows nothing. */
+  @keyframes reveal {
+    from {
+      opacity: 0;
+    }
   }
 
   @keyframes sweep {

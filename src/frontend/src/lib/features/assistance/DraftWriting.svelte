@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GenerationStatus, Skeleton } from '$ds';
+  import { GenerationAura, GenerationStatus, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
 
   import type { Draft } from './draftToRecipe';
@@ -41,6 +41,8 @@
   what it says — so this announces the draft rather than each line of it.
 -->
 <section class="writing" aria-busy={writing} aria-live="polite">
+  <GenerationAura active={writing} />
+
   {#if writing}
     <GenerationStatus label={m['assist.writing']()} />
   {/if}
@@ -86,6 +88,8 @@
 
 <style>
   .writing {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -155,17 +159,19 @@
      visible: the recipe grows as stream events land instead of replacing a
      frozen loader with a finished block. */
   .arrival {
-    animation: arrive 320ms var(--ease-out) both;
+    animation: arrive 420ms var(--ease-out) both;
   }
 
   @keyframes arrive {
     from {
       opacity: 0;
+      filter: blur(3px);
       transform: translateY(0.45rem);
     }
 
     to {
       opacity: 1;
+      filter: blur(0);
       transform: translateY(0);
     }
   }

@@ -106,3 +106,17 @@
   --z-overlay: 100;
   --z-toast: 200;
 }
+
+/*
+ * The angle the assistant's lights have turned to.
+ *
+ * Registered so it can be animated: an unregistered custom property jumps from
+ * one value to the next, and a conic gradient that jumps is a strobe. Shared by
+ * every generation surface so the glow round a draft and the orb beside its
+ * label turn as one.
+ */
+@property --generating-turn {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}

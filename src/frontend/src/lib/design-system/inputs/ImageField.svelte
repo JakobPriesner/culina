@@ -5,6 +5,7 @@
 
   import Button, { type ButtonVariant } from '../actions/Button.svelte';
   import Image from '../display/Image.svelte';
+  import GenerationAura from '../feedback/GenerationAura.svelte';
   import GenerationStatus from '../feedback/GenerationStatus.svelte';
   import FilePicker from './FilePicker.svelte';
 
@@ -267,22 +268,19 @@
            button: this is a minute of somebody else's machine working, and a
            spinner that size says "a moment".
 
-           A soft colour wash develops underneath a set of drawn strokes. The
-           stroke cycle is visibly constructive, but deliberately has no end
-           point: the provider reports elapsed time, not percentage complete,
-           and the interface must not invent one. -->
+           The assistant's four lights drift under the frame while their glow
+           runs round its edge. Nothing in it fills up or reaches an end: the
+           provider reports elapsed time, not percentage complete, and the
+           interface must not invent one. -->
       <div class="generating-overlay" out:fade={{ duration: reducedMotion.current ? 0 : 260 }}>
         <div class="drawing" aria-hidden="true">
           <span class="wash wash-one"></span>
           <span class="wash wash-two"></span>
           <span class="wash wash-three"></span>
-
-          <span class="stroke stroke-one"></span>
-          <span class="stroke stroke-two"></span>
-          <span class="stroke stroke-three"></span>
-          <span class="stroke stroke-four"></span>
-          <span class="scan"></span>
+          <span class="wash wash-four"></span>
         </div>
+
+        <GenerationAura over />
 
         {#if generatingLabel}
           <div class="caption">
@@ -515,110 +513,54 @@
     background: var(--generating-ground);
   }
 
-  /* A picture developing, rather than colour blobs drifting indefinitely.
-     The wash gives it photographic depth; the four strokes make each short
-     cycle visibly add something. */
+  /* Light through frosted glass: four soft colours drifting at different
+     speeds, so the mix underneath never quite repeats. */
   .drawing {
     background: var(--generating-ground);
   }
 
-  .drawing::after {
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(var(--generating-grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--generating-grid) 1px, transparent 1px),
-      radial-gradient(circle at center, transparent 25%, var(--generating-vignette) 100%);
-    background-size:
-      2.5rem 2.5rem,
-      2.5rem 2.5rem,
-      100% 100%;
-    content: '';
-    opacity: 0.55;
-  }
-
   .wash {
     position: absolute;
-    border-radius: 42% 58% 63% 37% / 46% 38% 62% 54%;
-    filter: blur(26px);
-    opacity: 0.78;
+    border-radius: var(--radius-full);
+    filter: blur(32px);
+    opacity: 0.7;
     will-change: transform;
   }
 
   .wash-one {
-    top: -24%;
-    left: -16%;
-    width: 78%;
-    height: 94%;
+    top: -30%;
+    left: -20%;
+    width: 75%;
+    height: 90%;
     background: var(--generating-1);
     animation: float-one 9s ease-in-out infinite alternate;
   }
 
   .wash-two {
-    right: -20%;
-    bottom: -28%;
-    width: 84%;
-    height: 92%;
+    top: -20%;
+    right: -25%;
+    width: 70%;
+    height: 85%;
     background: var(--generating-2);
     animation: float-two 11s ease-in-out infinite alternate;
   }
 
   .wash-three {
-    top: 22%;
-    left: 28%;
-    width: 58%;
-    height: 62%;
+    right: -15%;
+    bottom: -35%;
+    width: 80%;
+    height: 90%;
     background: var(--generating-3);
-    opacity: 0.62;
-    animation: float-three 7s ease-in-out infinite alternate;
+    animation: float-three 8s ease-in-out infinite alternate;
   }
 
-  .stroke {
-    position: absolute;
-    left: 14%;
-    height: 0.24rem;
-    border-radius: var(--radius-full);
-    background: var(--generating-sheen);
-    box-shadow: 0 0 1rem var(--generating-glow);
-    opacity: 0;
-    transform: scaleX(0);
-    transform-origin: left center;
-    animation: draw-stroke 4.8s var(--ease-out) infinite;
-  }
-
-  .stroke-one {
-    top: 25%;
-    width: 42%;
-  }
-
-  .stroke-two {
-    top: 35%;
-    width: 66%;
-    animation-delay: 0.3s;
-  }
-
-  .stroke-three {
-    top: 45%;
-    width: 54%;
-    animation-delay: 0.6s;
-  }
-
-  .stroke-four {
-    top: 55%;
-    width: 34%;
-    animation-delay: 0.9s;
-  }
-
-  .scan {
-    position: absolute;
-    top: -18%;
-    right: -20%;
-    width: 48%;
-    height: 145%;
-    background: linear-gradient(90deg, transparent, var(--generating-scan), transparent);
-    filter: blur(8px);
-    transform: rotate(16deg) translateX(0);
-    animation: scan 5.4s ease-in-out infinite;
+  .wash-four {
+    bottom: -30%;
+    left: -20%;
+    width: 70%;
+    height: 85%;
+    background: var(--generating-4);
+    animation: float-four 10s ease-in-out infinite alternate;
   }
 
   /*
@@ -652,69 +594,26 @@
   }
 
   @keyframes float-one {
-    from {
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-
     to {
-      transform: translate3d(22%, 18%, 0) scale(1.14) rotate(8deg);
+      transform: translate3d(30%, 25%, 0) scale(1.2);
     }
   }
 
   @keyframes float-two {
-    from {
-      transform: translate3d(0, 0, 0) scale(1.1);
-    }
-
     to {
-      transform: translate3d(-20%, -14%, 0) scale(0.94) rotate(-10deg);
+      transform: translate3d(-25%, 30%, 0) scale(0.9);
     }
   }
 
   @keyframes float-three {
-    from {
-      transform: translate3d(0, 0, 0) scale(0.9);
-    }
-
     to {
-      transform: translate3d(-12%, 16%, 0) scale(1.2) rotate(12deg);
+      transform: translate3d(-30%, -20%, 0) scale(1.15);
     }
   }
 
-  @keyframes draw-stroke {
-    0%,
-    8% {
-      opacity: 0;
-      transform: scaleX(0);
-    }
-
-    22%,
-    62% {
-      opacity: 0.44;
-      transform: scaleX(1);
-    }
-
-    100% {
-      opacity: 0;
-      transform: scaleX(1);
-    }
-  }
-
-  @keyframes scan {
-    0%,
-    12% {
-      opacity: 0;
-      transform: rotate(16deg) translateX(0);
-    }
-
-    24% {
-      opacity: 0.55;
-    }
-
-    72%,
-    100% {
-      opacity: 0;
-      transform: rotate(16deg) translateX(-245%);
+  @keyframes float-four {
+    to {
+      transform: translate3d(25%, -25%, 0) scale(1.1);
     }
   }
 
@@ -727,15 +626,8 @@
 
     /* The wait is still a wait, so the frame still shows the colour and still
        says what it is doing. It simply stops moving. */
-    .wash,
-    .stroke,
-    .scan {
+    .wash {
       animation: none;
-    }
-
-    .stroke {
-      opacity: 0.3;
-      transform: scaleX(1);
     }
   }
 

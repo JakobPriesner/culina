@@ -46,7 +46,7 @@ async function askFor(idea: string, reply: () => Response) {
   });
 
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: idea } });
-  await fireEvent.click(screen.getByRole('button', { name: /Rezept entwerfen|Draft recipe/ }));
+  await fireEvent.click(screen.getByRole('button', { name: /Rezept generieren|Draft recipe/ }));
 
   await vi.waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
 
@@ -82,7 +82,7 @@ describe('an idea the assistant could not draft', () => {
     await askFor('Etwas mit Kürbis', () => stoppedWith('assistance.unusable_answer'));
 
     expect(screen.getByRole('textbox')).toHaveValue('Etwas mit Kürbis');
-    expect(screen.getByRole('button', { name: 'Rezept entwerfen' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Rezept generieren' })).toBeEnabled();
   });
 
   it('says the same in English for a request turned away before it started', async () => {
