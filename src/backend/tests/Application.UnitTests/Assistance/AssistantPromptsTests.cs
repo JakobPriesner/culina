@@ -138,6 +138,14 @@ public class AssistantPromptsTests
     }
 
     [Fact]
+    public void Draw_ShouldPlaceTheCameraAtAnAngle()
+    {
+        var drawn = AssistantPrompts.Draw("Linsensuppe", description: null, [], []);
+
+        Assert.Contains("45-degree angle", drawn, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Draw_ShouldSayNothingAboutADescription_WhenTheRecipeHasNone()
     {
         var drawn = AssistantPrompts.Draw("Linsensuppe", description: null, [], []);
