@@ -93,7 +93,7 @@ describe('which order a list is in', () => {
 
     expect(effectiveSort(null, { ...browsing, searching: true })).toBe('relevance');
     expect(effectiveSort(null, browsing)).toBe('recent');
-    expect(effectiveSort(null, { ...browsing, ranks: true })).toBe('suggested');
+    expect(effectiveSort(null, { ...browsing, ranks: true })).toBe('recent');
     expect(effectiveSort(null, { ...browsing, inACookbook: true })).toBe('shelf');
   });
 

@@ -92,40 +92,6 @@
   const order = $derived(effectiveSort(libraryView.sort, context));
 
   /**
-   * Whether the order is settled enough to ask for a list in it.
-   *
-   * The question is only open when nobody has chosen an order and nothing has
-   * been typed: then, and only then, the order depends on what the ranking
-   * says. Anywhere else waiting for the shortlist was a round trip spent on an
-   * answer that could not change anything.
-   *
-   * When it does depend, a remembered answer settles it at once, and the list
-   * is asked for alongside the shortlist rather than after it. With nothing
-   * remembered — a first visit on this device — the list waits, because
-   * listing first and re-listing when the answer arrives is the page
-   * rearranging itself under somebody who is already reading it. One small
-   * request first is the cheaper of those two costs, and the skeleton was
-   * already going to be on screen for it.
-   *
-   * A failed suggestion counts as settled — it means "recently updated", which
-   * is the order the app has always had.
-   */
-  const settled = $derived(
-    !householdId ||
-      libraryView.sort !== null ||
-      searching ||
-      remembered !== null ||
-      suggestions.answered(householdId, featuredQuery)
-  );
-
-  /**
-   * Which list is on screen.
-   *
-   * Built once, because the first page, the next page and the retry all have to
-   * ask for the same thing — three copies of this object is three ways for a
-   * "load more" to append rows from a different list than the one above it.
-   */
-  /**
    * The query whose correction was turned down.
    *
    * Compared rather than cleared, so it lapses by itself the moment the query
@@ -176,34 +142,22 @@
   );
 
   /**
-   * The grid, minus everything the panel is holding.
-   *
-   * The whole shortlist, not just the one on screen. Hiding only the visible
-   * panel was right when the panel could not change; now a swipe would push one
-   * recipe into the grid and pull another out of it, and the page would
-   * rearrange itself below the thumb every time somebody looked at the next
-   * idea. A set chosen once is a grid that sits still — it only grows when
-   * somebody walks to the end of the shortlist and the next few are asked for.
+   * All recipes in the household collection, listed based on the chosen sort
+   * and filter settings, without omitting those currently suggested above.
    */
-  const library = $derived(
-    lead.length > 0
-      ? recipes.items.filter((recipe) => !lead.some((one) => one.id === recipe.id))
-      : recipes.items
-  );
+  const library = $derived(recipes.items);
 
   /**
    * Whether the panel and the grid can both be drawn.
    *
    * The list and the shortlist are asked for together and either can come back
    * first. Drawing whichever lands first moves the page when the other does:
-   * a grid drawn early is pushed down by the panel and loses the shortlisted
-   * recipes to it, and a panel drawn early lands above the grid's skeleton and
-   * pushes that off the screen. So neither is drawn until both are back — the
-   * requests overlap, the page still appears once, already arranged.
+   * a panel drawn early lands above the grid's skeleton and pushes that off the
+   * screen. So neither is drawn until both are back — the requests overlap,
+   * the page still appears once, already arranged.
    */
   const arranged = $derived(
-    settled &&
-      (filtered || !householdId || suggestions.answered(householdId, featuredQuery)) &&
+    (filtered || !householdId || suggestions.answered(householdId, featuredQuery)) &&
       !(recipes.status === 'loading' && recipes.items.length === 0)
   );
 
@@ -230,7 +184,7 @@
   });
 
   $effect(() => {
-    if (householdId && settled) {
+    if (householdId) {
       void recipes.list(householdId, filters);
     }
   });
@@ -402,7 +356,7 @@
     {#snippet summary()}
       <div class="collection-summary" aria-live="polite" aria-atomic="true">
         <p class="count">
-          {#if !settled || recipes.status === 'loading' || recipes.status === 'idle'}
+          {#if recipes.status === 'loading' || recipes.status === 'idle'}
             {m['recipes.list.loading']()}
           {:else if recipes.status === 'ready'}
             {m['recipes.list.count']({ count: recipes.total })}
