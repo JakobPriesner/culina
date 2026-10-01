@@ -5,7 +5,7 @@ using Domain.Shared;
 
 namespace Application.Recipes.Delete;
 
-/// <summary>Deletes a recipe.</summary>
+/// <summary>Puts a recipe in its household's bin, from which it can be restored.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
 /// <param name="ExpectedVersion">The version the caller was holding.</param>
@@ -14,7 +14,8 @@ public sealed record DeleteRecipeCommand(Guid RecipeId, Guid UserId, long Expect
 internal sealed class DeleteRecipeCommandHandler(
     IRecipeRepository recipes,
     IHouseholdRepository households,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    TimeProvider time)
     : ICommandHandler<DeleteRecipeCommand>
 {
     public async Task<Result> Handle(
@@ -31,7 +32,8 @@ internal sealed class DeleteRecipeCommandHandler(
 
         var result = await found.Match(
             recipe => unitOfWork.InTransactionAsync(
-                token => recipes.DeleteAsync(recipe.Id, command.ExpectedVersion, token),
+                token => recipes.DeleteAsync(
+                    recipe.Id, command.ExpectedVersion, command.UserId, time.GetUtcNow(), token),
                 cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 

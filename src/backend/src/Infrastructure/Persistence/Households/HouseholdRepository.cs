@@ -129,8 +129,12 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         await executor.ExecuteScalarAsync<bool>(
             """
             select exists (
-                select 1 from household_members
-                where household_id = @householdId and user_id = @userId);
+                select 1 from household_members m
+                -- The view, so a deleted household has no members as far as
+                -- anything that asks is concerned. The rows stay, because they
+                -- are who may restore it.
+                join households h on h.id = m.household_id
+                where m.household_id = @householdId and m.user_id = @userId);
             """,
             new { householdId, userId },
             cancellationToken).ConfigureAwait(false);
@@ -145,7 +149,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         await executor.ExecuteScalarAsync<bool>(
             """
             with recursive heirs (id) as (
-                select @householdId::uuid
+                select id from households where id = @householdId
                 union
                 select h.id from households h join heirs on h.inherits_from = heirs.id
             )
@@ -237,14 +241,22 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
     public async Task<Result> DeleteAsync(
         Guid householdId,
         long expectedVersion,
+        Guid deletedBy,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Recipes, tags and the shopping list cascade from here; there is no
-        // soft delete, because an undo affordance in the UI is a better answer
-        // than a deleted_at column every query has to remember.
+        // Into the bin, not gone: the households view stops showing it, and
+        // its recipes and cookbooks with it, until it is restored or the
+        // purge removes it — and only then do recipes, tags and the shopping
+        // list cascade. Through the view, so a household already in the bin
+        // is not deleted twice.
         var deleted = await executor.ExecuteAsync(
-            "delete from households where id = @householdId and version = @expectedVersion;",
-            new { householdId, expectedVersion },
+            """
+            update households
+            set deleted_at = @now, deleted_by = @deletedBy, version = version + 1
+            where id = @householdId and version = @expectedVersion;
+            """,
+            new { householdId, expectedVersion, deletedBy, now },
             cancellationToken).ConfigureAwait(false);
 
         return deleted == 0 ? ConcurrencyErrors.VersionMismatch : Result.Success();

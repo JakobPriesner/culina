@@ -19,6 +19,7 @@ using Api.Endpoints.Recipes.GetUnits.V1;
 using Api.Endpoints.Recipes.Import.V1;
 using Api.Endpoints.Recipes.RecordCooked.V1;
 using Api.Endpoints.Recipes.RemoveImage.V1;
+using Api.Endpoints.Recipes.Restore.V1;
 using Api.Endpoints.Recipes.RevokeShare.V1;
 using Api.Endpoints.Recipes.SaveNotes.V1;
 using Api.Endpoints.Recipes.SetImage.V1;
@@ -45,6 +46,7 @@ internal static class RecipesEndpoints
             .AddSingleton<IEndpoint, ImportRecipeEndpoint>()
             .AddSingleton<IEndpoint, UpdateRecipeEndpoint>()
             .AddSingleton<IEndpoint, DeleteRecipeEndpoint>()
+            .AddSingleton<IEndpoint, RestoreRecipeEndpoint>()
             .AddSingleton<IEndpoint, GetNotesEndpoint>()
             .AddSingleton<IEndpoint, SaveNotesEndpoint>()
             .AddSingleton<IEndpoint, GetCookLogEndpoint>()

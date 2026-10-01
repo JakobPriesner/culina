@@ -21,6 +21,7 @@
   import { suggestions } from '$features/recipes/stores/suggestions.svelte';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
+  import { restoreRecipe } from '$features/trash/trash';
   import { toaster } from '$shell/toaster.svelte';
   import type { Recipe } from '$features/recipes/types';
   import type { AppError } from '$api';
@@ -152,9 +153,26 @@
     related.forget(recipe.id);
 
     doomed = null;
-    toaster.show({ message: () => m['recipe.delete.done']({ title: recipe.title }) });
+    toaster.show({
+      message: () => m['recipe.delete.done']({ title: recipe.title }),
+      // The bin, from the toast: the moment somebody realises it was the
+      // wrong recipe is the moment this is on screen.
+      action: { label: () => m['trash.undo'](), run: () => void undoDelete(recipe.id) }
+    });
 
     await goto(resolve('/(app)'));
+  }
+
+  async function undoDelete(recipeId: string) {
+    const failure = await restoreRecipe(recipeId);
+
+    if (failure) {
+      toaster.show({ message: () => explain(failure), tone: 'danger' });
+
+      return;
+    }
+
+    await goto(resolve('/(app)/recipes/[recipeId]', { recipeId }));
   }
 
   /**

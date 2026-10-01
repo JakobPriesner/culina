@@ -20,6 +20,9 @@ internal sealed class TagRepository(DbExecutor executor) : ITagRepository
             select t.slug, min(t.name) as name, count(rt.recipe_id)::int as recipe_count
             from tags t
             join recipe_tags rt on rt.tag_id = t.id
+            -- The view, so a recipe in the bin neither counts towards a tag
+            -- nor keeps one on offer that would filter to nothing.
+            join recipes r on r.id = rt.recipe_id
             where t.household_id = any(@library)
             -- By slug, not by row: a household and one it inherits from may
             -- both carry "vegan", and a filter chip is for the word.

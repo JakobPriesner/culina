@@ -13,10 +13,12 @@ using Application.Households.GetById;
 using Application.Households.GetHeirs;
 using Application.Households.GetInvitations;
 using Application.Households.GetMembers;
+using Application.Households.GetTrash;
 using Application.Households.RedeemInvitation;
 using Application.Households.RemoveHeir;
 using Application.Households.RemoveMember;
 using Application.Households.Rename;
+using Application.Households.Restore;
 using Application.Households.RevokeInvitation;
 using Application.Households.SetInheritance;
 using Application.LogRecords.Create;
@@ -46,6 +48,7 @@ using Application.Recipes.GetUnits;
 using Application.Recipes.Import;
 using Application.Recipes.RecordCooked;
 using Application.Recipes.RemoveImage;
+using Application.Recipes.Restore;
 using Application.Recipes.RevokeShare;
 using Application.Recipes.SaveNotes;
 using Application.Recipes.SetImage;
@@ -73,6 +76,7 @@ using Application.Setup.Get;
 using Application.Shopping;
 using Application.Suggestions.Dismiss;
 using Application.Suggestions.GetAll;
+using Application.Trash.Purge;
 using Application.Users;
 using Application.Users.ChangePassword;
 using Application.Users.CreateRecoveryCodes;
@@ -161,6 +165,10 @@ public static class DependencyInjection
                 GetHeirsQueryHandler>()
             .AddScoped<ICommandHandler<RemoveHeirCommand>, RemoveHeirCommandHandler>()
             .AddScoped<ICommandHandler<DeleteHouseholdCommand>, DeleteHouseholdCommandHandler>()
+            .AddScoped<ICommandHandler<RestoreHouseholdCommand>, RestoreHouseholdCommandHandler>()
+            .AddScoped<IQueryHandler<GetTrashQuery, Contracts.Households.GetTrash.Response>,
+                GetTrashQueryHandler>()
+            .AddScoped<ICommandHandler<PurgeTrashCommand, int>, PurgeTrashCommandHandler>()
             .AddScoped<IQueryHandler<GetMembersQuery, Contracts.Households.GetMembers.Response>,
                 GetMembersQueryHandler>()
             .AddScoped<ICommandHandler<ChangeMemberRoleCommand,
@@ -241,6 +249,7 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<UpdateRecipeCommand, Contracts.Recipes.RecipeDetail>,
                 UpdateRecipeCommandHandler>()
             .AddScoped<ICommandHandler<DeleteRecipeCommand>, DeleteRecipeCommandHandler>()
+            .AddScoped<ICommandHandler<RestoreRecipeCommand>, RestoreRecipeCommandHandler>()
             .AddScoped<IQueryHandler<GetUnitsQuery, Contracts.Recipes.GetUnits.Response>,
                 GetUnitsQueryHandler>()
             .AddScoped<IQueryHandler<GetIngredientsQuery, Contracts.Recipes.GetIngredients.Response>,
@@ -321,6 +330,7 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<UpdateCookbookCommand, Contracts.Cookbooks.CookbookDetail>,
                 UpdateCookbookCommandHandler>()
             .AddScoped<ICommandHandler<DeleteCookbookCommand>, DeleteCookbookCommandHandler>()
+            .AddScoped<ICommandHandler<RestoreCookbookCommand>, RestoreCookbookCommandHandler>()
             .AddScoped<ICommandHandler<AddRecipeToCookbookCommand>,
                 AddRecipeToCookbookCommandHandler>()
             .AddScoped<ICommandHandler<RemoveRecipeFromCookbookCommand>,
