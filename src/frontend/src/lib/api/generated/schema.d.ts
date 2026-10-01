@@ -229,7 +229,7 @@ export interface paths {
         };
         /**
          * List your households
-         * @description Every household the caller belongs to, by name.
+         * @description Every household the caller belongs to, by name. With `deleted=true`, the households in the bin that the caller owns instead, each with `deletedAt` and `purgeAfter`: the ones `POST /households/{householdId}/restorations` can bring back.
          */
         get: operations["getHouseholdsV1"];
         put?: never;
@@ -327,6 +327,46 @@ export interface paths {
          * @description Owners of this household only, and only a household that inherits from it directly; any household inheriting through that one stops seeing the recipes too. 404 for a household that does not inherit from this one.
          */
         delete: operations["removeHouseholdHeirV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/restorations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a deleted household
+         * @description Owners only, until it is purged. It comes back with its members, recipes and cookbooks; anything deleted inside it before it was deleted stays in its bin.
+         */
+        post: operations["restoreHouseholdV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/trash": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's bin
+         * @description The recipes and cookbooks deleted in this household that can still be restored, newest first, each with when it will be purged. Any member may look.
+         */
+        get: operations["getTrashV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -876,6 +916,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipes/{recipeId}/restorations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a deleted recipe
+         * @description Any member of the recipe's household may, until it is purged. 404 when it is not in a bin the caller can open — never deleted, already restored, purged, or in a household that is itself deleted.
+         */
+        post: operations["restoreRecipeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipes/{recipeId}/notes": {
         parameters: {
             query?: never;
@@ -1379,6 +1439,26 @@ export interface paths {
         get: operations["getCookbookRecipesV1"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cookbooks/{cookbookId}/restorations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a deleted cookbook
+         * @description Any member of the cookbook's household may, until it is purged; it comes back with the recipes it held. 404 when it is not in a bin the caller can open.
+         */
+        post: operations["restoreCookbookV1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2056,6 +2136,16 @@ export interface components {
              * @description The entity version, for If-Match on an update.
              */
             version: number;
+            /**
+             * Format: date-time
+             * @description When it was deleted. Null for every household that is not in the bin.
+             */
+            deletedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When a deleted household will be removed for good, unless it is restored first.
+             */
+            purgeAfter?: string | null;
         };
         /** @description The households the caller belongs to. */
         HouseholdsGetAllResponse: {
@@ -2090,6 +2180,16 @@ export interface components {
              * @description The entity version, for If-Match on an update.
              */
             version: number;
+            /**
+             * Format: date-time
+             * @description When it was deleted. Null for every household that is not in the bin.
+             */
+            deletedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When a deleted household will be removed for good, unless it is restored first.
+             */
+            purgeAfter?: string | null;
         };
         /** @description A household that inherits this one's recipes, directly or not. */
         HouseholdsGetHeirsHeir: {
@@ -2146,6 +2246,35 @@ export interface components {
             /** @description One entry per member. */
             items: components["schemas"]["HouseholdsMember"][];
         };
+        /** @description What is in a household's bin, newest first. */
+        HouseholdsGetTrashResponse: {
+            /** @description Recipes and cookbooks that were deleted and can still be restored. */
+            items: components["schemas"]["HouseholdsGetTrashTrashItem"][];
+        };
+        /** @description One deleted recipe or cookbook. */
+        HouseholdsGetTrashTrashItem: {
+            /** @description `recipe` or `cookbook`. */
+            kind: string;
+            /**
+             * Format: uuid
+             * @description Its id, for `POST /recipes/{id}/restorations` or `/cookbooks/{id}/restorations`.
+             */
+            id: string;
+            /** @description The recipe's title or the cookbook's name. */
+            name: string;
+            /**
+             * Format: date-time
+             * @description When it was deleted.
+             */
+            deletedAt: string;
+            /**
+             * Format: date-time
+             * @description When it will be removed for good, unless it is restored first.
+             */
+            purgeAfter: string;
+            /** @description Who deleted it, by name, or null when that account no longer exists. */
+            deletedBy?: string | null;
+        };
         /** @description A household as it appears in a list. */
         HouseholdsHouseholdSummary: {
             /**
@@ -2167,6 +2296,16 @@ export interface components {
              * @description The entity version, for If-Match on an update.
              */
             version: number;
+            /**
+             * Format: date-time
+             * @description When it was deleted. Null for every household that is not in the bin.
+             */
+            deletedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When a deleted household will be removed for good, unless it is restored first.
+             */
+            purgeAfter?: string | null;
         };
         /** @description A household whose recipes another one sees. */
         HouseholdsInheritedHousehold: {
@@ -2236,6 +2375,16 @@ export interface components {
              * @description The entity version, for If-Match on an update.
              */
             version: number;
+            /**
+             * Format: date-time
+             * @description When it was deleted. Null for every household that is not in the bin.
+             */
+            deletedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When a deleted household will be removed for good, unless it is restored first.
+             */
+            purgeAfter?: string | null;
         };
         /** @description Which household to inherit recipes from. */
         HouseholdsSetInheritanceRequest: {
@@ -2274,6 +2423,16 @@ export interface components {
              * @description The entity version, for If-Match on an update.
              */
             version: number;
+            /**
+             * Format: date-time
+             * @description When it was deleted. Null for every household that is not in the bin.
+             */
+            deletedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description When a deleted household will be removed for good, unless it is restored first.
+             */
+            purgeAfter?: string | null;
         };
         /** Format: binary */
         IFormFile: string;
@@ -5175,7 +5334,9 @@ export interface operations {
     };
     getHouseholdsV1: {
         parameters: {
-            query?: never;
+            query?: {
+                deleted?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5622,6 +5783,93 @@ export interface operations {
             };
             /** @description Precondition Failed */
             412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    restoreHouseholdV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getTrashV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdsGetTrashResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7261,6 +7509,44 @@ export interface operations {
             };
             /** @description Too Many Requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    restoreRecipeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9119,6 +9405,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CookbooksCookbookRecipesResponse"];
                 };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    restoreCookbookV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unauthorized */
             401: {

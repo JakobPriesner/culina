@@ -100,7 +100,7 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Delete_ShouldRemoveTheHouseholdAndItsMembership()
+    public async Task Delete_ShouldHideTheHousehold_ButKeepItsMembershipForARestore()
     {
         // Arrange
         await using var scope = await NewScopeAsync();
@@ -109,12 +109,13 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
         await scope.Households.AddAsync(household, Token);
 
         // Act
-        var result = await scope.Households.DeleteAsync(household.Id, household.Version, Token);
+        var result = await scope.Households.DeleteAsync(household.Id, household.Version, owner, Now, Token);
 
         // Assert
         result.ShouldBeSuccess();
         var found = await scope.Households.FindAsync(household.Id, Token);
         found.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
+        Assert.False(await scope.Households.IsMemberAsync(household.Id, owner, Token));
     }
 
     [Fact]
@@ -127,7 +128,7 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
         await scope.Households.AddAsync(household, Token);
 
         // Act
-        var result = await scope.Households.DeleteAsync(household.Id, household.Version + 1, Token);
+        var result = await scope.Households.DeleteAsync(household.Id, household.Version + 1, owner, Now, Token);
 
         // Assert
         result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);

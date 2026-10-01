@@ -288,7 +288,8 @@ contents. Manual ordering is not implemented; when it is, it adds a
 `SortOrder` column backfilled from `AddedAt`.
 
 `CookbookRecipe.RecipeId` cascades, as `MealPlanEntry.RecipeId` does: a deleted
-recipe drops off every shelf it was on. **The reverse is deliberately not true
+recipe drops off every shelf it was on — hidden while it is in the bin, and gone
+when the bin is purged. **The reverse is deliberately not true
 — deleting a cookbook deletes no food.**
 
 The cover is derived, not chosen: up to four photographed recipes, oldest
@@ -844,9 +845,14 @@ would make the export the largest allocation in the process.
 - Timestamps are `timestamptz`, always UTC, always `DateTimeOffset` in C#.
 - Money does not exist in Culina. Quantities are `numeric(10,3)` — never
   `float`, which cannot represent 0.1.
-- Deletes are hard deletes with `on delete cascade` from the aggregate root.
-  There is no soft delete: an undo affordance in the UI is a better answer than
-  a `deleted_at` column every query must remember.
+- Households, recipes and cookbooks are deleted into a bin for 30 days
+  (`deleted_at`, `deleted_by`), then purged with `on delete cascade` from the
+  aggregate root. No query has to remember this: the tables are
+  `*_with_deleted`, and views named `households`, `recipes` and `cookbooks` show
+  only what is not deleted (a recipe or cookbook of a deleted household
+  included). Only the bin's repository reads the tables. A migration adding a
+  column to one of them must create its view again. Everything else is a hard
+  delete.
 - Migrations are numbered `.sql` files embedded in `Infrastructure`, applied at
   startup under a Postgres advisory lock, tracked in `schema_migrations`.
   Forward-only; a mistake is a new migration.

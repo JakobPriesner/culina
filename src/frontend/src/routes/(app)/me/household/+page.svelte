@@ -7,6 +7,7 @@
   import MembersPanel from '$features/auth/MembersPanel.svelte';
   import { members } from '$features/auth/members.svelte';
   import { session } from '$features/auth/session.svelte';
+  import TrashPanel from '$features/trash/TrashPanel.svelte';
   import { m } from '$shell/i18n';
 
   import SettingsSection from '../SettingsSection.svelte';
@@ -71,6 +72,10 @@
     bare
   >
     <InheritancePanel householdId={household.householdId} />
+  </SettingsSection>
+
+  <SettingsSection title={m['trash.title']()} description={m['trash.body']()} bare>
+    <TrashPanel householdId={household.householdId} />
   </SettingsSection>
 
   <SettingsSection title={m['archive.title']()} description={m['archive.hint']()} bare>

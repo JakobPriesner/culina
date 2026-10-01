@@ -4,15 +4,20 @@ using Application.Telemetry;
 using Contracts.Households;
 using Domain.Households;
 using Domain.Shared;
+using Domain.Trash;
 using Response = Contracts.Households.GetAll.Response;
 
 namespace Application.Households.GetAll;
 
-/// <summary>Lists the households the caller belongs to.</summary>
+/// <summary>Lists the households the caller belongs to, or the deleted ones they own.</summary>
 /// <param name="UserId">Who is asking.</param>
-public sealed record GetHouseholdsQuery(Guid UserId);
+/// <param name="Deleted">
+/// True for the households in the bin that the caller owns, and could restore,
+/// instead of the ones they are in.
+/// </param>
+public sealed record GetHouseholdsQuery(Guid UserId, bool Deleted = false);
 
-internal sealed class GetHouseholdsQueryHandler(IHouseholdRepository households)
+internal sealed class GetHouseholdsQueryHandler(IHouseholdRepository households, ITrashRepository trash)
     : IQueryHandler<GetHouseholdsQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -22,6 +27,20 @@ internal sealed class GetHouseholdsQueryHandler(IHouseholdRepository households)
         ArgumentNullException.ThrowIfNull(query);
 
         using var tracked = UseCaseActivity.Start("Households.GetAll");
+
+        if (query.Deleted)
+        {
+            var deleted = await trash.DeletedHouseholdsAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+
+            return tracked.Record(Result<Response>.Success(new Response
+            {
+                Items = [.. deleted.Select(entry => entry.Household.ToSummary(query.UserId) with
+                {
+                    DeletedAt = entry.DeletedAt,
+                    PurgeAfter = TrashPolicy.PurgeAfter(entry.DeletedAt)
+                })]
+            }));
+        }
 
         var found = await households.ForUserAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 

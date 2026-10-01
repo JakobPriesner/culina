@@ -6,7 +6,7 @@ using Domain.Shared;
 
 namespace Application.Households.Delete;
 
-/// <summary>Deletes a household and everything it owns. Owners only.</summary>
+/// <summary>Puts a household and everything it owns in the bin. Owners only.</summary>
 /// <param name="HouseholdId">Which household.</param>
 /// <param name="UserId">Who is asking.</param>
 /// <param name="ExpectedVersion">The version the caller was holding.</param>
@@ -14,7 +14,8 @@ public sealed record DeleteHouseholdCommand(Guid HouseholdId, Guid UserId, long 
 
 internal sealed class DeleteHouseholdCommandHandler(
     IHouseholdRepository households,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    TimeProvider time)
     : ICommandHandler<DeleteHouseholdCommand>
 {
     public async Task<Result> Handle(
@@ -32,7 +33,8 @@ internal sealed class DeleteHouseholdCommandHandler(
 
         var result = await permitted.Match(
             () => unitOfWork.InTransactionAsync(
-                token => households.DeleteAsync(command.HouseholdId, command.ExpectedVersion, token),
+                token => households.DeleteAsync(
+                    command.HouseholdId, command.ExpectedVersion, command.UserId, time.GetUtcNow(), token),
                 cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 

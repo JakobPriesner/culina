@@ -23,6 +23,10 @@ Everything below is the first release, still being assembled.
   order a shop is walked, with per-household corrections that are remembered.
 - Households: shared recipes and a shared list, with personal notes that stay
   personal. Invitations are made, copied and taken back from the app.
+- Deleting a recipe, a cookbook or a household is recoverable for 30 days:
+  an Undo on the spot, and a "Recently deleted" list in the household
+  settings that anybody in the household can restore from. After that a
+  daily job removes it for good, photographs included.
 - A way back in for somebody who forgot their password, without email: ten
   recovery codes to save while you still know it, or a one-day code the
   administrator makes for you. Changing the password, or resetting it, signs

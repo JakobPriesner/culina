@@ -691,8 +691,25 @@
           "Households"
         ],
         "summary": "List your households",
-        "description": "Every household the caller belongs to, by name.",
+        "description": "Every household the caller belongs to, by name. With `deleted=true`, the households in the bin that the caller owns instead, each with `deletedAt` and `purgeAfter`: the ones `POST /households/{householdId}/restorations` can bring back.",
         "operationId": "getHouseholdsV1",
+        "parameters": [
+          {
+            "name": "deleted",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "deleted",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1238,6 +1255,115 @@
           },
           "412": {
             "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/restorations": {
+      "post": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Restore a deleted household",
+        "description": "Owners only, until it is purged. It comes back with its members, recipes and cookbooks; anything deleted inside it before it was deleted stays in its bin.",
+        "operationId": "restoreHouseholdV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/trash": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "List a household's bin",
+        "description": "The recipes and cookbooks deleted in this household that can still be restored, newest first, each with when it will be purged. Any member may look.",
+        "operationId": "getTrashV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetTrashResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3400,6 +3526,52 @@
           },
           "429": {
             "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipes/{recipeId}/restorations": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Restore a deleted recipe",
+        "description": "Any member of the recipe's household may, until it is purged. 404 when it is not in a bin the caller can open — never deleted, already restored, purged, or in a household that is itself deleted.",
+        "operationId": "restoreRecipeV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5930,6 +6102,52 @@
         }
       }
     },
+    "/api/v1/cookbooks/{cookbookId}/restorations": {
+      "post": {
+        "tags": [
+          "Cookbooks"
+        ],
+        "summary": "Restore a deleted cookbook",
+        "description": "Any member of the cookbook's household may, until it is purged; it comes back with the recipes it held. 404 when it is not in a bin the caller can open.",
+        "operationId": "restoreCookbookV1",
+        "parameters": [
+          {
+            "name": "cookbookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}": {
       "put": {
         "tags": [
@@ -7889,6 +8107,18 @@
             "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
+          },
+          "deletedAt": {
+            "type": "string",
+            "description": "When it was deleted. Null for every household that is not in the bin.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "purgeAfter": {
+            "type": "string",
+            "description": "When a deleted household will be removed for good, unless it is restored first.",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "description": "The household that was created."
@@ -7955,6 +8185,18 @@
             "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
+          },
+          "deletedAt": {
+            "type": "string",
+            "description": "When it was deleted. Null for every household that is not in the bin.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "purgeAfter": {
+            "type": "string",
+            "description": "When a deleted household will be removed for good, unless it is restored first.",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "description": "One household, with everyone in it."
@@ -8064,6 +8306,63 @@
         },
         "description": "Everyone in a household."
       },
+      "HouseholdsGetTrashResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HouseholdsGetTrashTrashItem"
+            },
+            "description": "Recipes and cookbooks that were deleted and can still be restored."
+          }
+        },
+        "description": "What is in a household's bin, newest first."
+      },
+      "HouseholdsGetTrashTrashItem": {
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "deletedAt",
+          "purgeAfter"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "`recipe` or `cookbook`."
+          },
+          "id": {
+            "type": "string",
+            "description": "Its id, for `POST /recipes/{id}/restorations` or `/cookbooks/{id}/restorations`.",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "The recipe's title or the cookbook's name."
+          },
+          "deletedAt": {
+            "type": "string",
+            "description": "When it was deleted.",
+            "format": "date-time"
+          },
+          "purgeAfter": {
+            "type": "string",
+            "description": "When it will be removed for good, unless it is restored first.",
+            "format": "date-time"
+          },
+          "deletedBy": {
+            "type": "string",
+            "description": "Who deleted it, by name, or null when that account no longer exists.",
+            "nullable": true
+          }
+        },
+        "description": "One deleted recipe or cookbook."
+      },
       "HouseholdsHouseholdSummary": {
         "required": [
           "householdId",
@@ -8096,6 +8395,18 @@
             "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
+          },
+          "deletedAt": {
+            "type": "string",
+            "description": "When it was deleted. Null for every household that is not in the bin.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "purgeAfter": {
+            "type": "string",
+            "description": "When a deleted household will be removed for good, unless it is restored first.",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "description": "A household as it appears in a list."
@@ -8218,6 +8529,18 @@
             "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
+          },
+          "deletedAt": {
+            "type": "string",
+            "description": "When it was deleted. Null for every household that is not in the bin.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "purgeAfter": {
+            "type": "string",
+            "description": "When a deleted household will be removed for good, unless it is restored first.",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "description": "The household after the change."
@@ -8277,6 +8600,18 @@
             "type": "integer",
             "description": "The entity version, for If-Match on an update.",
             "format": "int64"
+          },
+          "deletedAt": {
+            "type": "string",
+            "description": "When it was deleted. Null for every household that is not in the bin.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "purgeAfter": {
+            "type": "string",
+            "description": "When a deleted household will be removed for good, unless it is restored first.",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "description": "The household after the change."

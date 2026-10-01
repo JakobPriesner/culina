@@ -24,4 +24,10 @@ public record HouseholdSummary
 
     /// <summary>The entity version, for If-Match on an update.</summary>
     public required long Version { get; init; }
+
+    /// <summary>When it was deleted. Null for every household that is not in the bin.</summary>
+    public DateTimeOffset? DeletedAt { get; init; }
+
+    /// <summary>When a deleted household will be removed for good, unless it is restored first.</summary>
+    public DateTimeOffset? PurgeAfter { get; init; }
 }

@@ -137,20 +137,22 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Delete_ShouldRemoveEverythingUnderTheRecipe()
+    public async Task Delete_ShouldHideTheRecipe_ButKeepEverythingUnderItForARestore()
     {
         // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
         // Act
-        var result = await scope.Recipes.DeleteAsync(recipe.Id, recipe.Version, Token);
+        var result = await scope.Recipes.DeleteAsync(recipe.Id, recipe.Version, recipe.CreatedBy, Now, Token);
 
         // Assert
         result.ShouldBeSuccess();
         (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeFailure(RecipeErrors.NotFound(recipe.Id));
-        Assert.Equal(0, await scope.CountAsync("select count(*) from recipe_ingredients;"));
-        Assert.Equal(0, await scope.CountAsync("select count(*) from steps;"));
+        Assert.NotEqual(0, await scope.CountAsync("select count(*) from recipe_ingredients;"));
+        Assert.NotEqual(0, await scope.CountAsync("select count(*) from steps;"));
+        // Nothing that searches can find it, until a restore writes this again.
+        Assert.Equal(0, await scope.CountAsync("select count(*) from recipe_search_documents;"));
     }
 
     [Fact]
@@ -163,7 +165,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         await scope.Recipes.UpdateAsync(recipe, seen, Token);
 
         // Act
-        var result = await scope.Recipes.DeleteAsync(recipe.Id, seen, Token);
+        var result = await scope.Recipes.DeleteAsync(recipe.Id, seen, recipe.CreatedBy, Now, Token);
 
         // Assert
         result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);

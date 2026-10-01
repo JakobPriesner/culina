@@ -8,9 +8,11 @@ using Api.Endpoints.Households.GetById.V1;
 using Api.Endpoints.Households.GetHeirs.V1;
 using Api.Endpoints.Households.GetInvitations.V1;
 using Api.Endpoints.Households.GetMembers.V1;
+using Api.Endpoints.Households.GetTrash.V1;
 using Api.Endpoints.Households.RemoveHeir.V1;
 using Api.Endpoints.Households.RemoveMember.V1;
 using Api.Endpoints.Households.Rename.V1;
+using Api.Endpoints.Households.Restore.V1;
 using Api.Endpoints.Households.RevokeInvitation.V1;
 using Api.Endpoints.Households.SetInheritance.V1;
 
@@ -29,6 +31,8 @@ internal static class HouseholdsEndpoints
             .AddSingleton<IEndpoint, GetHeirsEndpoint>()
             .AddSingleton<IEndpoint, RemoveHeirEndpoint>()
             .AddSingleton<IEndpoint, DeleteHouseholdEndpoint>()
+            .AddSingleton<IEndpoint, RestoreHouseholdEndpoint>()
+            .AddSingleton<IEndpoint, GetTrashEndpoint>()
             .AddSingleton<IEndpoint, GetMembersEndpoint>()
             .AddSingleton<IEndpoint, ChangeMemberRoleEndpoint>()
             .AddSingleton<IEndpoint, RemoveMemberEndpoint>()
