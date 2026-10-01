@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   accountFor,
   needsBackend,
+  opens,
   seedRecipe,
   signInWithHousehold,
   skipReason,
@@ -60,7 +61,9 @@ test.describe('a household that inherits another', () => {
 
       // The kitchen's recipe is in the new household's library, and says whose.
       await page.getByRole('searchbox').first().fill(title);
-      const card = page.getByRole('listitem').filter({ hasText: title });
+      const card = page
+        .getByRole('listitem')
+        .filter({ has: page.getByRole('link', { name: opens(title) }) });
 
       await expect(card).toContainText(new RegExp(`(from|aus) ${kitchen}`, 'i'));
 
