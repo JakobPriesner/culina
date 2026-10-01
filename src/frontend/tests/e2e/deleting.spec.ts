@@ -56,7 +56,8 @@ test.describe('deleting a recipe', () => {
   test('asks first, and keeping it keeps it', async () => {
     const dialog = await askToDelete();
 
-    await expect(dialog).toContainText(/can't be undone|nicht rückgängig/i);
+    // Says how to get it back, since for 30 days it can be.
+    await expect(dialog).toContainText(/still restore it|noch wiederherstellen/i);
 
     await dialog.getByRole('button', { name: /^(keep it|behalten)$/i }).click();
 

@@ -224,6 +224,8 @@ export async function responsiveData(
       });
     if (path.endsWith('/invitations'))
       return reply({ items: [{ invitationId: 'invite-1', expiresAt: '2026-10-14T12:00:00Z' }] });
+    if (path.endsWith('/trash')) return reply({ items: [] });
+    if (path === '/households') return reply({ items: [] });
     if (path.endsWith('/shopping-list'))
       return reply({
         listId: 'list-1',
