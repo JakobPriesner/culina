@@ -19,6 +19,7 @@
     clearLabel: string;
     disabled?: boolean;
     describedBy?: string | undefined;
+    keyShortcuts?: string | undefined;
     oninput?: (value: string) => void;
     onclear?: () => void;
   }
@@ -32,6 +33,7 @@
     clearLabel,
     disabled = false,
     describedBy,
+    keyShortcuts,
     oninput,
     onclear
   }: Props = $props();
@@ -74,6 +76,7 @@
     bind:value
     aria-label={label}
     aria-describedby={describedBy}
+    aria-keyshortcuts={keyShortcuts}
     oninput={(event) => oninput?.(event.currentTarget.value)}
   />
 
