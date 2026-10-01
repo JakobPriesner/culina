@@ -31,26 +31,33 @@
 ></span>
 
 <style>
+  /* Fades in rather than popping: the skeleton only appears once a wait has
+     outlasted the loading delay, and a block snapping into an empty page reads
+     as a glitch rather than as "coming". */
   .skeleton {
     position: relative;
     overflow: hidden;
     display: block;
     background-color: var(--skeleton-base);
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: appear var(--duration-slow) var(--ease-out) both;
   }
 
+  /* One slanted band of light, then a rest. A single, unhurried pass reads as
+     calm; the earlier pulse beating against a shimmer of a different period
+     made a page of placeholders flicker. Every block on screen mounts in the
+     same frame, so they sweep together. */
   .skeleton::after {
     position: absolute;
     inset: 0;
-    transform: translateX(-100%);
+    width: 200%;
     background-image: linear-gradient(
-      90deg,
-      transparent 0%,
+      105deg,
+      transparent 30%,
       var(--skeleton-highlight) 50%,
-      transparent 100%
+      transparent 70%
     );
-    opacity: 0.6;
-    animation: shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    transform: translateX(-70%);
+    animation: sweep 2.4s var(--ease-out) infinite;
     content: '';
     pointer-events: none;
   }
@@ -68,19 +75,20 @@
     aspect-ratio: 1;
   }
 
-  @keyframes shimmer {
-    100% {
-      transform: translateX(100%);
+  @keyframes appear {
+    from {
+      opacity: 0;
     }
   }
 
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
+  @keyframes sweep {
+    0% {
+      transform: translateX(-70%);
     }
-    50% {
-      opacity: 0.7;
+
+    70%,
+    100% {
+      transform: translateX(50%);
     }
   }
 

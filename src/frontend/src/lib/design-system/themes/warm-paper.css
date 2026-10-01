@@ -52,14 +52,10 @@
   --warning-subtle: var(--c-amber-200);
 
   --generating-ground: var(--c-sand-100);
-  --generating-1: var(--c-olive-200);
-  --generating-2: var(--c-terracotta-200);
-  --generating-3: var(--c-amber-200);
-  --generating-sheen: var(--c-white);
-  --generating-grid: rgb(255 255 255 / 4%);
-  --generating-vignette: rgb(0 0 0 / 22%);
-  --generating-glow: rgb(255 255 255 / 52%);
-  --generating-scan: rgb(255 255 255 / 20%);
+  --generating-1: rgb(255 153 82);
+  --generating-2: rgb(255 92 138);
+  --generating-3: rgb(176 112 255);
+  --generating-4: rgb(84 150 255);
   --generating-panel: rgb(20 17 14 / 44%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
@@ -127,17 +123,13 @@
   --warning: #e3bd6c;
   --warning-subtle: #4a3a18;
 
-  /* Deeper and more saturated: the pale tints that glow on paper disappear
-     on charcoal, and a light that does not glow is a stain. */
+  /* The same four lights as on paper: they are bright enough to glow on
+     charcoal and soft enough, once blurred, not to shout on sand. */
   --generating-ground: var(--c-sand-900);
-  --generating-1: var(--c-olive-600);
-  --generating-2: var(--c-terracotta-600);
-  --generating-3: var(--c-amber-500);
-  --generating-sheen: var(--c-sand-300);
-  --generating-grid: rgb(255 255 255 / 4%);
-  --generating-vignette: rgb(0 0 0 / 22%);
-  --generating-glow: rgb(255 255 255 / 42%);
-  --generating-scan: rgb(255 255 255 / 18%);
+  --generating-1: rgb(255 153 82);
+  --generating-2: rgb(255 92 138);
+  --generating-3: rgb(176 112 255);
+  --generating-4: rgb(84 150 255);
   --generating-panel: rgb(20 17 14 / 52%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(0 0 0 / 24%);

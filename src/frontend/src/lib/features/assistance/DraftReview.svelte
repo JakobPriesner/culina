@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Checkbox, GenerationStatus, Modal, Skeleton } from '$ds';
+  import { Button, Checkbox, GenerationAura, GenerationStatus, Modal, Skeleton } from '$ds';
   import type { AppError } from '$api';
   import { m } from '$shell/i18n';
 
@@ -155,6 +155,7 @@
 
   {#if writing}
     <div class="progress">
+      <GenerationAura />
       <GenerationStatus
         label={draft ? m['assist.improve.writing']() : m['assist.improve.asking']()}
       />
@@ -241,12 +242,15 @@
     line-height: var(--leading-normal);
   }
 
+  /* Its own ground rather than a tint: the assistant's glow round the edge is
+     what marks it out, and an accent wash underneath would muddy the colours. */
   .progress {
-    margin-top: var(--space-3);
-    padding: var(--space-3);
-    border: 1px solid var(--border-strong);
+    position: relative;
+    isolation: isolate;
+    margin: var(--space-4) var(--space-1) 0;
+    padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-md);
-    background: var(--surface-accent-subtle);
+    background: var(--surface-raised);
   }
 
   .forming {
@@ -329,17 +333,19 @@
   }
 
   .arrival {
-    animation: arrive 320ms var(--ease-out) both;
+    animation: arrive 420ms var(--ease-out) both;
   }
 
   @keyframes arrive {
     from {
       opacity: 0;
+      filter: blur(3px);
       transform: translateY(0.45rem);
     }
 
     to {
       opacity: 1;
+      filter: blur(0);
       transform: translateY(0);
     }
   }

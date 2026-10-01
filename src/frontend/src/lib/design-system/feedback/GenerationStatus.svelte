@@ -4,8 +4,9 @@
    *
    * Kept separate from a spinner: a spinner means "nothing to see yet", while
    * Culina's assistant usually has a stream behind it and is already sending
-   * useful pieces. The travelling points read as a live connection without
-   * pretending to know a percentage that the model never reports.
+   * useful pieces. A small orb of the assistant's four lights, and the same
+   * lights passing through the words, read as "the assistant is thinking"
+   * without pretending to know a percentage that the model never reports.
    */
   interface Props {
     label: string;
@@ -24,170 +25,154 @@
   aria-live="polite"
   aria-atomic="true"
 >
-  <span class="mark" aria-hidden="true">
-    <svg viewBox="0 0 24 24">
-      <path
-        d="M12 1.7c.8 4.8 3.5 7.5 8.3 8.3-4.8.8-7.5 3.5-8.3 8.3-.8-4.8-3.5-7.5-8.3-8.3 4.8-.8 7.5-3.5 8.3-8.3Z"
-      />
-    </svg>
-  </span>
-
-  <span class="copy">
-    <span class="label">{label}</span>
-    <span class="flow" aria-hidden="true">
-      <span></span><span></span><span></span><span></span>
-    </span>
-  </span>
+  <span class="orb" aria-hidden="true"></span>
+  <span class="label">{label}</span>
 </div>
 
 <style>
   .status {
+    /* The words' own colour, named because the label paints itself with a
+       gradient and its `currentColor` is transparent. */
+    --ink: var(--text-muted);
+
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
     max-width: 100%;
-    color: var(--text-muted);
+    color: var(--ink);
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
   }
 
   .centered {
     flex-direction: column;
+    gap: var(--space-2);
     justify-content: center;
     text-align: center;
   }
 
   .on-media {
-    color: var(--text-on-media);
+    --ink: var(--text-on-media);
   }
 
-  .mark {
+  /* A drop of the four lights, turning and gently changing shape, with a
+     blurred copy of itself behind it as the glow. */
+  .orb {
     position: relative;
-    display: grid;
     flex: 0 0 auto;
-    width: 1.5rem;
-    height: 1.5rem;
-    place-items: center;
+    width: 1rem;
+    height: 1rem;
+    animation:
+      turn 4s linear infinite,
+      breathe 2.4s ease-in-out infinite;
   }
 
-  .mark::before {
+  .orb::before,
+  .orb::after {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    border: 1px solid currentColor;
+    inset: 0;
     border-radius: var(--radius-full);
+    background: conic-gradient(
+      from var(--generating-turn),
+      var(--generating-1),
+      var(--generating-2),
+      var(--generating-3),
+      var(--generating-4),
+      var(--generating-1)
+    );
     content: '';
-    opacity: 0.2;
-    animation: breathe 2.4s var(--ease-out) infinite;
+    animation: morph 6s ease-in-out infinite;
   }
 
-  .mark svg {
-    width: 0.85rem;
-    height: 0.85rem;
-    fill: currentColor;
-    animation: glint 2.4s var(--ease-out) infinite;
+  .orb::before {
+    filter: blur(6px);
+    opacity: 0.8;
   }
 
-  .copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    min-width: 0;
-  }
-
-  .centered .copy {
-    align-items: center;
-  }
-
+  /* The lights passing through the words, the way a sentence shimmers while
+     it is being rewritten. Every point of the sweep stays readable; only the
+     tint moves. */
   .label {
+    background-image: linear-gradient(
+      90deg,
+      var(--ink) 0%,
+      var(--ink) 36%,
+      var(--generating-1) 42%,
+      var(--generating-2) 47%,
+      var(--generating-3) 53%,
+      var(--generating-4) 58%,
+      var(--ink) 64%,
+      var(--ink) 100%
+    );
+    background-size: 300% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
     font-weight: var(--weight-medium);
+    animation: glide 2.8s linear infinite;
   }
 
-  .flow {
-    display: flex;
-    gap: 0.22rem;
-    height: 0.25rem;
-    align-items: center;
-  }
-
-  .flow span {
-    width: 0.25rem;
-    height: 0.25rem;
-    border-radius: var(--radius-full);
-    background: currentColor;
-    opacity: 0.18;
-    animation: travel 1.6s var(--ease-out) infinite;
-  }
-
-  .flow span:nth-child(2) {
-    animation-delay: 0.16s;
-  }
-
-  .flow span:nth-child(3) {
-    animation-delay: 0.32s;
-  }
-
-  .flow span:nth-child(4) {
-    animation-delay: 0.48s;
+  @keyframes turn {
+    to {
+      --generating-turn: 360deg;
+    }
   }
 
   @keyframes breathe {
     0%,
     100% {
-      opacity: 0.14;
-      transform: scale(0.82);
+      transform: scale(0.88);
     }
 
     50% {
-      opacity: 0.32;
       transform: scale(1.08);
     }
   }
 
-  @keyframes glint {
+  @keyframes morph {
     0%,
     100% {
-      opacity: 0.65;
-      transform: rotate(0deg) scale(0.9);
+      border-radius: 50%;
     }
 
-    50% {
-      opacity: 1;
-      transform: rotate(45deg) scale(1.08);
+    33% {
+      border-radius: 58% 42% 52% 48% / 46% 56% 44% 54%;
+    }
+
+    66% {
+      border-radius: 44% 56% 46% 54% / 56% 44% 58% 42%;
     }
   }
 
-  @keyframes travel {
-    0%,
-    65%,
-    100% {
-      opacity: 0.18;
-      transform: translateY(0) scale(0.8);
+  @keyframes glide {
+    from {
+      background-position: 100% 0;
     }
 
-    28% {
-      opacity: 0.9;
-      transform: translateY(-0.08rem) scale(1);
+    to {
+      background-position: 0% 0;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .mark::before,
-    .mark svg,
-    .flow span {
+    .orb,
+    .orb::before,
+    .orb::after,
+    .label {
       animation: none;
     }
 
-    .flow span:nth-child(2) {
-      opacity: 0.35;
+    .label {
+      background: none;
+      color: inherit;
     }
+  }
 
-    .flow span:nth-child(3) {
-      opacity: 0.55;
-    }
-
-    .flow span:nth-child(4) {
-      opacity: 0.75;
+  /* Forced colours drop the gradient; the words must not drop with it. */
+  @media (forced-colors: active) {
+    .label {
+      background: none;
+      color: inherit;
     }
   }
 </style>
