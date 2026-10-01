@@ -26,7 +26,9 @@ Everything below is the first release, still being assembled.
 - Deleting a recipe, a cookbook or a household is recoverable for 30 days:
   an Undo on the spot, and a "Recently deleted" list in the household
   settings that anybody in the household can restore from. After that a
-  daily job removes it for good, photographs included.
+  daily job removes it for good, photographs included. An owner can delete a
+  household from its settings, and restore it from there or from the welcome
+  screen.
 - A way back in for somebody who forgot their password, without email: ten
   recovery codes to save while you still know it, or a one-day code the
   administrator makes for you. Changing the password, or resetting it, signs

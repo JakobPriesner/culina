@@ -260,7 +260,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a household
-         * @description Owners only. Deletes the household and every recipe, tag and shopping list it owns. There is no undo, which is why `If-Match` is required — missing is 428, stale is 412.
+         * @description Owners only; a plain member gets 403. Puts the household in the bin for 30 days: every member loses access at once, and its recipes and cookbooks are hidden with it until an owner restores it. `If-Match` is required — missing is 428, stale is 412. Idempotent: a household already deleted, or one the caller is not in, also answers 204.
          */
         delete: operations["deleteHouseholdV1"];
         options?: never;
