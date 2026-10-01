@@ -416,3 +416,97 @@ describe('waiting for the shortlist', () => {
     expect(localStorage.getItem(`culina.ranks.${household}`)).toBeNull();
   });
 });
+
+describe('keyboard shortcuts', () => {
+  it('focuses and selects the search input on Cmd+F / Ctrl+F', async () => {
+    serverAnswers(null);
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const searchField = screen.getByRole('searchbox', { name: 'Search recipes' });
+    expect(searchField).not.toHaveFocus();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(searchField).toHaveFocus();
+  });
+
+  it('works with Ctrl+F as well', async () => {
+    serverAnswers(null);
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const searchField = screen.getByRole('searchbox', { name: 'Search recipes' });
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(searchField).toHaveFocus();
+  });
+
+  it('selects existing text in the search field on Cmd+F', async () => {
+    serverAnswers(null);
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const searchField = screen.getByRole<HTMLInputElement>('searchbox', { name: 'Search recipes' });
+    await userEvent.type(searchField, 'soup');
+    expect(searchField).toHaveValue('soup');
+
+    searchField.blur();
+    expect(searchField).not.toHaveFocus();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'f',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(searchField).toHaveFocus();
+    expect(searchField.selectionStart).toBe(0);
+    expect(searchField.selectionEnd).toBe(4);
+  });
+
+  it('does not steal focus when a modal dialog is open', async () => {
+    serverAnswers(null);
+    renderWithProviders(LibraryPage);
+    await settle();
+
+    const dialog = document.createElement('dialog');
+    dialog.open = true;
+    document.body.appendChild(dialog);
+
+    try {
+      const searchField = screen.getByRole('searchbox', { name: 'Search recipes' });
+      searchField.blur();
+
+      const event = new KeyboardEvent('keydown', {
+        key: 'f',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true
+      });
+      window.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(searchField).not.toHaveFocus();
+    } finally {
+      document.body.removeChild(dialog);
+    }
+  });
+});

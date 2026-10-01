@@ -17,6 +17,7 @@
   import type { Suggestion } from '$features/recipes/types';
   import PageHeader from '$shell/PageHeader.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
   import { m } from '$shell/i18n';
   import { toaster } from '$shell/toaster.svelte';
   import Page from '$shell/Page.svelte';
@@ -344,15 +345,49 @@
       void recipes.loadMore(householdId, filters);
     }
   }
+
+  const searchId = 'recipe-search';
+
+  /**
+   * ⌘F / Ctrl-F focuses the recipe search field right on the page rather than
+   * letting the browser open its own in-page search.
+   */
+  function onkeydown(event: KeyboardEvent) {
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (
+      (event.metaKey || event.ctrlKey) &&
+      !event.altKey &&
+      !event.shiftKey &&
+      event.key.toLowerCase() === 'f'
+    ) {
+      if (searchOverlay.open || document.querySelector('dialog[open]')) {
+        return;
+      }
+
+      const field = document.getElementById(searchId) as HTMLInputElement | null;
+
+      if (field && !field.disabled) {
+        event.preventDefault();
+        field.focus();
+        field.select();
+      }
+    }
+  }
 </script>
 
 <svelte:head><title>{m['recipes.title']()}</title></svelte:head>
+
+<svelte:window {onkeydown} />
 
 <Page>
   <PageHeader title={m['recipes.title']()} subtitle={m['recipes.collection.subtitle']()} />
 
   <LibraryToolbar
-    id="recipe-search"
+    id={searchId}
+    keyShortcuts="Meta+F Control+F"
     householdId={householdId ?? ''}
     view={libraryView}
     {context}

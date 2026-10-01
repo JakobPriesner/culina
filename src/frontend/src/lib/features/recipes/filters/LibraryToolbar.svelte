@@ -34,6 +34,7 @@
     context: SortContext;
     searchLabel: string;
     searchPlaceholder: string;
+    keyShortcuts?: string;
     /**
      * Whether a search here can be saved.
      *
@@ -64,6 +65,7 @@
     context,
     searchLabel,
     searchPlaceholder,
+    keyShortcuts,
     savable = false,
     summary,
     interpretation = null,
@@ -170,6 +172,7 @@
         label={searchLabel}
         placeholder={searchPlaceholder}
         clearLabel={m['recipes.list.clearSearch']()}
+        {keyShortcuts}
         oninput={type}
         onclear={clearSearch}
       />

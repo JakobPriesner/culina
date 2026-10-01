@@ -179,4 +179,21 @@ test.describe('search @offline', () => {
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(375);
   });
+
+  test('focuses the integrated search field on Cmd+F / Ctrl+F on the startpage', async ({
+    page
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Keyboard shortcuts.');
+    await responsiveData(page);
+
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    const searchField = page.getByRole('searchbox', { name: 'Rezepte durchsuchen' });
+    await expect(searchField).toBeVisible();
+    await expect(searchField).not.toBeFocused();
+
+    await page.keyboard.press('ControlOrMeta+f');
+    await expect(searchField).toBeFocused();
+  });
 });
