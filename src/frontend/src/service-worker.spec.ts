@@ -13,9 +13,10 @@ vi.mock('$service-worker', () => ({
   version: 'test'
 }));
 
-type FetchListener = (event: unknown) => void;
+type Listener = (event: unknown) => void;
 
-let onFetch: FetchListener;
+let onFetch: Listener;
+let onActivate: Listener;
 
 beforeAll(async () => {
   const addEventListener = vi.spyOn(self, 'addEventListener');
@@ -26,7 +27,11 @@ beforeAll(async () => {
 
   await import(/* @vite-ignore */ worker);
 
-  onFetch = addEventListener.mock.calls.find(([type]) => type === 'fetch')?.[1] as FetchListener;
+  const listenerFor = (type: string) =>
+    addEventListener.mock.calls.find(([candidate]) => candidate === type)?.[1] as Listener;
+
+  onFetch = listenerFor('fetch');
+  onActivate = listenerFor('activate');
   addEventListener.mockRestore();
 });
 
@@ -83,4 +88,21 @@ it('still answers from the network when it answers in time', async () => {
   await vi.advanceTimersByTimeAsync(0);
 
   expect(answer.response).toBe(fresh);
+});
+
+it('keeps the private cache when a new build takes over', async () => {
+  const deleted: string[] = [];
+
+  vi.stubGlobal('caches', {
+    keys: () => Promise.resolve(['culina-old', 'culina-private', 'culina-test']),
+    delete: (key: string) => Promise.resolve(deleted.push(key) > 0)
+  });
+  vi.stubGlobal('clients', { claim: () => Promise.resolve() });
+
+  let activated: Promise<unknown> = Promise.resolve();
+
+  onActivate({ waitUntil: (pending: Promise<unknown>) => (activated = pending) });
+  await activated;
+
+  expect(deleted).toEqual(['culina-old']);
 });

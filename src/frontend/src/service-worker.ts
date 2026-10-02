@@ -157,11 +157,15 @@ async function precache(): Promise<void> {
 }
 
 worker.addEventListener('activate', (event) => {
+  // Every earlier build's cache goes, the private one stays: its lifetime is
+  // a session, and a deploy is not the end of one.
+  const kept = new Set([cacheName, privateCacheName]);
+
   event.waitUntil(
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== cacheName).map((key) => caches.delete(key)))
+        Promise.all(keys.filter((key) => !kept.has(key)).map((key) => caches.delete(key)))
       )
       // Existing tabs are controlled straight away, so the first load
       // after an update is already served by the worker that matches it.
