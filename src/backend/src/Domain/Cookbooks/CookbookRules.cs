@@ -95,7 +95,7 @@ public sealed record CookbookRules
         new(tags, ingredients, maxMinutes);
 
     /// <summary>
-    /// Trimmed, emptied of blanks, and deduplicated case-insensitively.
+    /// Trimmed, emptied of blanks and nulls, and deduplicated case-insensitively.
     /// </summary>
     /// <remarks>
     /// The same term twice is one condition written twice, and a shelf that
@@ -112,8 +112,8 @@ public sealed record CookbookRules
         return
         [
             .. terms
+                .Where(term => !string.IsNullOrWhiteSpace(term))
                 .Select(term => term.Trim())
-                .Where(term => term.Length > 0)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
         ];
     }

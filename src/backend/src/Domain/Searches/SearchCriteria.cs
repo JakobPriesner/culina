@@ -117,7 +117,7 @@ public sealed record SearchCriteria
     }
 
     /// <summary>
-    /// Trimmed, emptied of blanks, and deduplicated.
+    /// Trimmed, emptied of blanks and nulls, and deduplicated.
     /// </summary>
     /// <remarks>
     /// The same tag twice is one filter written twice, and a search that
@@ -134,8 +134,8 @@ public sealed record SearchCriteria
         return
         [
             .. tags
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Select(tag => tag.Trim())
-                .Where(tag => tag.Length > 0)
                 .Distinct(StringComparer.Ordinal)
         ];
     }
