@@ -119,6 +119,13 @@ internal static class RateLimitExtensions
             options.OnRejected = async (context, cancellationToken) =>
             {
                 CulinaTelemetry.RateLimitRejections.Add(1);
+                context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger(typeof(RateLimitExtensions))
+                    .Rejected(
+                        context.HttpContext.Request.Method,
+                        context.HttpContext.Request.Path,
+                        RequestErrors.RateLimited.Code);
 
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
                 {

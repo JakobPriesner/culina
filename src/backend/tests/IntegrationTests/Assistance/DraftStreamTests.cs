@@ -238,6 +238,48 @@ public class DraftStreamTests(PostgresFixture postgres)
             last.GetProperty("problem").GetProperty("code").GetString());
     }
 
+    [Fact]
+    public async Task ProviderRefusal_ShouldBeLogged_WithWhatTheProviderSaid()
+    {
+        // Arrange
+        using var provider = new StubProvider(Written, refuseWith: HttpStatusCode.Unauthorized);
+        var world = await ConnectedAsync(provider);
+
+        // Act
+        var response = await world.Client.PostAsync(
+            "/api/v1/recipe-drafts",
+            new
+            {
+                kind = "idea",
+                householdId = world.HouseholdId,
+                material = "something with aubergines",
+                language = "en"
+            },
+            Token);
+
+        // Assert
+        // Somebody cooking is told only that the assistant is unavailable; the
+        // operator holding the key needs to know it was refused, and the
+        // provider's own words are what tell a revoked key from a renamed model.
+        Assert.Equal(
+            "assistance.unavailable",
+            Events(response.Body!)[^1].GetProperty("problem").GetProperty("code").GetString());
+
+        var line = Assert.Single(
+            postgres.Api.Logs.Lines,
+            line => line.EventId == 1501 && line["Code"] == "assistance.rejected");
+
+        Assert.Contains(StubProvider.Refusal, line.Message + line.Exception, StringComparison.Ordinal);
+
+        // And the call itself, as the ledger settled it.
+        var settled = await postgres.Api.Logs.WaitForAsync(
+            line => line.EventId == 1502 && line["Outcome"] == "assistance.rejected");
+
+        Assert.NotNull(settled);
+        Assert.Equal("stub-one", settled["Model"]);
+        Assert.Equal("draft", settled["Capability"]);
+    }
+
     /// <summary>Every event of a server-sent stream, decoded.</summary>
     private static List<JsonElement> Events(string body) =>
     [
@@ -311,8 +353,14 @@ public class DraftStreamTests(PostgresFixture postgres)
         private readonly HttpListener listener = new();
         private readonly CancellationTokenSource stopping = new();
 
-        internal StubProvider(IReadOnlyList<string> chunks)
+        /// <summary>What the stub says when it refuses.</summary>
+        internal const string Refusal = "Incorrect API key provided";
+
+        private readonly HttpStatusCode? refuseWith;
+
+        internal StubProvider(IReadOnlyList<string> chunks, HttpStatusCode? refuseWith = null)
         {
+            this.refuseWith = refuseWith;
             Address = $"http://localhost:{FreePort()}";
 
             listener.Prefixes.Add(Address + "/");
@@ -362,10 +410,24 @@ public class DraftStreamTests(PostgresFixture postgres)
             }
         }
 
-#pragma warning disable CA1822
         private async Task AnswerAsync(HttpListenerContext call, IReadOnlyList<string> chunks)
-#pragma warning restore CA1822
         {
+            if (refuseWith is { } status)
+            {
+                call.Response.StatusCode = (int)status;
+                call.Response.ContentType = "application/json";
+
+                var refusal = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+                {
+                    error = new { message = Refusal, type = "invalid_request_error", code = "invalid_api_key" }
+                }));
+
+                await call.Response.OutputStream.WriteAsync(refusal).ConfigureAwait(false);
+                call.Response.Close();
+
+                return;
+            }
+
             call.Response.StatusCode = 200;
             call.Response.ContentType = "text/event-stream";
             call.Response.SendChunked = true;

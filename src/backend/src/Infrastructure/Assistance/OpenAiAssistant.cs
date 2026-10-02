@@ -74,7 +74,7 @@ internal sealed class OpenAiAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -127,7 +127,7 @@ internal sealed class OpenAiAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -160,7 +160,7 @@ internal sealed class OpenAiAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -277,6 +277,16 @@ internal sealed class OpenAiAssistant(
     /// </remarks>
     private static Error? Recognised(Exception failure) =>
         Expected(failure) ? Failure(failure) : null;
+
+    /// <summary>Classifies a failure and records what the provider said.</summary>
+    private Error Failed(Exception failure)
+    {
+        var error = Failure(failure);
+
+        AssistanceLogs.CallFailed(logger, Kind.Code, error.Code, failure);
+
+        return error;
+    }
 
     /// <summary>The failures that are the provider's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>
