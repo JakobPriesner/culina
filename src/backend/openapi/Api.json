@@ -8620,6 +8620,168 @@
         "type": "string",
         "format": "binary"
       },
+      "LogRecordsCreateClient": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Random per page load, so records from one page can be told apart from another's.",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "description": "The language the app is showing, such as `de`.",
+            "nullable": true
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The languages the browser asks for, most preferred first.",
+            "nullable": true
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "The device's time zone, such as `Europe/Berlin`.",
+            "nullable": true
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The browser's brands and their major versions, such as `Chromium 140`.",
+            "nullable": true
+          },
+          "platform": {
+            "type": "string",
+            "description": "The operating system, such as `Android` or `macOS`.",
+            "nullable": true
+          },
+          "platformVersion": {
+            "type": "string",
+            "description": "The operating system's version.",
+            "nullable": true
+          },
+          "architecture": {
+            "type": "string",
+            "description": "The processor architecture, such as `arm` or `x86`.",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "description": "The device model, where the browser names one.",
+            "nullable": true
+          },
+          "mobile": {
+            "type": "boolean",
+            "description": "Whether the browser says it is on a phone.",
+            "nullable": true
+          },
+          "screenWidth": {
+            "type": "integer",
+            "description": "The screen's width in CSS pixels.",
+            "format": "int32",
+            "nullable": true
+          },
+          "screenHeight": {
+            "type": "integer",
+            "description": "The screen's height in CSS pixels.",
+            "format": "int32",
+            "nullable": true
+          },
+          "viewportWidth": {
+            "type": "integer",
+            "description": "The page's width in CSS pixels.",
+            "format": "int32",
+            "nullable": true
+          },
+          "viewportHeight": {
+            "type": "integer",
+            "description": "The page's height in CSS pixels.",
+            "format": "int32",
+            "nullable": true
+          },
+          "pixelRatio": {
+            "type": "number",
+            "description": "Device pixels per CSS pixel.",
+            "format": "double",
+            "nullable": true
+          },
+          "orientation": {
+            "type": "string",
+            "description": "The screen's orientation, such as `portrait-primary`.",
+            "nullable": true
+          },
+          "colorScheme": {
+            "type": "string",
+            "description": "`light` or `dark`, as the device prefers.",
+            "nullable": true
+          },
+          "reducedMotion": {
+            "type": "boolean",
+            "description": "Whether the device asks for less motion.",
+            "nullable": true
+          },
+          "displayMode": {
+            "type": "string",
+            "description": "How the app is open: `standalone` when installed, otherwise `browser`.",
+            "nullable": true
+          },
+          "cores": {
+            "type": "integer",
+            "description": "Logical processors the browser reports.",
+            "format": "int32",
+            "nullable": true
+          },
+          "deviceMemory": {
+            "type": "number",
+            "description": "The device's memory in gibibytes, as the browser rounds it.",
+            "format": "double",
+            "nullable": true
+          },
+          "touchPoints": {
+            "type": "integer",
+            "description": "How many touch points the screen takes at once; 0 without a touch screen.",
+            "format": "int32",
+            "nullable": true
+          },
+          "connection": {
+            "type": "string",
+            "description": "The connection's effective type, such as `4g`.",
+            "nullable": true
+          },
+          "downlink": {
+            "type": "number",
+            "description": "The connection's estimated bandwidth, in megabits per second.",
+            "format": "double",
+            "nullable": true
+          },
+          "roundTrip": {
+            "type": "integer",
+            "description": "The connection's estimated round trip, in milliseconds.",
+            "format": "int32",
+            "nullable": true
+          },
+          "saveData": {
+            "type": "boolean",
+            "description": "Whether the user asked to save data.",
+            "nullable": true
+          },
+          "navigationType": {
+            "type": "string",
+            "description": "How the page was reached: `navigate`, `reload`, `back_forward` or `prerender`.",
+            "nullable": true
+          },
+          "serviceWorker": {
+            "type": "boolean",
+            "description": "Whether a service worker controls the page.",
+            "nullable": true
+          }
+        },
+        "description": "The browser and device the records came from, as far as the page can tell."
+      },
       "LogRecordsCreateRecord": {
         "required": [
           "event",
@@ -8651,6 +8813,40 @@
             "type": "string",
             "description": "The route it happened on, as the router names it — `/recipes/[recipeId]`,\nnever the address with the id in it. At most 200 characters.",
             "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "When it happened, by the device's clock.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "pageAge": {
+            "type": "integer",
+            "description": "How long the page had been open when it happened, in milliseconds.",
+            "format": "int64",
+            "nullable": true
+          },
+          "online": {
+            "type": "boolean",
+            "description": "Whether the browser thought it was online when it happened.",
+            "nullable": true
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Whether the page was on screen when it happened.",
+            "nullable": true
+          },
+          "heapUsed": {
+            "type": "integer",
+            "description": "The page's JavaScript heap in use when it happened, in bytes, where the browser says.",
+            "format": "int64",
+            "nullable": true
+          },
+          "heapLimit": {
+            "type": "integer",
+            "description": "The most the page's JavaScript heap may grow to, in bytes, where the browser says.",
+            "format": "int64",
+            "nullable": true
           }
         },
         "description": "One thing that went wrong in the browser."
@@ -8665,6 +8861,19 @@
           "appVersion": {
             "type": "string",
             "description": "The build that noticed it, as the app knows its own version."
+          },
+          "client": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/LogRecordsCreateClient"
+              }
+            ]
           },
           "records": {
             "type": "array",
