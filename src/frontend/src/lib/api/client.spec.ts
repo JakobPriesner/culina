@@ -275,6 +275,25 @@ describe('a failure', () => {
     expect(result.ok === false && result.error.code).toBe(ErrorCodes.unexpected);
   });
 
+  it('is still a failure when the body is empty', async () => {
+    respondWith(
+      new Response(null, { status: 403, headers: { 'Content-Length': '0' } }),
+      new Response(null, { status: 502, headers: { 'Content-Length': '0' } })
+    );
+
+    const forbidden = await request(() => http.GET(me));
+    const badGateway = await request(() => http.GET(me));
+
+    expect(forbidden).toMatchObject({
+      ok: false,
+      error: { code: ErrorCodes.unexpected, status: 403 }
+    });
+    expect(badGateway).toMatchObject({
+      ok: false,
+      error: { code: ErrorCodes.unexpected, status: 502 }
+    });
+  });
+
   it('is an offline error when the request never reached a server', async () => {
     vi.stubGlobal(
       'fetch',
