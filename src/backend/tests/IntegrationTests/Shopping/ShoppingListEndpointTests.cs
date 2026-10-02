@@ -339,6 +339,43 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         Assert.False(remaining[0].GetProperty("isChecked").GetBoolean());
     }
 
+    [Theory]
+    [InlineData("nope")]
+    [InlineData("")]
+    public async Task RemoveItems_ShouldRefuseAMalformedItemId_AndKeepWhatIsBought(string itemId)
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        var added = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items",
+            new { name = "Mehl" },
+            Token);
+
+        var checkedId = added.Json!.Value.GetProperty("items")[0].GetProperty("itemId").GetGuid();
+
+        await client.PatchAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items/{checkedId}",
+            new { isChecked = true },
+            Token);
+
+        // Act
+        var response = await client.DeleteAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items?itemId={itemId}",
+            Token);
+
+        // Assert
+        // Read as "no id", a bad one cleared every ticked line instead of one.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var list = await client.GetAsync(
+            $"/api/v1/households/{householdId}/shopping-list",
+            Token);
+
+        Assert.Single(list.Json!.Value.GetProperty("items").EnumerateArray());
+    }
+
     [Fact]
     public async Task AddRecipe_ShouldKeepTheAmountSomebodyScaledTo()
     {

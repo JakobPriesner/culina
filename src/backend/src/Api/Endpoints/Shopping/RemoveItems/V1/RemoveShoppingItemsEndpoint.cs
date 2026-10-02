@@ -1,7 +1,9 @@
+using System.Globalization;
 using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Shopping;
+using Domain.Shared;
 using Response = Contracts.Shopping.Response;
 
 namespace Api.Endpoints.Shopping.RemoveItems.V1;
@@ -22,9 +24,21 @@ internal sealed class RemoveShoppingItemsEndpoint : IEndpoint
                 // No id clears everything ticked, which is the one bulk action
                 // worth having: after a shop, removing a dozen lines one at a
                 // time is the tedium the list exists to avoid.
-                var itemId = Guid.TryParse(context.Request.Query["itemId"], out var parsed)
-                    ? parsed
-                    : (Guid?)null;
+                var raw = context.Request.Query["itemId"];
+                Guid? itemId = null;
+
+                // A bad id is refused rather than read as "no id": a request
+                // meant to take off one line must not clear every ticked one.
+                if (raw.Count > 0)
+                {
+                    if (!Guid.TryParse(raw, CultureInfo.InvariantCulture, out var parsed))
+                    {
+                        return CustomResults.Problem(
+                            new FieldError("itemId", "request.unknown_parameter", "That is not an item id."));
+                    }
+
+                    itemId = parsed;
+                }
 
                 var result = await handler
                     .Handle(
@@ -43,6 +57,7 @@ internal sealed class RemoveShoppingItemsEndpoint : IEndpoint
             .WithDescription("Pass `itemId` for one line; omit it to clear everything ticked off.")
             .WithRepeatableQueryParameters(["itemId"], [])
             .Produces<Response>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireAuthorization();
