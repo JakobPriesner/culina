@@ -826,12 +826,12 @@
         </footer>
       </div>
     </div>
-  {:else if recipes.status === 'failed'}
+  {:else if recipes.detailStatus === 'failed'}
     <ErrorState
       title={m['editor.failed.title']()}
       body={m['editor.failed.body']()}
       requestIdLabel={m['error.reference']()}
-      requestId={recipes.error?.requestId}
+      requestId={recipes.detailError?.requestId}
     >
       {#snippet action()}
         <Button variant="primary" onclick={() => recipes.load(recipeId)}>
