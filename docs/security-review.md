@@ -53,7 +53,7 @@ notice losing.
 | Revoked membership takes effect immediately | Met | `Member_ShouldLoseAccess_TheMomentTheyAreRemoved` |
 | Role checks on privileged operations | Met | `Rename_ShouldBeRefusedForAPlainMember_EvenThoughTheyCanSeeIt`, `Delete_ShouldBeRefusedForAPlainMember`, `Settings_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator` |
 | The last owner cannot strand a household | Met | `RemoveMember_ShouldRefuseToStrandTheHousehold_WhenItIsTheLastOwner` |
-| Personal notes are not shared by membership | Met | `Notes_ShouldBeInvisibleToAnotherMemberOfTheSameHousehold`, `CookLog_ShouldBeSeparatePerPerson_InTheSameHousehold` |
+| Personal notes are not shared by membership | Met | `Notes_ShouldBeInvisibleToAnotherMemberOfTheSameHousehold`, `CookLog_ShouldBeSeparatePerPerson_InTheSameHousehold`; another member saving the recipe cannot erase them either, `Notes_ShouldSurviveAnotherMemberSavingTheRecipe_WhenTheStepIsKept` |
 
 ## V4 — Invitations
 
