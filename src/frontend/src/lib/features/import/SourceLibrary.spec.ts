@@ -197,6 +197,27 @@ describe('looking through somebody else’s library', () => {
     expect(chosen).toHaveBeenCalledWith(['1']);
   });
 
+  it('searches once somebody stops typing, not on every key', async () => {
+    const fetched = libraryHoldsPages([[theirs('1', 'Zwiebelkuchen')], []], 1);
+
+    await sources.browse(source);
+
+    renderWithProviders(SourceLibrary, { props: { source, onimport: () => {} } });
+
+    await userEvent.type(screen.getByRole('searchbox'), 'pas');
+
+    // Each search is a read of somebody else's server. One per keystroke was
+    // three of them for a word nobody had finished.
+    await vi.waitFor(() => expect(fetched).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(fetched).toHaveBeenCalledTimes(2);
+
+    const [searched] = fetched.mock.calls[1] as unknown as [Request];
+
+    expect(new URL(searched.url).searchParams.get('query')).toBe('pas');
+  });
+
   it('keeps the action out of the way until something is chosen', async () => {
     libraryHolds([theirs('1', 'Zwiebelkuchen')]);
 
