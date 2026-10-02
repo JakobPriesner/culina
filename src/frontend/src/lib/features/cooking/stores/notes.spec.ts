@@ -39,6 +39,8 @@ describe('reading a note back', () => {
       })
     );
 
+    await notes.load('r1');
+    sent.length = 0;
     notes.set('Use the heavy pan');
 
     const saving = notes.save('r1');
@@ -51,5 +53,41 @@ describe('reading a note back', () => {
 
     expect(sent).toEqual(['PUT', 'GET']);
     expect(notes.overall).toBe('Use the heavy pan');
+  });
+});
+
+describe('saving a note', () => {
+  it('sends nothing for a note that was never read', async () => {
+    const fetch = vi.fn(async () => new Response(null, { status: 503 }));
+
+    vi.stubGlobal('fetch', fetch);
+
+    await notes.load('r1');
+    fetch.mockClear();
+
+    expect(await notes.save('r1')).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps the step notes it was given', async () => {
+    const steps = [{ stepId: 's1', body: 'Lower the heat' }];
+    const saved: unknown[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'PUT') {
+          saved.push(await input.json());
+        }
+
+        return json({ overall: 'Use the heavy pan', steps });
+      })
+    );
+
+    await notes.load('r1');
+    notes.set('Use the cast-iron pan');
+    await notes.save('r1');
+
+    expect(saved).toEqual([{ overall: 'Use the cast-iron pan', steps }]);
   });
 });

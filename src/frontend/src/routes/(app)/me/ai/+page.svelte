@@ -78,6 +78,9 @@
   /** Sends what changed, if anything did — on leaving a field, or on a choice made. */
   function commit(): void {
     if (edits !== savedEdits) {
+      // Owed and sent at once: this page saves when a field is left, never in
+      // a pause, since a key typed halfway is not a key.
+      autosave.touch();
       void autosave.flush();
     }
   }

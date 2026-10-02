@@ -19,6 +19,11 @@ class NotesStore {
    */
   #failed = $state(false);
   /**
+   * The step notes the read returned. Nothing here shows or edits them, but a
+   * save replaces the whole of a note, so they go back exactly as they came.
+   */
+  #steps: { stepId: string; body: string }[] = [];
+  /**
    * The save still on its way. Plain rather than `$state`, because `load()`
    * reads it before its first await, from inside an effect.
    */
@@ -37,6 +42,10 @@ class NotesStore {
   }
 
   async load(recipeId: string): Promise<void> {
+    // Emptied before the read, not after: the note on screen until it arrives
+    // is the previous recipe's, and must not be saved as this one's.
+    this.#overall = '';
+    this.#steps = [];
     this.#loaded = false;
     this.#failed = false;
 
@@ -50,12 +59,12 @@ class NotesStore {
     );
 
     if (!result.ok) {
-      this.#overall = '';
       this.#failed = true;
       return;
     }
 
     this.#overall = result.value.overall ?? '';
+    this.#steps = result.value.steps;
     this.#loaded = true;
   }
 
@@ -65,13 +74,20 @@ class NotesStore {
   }
 
   async save(recipeId: string): Promise<AppError | null> {
+    // A note that was never read would be saved over the one the server holds.
+    if (!this.#loaded) {
+      return null;
+    }
+
+    // Taken now, not when the request is built: a retry builds it again, after
+    // the next recipe's read may have emptied the note.
+    //
+    // Blank means "no note" rather than an empty one: a note nobody wrote
+    // should not take up space on the page.
+    const body = { overall: this.#overall.trim() || null, steps: this.#steps };
+
     const saving = request(() =>
-      http.PUT('/api/v1/recipes/{recipeId}/notes', {
-        params: { path: { recipeId } },
-        // Blank means "no note" rather than an empty one: a note nobody wrote
-        // should not take up space on the page.
-        body: { overall: this.#overall.trim() || null, steps: [] }
-      })
+      http.PUT('/api/v1/recipes/{recipeId}/notes', { params: { path: { recipeId } }, body })
     );
 
     this.#saving = saving;
@@ -89,6 +105,7 @@ class NotesStore {
     this.#overall = '';
     this.#loaded = false;
     this.#failed = false;
+    this.#steps = [];
     this.#saving = null;
   }
 }

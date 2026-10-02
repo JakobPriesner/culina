@@ -522,6 +522,8 @@
 
     draft = { ...mine, version: latest.version };
     autosave.clear();
+    // Clearing forgave what was owed, and this text is owed again.
+    autosave.touch();
 
     await autosave.flush();
   }
