@@ -40,7 +40,7 @@ describe('the editor journal', () => {
     expect(recall('u1', 'r1')).toBeNull();
   });
 
-  it('empties completely when a session ends', () => {
+  it('empties completely when somebody signs out', () => {
     remember('u1', 'r1', recipe);
     remember('u2', 'r2', recipe);
     localStorage.setItem('culina.appearance', '{}');
@@ -51,6 +51,19 @@ describe('the editor journal', () => {
     expect(recall('u2', 'r2')).toBeNull();
     // And leaves alone what is not a draft.
     expect(localStorage.getItem('culina.appearance')).toBe('{}');
+  });
+
+  it('can leave one person’s drafts in place while removing everyone else’s', () => {
+    remember('u1', 'r1', recipe);
+    remember('u10', 'r2', recipe);
+    remember('u2', 'r3', recipe);
+
+    forgetEveryDraft('u1');
+
+    expect(recall('u1', 'r1')?.recipe).toEqual(recipe);
+    // A user id that merely starts with the kept one is somebody else.
+    expect(recall('u10', 'r2')).toBeNull();
+    expect(recall('u2', 'r3')).toBeNull();
   });
 
   it('treats a hand-edited value as nothing, rather than throwing on the way in', () => {

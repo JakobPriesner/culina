@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { handleSessionExpiry } from '$api';
+import { recall, remember } from '$features/recipes/editor/journal';
+import { recipes } from '$features/recipes/stores/recipes.svelte';
+import type { Recipe } from '$features/recipes/types';
 import { registerStore, resetAllStores } from '$shell/stores';
 
 import { session } from './session.svelte';
@@ -220,6 +224,61 @@ describe('signing out', () => {
     // worse than one that ends the session locally.
     expect(session.user).toBeNull();
     expect(session.status).toBe('anonymous');
+  });
+});
+
+describe('unsent recipes', () => {
+  const draft = {
+    id: 'r1',
+    title: 'Half a thought',
+    version: 3,
+    groups: [],
+    steps: [],
+    tags: []
+  } as unknown as Recipe;
+
+  afterEach(() => {
+    handleSessionExpiry(() => {});
+  });
+
+  it('are kept when the session expires mid-edit, for whoever signs back in', async () => {
+    await session.resolve();
+    // What the app shell registers, without the router.
+    handleSessionExpiry(() => session.end());
+    remember('u1', 'r1', draft);
+
+    serverAnswers(signedOut);
+    await recipes.update(draft);
+
+    expect(session.status).toBe('anonymous');
+    expect(recall('u1', 'r1')?.recipe).toEqual(draft);
+  });
+
+  it('are gone after signing out', async () => {
+    await session.resolve();
+    remember('u1', 'r1', draft);
+
+    await session.signOut();
+
+    expect(recall('u1', 'r1')).toBeNull();
+  });
+
+  it('are kept for the person signing in and dropped for anybody else', async () => {
+    remember('u1', 'r1', draft);
+    remember('u2', 'r2', draft);
+    serverAnswers((url, method) =>
+      url.endsWith('/sessions') && method === 'POST'
+        ? json(
+            { userId: 'u1', displayName: 'Jakob', email: 'j@e.com', isAdmin: true, csrfToken: 't' },
+            201
+          )
+        : signedIn(url)
+    );
+
+    await session.signIn('jakob@example.com', 'right');
+
+    expect(recall('u1', 'r1')?.recipe).toEqual(draft);
+    expect(recall('u2', 'r2')).toBeNull();
   });
 });
 

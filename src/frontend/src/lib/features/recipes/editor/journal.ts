@@ -73,16 +73,20 @@ export function forget(userId: string, recipeId: string): void {
 }
 
 /**
- * Removes every draft on this device.
+ * Removes every draft on this device, except the ones `keep` wrote.
  *
- * Called when a session ends. An unsent recipe belongs to whoever wrote it, and
- * leaving it on a shared tablet is exactly the leak the account-scoped key was
- * meant to prevent — the key stops it being *shown*, not stored.
+ * Called when somebody signs out, and when somebody signs in: an unsent recipe
+ * belongs to whoever wrote it, and leaving it on a shared tablet is exactly the
+ * leak the account-scoped key was meant to prevent — the key stops it being
+ * *shown*, not stored. Not when a session merely expires: that is the moment
+ * the journal exists for, and the person signing back in wants their text.
  */
-export function forgetEveryDraft(): void {
+export function forgetEveryDraft(keep?: string): void {
+  const kept = keep === undefined ? null : keyFor(keep, '');
+
   try {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith(prefix)) {
+      if (key.startsWith(prefix) && !(kept && key.startsWith(kept))) {
         localStorage.removeItem(key);
       }
     }
