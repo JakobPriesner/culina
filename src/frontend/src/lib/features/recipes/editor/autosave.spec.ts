@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { clientError, ErrorCodes } from '$api';
+
 import { createAutosave } from './autosave.svelte';
 
 /*
  * There is no Save button, so these are the guarantees that replace one: work
  * is not lost, and two saves cannot overtake each other.
  */
+const offline = clientError(ErrorCodes.offline, 'No connection.');
+
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
@@ -74,6 +78,49 @@ describe('leaving the page', () => {
     const autosave = createAutosave(save);
 
     autosave.touch();
+    await autosave.flush();
+
+    expect(save).toHaveBeenCalledOnce();
+  });
+
+  it('sends nothing when nothing was typed', async () => {
+    const save = vi.fn(async () => null);
+    const autosave = createAutosave(save);
+
+    await autosave.flush();
+
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('sends nothing the server already has', async () => {
+    const save = vi.fn(async () => null);
+    const autosave = createAutosave(save);
+
+    autosave.touch();
+    await vi.advanceTimersByTimeAsync(1000);
+    await autosave.flush();
+
+    expect(save).toHaveBeenCalledOnce();
+  });
+
+  it('tries again what a failed save did not deliver', async () => {
+    const save = vi.fn().mockResolvedValueOnce(offline).mockResolvedValue(null);
+    const autosave = createAutosave(save);
+
+    autosave.touch();
+    await vi.advanceTimersByTimeAsync(1000);
+    await autosave.flush();
+
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  it('owes nothing once a failure has been cleared', async () => {
+    const save = vi.fn(async () => offline);
+    const autosave = createAutosave(save);
+
+    autosave.touch();
+    await vi.advanceTimersByTimeAsync(1000);
+    autosave.clear();
     await autosave.flush();
 
     expect(save).toHaveBeenCalledOnce();
