@@ -1,8 +1,10 @@
 <script lang="ts">
+  import { Switch } from '$ds';
   import AppIconChoice from '$shell/AppIconChoice.svelte';
   import { m } from '$shell/i18n';
   import LocalePicker from '$shell/LocalePicker.svelte';
   import MeasurementPicker from '$shell/MeasurementPicker.svelte';
+  import { ollaSetting } from '$shell/olla/setting.svelte';
   import ThemeChoice from '$shell/ThemeChoice.svelte';
 
   import SettingsRow from '../SettingsRow.svelte';
@@ -42,5 +44,13 @@
 
   <SettingsRow label={m['measurement.label']()} description={m['me.amounts.hint']()}>
     <MeasurementPicker compact />
+  </SettingsRow>
+
+  <SettingsRow label={m['me.olla']()} description={m['me.olla.hint']()}>
+    <Switch
+      checked={ollaSetting.shown}
+      label={m['me.olla']()}
+      onchange={(checked) => ollaSetting.show(checked)}
+    />
   </SettingsRow>
 </SettingsSection>

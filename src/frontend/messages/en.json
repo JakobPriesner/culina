@@ -1377,6 +1377,58 @@
   "household.delete.done": "{name} was deleted.",
   "household.deleted.title": "Deleted households",
   "household.deleted.body": "Households you deleted as an owner. Restoring one brings back its members, recipes and cookbooks.",
+  "notFound.tab": "Page not found",
+  "notFound.eyebrow": "Not found · a recipe for it",
+  "notFound.page.title": "Lost Page Soup",
+  "notFound.page.body": "There's no page at this address. Here's how to get back to cooking.",
+  "notFound.recipe.title": "Vanished Recipe Stew",
+  "notFound.recipe.body": "This recipe isn't in your kitchen. It may have been deleted, or the link you followed is incomplete.",
+  "notFound.cookbook.title": "Empty Shelf Crumble",
+  "notFound.cookbook.body": "This cookbook isn't in your kitchen. It may have been deleted, or the link you followed is incomplete.",
+  "notFound.servings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Serves {count} lost cook",
+        "countPlural=*": "Serves {count} lost cooks"
+      }
+    }
+  ],
+  "notFound.ing.address": "address, slightly off",
+  "notFound.ing.recipe": "recipe, nowhere to be found",
+  "notFound.ing.cookbook": "cookbook, nowhere to be found",
+  "notFound.ing.link": "link, past its best-before",
+  "notFound.ing.patience.amount": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": { "countPlural=one": "a pinch", "countPlural=*": "{count} pinches" }
+    }
+  ],
+  "notFound.ing.patience": "of patience",
+  "notFound.step.typo": "Check the address for a typo.",
+  "notFound.step.deleted": "Deleted in the last 30 days? It's still simmering here:",
+  "notFound.step.search": "Still nothing?",
+  "notFound.step.library": "Or cook something that exists:",
+  "notFound.step.signIn": "Signed out? Look in your own kitchen:",
+  "notFound.search": "Search your recipes",
+  "notFound.home": "Go to your recipes",
+  "notAllowed.title": "Only the head chef touches this stove",
+  "notAllowed.body": "These settings change the kitchen for everyone, so only administrators can edit them. Ask yours if something needs a tweak.",
+  "notAllowed.back": "Back to settings",
+  "notAllowed.ticket.order": "Order #403",
+  "notAllowed.ticket.table": "Table: settings",
+  "notAllowed.ticket.chef": "Head chef only",
+  "auth.cold.title": "Your session went cold",
+  "auth.cold.body": "You were away a while, so Culina turned the stove off. Sign in to fire it back up, right where you left off.",
+  "auth.cold.submit": "Turn the heat back on",
+  "auth.secret.title": "This one's a family secret",
+  "auth.secret.body": "Recipes in Culina stay in the kitchen they belong to. Sign in if you're family, and the link opens right away.",
+  "auth.secret.submit": "I'm family, sign me in",
+  "auth.secret.stamp": "Family recipe",
+  "auth.secret.stampNote": "Members only",
   "auth.join.confirm.body": "Somebody sent you a link to their household. Join only if you know who it was: its members will see your name, and whatever you add while you're in it belongs to their kitchen.",
-  "auth.join.confirm.submit": "Join household"
+  "me.olla": "Show Olla",
+  "me.olla.hint": "The little pot that keeps empty pages company and cheers when you finish something. Turn it off for plain pages. Kept on this device."
 }

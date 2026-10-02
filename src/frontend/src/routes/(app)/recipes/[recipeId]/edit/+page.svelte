@@ -29,6 +29,7 @@
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { busy } from '$shell/busy.svelte';
   import { m } from '$shell/i18n';
+  import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
   import type { Ingredient, Recipe, RecipeLanguage, Step } from '$features/recipes/types';
 
@@ -836,6 +837,8 @@
         </footer>
       </div>
     </div>
+  {:else if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
+    <NotFound kind="recipe" level={1} />
   {:else if recipes.detailStatus === 'failed'}
     <ErrorState
       title={m['editor.failed.title']()}

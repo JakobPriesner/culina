@@ -18,6 +18,9 @@
   import { restoreCookbook } from '$features/trash/trash';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
+  import Olla from '$shell/olla/Olla.svelte';
+  import { ollaSetting } from '$shell/olla/setting.svelte';
+  import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -300,10 +303,13 @@
   }
 </script>
 
+{#snippet peeking()}<Olla pose="peeking" />{/snippet}
 <svelte:head><title>{cookbook?.name ?? m['cookbooks.title']()}</title></svelte:head>
 
 <Page>
-  {#if cookbooks.status === 'failed' && !cookbook}
+  {#if cookbooks.status === 'failed' && !cookbook && cookbooks.error?.status === 404}
+    <NotFound kind="cookbook" level={1} />
+  {:else if cookbooks.status === 'failed' && !cookbook}
     <ErrorState
       title={m['cookbooks.detail.failed']()}
       body={m['cookbooks.detail.failed.body']()}
@@ -526,6 +532,7 @@
       <EmptyState
         title={m['cookbooks.detail.empty.title']()}
         body={automatic ? m['cookbooks.detail.noMatch.body']() : m['cookbooks.detail.empty.body']()}
+        art={ollaSetting.shown && !automatic ? peeking : undefined}
       >
         {#snippet action()}
           {#if automatic}

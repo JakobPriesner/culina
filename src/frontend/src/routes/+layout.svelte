@@ -63,7 +63,7 @@
     // having to know that a router exists.
     handleSessionExpiry(() => {
       session.end();
-      void goto(loginUrlFor(page.url), { replaceState: true });
+      void goto(loginUrlFor(page.url, 'expired'), { replaceState: true });
     });
 
     return () => {

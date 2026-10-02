@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Button, Checkbox, GenerationAura, GenerationStatus, Modal, Skeleton } from '$ds';
+  import { Button, Checkbox, GenerationAura, Modal, Skeleton } from '$ds';
   import type { AppError } from '$api';
   import { m } from '$shell/i18n';
 
   import AssistFailure from './AssistFailure.svelte';
+  import DraftProgress from './DraftProgress.svelte';
   import {
     acceptEverything,
     acceptNothing,
@@ -156,8 +157,9 @@
   {#if writing}
     <div class="progress">
       <GenerationAura />
-      <GenerationStatus
+      <DraftProgress
         label={draft ? m['assist.improve.writing']() : m['assist.improve.asking']()}
+        arriving={draft !== null}
       />
     </div>
   {/if}

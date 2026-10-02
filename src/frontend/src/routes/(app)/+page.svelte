@@ -19,6 +19,8 @@
   import { session } from '$features/auth/session.svelte';
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
   import { m } from '$shell/i18n';
+  import Olla from '$shell/olla/Olla.svelte';
+  import { ollaSetting } from '$shell/olla/setting.svelte';
   import { toaster } from '$shell/toaster.svelte';
   import Page from '$shell/Page.svelte';
 
@@ -332,6 +334,7 @@
   }
 </script>
 
+{#snippet peeking()}<Olla pose="peeking" />{/snippet}
 <svelte:head><title>{m['recipes.title']()}</title></svelte:head>
 
 <svelte:window {onkeydown} />
@@ -393,7 +396,11 @@
       {/snippet}
     </EmptyState>
   {:else if recipes.status === 'ready' && recipes.items.length === 0}
-    <EmptyState title={m['recipes.empty.title']()} body={m['recipes.empty.body']()}>
+    <EmptyState
+      title={m['recipes.empty.title']()}
+      body={m['recipes.empty.body']()}
+      art={ollaSetting.shown ? peeking : undefined}
+    >
       {#snippet icon()}
         <svg
           viewBox="0 0 48 48"

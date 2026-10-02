@@ -19,6 +19,7 @@
   import { session } from '$features/auth/session.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
+  import Olla from '$shell/olla/Olla.svelte';
 
   /**
    * An account with nowhere to cook.
@@ -73,6 +74,7 @@
 <svelte:head><title>{m['welcome.title']()}</title></svelte:head>
 
 <div class="page">
+  <Olla pose="hello" />
   <h1 class="title">{m['welcome.title']()}</h1>
   <p class="body">{m['welcome.body']()}</p>
 

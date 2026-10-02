@@ -40,6 +40,29 @@ if (typeof globalThis.matchMedia !== 'function') {
   })) as typeof matchMedia;
 }
 
+/*
+ * Nor does jsdom have the Web Animations API, which every Svelte transition
+ * runs on. A component that fades something out therefore throws the moment
+ * the thing leaves, rather than simply removing it — so the stub finishes
+ * every animation at once, the way a browser with motion turned off would.
+ */
+if (typeof Element.prototype.animate !== 'function') {
+  Element.prototype.animate = function animate() {
+    const animation = {
+      playState: 'finished',
+      onfinish: null as (() => void) | null,
+      finished: Promise.resolve(),
+      cancel: () => {},
+      finish: () => {}
+    };
+
+    queueMicrotask(() => animation.onfinish?.());
+
+    return animation as unknown as Animation;
+  };
+  Element.prototype.getAnimations = () => [];
+}
+
 // Components are unmounted between tests, so one test's dialog cannot be found
 // by the next one's query. A store that holds state exposes its own `reset`,
 // which its suite calls — explicit, and visible in the test that needs it.

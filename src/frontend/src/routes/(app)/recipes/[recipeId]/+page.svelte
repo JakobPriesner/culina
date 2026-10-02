@@ -28,6 +28,7 @@
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
+  import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
 
   /**
@@ -262,7 +263,9 @@
     </a>
   </p>
 
-  {#if recipes.detailStatus === 'failed'}
+  {#if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
+    <NotFound kind="recipe" level={1} />
+  {:else if recipes.detailStatus === 'failed'}
     <ErrorState
       title={m['recipes.failed.title']()}
       body={m['recipes.failed.body']()}
