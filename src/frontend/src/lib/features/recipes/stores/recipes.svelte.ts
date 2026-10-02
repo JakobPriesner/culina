@@ -60,6 +60,16 @@ class RecipeStore {
   #status = $state<LoadStatus>('idle');
 
   /**
+   * How the open recipe's read went, apart from the list's.
+   *
+   * The library can still be reading when a recipe opens, and its answer is
+   * about the list: a late list failure must not put an error over a recipe
+   * that loaded, nor a late list success hide a recipe that is not there.
+   */
+  #detailStatus = $state<LoadStatus>('idle');
+  #detailError = $state<AppError | null>(null);
+
+  /**
    * Whose items these are. Plain rather than $state: it is read before the
    * first await of a method an effect calls, and a tracked read there would
    * make the method's own writes call it again.
@@ -94,6 +104,12 @@ class RecipeStore {
    */
   #readToken = 0;
 
+  /**
+   * Which recipe read is allowed to write the open recipe — the same guard as
+   * the list's, for going from one recipe to the next before the first answers.
+   */
+  #detailToken = 0;
+
   /** The request a newer one has made pointless. */
   #reading: AbortController | null = null;
 
@@ -111,6 +127,14 @@ class RecipeStore {
 
   get error(): AppError | null {
     return this.#error;
+  }
+
+  get detailStatus(): LoadStatus {
+    return this.#detailStatus;
+  }
+
+  get detailError(): AppError | null {
+    return this.#detailError;
   }
 
   get total(): number {
@@ -235,22 +259,28 @@ class RecipeStore {
   }
 
   async load(recipeId: string): Promise<void> {
-    this.#status = 'loading';
-    this.#error = null;
+    const token = ++this.#detailToken;
+
+    this.#detailStatus = 'loading';
+    this.#detailError = null;
 
     const result = await request(() =>
       http.GET('/api/v1/recipes/{recipeId}', { params: { path: { recipeId } } })
     );
 
+    if (token !== this.#detailToken) {
+      return;
+    }
+
     if (!result.ok) {
-      this.#error = result.error;
-      this.#status = 'failed';
+      this.#detailError = result.error;
+      this.#detailStatus = 'failed';
 
       return;
     }
 
     this.#detail = toRecipe(result.value);
-    this.#status = 'ready';
+    this.#detailStatus = 'ready';
   }
 
   async create(
@@ -350,7 +380,6 @@ class RecipeStore {
     // Put back exactly what was there. A stale version is not a reason to
     // retry: somebody else's change would be lost.
     this.#detail = before;
-    this.#error = outcome.error;
 
     return outcome.error;
   }
@@ -402,6 +431,9 @@ class RecipeStore {
     this.#items = [];
     this.#detail = null;
     this.#status = 'idle';
+    this.#detailStatus = 'idle';
+    this.#detailError = null;
+    this.#detailToken += 1;
     this.#error = null;
     this.#total = 0;
     this.#cursor = null;

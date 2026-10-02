@@ -21,6 +21,28 @@ const summary = (id: string, title: string) => ({
   ingredientMatch: null
 });
 
+const recipe = (id: string, title: string) => ({
+  recipeId: id,
+  householdId: household,
+  title,
+  language: 'en',
+  yieldAmount: 4,
+  yieldKind: 'servings',
+  groups: [],
+  steps: [],
+  tags: [],
+  createdBy: 'u1',
+  createdAt: '2026-09-12T00:00:00Z',
+  updatedAt: '2026-09-12T00:00:00Z',
+  version: 3
+});
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
 const page = (
   items: ReturnType<typeof summary>[],
   total = items.length,
@@ -222,23 +244,59 @@ describe('signing out', () => {
   });
 });
 
-describe('deleting', () => {
-  const opened = {
-    recipeId: 'r1',
-    householdId: household,
-    title: 'Orzo',
-    language: 'en',
-    yieldAmount: 4,
-    yieldKind: 'servings',
-    groups: [],
-    steps: [],
-    tags: [],
-    createdBy: 'u1',
-    createdAt: '2026-09-12T00:00:00Z',
-    updatedAt: '2026-09-12T00:00:00Z',
-    version: 3
-  };
+describe('opening a recipe', () => {
+  it('shows the recipe asked for last, however late the one before answers', async () => {
+    const slow = Promise.withResolvers<Response>();
 
+    serverAnswers((url) => (url.endsWith('/recipes/a') ? slow.promise : json(recipe('b', 'Soup'))));
+
+    const first = recipes.load('a');
+    await recipes.load('b');
+
+    slow.resolve(json(recipe('a', 'Orzo')));
+    await first;
+
+    expect(recipes.detail?.id).toBe('b');
+    expect(recipes.detailStatus).toBe('ready');
+  });
+
+  it('is not marked failed by a library read that fails after it opened', async () => {
+    const slow = Promise.withResolvers<Response>();
+
+    serverAnswers((url) =>
+      url.includes('/recipes/r1') ? json(recipe('r1', 'Orzo')) : slow.promise
+    );
+
+    const listing = recipes.list(household);
+    await recipes.load('r1');
+
+    slow.resolve(new Response('', { status: 500 }));
+    await listing;
+
+    expect(recipes.status).toBe('failed');
+    expect(recipes.detailStatus).toBe('ready');
+    expect(recipes.detailError).toBeNull();
+  });
+
+  it('stays not found when a library read succeeds after it', async () => {
+    const slow = Promise.withResolvers<Response>();
+
+    serverAnswers((url) =>
+      url.includes('/recipes/gone') ? json({ code: 'recipes.not_found' }, 404) : slow.promise
+    );
+
+    const listing = recipes.list(household);
+    await recipes.load('gone');
+
+    slow.resolve(page([]));
+    await listing;
+
+    expect(recipes.detailStatus).toBe('failed');
+    expect(recipes.detailError?.status).toBe(404);
+  });
+});
+
+describe('deleting', () => {
   /** A listed and opened recipe, and a server that answers a DELETE with `deleted`. */
   async function openOrzo(deleted: () => Response) {
     vi.stubGlobal(
@@ -250,10 +308,7 @@ describe('deleting', () => {
 
         return Promise.resolve(
           input.url.includes('/recipes/r1')
-            ? new Response(JSON.stringify(opened), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-              })
+            ? json(recipe('r1', 'Orzo'))
             : page([summary('r1', 'Orzo'), summary('r2', 'Soup')])
         );
       })

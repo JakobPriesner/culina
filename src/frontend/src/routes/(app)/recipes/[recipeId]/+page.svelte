@@ -262,12 +262,12 @@
     </a>
   </p>
 
-  {#if recipes.status === 'failed'}
+  {#if recipes.detailStatus === 'failed'}
     <ErrorState
       title={m['recipes.failed.title']()}
       body={m['recipes.failed.body']()}
       requestIdLabel={m['error.reference']()}
-      requestId={recipes.error?.requestId}
+      requestId={recipes.detailError?.requestId}
     >
       {#snippet action()}
         <Button variant="primary" onclick={() => recipes.load(recipeId)}>
