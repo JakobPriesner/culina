@@ -82,7 +82,14 @@ public sealed record RateLimitSettings
     /// </remarks>
     public int AssistantRequestsPerHour { get; init; } = 60;
 
-    /// <summary>Requests allowed per minute from one authenticated session.</summary>
+    /// <summary>
+    /// Requests allowed per minute from one address, signed in or not.
+    /// </summary>
+    /// <remarks>
+    /// Named for when it was counted per session. The limiter runs before the
+    /// session cookie is checked, so counting per cookie let anybody who sent
+    /// a different made-up one with every request go uncounted.
+    /// </remarks>
     public int RequestsPerSessionPerMinute { get; init; } = 600;
 
     /// <summary>Throws when any value would make the process unable to serve.</summary>

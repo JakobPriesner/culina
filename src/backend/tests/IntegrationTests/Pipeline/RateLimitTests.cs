@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Pipeline;
@@ -47,6 +48,40 @@ public class RateLimitTests(PostgresFixture postgres)
         // Assert
         Assert.True(second.Headers.TryGetValues("Retry-After", out var retryAfter));
         Assert.NotEmpty(Assert.Single(retryAfter));
+    }
+
+    [Fact]
+    public async Task SignIn_ShouldBeRefused_WhenEachAttemptCarriesADifferentMadeUpSessionCookie()
+    {
+        // Arrange
+        await postgres.ResetAsync(Token);
+        using var factory = new CulinaApiFactory(
+            postgres,
+            new Dictionary<string, string> { ["RateLimits:LoginPerIpPerMinute"] = "2" });
+        using var client = factory.NewApiClient();
+
+        // Act
+        await SignInWithMadeUpCookie(client);
+        await SignInWithMadeUpCookie(client);
+        var third = await SignInWithMadeUpCookie(client);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+        Assert.Equal("request.rate_limited", third.ProblemCode);
+    }
+
+    private static Task<ApiResponse> SignInWithMadeUpCookie(ApiClient client)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/sessions")
+        {
+            Content = JsonContent.Create(new { email = "ada@example.com", password = "a guess" })
+        };
+
+        // The name the test host uses: its cookies are not Secure, so the
+        // session cookie goes without its __Host- prefix.
+        request.Headers.TryAddWithoutValidation("Cookie", $"culina.session={Guid.NewGuid():n}");
+
+        return client.SendAsync(request, Token);
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;

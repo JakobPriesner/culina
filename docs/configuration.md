@@ -148,7 +148,7 @@ All of these are in the app.
 | `RateLimits__ImportsPerHour` | `30` | Imports from a web page, per person. |
 | `RateLimits__SourceRequestsPerHour` | `1500` | Requests against a connected recipe library. |
 | `RateLimits__AssistantRequestsPerHour` | `60` | The only limit here about money rather than load. |
-| `RateLimits__RequestsPerSessionPerMinute` | `600` | |
+| `RateLimits__RequestsPerSessionPerMinute` | `600` | Every request, per address despite the name. |
 
 Login is limited per address **and** per account: per-address alone lets a
 botnet spread an attack on one account across many addresses, and per-account

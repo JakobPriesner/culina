@@ -4064,7 +4064,7 @@ export interface components {
             assistantRequestsPerHour: number;
             /**
              * Format: int32
-             * @description Requests per minute from one signed-in session.
+             * @description Requests per minute from one address, signed in or not.
              */
             requestsPerSessionPerMinute: number;
         };
@@ -4291,7 +4291,7 @@ export interface components {
             assistantRequestsPerHour: number;
             /**
              * Format: int32
-             * @description Requests per minute from one signed-in session.
+             * @description Requests per minute from one address, signed in or not.
              */
             requestsPerSessionPerMinute: number;
         };

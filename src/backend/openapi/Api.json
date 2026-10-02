@@ -11816,7 +11816,7 @@
           },
           "requestsPerSessionPerMinute": {
             "type": "integer",
-            "description": "Requests per minute from one signed-in session.",
+            "description": "Requests per minute from one address, signed in or not.",
             "format": "int32"
           }
         },
@@ -12273,7 +12273,7 @@
           },
           "requestsPerSessionPerMinute": {
             "type": "integer",
-            "description": "Requests per minute from one signed-in session.",
+            "description": "Requests per minute from one address, signed in or not.",
             "format": "int32"
           }
         },
