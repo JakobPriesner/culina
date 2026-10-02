@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onMount } from 'svelte';
   import type { AppError } from '$api';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
@@ -23,10 +23,12 @@
    * invitation code is a bearer token, and anyone holding the link would
    * otherwise learn what they had been handed the keys to.
    *
-   * Somebody already signed in is simply let in — and never offered a sign-in
-   * or an account they already have. The person opening a link is very often
-   * already using Culina on that phone, and quite often it is the owner,
-   * checking the link before sending it: they are told they are already in,
+   * Somebody already signed in is never offered a sign-in or an account they
+   * already have, but is asked before the code is redeemed. Opening a link must
+   * not be the same as joining: anybody can make a household and send its
+   * link, and a person let straight in would be switched into a stranger's
+   * kitchen, adding their recipes and lists there and showing them their name.
+   * The owner checking the link before sending it is told they are already in,
    * and taken back to their kitchen.
    */
   const code = $derived(page.params.code ?? '');
@@ -37,28 +39,20 @@
     | { readonly kind: 'failed'; readonly failure: AppError };
 
   let answer = $state<Answer | null>(null);
+  let joining = $state(false);
 
   const invalidCode = 'households.invitation_invalid';
 
-  // Once per code. resolve() reads the session status, and redeeming resets
-  // and re-reads the session, so a tracked read would redeem the code again
-  // on every change of status that causes.
-  $effect(() => {
-    const invitation = code;
+  onMount(() => void session.resolve());
 
-    void untrack(() => session.resolve()).then(() => {
-      if (session.status === 'authenticated' && invitation) {
-        void redeem(invitation);
-      }
-    });
-  });
-
-  async function redeem(invitation: string) {
+  async function join() {
     answer = null;
+    joining = true;
 
-    const outcome = await redeemInvitation(invitation);
+    const outcome = await redeemInvitation(code);
 
     if (!('householdId' in outcome)) {
+      joining = false;
       answer =
         outcome.code === invalidCode ? { kind: 'invalid' } : { kind: 'failed', failure: outcome };
 
@@ -115,7 +109,7 @@
 
     <div class="actions">
       {#if answer.kind === 'failed'}
-        <Button variant="primary" size="lg" full onclick={() => void redeem(code)}>
+        <Button variant="primary" size="lg" full onclick={() => void join()}>
           {m['error.retry']()}
         </Button>
       {/if}
@@ -131,6 +125,16 @@
       </Button>
 
       <Button size="lg" full href={loginHref}>{m['auth.register.signIn']()}</Button>
+    </div>
+  {:else if session.status === 'authenticated'}
+    <h1 class="title">{m['auth.join.title']()}</h1>
+    <p class="body">{m['auth.join.confirm.body']()}</p>
+
+    <div class="actions">
+      <Button variant="primary" size="lg" full loading={joining} onclick={() => void join()}>
+        {m['auth.join.confirm.submit']()}
+      </Button>
+      <Button size="lg" full href={resolve('/(app)')}>{m['auth.join.home']()}</Button>
     </div>
   {:else}
     <h1 class="title">{m['auth.join.title']()}</h1>

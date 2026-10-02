@@ -1374,5 +1374,7 @@
   "household.delete.failed": "The household couldn't be deleted.",
   "household.delete.done": "{name} was deleted.",
   "household.deleted.title": "Deleted households",
-  "household.deleted.body": "Households you deleted as an owner. Restoring one brings back its members, recipes and cookbooks."
+  "household.deleted.body": "Households you deleted as an owner. Restoring one brings back its members, recipes and cookbooks.",
+  "auth.join.confirm.body": "Somebody sent you a link to their household. Join only if you know who it was: its members will see your name, and whatever you add while you're in it belongs to their kitchen.",
+  "auth.join.confirm.submit": "Join household"
 }

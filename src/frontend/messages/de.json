@@ -1374,5 +1374,7 @@
   "household.delete.failed": "Der Haushalt konnte nicht gelöscht werden.",
   "household.delete.done": "„{name}“ wurde gelöscht.",
   "household.deleted.title": "Gelöschte Haushalte",
-  "household.deleted.body": "Haushalte, die du als Eigentümer gelöscht hast. Beim Wiederherstellen kommen Mitglieder, Rezepte und Kochbücher zurück."
+  "household.deleted.body": "Haushalte, die du als Eigentümer gelöscht hast. Beim Wiederherstellen kommen Mitglieder, Rezepte und Kochbücher zurück.",
+  "auth.join.confirm.body": "Jemand hat dir einen Link zu seinem Haushalt geschickt. Tritt nur bei, wenn du weißt, von wem er ist: Die Mitglieder sehen deinen Namen, und was du dort hinzufügst, gehört zu ihrer Küche.",
+  "auth.join.confirm.submit": "Haushalt beitreten"
 }
