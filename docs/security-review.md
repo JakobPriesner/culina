@@ -111,6 +111,7 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | Uploads are re-encoded, never served back as received | Met | Always WebP, always Culina's own encoding. `Upload_ShouldAttachTheImage_AndServeItAsWebp` |
 | A byte limit is enforced while reading | Met | Bounded copy; the stream is never read past the limit |
 | A pixel limit is enforced before decoding | Met | The header is read first: a byte limit does not bound a pixel count. `Upload_ShouldRefuseAnImageTooLargeToDecode_WithoutDecodingIt` |
+| An animated image decodes one frame | Met | The pixel limit is one frame's, and each frame of a GIF, WebP, APNG or TIFF is a full canvas: only the first is ever decoded. `Upload_ShouldKeepOnlyTheFirstFrame_OfAnAnimatedImage` |
 | Metadata is removed | Met | `Served_ShouldCarryNoMetadataFromTheOriginal`. A photograph taken in a kitchen carries where that kitchen is |
 | Files are not served from a caller-controlled path | Met | The stored name is a content hash and a width from a fixed list. `Served_ShouldRefuseAWidthItDoesNotKeep` |
 | Images are private | Met | `Cache-Control: private`, and the access check runs before the file is opened. `Served_ShouldCarryAContentHashETag_AndBePrivate`, `Upload_ShouldBeRefused_ForARecipeInAnotherHousehold` |

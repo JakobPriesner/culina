@@ -203,6 +203,39 @@ public class RecipeImageTests(PostgresFixture postgres)
         Assert.Equal("recipes.image_too_many_pixels", response.ProblemCode);
     }
 
+    [Fact]
+    public async Task Upload_ShouldKeepOnlyTheFirstFrame_OfAnAnimatedImage()
+    {
+        // Arrange
+        // The pixel limit is checked on one frame, and an animation is decoded
+        // as a whole canvas per frame: a GIF under a kilobyte can declare a
+        // large screen and thousands of frames, and every one of them is a
+        // full allocation. Only the first frame may ever be decoded.
+        var (client, recipeId) = await SeedAsync();
+
+        // Act
+        await UploadAsync(client, recipeId, Animated(), "dancing.gif", "image/gif");
+        var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
+
+        // Assert
+        using var decoded = Image.Load(served.Bytes.Span);
+
+        Assert.Single(decoded.Frames);
+    }
+
+    /// <summary>A small GIF of three different frames.</summary>
+    private static byte[] Animated()
+    {
+        using var image = new Image<Rgba32>(64, 64, Color.Red);
+        using var buffer = new MemoryStream();
+
+        image.Frames.CreateFrame(Color.Green);
+        image.Frames.CreateFrame(Color.Blue);
+        image.Save(buffer, new SixLabors.ImageSharp.Formats.Gif.GifEncoder());
+
+        return buffer.ToArray();
+    }
+
     /// <summary>
     /// A photograph taken upright, stored the way a camera stores one: wide
     /// pixels, plus the tag that says to turn them.
