@@ -71,3 +71,59 @@ describe('your note on a recipe', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
+
+/*
+ * Leaving the page sends what was typed. What was not typed is not sent: the
+ * note on screen may be one that was never read, and the save would replace
+ * the real one with it.
+ */
+describe('leaving a note nobody typed in', () => {
+  /** Answers every request alike, and returns the methods it was sent. */
+  const answered = (response: () => Response) => {
+    const sent: string[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        sent.push(input.method);
+
+        return response();
+      })
+    );
+
+    return sent;
+  };
+
+  it('sends nothing once it has been read', async () => {
+    const sent = answered(
+      () =>
+        new Response(JSON.stringify({ overall: 'Use the heavy pan', steps: [] }), {
+          headers: { 'Content-Type': 'application/json' }
+        })
+    );
+
+    const { unmount } = renderWithProviders(PersonalNotePanel, {
+      props: { recipeId: 'r1', variant: 'cook' }
+    });
+
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('Use the heavy pan'));
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(sent).toEqual(['GET']);
+  });
+
+  it('sends nothing when it could not be read', async () => {
+    const sent = answered(() => new Response(null, { status: 503 }));
+
+    const { unmount } = renderWithProviders(PersonalNotePanel, {
+      props: { recipeId: 'r1', variant: 'cook' }
+    });
+
+    await screen.findByRole('alert');
+    unmount();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(sent).toEqual(['GET']);
+  });
+});

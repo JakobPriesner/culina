@@ -21,27 +21,37 @@ export function createAutosave(save: () => Promise<AppError | null>) {
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight = false;
-  /** Something changed while a save was running, so another one is owed. */
-  let owed = false;
+  /**
+   * Edits made, and how many of them the server has. Leaving a page nobody
+   * typed on owes nothing, and a save sent anyway is not harmless: it moves a
+   * recipe's version on under every other open editor, and writes back a note
+   * that was never read.
+   */
+  let edits = 0;
+  let savedEdits = 0;
 
   async function run() {
-    if (inFlight) {
-      owed = true;
-
+    // A save already running is followed by another below if typing went on.
+    if (inFlight || edits === savedEdits) {
       return;
     }
 
     inFlight = true;
     state = 'saving';
 
+    const sending = edits;
     const error = await save();
 
     inFlight = false;
     failure = error;
     state = error ? 'failed' : 'saved';
 
-    if (owed) {
-      owed = false;
+    if (!error) {
+      savedEdits = sending;
+    }
+
+    // Something changed while that save was running, so another one is owed.
+    if (edits !== sending) {
       await run();
     }
   }
@@ -57,6 +67,7 @@ export function createAutosave(save: () => Promise<AppError | null>) {
 
     /** Called on every keystroke; only the last one in a pause does anything. */
     touch() {
+      edits += 1;
       clearTimeout(timer);
       timer = setTimeout(() => void run(), quietMs);
     },
@@ -67,9 +78,11 @@ export function createAutosave(save: () => Promise<AppError | null>) {
      * For the one case where the failure has been dealt with rather than
      * retried: a conflict the author resolved by taking somebody else's
      * version, where leaving the message on screen would describe a situation
-     * that no longer exists.
+     * that no longer exists. Nothing typed before it is owed any more.
      */
     clear() {
+      clearTimeout(timer);
+      savedEdits = edits;
       failure = null;
       state = 'idle';
     },
