@@ -1,3 +1,5 @@
+import { forgetAccountKeys } from '$shell/deviceStorage';
+
 /**
  * Which recipe was last started here, so leaving the create page mid-thought
  * does not mean starting over.
@@ -13,7 +15,9 @@ export interface LastDraft {
 }
 
 /** Scoped by account and household: a device or a login can hold either. */
-const keyFor = (userId: string, householdId: string) => `culina.lastDraft.${userId}.${householdId}`;
+const keyFor = (userId: string, householdId: string) => `${prefix}${userId}.${householdId}`;
+
+const prefix = 'culina.lastDraft.';
 
 /** Never throws: forgetting to offer a draft back is not worth an error. */
 export function rememberLastDraft(
@@ -55,6 +59,17 @@ export function forgetLastDraft(userId: string, householdId: string): void {
   } catch {
     // Nothing to do, and nothing worth saying.
   }
+}
+
+/**
+ * Forgets which recipe was last started, for everybody but `keep`.
+ *
+ * At the same moments as the drafts themselves, for the same reason — it
+ * holds a title — and not when a session merely expires, which would lose the
+ * way back to a draft that was kept.
+ */
+export function forgetEveryLastDraft(keep?: string): void {
+  forgetAccountKeys(prefix, keep);
 }
 
 const isLastDraft = (value: unknown): value is LastDraft =>

@@ -1,5 +1,7 @@
 import { forgetCachedResponses, http, request, type AppError } from '$api';
 import { forgetEveryDraft } from '$features/recipes/editor/journal';
+import { forgetEveryLastDraft } from '$features/recipes/editor/lastDraft';
+import { forgetEveryRecentSearch } from '$features/recipes/search/recentSearches';
 import { forgetCachedReads } from '$shell/connection.svelte';
 import { readDevice, writeDevice } from '$shell/deviceStorage';
 import { registerStore, resetAllStores } from '$shell/stores';
@@ -58,6 +60,16 @@ const bootHintKey = 'culina.boot';
  * the cookie is still in the jar when they do.
  */
 const bootDeadlineMs = 4_000;
+
+/**
+ * What this device keeps per account — unsent recipes, the last one started,
+ * recent searches — for everybody but `keep`.
+ */
+function forgetAccounts(keep?: string): void {
+  forgetEveryDraft(keep);
+  forgetEveryLastDraft(keep);
+  forgetEveryRecentSearch(keep);
+}
 
 class SessionStore {
   #status = $state<SessionStatus>('unknown');
@@ -159,7 +171,7 @@ class SessionStore {
     // Their own unsent recipes are what an expired session left for them to
     // come back to. Anybody else's are not theirs to inherit.
     if (this.#user) {
-      forgetEveryDraft(this.#user.userId);
+      forgetAccounts(this.#user.userId);
     }
 
     return null;
@@ -174,7 +186,7 @@ class SessionStore {
     this.end();
     // An unsent recipe belongs to whoever wrote it. Scoping the key by account
     // stops it being shown to the next person; only this stops it being kept.
-    forgetEveryDraft();
+    forgetAccounts();
   }
 
   /** Chooses which household the app is looking at. */
