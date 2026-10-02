@@ -12,7 +12,7 @@ import { needsBackend, skipReason } from './support/culina';
 async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel(/email|e-mail/i).fill(email);
   await page.getByRole('textbox', { name: /password|passwort/i }).fill(password);
-  await page.getByRole('button', { name: /^(sign in|anmelden)$/i }).click();
+  await page.getByRole('button', { name: /(^|\s)(sign (me )?in|anmelden)$/i }).click();
 }
 
 test.describe('the first-run path', () => {
