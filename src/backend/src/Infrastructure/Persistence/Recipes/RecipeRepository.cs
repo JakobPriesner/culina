@@ -352,13 +352,17 @@ internal sealed class RecipeRepository(
     };
 
     /// <summary>
-    /// Rewrites the ingredient list, the steps and the tag links wholesale.
+    /// Rewrites the ingredient list and the tag links wholesale, and the steps
+    /// in place.
     /// </summary>
     /// <remarks>
     /// Replacing rather than diffing: a recipe has tens of rows, not thousands,
     /// and a diff has to be right about identity, ordering and removal all at
-    /// once. This runs inside the caller's transaction, so the delete and the
-    /// inserts are never observed apart.
+    /// once. Steps are the exception, because people's personal notes hang off
+    /// them and a deleted step takes its notes with it — so a step that is kept
+    /// is updated, and only a step that is gone is deleted. This runs inside the
+    /// caller's transaction, so the deletes and the writes are never observed
+    /// apart.
     /// </remarks>
     private async Task ReplaceContentsAsync(Recipe recipe, CancellationToken cancellationToken)
     {
@@ -366,10 +370,10 @@ internal sealed class RecipeRepository(
         await executor.ExecuteAsync(
             """
             delete from ingredient_groups where recipe_id = @recipeId;
-            delete from steps where recipe_id = @recipeId;
+            delete from steps where recipe_id = @recipeId and id <> all(@stepIds);
             delete from recipe_tags where recipe_id = @recipeId;
             """,
-            new { recipeId = recipe.Id },
+            new { recipeId = recipe.Id, stepIds = recipe.Steps.Select(step => step.Id).ToArray() },
             cancellationToken).ConfigureAwait(false);
 
         foreach (var group in recipe.Groups)
@@ -405,21 +409,7 @@ internal sealed class RecipeRepository(
 
         foreach (var step in recipe.Steps)
         {
-            await executor.ExecuteAsync(
-                """
-                insert into steps (id, recipe_id, sort_order, title, body, duration_seconds)
-                values (@id, @recipeId, @sortOrder, @title, @body, @durationSeconds);
-                """,
-                new
-                {
-                    id = step.Id,
-                    recipeId = recipe.Id,
-                    sortOrder = step.SortOrder,
-                    title = step.Title,
-                    body = StepText.Serialise(step.Segments),
-                    durationSeconds = step.DurationSeconds
-                },
-                cancellationToken).ConfigureAwait(false);
+            await WriteStepAsync(recipe.Id, step, cancellationToken).ConfigureAwait(false);
 
             // The step's own set, which Step.Create has already widened to
             // include everything the sentence mentions — so this cannot
@@ -444,5 +434,45 @@ internal sealed class RecipeRepository(
         // this method, which is why the index cannot be forgotten on one of
         // them — and an architecture test says so.
         await documents.WriteAsync(recipe.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Updates a step the recipe already has, or adds a new one.</summary>
+    /// <remarks>
+    /// The update is limited to this recipe's own steps, so an id that belongs
+    /// to another recipe falls through to the insert and fails on the primary
+    /// key instead of moving that step over.
+    /// </remarks>
+    private async Task WriteStepAsync(Guid recipeId, Step step, CancellationToken cancellationToken)
+    {
+        var parameters = new
+        {
+            id = step.Id,
+            recipeId,
+            sortOrder = step.SortOrder,
+            title = step.Title,
+            body = StepText.Serialise(step.Segments),
+            durationSeconds = step.DurationSeconds
+        };
+
+        var updated = await executor.ExecuteAsync(
+            """
+            update steps
+            set sort_order = @sortOrder, title = @title, body = @body,
+                duration_seconds = @durationSeconds
+            where id = @id and recipe_id = @recipeId;
+            """,
+            parameters,
+            cancellationToken).ConfigureAwait(false);
+
+        if (updated == 0)
+        {
+            await executor.ExecuteAsync(
+                """
+                insert into steps (id, recipe_id, sort_order, title, body, duration_seconds)
+                values (@id, @recipeId, @sortOrder, @title, @body, @durationSeconds);
+                """,
+                parameters,
+                cancellationToken).ConfigureAwait(false);
+        }
     }
 }
