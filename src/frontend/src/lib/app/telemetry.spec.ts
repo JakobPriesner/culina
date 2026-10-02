@@ -68,7 +68,59 @@ describe('batching', () => {
 
     expect(sent[0]?.keepalive).toBe(true);
   });
+
+  /*
+   * The browser fails a keepalive request outright once the keepalive bodies in
+   * flight pass 64 KiB, and the reporter never hears of it — so a page with a
+   * lot to say would have said nothing.
+   */
+  it('keeps within what the browser lets outlive the page, and sends the rest anyway', async () => {
+    reportLargeFailures(10);
+
+    flush();
+    await vi.runAllTimersAsync();
+
+    const sizes = await Promise.all(sent.map(sizeOf));
+    const keptAlive = sizes.filter((_, index) => sent[index]?.keepalive);
+    const total = (await bodies()).reduce((sum, body) => sum + body.records.length, 0);
+
+    expect(sent.length).toBeGreaterThan(1);
+    expect(sizes.every((size) => size <= keepaliveBudget)).toBe(true);
+    expect(keptAlive.reduce((sum, size) => sum + size, 0)).toBeLessThanOrEqual(keepaliveBudget);
+    expect(sent.some((request) => !request.keepalive)).toBe(true);
+    expect(total).toBe(10);
+  });
+
+  it('keeps a request alive again once the earlier ones have arrived', async () => {
+    reportLargeFailures(10);
+    flush();
+    await vi.runAllTimersAsync();
+
+    // Big enough that it would not fit beside the first batch, were that still
+    // counted as on its way.
+    reportLargeFailures(1, 10);
+    flush();
+    await vi.runAllTimersAsync();
+
+    expect(sent.at(-1)?.keepalive).toBe(true);
+  });
 });
+
+const keepaliveBudget = 64 * 1024;
+
+/** As big as the server lets a record be, each one different. */
+function reportLargeFailures(count: number, from = 0) {
+  for (let index = from; index < from + count; index++) {
+    const error = new Error(`${index} ${'x'.repeat(1_000)}`);
+    error.stack = 'y'.repeat(8_000);
+
+    report('uncaught_error', error);
+  }
+}
+
+async function sizeOf(request: Request) {
+  return new TextEncoder().encode(await request.clone().text()).length;
+}
 
 describe('restraint', () => {
   it('sends the same failure once', async () => {
