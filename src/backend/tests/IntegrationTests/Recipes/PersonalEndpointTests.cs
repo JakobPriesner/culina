@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Application.Abstractions.Settings;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +79,34 @@ public class PersonalEndpointTests(PostgresFixture postgres)
         // The recipe is shared; the note is not.
         Assert.Equal(HttpStatusCode.OK, theirs.StatusCode);
         Assert.Equal(JsonValueKindNull, theirs.Json!.Value.GetProperty("overall").ValueKind);
+    }
+
+    [Fact]
+    public async Task Notes_ShouldSurviveAnotherMemberSavingTheRecipe_WhenTheStepIsKept()
+    {
+        // Arrange
+        var (owner, housemate) = await TwoInOneHouseholdAsync();
+        using var ownerClient = owner;
+        using var housemateClient = housemate;
+        var recipeId = await CreateRecipeAsync(owner);
+        var withStep = await SaveRecipeAsync(owner, recipeId, stepId: null);
+        var stepId = withStep.Json!.Value.GetProperty("steps")[0].GetProperty("stepId").GetGuid();
+        await housemate.PutAsync(
+            $"/api/v1/recipes/{recipeId}/notes",
+            new { overall = (string?)null, steps = new[] { new { stepId, body = "Lower the heat." } } },
+            Token);
+
+        // Act
+        // The editor saves on every pause in typing, so this is what fixing a
+        // typo in the title does.
+        var saved = await SaveRecipeAsync(owner, recipeId, stepId);
+        var notes = await housemate.GetAsync($"/api/v1/recipes/{recipeId}/notes", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var step = Assert.Single(notes.Json!.Value.GetProperty("steps").EnumerateArray());
+        Assert.Equal(stepId, step.GetProperty("stepId").GetGuid());
+        Assert.Equal("Lower the heat.", step.GetProperty("body").GetString());
     }
 
     [Fact]
@@ -168,6 +197,29 @@ public class PersonalEndpointTests(PostgresFixture postgres)
                 new { householdId, title = "Bolognese" },
                 Token))
             .Json!.Value.GetProperty("recipeId").GetGuid();
+    }
+
+    /// <summary>Saves the recipe as the editor does, with one step.</summary>
+    private static async Task<ApiResponse> SaveRecipeAsync(ApiClient client, Guid recipeId, Guid? stepId)
+    {
+        var current = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                title = "Bolognese",
+                language = "en",
+                yieldAmount = 4,
+                yieldKind = "servings",
+                groups = Array.Empty<object>(),
+                steps = new[] { new { stepId, segments = new[] { new { type = "text", value = "Simmer." } } } },
+                tags = Array.Empty<string>()
+            })
+        };
+
+        request.Headers.TryAddWithoutValidation("If-Match", current.ETag);
+
+        return await client.SendAsync(request, Token);
     }
 
     private async Task<ApiClient> SignedInAsync(string email)
