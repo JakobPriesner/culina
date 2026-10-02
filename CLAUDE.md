@@ -74,4 +74,7 @@ _Add a brief overview of your project architecture_
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+- **Never publish source maps.** No `.map` files in the frontend build output,
+  the container image, or anything the server serves, and no `sourceMappingURL`
+  pointing at one. Reported web app stacks stay minified; don't propose making
+  them readable by shipping maps.
