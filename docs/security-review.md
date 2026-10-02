@@ -65,6 +65,7 @@ notice losing.
 | Revocable | Met | `Revoke_ShouldStopACodeWorking_Immediately` |
 | Refusals are indistinguishable | Met | `Redeem_ShouldAnswerIdentically_ForUnknownAndUsedCodes` |
 | Only a member may invite | Met | `Invite_ShouldBeRefused_ForSomeoneWhoIsNotAMember` |
+| Opening a link does not join | Met | The join page redeems only when the person signed in presses Join, so a link from a stranger cannot switch them into a stranger's kitchen — `asks somebody signed in before joining, and does not join on opening` in `join/[code]/page.spec.ts` |
 
 ## V2 — Account recovery
 
