@@ -1,3 +1,4 @@
+using Application.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace Application.LogRecords;
@@ -7,12 +8,12 @@ namespace Application.LogRecords;
 /// </summary>
 /// <remarks>
 /// Its own category, so an operator can tell the browser's lines from the
-/// server's with one filter: the exporter sends the category as the
-/// instrumentation scope.
+/// server's on the console with one filter, and so the host can export them
+/// under a service of their own.
 /// </remarks>
 internal static partial class WebAppLogs
 {
-    internal const string Category = "Culina.WebApp";
+    internal const string Category = CulinaTelemetry.WebAppCategory;
 
     [LoggerMessage(
         EventId = 1700,
