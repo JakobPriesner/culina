@@ -83,6 +83,18 @@ public static class RecipeErrors
         "Two ingredient lines have the same id. Each line needs its own.",
         ErrorType.Validation);
 
+    /// <summary>Two ingredient groups claim the same id.</summary>
+    public static readonly Error DuplicateGroup = new(
+        "recipes.duplicate_group",
+        "Two ingredient groups have the same id. Each group needs its own.",
+        ErrorType.Validation);
+
+    /// <summary>Two steps claim the same id.</summary>
+    public static readonly Error DuplicateStep = new(
+        "recipes.duplicate_step",
+        "Two steps have the same id. Each step needs its own.",
+        ErrorType.Validation);
+
     /// <summary>The recipe has more ingredients than anyone could cook from.</summary>
     public static readonly Error TooManyIngredients = new(
         "recipes.too_many_ingredients",

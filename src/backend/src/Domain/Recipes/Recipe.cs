@@ -219,9 +219,21 @@ public sealed class Recipe
             return RecipeErrors.DuplicateIngredient;
         }
 
+        if (groups.DistinctBy(group => group.Id).Count() != groups.Count)
+        {
+            return RecipeErrors.DuplicateGroup;
+        }
+
         if (steps.Count > MaxSteps)
         {
             return RecipeErrors.TooManySteps;
+        }
+
+        // A step is updated in place by its id, so two sharing one would not
+        // even fail: the second would quietly overwrite the first.
+        if (steps.DistinctBy(step => step.Id).Count() != steps.Count)
+        {
+            return RecipeErrors.DuplicateStep;
         }
 
         if (DanglingReference(steps, ingredientIds) is { } failure)
