@@ -1377,6 +1377,58 @@
   "household.delete.done": "„{name}“ wurde gelöscht.",
   "household.deleted.title": "Gelöschte Haushalte",
   "household.deleted.body": "Haushalte, die du als Eigentümer gelöscht hast. Beim Wiederherstellen kommen Mitglieder, Rezepte und Kochbücher zurück.",
+  "notFound.tab": "Seite nicht gefunden",
+  "notFound.eyebrow": "Nicht gefunden · ein Rezept dafür",
+  "notFound.page.title": "Verlorene-Seiten-Suppe",
+  "notFound.page.body": "Unter dieser Adresse gibt es keine Seite. So kommst du zurück zum Kochen.",
+  "notFound.recipe.title": "Verschwundenes-Rezept-Eintopf",
+  "notFound.recipe.body": "Dieses Rezept ist nicht in deiner Küche. Es wurde vielleicht gelöscht, oder der Link, dem du gefolgt bist, ist unvollständig.",
+  "notFound.cookbook.title": "Leeres-Regal-Crumble",
+  "notFound.cookbook.body": "Dieses Kochbuch ist nicht in deiner Küche. Es wurde vielleicht gelöscht, oder der Link, dem du gefolgt bist, ist unvollständig.",
+  "notFound.servings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Für {count} ratlose Seele",
+        "countPlural=*": "Für {count} ratlose Seelen"
+      }
+    }
+  ],
+  "notFound.ing.address": "Adresse, leicht daneben",
+  "notFound.ing.recipe": "Rezept, unauffindbar",
+  "notFound.ing.cookbook": "Kochbuch, unauffindbar",
+  "notFound.ing.link": "Link, nicht mehr ganz frisch",
+  "notFound.ing.patience.amount": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": { "countPlural=one": "eine Prise", "countPlural=*": "{count} Prisen" }
+    }
+  ],
+  "notFound.ing.patience": "Geduld",
+  "notFound.step.typo": "Prüf die Adresse auf Tippfehler.",
+  "notFound.step.deleted": "In den letzten 30 Tagen gelöscht? Dann köchelt es noch hier:",
+  "notFound.step.search": "Immer noch nichts?",
+  "notFound.step.library": "Oder koch etwas, das es gibt:",
+  "notFound.step.signIn": "Abgemeldet? Schau in deiner eigenen Küche nach:",
+  "notFound.search": "Rezepte durchsuchen",
+  "notFound.home": "Zu deinen Rezepten",
+  "notAllowed.title": "Dieser Herd ist Chefsache",
+  "notAllowed.body": "Diese Einstellungen verändern die Küche für alle, deshalb können nur Administratoren sie bearbeiten. Wenn hier etwas angepasst werden soll, frag einen Administrator.",
+  "notAllowed.back": "Zurück zu den Einstellungen",
+  "notAllowed.ticket.order": "Bestellung #403",
+  "notAllowed.ticket.table": "Tisch: Einstellungen",
+  "notAllowed.ticket.chef": "Nur für die Küchenleitung",
+  "auth.cold.title": "Deine Sitzung ist kalt geworden",
+  "auth.cold.body": "Du warst eine Weile weg, also hat Culina den Herd ausgeschaltet. Melde dich an, dann heizen wir genau da wieder ein, wo du aufgehört hast.",
+  "auth.cold.submit": "Herd wieder anschalten",
+  "auth.secret.title": "Das bleibt in der Familie",
+  "auth.secret.body": "Rezepte in Culina bleiben in der Küche, zu der sie gehören. Melde dich an, wenn du dazugehörst, dann öffnet sich der Link sofort.",
+  "auth.secret.submit": "Ich gehöre dazu – anmelden",
+  "auth.secret.stamp": "Familienrezept",
+  "auth.secret.stampNote": "Nur für Mitglieder",
   "auth.join.confirm.body": "Jemand hat dir einen Link zu seinem Haushalt geschickt. Tritt nur bei, wenn du weißt, von wem er ist: Die Mitglieder sehen deinen Namen, und was du dort hinzufügst, gehört zu ihrer Küche.",
-  "auth.join.confirm.submit": "Haushalt beitreten"
+  "me.olla": "Olla zeigen",
+  "me.olla.hint": "Der kleine Topf, der leeren Seiten Gesellschaft leistet und sich freut, wenn du etwas geschafft hast. Ausgeschaltet bleiben die Seiten schlicht. Gilt für dieses Gerät."
 }

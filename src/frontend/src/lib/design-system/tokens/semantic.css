@@ -120,4 +120,23 @@
   /* The shimmer a skeleton animates between. */
   --skeleton-base: var(--c-sand-200);
   --skeleton-highlight: var(--c-sand-100);
+
+  /*
+   * Olla, the mascot.
+   *
+   * The same in both modes, like a photograph: Olla is a character with its
+   * own colours, not a surface that follows the page. Only the steam follows
+   * the page, because steam is the room's colour.
+   */
+  --mascot-line: var(--c-sand-900);
+  --mascot-body: var(--c-olive-400);
+  --mascot-shine: color-mix(in srgb, var(--c-olive-300) 55%, var(--c-olive-400));
+  --mascot-rim: var(--c-olive-500);
+  --mascot-hat: var(--c-white);
+  --mascot-hat-shade: var(--c-sand-200);
+  --mascot-cheek: var(--c-saffron-400);
+  --mascot-mouth: var(--c-rust-600);
+  --mascot-paper: var(--c-sand-50);
+  --mascot-paper-line: var(--c-sand-300);
+  --mascot-steam: var(--c-sand-400);
 }

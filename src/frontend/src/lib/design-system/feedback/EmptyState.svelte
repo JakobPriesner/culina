@@ -18,13 +18,20 @@
     action: Snippet;
     /** An outline, not a picture: decoration here just delays reading. */
     icon?: Snippet;
+    /**
+     * A character in place of the icon, drawn without the icon's frame. The
+     * app decides whether there is one; with none, the icon stands in.
+     */
+    art?: Snippet;
   }
 
-  let { title, body, action, icon }: Props = $props();
+  let { title, body, action, icon, art }: Props = $props();
 </script>
 
 <div class="empty">
-  {#if icon}
+  {#if art}
+    <div class="art">{@render art()}</div>
+  {:else if icon}
     <span class="icon" aria-hidden="true">{@render icon()}</span>
   {/if}
 
@@ -56,6 +63,10 @@
     border-radius: var(--radius-lg);
     background: var(--surface-accent-subtle);
     color: var(--accent);
+  }
+
+  .art {
+    margin-bottom: var(--space-2);
   }
 
   .icon :global(svg) {

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { GenerationAura, GenerationStatus, Skeleton } from '$ds';
+  import { GenerationAura, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
 
+  import DraftProgress from './DraftProgress.svelte';
   import type { Draft } from './draftToRecipe';
 
   /**
@@ -44,7 +45,7 @@
   <GenerationAura active={writing} />
 
   {#if writing}
-    <GenerationStatus label={m['assist.writing']()} />
+    <DraftProgress label={m['assist.writing']()} arriving={draft !== null} />
   {/if}
 
   {#if draft?.title}

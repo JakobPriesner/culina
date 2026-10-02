@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { safeRedirect } from './redirectTarget';
+import { loginUrlFor, safeRedirect } from './redirectTarget';
 
 /*
  * This value arrives in a URL that anyone can write, so every case here is a
@@ -25,5 +25,19 @@ describe('where to go after signing in', () => {
     ['empty', '']
   ])('refuses %s', (_, next) => {
     expect(safeRedirect(next)).toBe('/');
+  });
+});
+
+describe('the sign-in address', () => {
+  it('remembers where somebody was going', () => {
+    expect(loginUrlFor(new URL('http://culina.test/recipes?q=soup'))).toBe(
+      '/login?next=%2Frecipes%3Fq%3Dsoup'
+    );
+  });
+
+  it('says the session ended, so the sign-in page can explain the bounce', () => {
+    expect(loginUrlFor(new URL('http://culina.test/shopping'), 'expired')).toBe(
+      '/login?next=%2Fshopping&reason=expired'
+    );
   });
 });
