@@ -40,9 +40,10 @@ test.describe('the shipped image @image', () => {
       // which would pass everything below without testing anything.
       expect(response?.headers()['content-security-policy']).toContain("'nonce-");
 
-      // Signed out, a deep link lands on sign-in too.
+      // Signed out, a deep link lands on sign-in too, under the copy that says
+      // the recipe is for the household.
       await expect(
-        page.getByRole('heading', { level: 1, name: /anmelden|sign in/i })
+        page.getByRole('heading', { level: 1, name: /anmelden|sign in|familie|family/i })
       ).toBeVisible();
       // SvelteKit's route announcer mounts after the heading does, and a
       // refused style on it is reported then, not before.

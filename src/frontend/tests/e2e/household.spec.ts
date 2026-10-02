@@ -77,9 +77,10 @@ test.describe('sharing a kitchen', () => {
     await signIn(them, guest);
 
     // Already signed in, so the link does not ask them to sign in again and
-    // does not send them to a screen about not having a household. It lets
-    // them in.
+    // does not send them to a screen about not having a household. It asks
+    // whether to join, and one press lets them in.
     await them.goto(url.pathname);
+    await them.getByRole('button', { name: /join household|haushalt beitreten/i }).click();
 
     // Landed in the household, and the recipe is simply there, in the library.
     await expect(them).toHaveURL(/\/$/);
