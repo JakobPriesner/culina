@@ -208,7 +208,7 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
 
             foreach (var rendition in renditions)
             {
-                await WriteAsync(hash, rendition, cancellationToken).ConfigureAwait(false);
+                await WriteAsync(hash, rendition).ConfigureAwait(false);
             }
 
             return new StoredImage(hash, image.Width, image.Height, renditions[^1].Bytes.Length);
@@ -260,10 +260,17 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
         return renditions;
     }
 
-    private async Task WriteAsync(
-        string hash,
-        Rendition rendition,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Writes beside the final path and moves into it, so the address only
+    /// ever holds a whole file.
+    /// </summary>
+    /// <remarks>
+    /// A file at its address is never written again, so one cut off halfway
+    /// would be served, broken, under a URL cached forever. Nor is the
+    /// request's token passed: a client hanging up after the photo is
+    /// rendered is no reason to throw the renditions away.
+    /// </remarks>
+    private async Task WriteAsync(string hash, Rendition rendition)
     {
         var path = PathFor(hash, rendition.Width);
 
@@ -275,7 +282,19 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             return;
         }
 
-        await File.WriteAllBytesAsync(path, rendition.Bytes, cancellationToken).ConfigureAwait(false);
+        var temporary = $"{path}.{Guid.NewGuid():n}.tmp";
+
+        await File.WriteAllBytesAsync(temporary, rendition.Bytes, CancellationToken.None).ConfigureAwait(false);
+
+        try
+        {
+            File.Move(temporary, path, overwrite: false);
+        }
+        catch (IOException) when (File.Exists(path))
+        {
+            // A concurrent store of the same photo moved in first.
+            File.Delete(temporary);
+        }
     }
 
     /// <summary>
