@@ -214,6 +214,14 @@ public class SuggestedSortTests(PostgresFixture postgres)
             }
         }
 
+        // Statistics, as autovacuum would have gathered them within a minute of
+        // an import this size. The suite seeds two hundred recipes in seconds on
+        // top of whatever an earlier analyze saw — possibly one household with
+        // one recipe — so the planner estimates this library at a row or two
+        // and nests loops over every scoring CTE: 3 s instead of 40 ms on a
+        // laptop, and past the 30 s command timeout on a CI runner.
+        await postgres.ExecuteAsync("analyze;", Token);
+
         // Act
         var suggestions = await world.SuggestAsync("&limit=5");
         var listed = await world.Client.GetAsync(
