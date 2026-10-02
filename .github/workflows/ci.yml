@@ -374,6 +374,10 @@ jobs:
           format: sarif
           output: trivy.sarif
           severity: HIGH,CRITICAL
+          # Without this the action drops `severity` whenever the format is
+          # SARIF, so the report holds every severity and exit-code fails the
+          # job on a LOW finding.
+          limit-severities-for-sarif: true
           # Only what can actually be acted on. A finding with no fix available
           # is a finding that teaches everyone to ignore the report.
           ignore-unfixed: true
