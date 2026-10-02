@@ -136,7 +136,7 @@ export function scaleQuantity(
 function measured(exact: number, unit: Unit): ScaledQuantity {
   const canonical = canonicalOf(unit)!;
   const inCanonical = exact * toCanonical(unit);
-  const rounded = toStep(inCanonical, stepFor(inCanonical));
+  const rounded = orExact(toStep(inCanonical, stepFor(inCanonical)), inCanonical);
 
   const bigger = largerUnit(canonical);
 
@@ -175,10 +175,10 @@ function measured(exact: number, unit: Unit): ScaledQuantity {
 function customary(exact: number, unit: Unit, isMass: boolean): ScaledQuantity {
   const inCanonical = exact * toCanonical(unit);
   const converted = isMass ? fromGrams(inCanonical) : fromMillilitres(inCanonical);
-  const rounded = toMeasure(converted.value, converted.steps);
+  const rounded = orExact(toMeasure(converted.value, converted.steps), converted.value);
 
   return {
-    value: trim(Math.max(0, rounded)),
+    value: trim(rounded),
     upper: null,
     unit: converted.unit,
     isApproximate: drifted(converted.value, rounded),
@@ -212,8 +212,18 @@ function stepFor(amount: number): number {
 }
 
 /**
+ * Rounding never makes an amount disappear.
+ *
+ * Below the smallest step — 0.2 g of saffron, 2 g of yeast in ounces — the
+ * grid has nothing between zero and an amount several times too much, and
+ * either would change what is cooked. The arithmetic is the honest answer.
+ */
+const orExact = (rounded: number, exact: number): number => (rounded === 0 ? exact : rounded);
+
+/**
  * Spoons round to halves, and to thirds, because measuring spoons exist in
- * those sizes and in no others.
+ * those sizes and in no others — and below a half, to the quarter and eighth
+ * spoons, so a small amount stays a small amount instead of becoming none.
  */
 function spooned(exact: number, unit: Unit): ScaledQuantity {
   // Halves are the grid. Thirds are not an alternative grid to round onto —
@@ -224,12 +234,12 @@ function spooned(exact: number, unit: Unit): ScaledQuantity {
   const nearestThird = Math.round(exact * 3) / 3;
 
   const rounded =
-    Math.abs(nearestThird - exact) <= thirdTolerance
+    nearestThird > 0 && Math.abs(nearestThird - exact) <= thirdTolerance
       ? nearestThird
-      : closest(exact, multiples(exact, 0.5));
+      : closest(exact, exact < 0.5 ? smallSpoons : multiples(exact, 0.5));
 
   return {
-    value: trim(Math.max(0, rounded)),
+    value: trim(rounded),
     upper: null,
     unit,
     isApproximate: drifted(exact, rounded),
@@ -240,6 +250,9 @@ function spooned(exact: number, unit: Unit): ScaledQuantity {
 
 /** How near a third an amount has to be before it is treated as one. */
 const thirdTolerance = 0.02;
+
+/** The spoons below a half. An eighth is the floor: nothing rounds to no spoon. */
+const smallSpoons = [0.125, 0.25, 0.5];
 
 /**
  * The pieces of one thing a kitchen has words for.

@@ -25,6 +25,7 @@ export interface QuantityText {
  * is the same: nobody writes `0.5 onion`, they write half an onion.
  */
 const glyphs = new Map<number, string>([
+  [0.125, '⅛'],
   [0.25, '¼'],
   [1 / 3, '⅓'],
   [0.5, '½'],

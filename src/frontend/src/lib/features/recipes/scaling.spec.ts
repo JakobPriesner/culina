@@ -54,6 +54,22 @@ describe('mass and volume', () => {
     expect(scale(1, 'kg', 0.5)).toMatchObject({ value: 500, unit: 'g' });
     expect(scale(1, 'l', 0.5)).toMatchObject({ value: 500, unit: 'ml' });
   });
+
+  it('never rounds a small amount to nothing', () => {
+    // 0.2 g of saffron is below the half-gram step; zero would leave it out
+    // and half a gram would be two and a half times it, so it stays exact.
+    expect(scale(0.1, 'g', 2)).toMatchObject({ value: 0.2, unit: 'g', isApproximate: false });
+    expect(scale(0.4, 'ml', 0.5)).toMatchObject({ value: 0.2, unit: 'ml' });
+  });
+
+  it('never converts a small amount to nothing', () => {
+    // 2 g of yeast is 0.07 oz, and the nearest quarter-ounce below it is none.
+    const scaled = scaleQuantity({ value: 2, unit: 'g' }, 1, 'imperial');
+
+    expect(scaled.unit).toBe('oz');
+    expect(scaled.value).toBeCloseTo(0.0705, 4);
+    expect(scaleQuantity({ value: 3, unit: 'ml' }, 1, 'imperial').value).toBeGreaterThan(0);
+  });
 });
 
 describe('countable things', () => {
@@ -99,6 +115,13 @@ describe('spoons', () => {
   it('allows thirds when the arithmetic produced one, because the spoons exist', () => {
     expect(scale(1, 'tsp', 1 / 3).value).toBeCloseTo(1 / 3, 3);
     expect(scale(1, 'tsp', 2 / 3).value).toBeCloseTo(2 / 3, 3);
+  });
+
+  it('keeps a small spoon amount a small spoon amount', () => {
+    // An eighth of a teaspoon is a measurement, and no spoon at all is not.
+    expect(scale(0.25, 'tsp', 0.5)).toMatchObject({ value: 0.125, isApproximate: false });
+    expect(scale(0.5, 'tsp', 0.5)).toMatchObject({ value: 0.25, isApproximate: false });
+    expect(scale(0.25, 'tsp', 0.1)).toMatchObject({ value: 0.125, isApproximate: true });
   });
 
   it('does not use a third as a second grid to round onto', () => {
