@@ -182,6 +182,28 @@
   }
 
   /*
+   * On a phone: pinned under the header.
+   *
+   * Sticky for the same reason as on every wider screen: the categories are
+   * how you leave a long archive. On an opaque band the colour of the page
+   * rather than a floating bar: the row wraps to two lines here, and a glass
+   * box that tall is a second header. Bled out to the gutter so the page
+   * disappears at the edge of the screen rather than at the edge of the pills.
+   * Above the header's layer, so its scrim fades the page and not the pills.
+   */
+  @media (max-width: 47.999rem) {
+    .rail {
+      position: sticky;
+      z-index: var(--z-sticky);
+      top: var(--header-inset);
+      margin-inline: calc(-1 * var(--layout-gutter-start)) calc(-1 * var(--layout-gutter-end));
+      padding: var(--space-2) var(--layout-gutter-end) var(--space-2) var(--layout-gutter-start);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+  }
+
+  /*
    * On a tablet: up into the header, on the brand's line.
    *
    * The shell's header carries the brand and nothing else at this width — the
