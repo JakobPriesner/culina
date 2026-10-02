@@ -57,10 +57,10 @@ internal sealed class RecipeImporter(
     /// <summary>What the image store writes, and so what a recipe row records.</summary>
     private const string PictureContentType = "image/webp";
 
-    private const string Imported = "imported";
+    internal const string Imported = "imported";
     private const string AlreadyHere = "already_here";
     private const string LooksLike = "looks_like";
-    private const string Failed = "failed";
+    internal const string Failed = "failed";
 
     /// <summary>Brings one of their recipes over.</summary>
     /// <param name="into">Which connection, which shelf, whose import.</param>

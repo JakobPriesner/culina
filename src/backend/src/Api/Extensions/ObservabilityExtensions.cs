@@ -94,9 +94,12 @@ internal static class ObservabilityExtensions
     {
         builder.Logging.ClearProviders();
 
-        // Scopes carry the request id, so every line emitted while handling a
-        // request is correlated.
-        builder.Logging.Configure(options => options.ActivityTrackingOptions = ActivityTrackingOptions.None);
+        // Every line carries the trace and span ids, so the lines of a request
+        // are correlated, and so are those of the work no request carries: an
+        // import, a sweep, a migration. The trace id is the request id a user
+        // is shown.
+        builder.Logging.Configure(options =>
+            options.ActivityTrackingOptions = ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId);
 
         if (builder.Environment.IsDevelopment())
         {
@@ -169,7 +172,7 @@ internal static class ObservabilityExtensions
             // rather than through an instrumentation package.
             .AddMeter("Npgsql");
 
-    private static string Version() =>
+    internal static string Version() =>
         typeof(ObservabilityExtensions).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
         ?? "0.0.0";

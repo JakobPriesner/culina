@@ -267,8 +267,22 @@ previous release's dump.
 
 - **Health.** `/health/live` says a process exists; `/health/ready` says it can
   reach the database. Your load balancer wants `ready`.
-- **Logs.** JSON on stdout, one line per request, each carrying the request id
-  that the app also shows to whoever hit the error. Ask them for it.
+- **Logs.** JSON on stdout, one line per API request: method, path, route,
+  status, duration and, when it failed, the error code the client was shown
+  (`auth.invalid_credentials`, `recipes.not_found`). Every line carries
+  `TraceId`, which is the request id the app shows to whoever hit the error
+  (ask them for it), plus the span, the client address and the user. The
+  `RequestId` field is the web server's own connection counter, not that id.
+  The first line after a start names the version, the database, the image path
+  and where telemetry goes. Set `Logging__LogLevel__Default=Debug` to see each import
+  recipe, each fetch hop and each assistant call as it is asked for.
+- **Event ids worth alerting on.** 1001 refused sign-in, 1002 refused password
+  confirmation, 1003 refused recovery code, and 1801 for a request rejected by
+  a rate limit, the CSRF check or the origin check, with the reason. Each line
+  carries `ClientAddress` and never the email address that was tried, so
+  fail2ban or CrowdSec can ban on it. 1501 is an AI provider refusing a call,
+  with the provider's own reason attached; 1502 is every settled assistant
+  call with its tokens, cost and duration.
 - **Telemetry.** Set a collector under Settings → Server, or
   `OTEL_EXPORTER_OTLP_ENDPOINT`, and traces, metrics and logs all export. Unset,
   nothing leaves the machine.
