@@ -538,6 +538,80 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         Assert.Equal(["Limes"], names);
     }
 
+    [Fact]
+    public async Task Get_ShouldNotAnswerNotModifiedOverARenamedRecipe()
+    {
+        // Arrange
+        // The title is read from the recipe, and renaming it is not a write to
+        // the list, so the list's version alone cannot say it has changed.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+        var before = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+
+        // Act
+        await SaveWithButterAsync(client, recipeId, "Birthday cake", 200);
+        var after = await RevalidateAsync(client, householdId, before);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+        Assert.Equal(
+            "Birthday cake",
+            Butter(after).GetProperty("sources")[0].GetProperty("recipeTitle").GetString());
+    }
+
+    [Fact]
+    public async Task Get_ShouldNotAnswerNotModifiedOverAMovedMeal()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var entryId = await PlanAsync(client, householdId, recipeId, Monday);
+
+        await AddWeekAsync(client, householdId);
+        var before = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+
+        // Act
+        await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{entryId}",
+            new { date = Monday.AddDays(2) },
+            Token);
+        var after = await RevalidateAsync(client, householdId, before);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+        Assert.Equal(
+            "2026-09-16",
+            Butter(after).GetProperty("sources")[0].GetProperty("plannedDate").GetString());
+    }
+
+    [Fact]
+    public async Task Get_ShouldAnswerNotModifiedWhenNothingChanged()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+        var before = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+
+        // Act
+        var after = await RevalidateAsync(client, householdId, before);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotModified, after.StatusCode);
+    }
+
     private static readonly DateOnly Monday = new(2026, 9, 14);
 
     private static JsonElement Butter(ApiResponse response) =>
@@ -587,6 +661,17 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         return me.Json!.Value.GetProperty("households")[0].GetProperty("householdId").GetGuid();
     }
 
+    private static Task<ApiResponse> RevalidateAsync(ApiClient client, Guid householdId, ApiResponse before)
+    {
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/v1/households/{householdId}/shopping-list");
+        request.Headers.IfNoneMatch.Add(
+            System.Net.Http.Headers.EntityTagHeaderValue.Parse(before.ETag!));
+
+        return client.SendAsync(request, Token);
+    }
+
     private static async Task<Guid> RecipeWithButterAsync(
         ApiClient client,
         Guid householdId,
@@ -599,6 +684,17 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             Token);
 
         var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        await SaveWithButterAsync(client, recipeId, title, grams);
+
+        return recipeId;
+    }
+
+    private static async Task SaveWithButterAsync(
+        ApiClient client,
+        Guid recipeId,
+        string title,
+        decimal grams)
+    {
         var read = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
         var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
@@ -625,8 +721,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             System.Net.Http.Headers.EntityTagHeaderValue.Parse(read.ETag!));
 
         await client.SendAsync(request, Token);
-
-        return recipeId;
     }
 
     private async Task<ApiClient> SignedInAsync()
