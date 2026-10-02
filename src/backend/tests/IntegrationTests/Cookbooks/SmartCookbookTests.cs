@@ -442,6 +442,7 @@ public class SmartCookbookTests(PostgresFixture postgres)
         var settings = postgres.Api.Services.GetRequiredService<RegistrationSettings>();
 
         settings.OpenRegistration = true;
+        settings.RequireInvitation = false;
 
         var grace = postgres.Api.NewApiClient();
 

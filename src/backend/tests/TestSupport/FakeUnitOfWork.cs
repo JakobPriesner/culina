@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Domain.Shared;
 
 namespace TestSupport;
 
@@ -17,6 +18,17 @@ public sealed class FakeUnitOfWork : IUnitOfWork
 
     /// <summary>When set, the transaction throws instead of running the work.</summary>
     public Exception? FailWith { get; set; }
+
+    public Task<Result> InTransactionAsync(
+        Func<CancellationToken, Task<Result>> work,
+        CancellationToken cancellationToken) =>
+        InTransactionAsync<Result>(work, cancellationToken);
+
+    public Task<Result<TValue>> InTransactionAsync<TValue>(
+        Func<CancellationToken, Task<Result<TValue>>> work,
+        CancellationToken cancellationToken)
+        where TValue : notnull =>
+        InTransactionAsync<Result<TValue>>(work, cancellationToken);
 
     public Task<TResult> InTransactionAsync<TResult>(
         Func<CancellationToken, Task<TResult>> work,

@@ -174,6 +174,47 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
         Assert.Equal("households.invitation_invalid", registered.ProblemCode);
     }
 
+    [Fact]
+    public async Task Registration_ShouldLeaveNoAccountBehind_WhenItIsRefusedForWantOfACode()
+    {
+        // Arrange
+        using var admin = await AdminAsync();
+        await admin.PutAsync(
+            "/api/v1/settings/registration",
+            new { openRegistration = true, requireInvitation = true, maxUsers = 100 },
+            Token);
+
+        var householdId = (await admin.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        var code = (await admin.PostAsync(
+                $"/api/v1/households/{householdId}/invitations",
+                new { },
+                Token))
+            .Json!.Value.GetProperty("code").GetString();
+
+        using var newcomer = postgres.Api.NewApiClient();
+        var account = new { email = "grace@example.com", displayName = "Grace", password = Password };
+
+        // Act
+        await newcomer.PostAsync("/api/v1/users", account, Token);
+
+        var signedIn = await newcomer.PostAsync(
+            "/api/v1/sessions",
+            new { email = account.email, password = Password },
+            Token);
+        var retried = await newcomer.PostAsync(
+            "/api/v1/users",
+            new { account.email, account.displayName, account.password, invitationCode = code },
+            Token);
+
+        // Assert
+        // The account is written before the code is checked, so a refusal has
+        // to take it back: otherwise anyone could sign in to an invite-only
+        // instance, and the address would be spent for a later honest attempt.
+        Assert.Equal("auth.invalid_credentials", signedIn.ProblemCode);
+        Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private async Task<ApiClient> AdminAsync()
