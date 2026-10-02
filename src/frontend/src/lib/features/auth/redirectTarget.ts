@@ -33,7 +33,13 @@ export function safeRedirect(next: string | null): string {
  * One definition, used by the route guard and by the handler for a session that
  * expired mid-use, so the two cannot drift into sending people to different
  * places.
+ *
+ * The reason is what lets the sign-in page say why somebody is suddenly
+ * looking at it. Without one, a session ending mid-use is a bounce nobody
+ * explained.
  */
-export function loginUrlFor(url: URL): string {
-  return `${resolve('/(auth)/login')}?next=${encodeURIComponent(url.pathname + url.search)}`;
+export function loginUrlFor(url: URL, reason?: 'expired'): string {
+  const next = `?next=${encodeURIComponent(url.pathname + url.search)}`;
+
+  return `${resolve('/(auth)/login')}${next}${reason ? `&reason=${reason}` : ''}`;
 }

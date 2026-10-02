@@ -18,6 +18,8 @@
     body: string;
     /** The way to try again. Present unless retrying genuinely cannot help. */
     action?: Snippet;
+    /** A character above the title, when the app has one to show. */
+    art?: Snippet;
     /** Labelled, so the id is not a bare string nobody can interpret. */
     requestIdLabel?: string;
     requestId?: string | null;
@@ -32,10 +34,11 @@
     level?: 1 | 2;
   }
 
-  let { title, body, action, requestIdLabel, requestId, level = 2 }: Props = $props();
+  let { title, body, action, art, requestIdLabel, requestId, level = 2 }: Props = $props();
 </script>
 
 <div class="error" role="alert">
+  {#if art}{@render art()}{/if}
   <svelte:element this={level === 1 ? 'h1' : 'h2'} class="title">{title}</svelte:element>
   <p class="body">{body}</p>
 

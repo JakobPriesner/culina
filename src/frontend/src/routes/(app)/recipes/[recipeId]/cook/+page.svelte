@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, IconButton, Sheet, Skeleton } from '$ds';
+  import { Button, ErrorState, IconButton, Sheet, Skeleton } from '$ds';
   import { busy } from '$shell/busy.svelte';
   import { session } from '$features/auth/session.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
@@ -18,6 +18,7 @@
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import { haptics } from '$shell/haptics';
+  import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -344,6 +345,21 @@
         </div>
       </div>
     </div>
+  {:else if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
+    <NotFound kind="recipe" level={1} />
+  {:else if recipes.detailStatus === 'failed'}
+    <ErrorState
+      title={m['recipes.failed.title']()}
+      body={m['recipes.failed.body']()}
+      requestIdLabel={m['error.reference']()}
+      requestId={recipes.detailError?.requestId}
+    >
+      {#snippet action()}
+        <Button variant="primary" onclick={() => recipes.load(recipeId)}>
+          {m['error.retry']()}
+        </Button>
+      {/snippet}
+    </ErrorState>
   {:else}
     <div class="cook-skeleton" aria-busy="true" aria-label={m['recipes.list.loading']()}>
       <div class="back">

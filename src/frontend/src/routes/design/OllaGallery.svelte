@@ -1,0 +1,96 @@
+<script lang="ts">
+  import Olla from '$shell/olla/Olla.svelte';
+  import { poses, type Pose } from '$shell/olla/poses';
+
+  /*
+   * Olla in every pose, for looking at the motion.
+   *
+   * The big one moves between poses as they are chosen, which is the case the
+   * springs exist for; the row below arrives in each pose once.
+   */
+  const names = Object.keys(poses) as Pose[];
+
+  let pose = $state<Pose>('hello');
+</script>
+
+<div class="stage">
+  <Olla {pose} size="lg" />
+  <div class="choices">
+    {#each names as name (name)}
+      <button type="button" aria-pressed={pose === name} onclick={() => (pose = name)}>
+        {name}
+      </button>
+    {/each}
+  </div>
+</div>
+
+<div class="all">
+  {#each names as name (name)}
+    <figure>
+      <Olla pose={name} />
+      <figcaption>{name}</figcaption>
+    </figure>
+  {/each}
+</div>
+
+<div class="small">
+  <Olla pose="celebrating" size="sm" still />
+  <Olla pose="hello" size="sm" still />
+  <span>Small and still, for toasts.</span>
+</div>
+
+<style>
+  .stage {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    flex: 1;
+    min-width: 12rem;
+  }
+
+  button {
+    min-height: var(--control-sm);
+    padding-inline: var(--space-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--surface-accent-subtle);
+  }
+
+  .all {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    gap: var(--space-4);
+  }
+
+  figure {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .small {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+</style>

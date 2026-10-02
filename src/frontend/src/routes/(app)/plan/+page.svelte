@@ -24,6 +24,8 @@
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
+  import Olla from '$shell/olla/Olla.svelte';
+  import { ollaSetting } from '$shell/olla/setting.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -282,6 +284,7 @@
   };
 </script>
 
+{#snippet peeking()}<Olla pose="peeking" />{/snippet}
 <svelte:head><title>{m['plan.title']()}</title></svelte:head>
 
 <Page>
@@ -390,7 +393,11 @@
         {/if}
       </div>
     {:else if !mealPlan.loading}
-      <EmptyState title={m['plan.empty.title']()} body={m['plan.empty.description']()}>
+      <EmptyState
+        title={m['plan.empty.title']()}
+        body={m['plan.empty.description']()}
+        art={ollaSetting.shown ? peeking : undefined}
+      >
         {#snippet action()}
           <Button variant="primary" href={resolve('/(app)')}>{m['plan.empty.action']()}</Button>
         {/snippet}
