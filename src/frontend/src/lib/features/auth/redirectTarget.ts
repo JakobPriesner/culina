@@ -39,7 +39,13 @@ export function safeRedirect(next: string | null): string {
  * explained.
  */
 export function loginUrlFor(url: URL, reason?: 'expired'): string {
-  const next = `?next=${encodeURIComponent(url.pathname + url.search)}`;
+  const login = resolve('/(auth)/login');
+  // Already on the sign-in page, the place to go is the one it already has.
+  // Pointing `next` at the sign-in page itself would land people back on the
+  // form after signing in, and nest one level deeper each time.
+  const target =
+    url.pathname === login ? safeRedirect(url.searchParams.get('next')) : url.pathname + url.search;
+  const next = `?next=${encodeURIComponent(target)}`;
 
-  return `${resolve('/(auth)/login')}${next}${reason ? `&reason=${reason}` : ''}`;
+  return `${login}${next}${reason ? `&reason=${reason}` : ''}`;
 }

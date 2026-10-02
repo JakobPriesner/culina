@@ -378,6 +378,20 @@ describe('an expired session', () => {
     expect(sent).toHaveLength(1);
   });
 
+  it('is not what a wrong password means', async () => {
+    const expired = vi.fn();
+
+    handleSessionExpiry(expired);
+    respondWith(problem(401, { code: ErrorCodes.invalidCredentials, detail: 'No match.' }));
+
+    const result = await request(() =>
+      http.POST('/api/v1/sessions', { body: { email: 'a@b.c', password: 'wrong' } })
+    );
+
+    expect(result.ok === false && result.error.code).toBe(ErrorCodes.invalidCredentials);
+    expect(expired).not.toHaveBeenCalled();
+  });
+
   it('drops everything read as the previous person', async () => {
     respondWith(
       json({ id: 'u1' }, { headers: { ETag: '"v3"' } }),
