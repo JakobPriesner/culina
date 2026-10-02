@@ -60,6 +60,11 @@ better** — at least one of it, and no more than one decimal place:
 - `1350 g` stays `1350 g`, because nobody writes `1.35 kg`
 - `500 g` stays `500 g`, because a scale shows grams
 
+Nothing rounds to zero. An amount below the smallest step — `0.1 g` of saffron
+doubled, `2 g` of yeast in ounces — is shown exactly as the arithmetic gives
+it (`0.2 g`, `0.07 oz`): zero leaves it out, and the step would be several
+times too much.
+
 ### 2. Countable things — a range above one, a fraction below it
 
 Anything with a count unit (`piece`, `clove`, `slice`, `can`, `pack`, `bunch`)
@@ -98,6 +103,9 @@ one (within `0.02`):
 
 - `1 tsp × ⅓` → `⅓ tsp`
 - `1.7 tbsp` → `1½ tbsp`, not `1⅔` — it is a half and a half
+
+Below a half, the grid is the small spoons, `⅛ ¼ ½`, with `⅛` the floor:
+`¼ tsp × 0.5` → `⅛ tsp`, `½ tsp × 0.5` → `¼ tsp`.
 
 A small spoon amount stays a small spoon amount. An earlier version of this
 document turned anything under `¼ tsp` into "a pinch"; a pinch is a gesture and

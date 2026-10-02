@@ -45,6 +45,7 @@ describe('fractions', () => {
     expect(show(3, 'tbsp', 0.5)).toBe('1½' + nbsp + 'tbsp');
     expect(show(1, 'tsp', 1 / 3)).toBe('⅓' + nbsp + 'tsp');
     expect(show(1, 'tsp', 2 / 3)).toBe('⅔' + nbsp + 'tsp');
+    expect(show(0.25, 'tsp', 0.5)).toBe('⅛' + nbsp + 'tsp');
   });
 
   it('does not, where nobody writes them', () => {

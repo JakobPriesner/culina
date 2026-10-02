@@ -71,6 +71,13 @@ describe('mass, which is the same measurement said differently', () => {
     // a four per cent lie for no gain at all.
     expect(shown(300, 'g')).toBe('10½ oz');
   });
+
+  it('says how little rather than nothing', () => {
+    // 2 g of yeast is 0.07 oz. A quarter-ounce would be three times it, and
+    // "0 oz" would leave it out.
+    expect(shown(2, 'g')).toBe('0.07 oz');
+    expect(shown(3, 'ml')).toBe('0.1 fl oz');
+  });
 });
 
 describe('volume, which converts honestly', () => {
