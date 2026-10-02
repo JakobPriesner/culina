@@ -162,6 +162,14 @@ API) to `POST /api/v1/log-records`. `CreateLogRecordsCommandHandler` writes one
 - A browser stack travels as `WebAppException`, which is exported as
   `exception.stacktrace`.
 - Send a route id (`/(app)/recipes/[recipeId]`), never `location.href`.
+- Each batch carries `client` (browser, device, screen, connection, display
+  mode, …, gathered in `src/lib/app/clientContext.ts`) and each record its
+  moment (time, page age, online, visible, JS heap). The handler exports them
+  as log attributes through a scope — OTel names where they exist
+  (`browser.*`, `os.version`, `device.model.name`, `session.id`,
+  `user_agent.original`), `culina.web.*` otherwise — cutting text to 128
+  characters and lists to ten rather than refusing the report. Who, never:
+  no address, referrer or anything typed.
 
 Background work (migrations, session sweep, reindex, each import run) opens
 its own span, since there is no request for it to hang off.
@@ -181,11 +189,18 @@ last-4, or a boolean.
 `Api/Extensions/ObservabilityExtensions.cs` owns the whole setup:
 
 - Resource attributes: `service.name = culina-api`, `service.version` from the
-  assembly, `deployment.environment.name` from the hosting environment.
+  assembly, `deployment.environment.name` from the hosting environment, and
+  the machine from the contrib detectors — `host.*`, `os.*`, `container.id`,
+  `process.pid`/`owner`/`creation.time`, `process.runtime.*`. The web app's
+  provider gets none of these: its machine is the browser.
 - Tracing: `AddSource(CulinaTelemetry.Name)`, ASP.NET Core (health filtered),
   HttpClient, Npgsql.
 - Metrics: `AddMeter(CulinaTelemetry.Name)`, ASP.NET Core, HttpClient, runtime,
-  Npgsql.
+  process (CPU time, memory, threads as the OS counts them), Npgsql, and
+  `MachineMetrics` (`Culina.Machine`): `system.memory.limit`/`usage` from the
+  GC (container-aware) and `culina.storage.usage`/`limit` per Culina
+  directory. Machine-wide CPU, network and disk I/O are the collector's
+  `hostmetrics` receiver's job, not the app's.
 - Logging: scopes on; simple single-line console in Development, JSON console
   otherwise; OTel logging provider with `IncludeFormattedMessage` when a
   collector is configured.

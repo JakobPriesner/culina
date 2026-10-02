@@ -57,6 +57,15 @@
           "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.18.0, 2.0.0)"
         }
       },
+      "OpenTelemetry.Instrumentation.Process": {
+        "type": "Direct",
+        "requested": "[1.18.0-rc.1, )",
+        "resolved": "1.18.0-rc.1",
+        "contentHash": "kRO8RMIomcyHeHjq45ZMKKX4oLUhdnmUQmIFrC0Z6ZWWonUqEQdksQwnlXOOjDZwU1FrTRfR+Bos1R0PZChHDw==",
+        "dependencies": {
+          "OpenTelemetry.Api": "[1.18.0, 2.0.0)"
+        }
+      },
       "OpenTelemetry.Instrumentation.Runtime": {
         "type": "Direct",
         "requested": "[1.18.0, )",
@@ -64,6 +73,51 @@
         "contentHash": "McuXGjBJDL/Cown2PxfUQysK98MZG7ZDjO/IKUtaAx8t1m0PB0d+QtJC79RFTVipMhRIwjJiULNOp0OGfZbvwg==",
         "dependencies": {
           "OpenTelemetry.Api": "[1.18.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Resources.Container": {
+        "type": "Direct",
+        "requested": "[1.18.0-beta.1, )",
+        "resolved": "1.18.0-beta.1",
+        "contentHash": "CV8OSa+UjRM/fDksMQIM3mri6YT/CSR6XWtp21qMTNuopPli40jjbCDRK13u2SQZxVYZ7YqeGgB4N+cmrzaHCQ==",
+        "dependencies": {
+          "OpenTelemetry": "[1.18.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Resources.Host": {
+        "type": "Direct",
+        "requested": "[1.18.0-beta.1, )",
+        "resolved": "1.18.0-beta.1",
+        "contentHash": "op7av5suL0muUCAn4LsMf+d7+Aea6VPj0DN4ziFsWwcY/N3wFwnozZxWcLDllF2wpSnTZRjm0hbxSeiVGNA3Vw==",
+        "dependencies": {
+          "OpenTelemetry": "[1.18.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Resources.OperatingSystem": {
+        "type": "Direct",
+        "requested": "[1.18.0-beta.1, )",
+        "resolved": "1.18.0-beta.1",
+        "contentHash": "G1rwxZ06qZvXYSARwAb678gm8GLPJHPX5Rio9r8P4eKte2eMQQcpTDdBMi4FUoaV/oDm0Azk8rMPJ2OsDdAxmQ==",
+        "dependencies": {
+          "OpenTelemetry": "[1.18.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Resources.Process": {
+        "type": "Direct",
+        "requested": "[1.18.0-rc.1, )",
+        "resolved": "1.18.0-rc.1",
+        "contentHash": "KeNjSM5Op+emAXD05t56xhnv9oqmIZ2eofbwv1haNqOHp0FZNoG1VyvN4QfQWWwnBxm797TEb/7Vpf0h+gafhA==",
+        "dependencies": {
+          "OpenTelemetry": "[1.18.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Resources.ProcessRuntime": {
+        "type": "Direct",
+        "requested": "[1.18.0-beta.1, )",
+        "resolved": "1.18.0-beta.1",
+        "contentHash": "520gPsLbog9lF+77YzlYlD8ffO74JUvOXkEInFEbdaOUwxAloHKBzcIT2EvfKStVxl671tp7HV/S19r2uMdI8g==",
+        "dependencies": {
+          "OpenTelemetry": "[1.18.0, 2.0.0)"
         }
       },
       "Google.Apis": {
