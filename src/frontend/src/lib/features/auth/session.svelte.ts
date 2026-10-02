@@ -156,6 +156,12 @@ class SessionStore {
     // signed in, but not the households, and the shell needs both.
     await this.#load();
 
+    // Their own unsent recipes are what an expired session left for them to
+    // come back to. Anybody else's are not theirs to inherit.
+    if (this.#user) {
+      forgetEveryDraft(this.#user.userId);
+    }
+
     return null;
   }
 
@@ -166,6 +172,9 @@ class SessionStore {
     // previous person's data on screen is worse than one that ends the session
     // locally and lets the cookie expire.
     this.end();
+    // An unsent recipe belongs to whoever wrote it. Scoping the key by account
+    // stops it being shown to the next person; only this stops it being kept.
+    forgetEveryDraft();
   }
 
   /** Chooses which household the app is looking at. */
@@ -178,14 +187,17 @@ class SessionStore {
     writeDevice(activeHouseholdKey, householdId);
   }
 
-  /** Everything goes: the session, every store, and the cached responses. */
+  /**
+   * Everything goes: the session, every store, and the cached responses.
+   *
+   * Except the unsent recipes. This is also what a session that expired
+   * mid-sentence runs, and those drafts are kept for whoever signs back in;
+   * signing out, or somebody else signing in, is what removes them.
+   */
   end(): void {
     resetAllStores();
     forgetCachedResponses();
     forgetCachedReads();
-    // An unsent recipe belongs to whoever wrote it. Scoping the key by account
-    // stops it being shown to the next person; only this stops it being kept.
-    forgetEveryDraft();
     this.#status = 'anonymous';
     writeDevice(bootHintKey, 'auth');
   }
