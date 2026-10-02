@@ -78,6 +78,37 @@ describe('opening an invitation', () => {
     expect(select).toHaveBeenCalledWith('h2');
   });
 
+  it('redeems the code once, though joining re-reads the session', async () => {
+    // The real store this time: it is its status changing under the page,
+    // as joining re-reads the session, that must not redeem the code again.
+    session.reset();
+    let redeemed = 0;
+
+    vi.stubGlobal('fetch', (input: Request) => {
+      if (input.url.includes('/redemptions')) {
+        redeemed += 1;
+
+        return Promise.resolve(
+          json({ householdId: 'h2', name: 'Graces Küche', alreadyMember: redeemed > 1 }, 201)
+        );
+      }
+
+      return Promise.resolve(
+        input.url.endsWith('/users/me')
+          ? json({ userId: 'u1', households: [] }, 200)
+          : json({}, 404)
+      );
+    });
+
+    renderWithProviders(JoinPage);
+
+    await vi.waitFor(() => expect(goto).toHaveBeenCalled());
+    await new Promise((settled) => setTimeout(settled, 50));
+
+    expect(redeemed).toBe(1);
+    session.reset();
+  });
+
   it('tells the owner checking their own link that they are already in', async () => {
     signedIn('authenticated');
     redemptionAnswers(() => json({ householdId: 'h1', name: 'Home', alreadyMember: true }, 200));
