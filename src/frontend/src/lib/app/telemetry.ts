@@ -40,6 +40,13 @@ const longestMessage = 1_000;
 const longestStack = 8_000;
 const longestRoute = 200;
 
+/**
+ * What the browser lets `keepalive` requests carry between them: once their
+ * bodies in flight would pass 64 KiB, it fails the next one outright. Only this
+ * module sends them, so it can keep the count itself.
+ */
+const keepaliveBudget = 64 * 1024;
+
 /** Long enough that a burst becomes one request, short enough to arrive before the tab closes. */
 const flushDelayMs = 5_000;
 
@@ -51,7 +58,9 @@ const workerFailed = 'culina:failed';
 
 let queue: LogRecord[] = [];
 let timer: ReturnType<typeof setTimeout> | undefined;
+let keptAlive = 0;
 const seen = new Set<string>();
+const encoder = new TextEncoder();
 
 /**
  * Records one thing that went wrong.
@@ -81,25 +90,63 @@ export function report(event: ReportedEvent, thrown: unknown): void {
  * Sends whatever is waiting.
  *
  * `keepalive`, so a batch sent as the tab is hidden still arrives after the
- * page is gone. Through the typed client, so a signed-in page sends its CSRF
- * token like every other write.
+ * page is gone — but only while it fits. The browser fails a `keepalive`
+ * request over its budget rather than sending it, and a failure here is
+ * silent, so a batch that does not fit goes as an ordinary request instead:
+ * it still arrives unless the page closes first. Batches are cut by size as
+ * well as count so that each one can fit on its own. Through the typed client,
+ * so a signed-in page sends its CSRF token like every other write.
  */
 export function flush(): void {
   clearTimeout(timer);
   timer = undefined;
 
   while (queue.length > 0) {
-    const records = queue.splice(0, mostPerBatch);
+    const body = { appVersion: version, records: takeBatch() };
+    const size = bytes(body);
+    const keepalive = keptAlive + size <= keepaliveBudget;
+
+    if (keepalive) {
+      keptAlive += size;
+    }
 
     // Fire and forget: `request` never throws, and a failure is not worth a
     // second attempt or a word to anybody.
-    void request(() =>
-      http.POST('/api/v1/log-records', {
-        body: { appVersion: version, records },
-        keepalive: true
-      })
-    );
+    void request(() => http.POST('/api/v1/log-records', { body, keepalive })).then(() => {
+      if (keepalive) {
+        keptAlive -= size;
+      }
+    });
   }
+}
+
+/**
+ * The next batch off the queue: at most what the server accepts, and small
+ * enough to travel with `keepalive` when nothing else is. A record too big for
+ * that on its own still goes, alone.
+ */
+function takeBatch(): LogRecord[] {
+  const batch: LogRecord[] = [];
+  let size = bytes({ appVersion: version, records: [] });
+
+  while (queue.length > 0 && batch.length < mostPerBatch) {
+    // One more for the comma between records.
+    const next = bytes(queue[0]) + 1;
+
+    if (batch.length > 0 && size + next > keepaliveBudget) {
+      break;
+    }
+
+    batch.push(queue.shift()!);
+    size += next;
+  }
+
+  return batch;
+}
+
+/** The size of the body as it is sent, which is UTF-8 and not string length. */
+function bytes(value: unknown): number {
+  return encoder.encode(JSON.stringify(value)).length;
 }
 
 /**
@@ -145,6 +192,7 @@ export function startReporting(): () => void {
 export function resetReporting(): void {
   clearTimeout(timer);
   timer = undefined;
+  keptAlive = 0;
   queue = [];
   seen.clear();
 }
