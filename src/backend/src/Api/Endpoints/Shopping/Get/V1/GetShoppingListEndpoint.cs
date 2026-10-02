@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Shopping;
@@ -25,7 +26,7 @@ internal sealed class GetShoppingListEndpoint : IEndpoint
                     .ConfigureAwait(false);
 
                 return result.Match(
-                    list => ETag.Ok(context, list, list.Version, list.ListId),
+                    list => ETag.Ok(context, list, list.Version, list.ListId, SourcesFingerprint(list)),
                     CustomResults.Problem);
             })
             .WithName("getShoppingListV1")
@@ -41,4 +42,16 @@ internal sealed class GetShoppingListEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireAuthorization();
     }
+
+    // Not the version alone. Each source's recipe title and planned day are
+    // read live from the recipe and the meal plan, and renaming a recipe or
+    // moving a meal is not a write to the list: a tag of the version alone
+    // answered 304 over the old name and the old day. Distinct, because the
+    // fingerprint folds with XOR and a recipe added twice would cancel itself out.
+    private static string SourcesFingerprint(Response list) =>
+        ETag.Fingerprint(list.Items
+            .SelectMany(item => item.Sources.Select(source => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{item.ItemId:N}:{source.RecipeId:N}:{source.RecipeTitle}:{source.PlannedDate:yyyy-MM-dd}:{source.PlannedSlot}")))
+            .Distinct());
 }
