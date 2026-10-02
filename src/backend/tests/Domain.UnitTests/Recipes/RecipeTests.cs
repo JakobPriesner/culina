@@ -282,6 +282,46 @@ public class RecipeTests
     }
 
     [Fact]
+    public void SetContents_ShouldRefuse_WhenTwoGroupsClaimTheSameId()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var shared = CulinaId.New();
+
+        // Act
+        var result = recipe.SetContents(
+            [
+                IngredientGroup.Create(shared, "Dough", 0, [AnIngredient("flour")]).ShouldBeSuccess(),
+                IngredientGroup.Create(shared, "Filling", 1, [AnIngredient("apples")]).ShouldBeSuccess()
+            ],
+            [],
+            Now);
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.DuplicateGroup);
+    }
+
+    [Fact]
+    public void SetContents_ShouldRefuse_WhenTwoStepsClaimTheSameId()
+    {
+        // Arrange
+        var recipe = ARecipe();
+        var shared = CulinaId.New();
+
+        // Act
+        var result = recipe.SetContents(
+            [AGroup()],
+            [
+                Step.Create(shared, 0, [new TextSegment("Preheat.")], [], null).ShouldBeSuccess(),
+                Step.Create(shared, 1, [new TextSegment("Bake.")], [], null).ShouldBeSuccess()
+            ],
+            Now);
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.DuplicateStep);
+    }
+
+    [Fact]
     public void SetContents_ShouldCountLinesRatherThanIds_WhenCappingIngredients()
     {
         // Arrange

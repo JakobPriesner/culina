@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Domain.Recipes;
 using Domain.Shared;
+using Npgsql;
 
 namespace Infrastructure.Persistence.Recipes;
 
@@ -154,9 +155,7 @@ internal sealed class RecipeRepository(
             Parameters(recipe),
             cancellationToken).ConfigureAwait(false);
 
-        await ReplaceContentsAsync(recipe, cancellationToken).ConfigureAwait(false);
-
-        return Result.Success();
+        return await ReplaceContentsAsync(recipe, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<long>> UpdateAsync(
@@ -185,9 +184,9 @@ internal sealed class RecipeRepository(
             return ConcurrencyErrors.VersionMismatch;
         }
 
-        await ReplaceContentsAsync(recipe, cancellationToken).ConfigureAwait(false);
+        var replaced = await ReplaceContentsAsync(recipe, cancellationToken).ConfigureAwait(false);
 
-        return version.Value;
+        return replaced.Map(() => version.Value);
     }
 
     public async Task<bool> IsImageStillUsedAsync(
@@ -364,7 +363,34 @@ internal sealed class RecipeRepository(
     /// caller's transaction, so the deletes and the writes are never observed
     /// apart.
     /// </remarks>
-    private async Task ReplaceContentsAsync(Recipe recipe, CancellationToken cancellationToken)
+    private async Task<Result> ReplaceContentsAsync(Recipe recipe, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await WriteContentsAsync(recipe, cancellationToken).ConfigureAwait(false);
+
+            return Result.Success();
+        }
+        catch (PostgresException failure) when (TakenId(failure.ConstraintName) is { } error)
+        {
+            // The ids are the client's, and the recipe has already checked
+            // them against each other — but not against every other recipe's
+            // rows, which only the primary key can see. An id taken there is
+            // the same mistake as one used twice here, and the transaction
+            // this runs in rolls back with the failure.
+            return error;
+        }
+    }
+
+    private static Error? TakenId(string? constraint) => constraint switch
+    {
+        "ingredient_groups_pkey" => RecipeErrors.DuplicateGroup,
+        "recipe_ingredients_pkey" => RecipeErrors.DuplicateIngredient,
+        "steps_pkey" => RecipeErrors.DuplicateStep,
+        _ => null
+    };
+
+    private async Task WriteContentsAsync(Recipe recipe, CancellationToken cancellationToken)
     {
         // Cascades clear ingredients and the reference index with the groups.
         await executor.ExecuteAsync(

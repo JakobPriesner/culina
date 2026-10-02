@@ -1010,6 +1010,8 @@
   "problem.planning.invalid_range": "A plan is read one week at a time.",
   "problem.planning.invalid_servings": "A planned meal is for between one and a thousand people.",
   "problem.recipes.duplicate_ingredient": "Two ingredient lines are the same line. Reload the recipe and try again.",
+  "problem.recipes.duplicate_group": "Two ingredient groups are the same group. Reload the recipe and try again.",
+  "problem.recipes.duplicate_step": "Two steps are the same step. Reload the recipe and try again.",
   "problem.recipes.image_not_found": "That image is no longer stored.",
   "problem.recipes.image_too_large": "That image is larger than this Culina accepts.",
   "problem.recipes.image_too_many_pixels": "That image has more pixels than a photo needs. Scale it down first.",
