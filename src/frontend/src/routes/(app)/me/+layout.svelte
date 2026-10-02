@@ -8,6 +8,8 @@
   import Page from '$shell/Page.svelte';
   import { session } from '$features/auth/session.svelte';
 
+  import NotAllowed from './NotAllowed.svelte';
+
   /**
    * Settings, split into categories.
    *
@@ -64,7 +66,29 @@
   // would light Account up on every one of them.
   const current = $derived(page.url.pathname);
   const active = $derived(categories.find((category) => category.href === current));
+
+  /**
+   * Somebody who is not an administrator, at one of the two pages that are.
+   *
+   * Only reachable by typing the address or following a link, since the rail
+   * does not offer them — so the reader already knows the page exists, and
+   * saying "not yours" leaks nothing. Answered here rather than by letting the
+   * page ask the server for settings it would only refuse: the refusal would
+   * read as "could not load", and its retry button could never help.
+   */
+  const refused = $derived(
+    session.user?.isAdmin
+      ? null
+      : ([
+          { href: resolve('/(app)/me/ai'), label: m['me.ai'] },
+          { href: resolve('/(app)/me/server'), label: m['me.server'] }
+        ].find((page) => page.href === current) ?? null)
+  );
 </script>
+
+<svelte:head>
+  {#if refused}<title>{m['notAllowed.title']()}</title>{/if}
+</svelte:head>
 
 <Page>
   <div class="settings">
@@ -96,7 +120,11 @@
         </header>
       {/if}
 
-      {@render children()}
+      {#if refused}
+        <NotAllowed item={refused.label()} />
+      {:else}
+        {@render children()}
+      {/if}
     </div>
   </div>
 </Page>

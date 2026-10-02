@@ -17,6 +17,8 @@
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
+  import Olla from '$shell/olla/Olla.svelte';
+  import { ollaSetting } from '$shell/olla/setting.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -49,6 +51,24 @@
 
   /** Nothing left to find, but the trolley is not empty: a finished shop. */
   const finished = $derived(shopping.toBuy.length === 0 && shopping.bought.length > 0);
+
+  /**
+   * The shop finished while somebody was here, ticking the last item off.
+   *
+   * Olla celebrates that, once, and not a list that was already done when the
+   * page opened: a celebration is for effort, and opening a page is none.
+   */
+  let justFinished = $state(false);
+  let sawUnfinished = false;
+
+  $effect(() => {
+    if (!finished) {
+      sawUnfinished = shopping.toBuy.length > 0;
+      justFinished = false;
+    } else if (sawUnfinished) {
+      justFinished = true;
+    }
+  });
 
   /**
    * Whether the page is far enough along to say how far along it is.
@@ -170,6 +190,7 @@
   }
 </script>
 
+{#snippet peeking()}<Olla pose="peeking" />{/snippet}
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
 <Page width="reading">
@@ -287,7 +308,11 @@
          blank and then jump. -->
     <ShoppingListSkeleton />
   {:else if shopping.status === 'ready' && shopping.items.length === 0}
-    <EmptyState title={m['shopping.empty.title']()} body={m['shopping.empty.body']()}>
+    <EmptyState
+      title={m['shopping.empty.title']()}
+      body={m['shopping.empty.body']()}
+      art={ollaSetting.shown ? peeking : undefined}
+    >
       {#snippet action()}
         <!-- The invitation is the thing that fills a list fastest, and it is
              the same one the button above offers. Sending somebody off to the
@@ -328,7 +353,10 @@
     <!-- The shop is done. Said out loud, because a page whose only content is
          a struck-through list looks like a page that has lost something. -->
     {#if finished}
-      <p class="finished">{m['shopping.allBought']()}</p>
+      <div class="finished">
+        {#if justFinished}<Olla pose="celebrating" size="sm" />{/if}
+        <p>{m['shopping.allBought']()}</p>
+      </div>
     {/if}
 
     {#if shopping.bought.length > 0}
@@ -496,6 +524,9 @@
   }
 
   .finished {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     color: var(--text-muted);
     font-size: var(--text-sm);
     margin-bottom: var(--space-8);

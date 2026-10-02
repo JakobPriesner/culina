@@ -6,6 +6,8 @@
   import { page } from '$app/state';
   import { ErrorCodes } from '$api';
   import FormField from '$features/auth/FormField.svelte';
+  import ColdStove from '$features/auth/ColdStove.svelte';
+  import FamilySecret from '$features/auth/FamilySecret.svelte';
   import FormFailure from '$features/auth/FormFailure.svelte';
   import SubmitButton from '$features/auth/SubmitButton.svelte';
   import { safeRedirect } from '$features/auth/redirectTarget';
@@ -29,6 +31,47 @@
   // From the URL, so from whoever wrote the link: only a path inside this app
   // is accepted. See `safeRedirect`.
   const destination = $derived(safeRedirect(page.url.searchParams.get('next')));
+
+  /**
+   * Why somebody is here, when it was not their idea.
+   *
+   * A session that ended under them gets the stove that went cold; a link
+   * followed while signed out gets the family recipe under a stamp. Either way
+   * the form says why it appeared, and that they will land where they were
+   * going. Somebody who simply opened the app is told nothing: there is
+   * nothing to explain.
+   */
+  const moment = $derived(
+    page.url.searchParams.get('reason') === 'expired'
+      ? 'cold'
+      : destination !== resolve('/(app)')
+        ? 'secret'
+        : null
+  );
+
+  const heading = $derived(
+    moment === 'cold'
+      ? {
+          title: m['auth.cold.title'](),
+          body: m['auth.cold.body'](),
+          submit: m['auth.cold.submit']()
+        }
+      : moment === 'secret'
+        ? {
+            title: m['auth.secret.title'](),
+            body: m['auth.secret.body'](),
+            submit: m['auth.secret.submit']()
+          }
+        : {
+            title: m['auth.signIn.title'](),
+            body: m['auth.signIn.intro'](),
+            submit: m['auth.signIn.submit']()
+          }
+  );
+
+  // Every character typed lights one more flame; the whole burner while the
+  // request is on its way.
+  const flames = $derived(submission.inFlight ? 9 : password.length);
 
   const registerHref = $derived(
     `${resolve('/(auth)/register')}?next=${encodeURIComponent(destination)}`
@@ -56,10 +99,16 @@
 <svelte:head><title>{m['auth.signIn.title']()}</title></svelte:head>
 
 <form class="form" onsubmit={submit} novalidate>
+  {#if moment === 'cold'}
+    <div class="moment"><ColdStove lit={flames} /></div>
+  {:else if moment === 'secret'}
+    <div class="moment"><FamilySecret /></div>
+  {/if}
+
   <header class="intro">
     <p class="eyebrow">{m['auth.signIn.welcome']()}</p>
-    <h1 class="title">{m['auth.signIn.title']()}</h1>
-    <p class="subtitle">{m['auth.signIn.intro']()}</p>
+    <h1 class="title" class:long={moment !== null}>{heading.title}</h1>
+    <p class="subtitle">{heading.body}</p>
   </header>
 
   <!--
@@ -94,7 +143,7 @@
     {submission}
   />
 
-  <SubmitButton label={m['auth.signIn.submit']()} {submission} />
+  <SubmitButton label={heading.submit} {submission} />
 
   <p class="alternative">
     <a href={resolve('/(auth)/password-reset')}>{m['auth.signIn.forgot']()}</a>
@@ -136,6 +185,15 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     line-height: var(--leading-relaxed);
+  }
+  .title.long {
+    font-size: var(--text-3xl);
+    text-wrap: balance;
+  }
+  .moment {
+    display: grid;
+    justify-items: center;
+    margin-bottom: var(--space-2);
   }
   .alternative {
     color: var(--text-muted);
