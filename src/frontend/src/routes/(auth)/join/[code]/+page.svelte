@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { AppError } from '$api';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
@@ -39,10 +40,15 @@
 
   const invalidCode = 'households.invitation_invalid';
 
+  // Once per code. resolve() reads the session status, and redeeming resets
+  // and re-reads the session, so a tracked read would redeem the code again
+  // on every change of status that causes.
   $effect(() => {
-    void session.resolve().then(() => {
-      if (session.status === 'authenticated' && code) {
-        void redeem(code);
+    const invitation = code;
+
+    void untrack(() => session.resolve()).then(() => {
+      if (session.status === 'authenticated' && invitation) {
+        void redeem(invitation);
       }
     });
   });
