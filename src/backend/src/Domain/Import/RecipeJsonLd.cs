@@ -293,7 +293,8 @@ internal static class XmlDuration
                 ? (int)span.TotalMinutes
                 : null;
         }
-        catch (FormatException)
+        // A duration longer than a TimeSpan can hold parses, then overflows.
+        catch (Exception exception) when (exception is FormatException or OverflowException)
         {
             return null;
         }

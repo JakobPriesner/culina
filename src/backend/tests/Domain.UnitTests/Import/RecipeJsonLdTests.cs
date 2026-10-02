@@ -161,6 +161,26 @@ public class RecipeJsonLdTests
     }
 
     [Theory]
+    [InlineData("about an hour")]
+    [InlineData("P99999999D")]
+    public void Read_ShouldLeaveATotalTimeItCannotRead(string totalTime)
+    {
+        // Arrange
+        var json = $$"""{ "@type": "Recipe", "name": "Stew", "totalTime": "{{totalTime}}" }""";
+
+        // Act
+        var recipe = RecipeJsonLd.Read(json);
+
+        // Assert
+        // A duration too long for a TimeSpan is still a valid XSD duration,
+        // so it overflows rather than failing to parse. Either way the rest
+        // of the recipe is kept.
+        Assert.NotNull(recipe);
+        Assert.Equal("Stew", recipe.Title);
+        Assert.Null(recipe.TotalMinutes);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("not json at all")]
