@@ -48,7 +48,10 @@ class ServerStore {
   #database = $state<DatabaseDraft | null>(null);
   #databaseFacts = $state<DatabaseFacts | null>(null);
   #status = $state<LoadStatus>('idle');
-  #error = $state<AppError | null>(null);
+  // One per read: `load` runs both at once, and whichever finished last
+  // would otherwise decide whether the other one failed.
+  #serverError = $state<AppError | null>(null);
+  #databaseError = $state<AppError | null>(null);
   #phase = $state<SavePhase>('idle');
 
   /** The server settings as the running process uses them, shaped for a form. */
@@ -75,7 +78,7 @@ class ServerStore {
 
   /** Why the last read failed. */
   get error(): AppError | null {
-    return this.#error;
+    return this.#serverError ?? this.#databaseError;
   }
 
   get phase(): SavePhase {
@@ -88,7 +91,7 @@ class ServerStore {
 
     await Promise.all([this.loadServer(), this.loadDatabase()]);
 
-    this.#status = this.#error ? 'failed' : 'ready';
+    this.#status = this.error ? 'failed' : 'ready';
   }
 
   async loadServer(): Promise<void> {
@@ -97,9 +100,9 @@ class ServerStore {
     if (result.ok) {
       this.#server = toServerDraft(result.value);
       this.#serverFacts = toServerFacts(result.value);
-      this.#error = null;
+      this.#serverError = null;
     } else {
-      this.#error = result.error;
+      this.#serverError = result.error;
     }
   }
 
@@ -109,9 +112,9 @@ class ServerStore {
     if (result.ok) {
       this.#database = toDatabaseDraft(result.value);
       this.#databaseFacts = toDatabaseFacts(result.value);
-      this.#error = null;
+      this.#databaseError = null;
     } else {
-      this.#error = result.error;
+      this.#databaseError = result.error;
     }
   }
 
@@ -185,7 +188,8 @@ class ServerStore {
     this.#database = null;
     this.#databaseFacts = null;
     this.#status = 'idle';
-    this.#error = null;
+    this.#serverError = null;
+    this.#databaseError = null;
     this.#phase = 'idle';
   }
 }
