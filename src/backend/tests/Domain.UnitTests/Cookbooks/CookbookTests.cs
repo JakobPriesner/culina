@@ -189,6 +189,21 @@ public class CookbookTests
     }
 
     [Fact]
+    public void Rules_ShouldSkipANullTerm_WhenTheRequestCarriedOne()
+    {
+        // Arrange
+        // The JSON reader lets ["quick", null] through, so a null reaches here.
+        IReadOnlyList<string> terms = ["quick", null!];
+
+        // Act
+        var rules = CookbookRules.Create(terms, terms, null);
+
+        // Assert
+        Assert.Equal(["quick"], rules.ShouldBeSuccess().Tags);
+        Assert.Equal(["quick"], rules.ShouldBeSuccess().Ingredients);
+    }
+
+    [Fact]
     public void Rules_ShouldRefuseATimeNoRecipeCouldTake()
     {
         // Act
