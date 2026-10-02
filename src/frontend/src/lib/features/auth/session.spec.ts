@@ -356,6 +356,20 @@ describe('signing in', () => {
     expect(session.status).not.toBe('authenticated');
   });
 
+  it('keeps the drafts on the device after a wrong password', async () => {
+    const expired = vi.fn(() => session.end());
+
+    handleSessionExpiry(expired);
+    remember('u1', 'r1', draft);
+    serverAnswers(() => json({ code: 'auth.invalid_credentials', detail: 'No match.' }, 401));
+
+    await session.signIn('jakob@example.com', 'wrong');
+    handleSessionExpiry(() => {});
+
+    expect(expired).not.toHaveBeenCalled();
+    expect(recall('u1', 'r1')?.recipe).toEqual(draft);
+  });
+
   it('reads the session afterwards, because sign-in does not return households', async () => {
     serverAnswers((url, method) =>
       url.endsWith('/sessions') && method === 'POST'
