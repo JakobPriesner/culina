@@ -23,7 +23,8 @@ import { base, build, files, version } from '$service-worker';
  *
  * That cache holds somebody's data on what may be a shared kitchen tablet, so
  * it is not allowed to outlive a session: the app empties it when anyone signs
- * in or out. See `culina:forget`.
+ * in or out (see `culina:forget`), and the worker empties it itself the first
+ * time the server answers one of its reads with a 401.
  */
 const worker = self as unknown as ServiceWorkerGlobalScope;
 
@@ -367,8 +368,22 @@ async function fetchAndStore(request: Request, cache: Cache | null): Promise<Res
   try {
     const response = await fetch(request);
 
+    // The server saying there is no session. One that ended while the app was
+    // closed never reached a sign-out, and the page does not end it either:
+    // the 401 arrives at boot, before the app listens for an expiry. Without
+    // this the next person's first offline start answered as the last one.
+    if (response.status === 401) {
+      await caches.delete(privateCacheName).catch(() => false);
+
+      return response;
+    }
+
     // A 304 carries no body to keep, and an error response cached is a fault
     // that outlives the deploy that fixed it.
+    //
+    // A refresh that lands after `culina:forget` cannot bring the last
+    // person's copy back: `cache` was opened before the delete, and a deleted
+    // cache stays writable but is no longer the one `caches.open` returns.
     if (cache && response.ok && response.type === 'basic') {
       try {
         await cache.put(request, response.clone());

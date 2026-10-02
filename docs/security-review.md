@@ -145,7 +145,7 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | Requirement | Verdict | Evidence |
 | --- | --- | --- |
 | Authenticated responses are not cached generically | Met | An allow-list of exact paths, and a test that nothing else can appear in the store: `keeps nothing from the API that anyone did not ask it to` |
-| Private material is cleared when the session changes | Met | On sign-in as well as sign-out. `is gone from the device the moment anyone signs out`, `keeps nothing of the first person for the second` |
+| Private material is cleared when the session changes | Met | On sign-in as well as sign-out, and by the worker itself on the first 401 to one of its reads, for a session that ended while the app was closed. `is gone from the device the moment anyone signs out`, `keeps nothing of the first person for the second`, `forgets the private cache when the server says the session is gone` |
 | Cached responses never override the server while online | Met | Network-first for everything but the immutable image; the cache only catches a fall |
 | The store is bounded | Met | 120 entries, oldest evicted |
 | A reload is never imposed while somebody is working | Met | `says nothing while somebody is cooking or editing`, and it is offered again at the next safe moment |
