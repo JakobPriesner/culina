@@ -32,6 +32,8 @@
   let query = $state('');
   let chosen = $state<string[]>([]);
 
+  let debounce: ReturnType<typeof setTimeout> | undefined;
+
   /** Everything that could still be brought over. */
   const available = $derived(sources.recipes.filter((recipe) => recipe.alreadyHere === null));
 
@@ -69,7 +71,7 @@
     }
 
     if (sources.hasMore) {
-      await sources.loadEverything(query);
+      await sources.loadEverything();
     }
 
     // Read after the loading, not before: `available` is derived from what has
@@ -77,10 +79,25 @@
     chosen = available.map((recipe) => recipe.externalId);
   }
 
-  async function search(next: string) {
+  $effect(() => () => clearTimeout(debounce));
+
+  /**
+   * Each search is a read of somebody else's server, which may take its time.
+   * One per keystroke would be a queue of them for words nobody finished.
+   */
+  function type(next: string) {
+    query = next;
+    clearTimeout(debounce);
+
+    // Long enough that a word is finished, short enough that it feels live.
+    debounce = setTimeout(() => search(next), 250);
+  }
+
+  function search(next: string) {
+    clearTimeout(debounce);
     query = next;
     chosen = [];
-    await sources.browse(source, next);
+    void sources.browse(source, next);
   }
 </script>
 
@@ -101,8 +118,8 @@
     label={m['import.library.searchLabel']()}
     placeholder={m['import.library.searchPlaceholder']()}
     clearLabel={m['import.library.searchClear']()}
-    oninput={(next) => void search(next)}
-    onclear={() => void search('')}
+    oninput={type}
+    onclear={() => search('')}
   />
 
   {#if sources.browseStatus === 'loading'}
@@ -171,7 +188,7 @@
            where the list looks finished when it is not. -->
       <ul class="list" aria-hidden="true">
         {#each ['60%', '75%', '50%'] as width, row (row)}
-          <li class="row" {@attach whenVisible(() => void sources.more(query))}>
+          <li class="row" {@attach whenVisible(() => void sources.more())}>
             <div class="row-skeleton">
               <Skeleton width="var(--space-6)" height="var(--space-6)" shape="text" />
               <Skeleton {width} height="1.125rem" />
