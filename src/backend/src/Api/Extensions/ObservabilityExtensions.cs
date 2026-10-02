@@ -1,4 +1,5 @@
 using System.Reflection;
+using Api.Infrastructure;
 using Application.Abstractions.Settings;
 using Application.Telemetry;
 using Microsoft.Extensions.Logging.Console;
@@ -31,6 +32,11 @@ namespace Api.Extensions;
 /// </remarks>
 internal static class ObservabilityExtensions
 {
+    internal const string ApiService = "culina-api";
+
+    /// <summary>The service what the web app reported is exported as.</summary>
+    internal const string WebAppService = "culina-web";
+
     internal static IHostApplicationBuilder AddObservability(this IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -39,28 +45,37 @@ internal static class ObservabilityExtensions
 
         var telemetry = builder.Services
             .AddOpenTelemetry()
-            .ConfigureResource(resource => resource
-                .AddService(
-                    serviceName: "culina-api",
-                    serviceVersion: Version(),
-                    serviceInstanceId: Environment.MachineName)
-                .AddAttributes([
-                    new KeyValuePair<string, object>(
-                        "deployment.environment.name",
-                        builder.Environment.EnvironmentName)
-                ]))
+            .ConfigureResource(resource => resource.AddCulinaService(ApiService, builder.Environment))
             .WithTracing(ConfigureTracing)
             .WithMetrics(ConfigureMetrics);
 
-        // Only when a collector is configured. Without this guard the exporter
-        // retries against localhost forever and fills the log with noise.
-        if (!string.IsNullOrWhiteSpace(builder.Configuration[TelemetrySettings.EndpointKey]))
+        if (Exports(builder.Configuration))
         {
             telemetry.UseOtlpExporter();
         }
 
         return builder;
     }
+
+    /// <summary>
+    /// Only when a collector is configured. Without this guard the exporter
+    /// retries against localhost forever and fills the log with noise.
+    /// </summary>
+    private static bool Exports(IConfiguration configuration) =>
+        !string.IsNullOrWhiteSpace(configuration[TelemetrySettings.EndpointKey]);
+
+    private static ResourceBuilder AddCulinaService(
+        this ResourceBuilder resource,
+        string serviceName,
+        IHostEnvironment environment) =>
+        resource
+            .AddService(
+                serviceName: serviceName,
+                serviceVersion: Version(),
+                serviceInstanceId: Environment.MachineName)
+            .AddAttributes([
+                new KeyValuePair<string, object>("deployment.environment.name", environment.EnvironmentName)
+            ]);
 
     private static void ConfigureLogging(this IHostApplicationBuilder builder)
     {
@@ -94,6 +109,25 @@ internal static class ObservabilityExtensions
         {
             logging.IncludeFormattedMessage = true;
             logging.IncludeScopes = true;
+        });
+
+        // What the web app reported is exported as the web app, not as the
+        // API that passed it on. It still goes to the console with the rest.
+        builder.Logging.AddFilter<OpenTelemetryLoggerProvider>(CulinaTelemetry.WebAppCategory, LogLevel.None);
+        builder.Services.AddSingleton<ILoggerProvider>(services =>
+        {
+            var configuration = services.GetRequiredService<IConfiguration>();
+
+            return new WebAppLoggerProvider(
+                configuration,
+                resource => resource.AddCulinaService(WebAppService, builder.Environment),
+                logging =>
+                {
+                    if (Exports(configuration))
+                    {
+                        logging.AddOtlpExporter();
+                    }
+                });
         });
     }
 
