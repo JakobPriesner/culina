@@ -15,6 +15,7 @@
   import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
   import { withIngredients } from '$features/recipes/editor/ingredientGroups';
   import { withoutIngredients } from '$features/recipes/editor/stepUsage';
+  import { linkMentions } from '$features/recipes/editor/mentions';
   import type { SaveTone } from '$features/recipes/editor/SaveState.svelte';
   import { yieldNoun } from '$features/recipes/yieldWords';
   import { ErrorCodes, type AppError } from '$api';
@@ -183,6 +184,11 @@
    * and only onto lines that have none yet, so a line added or removed
    * mid-save can at worst miss an id rather than inherit the wrong one; the
    * next save fills it in.
+   *
+   * A line added from inside a step was mentioned before it had one of those
+   * ids, so the step still says "@saffron" in plain words. Once the id is
+   * here the mention is linked, and saved again: otherwise it would stay
+   * plain text until somebody happened to type in that step.
    */
   function adoptSaved(sent: number) {
     const saved = recipes.detail;
@@ -206,16 +212,20 @@
       return at === -1 ? '' : unclaimed.splice(at, 1)[0]!.id;
     };
 
-    draft = {
-      ...draft,
-      version: saved.version + (draft.version - sent),
-      groups: draft.groups.map((group) => ({
-        ...group,
-        ingredients: group.ingredients.map((one) =>
-          one.id ? one : { ...one, id: claim(one.name) }
-        )
-      }))
-    };
+    const groups = draft.groups.map((group) => ({
+      ...group,
+      ingredients: group.ingredients.map((one) => (one.id ? one : { ...one, id: claim(one.name) }))
+    }));
+    const ingredients = groups.flatMap((group) => group.ingredients);
+    const before = draft.steps;
+    const steps = before.map((step) => linkMentions(step, ingredients));
+    const linked = steps.some((step, index) => step !== before[index]);
+
+    draft = { ...draft, version: saved.version + (draft.version - sent), groups, steps };
+
+    if (linked) {
+      autosave.touch();
+    }
   }
 
   /**

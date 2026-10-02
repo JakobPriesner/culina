@@ -116,6 +116,25 @@ const matchesAt = (text: string, at: number, name: string): boolean =>
   text.slice(at, at + name.length).toLowerCase() === name.toLowerCase() &&
   !isWord(text[at + name.length]);
 
+/**
+ * Links the mentions a step could not link when they were written.
+ *
+ * A name added from inside a step is mentioned before the server has given it
+ * an id, so the step keeps it as the words "@saffron" until somebody types in
+ * that step again. Only the plain words are read again: a mention that is
+ * already linked keeps the ingredient it points at. The same step comes back
+ * when there was nothing new to link, so a caller can tell whether it changed.
+ */
+export function linkMentions(step: Step, ingredients: readonly Ingredient[]): Step {
+  const segments = step.segments.flatMap((segment) =>
+    segment.kind === 'text' ? toSegments(segment.text, ingredients) : [segment]
+  );
+  const linked = (list: readonly StepSegment[]) =>
+    list.filter((segment) => segment.kind === 'ingredient').length;
+
+  return linked(segments) === linked(step.segments) ? step : { ...step, segments };
+}
+
 /** A mention the author is in the middle of typing. */
 export interface PendingMention {
   /** Where its `@` is. */
