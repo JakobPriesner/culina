@@ -1,3 +1,5 @@
+import { forgetAccountKeys } from '$shell/deviceStorage';
+
 /**
  * The last few searches, on this device only.
  *
@@ -6,13 +8,17 @@
  * account onto a shared tablet would be telling the household. It is a
  * convenience, so every read and write survives storage being unavailable —
  * a private window, a full disk — by simply remembering nothing.
+ *
+ * Scoped by account, so it is not shown to the next person, and removed for
+ * everybody else when somebody signs in or out, so it is not kept for them.
  */
-const key = 'culina.search.recent';
+const prefix = 'culina.search.';
+const keyFor = (userId: string) => `${prefix}${userId}`;
 const kept = 5;
 
-export function recentSearches(): string[] {
+export function recentSearches(userId: string): string[] {
   try {
-    const stored: unknown = JSON.parse(localStorage.getItem(key) ?? '[]');
+    const stored: unknown = JSON.parse(localStorage.getItem(keyFor(userId)) ?? '[]');
 
     return Array.isArray(stored)
       ? stored.filter((one): one is string => typeof one === 'string').slice(0, kept)
@@ -23,20 +29,28 @@ export function recentSearches(): string[] {
 }
 
 /** Remembers a search, most recent first, without keeping it twice. */
-export function rememberSearch(query: string): string[] {
+export function rememberSearch(userId: string, query: string): string[] {
   const trimmed = query.trim();
 
   if (trimmed.length === 0) {
-    return recentSearches();
+    return recentSearches(userId);
   }
 
-  const next = [trimmed, ...recentSearches().filter((one) => one !== trimmed)].slice(0, kept);
+  const next = [trimmed, ...recentSearches(userId).filter((one) => one !== trimmed)].slice(0, kept);
 
   try {
-    localStorage.setItem(key, JSON.stringify(next));
+    localStorage.setItem(keyFor(userId), JSON.stringify(next));
   } catch {
     // Remembering is a courtesy; failing to is not worth telling anybody.
   }
 
   return next;
+}
+
+/**
+ * Forgets the recent searches of everybody but `keep`, including the one list
+ * from before it was scoped by account (`culina.search.recent`).
+ */
+export function forgetEveryRecentSearch(keep?: string): void {
+  forgetAccountKeys(prefix, keep);
 }

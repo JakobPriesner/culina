@@ -38,10 +38,11 @@
   interface Props {
     open: boolean;
     householdId: string;
+    userId: string;
     onclose: () => void;
   }
 
-  let { open, householdId, onclose }: Props = $props();
+  let { open, householdId, userId, onclose }: Props = $props();
 
   const recipes = createRecipeStore();
   const completions = createCompletionStore();
@@ -135,7 +136,7 @@
   // where the typing goes, not the close button the dialog would focus first.
   $effect(() => {
     if (open) {
-      recent = recentSearches();
+      recent = recentSearches(userId);
       void tick().then(() => field?.focus());
     } else {
       clearTimeout(suggesting);
@@ -221,7 +222,7 @@
   }
 
   async function go(recipeId: string, elsewhere = false) {
-    rememberSearch(applied);
+    rememberSearch(userId, applied);
 
     if (elsewhere) {
       window.open(hrefOf(recipeId), '_blank', 'noopener');
@@ -291,7 +292,7 @@
       if (option) {
         activate(option, event.metaKey || event.ctrlKey);
       } else {
-        recent = rememberSearch(typed);
+        recent = rememberSearch(userId, typed);
         set(typed);
       }
     } else if (
