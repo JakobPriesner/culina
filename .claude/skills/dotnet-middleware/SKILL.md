@@ -59,7 +59,8 @@ internal sealed class RequestContextMiddleware(RequestDelegate next)
         context.Items[RequestContext.RequestIdKey] = requestId;
         context.Response.Headers[CulinaHeaders.RequestId] = requestId;
 
-        using var scope = logger.BeginScope(new Dictionary<string, object> { ["RequestId"] = requestId });
+        using var scope = logger.BeginScope(new LogScope(
+            new KeyValuePair<string, object?>("ClientAddress", context.Connection.RemoteIpAddress?.ToString() ?? "unknown")));
 
         await next(context).ConfigureAwait(false);
     }

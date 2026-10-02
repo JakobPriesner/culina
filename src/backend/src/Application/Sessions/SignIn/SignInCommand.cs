@@ -5,6 +5,7 @@ using Application.Telemetry;
 using Domain.Sessions;
 using Domain.Shared;
 using Domain.Users;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Sessions.SignIn;
 
@@ -25,7 +26,8 @@ internal sealed class SignInCommandHandler(
     ISecretTokens tokens,
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
-    SignInDependencies dependencies)
+    SignInDependencies dependencies,
+    ILogger<SignInCommandHandler> logger)
     : ICommandHandler<SignInCommand, SignInOutcome>
 {
     public async Task<Result<SignInOutcome>> Handle(
@@ -93,6 +95,7 @@ internal sealed class SignInCommandHandler(
     {
         attempts.RecordFailure(accountKey, now);
         CulinaTelemetry.LoginFailures.Add(1);
+        AuthenticationLogs.SignInRefused(logger);
 
         return SessionErrors.InvalidCredentials;
     }

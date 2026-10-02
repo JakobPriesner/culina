@@ -3,6 +3,7 @@ using Application.Abstractions.Settings;
 using Application.Assistance;
 using Domain.Assistance;
 using Domain.Shared;
+using Microsoft.Extensions.Logging.Abstractions;
 using TestSupport;
 
 namespace Application.UnitTests.Assistance;
@@ -400,7 +401,8 @@ public class AssistantRunTests
             Protector,
             Ledger,
             new FakeModelPrices(),
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<AssistantRun>.Instance);
 
         internal Task<Result<DraftedRecipe>> ComposeAsync() =>
             Run.ComposeAsync(

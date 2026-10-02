@@ -81,7 +81,7 @@ internal sealed class OllamaAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -163,7 +163,7 @@ internal sealed class OllamaAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -208,6 +208,16 @@ internal sealed class OllamaAssistant(
     /// </remarks>
     private static Error? Recognised(Exception failure) =>
         Expected(failure) ? Failure(failure) : null;
+
+    /// <summary>Classifies a failure and records what the provider said.</summary>
+    private Error Failed(Exception failure)
+    {
+        var error = Failure(failure);
+
+        AssistanceLogs.CallFailed(logger, Kind.Code, error.Code, failure);
+
+        return error;
+    }
 
     /// <summary>The failures that are the runner's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace Infrastructure.Assistance;
 
 /// <summary>
-/// Assistant log lines. Event ids 1500-1509.
+/// Assistant log lines. Event ids 1500-1509; listing models uses 1510-1519.
 /// </summary>
 /// <remarks>
 /// Nothing here carries a prompt, an answer, a recipe or a key. What is worth
@@ -19,19 +19,14 @@ internal static partial class AssistanceLogs
         Message = "The {Provider} assistant answered with nothing usable (finish reason: {FinishReason})")]
     internal static partial void EmptyAnswer(ILogger logger, string provider, string? finishReason);
 
+    /// <remarks>
+    /// The exception goes with it: the provider's status and its own words are
+    /// what tell a revoked key from a content filter from a model that was
+    /// renamed, and the error code the person sees cannot.
+    /// </remarks>
     [LoggerMessage(
         EventId = 1501,
         Level = LogLevel.Warning,
-        Message = "The {Provider} assistant refused a {Capability} request")]
-    internal static partial void Refused(ILogger logger, string provider, string capability);
-
-    [LoggerMessage(
-        EventId = 1502,
-        Level = LogLevel.Error,
-        Message = "A {Capability} request to the {Provider} assistant ended in a defect")]
-    internal static partial void Failed(
-        ILogger logger,
-        string capability,
-        string provider,
-        Exception failure);
+        Message = "A call to the {Provider} assistant failed and was reported as {Code}")]
+    internal static partial void CallFailed(ILogger logger, string provider, string code, Exception failure);
 }
