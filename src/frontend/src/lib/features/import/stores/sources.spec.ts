@@ -282,6 +282,84 @@ describe('reading more of a library', () => {
   });
 });
 
+describe('searching a library', () => {
+  /** A server whose answers arrive when the test says so, not in the order asked. */
+  function slowServer() {
+    const waiting = new Map<string, (response: Response) => void>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) => {
+        const url = new URL(input.url);
+        const key = `${url.searchParams.get('query') ?? ''}|${url.searchParams.get('page') ?? ''}`;
+
+        return new Promise<Response>((resolve) => waiting.set(key, resolve));
+      })
+    );
+
+    return (query: string, page: string, body: unknown) =>
+      vi.waitFor(() => {
+        const answer = waiting.get(`${query}|${page}`);
+
+        expect(answer).toBeDefined();
+        answer!(json(body));
+      });
+  }
+
+  it('shows only the latest search when an earlier one answers last', async () => {
+    const answer = slowServer();
+
+    const first = sources.browse(library, 'pa');
+    const second = sources.browse(library, 'pas');
+
+    await answer('pas', '', { items: [theirs('2'), theirs('3')], nextPage: null, total: 2 });
+    await second;
+    await answer('pa', '', {
+      items: [theirs('1'), theirs('2'), theirs('3')],
+      nextPage: null,
+      total: 3
+    });
+    await first;
+
+    // Both in one list was a recipe in both drawn twice, and a keyed list that
+    // throws on the duplicate.
+    expect(sources.recipes.map((recipe) => recipe.externalId)).toEqual(['2', '3']);
+    expect(sources.total).toBe(2);
+  });
+
+  it('drops a next page that belongs to the search before', async () => {
+    const answer = slowServer();
+
+    const first = sources.browse(library);
+    await answer('', '', { items: [theirs('1')], nextPage: 'p1', total: 2 });
+    await first;
+
+    const stale = sources.more();
+    const second = sources.browse(library, 'suppe');
+
+    await answer('suppe', '', { items: [theirs('2')], nextPage: null, total: 1 });
+    await second;
+    await answer('', 'p1', { items: [theirs('2')], nextPage: null, total: 2 });
+    await stale;
+
+    expect(sources.recipes.map((recipe) => recipe.externalId)).toEqual(['2']);
+  });
+
+  it('reads the next page of what was searched for', async () => {
+    const answer = slowServer();
+
+    const first = sources.browse(library, 'suppe');
+    await answer('suppe', '', { items: [theirs('1')], nextPage: 'p1', total: 2 });
+    await first;
+
+    const next = sources.more();
+    await answer('suppe', 'p1', { items: [theirs('2')], nextPage: null, total: 2 });
+    await next;
+
+    expect(sources.recipes.map((recipe) => recipe.externalId)).toEqual(['1', '2']);
+  });
+});
+
 describe('importing', () => {
   it('asks for the whole selection at once, and follows what the server does with it', async () => {
     const chosen = Array.from({ length: 12 }, (_, index) => String(index));

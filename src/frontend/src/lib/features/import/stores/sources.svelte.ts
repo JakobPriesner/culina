@@ -59,6 +59,19 @@ class SourceStore {
    */
   #moreFailed = $state(false);
 
+  /**
+   * What the library being looked through was searched for, and which look
+   * this is.
+   *
+   * A search goes to somebody else's server and can take its time, so the
+   * answer to "pa" can arrive after the answer to "pas". Every read notes the
+   * generation it was asked under and drops what comes back once another look
+   * has begun — otherwise both searches land in one list, and a recipe in both
+   * is drawn twice. Not `$state`: nothing renders them.
+   */
+  #query = '';
+  #generation = 0;
+
   #run = $state<ImportRun | null>(null);
 
   /** Set while a run is going, so a second tap cannot start a second one. */
@@ -260,31 +273,34 @@ class SourceStore {
     }
   }
 
-  /** Starts looking through one library. */
-  async browse(source: ConnectedSource, query?: string): Promise<void> {
+  /** Starts looking through one library, or through what matches a search of it. */
+  async browse(source: ConnectedSource, query = ''): Promise<void> {
+    this.closeLibrary();
     this.#open = source;
-    this.#recipes = [];
-    this.#nextPage = null;
-    this.#total = null;
+    this.#query = query;
     this.#browseStatus = 'loading';
-    this.#browseError = null;
-    this.#moreFailed = false;
     this.#importError = null;
 
-    await this.#read(source, null, query);
+    await this.#read(source, null);
   }
 
   /** Reads the next page of the library being looked through. */
-  async more(query?: string): Promise<void> {
+  async more(): Promise<void> {
     if (!this.#open || this.#nextPage === null || this.#loadingMore || this.#moreFailed) {
       return;
     }
 
+    const generation = this.#generation;
+
     this.#loadingMore = true;
 
-    await this.#read(this.#open, this.#nextPage, query);
+    await this.#read(this.#open, this.#nextPage);
 
-    this.#loadingMore = false;
+    // A page for an earlier look no longer owns the flag: the new look started
+    // without it, and may already be reading a page of its own.
+    if (generation === this.#generation) {
+      this.#loadingMore = false;
+    }
   }
 
   /**
@@ -299,10 +315,12 @@ class SourceStore {
    * selectable: the failure is already on screen, and a half-read library is
    * better than none.
    */
-  async loadEverything(query?: string): Promise<void> {
+  async loadEverything(): Promise<void> {
     if (this.#loadingAll || !this.#open) {
       return;
     }
+
+    const generation = this.#generation;
 
     this.#loadingAll = true;
 
@@ -314,7 +332,13 @@ class SourceStore {
     for (let page = 0; page < mostPages && this.#nextPage !== null; page += 1) {
       const asked = this.#nextPage;
 
-      await this.more(query);
+      await this.more();
+
+      // A new look began: the rest being read is the rest of something no
+      // longer on screen, and the flag is the new look's now.
+      if (generation !== this.#generation) {
+        return;
+      }
 
       // The same token twice means it is not advancing, and asking again would
       // be asking the identical question forever.
@@ -327,12 +351,15 @@ class SourceStore {
   }
 
   closeLibrary(): void {
+    this.#generation += 1;
     this.#open = null;
+    this.#query = '';
     this.#recipes = [];
     this.#nextPage = null;
     this.#total = null;
     this.#browseStatus = 'idle';
     this.#browseError = null;
+    this.#loadingMore = false;
     this.#loadingAll = false;
     this.#moreFailed = false;
   }
@@ -454,18 +481,25 @@ class SourceStore {
     this.closeLibrary();
   }
 
-  async #read(source: ConnectedSource, page: string | null, query?: string): Promise<void> {
+  async #read(source: ConnectedSource, page: string | null): Promise<void> {
+    const generation = this.#generation;
+    const query = this.#query.trim();
+
     const result = await request(() =>
       http.GET('/api/v1/recipe-sources/{sourceId}/recipes', {
         params: {
           path: { sourceId: source.sourceId },
           query: {
             ...(page ? { page } : {}),
-            ...(query?.trim() ? { query: query.trim() } : {})
+            ...(query ? { query } : {})
           }
         }
       })
     );
+
+    if (generation !== this.#generation) {
+      return;
+    }
 
     if (!result.ok) {
       if (page === null) {
