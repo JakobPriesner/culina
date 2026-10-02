@@ -137,6 +137,49 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Move_ShouldPlaceAMealWhereItWasDroppedOnADayWithGaps()
+    {
+        // Arrange
+        // Taking a meal off leaves its number unused, so the day is no longer
+        // numbered from zero when the next one is dropped onto it.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        foreach (var title in new[] { "First", "Second", "Third", "Fourth" })
+        {
+            await client.PostAsync(
+                $"/api/v1/households/{householdId}/meal-plan",
+                new { date = Monday, recipeId = await RecipeAsync(client, householdId, title) },
+                Token);
+        }
+
+        var day = MealsOn(
+            await client.GetAsync(
+                $"/api/v1/households/{householdId}/meal-plan?from={Monday:yyyy-MM-dd}",
+                Token),
+            Monday);
+
+        await client.DeleteAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{day[0].GetProperty("entryId").GetGuid()}",
+            Token);
+
+        // Act
+        // The day now reads Second, Third, Fourth. Fourth is dropped onto the
+        // gap between the other two.
+        var response = await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{day[3].GetProperty("entryId").GetGuid()}",
+            new { date = Monday, position = 1 },
+            Token);
+
+        // Assert
+        var titles = MealsOn(response, Monday)
+            .Select(meal => meal.GetProperty("title").GetString())
+            .ToList();
+
+        Assert.Equal(["Second", "Fourth", "Third"], titles);
+    }
+
+    [Fact]
     public async Task Move_ShouldRefuseAPositionThatIsNotAnIndex()
     {
         // Arrange

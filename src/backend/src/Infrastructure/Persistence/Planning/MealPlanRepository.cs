@@ -168,16 +168,22 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         // aimed at gaps that are still where they look. Everything but the
         // moved entry counts double and odd — the gap above the meal at index
         // j is the even number 2j, which is the key the moved entry was just
-        // given, so it slots in there without a tie to break.
+        // given, so it slots in there without a tie to break. The others are
+        // ranked before they are doubled, because a day can have gaps — the
+        // meal that left it, or one taken off — and j has to be an index.
         await executor.ExecuteAsync(
             """
-            with ordered as (
+            with keyed as (
                 select id,
-                       row_number() over (
-                           order by case when id = @id then sort_order else sort_order * 2 + 1 end)
-                           - 1 as position
+                       case when id = @id then sort_order
+                            else (row_number() over (partition by id = @id order by sort_order) - 1) * 2 + 1
+                       end as sort_key
                 from meal_plan_entries
                 where household_id = @householdId and on_date = @date
+            ),
+            ordered as (
+                select id, row_number() over (order by sort_key) - 1 as position
+                from keyed
             )
             update meal_plan_entries entry
             set sort_order = ordered.position
