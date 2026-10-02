@@ -1,4 +1,3 @@
-using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Registration.GetPolicy;
@@ -10,9 +9,10 @@ namespace Api.Endpoints.Registration.GetPolicy.V1;
 /// Tells a sign-up form what this instance allows.
 /// </summary>
 /// <remarks>
-/// Anonymous by necessity — the caller has no account yet — and rate limited
-/// like the other anonymous endpoints, because anything reachable without a
-/// session is reachable by everyone.
+/// Anonymous by necessity — the caller has no account yet. Only the global
+/// per-address ceiling applies: the register page reads this on every visit
+/// and on every hover over a link to it, so sharing the registration limit
+/// spent a household's sign-up attempts before anybody submitted the form.
 /// </remarks>
 internal sealed class GetRegistrationPolicyEndpoint : IEndpoint
 {
@@ -36,7 +36,6 @@ internal sealed class GetRegistrationPolicyEndpoint : IEndpoint
             .WithDescription(
                 "Public: a sign-up form has to know which fields to ask for before anyone has an account.")
             .Produces<Response>()
-            .AllowAnonymous()
-            .RequireRateLimiting(RateLimitExtensions.Register);
+            .AllowAnonymous();
     }
 }
