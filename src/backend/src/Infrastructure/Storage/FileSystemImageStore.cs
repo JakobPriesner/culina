@@ -4,6 +4,7 @@ using Application.Abstractions.Settings;
 using Domain.Recipes;
 using Domain.Shared;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 
@@ -34,6 +35,18 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
     /// 50000 pixels, and a decoder that believes it allocates ten gigabytes.
     /// </remarks>
     private const int MaxPixels = 8000 * 8000;
+
+    /// <summary>
+    /// The first frame only, of an animated GIF, WebP or PNG or a multi-page
+    /// TIFF.
+    /// </summary>
+    /// <remarks>
+    /// The pixel ceiling is one frame's, and every frame decodes onto a canvas
+    /// the size of the whole image: a GIF under a kilobyte can declare a large
+    /// screen and thousands of frames, and each one is a full allocation. A
+    /// recipe photo is a still, so nothing past the first is worth decoding.
+    /// </remarks>
+    private static readonly DecoderOptions FirstFrameOnly = new() { MaxFrames = 1 };
 
     public async Task<Result<StoredImage>> StoreAsync(
         Stream content,
@@ -151,7 +164,7 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             // a pixel count: a few kilobytes of PNG can describe fifty thousand
             // pixels square, and decoding it to find that out is the whole of
             // the attack. Reading the dimensions costs nothing.
-            header = await Image.IdentifyAsync(buffered, cancellationToken).ConfigureAwait(false);
+            header = await Image.IdentifyAsync(FirstFrameOnly, buffered, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
         {
@@ -171,7 +184,7 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
         {
             // Decoding is the format check. A content type and an extension are
             // both attacker-supplied, and neither says what the bytes are.
-            image = await Image.LoadAsync(buffered, cancellationToken).ConfigureAwait(false);
+            image = await Image.LoadAsync(FirstFrameOnly, buffered, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
         {
