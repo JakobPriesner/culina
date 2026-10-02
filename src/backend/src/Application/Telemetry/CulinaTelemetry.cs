@@ -16,6 +16,12 @@ public static class CulinaTelemetry
     /// <summary>The activity source and meter name the collector filters on.</summary>
     public const string Name = "Culina";
 
+    /// <summary>
+    /// The log category the web app's records are written under, which is
+    /// exported as a service of its own.
+    /// </summary>
+    public const string WebAppCategory = "Culina.WebApp";
+
     /// <summary>The one source use-case spans are started on.</summary>
     public static readonly ActivitySource ActivitySource = new(Name);
 
