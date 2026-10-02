@@ -11,7 +11,7 @@ namespace Api.Infrastructure;
 /// <list type="table">
 ///   <item><term>1000-1099</term><description>Users and authentication</description></item>
 ///   <item><term>1100-1199</term><description>Households and invitations</description></item>
-///   <item><term>1200-1299</term><description>Recipes</description></item>
+///   <item><term>1200-1299</term><description>Recipes, and importing them</description></item>
 ///   <item><term>1300-1399</term><description>Cooking</description></item>
 ///   <item><term>1400-1499</term><description>Shopping</description></item>
 ///   <item><term>1500-1599</term><description>The assistant</description></item>

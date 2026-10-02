@@ -3,6 +3,7 @@ using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Assistance;
 using Domain.Shared;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Assistance;
 
@@ -36,14 +37,16 @@ namespace Application.Assistance;
 /// <param name="protector">Decrypts a stored key.</param>
 /// <param name="ledger">Decides whether there is budget, and records what was used.</param>
 /// <param name="prices">Works out what a call came to.</param>
-/// <param name="time">The injected clock, for which month this is.</param>
-public sealed class AssistantRun(
+/// <param name="time">The injected clock, for which month this is, and how long a call took.</param>
+/// <param name="logger">Records each call as it is settled.</param>
+public sealed partial class AssistantRun(
     AssistanceSettings settings,
     IAssistants assistants,
     ISecretProtector protector,
     IAssistanceLedger ledger,
     IModelPrices prices,
-    TimeProvider time)
+    TimeProvider time,
+    ILogger<AssistantRun> logger)
 {
     /// <summary>
     /// What one composition might cost, reserved before the real number exists.
@@ -250,6 +253,22 @@ public sealed class AssistantRun(
         decimal estimate,
         CancellationToken cancellationToken)
     {
+        var prepared = await CheckAndReserveAsync(who, capability, estimate, cancellationToken)
+            .ConfigureAwait(false);
+
+        prepared.Match(
+            ready => Asking(logger, ready.Chosen.Kind.Code, ready.Chosen.Connected.Model, capability.Code),
+            error => NotAsking(logger, capability.Code, error.Code));
+
+        return prepared;
+    }
+
+    private async Task<Result<Reserved>> CheckAndReserveAsync(
+        Asker who,
+        Capability capability,
+        decimal estimate,
+        CancellationToken cancellationToken)
+    {
         if (!settings.Allows(capability))
         {
             // One answer for "no assistant here" and "not that, here". A caller
@@ -326,7 +345,7 @@ public sealed class AssistantRun(
 
         var taken = await ledger.ReserveAsync(reservation, cancellationToken).ConfigureAwait(false);
 
-        return taken.Map(id => new Reserved(id, chosen));
+        return taken.Map(id => new Reserved(id, capability, chosen, time.GetTimestamp()));
     }
 
     /// <summary>
@@ -405,21 +424,71 @@ public sealed class AssistantRun(
         }
     }
 
-    private Task SettleAsync(Reserved ready, ModelUsage usage, string outcome) =>
-        ledger.SettleAsync(
-            new Settlement(
-                ready.ReservationId,
-                usage,
-                prices.Of(
-                    ready.Chosen.Kind,
-                    ready.Chosen.Connected.Model,
-                    usage.InputTokens,
-                    usage.OutputTokens,
-                    usage.Pictures),
-                outcome),
+    private Task SettleAsync(Reserved ready, ModelUsage usage, string outcome)
+    {
+        var cost = prices.Of(
+            ready.Chosen.Kind,
+            ready.Chosen.Connected.Model,
+            usage.InputTokens,
+            usage.OutputTokens,
+            usage.Pictures);
+        var elapsed = (long)time.GetElapsedTime(ready.StartedAt).TotalMilliseconds;
+
+        Settled(
+            logger,
+            ready.Capability.Code,
+            ready.Chosen.Kind.Code,
+            ready.Chosen.Connected.Model,
+            outcome,
+            elapsed,
+            usage.InputTokens,
+            usage.OutputTokens,
+            usage.Pictures,
+            cost);
+
+        return ledger.SettleAsync(
+            new Settlement(ready.ReservationId, usage, cost, outcome),
             // Not the caller's token: a cancelled request must still leave the
             // budget it spent accounted for.
             CancellationToken.None);
+    }
+
+    [LoggerMessage(
+        EventId = 1503,
+        Level = LogLevel.Debug,
+        Message = "Asking {Provider} {Model} for {Capability}")]
+    private static partial void Asking(ILogger logger, string provider, string model, string capability);
+
+    /// <remarks>
+    /// Switched off, not connected, or out of budget: the request line carries
+    /// the code too, but not which capability it was for.
+    /// </remarks>
+    [LoggerMessage(
+        EventId = 1504,
+        Level = LogLevel.Debug,
+        Message = "Not asking an assistant for {Capability}: {Code}")]
+    private static partial void NotAsking(ILogger logger, string capability, string code);
+
+    /// <remarks>
+    /// The ledger keeps the same figures for the budget; this is the operator's
+    /// copy, with how long the provider took, which the ledger does not keep.
+    /// </remarks>
+    [LoggerMessage(
+        EventId = 1502,
+        Level = LogLevel.Information,
+        Message = "Assistant call for {Capability} on {Provider} {Model} ended {Outcome} in {ElapsedMilliseconds} ms: "
+            + "{InputTokens} tokens in, {OutputTokens} out, {Pictures} pictures, cost {Cost}")]
+    private static partial void Settled(
+        ILogger logger,
+        string capability,
+        string provider,
+        string model,
+        string outcome,
+        long elapsedMilliseconds,
+        int inputTokens,
+        int outputTokens,
+        int pictures,
+        decimal? cost);
 
     /// <summary>
     /// What a failure becomes on its way out.
@@ -446,8 +515,8 @@ public sealed class AssistantRun(
     /// <summary>An adapter and the connection it is about to be called with.</summary>
     internal sealed record Chosen(IAssistant Assistant, AssistantKind Kind, Connected Connected);
 
-    /// <summary>A provider to call, and the money already set aside for it.</summary>
-    internal sealed record Reserved(Guid ReservationId, Chosen Chosen);
+    /// <summary>A provider to call, the money already set aside for it, and when.</summary>
+    internal sealed record Reserved(Guid ReservationId, Capability Capability, Chosen Chosen, long StartedAt);
 }
 
 /// <summary>Who is asking, for the ledger.</summary>

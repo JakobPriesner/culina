@@ -66,7 +66,7 @@ internal sealed class GeminiAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -112,7 +112,7 @@ internal sealed class GeminiAssistant(
 
                 if (thrown is not null)
                 {
-                    yield return Stopped(answer, Failure(thrown));
+                    yield return Stopped(answer, Failed(thrown));
 
                     yield break;
                 }
@@ -176,7 +176,7 @@ internal sealed class GeminiAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -217,7 +217,7 @@ internal sealed class GeminiAssistant(
         }
         catch (Exception failure) when (Expected(failure))
         {
-            return Failure(failure);
+            return Failed(failure);
         }
     }
 
@@ -397,6 +397,16 @@ internal sealed class GeminiAssistant(
         {
             HttpClientFactory = () => http.ClientFor(@using.BaseUrl, drawing)
         });
+
+    /// <summary>Classifies a failure and records what the provider said.</summary>
+    private Error Failed(Exception failure)
+    {
+        var error = Failure(failure);
+
+        AssistanceLogs.CallFailed(logger, Kind.Code, error.Code, failure);
+
+        return error;
+    }
 
     /// <summary>The failures that are the provider's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>

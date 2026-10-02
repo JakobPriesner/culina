@@ -127,6 +127,8 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
                 .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
 
+            LogAnswered(logger, current.Host, (int)response.StatusCode);
+
             if (!IsRedirect(response.StatusCode))
             {
                 return await ReadAsync(current, response, cancellationToken).ConfigureAwait(false);
@@ -218,8 +220,18 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
     }
 
     [LoggerMessage(
-        EventId = 2101,
+        EventId = 1201,
         Level = LogLevel.Information,
         Message = "Could not fetch {Host} for an import")]
     private static partial void LogFetchFailed(ILogger logger, string host, Exception failure);
+
+    /// <remarks>
+    /// The host and not the address: a path or a query can carry a token, and
+    /// one line per hop is enough to see where a redirect chain went.
+    /// </remarks>
+    [LoggerMessage(
+        EventId = 1202,
+        Level = LogLevel.Debug,
+        Message = "{Host} answered {StatusCode} for an import")]
+    private static partial void LogAnswered(ILogger logger, string host, int statusCode);
 }

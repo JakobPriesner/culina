@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using TestSupport;
 
 namespace IntegrationTests.Fixtures;
@@ -52,6 +53,9 @@ public sealed class CulinaApiFactory(
     /// <summary>Every restart a saved server setting asked for, none of them performed.</summary>
     public RecordingRestart Restarts { get; } = new();
 
+    /// <summary>Every line the host logged, after the configured level filters.</summary>
+    public RecordingLogs Logs { get; } = new();
+
     /// <summary>The settings file this host reads at startup and writes when a server setting is saved.</summary>
     public string ServerSettingsFile => Path.Combine(dataRoot, "config", "culina.json");
 
@@ -92,6 +96,7 @@ public sealed class CulinaApiFactory(
             // Never the real restart: it would stop the host this factory
             // serves every later request from.
             services.AddSingleton<IHostRestart>(Restarts);
+            services.AddSingleton<ILoggerProvider>(Logs);
 
             if (weights is not null)
             {

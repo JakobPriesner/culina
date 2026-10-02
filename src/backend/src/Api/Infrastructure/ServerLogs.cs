@@ -22,4 +22,23 @@ internal static partial class ServerLogs
         Level = LogLevel.Information,
         Message = "Restarting to apply saved server settings")]
     internal static partial void Restarting(this ILogger logger);
+
+    /// <summary>
+    /// What this instance is and where it keeps things, first in the log: the
+    /// questions behind most reports that something is wrong. No credentials,
+    /// and only the collector's host, since an address can carry a token.
+    /// </summary>
+    [LoggerMessage(
+        EventId = LogEvents.ServerBase + 2,
+        Level = LogLevel.Information,
+        Message = "Culina {Version} starting in {Environment}: database {DatabaseHost}:{DatabasePort}/{DatabaseName}, images in {ImagePath}, telemetry export to {TelemetryExport}")]
+    internal static partial void Starting(
+        this ILogger logger,
+        string version,
+        string environment,
+        string databaseHost,
+        int databasePort,
+        string databaseName,
+        string imagePath,
+        string telemetryExport);
 }

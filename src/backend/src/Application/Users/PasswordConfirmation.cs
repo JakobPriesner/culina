@@ -3,6 +3,7 @@ using Application.Sessions;
 using Application.Telemetry;
 using Domain.Shared;
 using Domain.Users;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Users;
 
@@ -19,10 +20,12 @@ namespace Application.Users;
 /// <param name="passwordHasher">Verifies the password.</param>
 /// <param name="attempts">Counts failures per account.</param>
 /// <param name="time">The injected clock.</param>
+/// <param name="logger">Records a refusal.</param>
 internal sealed class PasswordConfirmation(
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
-    TimeProvider time)
+    TimeProvider time,
+    ILogger<PasswordConfirmation> logger)
 {
     /// <summary>Succeeds when the password is the account's current one.</summary>
     /// <param name="user">Whose password.</param>
@@ -44,6 +47,7 @@ internal sealed class PasswordConfirmation(
 
         attempts.RecordFailure(accountKey, now);
         CulinaTelemetry.LoginFailures.Add(1);
+        AuthenticationLogs.ConfirmationRefused(logger);
 
         return UserErrors.IncorrectPassword;
     }

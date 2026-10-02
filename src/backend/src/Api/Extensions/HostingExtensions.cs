@@ -1,4 +1,5 @@
 using System.Net;
+using Api.Infrastructure;
 using Application.Abstractions.Settings;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -14,7 +15,8 @@ namespace Api.Extensions;
 internal static class HostingExtensions
 {
     /// <summary>
-    /// One combined line per request: method, path, status, duration.
+    /// One combined line per API request: method, path, route, status,
+    /// duration and the error code of a failure.
     /// </summary>
     /// <remarks>
     /// Request and response bodies are never logged, in any environment. A
@@ -23,6 +25,8 @@ internal static class HostingExtensions
     internal static IServiceCollection AddRequestLogging(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        services.AddHttpLoggingInterceptor<RequestLogInterceptor>();
 
         return services.AddHttpLogging(options =>
         {

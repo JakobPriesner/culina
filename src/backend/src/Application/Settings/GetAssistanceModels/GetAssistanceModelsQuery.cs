@@ -100,13 +100,13 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
     }
 
     [LoggerMessage(
-        EventId = 2311,
+        EventId = 1511,
         Level = LogLevel.Information,
         Message = "Provider {Provider} offers {Count} models, {Drawing} of which draw")]
     private static partial void Listed(ILogger logger, string provider, int count, int drawing);
 
     [LoggerMessage(
-        EventId = 2310,
+        EventId = 1510,
         Level = LogLevel.Warning,
         Message = "Provider {Provider} could not be asked what it offers: {Reason}")]
     private static partial void CouldNotList(ILogger logger, string provider, string reason);

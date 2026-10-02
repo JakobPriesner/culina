@@ -61,9 +61,19 @@ public sealed class SourceImportRunner(
         using var activity = CulinaTelemetry.ActivitySource.StartActivity("Recipes.ImportRun");
         activity?.SetTag("culina.import_id", run.Id);
 
+        var startedAt = time.GetTimestamp();
+
+        ImportLogs.RunStarted(logger, run.Id, run.Total, run.SourceId, run.CookbookId);
+
         try
         {
             await ImportAllAsync(run, cancellationToken).ConfigureAwait(false);
+
+            var elapsed = (long)time.GetElapsedTime(startedAt).TotalMilliseconds;
+            var imported = run.Count(RecipeImporter.Imported);
+            var failed = run.Count(RecipeImporter.Failed);
+
+            ImportLogs.RunFinished(logger, run.Id, elapsed, imported, run.Total, failed);
         }
         catch (OperationCanceledException)
         {
@@ -166,7 +176,10 @@ public sealed class SourceImportRunner(
 
             try
             {
-                run.Record(await OneAsync(into, externalId, cancellationToken).ConfigureAwait(false));
+                var outcome = await OneAsync(into, externalId, cancellationToken).ConfigureAwait(false);
+
+                ImportLogs.RecipeDone(logger, run.Id, outcome.ExternalId, outcome.Outcome, outcome.Reason);
+                run.Record(outcome);
             }
             finally
             {
@@ -249,25 +262,58 @@ public sealed class SourceImportRunner(
 }
 
 /// <summary>
-/// Import log lines. Event ids 2110-2119.
+/// Import log lines. Event ids 1210-1219.
 /// </summary>
 internal static partial class ImportLogs
 {
     [LoggerMessage(
-        EventId = 2110,
+        EventId = 1210,
         Level = LogLevel.Warning,
         Message = "Import {ImportId} stopped before it finished")]
     internal static partial void RunStopped(ILogger logger, Guid importId);
 
     [LoggerMessage(
-        EventId = 2111,
+        EventId = 1211,
         Level = LogLevel.Error,
         Message = "Import {ImportId} ended in a defect")]
     internal static partial void RunFailed(ILogger logger, Guid importId, Exception failure);
 
     [LoggerMessage(
-        EventId = 2112,
+        EventId = 1212,
         Level = LogLevel.Error,
         Message = "Recipe {ExternalId} could not be brought over")]
     internal static partial void RecipeFailed(ILogger logger, string externalId, Exception failure);
+
+    /// <remarks>
+    /// The rest of the total were already here or looked like a recipe that
+    /// was, and were left alone.
+    /// </remarks>
+    [LoggerMessage(
+        EventId = 1213,
+        Level = LogLevel.Information,
+        Message = "Import {ImportId} finished in {ElapsedMilliseconds} ms: {Imported} of {Total} brought over, {Failed} failed")]
+    internal static partial void RunFinished(
+        ILogger logger,
+        Guid importId,
+        long elapsedMilliseconds,
+        int imported,
+        int total,
+        int failed);
+
+    [LoggerMessage(
+        EventId = 1214,
+        Level = LogLevel.Debug,
+        Message = "Import {ImportId} started: {Total} recipes from source {SourceId} onto cookbook {CookbookId}")]
+    internal static partial void RunStarted(ILogger logger, Guid importId, int total, Guid sourceId, Guid cookbookId);
+
+    [LoggerMessage(
+        EventId = 1215,
+        Level = LogLevel.Debug,
+        Message = "Import {ImportId}: recipe {ExternalId} {Outcome} {Reason}")]
+    internal static partial void RecipeDone(
+        ILogger logger,
+        Guid importId,
+        string externalId,
+        string outcome,
+        string? reason);
 }

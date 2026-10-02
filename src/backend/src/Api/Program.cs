@@ -4,6 +4,7 @@ using Api.Endpoints.Setup;
 using Api.Extensions;
 using Api.Infrastructure;
 using Application;
+using Application.Abstractions.Settings;
 using Infrastructure;
 using Infrastructure.Settings;
 
@@ -107,7 +108,26 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
     app.MapEndpoints();
     app.MapSinglePageAppFallback();
 
+    LogStarting(app);
+
     return app;
+}
+
+static void LogStarting(WebApplication app)
+{
+    var database = app.Services.GetRequiredService<DatabaseSettings>();
+    var storage = app.Services.GetRequiredService<StorageSettings>();
+    var telemetry = app.Services.GetRequiredService<TelemetrySettings>();
+    var version = ObservabilityExtensions.Version();
+
+    app.Logger.Starting(
+        version,
+        app.Environment.EnvironmentName,
+        database.Host,
+        database.Port,
+        database.Name,
+        storage.ImagePath,
+        telemetry.Endpoint?.Host ?? "nowhere");
 }
 
 // The host for an instance nobody has configured a database for. The same

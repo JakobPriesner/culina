@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Api.Authentication;
+using Api.Infrastructure;
 using Microsoft.Extensions.Primitives;
 
 namespace Api.Middleware;
@@ -33,10 +34,7 @@ internal sealed class SessionContextMiddleware(RequestDelegate next)
         // email or a search query would not be.
         Activity.Current?.SetTag("culina.user_id", userId);
 
-        using var scope = logger.BeginScope(new Dictionary<string, object>
-        {
-            ["UserId"] = userId
-        });
+        using var scope = logger.BeginScope(new LogScope(new KeyValuePair<string, object?>("UserId", userId)));
 
         await next(context).ConfigureAwait(false);
     }

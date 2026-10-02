@@ -5,6 +5,7 @@ using Application.Telemetry;
 using Domain.Sessions;
 using Domain.Shared;
 using Domain.Users;
+using Microsoft.Extensions.Logging;
 
 namespace Application.PasswordResets.Create;
 
@@ -22,7 +23,8 @@ internal sealed class ResetPasswordCommandHandler(
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
     IUnitOfWork unitOfWork,
-    TimeProvider time)
+    TimeProvider time,
+    ILogger<ResetPasswordCommandHandler> logger)
     : ICommandHandler<ResetPasswordCommand>
 {
     public async Task<Result> Handle(ResetPasswordCommand command, CancellationToken cancellationToken)
@@ -60,6 +62,7 @@ internal sealed class ResetPasswordCommandHandler(
             {
                 attempts.RecordFailure(accountKey, now);
                 CulinaTelemetry.RecoveryFailures.Add(1);
+                AuthenticationLogs.RecoveryRefused(logger);
             });
 
         return result;

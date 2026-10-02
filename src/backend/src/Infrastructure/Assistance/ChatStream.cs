@@ -81,7 +81,11 @@ internal static class ChatStream
 
                 if (thrown is not null)
                 {
-                    yield return Stopped(answer, recognised(thrown) ?? AssistanceErrors.Unavailable);
+                    var failure = recognised(thrown) ?? AssistanceErrors.Unavailable;
+
+                    AssistanceLogs.CallFailed(logger, kind.Code, failure.Code, thrown);
+
+                    yield return Stopped(answer, failure);
 
                     yield break;
                 }

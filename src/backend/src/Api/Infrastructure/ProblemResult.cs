@@ -58,6 +58,7 @@ internal sealed class ProblemResult(Error error, int? statusOverride = null) : I
         }
 
         httpContext.Response.StatusCode = status;
+        RequestContext.SetErrorCode(httpContext, error.Code);
 
         // The content type has to be passed to the write: setting
         // Response.ContentType first does not survive, because the JSON

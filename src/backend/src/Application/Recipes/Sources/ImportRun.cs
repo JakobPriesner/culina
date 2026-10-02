@@ -135,6 +135,16 @@ public sealed class ImportRun
         }
     }
 
+    /// <summary>How many recipes have ended with <paramref name="outcome"/> so far.</summary>
+    /// <param name="outcome">An outcome as recorded, such as <c>imported</c>.</param>
+    public int Count(string outcome)
+    {
+        lock (gate)
+        {
+            return outcomes.Count(one => one.Outcome == outcome);
+        }
+    }
+
     /// <summary>Says the run is over, however it went.</summary>
     public void Finish()
     {

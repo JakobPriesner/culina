@@ -81,15 +81,18 @@ internal static partial class UserLogs
 1. Reads the incoming `traceparent` (OTel does the real work) and takes the
    current `Activity.TraceId` as the **request id**, or generates one when
    there is no activity.
-2. Pushes a logging scope `{ RequestId }`, so every line emitted while handling
-   that request carries it.
+2. Pushes a logging scope `{ ClientAddress }`. The id itself reaches every line
+   as `TraceId`, from `ActivityTrackingOptions.TraceId | SpanId`; it is never
+   called `RequestId` in a log, because the host's own scope uses that name for
+   its connection-based identifier.
 3. Sets the `X-Request-Id` response header.
 4. Puts the same value on the problem document as `requestId`.
 
 So a user can paste the id from an error toast and an operator can find every
-line and the whole trace. Do not add `traceId`/`spanId` to scopes by hand —
-`ActivityTrackingOptions` is set to `None` and the collector reads those from
-the exported span.
+line and the whole trace. Do not add `TraceId`/`SpanId` to scopes by hand —
+activity tracking already puts them on every line, background work included,
+and a second copy only repeats them. Scopes are `LogScope`, not a dictionary,
+so the console prints `ClientAddress:…` rather than a type name.
 
 ## Tracing
 

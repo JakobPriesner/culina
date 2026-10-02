@@ -89,6 +89,44 @@ public class BackgroundImportTests(PostgresFixture postgres)
         var shelf = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
 
         Assert.Equal(3, shelf.Json!.Value.GetProperty("recipeCount").GetInt32());
+
+        // And an operator who reads nothing but the log sees how it went.
+        var finished = Assert.Single(factory.Logs.Lines, line => line.EventId == 1213);
+        Assert.Equal(importId.ToString(), finished["ImportId"]);
+        Assert.Equal("3", finished["Imported"]);
+        Assert.Equal("4", finished["Total"]);
+        Assert.Equal("1", finished["Failed"]);
+
+        // No request carries the run, so its trace is what ties its lines together.
+        Assert.NotNull(finished["TraceId"]);
+    }
+
+    [Fact]
+    public async Task Import_ShouldAccountForEachRecipe_WhenTheLogIsTurnedUpToDebug()
+    {
+        // Arrange
+        using var tandoor = FakeTandoor.Start(recipes: 4, broken: Broken);
+        using var factory = Factory(logLevel: "Debug");
+        using var client = await SignedInAsync(factory);
+        var sourceId = await ConnectAsync(client, tandoor);
+
+        // Act
+        var started = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = Four },
+            Token);
+
+        await WatchAsync(client, sourceId, started.Json!.Value.GetProperty("importId").GetGuid());
+
+        // Assert
+        // Raising the level is the one thing an operator can do without a
+        // debugger, so it has to show where each recipe went.
+        Assert.Single(factory.Logs.Lines, line => line.EventId == 1214);
+
+        var recipes = factory.Logs.Lines.Where(line => line.EventId == 1215).ToList();
+
+        Assert.Equal(4, recipes.Count);
+        Assert.Equal("failed", Assert.Single(recipes, line => line["ExternalId"] == "3")["Outcome"]);
     }
 
     [Fact]
@@ -278,14 +316,15 @@ public class BackgroundImportTests(PostgresFixture postgres)
             .ToList();
     }
 
-    private CulinaApiFactory Factory() => new(
+    private CulinaApiFactory Factory(string logLevel = "Information") => new(
         postgres,
         new Dictionary<string, string>
         {
             // The fake Tandoor is on loopback, which is exactly the case this
             // setting exists for: somebody's own recipe server, next door.
             ["Import:AllowPrivateSourceAddresses"] = "true",
-            ["RateLimits:SourceRequestsPerHour"] = "10000"
+            ["RateLimits:SourceRequestsPerHour"] = "10000",
+            ["Logging:LogLevel:Default"] = logLevel
         });
 
     private async Task<ApiClient> SignedInAsync(CulinaApiFactory factory)
