@@ -1,11 +1,15 @@
+using Domain.Shared;
 using Infrastructure.Persistence;
 using IntegrationTests.Fixtures;
+using TestSupport;
 
 namespace IntegrationTests.Persistence;
 
 [Collection(RequiresDatabase.Name)]
 public class DbSessionTests(PostgresFixture postgres)
 {
+    private static readonly Error ScratchFailure = new("tests.scratch", "The work declined.", ErrorType.Conflict);
+
     [Fact]
     public async Task Executor_ShouldRunAStatement_WhenTheConnectionIsOpened()
     {
@@ -70,6 +74,58 @@ public class DbSessionTests(PostgresFixture postgres)
         await Assert.ThrowsAsync<InvalidOperationException>(Act);
         // Disposing an uncommitted transaction rolls it back, so neither insert
         // survives — partial writes are what the unit of work exists to prevent.
+        var rows = await CountAsync(executor, table);
+        Assert.Equal(0, rows);
+    }
+
+    [Fact]
+    public async Task UnitOfWork_ShouldDiscardEveryWrite_WhenTheWorkReturnsAFailure()
+    {
+        // Arrange
+        await using var session = NewSession();
+        var executor = new DbExecutor(session);
+        var unitOfWork = new UnitOfWork(session);
+        var table = await CreateScratchTableAsync(executor);
+
+        // Act
+        var result = await unitOfWork.InTransactionAsync(
+            async token =>
+            {
+                await executor.ExecuteAsync($"insert into {table}(id) values (1);", null, token);
+
+                return Result.Failure(ScratchFailure);
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // An expected failure is returned rather than thrown, but it is just as
+        // much a reason not to keep the half of the work that ran before it.
+        result.ShouldBeFailure(ScratchFailure);
+        var rows = await CountAsync(executor, table);
+        Assert.Equal(0, rows);
+    }
+
+    [Fact]
+    public async Task UnitOfWork_ShouldDiscardEveryWrite_WhenTheWorkReturnsAFailedValue()
+    {
+        // Arrange
+        await using var session = NewSession();
+        var executor = new DbExecutor(session);
+        var unitOfWork = new UnitOfWork(session);
+        var table = await CreateScratchTableAsync(executor);
+
+        // Act
+        var result = await unitOfWork.InTransactionAsync(
+            async token =>
+            {
+                await executor.ExecuteAsync($"insert into {table}(id) values (1);", null, token);
+
+                return Result<int>.Failure(ScratchFailure);
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        result.ShouldBeFailure(ScratchFailure);
         var rows = await CountAsync(executor, table);
         Assert.Equal(0, rows);
     }
