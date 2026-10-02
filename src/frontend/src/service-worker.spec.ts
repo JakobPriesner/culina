@@ -106,3 +106,25 @@ it('keeps the private cache when a new build takes over', async () => {
 
   expect(deleted).toEqual(['culina-old']);
 });
+
+it('forgets the private cache when the server says the session is gone', async () => {
+  const deleted: string[] = [];
+
+  vi.stubGlobal('caches', {
+    open: () => Promise.resolve({ match: () => Promise.resolve(undefined) }),
+    delete: (key: string) => Promise.resolve(deleted.push(key) > 0)
+  });
+  vi.stubGlobal('fetch', () => Promise.resolve(new Response(null, { status: 401 })));
+
+  let refreshed: Promise<unknown> = Promise.resolve();
+
+  onFetch({
+    request: new Request(new URL('/api/v1/users/me', location.origin)),
+    respondWith: () => {},
+    waitUntil: (pending: Promise<unknown>) => (refreshed = pending)
+  });
+  await vi.advanceTimersByTimeAsync(0);
+  await refreshed;
+
+  expect(deleted).toEqual(['culina-private']);
+});
