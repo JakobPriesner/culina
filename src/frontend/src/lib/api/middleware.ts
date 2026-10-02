@@ -2,6 +2,7 @@ import type { Middleware } from 'openapi-fetch';
 
 import { readCookie } from './cookies';
 import { cached, invalidate, remember } from './etagCache';
+import { ErrorCodes } from './problem';
 import { sessionExpired } from './session';
 
 /** The header the backend checks on every unsafe cookie-authenticated request. */
@@ -96,16 +97,31 @@ export const conditionalRequests: Middleware = {
  * Never a retry: if the cookie is gone, sending the same request again only
  * produces the same 401, and a loop of them is how a sign-in page ends up
  * flickering instead of appearing.
+ *
+ * A wrong password is a 401 too, but it is the sign-in form's answer, not a
+ * session ending: treating it as one wiped every draft on the device and sent
+ * the person from the login page to the login page, one `next` deeper per typo.
  */
 export const expiredSessions: Middleware = {
-  onResponse({ response }) {
-    if (response.status === 401) {
+  async onResponse({ response }) {
+    if (response.status === 401 && (await codeOf(response)) !== ErrorCodes.invalidCredentials) {
       sessionExpired();
     }
 
     return undefined;
   }
 };
+
+/** The problem code, or nothing when the body is not a problem document. */
+async function codeOf(response: Response): Promise<unknown> {
+  try {
+    const body: unknown = await response.clone().json();
+
+    return typeof body === 'object' && body !== null && 'code' in body ? body.code : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const replay = (body: string) =>
   new Response(body, {

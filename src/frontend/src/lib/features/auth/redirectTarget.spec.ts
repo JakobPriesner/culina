@@ -40,4 +40,10 @@ describe('the sign-in address', () => {
       '/login?next=%2Fshopping&reason=expired'
     );
   });
+
+  it('keeps where somebody was going when they are already signing in', () => {
+    expect(loginUrlFor(new URL('http://culina.test/login?next=%2Frecipes%2Fx'), 'expired')).toBe(
+      '/login?next=%2Frecipes%2Fx&reason=expired'
+    );
+  });
 });
