@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { insertMention, pendingMention, suggest, toSegments, toText, writesOn } from './mentions';
+import {
+  insertMention,
+  linkMentions,
+  pendingMention,
+  suggest,
+  toSegments,
+  toText,
+  writesOn
+} from './mentions';
 import type { Ingredient, Step } from '../types';
 
 const ingredient = (id: string, name: string, value: number | null = 200): Ingredient => ({
@@ -91,6 +99,38 @@ describe('finding the mentions in a sentence', () => {
     const segments = toSegments('Whisk @olive oil into @butter, then rest.', list);
 
     expect(toText(step(segments))).toBe('Whisk @olive oil into @butter, then rest.');
+  });
+});
+
+describe('linking a mention once its ingredient has an id', () => {
+  const saffron = ingredient('i-saffron', 'saffron', null);
+
+  it('links a name that was written before the server had seen it', () => {
+    const written = step(toSegments('Add @saffron.', [...list, { ...saffron, id: '' }]));
+
+    expect(linkMentions(written, [...list, saffron]).segments).toEqual([
+      { kind: 'text', text: 'Add ' },
+      { kind: 'ingredient', ingredientId: saffron.id, name: 'saffron', quantity: saffron.quantity },
+      { kind: 'text', text: '.' }
+    ]);
+  });
+
+  it('leaves a mention that is already linked pointing where it did', () => {
+    const glaze = ingredient('i-glaze', 'butter');
+    const written = step([
+      { kind: 'ingredient', ingredientId: glaze.id, name: 'butter', quantity: glaze.quantity },
+      { kind: 'text', text: ' and @saffron' }
+    ]);
+
+    expect(linkMentions(written, [butter, glaze, saffron]).segments[0]).toEqual(
+      written.segments[0]
+    );
+  });
+
+  it('hands back the same step when there is nothing new to link', () => {
+    const written = step(toSegments('Melt @butter, add @nutmeg.', list));
+
+    expect(linkMentions(written, list)).toBe(written);
   });
 });
 
