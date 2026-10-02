@@ -64,6 +64,17 @@ const privateCacheName = 'culina-private';
 const privateCacheLimit = 120;
 
 /**
+ * How long a network-first read waits for the network when there is a copy.
+ *
+ * Without one, a stalled connection — the supermarket, the far end of the
+ * kitchen — never rejects the fetch, so the cache was never reached: the page
+ * gave up first and said the server was unavailable while the recipe sat in
+ * the cache. Shorter than the four seconds the app waits for who is signed in
+ * at boot, so the copy arrives before the app stops waiting for it.
+ */
+const networkDeadlineMs = 2_500;
+
+/**
  * The static files the document itself links to, and the only ones installed.
  *
  * Named rather than taken from `files` wholesale. `files` is everything in
@@ -224,7 +235,7 @@ worker.addEventListener('fetch', (event) => {
     const policy = policyFor(url);
 
     if (policy) {
-      event.respondWith(apiResponse(request, policy));
+      event.respondWith(apiResponse(event, policy));
     }
 
     return;
@@ -259,8 +270,8 @@ const readable = [
   // Content-addressed and immutable: the URL carries the width and the
   // picture's id, so what is cached can never be the wrong picture.
   one(/^\/api\/v1\/recipes\/[^/]+\/image$/, 'cache-first'),
-  // The recipe, the list, and who is signed in: the network wins whenever
-  // there is one, and the cache only ever catches a fall.
+  // The recipe, the list, and who is signed in: the network wins whenever it
+  // answers in time, and the cache only ever catches a fall or a stall.
   //
   // Not stale-while-revalidate, which is the obvious choice and the wrong one.
   // Showing the stored copy first means that the moment after somebody edits a
@@ -310,7 +321,8 @@ function policyFor(url: URL): CachePolicy | null {
  * the page as "Failed to fetch" — a network error the app cannot tell apart
  * from a dead wifi, for a request that actually succeeded.
  */
-async function apiResponse(request: Request, policy: CachePolicy): Promise<Response> {
+async function apiResponse(event: FetchEvent, policy: CachePolicy): Promise<Response> {
+  const request = event.request;
   const cache = await caches.open(privateCacheName).catch(() => null);
   const cached = cache ? await cache.match(request).catch(() => undefined) : undefined;
 
@@ -319,10 +331,13 @@ async function apiResponse(request: Request, policy: CachePolicy): Promise<Respo
   }
 
   // Started once and awaited once: a `Request` is spent by the fetch that used
-  // it, so there is no second attempt to be had.
+  // it, so there is no second attempt to be had. Kept alive past the answer,
+  // so a slow network that loses to the deadline still refreshes the copy.
   const fresh = fetchAndStore(request, cache);
 
-  const response = await fresh;
+  event.waitUntil(fresh);
+
+  const response = cached ? await Promise.race([fresh, deadline()]) : await fresh;
 
   if (response) {
     return response;
@@ -336,6 +351,11 @@ async function apiResponse(request: Request, policy: CachePolicy): Promise<Respo
   // it needs from here is the ordinary failure, which is what re-throwing the
   // fetch gives it.
   return fetch(request.url, { credentials: 'include', headers: request.headers });
+}
+
+/** Resolves with nothing once the network has had its chance. */
+function deadline(): Promise<null> {
+  return new Promise((resolve) => setTimeout(() => resolve(null), networkDeadlineMs));
 }
 
 /** Fetches, stores what is worth storing, and never rejects. */
