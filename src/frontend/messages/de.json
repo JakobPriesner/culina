@@ -1133,7 +1133,7 @@
   "server.limit.importsPerHour": "Importe von Webseiten pro Stunde und Person",
   "server.limit.sourceRequestsPerHour": "Anfragen an verbundene Sammlungen pro Stunde",
   "server.limit.assistantRequestsPerHour": "Anfragen an den Assistenten pro Stunde und Person",
-  "server.limit.requestsPerSessionPerMinute": "Anfragen pro Minute und angemeldeter Sitzung",
+  "server.limit.requestsPerSessionPerMinute": "Anfragen pro Minute und Adresse",
   "server.telemetry": "Telemetrie",
   "server.telemetry.hint": "Wohin Traces, Metriken und Logs über OpenTelemetry gehen. Lass die Adresse leer, um nichts zu exportieren; Logs landen weiterhin in der Konsole.",
   "server.telemetry.endpoint": "Adresse des Collectors",

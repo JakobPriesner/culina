@@ -87,16 +87,16 @@ internal static class RateLimitExtensions
             var limits = Resolve(services);
 
             options.AddPolicy(Login, context =>
-                PerClient(context, limits.LoginPerIpPerMinute, TimeSpan.FromMinutes(1)));
+                PerAddress(context, limits.LoginPerIpPerMinute, TimeSpan.FromMinutes(1)));
 
             options.AddPolicy(Register, context =>
-                PerClient(context, limits.RegisterPerIpPerHour, TimeSpan.FromHours(1)));
+                PerAddress(context, limits.RegisterPerIpPerHour, TimeSpan.FromHours(1)));
 
             options.AddPolicy(Invitation, context =>
-                PerClient(context, limits.InvitationPerIpPerHour, TimeSpan.FromHours(1)));
+                PerAddress(context, limits.InvitationPerIpPerHour, TimeSpan.FromHours(1)));
 
             options.AddPolicy(SharedRecipe, context =>
-                PerClient(context, limits.SharedRecipesPerIpPerMinute, TimeSpan.FromMinutes(1)));
+                PerAddress(context, limits.SharedRecipesPerIpPerMinute, TimeSpan.FromMinutes(1)));
 
             options.AddPolicy(Import, context =>
                 PerClient(context, limits.ImportsPerHour, TimeSpan.FromHours(1)));
@@ -108,12 +108,13 @@ internal static class RateLimitExtensions
                 PerClient(context, limits.AssistantRequestsPerHour, TimeSpan.FromHours(1)));
 
             options.AddPolicy(LogRecords, context =>
-                PerClient(context, LogRecordBatchesPerMinute, TimeSpan.FromMinutes(1)));
+                PerAddress(context, LogRecordBatchesPerMinute, TimeSpan.FromMinutes(1)));
 
             // A generous ceiling on everything else, so one misbehaving client
-            // cannot exhaust the connection pool.
+            // cannot exhaust the connection pool. Per address, so a made-up
+            // session cookie cannot buy a fresh budget.
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-                PerClient(context, limits.RequestsPerSessionPerMinute, TimeSpan.FromMinutes(1)));
+                PerAddress(context, limits.RequestsPerSessionPerMinute, TimeSpan.FromMinutes(1)));
 
             options.OnRejected = async (context, cancellationToken) =>
             {
@@ -136,9 +137,14 @@ internal static class RateLimitExtensions
 
     /// <summary>
     /// Partitions by session when there is one and by client address otherwise,
-    /// so a signed-in user's budget follows them across addresses and an
-    /// anonymous caller is limited per address.
+    /// so a signed-in user's budget follows them across addresses.
     /// </summary>
+    /// <remarks>
+    /// Only for endpoints that require a session. The limiter runs before the
+    /// cookie is checked, so a made-up cookie gets a budget of its own — which
+    /// buys nothing here but a 401, and the per-address global limiter bounds
+    /// how many of those can be asked for.
+    /// </remarks>
     private static RateLimitPartition<string> PerClient(HttpContext context, int permit, TimeSpan window)
     {
         // The name, not the constant: it loses its `__Host-` prefix wherever
@@ -146,17 +152,29 @@ internal static class RateLimitExtensions
         // is never there is a limiter that only ever sees an address.
         var cookies = context.RequestServices.GetRequiredService<CookieSettings>();
 
-        var key = context.Request.Cookies.TryGetValue(Authentication.SessionCookies.Name(cookies), out var session)
-            ? $"session:{session}"
-            : $"ip:{context.Connection.RemoteIpAddress}";
+        return context.Request.Cookies.TryGetValue(Authentication.SessionCookies.Name(cookies), out var session)
+            ? FixedWindow($"session:{session}", permit, window)
+            : PerAddress(context, permit, window);
+    }
 
-        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+    /// <summary>
+    /// Partitions by client address alone, whatever cookie the request carries.
+    /// </summary>
+    /// <remarks>
+    /// For everything anonymous: an unchecked cookie is whatever the caller
+    /// chose to send, and keying on it would give a script a fresh budget with
+    /// every request.
+    /// </remarks>
+    private static RateLimitPartition<string> PerAddress(HttpContext context, int permit, TimeSpan window) =>
+        FixedWindow($"ip:{context.Connection.RemoteIpAddress}", permit, window);
+
+    private static RateLimitPartition<string> FixedWindow(string key, int permit, TimeSpan window) =>
+        RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = permit,
             Window = window,
             QueueLimit = 0
         });
-    }
 
     private static RateLimitSettings Resolve(IServiceCollection services) =>
         (RateLimitSettings?)services

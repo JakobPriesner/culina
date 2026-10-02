@@ -1133,7 +1133,7 @@
   "server.limit.importsPerHour": "Web page imports per hour, per person",
   "server.limit.sourceRequestsPerHour": "Requests to connected libraries per hour",
   "server.limit.assistantRequestsPerHour": "Assistant requests per hour, per person",
-  "server.limit.requestsPerSessionPerMinute": "Requests per minute, per signed-in session",
+  "server.limit.requestsPerSessionPerMinute": "Requests per minute, per address",
   "server.telemetry": "Telemetry",
   "server.telemetry.hint": "Where to send traces, metrics and logs over OpenTelemetry. Leave the address empty to export nothing; logs still go to the console.",
   "server.telemetry.endpoint": "Collector address",
