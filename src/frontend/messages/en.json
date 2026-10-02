@@ -1429,6 +1429,7 @@
   "auth.secret.stamp": "Family recipe",
   "auth.secret.stampNote": "Members only",
   "auth.join.confirm.body": "Somebody sent you a link to their household. Join only if you know who it was: its members will see your name, and whatever you add while you're in it belongs to their kitchen.",
+  "auth.join.confirm.submit": "Join household",
   "me.olla": "Show Olla",
   "me.olla.hint": "The little pot that keeps empty pages company and cheers when you finish something. Turn it off for plain pages. Kept on this device."
 }

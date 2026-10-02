@@ -1429,6 +1429,7 @@
   "auth.secret.stamp": "Familienrezept",
   "auth.secret.stampNote": "Nur für Mitglieder",
   "auth.join.confirm.body": "Jemand hat dir einen Link zu seinem Haushalt geschickt. Tritt nur bei, wenn du weißt, von wem er ist: Die Mitglieder sehen deinen Namen, und was du dort hinzufügst, gehört zu ihrer Küche.",
+  "auth.join.confirm.submit": "Haushalt beitreten",
   "me.olla": "Olla zeigen",
   "me.olla.hint": "Der kleine Topf, der leeren Seiten Gesellschaft leistet und sich freut, wenn du etwas geschafft hast. Ausgeschaltet bleiben die Seiten schlicht. Gilt für dieses Gerät."
 }
