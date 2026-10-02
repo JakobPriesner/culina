@@ -137,6 +137,30 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Add_ShouldRefuse_WhenAStepIdBelongsToAnotherRecipe()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var first = await scope.SeedRecipeAsync();
+        var second = Recipe.Create(
+            first.HouseholdId,
+            RecipeTitle.Create("Ragù").ShouldBeSuccess(),
+            first.CreatedBy,
+            Language.En,
+            Now);
+        second.SetContents(
+            [],
+            [Step.Create(first.Steps[0].Id, 0, [new TextSegment("Stir.")], [], null).ShouldBeSuccess()],
+            Now).ShouldBeSuccess();
+
+        // Act
+        var result = await scope.Recipes.AddAsync(second, Token);
+
+        // Assert
+        result.ShouldBeFailure(RecipeErrors.DuplicateStep);
+    }
+
+    [Fact]
     public async Task Delete_ShouldHideTheRecipe_ButKeepEverythingUnderItForARestore()
     {
         // Arrange
