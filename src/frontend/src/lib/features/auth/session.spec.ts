@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { handleSessionExpiry } from '$api';
 import { recall, remember } from '$features/recipes/editor/journal';
+import { recallLastDraft, rememberLastDraft } from '$features/recipes/editor/lastDraft';
+import { recentSearches, rememberSearch } from '$features/recipes/search/recentSearches';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import type { Recipe } from '$features/recipes/types';
 import { registerStore, resetAllStores } from '$shell/stores';
@@ -227,16 +229,16 @@ describe('signing out', () => {
   });
 });
 
-describe('unsent recipes', () => {
-  const draft = {
-    id: 'r1',
-    title: 'Half a thought',
-    version: 3,
-    groups: [],
-    steps: [],
-    tags: []
-  } as unknown as Recipe;
+const draft = {
+  id: 'r1',
+  title: 'Half a thought',
+  version: 3,
+  groups: [],
+  steps: [],
+  tags: []
+} as unknown as Recipe;
 
+describe('unsent recipes', () => {
   afterEach(() => {
     handleSessionExpiry(() => {});
   });
@@ -279,6 +281,64 @@ describe('unsent recipes', () => {
 
     expect(recall('u1', 'r1')?.recipe).toEqual(draft);
     expect(recall('u2', 'r2')).toBeNull();
+  });
+});
+
+describe('the last recipe started and recent searches', () => {
+  afterEach(() => {
+    handleSessionExpiry(() => {});
+  });
+
+  function keepSome(userId: string) {
+    rememberLastDraft(userId, 'h1', 'r1', 'Half a thought');
+    rememberSearch(userId, 'lentils');
+  }
+
+  it('are kept when the session expires, so the way back to a kept draft is too', async () => {
+    await session.resolve();
+    handleSessionExpiry(() => session.end());
+    keepSome('u1');
+
+    serverAnswers(signedOut);
+    await recipes.update(draft);
+
+    expect(session.status).toBe('anonymous');
+    expect(recallLastDraft('u1', 'h1')).not.toBeNull();
+    expect(recentSearches('u1')).toEqual(['lentils']);
+  });
+
+  it('are gone after signing out, including the list from before it was per account', async () => {
+    await session.resolve();
+    keepSome('u1');
+    localStorage.setItem('culina.search.recent', '["chili"]');
+
+    await session.signOut();
+
+    const left = Object.keys(localStorage).filter(
+      (key) => key.startsWith('culina.search.') || key.startsWith('culina.lastDraft.')
+    );
+
+    expect(left).toEqual([]);
+  });
+
+  it('are kept for the person signing in and dropped for anybody else', async () => {
+    keepSome('u1');
+    keepSome('u2');
+    serverAnswers((url, method) =>
+      url.endsWith('/sessions') && method === 'POST'
+        ? json(
+            { userId: 'u1', displayName: 'Jakob', email: 'j@e.com', isAdmin: true, csrfToken: 't' },
+            201
+          )
+        : signedIn(url)
+    );
+
+    await session.signIn('jakob@example.com', 'right');
+
+    expect(recallLastDraft('u1', 'h1')).not.toBeNull();
+    expect(recentSearches('u1')).toEqual(['lentils']);
+    expect(recallLastDraft('u2', 'h1')).toBeNull();
+    expect(recentSearches('u2')).toEqual([]);
   });
 });
 

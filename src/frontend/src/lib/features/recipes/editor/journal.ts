@@ -1,3 +1,5 @@
+import { forgetAccountKeys } from '$shell/deviceStorage';
+
 import type { Recipe } from '../types';
 
 /**
@@ -82,17 +84,7 @@ export function forget(userId: string, recipeId: string): void {
  * the journal exists for, and the person signing back in wants their text.
  */
 export function forgetEveryDraft(keep?: string): void {
-  const kept = keep === undefined ? null : keyFor(keep, '');
-
-  try {
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith(prefix) && !(kept && key.startsWith(kept))) {
-        localStorage.removeItem(key);
-      }
-    }
-  } catch {
-    // As above.
-  }
+  forgetAccountKeys(prefix, keep);
 }
 
 const isEntry = (value: unknown): value is JournalEntry =>
