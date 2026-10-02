@@ -126,17 +126,54 @@ public class CreateLogRecordsCommandHandlerTests
     }
 
     private static CreateLogRecordsCommand Command(params ReportedRecord[] records) =>
-        new("2026.10.01-abc", records, "Mozilla/5.0");
+        new("2026.10.01-abc", records, "Mozilla/5.0", []);
 
     private static ReportedRecord Record(string @event) =>
-        new(@event, "Cannot read properties of undefined (reading 'title')", null, "/(app)/recipes/[recipeId]");
+        new(@event, "Cannot read properties of undefined (reading 'title')", null, "/(app)/recipes/[recipeId]", []);
+
+    [Fact]
+    public async Task Handle_ShouldAttachTheBrowsersDetails_CutToTheirCeiling()
+    {
+        // Arrange
+        var loggers = new RecordingLoggers();
+        var handler = new CreateLogRecordsCommandHandler(loggers);
+        var command = Command(Record("uncaught_error") with { Context = [new("culina.web.online", false)] }) with
+        {
+            Client =
+            [
+                new("browser.platform", new string('x', 500)),
+                new("culina.web.languages", Enumerable.Repeat("de", 50).ToArray()),
+                new("culina.web.screen.width", 390)
+            ]
+        };
+
+        // Act
+        await handler.Handle(command, Token);
+
+        // Assert
+        // Each one an attribute of the line, and none of them an open door:
+        // anybody can send these.
+        var attributes = Assert.Single(loggers.Lines).Attributes;
+
+        Assert.Equal("Mozilla/5.0", attributes["user_agent.original"]);
+        Assert.Equal("2026.10.01-abc", attributes["culina.web.app_version"]);
+        Assert.Equal(128, Assert.IsType<string>(attributes["browser.platform"]).Length);
+        Assert.Equal(10, Assert.IsType<string[]>(attributes["culina.web.languages"]).Length);
+        Assert.Equal(390, attributes["culina.web.screen.width"]);
+        Assert.Equal(false, attributes["culina.web.online"]);
+    }
 
     private static string Field(Result result) =>
         result.Match(
             () => throw new InvalidOperationException("Expected a refusal."),
             error => Assert.IsType<FieldError>(error).Field);
 
-    private sealed record Line(string Category, LogLevel Level, int EventId, Exception? Exception);
+    private sealed record Line(
+        string Category,
+        LogLevel Level,
+        int EventId,
+        Exception? Exception,
+        IReadOnlyDictionary<string, object> Attributes);
 
     /// <summary>Every line written, by every logger it handed out.</summary>
     private sealed class RecordingLoggers : ILoggerFactory
@@ -153,8 +190,18 @@ public class CreateLogRecordsCommandHandlerTests
 
         private sealed class Recording(string category, List<Line> lines) : ILogger
         {
+            private IReadOnlyDictionary<string, object> scope = new Dictionary<string, object>();
+
             public IDisposable? BeginScope<TState>(TState state)
-                where TState : notnull => null;
+                where TState : notnull
+            {
+                if (state is IEnumerable<KeyValuePair<string, object>> pairs)
+                {
+                    scope = pairs.ToDictionary();
+                }
+
+                return null;
+            }
 
             public bool IsEnabled(LogLevel logLevel) => true;
 
@@ -164,7 +211,7 @@ public class CreateLogRecordsCommandHandlerTests
                 TState state,
                 Exception? exception,
                 Func<TState, Exception?, string> formatter) =>
-                lines.Add(new Line(category, logLevel, eventId.Id, exception));
+                lines.Add(new Line(category, logLevel, eventId.Id, exception, scope));
         }
     }
 }
