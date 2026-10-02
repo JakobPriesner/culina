@@ -101,7 +101,9 @@ async function attempt<TData>(call: () => Promise<Call<TData>>): Promise<Result<
   try {
     const { data, error, response } = await call();
 
-    if (error !== undefined) {
+    // openapi-fetch reports a failure with an empty body as `error: undefined`,
+    // so an empty 403 from a proxy would otherwise pass for a success.
+    if (error !== undefined || !response.ok) {
       return err(toAppError(response, error));
     }
 
