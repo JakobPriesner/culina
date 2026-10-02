@@ -1010,6 +1010,8 @@
   "problem.planning.invalid_range": "Ein Plan wird wochenweise gelesen.",
   "problem.planning.invalid_servings": "Eine geplante Mahlzeit ist für eine bis tausend Personen.",
   "problem.recipes.duplicate_ingredient": "Zwei Zutatenzeilen sind dieselbe Zeile. Lade das Rezept neu und versuch es noch einmal.",
+  "problem.recipes.duplicate_group": "Zwei Zutatengruppen sind dieselbe Gruppe. Lade das Rezept neu und versuch es noch einmal.",
+  "problem.recipes.duplicate_step": "Zwei Schritte sind derselbe Schritt. Lade das Rezept neu und versuch es noch einmal.",
   "problem.recipes.image_not_found": "Dieses Bild ist nicht mehr gespeichert.",
   "problem.recipes.image_too_large": "Dieses Bild ist größer, als dieses Culina annimmt.",
   "problem.recipes.image_too_many_pixels": "Dieses Bild hat mehr Pixel, als ein Foto braucht. Verkleinere es zuerst.",
