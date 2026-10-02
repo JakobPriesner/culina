@@ -7,9 +7,10 @@ import { renderWithProviders } from '$lib/test/render';
 
 /*
  * One link, four people opening it: somebody signed out, somebody signed in
- * who is let in, the owner checking the link they are about to send, and
+ * who chooses to join, the owner checking the link they are about to send, and
  * somebody holding a code that no longer works. Only the first is ever offered
- * a sign-in, and nobody signed in is left on a page with no way back.
+ * a sign-in, nobody signed in joins without asking to, and nobody signed in is
+ * left on a page with no way back.
  */
 vi.mock('$app/state', () => ({ page: { params: { code: 'abc123' } } }));
 
@@ -39,6 +40,11 @@ function signedIn(status: SessionStatus) {
 
 const signInOffered = () => screen.queryByRole('link', { name: /sign in/i });
 
+/** Says yes to the household the link is for. */
+async function joinIt() {
+  (await screen.findByRole('button', { name: 'Join household' })).click();
+}
+
 beforeEach(() => goto.mockReset());
 
 afterEach(() => {
@@ -62,7 +68,23 @@ describe('opening an invitation', () => {
     expect(fetched).not.toHaveBeenCalled();
   });
 
-  it('lets somebody signed in straight into the household it is for', async () => {
+  it('asks somebody signed in before joining, and does not join on opening', async () => {
+    signedIn('authenticated');
+    const fetched = redemptionAnswers(() =>
+      json({ householdId: 'h2', name: 'Graces Küche', alreadyMember: false }, 201)
+    );
+
+    renderWithProviders(JoinPage);
+
+    expect(await screen.findByRole('button', { name: 'Join household' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Back to your kitchen' })).toHaveAttribute('href', '/');
+    await new Promise((settled) => setTimeout(settled, 50));
+
+    expect(fetched).not.toHaveBeenCalled();
+    expect(goto).not.toHaveBeenCalled();
+  });
+
+  it('takes somebody who joins into the household it is for', async () => {
     signedIn('authenticated');
     const select = vi.spyOn(session, 'selectHousehold').mockImplementation(() => {});
 
@@ -71,6 +93,7 @@ describe('opening an invitation', () => {
     );
 
     renderWithProviders(JoinPage);
+    await joinIt();
 
     await vi.waitFor(() => expect(goto).toHaveBeenCalled());
 
@@ -101,6 +124,7 @@ describe('opening an invitation', () => {
     });
 
     renderWithProviders(JoinPage);
+    await joinIt();
 
     await vi.waitFor(() => expect(goto).toHaveBeenCalled());
     await new Promise((settled) => setTimeout(settled, 50));
@@ -114,6 +138,7 @@ describe('opening an invitation', () => {
     redemptionAnswers(() => json({ householdId: 'h1', name: 'Home', alreadyMember: true }, 200));
 
     renderWithProviders(JoinPage);
+    await joinIt();
 
     expect(
       await screen.findByRole('heading', { name: "You're already in Home" })
@@ -129,6 +154,7 @@ describe('opening an invitation', () => {
     );
 
     renderWithProviders(JoinPage);
+    await joinIt();
 
     expect(
       await screen.findByRole('heading', { name: 'That invitation is not valid' })
@@ -142,6 +168,7 @@ describe('opening an invitation', () => {
     redemptionAnswers(() => json({ code: 'server.unexpected', detail: 'Oops.' }, 500));
 
     renderWithProviders(JoinPage);
+    await joinIt();
 
     expect(await screen.findByRole('button', { name: 'Try again' })).toBeVisible();
     expect(screen.queryByText('That invitation is not valid')).not.toBeInTheDocument();
