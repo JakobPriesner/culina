@@ -77,7 +77,13 @@
     element.style.height = `${element.scrollHeight}px`;
   }
 
-  $effect(grow);
+  // Also on a value set from outside, such as a note that arrives after the
+  // box is shown: typing is not the only way text gets in, and with overflow
+  // hidden the rest would be out of reach.
+  $effect(() => {
+    void value;
+    grow();
+  });
 </script>
 
 <textarea
