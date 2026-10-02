@@ -32,6 +32,26 @@ public class RateLimitTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Registration_ShouldStillBeAllowed_AfterTheSignUpPageReadThePolicyMoreTimesThanTheLimit()
+    {
+        // Arrange
+        await postgres.ResetAsync(Token);
+        using var factory = new CulinaApiFactory(
+            postgres,
+            new Dictionary<string, string> { ["RateLimits:RegisterPerIpPerHour"] = "2" });
+        using var client = factory.NewApiClient();
+
+        // Act
+        await client.GetAsync("/api/v1/registration/policy", Token);
+        await client.GetAsync("/api/v1/registration/policy", Token);
+        await client.GetAsync("/api/v1/registration/policy", Token);
+        var registration = await client.PostAsync("/api/v1/users", Body("one@example.com"), Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, registration.StatusCode);
+    }
+
+    [Fact]
     public async Task Rejection_ShouldSayWhenToRetry_SoAClientCanBackOffCorrectly()
     {
         // Arrange
