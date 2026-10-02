@@ -81,6 +81,7 @@
   let Overlay = $state<Component<{
     open: boolean;
     householdId: string;
+    userId: string;
     onclose: () => void;
   }> | null>(null);
 
@@ -225,10 +226,11 @@
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
 
-  {#if Overlay && session.activeHouseholdId}
+  {#if Overlay && session.user && session.activeHouseholdId}
     <Overlay
       open={searchOverlay.open}
       householdId={session.activeHouseholdId}
+      userId={session.user.userId}
       onclose={() => searchOverlay.hide()}
     />
   {/if}
