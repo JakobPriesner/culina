@@ -63,6 +63,14 @@
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+        <!-- The machine a signal came from and what it was using. Only ever
+             published as pre-releases; pinned to the SDK's own release. -->
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.18.0-rc.1" />
+        <PackageVersion Include="OpenTelemetry.Resources.Container" Version="1.18.0-beta.1" />
+        <PackageVersion Include="OpenTelemetry.Resources.Host" Version="1.18.0-beta.1" />
+        <PackageVersion Include="OpenTelemetry.Resources.OperatingSystem" Version="1.18.0-beta.1" />
+        <PackageVersion Include="OpenTelemetry.Resources.Process" Version="1.18.0-rc.1" />
+        <PackageVersion Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.18.0-beta.1" />
         <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
     </ItemGroup>
 

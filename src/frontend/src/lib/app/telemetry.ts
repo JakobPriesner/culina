@@ -2,6 +2,14 @@ import { version } from '$app/environment';
 import { page } from '$app/state';
 import { http, request } from '$api';
 
+import {
+  describeClient,
+  describeMoment,
+  learnClientHints,
+  type ClientContext,
+  type MomentContext
+} from './clientContext';
+
 /**
  * Tells the operator what went wrong in somebody's browser.
  *
@@ -17,6 +25,10 @@ import { http, request } from '$api';
  * dropped — never retried, never queued for later, and never itself reported,
  * which is the loop a reporter must not be able to start. Repeats are sent
  * once, and a page that is failing over and over stops after a few dozen.
+ *
+ * Each batch says everything the page knows about the browser and device it
+ * runs on, and each record the state of the page when it happened; see
+ * `clientContext.ts`.
  */
 
 /** What the server records, and decides the level of. */
@@ -27,7 +39,7 @@ export type ReportedEvent =
   | 'csp_violation'
   | 'service_worker_failed';
 
-interface LogRecord {
+interface LogRecord extends MomentContext {
   readonly event: ReportedEvent;
   readonly message: string;
   readonly stack?: string;
@@ -69,7 +81,7 @@ const encoder = new TextEncoder();
  * neither — because a handler cannot choose what reaches it.
  */
 export function report(event: ReportedEvent, thrown: unknown): void {
-  const record = { event, route: currentRoute(), ...describe(thrown) };
+  const record = { event, route: currentRoute(), ...describe(thrown), ...describeMoment() };
   const key = `${record.event} ${record.route} ${record.message}`;
 
   if (seen.has(key) || seen.size >= mostPerPage) {
@@ -101,8 +113,10 @@ export function flush(): void {
   clearTimeout(timer);
   timer = undefined;
 
+  const client = describeClient();
+
   while (queue.length > 0) {
-    const body = { appVersion: version, records: takeBatch() };
+    const body = { appVersion: version, client, records: takeBatch(client) };
     const size = bytes(body);
     const keepalive = keptAlive + size <= keepaliveBudget;
 
@@ -125,9 +139,9 @@ export function flush(): void {
  * enough to travel with `keepalive` when nothing else is. A record too big for
  * that on its own still goes, alone.
  */
-function takeBatch(): LogRecord[] {
+function takeBatch(client: ClientContext): LogRecord[] {
   const batch: LogRecord[] = [];
-  let size = bytes({ appVersion: version, records: [] });
+  let size = bytes({ appVersion: version, client, records: [] });
 
   while (queue.length > 0 && batch.length < mostPerBatch) {
     // One more for the comma between records.
@@ -156,6 +170,8 @@ function bytes(value: unknown): number {
  * call `report` themselves.
  */
 export function startReporting(): () => void {
+  learnClientHints();
+
   const onError = (event: ErrorEvent) => report('uncaught_error', event.error ?? event.message);
   const onRejection = (event: PromiseRejectionEvent) => report('unhandled_rejection', event.reason);
   const onViolation = (event: SecurityPolicyViolationEvent) =>

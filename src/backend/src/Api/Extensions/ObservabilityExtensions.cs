@@ -45,7 +45,7 @@ internal static class ObservabilityExtensions
 
         var telemetry = builder.Services
             .AddOpenTelemetry()
-            .ConfigureResource(resource => resource.AddCulinaService(ApiService, builder.Environment))
+            .ConfigureResource(resource => resource.AddCulinaService(ApiService, builder.Environment).AddMachine())
             .WithTracing(ConfigureTracing)
             .WithMetrics(ConfigureMetrics);
 
@@ -76,6 +76,19 @@ internal static class ObservabilityExtensions
             .AddAttributes([
                 new KeyValuePair<string, object>("deployment.environment.name", environment.EnvironmentName)
             ]);
+
+    /// <summary>
+    /// The machine the server runs on, on every span, metric and line it
+    /// exports: which host and container, which operating system and runtime,
+    /// and which process. Not the web app's, whose machine is the browser's.
+    /// </summary>
+    private static ResourceBuilder AddMachine(this ResourceBuilder resource) =>
+        resource
+            .AddHostDetector()
+            .AddOperatingSystemDetector()
+            .AddContainerDetector()
+            .AddProcessDetector()
+            .AddProcessRuntimeDetector();
 
     private static void ConfigureLogging(this IHostApplicationBuilder builder)
     {
@@ -147,6 +160,11 @@ internal static class ObservabilityExtensions
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation()
+            // CPU time, memory and threads of the process as the operating
+            // system counts them, beside the runtime's own view of its heap.
+            .AddProcessInstrumentation()
+            .AddMeter(MachineMetrics.MeterName)
+            .AddInstrumentation(services => new MachineMetrics(services.GetService<StorageSettings>()))
             // Npgsql publishes its pool and command metrics on its own meter
             // rather than through an instrumentation package.
             .AddMeter("Npgsql");

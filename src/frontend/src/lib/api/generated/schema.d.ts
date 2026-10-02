@@ -2436,6 +2436,95 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        /** @description The browser and device the records came from, as far as the page can tell. */
+        LogRecordsCreateClient: {
+            /** @description Random per page load, so records from one page can be told apart from another's. */
+            sessionId?: string | null;
+            /** @description The language the app is showing, such as `de`. */
+            locale?: string | null;
+            /** @description The languages the browser asks for, most preferred first. */
+            languages?: string[] | null;
+            /** @description The device's time zone, such as `Europe/Berlin`. */
+            timeZone?: string | null;
+            /** @description The browser's brands and their major versions, such as `Chromium 140`. */
+            brands?: string[] | null;
+            /** @description The operating system, such as `Android` or `macOS`. */
+            platform?: string | null;
+            /** @description The operating system's version. */
+            platformVersion?: string | null;
+            /** @description The processor architecture, such as `arm` or `x86`. */
+            architecture?: string | null;
+            /** @description The device model, where the browser names one. */
+            model?: string | null;
+            /** @description Whether the browser says it is on a phone. */
+            mobile?: boolean | null;
+            /**
+             * Format: int32
+             * @description The screen's width in CSS pixels.
+             */
+            screenWidth?: number | null;
+            /**
+             * Format: int32
+             * @description The screen's height in CSS pixels.
+             */
+            screenHeight?: number | null;
+            /**
+             * Format: int32
+             * @description The page's width in CSS pixels.
+             */
+            viewportWidth?: number | null;
+            /**
+             * Format: int32
+             * @description The page's height in CSS pixels.
+             */
+            viewportHeight?: number | null;
+            /**
+             * Format: double
+             * @description Device pixels per CSS pixel.
+             */
+            pixelRatio?: number | null;
+            /** @description The screen's orientation, such as `portrait-primary`. */
+            orientation?: string | null;
+            /** @description `light` or `dark`, as the device prefers. */
+            colorScheme?: string | null;
+            /** @description Whether the device asks for less motion. */
+            reducedMotion?: boolean | null;
+            /** @description How the app is open: `standalone` when installed, otherwise `browser`. */
+            displayMode?: string | null;
+            /**
+             * Format: int32
+             * @description Logical processors the browser reports.
+             */
+            cores?: number | null;
+            /**
+             * Format: double
+             * @description The device's memory in gibibytes, as the browser rounds it.
+             */
+            deviceMemory?: number | null;
+            /**
+             * Format: int32
+             * @description How many touch points the screen takes at once; 0 without a touch screen.
+             */
+            touchPoints?: number | null;
+            /** @description The connection's effective type, such as `4g`. */
+            connection?: string | null;
+            /**
+             * Format: double
+             * @description The connection's estimated bandwidth, in megabits per second.
+             */
+            downlink?: number | null;
+            /**
+             * Format: int32
+             * @description The connection's estimated round trip, in milliseconds.
+             */
+            roundTrip?: number | null;
+            /** @description Whether the user asked to save data. */
+            saveData?: boolean | null;
+            /** @description How the page was reached: `navigate`, `reload`, `back_forward` or `prerender`. */
+            navigationType?: string | null;
+            /** @description Whether a service worker controls the page. */
+            serviceWorker?: boolean | null;
+        };
         /** @description One thing that went wrong in the browser. */
         LogRecordsCreateRecord: {
             /**
@@ -2452,11 +2541,36 @@ export interface components {
              *     never the address with the id in it. At most 200 characters.
              */
             route?: string | null;
+            /**
+             * Format: date-time
+             * @description When it happened, by the device's clock.
+             */
+            occurredAt?: string | null;
+            /**
+             * Format: int64
+             * @description How long the page had been open when it happened, in milliseconds.
+             */
+            pageAge?: number | null;
+            /** @description Whether the browser thought it was online when it happened. */
+            online?: boolean | null;
+            /** @description Whether the page was on screen when it happened. */
+            visible?: boolean | null;
+            /**
+             * Format: int64
+             * @description The page's JavaScript heap in use when it happened, in bytes, where the browser says.
+             */
+            heapUsed?: number | null;
+            /**
+             * Format: int64
+             * @description The most the page's JavaScript heap may grow to, in bytes, where the browser says.
+             */
+            heapLimit?: number | null;
         };
         /** @description What the web app noticed since it last reported. */
         LogRecordsCreateRequest: {
             /** @description The build that noticed it, as the app knows its own version. */
             appVersion: string;
+            client?: (null) | components["schemas"]["LogRecordsCreateClient"];
             /** @description One to ten records, oldest first. */
             records: components["schemas"]["LogRecordsCreateRecord"][];
         };

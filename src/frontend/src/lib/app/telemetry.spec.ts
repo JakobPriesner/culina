@@ -122,6 +122,33 @@ async function sizeOf(request: Request) {
   return new TextEncoder().encode(await request.clone().text()).length;
 }
 
+describe('context', () => {
+  it('says where it ran once per batch, and when each record happened', async () => {
+    report('uncaught_error', new Error('one'));
+    report('uncaught_error', new Error('two'));
+
+    flush();
+    await vi.runAllTimersAsync();
+
+    const body = (await sent[0]!.clone().json()) as {
+      client: { sessionId?: string; viewportWidth?: number; languages?: string[] };
+      records: { occurredAt?: string; online?: boolean }[];
+    };
+
+    expect(body.client).toEqual(
+      expect.objectContaining({
+        sessionId: expect.any(String),
+        viewportWidth: window.innerWidth,
+        languages: [...navigator.languages]
+      })
+    );
+    expect(body.records).toEqual([
+      expect.objectContaining({ occurredAt: expect.any(String), online: navigator.onLine }),
+      expect.objectContaining({ occurredAt: expect.any(String), online: navigator.onLine })
+    ]);
+  });
+});
+
 describe('restraint', () => {
   it('sends the same failure once', async () => {
     report('render_failed', new Error('same'));

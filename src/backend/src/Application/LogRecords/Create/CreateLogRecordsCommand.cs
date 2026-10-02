@@ -10,17 +10,29 @@ namespace Application.LogRecords.Create;
 /// <param name="AppVersion">The build that reported it.</param>
 /// <param name="Records">What it reported.</param>
 /// <param name="UserAgent">The browser, as its request header names it.</param>
+/// <param name="Client">
+/// The browser and device, as the attributes every record is exported with.
+/// </param>
 public sealed record CreateLogRecordsCommand(
     string AppVersion,
     IReadOnlyList<ReportedRecord> Records,
-    string UserAgent);
+    string UserAgent,
+    IReadOnlyList<KeyValuePair<string, object>> Client);
 
 /// <summary>One record, as the browser sent it.</summary>
 /// <param name="Event">One of <see cref="LogRecordVocabulary.Events"/>.</param>
 /// <param name="Message">What it said.</param>
 /// <param name="Stack">Where it was thrown, if anywhere.</param>
 /// <param name="Route">The route id it happened on.</param>
-public sealed record ReportedRecord(string Event, string Message, string? Stack, string? Route);
+/// <param name="Context">
+/// What the page was like when it happened, as attributes of this record alone.
+/// </param>
+public sealed record ReportedRecord(
+    string Event,
+    string Message,
+    string? Stack,
+    string? Route,
+    IReadOnlyList<KeyValuePair<string, object>> Context);
 
 /// <summary>
 /// Re-emits browser records through <see cref="ILogger"/>.
@@ -49,6 +61,8 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
     internal const int LongestRoute = 200;
     internal const int LongestAppVersion = 64;
     internal const int LongestUserAgent = 256;
+    internal const int LongestAttribute = 128;
+    internal const int MostListEntries = 10;
 
     private const string Invalid = "log_records.invalid";
 
@@ -114,6 +128,13 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
             ? command.UserAgent[..LongestUserAgent]
             : command.UserAgent;
 
+        List<KeyValuePair<string, object>> shared =
+        [
+            new("user_agent.original", userAgent),
+            new("culina.web.app_version", command.AppVersion),
+            .. command.Client.Select(Bounded)
+        ];
+
         foreach (var record in command.Records)
         {
             var level = LevelOf(record.Event);
@@ -122,6 +143,11 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
             {
                 continue;
             }
+
+            // A scope rather than more template holes: the exporter turns each
+            // pair into an attribute of the line, and the message stays readable.
+            using var attributes = logger.BeginScope<IReadOnlyList<KeyValuePair<string, object>>>(
+                [.. shared, .. record.Context.Select(Bounded)]);
 
             logger.Reported(
                 level,
@@ -140,6 +166,20 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
     /// </summary>
     private static LogLevel LevelOf(string @event) =>
         @event == LogRecordVocabulary.CspViolation ? LogLevel.Warning : LogLevel.Error;
+
+    /// <summary>
+    /// Cuts what the browser described itself with rather than refusing it:
+    /// losing the error over its context would be the worse trade.
+    /// </summary>
+    private static KeyValuePair<string, object> Bounded(KeyValuePair<string, object> attribute) =>
+        new(attribute.Key, attribute.Value switch
+        {
+            string text => Cut(text),
+            IEnumerable<string> texts => texts.Take(MostListEntries).Select(Cut).ToArray(),
+            var value => value
+        });
+
+    private static string Cut(string text) => text.Length > LongestAttribute ? text[..LongestAttribute] : text;
 
     private static bool Longer(string? value, int limit) => value?.Length > limit;
 }

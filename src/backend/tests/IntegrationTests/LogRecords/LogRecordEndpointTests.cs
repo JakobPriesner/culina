@@ -70,6 +70,16 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
         new
         {
             appVersion = "test",
+            client = new
+            {
+                sessionId = "0198c0de-2222-7000-8000-000000000000",
+                languages = new[] { "de-DE", "en" },
+                brands = new[] { "Chromium 140" },
+                mobile = true,
+                viewportWidth = 390,
+                pixelRatio = 3.0,
+                connection = "4g"
+            },
             records = new[]
             {
                 new
@@ -77,7 +87,11 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
                     @event,
                     message = "Cannot read properties of undefined (reading 'title')",
                     stack = "at render (http://localhost/_app/immutable/chunks/a.js:1:42)",
-                    route = "/(app)/recipes/[recipeId]"
+                    route = "/(app)/recipes/[recipeId]",
+                    occurredAt = "2026-10-02T08:15:00.000Z",
+                    pageAge = 1234L,
+                    online = true,
+                    heapUsed = 12_345_678L
                 }
             }
         };

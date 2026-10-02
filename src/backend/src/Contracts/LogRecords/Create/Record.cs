@@ -17,4 +17,22 @@ public sealed record Record
     /// never the address with the id in it. At most 200 characters.
     /// </summary>
     public string? Route { get; init; }
+
+    /// <summary>When it happened, by the device's clock.</summary>
+    public DateTimeOffset? OccurredAt { get; init; }
+
+    /// <summary>How long the page had been open when it happened, in milliseconds.</summary>
+    public long? PageAge { get; init; }
+
+    /// <summary>Whether the browser thought it was online when it happened.</summary>
+    public bool? Online { get; init; }
+
+    /// <summary>Whether the page was on screen when it happened.</summary>
+    public bool? Visible { get; init; }
+
+    /// <summary>The page's JavaScript heap in use when it happened, in bytes, where the browser says.</summary>
+    public long? HeapUsed { get; init; }
+
+    /// <summary>The most the page's JavaScript heap may grow to, in bytes, where the browser says.</summary>
+    public long? HeapLimit { get; init; }
 }
