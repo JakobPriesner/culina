@@ -23,6 +23,27 @@ set -euo pipefail
 command -v docker >/dev/null && docker info >/dev/null 2>&1 ||
   { echo "ci-local: Docker is not running, and every database here is a container." >&2; exit 1; }
 
+# One run at a time. Two runs share the compose project and port 4173, and each
+# clears the project as it starts and as it ends, so a second push while one
+# is being tested took the first one's API away mid-suite and failed both. The
+# second waits instead. The lock names its holder, so one left by a run that
+# was killed is taken over rather than waited on for ever.
+LOCK="${TMPDIR:-/tmp}/culina-ci.lock"
+until mkdir "$LOCK" 2>/dev/null; do
+  holder="$(cat "$LOCK/pid" 2>/dev/null || true)"
+
+  if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+    rm -rf "$LOCK"
+    continue
+  fi
+
+  [ -n "${waiting:-}" ] || echo "ci-local: another run (pid ${holder:-?}) is testing; waiting for it." >&2
+  waiting=1
+  sleep 5
+done
+echo $$ >"$LOCK/pid"
+trap 'rm -rf "$LOCK"' EXIT
+
 # Run as CI, Playwright starts its own preview on this port rather than trusting
 # one that is already there, which may be serving an older build.
 if lsof -nP -iTCP:4173 -sTCP:LISTEN >/dev/null 2>&1; then
@@ -88,6 +109,7 @@ cleanup() {
   compose down -v --remove-orphans >/dev/null 2>&1 || true
   docker rm -f "$CONTRACT_DB" >/dev/null 2>&1 || true
   git -C "$ROOT" worktree remove --force "$TREE" >/dev/null 2>&1 || true
+  rm -rf "$LOCK"
 
   if [ "$status" -eq 0 ]; then
     rm -rf "$WORK"
