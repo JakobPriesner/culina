@@ -5,6 +5,7 @@
   import AssistFailure from '$features/assistance/AssistFailure.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
+  import Olla from '$shell/olla/Olla.svelte';
   import { imageSrcset, imageUrl } from '../recipeImage';
 
   /**
@@ -192,11 +193,16 @@
   generatingLabel={drawnFor > 0
     ? m['assist.draw.elapsed']({ seconds: drawnFor })
     : m['assist.draw.working']()}
+  generatingArt={drawingArt}
   extraAction={canDraw ? drawAction : undefined}
   {failure}
   onpick={upload}
   onremove={remove}
 />
+
+{#snippet drawingArt()}
+  <Olla pose="reading" size="sm" still />
+{/snippet}
 
 <!-- Absent entirely where no assistant can draw — which includes every
      instance running a model on its own hardware, since those do not make

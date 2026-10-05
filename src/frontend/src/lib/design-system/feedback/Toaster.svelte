@@ -49,6 +49,11 @@
     pointer-events: none;
   }
 
+  /* A peek must not cover the message already sitting above this one. */
+  .toaster :global(.toast:not(:first-child) .art) {
+    display: none;
+  }
+
   @media (min-width: 48rem) {
     .toaster {
       inset-inline: auto var(--space-6);

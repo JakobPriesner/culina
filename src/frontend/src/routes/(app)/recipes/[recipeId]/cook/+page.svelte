@@ -19,6 +19,7 @@
   import { m } from '$shell/i18n';
   import { haptics } from '$shell/haptics';
   import NotFound from '$shell/NotFound.svelte';
+  import Olla from '$shell/olla/Olla.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -153,6 +154,7 @@
           ? {
               message: () => m['cooking.madeIt.toast'](),
               tone: 'success',
+              art: cookedArt,
               // Done first, undo offered after: asking "are you sure?" before a
               // one-tap action that was never dangerous costs everyone a
               // decision to protect against a mistake that was already cheap
@@ -260,6 +262,10 @@
     }
   }
 </script>
+
+{#snippet cookedArt()}
+  <Olla pose="celebrating" size="sm" still />
+{/snippet}
 
 <svelte:head>
   <title>{recipes.detail?.title ?? m['recipes.title']()}</title>

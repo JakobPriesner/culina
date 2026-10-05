@@ -72,6 +72,8 @@
     generating?: boolean;
     /** What the frame says while it draws. */
     generatingLabel?: string;
+    /** Optional decoration shown only during generation, beside the status. */
+    generatingArt?: Snippet;
     /**
      * One more thing that can be done to the picture, from the caller.
      *
@@ -105,6 +107,7 @@
     busy = false,
     generating = false,
     generatingLabel,
+    generatingArt,
     extraAction,
     failure = null,
     onpick,
@@ -284,6 +287,7 @@
 
         {#if generatingLabel}
           <div class="caption">
+            {@render generatingArt?.()}
             <GenerationStatus label={generatingLabel} tone="on-media" align="center" />
           </div>
         {/if}
