@@ -1452,5 +1452,9 @@
   "cooking.pip.failed": "The floating window could not open. Keep cooking here and try again.",
   "cooking.timer.pause": "Pause timer",
   "cooking.timer.resume": "Resume timer",
-  "cooking.timer.paused": "Paused at {minutes}:{seconds}"
+  "cooking.timer.paused": "Paused at {minutes}:{seconds}",
+  "cooking.remote.enable": "Remote controls",
+  "cooking.remote.disable": "Turn off remote",
+  "cooking.remote.hint": "Next/Previous: steps. Play/Pause: timer. Controls vary by device.",
+  "cooking.remote.failed": "Remote controls could not start. Try again from this button."
 }

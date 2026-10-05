@@ -6,6 +6,7 @@
   import { m } from '$shell/i18n';
   import { kitchenWakeLock } from './kitchen.svelte';
   import { cooking } from './stores/cooking.svelte';
+  import CookingRemoteToggle from './CookingRemoteToggle.svelte';
 
   /**
    * The way back into what you were cooking.
@@ -46,6 +47,8 @@
 
       <span class="resume">{m['cooking.resume']()}</span>
     </a>
+
+    <CookingRemoteToggle />
 
     <!-- Ending it, not hiding it. A bar that vanished while the session stayed
          open would come back on the next page load, and the cook would have no

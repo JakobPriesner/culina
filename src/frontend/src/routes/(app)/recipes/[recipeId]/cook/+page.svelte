@@ -12,6 +12,7 @@
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import StepTimer from '$features/cooking/StepTimer.svelte';
   import CookingPipToggle from '$features/cooking/CookingPipToggle.svelte';
+  import CookingRemoteToggle from '$features/cooking/CookingRemoteToggle.svelte';
   import {
     kitchenTimers as timers,
     kitchenWakeLock as wakeLock
@@ -316,6 +317,7 @@
           {wakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
         </span>
         <CookingPipToggle recipe={recipes.detail} />
+        <CookingRemoteToggle recipe={recipes.detail} />
       </div>
 
       <RecipeSurface
