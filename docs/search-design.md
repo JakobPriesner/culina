@@ -666,7 +666,7 @@ megabytes plus a container.
 The most capable option and the most obviously wrong one. A JVM with a 1–2 GB
 heap floor, a cluster concept, index lifecycle management, and an operational
 surface larger than the rest of Culina combined. Elasticsearch's SSPL/Elastic
-licence would also need weighing against Culina's AGPL-3.0. Named only so that
+licence would also need weighing against Culina's PolyForm Noncommercial 1.0.0. Named only so that
 its absence is a decision.
 
 ### 5.7 Lucene.NET / Tantivy-based (`lnx`, Quickwit, `tantivy-py`)

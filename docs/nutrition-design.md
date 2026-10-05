@@ -465,7 +465,7 @@ downward.
 | --- | --- | --- |
 | BLS 4.0 values and names | CC BY 4.0 | Attribution: "Max Rubner-Institut (2025): Bundeslebensmittelschlüssel (BLS), Version 4.0 — Deutsche Nährstoffdatenbank. Karlsruhe." In the panel, and in the repository beside the file. |
 | USDA FDC portion data (densities) | CC0 | None; cited anyway. |
-| The name table (§D) | Culina's own, AGPL-3.0 with the code | — |
+| The name table (§D) | Culina's own, PolyForm Noncommercial 1.0.0 with the code | — |
 
 **The bead's ODbL question no longer arises.** Nothing is share-alike, so a
 household's database with nutrition in it is not a derivative database of

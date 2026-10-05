@@ -128,4 +128,4 @@ CORS policy anywhere. `make` with no target lists every command.
 
 ## Licence
 
-AGPL-3.0. See [LICENSE](LICENSE).
+PolyForm Noncommercial License 1.0.0. See [LICENSE](LICENSE).
