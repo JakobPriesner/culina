@@ -4,6 +4,7 @@
   import { IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
+  import { kitchenWakeLock } from './kitchen.svelte';
   import { cooking } from './stores/cooking.svelte';
 
   /**
@@ -27,7 +28,13 @@
 
 {#if session && !onTheCookingScreen}
   <div class="bar">
-    <span class="dot" aria-hidden="true"></span>
+    <span
+      class="dot"
+      class:held={kitchenWakeLock.held}
+      role="img"
+      aria-label={kitchenWakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
+      title={kitchenWakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
+    ></span>
 
     <a
       class="what"
@@ -70,7 +77,14 @@
     width: var(--space-2);
     height: var(--space-2);
     border-radius: var(--radius-full);
-    background: var(--accent);
+    border: 1px solid var(--text-muted);
+    background: transparent;
+  }
+
+  .dot.held {
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: 0 0 0 var(--space-1) var(--success-subtle);
   }
 
   /* The link is everything except the dismiss control, so the easy target is

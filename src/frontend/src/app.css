@@ -2,6 +2,7 @@
 @import './lib/design-system/tokens/scales.css';
 @import './lib/design-system/tokens/semantic.css';
 @import './lib/design-system/themes/warm-paper.css';
+@import './lib/design-system/tokens/kitchen-lighting.css';
 /* After the themes: on paper every one of them is ink on paper. */
 @import './lib/design-system/tokens/print.css';
 @import './lib/design-system/inputs/control.css';

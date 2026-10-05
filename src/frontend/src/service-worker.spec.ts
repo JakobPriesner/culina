@@ -1,3 +1,4 @@
+import { applyTimerAction, editTimerState } from './lib/features/cooking/timerState';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 /*
@@ -13,10 +14,17 @@ vi.mock('$service-worker', () => ({
   version: 'test'
 }));
 
+vi.mock('./lib/features/cooking/timerState', () => ({
+  applyTimerAction: vi.fn(),
+  editTimerState: vi.fn(),
+  forgetKitchen: vi.fn().mockResolvedValue(undefined)
+}));
+
 type Listener = (event: unknown) => void;
 
 let onFetch: Listener;
 let onActivate: Listener;
+let onNotificationClick: Listener;
 
 beforeAll(async () => {
   const addEventListener = vi.spyOn(self, 'addEventListener');
@@ -32,6 +40,7 @@ beforeAll(async () => {
 
   onFetch = listenerFor('fetch');
   onActivate = listenerFor('activate');
+  onNotificationClick = listenerFor('notificationclick');
   addEventListener.mockRestore();
 });
 
@@ -127,4 +136,65 @@ it('forgets the private cache when the server says the session is gone', async (
   await refreshed;
 
   expect(deleted).toEqual(['culina-private']);
+});
+
+const timerNotice = {
+  type: 'culina:timer',
+  sessionId: 's1',
+  stepIndex: 0,
+  endsAt: 100,
+  url: '/recipes/r1/cook?yield=4'
+};
+function clickNotification(action: string) {
+  let finished: Promise<unknown> = Promise.resolve();
+  const close = vi.fn();
+  onNotificationClick({
+    action,
+    notification: { data: timerNotice, close },
+    waitUntil: (promise: Promise<unknown>) => {
+      finished = promise;
+    }
+  });
+  return { close, finished };
+}
+it('handles extension in the worker without foregrounding a window', async () => {
+  const focus = vi.fn();
+  const postMessage = vi.fn();
+  vi.stubGlobal('clients', {
+    matchAll: vi.fn().mockResolvedValue([{ focus, postMessage }]),
+    openWindow: vi.fn()
+  });
+  vi.mocked(applyTimerAction).mockResolvedValue(true);
+  vi.mocked(editTimerState).mockResolvedValue({ timers: [], url: '' });
+  const click = clickNotification('minute-1');
+  await click.finished;
+  expect(applyTimerAction).toHaveBeenLastCalledWith(timerNotice, 'minute-1');
+  expect(postMessage).toHaveBeenCalledWith({ type: 'culina:timers-changed', sessionId: 's1' });
+  expect(focus).not.toHaveBeenCalled();
+  expect(click.close).toHaveBeenCalledOnce();
+});
+it('persists next step without opening the app when all windows are closed', async () => {
+  const openWindow = vi.fn();
+  vi.stubGlobal('clients', { matchAll: vi.fn().mockResolvedValue([]), openWindow });
+  vi.mocked(applyTimerAction).mockResolvedValue(true);
+  vi.mocked(editTimerState).mockResolvedValue({ timers: [], url: '' });
+  await clickNotification('next').finished;
+  expect(applyTimerAction).toHaveBeenLastCalledWith(timerNotice, 'next');
+  expect(openWindow).not.toHaveBeenCalled();
+});
+it('opens the matching cooking route on a body click', async () => {
+  const openWindow = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('clients', { matchAll: vi.fn().mockResolvedValue([]), openWindow });
+  await clickNotification('').finished;
+  expect(openWindow).toHaveBeenCalledWith(new URL(timerNotice.url, location.origin).href);
+});
+it('navigates an existing window before focusing it on a body click', async () => {
+  const navigate = vi.fn().mockResolvedValue(undefined);
+  const focus = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('clients', {
+    matchAll: vi.fn().mockResolvedValue([{ url: location.origin, navigate, focus }])
+  });
+  await clickNotification('').finished;
+  expect(navigate).toHaveBeenCalledWith(new URL(timerNotice.url, location.origin).href);
+  expect(focus).toHaveBeenCalledOnce();
 });
