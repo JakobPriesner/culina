@@ -1452,5 +1452,9 @@
   "cooking.pip.failed": "Das schwebende Fenster konnte nicht geöffnet werden. Koche hier weiter und versuche es erneut.",
   "cooking.timer.pause": "Timer pausieren",
   "cooking.timer.resume": "Timer fortsetzen",
-  "cooking.timer.paused": "Pausiert bei {minutes}:{seconds}"
+  "cooking.timer.paused": "Pausiert bei {minutes}:{seconds}",
+  "cooking.remote.enable": "Fernsteuerung",
+  "cooking.remote.disable": "Fernsteuerung aus",
+  "cooking.remote.hint": "Weiter/Zurück: Schritte. Wiedergabe/Pause: Timer. Die Steuerung hängt vom Gerät ab.",
+  "cooking.remote.failed": "Die Fernsteuerung konnte nicht starten. Versuche es erneut mit diesem Knopf."
 }

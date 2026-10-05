@@ -22,6 +22,16 @@ Normal uses the chosen theme. Glare uses opaque white surfaces, dark text and st
 
 Wake lock is held while the session is active, reacquired on return to the foreground, and released when it ends. The NowCookingBar and cooking controls expose a steady, labelled indicator of the actual held state, including browser refusal or release. There is no flashing or continuous animation.
 
+## Cooking remote
+
+Media Session controls are an optional tool beside lighting and the floating cooking window. A direct tap enables a ten-second silent PCM WAV loop from the same origin. The WAV is a bundled asset, compatible with the document CSP and installed by the service worker; range requests for audio can use the cached full response offline. Enabling is scoped to the current cooking session and device; it is not remembered as a preference and does not automatically take audio focus on arrival. The floating window offers the same toggle; the ongoing cooking bar lets the cook turn it off while browsing elsewhere.
+
+The shell runtime owns it alongside the timer clock and wake lock. Leaving the recipe route keeps the remote alive, with the cooking recipe retained even when another recipe is loaded. Next/Previous use the shared cooking store, clamp at the recipe bounds, and never silently record completion. Metadata includes recipe artwork, current step, plain instructions using the surface's Markdown parser and ingredient scaling, and the selected timer. Step, yield, artwork and pause changes publish immediately; countdown metadata updates at most every ten seconds.
+
+Play/Pause selects the current step's live timer first, then the soonest running timer, then a paused timer. Play stays paired with a fallback timer paused by the remote until the step changes. Expired timers are not restarted. With no live timer it pauses/resumes the silent audio session without starting a timer or ending cooking. Speech narration is tracked separately in nb65.3 and is not yet available. Browser audio interruptions release remote controls while cooking timers continue; an explicit Pause media action pauses the selected timer. The existing timer notifications, badges and floating view all observe the same persisted timer state.
+
+Turning off the remote or receiving the OS Stop action releases only the audio session. Ending/abandoning cooking, switching sessions, signing out, unmounting the shell or hiding the document for navigation releases audio, handlers and metadata. Browser refusal leaves a retryable button; missing support hides the tool. This uses standard media controls, not a native watch app or Live Activity: lock-screen presentation, Dynamic Island behavior and the particular headset/watch buttons depend on the operating system and browser. Hardware verification remains necessary on supported phones and paired watches; browser automation verifies dispatch and shared state, not an OS widget.
+
 ## Platform references
 
 - [Notification actions and platform limits](https://developer.mozilla.org/en-US/docs/Web/API/Notification/actions)

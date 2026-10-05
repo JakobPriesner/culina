@@ -9,6 +9,7 @@
   import { cooking } from './stores/cooking.svelte';
   import { kitchenTimers as timers } from './kitchen.svelte';
   import StepTimer from './StepTimer.svelte';
+  import CookingRemoteToggle from './CookingRemoteToggle.svelte';
 
   let { recipe, onreturn }: { recipe: RecipeReading; onreturn: () => void } = $props();
   let surface: HTMLElement;
@@ -67,6 +68,7 @@
     <h1>{recipe.title}</h1>
     <p class="yield">{scaling.currentYieldLabel}</p>
     <Button size="sm" variant="ghost" onclick={onreturn}>{m['cooking.pip.return']()}</Button>
+    <CookingRemoteToggle {recipe} />
   </header>
   {#if step}
     <section class="step" aria-labelledby="pip-step">
