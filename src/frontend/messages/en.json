@@ -49,7 +49,7 @@
   "locale.label": "Language",
   "me.appearance": "Appearance",
   "me.appIcon": "App icon",
-  "me.appIcon.hint": "The icon this device shows for Culina, in the browser tab and on the home screen. An iPhone or iPad that already has Culina on its home screen keeps the old icon until it is added again.",
+  "me.appIcon.hint": "The icon this device shows for Culina, in the browser tab and for new installs. An app already installed on your home screen or desktop keeps the original icon until it is added again.",
   "me.household": "Household",
   "me.theme": "Theme",
   "me.title": "Settings",
