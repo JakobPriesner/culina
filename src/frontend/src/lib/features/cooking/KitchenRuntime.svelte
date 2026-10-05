@@ -9,6 +9,8 @@
   import { editTimerState } from './timerState';
   import { cookingPip } from './pip.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { kitchenMediaSession } from './mediaSession.svelte';
+  import { preferences } from '$shell/preferences.svelte';
 
   const sessionId = $derived(cooking.session?.sessionId ?? null);
 
@@ -16,6 +18,7 @@
     kitchenLighting.load();
     return () => {
       cookingPip.close();
+      kitchenMediaSession.stop();
       kitchenTimers.clear();
       badgeManager.clear();
       delete document.documentElement.dataset['kitchenLighting'];
@@ -33,6 +36,18 @@
       stopHolding();
       kitchenTimers.clear();
     };
+  });
+
+  $effect(() => {
+    // Track the common session and clock, never the remote's own writes.
+    const snapshot = {
+      session: cooking.session,
+      detail: recipes.detail,
+      locale: preferences.locale,
+      measurements: preferences.measurementSystem
+    };
+    for (const timer of kitchenTimers.timers) kitchenTimers.remaining(timer);
+    untrack(() => kitchenMediaSession.sync(snapshot.detail));
   });
 
   $effect(() => {
