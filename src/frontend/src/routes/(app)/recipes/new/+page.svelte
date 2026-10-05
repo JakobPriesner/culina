@@ -12,9 +12,14 @@
     rememberLastDraft,
     type LastDraft
   } from '$features/recipes/editor/lastDraft';
+  import {
+    recallSharedRecipe,
+    forgetSharedRecipe,
+    sharedAddress
+  } from '$features/import/sharedRecipe';
+  import type { Recipe } from '$features/recipes/types';
   import PasteImport from '$features/recipes/editor/PasteImport.svelte';
   import IdeaDraft from '$features/assistance/IdeaDraft.svelte';
-  import PhotographDraft from '$features/assistance/PhotographDraft.svelte';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { acceptEverything, toPatch, type Draft } from '$features/assistance/draftToRecipe';
   import type { ParsedRecipe } from '$features/recipes/editor/parseRecipeText';
@@ -47,10 +52,37 @@
   /** Whether the pasting box has been opened, which takes over the page. */
   let pasting = $state(false);
   let describing = $state(false);
-  let photographing = $state(false);
 
   let incomingUrl = $state('');
   let incomingText = $state('');
+  let incomingPhotos = $state<File[]>([]);
+  let sharedFailure = $state(false);
+  let loadingShare = $state(!!page.url.searchParams.get('share'));
+  const shareId = page.url.searchParams.get('share');
+  let intakeRecipe: Recipe | null = null;
+
+  async function forgetShare() {
+    if (shareId) await forgetSharedRecipe(shareId).catch(() => {});
+  }
+
+  async function receiveShare() {
+    try {
+      const shared = shareId ? await recallSharedRecipe(shareId) : null;
+      if (!shared) {
+        sharedFailure = true;
+        return;
+      }
+      title = shared.title;
+      incomingUrl = sharedAddress(shared.url, shared.text);
+      incomingText = shared.text;
+      incomingPhotos = shared.photos;
+      pasting = true;
+    } catch {
+      sharedFailure = true;
+    } finally {
+      loadingShare = false;
+    }
+  }
 
   const submission = createSubmission();
 
@@ -65,6 +97,11 @@
   let continuing = $state<LastDraft | null>(null);
 
   onMount(() => {
+    if (shareId) {
+      void receiveShare();
+      return;
+    }
+    if (page.url.searchParams.has('shareError')) sharedFailure = true;
     void checkForUnfinishedDraft();
 
     const sharedUrl = page.url.searchParams.get('url')?.trim() ?? '';
@@ -80,6 +117,7 @@
         ? sharedUrl
         : (sharedText.match(/https?:\/\/[^\s]+/)?.[0] ?? '');
 
+    incomingText = sharedText;
     if (extractedUrl) {
       incomingUrl = extractedUrl;
       pasting = true;
@@ -154,13 +192,21 @@
     let created: string | null = null;
 
     const ok = await submission.run(async () => {
-      const outcome = await recipes.create(householdId, named || m['import.paste.untitled']());
+      const outcome =
+        (intakeRecipe?.householdId === householdId ? intakeRecipe : null) ??
+        (await recipes.create(
+          householdId,
+          named || m['import.paste.untitled'](),
+          undefined,
+          pasted?.sourceUrl
+        ));
 
       if ('code' in outcome) {
         return outcome;
       }
 
       created = outcome.id;
+      intakeRecipe = outcome;
 
       if (!pasted) {
         return null;
@@ -204,38 +250,40 @@
         rememberLastDraft(userId, householdId, created, named || m['import.paste.untitled']());
       }
 
+      await forgetShare();
       await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: created }));
     }
+    return ok;
   }
 
   /**
    * The same road as a pasted recipe: create with a title, then fill it in.
    *
-   * Deliberately not a review dialog first. There is nothing to compare an
-   * assistant's draft against on this screen — the recipe does not exist yet —
-   * and a dialog asking somebody to approve a recipe they have not read is a
-   * dialog they will dismiss. The editor is the review: it opens with the draft
-   * in it, unsaved changes are the norm there, and deleting a recipe they did
-   * not want is one action away.
+   * Intake has already compared the draft to its source. An idea has no
+   * source to compare and goes straight to the editor. Both use the ordinary
+   * create and update path, with the source link and draft provenance intact.
    */
-  async function startFromDraft(written: Draft): Promise<void> {
+  async function startFromDraft(written: Draft, sourceUrl?: string): Promise<boolean> {
     const householdId = session.activeHouseholdId;
 
     if (!householdId) {
-      return;
+      return false;
     }
 
     let created: string | null = null;
     const named = written.title?.trim() || title.trim() || m['import.paste.untitled']();
 
     const ok = await submission.run(async () => {
-      const outcome = await recipes.create(householdId, named);
+      const outcome =
+        (intakeRecipe?.householdId === householdId ? intakeRecipe : null) ??
+        (await recipes.create(householdId, named, written.draftId, sourceUrl || undefined));
 
       if ('code' in outcome) {
         return outcome;
       }
 
       created = outcome.id;
+      intakeRecipe = outcome;
 
       return recipes.update({
         ...outcome,
@@ -243,7 +291,7 @@
       });
     });
 
-    drafts.dismiss();
+    if (ok) drafts.dismiss();
 
     if (ok && created) {
       const userId = session.user?.userId;
@@ -252,8 +300,10 @@
         rememberLastDraft(userId, householdId, created, named);
       }
 
+      await forgetShare();
       await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: created }));
     }
+    return ok;
   }
 </script>
 
@@ -261,12 +311,18 @@
 
 <Page width="reading">
   <PageHeader
-    title={continuing ? m['editor.newAnother']() : m['editor.new']()}
-    subtitle={m['editor.titleHint']()}
+    title={pasting
+      ? m['import.intake.title']()
+      : continuing
+        ? m['editor.newAnother']()
+        : m['editor.new']()}
+    subtitle={pasting ? undefined : m['editor.titleHint']()}
   />
 
   <div class="stack">
-    {#if continuing}
+    {#if sharedFailure}<p role="alert">{m['import.share.failed']()}</p>{/if}
+    {#if loadingShare}<p role="status">{m['import.share.loading']()}</p>{/if}
+    {#if continuing && !pasting}
       <!-- Above the field rather than beside it: somebody who left a recipe
            half-written is here to finish it far more often than to start a
            second one, and the row says which recipe rather than making them
@@ -284,36 +340,51 @@
       </a>
     {/if}
 
-    <form class="start" onsubmit={submit} novalidate>
+    {#if !pasting && !loadingShare}
+      <form class="start" onsubmit={submit} novalidate>
+        <FormFailure failure={submission.failure} />
+
+        <Field label={m['editor.title']()}>
+          {#snippet children({ id, describedBy, invalid })}
+            <TextInput
+              {id}
+              {describedBy}
+              {invalid}
+              size="display"
+              placeholder={m['editor.titlePlaceholder']()}
+              bind:value={title}
+            />
+          {/snippet}
+        </Field>
+
+        <Button type="submit" variant="primary" size="lg" loading={submission.showingProgress}>
+          {m['editor.create']()}
+        </Button>
+      </form>
+    {:else}
       <FormFailure failure={submission.failure} />
+    {/if}
 
-      <Field label={m['editor.title']()}>
-        {#snippet children({ id, describedBy, invalid })}
-          <TextInput
-            {id}
-            {describedBy}
-            {invalid}
-            size="display"
-            placeholder={m['editor.titlePlaceholder']()}
-            bind:value={title}
-          />
-        {/snippet}
-      </Field>
-
-      <Button type="submit" variant="primary" size="lg" loading={submission.showingProgress}>
-        {m['editor.create']()}
-      </Button>
-    </form>
-
-    {#if session.activeHouseholdId}
+    {#if session.activeHouseholdId && !loadingShare}
       {#if pasting}
         <PasteImport
           bind:open={pasting}
           householdId={session.activeHouseholdId}
-          busy={submission.showingProgress}
+          busy={submission.inFlight}
+          saveError={submission.failure}
           initialUrl={incomingUrl}
           initialText={incomingText}
-          onimport={(parsed) => void start(title.trim() || parsed.title, parsed)}
+          initialPhotos={incomingPhotos}
+          onimport={(parsed) => start(parsed.title || title.trim(), parsed)}
+          ondraft={(written, sourceUrl) => startFromDraft(written, sourceUrl)}
+          onqueued={forgetShare}
+          oncancel={() => {
+            void forgetShare();
+            incomingPhotos = [];
+            incomingText = '';
+            incomingUrl = '';
+            void goto(resolve('/(app)/recipes/new'), { replaceState: true });
+          }}
         />
       {:else if describing}
         <IdeaDraft
@@ -322,16 +393,6 @@
           onwritten={(written) => void startFromDraft(written)}
           oncancel={() => {
             describing = false;
-            drafts.dismiss();
-          }}
-        />
-      {:else if photographing}
-        <PhotographDraft
-          householdId={session.activeHouseholdId}
-          language={preferences.locale}
-          onread={(written) => void startFromDraft(written)}
-          oncancel={() => {
-            photographing = false;
             drafts.dismiss();
           }}
         />
@@ -368,7 +429,7 @@
             {/if}
 
             {#if session.user?.assistance.read}
-              <button type="button" class="way" onclick={() => (photographing = true)}>
+              <button type="button" class="way" onclick={() => (pasting = true)}>
                 <span class="way-title">{m['assist.photo.title']()}</span>
                 <span class="way-body">{m['assist.photo.hint']()}</span>
               </button>

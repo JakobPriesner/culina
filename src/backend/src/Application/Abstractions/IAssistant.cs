@@ -174,6 +174,9 @@ public sealed record Composition
 
     /// <summary>What kind of picture, when there is one.</summary>
     public string? PictureMediaType { get; init; }
+
+    /// <summary>Additional pages of the same recipe, in reading order.</summary>
+    public IReadOnlyList<RecipePicture> Pictures { get; init; } = [];
 }
 
 /// <summary>What the model said, and what it cost.</summary>
@@ -326,3 +329,6 @@ public sealed record DraftedStep
     /// <summary>How long it waits, when it waits.</summary>
     public int? DurationSeconds { get; init; }
 }
+
+/// <summary>One page or screenshot of the source recipe.</summary>
+public sealed record RecipePicture(ReadOnlyMemory<byte> Content, string MediaType);

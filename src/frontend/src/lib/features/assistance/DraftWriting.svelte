@@ -28,9 +28,10 @@
     draft: Draft | null;
     /** Whether more is still coming. */
     writing: boolean;
+    showProgress?: boolean;
   }
 
-  let { draft, writing }: Props = $props();
+  let { draft, writing, showProgress = true }: Props = $props();
 
   const lines = $derived(draft?.groups.flatMap((group) => group.ingredients) ?? []);
   const steps = $derived(draft?.steps ?? []);
@@ -44,7 +45,7 @@
 <section class="writing" aria-busy={writing} aria-live="polite">
   <GenerationAura active={writing} />
 
-  {#if writing}
+  {#if writing && showProgress}
     <DraftProgress label={m['assist.writing']()} arriving={draft !== null} />
   {/if}
 

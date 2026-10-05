@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SettingsLayout from './+layout.svelte';
 import { session } from '$features/auth/session.svelte';
-import { ollaSetting } from '$shell/olla/setting.svelte';
+import { olliSetting } from '$shell/olli/setting.svelte';
 import { resetAllStores } from '$shell/stores';
 import { renderWithProviders } from '$lib/test/render';
 
@@ -51,7 +51,7 @@ const children = createRawSnippet(() => ({ render: () => '<p>The server settings
 
 beforeEach(() => {
   resetAllStores();
-  ollaSetting.reset();
+  olliSetting.reset();
   location.pathname = '/me/server';
 });
 
@@ -73,8 +73,8 @@ describe('an administrator-only settings page', () => {
     }
   );
 
-  it('puts the refused order on a ticket when Olla is turned off', async () => {
-    ollaSetting.show(false);
+  it('puts the refused order on a ticket when Olli is turned off', async () => {
+    olliSetting.show(false);
     location.pathname = '/me/ai';
     await signedInAs(false);
 

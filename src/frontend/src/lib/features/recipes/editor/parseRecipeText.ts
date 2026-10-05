@@ -17,6 +17,7 @@ import { parseIngredientLine, type ParsedIngredient } from './parseIngredientLin
  * cannot see is worse than no reading at all.
  */
 export interface ParsedRecipe {
+  readonly sourceUrl?: string;
   /** The first line, when it looks like a name rather than an instruction. */
   readonly title: string;
   readonly ingredients: readonly ParsedIngredient[];

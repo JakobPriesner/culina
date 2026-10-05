@@ -6805,7 +6805,7 @@
           "Recipes"
         ],
         "summary": "Ask the assistant for a recipe",
-        "description": "A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.\n\n`kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and the language it is written in, and changing only how it reads. `language` is ignored for a revision.\n\nServer-sent events, because a model writes a recipe over tens of seconds and a screen that shows it arriving is a screen somebody reads rather than waits at. Each event carries the whole draft as far as it has been written — a title, then ingredients, then steps — and the last one says `finished`. A field the model has not finished writing is absent rather than half-written.\n\nEverything that can refuse the ask is decided before the stream opens, so it is still an ordinary status code: 404 when this instance has no assistant, or has that capability switched off — the two are one answer because a caller learns nothing from being told which — and 429 when the month's budget is spent. What goes wrong afterwards arrives as `problem` on the last event, because by then the 200 has been sent.\n\nThe answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.",
+        "description": "A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.\n\n`kind` selects the job: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId`. `social` reads a caption with an optional `transcript`, strips marketing, and leaves missing measurements blank. Revisions keep their ingredients, amounts and the language it is written in, and changing only how it reads. `language` is ignored for a revision.\n\nServer-sent events, because a model writes a recipe over tens of seconds and a screen that shows it arriving is a screen somebody reads rather than waits at. Each event carries the whole draft as far as it has been written — a title, then ingredients, then steps — and the last one says `finished`. A field the model has not finished writing is absent rather than half-written.\n\nEverything that can refuse the ask is decided before the stream opens, so it is still an ordinary status code: 404 when this instance has no assistant, or has that capability switched off — the two are one answer because a caller learns nothing from being told which — and 429 when the month's budget is spent. What goes wrong afterwards arrives as `problem` on the last event, because by then the 200 has been sent.\n\nThe answer is checked on the way out: a line the app could not store loses the part it could not store rather than failing the whole draft, because a draft is a thing somebody is about to correct anyway.",
         "operationId": "composeRecipeDraftV1",
         "requestBody": {
           "content": {
@@ -7001,6 +7001,496 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-drafts/media": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read a shared recipe from captions and screenshots",
+        "operationId": "readMediaRecipeDraftV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "photos"
+                ],
+                "type": "object",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "photos": {
+                        "$ref": "#/components/schemas/IFormFileCollection"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "material": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "transcript": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesDraftsEvent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-intakes": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "startRecipeIntakeV1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "photos"
+                ],
+                "type": "object",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "photos": {
+                        "$ref": "#/components/schemas/IFormFileCollection"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "material": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "transcript": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "sourceUrl": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "fetchSource": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakeIntakeJob"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "listRecipeIntakesV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipesIntakeIntakeJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-intakes/{id}/retry": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "retryRecipeIntakeV1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "nextId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "nextId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakeIntakeJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-intakes/{id}": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "getRecipeIntakeV1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakeIntakeJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-intakes/{id}/photos/{index}": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "getRecipeIntakePhotoV1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/recipe-intakes/{id}/reviewed": {
+      "post": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "reviewRecipeIntakeV1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/push/key": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "getPushKeyV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakePushKey"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push/subscription": {
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "registerPushV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesIntakePushRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "removePushV1",
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpoint",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -8630,6 +9120,12 @@
         "type": "string",
         "format": "binary"
       },
+      "IFormFileCollection": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IFormFile"
+        }
+      },
       "LogRecordsCreateClient": {
         "type": "object",
         "properties": {
@@ -9176,6 +9672,11 @@
             "description": "The assistant draft this recipe is being made from, when it is.",
             "format": "uuid",
             "nullable": true
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "The public page the recipe was imported from.",
+            "nullable": true
           }
         },
         "description": "A new recipe."
@@ -9292,7 +9793,7 @@
         "properties": {
           "kind": {
             "type": "string",
-            "description": "What is being asked for: `idea`, `text` or `revision`."
+            "description": "What is being asked for: `idea`, `text`, `social` or `revision`."
           },
           "householdId": {
             "type": "string",
@@ -9302,6 +9803,11 @@
           "material": {
             "type": "string",
             "description": "The material, for `idea` and `text`.",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "string",
+            "description": "Spoken captions, kept apart from the measured written recipe.",
             "nullable": true
           },
           "recipeId": {
@@ -10391,6 +10897,16 @@
             "type": "string",
             "description": "The page's words, when it published no structured data.",
             "nullable": true
+          },
+          "caption": {
+            "type": "string",
+            "description": "Written caption or description, when published separately.",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "string",
+            "description": "Public speech captions, when the source makes them available.",
+            "nullable": true
           }
         },
         "description": "What a page turned out to say."
@@ -10456,6 +10972,120 @@
           }
         },
         "description": "An ingredient group and its lines."
+      },
+      "RecipesIntakeIntakeJob": {
+        "required": [
+          "id",
+          "householdId",
+          "stage",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The import identity, also used to deduplicate submissions.",
+            "format": "uuid"
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The requesting household.",
+            "format": "uuid"
+          },
+          "stage": {
+            "type": "string",
+            "description": "Queued, reading, thinking, writing, saving, ready, failed or reviewed."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the import was accepted.",
+            "format": "date-time"
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe, saved before ready is published.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "draft": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesDraftsResponse"
+              }
+            ]
+          },
+          "material": {
+            "type": "string",
+            "description": "The original written source.",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "string",
+            "description": "The original spoken source.",
+            "nullable": true
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "The original address.",
+            "nullable": true
+          },
+          "photoCount": {
+            "type": "integer",
+            "description": "How many original images can be read.",
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "An ordinary failure code, without provider secrets.",
+            "nullable": true
+          }
+        },
+        "description": "A persisted import and its recoverable progress."
+      },
+      "RecipesIntakePushKey": {
+        "required": [
+          "publicKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string"
+          }
+        },
+        "description": "The public application key for registering Web Push."
+      },
+      "RecipesIntakePushRegistration": {
+        "required": [
+          "endpoint",
+          "p256dh",
+          "auth"
+        ],
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "The push service address."
+          },
+          "p256dh": {
+            "type": "string",
+            "description": "The browser encryption public key."
+          },
+          "auth": {
+            "type": "string",
+            "description": "The encryption authentication secret."
+          },
+          "language": {
+            "type": "string",
+            "description": "The notification language."
+          }
+        },
+        "description": "The browser's Web Push subscription."
       },
       "RecipesRecipeDetail": {
         "required": [

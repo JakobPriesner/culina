@@ -294,6 +294,14 @@ internal sealed class GeminiAssistant(
             });
         }
 
+        foreach (var picture in request.Pictures)
+        {
+            parts.Add(new Part
+            {
+                InlineData = new Blob { Data = picture.Content.ToArray(), MimeType = picture.MediaType }
+            });
+        }
+
         return [new Content { Role = "user", Parts = parts }];
     }
 

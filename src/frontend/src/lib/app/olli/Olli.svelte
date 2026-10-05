@@ -6,13 +6,13 @@
   import { prefersReducedMotion, Spring, Tween } from 'svelte/motion';
   import { fade } from 'svelte/transition';
 
-  import { ollaSetting } from './setting.svelte';
+  import { olliSetting } from './setting.svelte';
   import { idleBlinks, poses, restAfter, type Pose } from './poses';
 
   /**
-   * Olla, the pot from Culina's logo, with a face and a chef's hat.
+   * Olli, the pot from Culina's logo, with a face and a chef's hat.
    *
-   * Silent on purpose. The page's own words say what happened; Olla only shows
+   * Silent on purpose. The page's own words say what happened; Olli only shows
    * how it feels about it, which is why it is hidden from screen readers.
    *
    * Alive on arrival, then still. Arriving in a pose plays one small movement,
@@ -31,9 +31,11 @@
     /** Never moves: for small, repeated places like a toast. */
     still?: boolean;
     fallback?: Snippet;
+    /** Repeat meaningful work while processing; the surrounding UI offers a pause. */
+    working?: boolean;
   }
 
-  let { pose, size = 'md', still = false, fallback }: Props = $props();
+  let { pose, size = 'md', still = false, fallback, working = false }: Props = $props();
 
   const uid = $props.id();
   const spec = $derived(poses[pose]);
@@ -56,6 +58,10 @@
   const shown = new Tween(untrack(() => still) ? 1 : 0);
   /** How far the steam of this arrival has risen, from 0 to 1. */
   const steam = new Tween(0);
+  const pencil = new Tween(0);
+  const pencilX = new Tween(-15);
+  const pencilY = new Tween(-5);
+  const penLift = new Tween(0);
 
   // Plain fields, not state: bookkeeping that nothing renders. Reading state
   // here from inside the effect below would make it wake itself up.
@@ -93,6 +99,54 @@
     switch (next) {
       case 'hello':
         [35, 62, 38, 55].forEach((angle, i) => later(320 + i * 175, () => (armL.target = angle)));
+        break;
+      case 'watching':
+        later(700, () => (hat.target = 3));
+        later(1300, () => (hat.target = 0));
+        later(2100, blink);
+        break;
+      case 'thinking':
+        later(650, () => {
+          lookX.target = 2;
+          lookY.target = -3;
+        });
+        later(1800, () => {
+          tilt.target = 3;
+          hat.target = 1;
+        });
+        later(2900, () => {
+          lookX.target = -2;
+          tilt.target = -4;
+          hat.target = -2;
+        });
+        break;
+      case 'writing':
+        void pencil.set(0, { duration: 0 });
+        [0, 1, 2].forEach((line) => {
+          const start = line * 1150;
+          later(start, () => void penLift.set(3, { duration: 80 }));
+          later(start + 90, () => {
+            void pencilX.set(-15, { duration: 180, easing: cubicOut });
+            void pencilY.set(line * 6 - 5, { duration: 180, easing: cubicOut });
+          });
+          later(start + 280, () => void penLift.set(0, { duration: 100 }));
+          later(start + 400, () => {
+            void pencil.set(line + 1, { duration: 650, easing: linear });
+            void pencilX.set(line === 2 ? 3 : 14, { duration: 650, easing: linear });
+          });
+        });
+        later(3400, () => void penLift.set(2, { duration: 150 }));
+        later(3650, () => (lookY.target = 1));
+        break;
+      case 'idea':
+        later(120, () => {
+          lift.target = -3;
+          hat.target = -4;
+        });
+        later(650, () => {
+          lift.target = 0;
+          hat.target = 0;
+        });
         break;
       case 'reading':
         // Three lines read, then a hold: a loop past five seconds is motion
@@ -143,7 +197,7 @@
 
     if (first && !still) {
       // Fading is not motion, so even a reader who asked for less of it sees
-      // Olla arrive rather than pop in.
+      // Olli arrive rather than pop in.
       void shown.set(0, { duration: 0 });
       void shown.set(1, { duration: animate && next !== 'onDuty' ? 320 : 200, easing: cubicOut });
 
@@ -157,14 +211,28 @@
 
     if (!animate) {
       // The steam that means something — a question, sleep — still shows.
-      void steam.set(target.steam === 'question' || target.steam === 'sleep' ? 1 : 0, {
-        duration: 0
-      });
+      void steam.set(
+        target.steam === 'bulb'
+          ? 0.5
+          : target.steam === 'question' || target.steam === 'sleep'
+            ? 1
+            : 0,
+        {
+          duration: 0
+        }
+      );
 
+      void pencil.set(next === 'writing' ? 3 : 0, { duration: 0 });
+      void pencilX.set(3, { duration: 0 });
+      void pencilY.set(7, { duration: 0 });
+      void penLift.set(0, { duration: 0 });
       return;
     }
 
-    void steam.set(1, { duration: target.steam === 'sparks' ? 1100 : 750, delay: 150 });
+    void steam.set(1, {
+      duration: target.steam === 'bulb' ? 2400 : target.steam === 'sparks' ? 1100 : 750,
+      delay: 150
+    });
 
     if (!first) {
       blink();
@@ -181,12 +249,16 @@
 
     perform(next);
     idleBlinks().forEach((ms) => later(ms, blink));
-    later(restAfter, rest);
+    later(restAfter, () => {
+      rest();
+      if (working && watched()) later(900, () => arrive(next, true));
+    });
   }
 
   $effect(() => {
     const next = pose;
     const animate = !still && !prefersReducedMotion.current;
+    void working;
 
     untrack(() => arrive(next, animate));
 
@@ -200,12 +272,29 @@
     }
 
     const observer = new IntersectionObserver(([entry]) => {
+      const wasVisible = visible;
       visible = entry?.isIntersecting ?? true;
+      if (working && !still && !prefersReducedMotion.current && visible !== wasVisible) {
+        rest();
+        if (watched()) untrack(() => arrive(pose, true));
+      }
     });
 
     observer.observe(svg);
 
     return () => observer.disconnect();
+  });
+
+  $effect(() => {
+    if (!working || still || prefersReducedMotion.current) return;
+    const resume = () => {
+      if (!document.hidden && visible) {
+        rest();
+        untrack(() => arrive(pose, true));
+      } else rest();
+    };
+    document.addEventListener('visibilitychange', resume);
+    return () => document.removeEventListener('visibilitychange', resume);
   });
 
   function poke(): void {
@@ -245,6 +334,12 @@
       `translate(60 104) scale(${squashX.current} ${squashY.current}) translate(-60 -104)`
   );
   const eye = (x: number) => `translate(${x} 75) scale(1 ${lid.current}) translate(${-x} -75)`;
+  // Keep the wrist attached as the tip crosses each line. The paper and
+  // pencil use different rotations, so apply both to the grip's position.
+  const gripLocalX = $derived(pencilX.current + 13.05);
+  const gripLocalY = $derived(pencilY.current - penLift.current - 10.19);
+  const gripX = $derived(57 + gripLocalX * 0.9962 + gripLocalY * 0.0872);
+  const gripY = $derived(96 - gripLocalX * 0.0872 + gripLocalY * 0.9962);
 
   /** Steam: rises 8 units and fades. Kept when it means something. */
   const stays = $derived(spec.steam === 'question' || spec.steam === 'sleep');
@@ -261,10 +356,10 @@
   ] as const;
 </script>
 
-{#if ollaSetting.shown}
+{#if olliSetting.shown}
   <svg
     bind:this={svg}
-    class="olla {size}"
+    class="olli {size}"
     viewBox="-10 -14 140 134"
     aria-hidden="true"
     onclick={poke}
@@ -371,6 +466,44 @@
               <path class="none thin" d="M66 64 q4 -3 8 0" />
             {/if}
 
+            {#if spec.prop === 'phone'}
+              <path class="none" d="M93 70 Q101 82 84 85" />
+              <g class="earbuds">
+                <path class="hat thin" d="M30 70 q-5 -3 -5 2 v8 q0 3 3 3 q3 0 3 -3 v-5" />
+                <path class="hat thin" d="M90 70 q5 -3 5 2 v8 q0 3 -3 3 q-3 0 -3 -3 v-5" />
+              </g>
+              <g transform="translate(99 76) rotate(-12)" transition:fade={{ duration: 180 }}>
+                <rect class="phone" x="-11" y="-20" width="22" height="38" rx="4" />
+                <rect class="screen bare" x="-7" y="-14" width="14" height="23" rx="1.5" />
+                <path class="play bare" d="M-3 -9 l7 5 -7 5 Z" />
+                <path class="paper-line" d="M-2 13 h4" />
+                <path class="rim thin" d="M-12 5 q-5 -3 -5 1 v5 q2 4 6 1" />
+              </g>
+            {:else if spec.prop === 'pencil'}
+              <path class="none" d="M93 76 C109 89 90 101 {gripX} {gripY}" />
+              <path class="none" d="M27 78 Q19 94 33 98" />
+              <g transform="translate(57 96) rotate(-5)" transition:fade={{ duration: 180 }}>
+                <rect class="paper thin" x="-22" y="-12" width="45" height="25" rx="2" />
+                <path class="rim thin" d="M-21 -3 q-7 -3 -7 2 v5 q4 3 8 -2" />
+                {#each [0, 1, 2] as line (line)}
+                  <path
+                    class="paper-line"
+                    d="M-15 {line * 6 - 5} h{Math.min(1, Math.max(0, pencil.current - line)) *
+                      (line === 2 ? 18 : 29)}"
+                  />
+                {/each}
+                <g
+                  transform="translate({pencilX.current} {pencilY.current -
+                    penLift.current}) rotate(27)"
+                >
+                  <path class="pencil thin" d="M0 0 l-2 -7 v-20 h5 v20 Z" />
+                  <path class="ink bare" d="M0 0 l-1 -3 h3 Z" />
+                  <path class="hat thin" d="M-2 -27 v-4 q2.5 -3 5 0 v4 Z" />
+                  <path class="rim thin" d="M4 -16 q5 -4 7 0 q1 5 -5 5" />
+                </g>
+              </g>
+            {/if}
+
             {#if spec.prop === 'card'}
               <g transform="translate(60 98) rotate(-4)" transition:fade={{ duration: 150 }}>
                 <rect class="paper" x="-17" y="-12" width="34" height="22" rx="2.5" />
@@ -381,7 +514,19 @@
         </g>
 
         <g opacity={steamOpacity} transform="translate(0 {steamRise})">
-          {#if spec.steam === 'wisp'}
+          {#if spec.steam === 'bulb'}
+            <g transform="translate(103 23)">
+              <path
+                class="bulb thin"
+                d="M-8 0 a8 8 0 1 1 16 0 q0 4 -4 7 v4 h-8 v-4 q-4 -3 -4 -7 Z"
+              />
+              <path class="none thin" d="M-3 14 h6 M0 6 v-6 M-3 -1 l3 3 3 -3" />
+              <path
+                class="bulb-rays none"
+                d="M0 -15 v-4 M-13 -8 l-3 -2 M13 -8 l3 -2 M-14 4 h-4 M14 4 h4"
+              />
+            </g>
+          {:else if spec.steam === 'wisp'}
             <path class="steam" d="M98 44 q-6 -8 0 -16 q6 -8 0 -16" />
           {:else if spec.steam === 'question'}
             <text class="question" x="96" y="34">?</text>
@@ -406,7 +551,7 @@
 {/if}
 
 <style>
-  .olla {
+  .olli {
     display: block;
     flex: none;
     overflow: visible;
@@ -495,6 +640,21 @@
   .mouth {
     fill: var(--mascot-mouth);
     stroke-width: 2.2;
+  }
+
+  .phone {
+    fill: var(--mascot-line);
+  }
+  .screen {
+    fill: var(--mascot-hat);
+  }
+  .play,
+  .pencil,
+  .bulb {
+    fill: var(--mascot-cheek);
+  }
+  .bulb-rays {
+    stroke: var(--mascot-cheek);
   }
 
   .paper {

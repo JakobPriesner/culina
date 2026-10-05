@@ -289,3 +289,78 @@ async function writeRecipe(page: Page, title: string): Promise<string> {
 
   return recipeId;
 }
+
+test.describe('receiving a recipe from the share sheet @offline', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only.');
+
+  test('stores the caption, URL and actual image before redirecting through sign-in', async ({
+    page
+  }) => {
+    await page.goto('/');
+    await activeWorkerState(page);
+    await page.reload();
+    await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+    // A navigation POST, just as the installed app receives from the OS.
+    await page.evaluate(() => {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.enctype = 'multipart/form-data';
+      form.action = '/recipes/import';
+      for (const [name, value] of Object.entries({
+        title: 'Beans',
+        text: '120 g beans #ad',
+        url: 'https://example.com/beans'
+      })) {
+        const field = document.createElement('input');
+        field.name = name;
+        field.value = value;
+        form.append(field);
+      }
+      const photos = document.createElement('input');
+      photos.type = 'file';
+      photos.name = 'photos';
+      const transfer = new DataTransfer();
+      transfer.items.add(
+        new File([new Uint8Array([137, 80, 78, 71])], 'recipe.png', { type: 'image/png' })
+      );
+      photos.files = transfer.files;
+      form.append(photos);
+      document.body.append(form);
+      form.submit();
+    });
+    await expect(page).toHaveURL(/(?:share=|share%3D)/);
+    const read = () =>
+      page.evaluate(
+        () =>
+          new Promise<{ text: string; url: string; bytes: number; name: string }>(
+            (resolve, reject) => {
+              const opening = indexedDB.open('culina-recipe-intake', 1);
+              opening.onerror = () => reject(opening.error);
+              opening.onsuccess = () => {
+                const request = opening.result.transaction('shares').objectStore('shares').getAll();
+                request.onsuccess = () => {
+                  const share = request.result[0];
+                  resolve({
+                    text: share.text,
+                    url: share.url,
+                    bytes: share.photos[0].size,
+                    name: share.photos[0].name
+                  });
+                  opening.result.close();
+                };
+                request.onerror = () => reject(request.error);
+              };
+            }
+          )
+      );
+    const source = await read();
+    expect(source).toEqual({
+      text: '120 g beans #ad',
+      url: 'https://example.com/beans',
+      bytes: 4,
+      name: 'recipe.png'
+    });
+    await page.reload();
+    expect(await read()).toEqual(source);
+  });
+});

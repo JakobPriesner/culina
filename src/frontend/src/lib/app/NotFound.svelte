@@ -7,7 +7,7 @@
 
   import { formatNumber, m } from './i18n';
   import { offersSearch } from './navigation';
-  import Olla from './olla/Olla.svelte';
+  import Olli from './olli/Olli.svelte';
 
   /**
    * Nothing at this address, written as a recipe for it.
@@ -76,7 +76,7 @@
 
 <article class="lost">
   <header class="head">
-    <Olla pose="puzzled" />
+    <Olli pose="puzzled" />
     <p class="eyebrow">{m['notFound.eyebrow']()}</p>
     <svelte:element this={level === 1 ? 'h1' : 'h2'} class="title">
       {copy[kind].title()}

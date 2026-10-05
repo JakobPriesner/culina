@@ -1,8 +1,18 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { resolve } from '$app/paths';
+  import { goto } from '$app/navigation';
+  import { intakes } from '$features/import/intakes.svelte';
+  import { explain } from '$shell/explain';
+  import { onDestroy, onMount } from 'svelte';
+  import DraftReview from '$features/assistance/DraftReview.svelte';
+  import { drafts } from '$features/assistance/stores/drafts.svelte';
+  import type { Draft } from '$features/assistance/draftToRecipe';
+  import { intakeBaseline, intakeDraft } from '$features/import/intakeDraft';
+  import { sharedAddress, validSharedPhotos } from '$features/import/sharedRecipe';
+  import { session } from '$features/auth/session.svelte';
   import { Button, Field, TextArea, TextInput } from '$ds';
 
-  import { http, request } from '$api';
+  import { http, request, type AppError } from '$api';
   import { m } from '$shell/i18n';
   import { parseIngredientLine } from './parseIngredientLine';
   import { parseRecipeText, type ParsedRecipe } from './parseRecipeText';
@@ -26,8 +36,9 @@
   interface Props {
     /** Whose kitchen, so a unit it has added is read as a unit. */
     householdId: string;
-    onimport: (parsed: ParsedRecipe) => void;
+    onimport: (parsed: ParsedRecipe) => void | Promise<boolean | undefined>;
     busy?: boolean;
+    saveError?: AppError | null;
     /**
      * Whether the box is open, readable by the page around it.
      *
@@ -40,19 +51,46 @@
     initialUrl?: string;
     /** An initial block of text to populate. */
     initialText?: string;
+    initialPhotos?: File[];
+    ondraft?: (draft: Draft, sourceUrl: string) => void | Promise<boolean>;
+    oncancel?: () => void;
+    onqueued?: () => Promise<void>;
   }
 
   let {
     householdId,
     onimport,
     busy = false,
+    saveError = null,
     open = $bindable(false),
     initialUrl = '',
-    initialText = ''
+    initialText = '',
+    initialPhotos = [],
+    ondraft,
+    oncancel,
+    onqueued
   }: Props = $props();
 
+  let submissionId: string | undefined;
+  let submissionSignature: string | undefined;
   let text = $state('');
   let url = $state('');
+  let sourceUrl = $state('');
+  let transcript = $state('');
+  let photos = $state<File[]>([]);
+  let photoUrls = $state<string[]>([]);
+  let reviewing = $state(false);
+  let assisted = $state(false);
+  let reviewed = $state<ParsedRecipe | null>(null);
+  let reviewDraft = $state<Draft | null>(null);
+  const current = $derived(intakeBaseline(householdId));
+
+  $effect(() => {
+    const urls = photos.map((file) => URL.createObjectURL(file));
+    photoUrls = urls;
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  });
+  onDestroy(() => drafts.dismiss());
   let reading = $state(false);
   let failure = $state<string | null>(null);
 
@@ -64,8 +102,12 @@
   onMount(() => {
     if (initialText) {
       text = initialText;
+      open = true;
     }
+    photos = initialPhotos;
+    if (initialPhotos.length) open = true;
     if (initialUrl.trim()) {
+      open = true;
       url = initialUrl.trim();
       void read();
     }
@@ -96,7 +138,7 @@
   async function read() {
     const address = url.trim();
 
-    if (!address) {
+    if (!address || reading || drafts.asking) {
       return;
     }
 
@@ -116,18 +158,22 @@
     }
 
     const draft = result.value;
+    sourceUrl = draft.sourceUrl;
+    transcript = draft.transcript ?? '';
 
     // A site that publishes nothing structured gives back its words, and those
     // go through the same parser a paste does — one set of heuristics, on the
     // side where the person correcting them is.
     if (draft.text) {
       published = null;
-      text = draft.text;
+      // Keep the words the person shared beside what the page publishes.
+      text = [...new Set([text.trim(), draft.text.trim()].filter(Boolean))].join('\n\n');
 
       return;
     }
 
     published = {
+      sourceUrl,
       title: draft.title ?? '',
       ingredients: draft.ingredientLines.map((line) => parseIngredientLine(line, units.own)),
       steps: [...draft.steps],
@@ -138,6 +184,74 @@
         ? {}
         : { totalMinutes: draft.totalMinutes })
     };
+    if (!text.trim()) {
+      text = [draft.title, ...draft.ingredientLines, ...draft.steps].filter(Boolean).join('\n');
+    }
+  }
+
+  function reviewParsed() {
+    reviewed = { ...parsed, sourceUrl: sourceUrl || sharedAddress(url, text) || undefined };
+    assisted = false;
+    reviewDraft = intakeDraft(reviewed);
+    reviewing = true;
+  }
+
+  async function readWithAssistant() {
+    if (intakes.submitting || drafts.asking || !ondraft || !session.user?.assistance.read) return;
+    if (!validSharedPhotos(photos)) {
+      failure = m['import.media.invalid']();
+      return;
+    }
+    failure = null;
+    const signature = JSON.stringify([
+      householdId,
+      preferences.locale,
+      text,
+      transcript,
+      sourceUrl,
+      url,
+      photos.map((photo) => [photo.name, photo.size, photo.lastModified])
+    ]);
+    if (signature !== submissionSignature) {
+      submissionSignature = signature;
+      submissionId = crypto.randomUUID();
+    }
+    const job = await intakes.start({
+      id: (submissionId ??= crypto.randomUUID()),
+      householdId,
+      language: preferences.locale,
+      material: text,
+      transcript,
+      sourceUrl: sourceUrl || sharedAddress(url, text) || undefined,
+      photos,
+      fetchSource: !sourceUrl && Boolean(sharedAddress(url, text))
+    });
+    if (!job) {
+      failure = intakes.error ? explain(intakes.error) : m['intake.failed']();
+      return;
+    }
+    await onqueued?.();
+    await goto(resolve('/(app)/recipes/imports/[intakeId]', { intakeId: job.id }));
+  }
+
+  function pickPhotos(event: Event) {
+    const picked = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
+    if (!validSharedPhotos(picked)) {
+      failure = m['import.media.invalid']();
+      return;
+    }
+    photos = picked;
+    failure = null;
+  }
+
+  async function acceptReviewed() {
+    if (busy) return;
+    const outcome = reviewed
+      ? await onimport(reviewed)
+      : drafts.draft && !drafts.asking && !drafts.error
+        ? await ondraft?.(drafts.draft, sourceUrl || sharedAddress(url, text))
+        : false;
+    if (outcome !== false) reviewing = false;
   }
 
   async function pasteFromClipboard() {
@@ -146,6 +260,7 @@
       const clipboardText = await navigator.clipboard.readText();
       const trimmed = clipboardText.trim();
       const match = trimmed.match(/https?:\/\/[^\s]+/);
+      text = trimmed;
       if (match) {
         url = match[0];
         void read();
@@ -169,8 +284,8 @@
 
 {#if open}
   <section class="paste" aria-labelledby="paste-heading">
-    <h2 id="paste-heading" class="heading">{m['import.paste.title']()}</h2>
-    <p class="hint">{m['import.paste.hint']()}</p>
+    <h2 id="paste-heading" class="heading">{m['import.intake.source']()}</h2>
+    <p class="hint">{m['import.intake.hint']()}</p>
 
     <div class="from-url">
       <Field label={m['import.url.label']()}>
@@ -183,6 +298,12 @@
             inputmode="url"
             placeholder="https://"
             bind:value={url}
+            disabled={intakes.submitting || reading || drafts.asking}
+            oninput={() => {
+              sourceUrl = '';
+              transcript = '';
+              published = null;
+            }}
           />
         {/snippet}
       </Field>
@@ -193,7 +314,7 @@
         </Button>
       {/if}
 
-      <Button loading={reading} disabled={!url.trim()} onclick={() => void read()}>
+      <Button loading={reading} disabled={!url.trim() || drafts.asking} onclick={() => void read()}>
         {m['import.url.read']()}
       </Button>
     </div>
@@ -206,6 +327,7 @@
       id="pasted"
       label={m['import.paste.label']()}
       bind:value={text}
+      disabled={intakes.submitting || reading || drafts.asking}
       rows={8}
       oninput={(next) => {
         text = next;
@@ -213,6 +335,40 @@
         published = null;
       }}
     />
+
+    {#if transcript}
+      <TextArea
+        id="spoken-captions"
+        label={m['import.review.transcript']()}
+        bind:value={transcript}
+        rows={4}
+        disabled={intakes.submitting || reading || drafts.asking}
+      />
+    {/if}
+
+    {#if ondraft}
+      <div class="media">
+        <label for="recipe-screenshots">{m['import.media.label']()}</label>
+        <input
+          id="recipe-screenshots"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          disabled={intakes.submitting || reading || drafts.asking}
+          onchange={pickPhotos}
+        />
+        <p class="hint">{m['import.media.hint']()}</p>
+        {#if photos.length}
+          <div class="photos">
+            {#each photoUrls as photo, index (photo)}
+              <img src={photo} alt={photos[index]?.name ?? m['import.review.photo']()} />
+            {/each}
+          </div>
+          <Button variant="ghost" onclick={() => (photos = [])}>{m['import.media.remove']()}</Button
+          >
+        {/if}
+      </div>
+    {/if}
 
     {#if text.trim() || published}
       <!-- Polite: it reports what was understood while somebody is still
@@ -261,23 +417,44 @@
     <div class="actions">
       <Button
         variant="primary"
-        disabled={found === 0}
         loading={busy}
-        onclick={() => onimport(parsed)}
+        disabled={found === 0 || reading}
+        onclick={reviewParsed}
       >
-        {m['import.paste.create']()}
+        {m['import.review.preview']()}
       </Button>
+
+      {#if ondraft && session.user?.assistance.read}
+        <Button
+          loading={intakes.submitting}
+          disabled={intakes.submitting ||
+            (!text.trim() && !transcript && !photos.length && !url.trim()) ||
+            text.length + transcript.length > 20000}
+          onclick={() => void readWithAssistant()}
+        >
+          {m['import.media.read']()}
+        </Button>
+      {/if}
 
       <Button
         variant="ghost"
         onclick={() => {
           open = false;
           text = '';
+          photos = [];
+          drafts.dismiss();
+          oncancel?.();
         }}
       >
         {m['import.paste.cancel']()}
       </Button>
     </div>
+    {#if photos.length && !session.user?.assistance.read}
+      <p class="hint">{m['import.media.unavailable']()}</p>
+    {/if}
+    {#if text.length + transcript.length > 20000}<p class="hint">
+        {m['import.media.tooLong']()}
+      </p>{/if}
   </section>
 {:else}
   <div>
@@ -285,7 +462,52 @@
   </div>
 {/if}
 
+{#if reviewing}
+  <DraftReview
+    bind:open={reviewing}
+    draft={assisted ? drafts.draft : reviewDraft}
+    {current}
+    writing={assisted && drafts.asking}
+    error={assisted ? drafts.error : null}
+    source={{
+      text,
+      transcript,
+      url: sourceUrl || sharedAddress(url, text),
+      photos: photoUrls,
+      assisted
+    }}
+    saving={busy}
+    {saveError}
+    onaccept={() => void acceptReviewed()}
+    onclose={() => {
+      reviewing = false;
+      drafts.dismiss();
+    }}
+  />
+{/if}
+
 <style>
+  .media {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .media input {
+    max-width: 100%;
+    font: inherit;
+  }
+  .photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    gap: var(--space-2);
+  }
+  .photos img {
+    width: 100%;
+    max-height: 12rem;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+  }
+
   .paste {
     display: flex;
     flex-direction: column;

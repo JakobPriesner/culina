@@ -361,12 +361,11 @@ test.describe('writing a recipe', () => {
     // \s, because the space between an amount and its unit does not break.
     await expect(page.getByText(/^1\s(tbsp|EL)$/)).toBeVisible();
 
-    // The one in the paste panel, not the form's own: both say "Create recipe"
-    // since the copy pass, and the form's is the empty-recipe button this
-    // screen also carries.
+    // Compare with the original before creating the ordinary editable recipe.
+    await page.getByRole('button', { name: /^(review recipe|rezept prüfen)$/i }).click();
     await page
-      .getByRole('button', { name: /create recipe|rezept erstellen/i })
-      .last()
+      .getByRole('dialog')
+      .getByRole('button', { name: /save and edit recipe|rezept speichern und bearbeiten/i })
       .click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 
@@ -423,11 +422,11 @@ test.describe('writing a recipe', () => {
     await expect(page.getByRole('status')).toContainText(/2/);
     await expect(page.getByText('200 g', { exact: true })).toBeVisible();
 
-    // The import panel's, as in the pasted case: the form's own empty-recipe
-    // button carries the same words.
+    // The same source review as a pasted recipe.
+    await page.getByRole('button', { name: /^(review recipe|rezept prüfen)$/i }).click();
     await page
-      .getByRole('button', { name: /create recipe|rezept erstellen/i })
-      .last()
+      .getByRole('dialog')
+      .getByRole('button', { name: /save and edit recipe|rezept speichern und bearbeiten/i })
       .click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
 

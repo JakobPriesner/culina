@@ -28,7 +28,8 @@ internal sealed class ComposeRecipeDraftEndpoint : IEndpoint
                             request.Material,
                             request.RecipeId,
                             request.Language,
-                            context.CurrentUser().UserId),
+                            context.CurrentUser().UserId)
+                        { Transcript = request.Transcript },
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -41,9 +42,11 @@ internal sealed class ComposeRecipeDraftEndpoint : IEndpoint
                 "A draft, never a recipe. Nothing is created: what comes back is shown for "
                 + "correction and accepted a field at a time through the ordinary recipe "
                 + "endpoints.\n\n"
-                + "`kind` says which of three: `idea` turns a sentence about dinner into a "
+                + "`kind` selects the job: `idea` turns a sentence about dinner into a "
                 + "draft, `text` reads one out of something pasted, and `revision` rewrites "
-                + "the recipe named by `recipeId` — keeping its ingredients, its amounts and "
+                + "the recipe named by `recipeId`. `social` reads a caption with an optional "
+                + "`transcript`, strips marketing, and leaves missing measurements blank. "
+                + "Revisions keep their ingredients, amounts and "
                 + "the language it is written in, and changing only how it reads. `language` "
                 + "is ignored for a revision.\n\n"
                 + "Server-sent events, because a model writes a recipe over tens of seconds "

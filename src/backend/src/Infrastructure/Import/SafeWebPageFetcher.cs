@@ -167,7 +167,8 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
 
         var mediaType = response.Content.Headers.ContentType?.MediaType;
 
-        if (mediaType is not ("text/html" or "application/xhtml+xml" or "text/plain"))
+        if (mediaType is not ("text/html" or "application/xhtml+xml" or "text/plain"
+            or "text/vtt" or "application/xml" or "text/xml" or "application/json"))
         {
             return ImportErrors.NotAWebPage;
         }

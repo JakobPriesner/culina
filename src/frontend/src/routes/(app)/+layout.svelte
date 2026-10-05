@@ -8,7 +8,7 @@
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import AppShell from '$shell/AppShell.svelte';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
 
   interface Props {
     children: Snippet;
@@ -55,7 +55,7 @@
       body={m['session.unavailable.body']()}
       level={1}
     >
-      {#snippet art()}<Olla pose="dozing" />{/snippet}
+      {#snippet art()}<Olli pose="dozing" />{/snippet}
       {#snippet action()}
         <Button variant="primary" onclick={retry} loading={retrying}>{m['error.retry']()}</Button>
       {/snippet}

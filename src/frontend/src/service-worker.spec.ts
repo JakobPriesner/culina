@@ -25,6 +25,7 @@ type Listener = (event: unknown) => void;
 let onFetch: Listener;
 let onActivate: Listener;
 let onNotificationClick: Listener;
+let onPush: Listener;
 
 beforeAll(async () => {
   const addEventListener = vi.spyOn(self, 'addEventListener');
@@ -41,6 +42,7 @@ beforeAll(async () => {
   onFetch = listenerFor('fetch');
   onActivate = listenerFor('activate');
   onNotificationClick = listenerFor('notificationclick');
+  onPush = listenerFor('push');
   addEventListener.mockRestore();
 });
 
@@ -197,4 +199,55 @@ it('navigates an existing window before focusing it on a body click', async () =
   await clickNotification('').finished;
   expect(navigate).toHaveBeenCalledWith(new URL(timerNotice.url, location.origin).href);
   expect(focus).toHaveBeenCalledOnce();
+});
+
+it('shows a completion push without needing an open page, with one stable tag', async () => {
+  const showNotification = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('registration', { showNotification });
+  let completion: Promise<unknown> | undefined;
+  onPush({
+    data: {
+      json: () => ({
+        title: 'Your recipe is ready',
+        body: 'Saved',
+        url: '/recipes/imports/00000000-0000-4000-8000-000000000055',
+        tag: 'recipe-intake-55'
+      })
+    },
+    waitUntil: (promise: Promise<unknown>) => (completion = promise)
+  });
+  await completion;
+  expect(showNotification).toHaveBeenCalledWith(
+    'Your recipe is ready',
+    expect.objectContaining({
+      tag: 'recipe-intake-55',
+      data: { type: 'culina:intake', url: '/recipes/imports/00000000-0000-4000-8000-000000000055' }
+    })
+  );
+});
+it('opens the saved import review from its notification', async () => {
+  const openWindow = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('clients', { matchAll: vi.fn().mockResolvedValue([]), openWindow });
+  let completion: Promise<unknown> | undefined;
+  const url = '/recipes/imports/00000000-0000-4000-8000-000000000055';
+  onNotificationClick({
+    notification: { close: vi.fn(), data: { type: 'culina:intake', url } },
+    waitUntil: (promise: Promise<unknown>) => (completion = promise)
+  });
+  await completion;
+  expect(openWindow).toHaveBeenCalledWith(new URL(url, location.origin).href);
+});
+it('ignores a push trying to send the browser somewhere else', () => {
+  const showNotification = vi.fn();
+  vi.stubGlobal('registration', { showNotification });
+  onPush({
+    data: {
+      json: () => ({
+        title: 'Bad',
+        url: 'https://example.com/recipes/imports/00000000-0000-4000-8000-000000000055'
+      })
+    },
+    waitUntil: vi.fn()
+  });
+  expect(showNotification).not.toHaveBeenCalled();
 });

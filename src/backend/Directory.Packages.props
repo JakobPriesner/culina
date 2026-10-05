@@ -22,6 +22,7 @@
              keys the environment pins, and writes it. -->
         <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
         <PackageVersion Include="Npgsql" Version="10.0.3" />
+        <PackageVersion Include="Lib.Net.Http.WebPush" Version="3.3.1" />
         <PackageVersion Include="Dapper" Version="2.1.79" />
         <!-- Argon2id: memory-hard password hashing, per cookie-auth-and-security. -->
         <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />

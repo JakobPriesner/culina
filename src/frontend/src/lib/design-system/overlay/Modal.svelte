@@ -13,6 +13,7 @@
   interface Props {
     open: boolean;
     title: string;
+    wide?: boolean;
     children: Snippet;
     footer?: Snippet;
     closeLabel: string;

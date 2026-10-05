@@ -28,6 +28,8 @@
     closeLabel: string;
     /** The visual shape. `sheet` rises from the bottom edge on a phone. */
     placement?: 'centre' | 'sheet';
+    /** Allows source and draft to be read side by side on a wide screen. */
+    wide?: boolean;
     /** Hides the heading visually while still naming the dialog. */
     hideTitle?: boolean;
     onclose?: () => void;
@@ -40,6 +42,7 @@
     footer,
     closeLabel,
     placement = 'centre',
+    wide = false,
     hideTitle = false,
     onclose
   }: Props = $props();
@@ -101,6 +104,7 @@
 </script>
 
 <dialog
+  class:wide
   bind:this={element}
   class="dialog {placement}"
   aria-labelledby={titleId}
@@ -234,6 +238,10 @@
     border-start-end-radius: var(--radius-lg);
     padding-bottom: env(safe-area-inset-bottom, 0);
     padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+  }
+
+  .centre.wide {
+    width: min(64rem, calc(100vw - var(--space-8)));
   }
 
   @media (min-width: 48rem) {

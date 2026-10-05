@@ -178,6 +178,8 @@ class SessionStore {
   }
 
   async signOut(): Promise<void> {
+    const { importPush } = await import('$features/import/push.svelte');
+    await importPush.disable().catch(() => {});
     await request(() => http.DELETE('/api/v1/sessions/current'));
 
     // Cleared whatever the server said. A failed sign-out that leaves the

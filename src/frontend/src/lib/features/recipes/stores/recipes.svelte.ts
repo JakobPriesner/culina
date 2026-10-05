@@ -287,10 +287,11 @@ class RecipeStore {
     householdId: string,
     title: string,
     /** The assistant draft it came from, so the recipe records that it was one. */
-    draftId?: string
+    draftId?: string,
+    sourceUrl?: string
   ): Promise<Recipe | AppError> {
     const result = await request(() =>
-      http.POST('/api/v1/recipes', { body: { householdId, title, draftId } })
+      http.POST('/api/v1/recipes', { body: { householdId, title, draftId, sourceUrl } })
     );
 
     if (!result.ok) {

@@ -230,6 +230,11 @@ internal static class ChatAsk
             parts.Add(new DataContent(request.Picture, request.PictureMediaType ?? "image/jpeg"));
         }
 
+        foreach (var picture in request.Pictures)
+        {
+            parts.Add(new DataContent(picture.Content, picture.MediaType));
+        }
+
         return parts;
     }
 }

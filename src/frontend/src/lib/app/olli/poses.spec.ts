@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { idleBlinks, poses, restAfter } from './poses';
 
-describe("Olla's idle blinks", () => {
+describe("Olli's idle blinks", () => {
   it.each([0, 0.3, 0.59, 0.61, 0.99])(
     'are all over before the rest, however the dice fall (%s)',
     (n) => {
@@ -22,7 +22,7 @@ describe("Olla's idle blinks", () => {
   });
 });
 
-describe("Olla's poses", () => {
+describe("Olli's poses", () => {
   it('stay calm where somebody is stuck or refused', () => {
     expect(poses.unplugged.sombre).toBe(true);
     expect(poses.onDuty.sombre).toBe(true);

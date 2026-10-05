@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using Application.Abstractions;
 using Domain.Suggestions;
+using Infrastructure.Import;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -59,6 +60,22 @@ public sealed class CulinaApiFactory(
     /// <summary>The settings file this host reads at startup and writes when a server setting is saved.</summary>
     public string ServerSettingsFile => Path.Combine(dataRoot, "config", "culina.json");
 
+    private int pushRequests;
+    /// <summary>Encrypted pushes captured locally; no test contacts a real push service.</summary>
+    public int PushRequests => Volatile.Read(ref pushRequests);
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The DI-owned PushTransport disposes its HttpClient and handler.")]
+    private PushTransport LocalPush() => new(new HttpClient(new PushHandler(() => Interlocked.Increment(ref pushRequests)), disposeHandler: true));
+
+    private sealed class PushHandler(Action sent) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            sent();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Created));
+        }
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -97,6 +114,7 @@ public sealed class CulinaApiFactory(
             // serves every later request from.
             services.AddSingleton<IHostRestart>(Restarts);
             services.AddSingleton<ILoggerProvider>(Logs);
+            services.AddSingleton(_ => LocalPush());
 
             if (weights is not null)
             {

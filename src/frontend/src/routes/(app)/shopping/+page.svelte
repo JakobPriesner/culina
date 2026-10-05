@@ -17,8 +17,8 @@
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
-  import { ollaSetting } from '$shell/olla/setting.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -55,7 +55,7 @@
   /**
    * The shop finished while somebody was here, ticking the last item off.
    *
-   * Olla celebrates that, once, and not a list that was already done when the
+   * Olli celebrates that, once, and not a list that was already done when the
    * page opened: a celebration is for effort, and opening a page is none.
    */
   let justFinished = $state(false);
@@ -190,7 +190,7 @@
   }
 </script>
 
-{#snippet peeking()}<Olla pose="peeking" />{/snippet}
+{#snippet peeking()}<Olli pose="peeking" />{/snippet}
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
 <Page width="reading">
@@ -311,7 +311,7 @@
     <EmptyState
       title={m['shopping.empty.title']()}
       body={m['shopping.empty.body']()}
-      art={ollaSetting.shown ? peeking : undefined}
+      art={olliSetting.shown ? peeking : undefined}
     >
       {#snippet action()}
         <!-- The invitation is the thing that fills a list fastest, and it is
@@ -354,7 +354,7 @@
          a struck-through list looks like a page that has lost something. -->
     {#if finished}
       <div class="finished">
-        {#if justFinished}<Olla pose="celebrating" size="sm" />{/if}
+        {#if justFinished}<Olli pose="celebrating" size="sm" />{/if}
         <p>{m['shopping.allBought']()}</p>
       </div>
     {/if}

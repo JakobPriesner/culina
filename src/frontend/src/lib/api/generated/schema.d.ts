@@ -1660,7 +1660,7 @@ export interface paths {
          * Ask the assistant for a recipe
          * @description A draft, never a recipe. Nothing is created: what comes back is shown for correction and accepted a field at a time through the ordinary recipe endpoints.
          *
-         *     `kind` says which of three: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId` — keeping its ingredients, its amounts and the language it is written in, and changing only how it reads. `language` is ignored for a revision.
+         *     `kind` selects the job: `idea` turns a sentence about dinner into a draft, `text` reads one out of something pasted, and `revision` rewrites the recipe named by `recipeId`. `social` reads a caption with an optional `transcript`, strips marketing, and leaves missing measurements blank. Revisions keep their ingredients, amounts and the language it is written in, and changing only how it reads. `language` is ignored for a revision.
          *
          *     Server-sent events, because a model writes a recipe over tens of seconds and a screen that shows it arriving is a screen somebody reads rather than waits at. Each event carries the whole draft as far as it has been written — a title, then ingredients, then steps — and the last one says `finished`. A field the model has not finished writing is absent rather than half-written.
          *
@@ -1696,6 +1696,135 @@ export interface paths {
          */
         post: operations["readRecipeDraftV1"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-drafts/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read a shared recipe from captions and screenshots */
+        post: operations["readMediaRecipeDraftV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-intakes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRecipeIntakesV1"];
+        put?: never;
+        post: operations["startRecipeIntakeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-intakes/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryRecipeIntakeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-intakes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRecipeIntakeV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-intakes/{id}/photos/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRecipeIntakePhotoV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipe-intakes/{id}/reviewed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reviewRecipeIntakeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPushKeyV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["registerPushV1"];
+        post?: never;
+        delete: operations["removePushV1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2436,6 +2565,7 @@ export interface components {
         };
         /** Format: binary */
         IFormFile: string;
+        IFormFileCollection: components["schemas"]["IFormFile"][];
         /** @description The browser and device the records came from, as far as the page can tell. */
         LogRecordsCreateClient: {
             /** @description Random per page load, so records from one page can be told apart from another's. */
@@ -2726,6 +2856,8 @@ export interface components {
              * @description The assistant draft this recipe is being made from, when it is.
              */
             draftId?: string | null;
+            /** @description The public page the recipe was imported from. */
+            sourceUrl?: string | null;
         };
         /** @description A heading and the lines under it. */
         RecipesDraftsDraftGroupContract: {
@@ -2769,7 +2901,7 @@ export interface components {
         };
         /** @description Asks the assistant for a recipe. */
         RecipesDraftsRequest: {
-            /** @description What is being asked for: `idea`, `text` or `revision`. */
+            /** @description What is being asked for: `idea`, `text`, `social` or `revision`. */
             kind: string;
             /**
              * Format: uuid
@@ -2778,6 +2910,8 @@ export interface components {
             householdId: string;
             /** @description The material, for `idea` and `text`. */
             material?: string | null;
+            /** @description Spoken captions, kept apart from the measured written recipe. */
+            transcript?: string | null;
             /**
              * Format: uuid
              * @description Which recipe to rewrite, for `revision`.
@@ -3323,6 +3457,10 @@ export interface components {
             totalMinutes?: number | null;
             /** @description The page's words, when it published no structured data. */
             text?: string | null;
+            /** @description Written caption or description, when published separately. */
+            caption?: string | null;
+            /** @description Public speech captions, when the source makes them available. */
+            transcript?: string | null;
         };
         /** @description One line of the ingredient list. */
         RecipesIngredientContract: {
@@ -3357,6 +3495,60 @@ export interface components {
             name?: string | null;
             /** @description Its ingredient lines, in order. */
             ingredients: components["schemas"]["RecipesIngredientContract"][];
+        };
+        /** @description A persisted import and its recoverable progress. */
+        RecipesIntakeIntakeJob: {
+            /**
+             * Format: uuid
+             * @description The import identity, also used to deduplicate submissions.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The requesting household.
+             */
+            householdId: string;
+            /** @description Queued, reading, thinking, writing, saving, ready, failed or reviewed. */
+            stage: string;
+            /**
+             * Format: date-time
+             * @description When the import was accepted.
+             */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description The recipe, saved before ready is published.
+             */
+            recipeId?: string | null;
+            draft?: (null) | components["schemas"]["RecipesDraftsResponse"];
+            /** @description The original written source. */
+            material?: string | null;
+            /** @description The original spoken source. */
+            transcript?: string | null;
+            /** @description The original address. */
+            sourceUrl?: string | null;
+            /**
+             * Format: int32
+             * @description How many original images can be read.
+             */
+            photoCount?: number;
+            /** @description An ordinary failure code, without provider secrets. */
+            errorCode?: string | null;
+        };
+        /** @description The public application key for registering Web Push. */
+        RecipesIntakePushKey: {
+            publicKey: string;
+        };
+        /** @description The browser's Web Push subscription. */
+        RecipesIntakePushRegistration: {
+            /** @description The push service address. */
+            endpoint: string;
+            /** @description The browser encryption public key. */
+            p256dh: string;
+            /** @description The encryption authentication secret. */
+            auth: string;
+            /** @description The notification language. */
+            language?: string;
         };
         /** @description A recipe in full. */
         RecipesRecipeDetail: {
@@ -10185,6 +10377,282 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
+            };
+        };
+    };
+    readMediaRecipeDraftV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+                language?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    photos: components["schemas"]["IFormFileCollection"];
+                } & {
+                    material?: string;
+                } & {
+                    transcript?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["RecipesDraftsEvent"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listRecipeIntakesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakeIntakeJob"][];
+                };
+            };
+        };
+    };
+    startRecipeIntakeV1: {
+        parameters: {
+            query?: {
+                id?: string;
+                householdId?: string;
+                language?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    photos: components["schemas"]["IFormFileCollection"];
+                } & {
+                    material?: string;
+                } & {
+                    transcript?: string;
+                } & {
+                    sourceUrl?: string;
+                } & {
+                    fetchSource?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakeIntakeJob"];
+                };
+            };
+        };
+    };
+    retryRecipeIntakeV1: {
+        parameters: {
+            query?: {
+                nextId?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakeIntakeJob"];
+                };
+            };
+        };
+    };
+    getRecipeIntakeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakeIntakeJob"];
+                };
+            };
+        };
+    };
+    getRecipeIntakePhotoV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reviewRecipeIntakeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getPushKeyV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakePushKey"];
+                };
+            };
+        };
+    };
+    registerPushV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesIntakePushRegistration"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removePushV1: {
+        parameters: {
+            query?: {
+                endpoint?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
