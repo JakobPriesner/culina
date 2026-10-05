@@ -17,9 +17,12 @@
     secondsLeft: number;
     onstart: () => void;
     ondismiss: () => void;
+    onpause?: () => void;
+    onresume?: () => void;
   }
 
-  let { durationSeconds, timer, secondsLeft, onstart, ondismiss }: Props = $props();
+  let { durationSeconds, timer, secondsLeft, onstart, ondismiss, onpause, onresume }: Props =
+    $props();
 
   const minutes = $derived(Math.floor(secondsLeft / 60));
   const seconds = $derived(String(secondsLeft % 60).padStart(2, '0'));
@@ -30,9 +33,18 @@
     {m['cooking.timer.start']({ minutes: Math.round(durationSeconds / 60) })}
   </Button>
 {:else if secondsLeft > 0}
-  <p class="running" role="timer" aria-live="off">
-    {m['cooking.timer.running']({ minutes, seconds })}
-  </p>
+  <div class="timer-controls">
+    <p class="running" role="timer" aria-live="off">
+      {timer.pausedRemaining !== undefined
+        ? m['cooking.timer.paused']({ minutes, seconds })
+        : m['cooking.timer.running']({ minutes, seconds })}
+    </p>
+    {#if timer.pausedRemaining !== undefined && onresume}
+      <Button size="sm" onclick={onresume}>{m['cooking.timer.resume']()}</Button>
+    {:else if onpause}
+      <Button size="sm" onclick={onpause}>{m['cooking.timer.pause']()}</Button>
+    {/if}
+  </div>
 {:else}
   <!-- Assertive, because this one genuinely cannot wait: the pan is on. -->
   <p class="done" role="alert">
@@ -44,6 +56,13 @@
 {/if}
 
 <style>
+  .timer-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
   .running {
     font-variant-numeric: tabular-nums;
     font-weight: var(--weight-semibold);

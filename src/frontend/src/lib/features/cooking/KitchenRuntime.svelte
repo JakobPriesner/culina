@@ -7,12 +7,15 @@
   import { kitchenTimers, kitchenWakeLock } from './kitchen.svelte';
   import { kitchenLighting } from './lighting.svelte';
   import { editTimerState } from './timerState';
+  import { cookingPip } from './pip.svelte';
+  import { recipes } from '$features/recipes/stores/recipes.svelte';
 
   const sessionId = $derived(cooking.session?.sessionId ?? null);
 
   onMount(() => {
     kitchenLighting.load();
     return () => {
+      cookingPip.close();
       kitchenTimers.clear();
       badgeManager.clear();
       delete document.documentElement.dataset['kitchenLighting'];
@@ -30,6 +33,14 @@
       stopHolding();
       kitchenTimers.clear();
     };
+  });
+
+  $effect(() => {
+    const id = sessionId;
+    const pipSession = cookingPip.sessionId;
+    if (pipSession && pipSession !== id) untrack(() => cookingPip.close());
+    const detail = recipes.detail;
+    if (detail) untrack(() => cookingPip.updateRecipe(detail));
   });
 
   $effect(() => {

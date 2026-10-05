@@ -60,14 +60,25 @@ export function createTimers(sessionId: () => string | null, url: () => string =
     if (!id) return;
     for (const timer of timers) {
       const key = `${id}:${timer.stepIndex}:${timer.endsAt}`;
-      if (timer.endsAt > now || timer.notified || alerted.has(key)) continue;
+      if (
+        timer.pausedRemaining !== undefined ||
+        timer.endsAt > now ||
+        timer.notified ||
+        alerted.has(key)
+      )
+        continue;
       alerted.add(key);
       const href = url();
       pending = pending.then(async () => {
         let claimed = false;
         const state = await editTimerState(id, (stored) => {
           stored.timers = stored.timers.map((t) => {
-            if (t.stepIndex !== timer.stepIndex || t.endsAt !== timer.endsAt || t.notified)
+            if (
+              t.stepIndex !== timer.stepIndex ||
+              t.endsAt !== timer.endsAt ||
+              t.notified ||
+              t.pausedRemaining !== undefined
+            )
               return t;
             claimed = true;
             return { ...t, notified: true };
@@ -76,7 +87,12 @@ export function createTimers(sessionId: () => string | null, url: () => string =
         });
         if (
           loadedFor !== id ||
-          !timers.some((t) => t.stepIndex === timer.stepIndex && t.endsAt === timer.endsAt)
+          !timers.some(
+            (t) =>
+              t.stepIndex === timer.stepIndex &&
+              t.endsAt === timer.endsAt &&
+              t.pausedRemaining === undefined
+          )
         )
           return;
         if (!state || claimed) {
@@ -95,19 +111,20 @@ export function createTimers(sessionId: () => string | null, url: () => string =
     }
   }
 
-  const remaining = (timer: KitchenTimer) => Math.max(0, Math.ceil((timer.endsAt - now) / 1000));
+  const remaining = (timer: KitchenTimer) =>
+    timer.pausedRemaining ?? Math.max(0, Math.ceil((timer.endsAt - now) / 1000));
   return {
     get timers() {
       return timers;
     },
     get runningCount() {
-      return timers.filter((t) => t.endsAt > now).length;
+      return timers.filter((t) => t.pausedRemaining === undefined && t.endsAt > now).length;
     },
     get nextStep() {
       return nextStep;
     },
     remaining,
-    isDone: (timer: KitchenTimer) => timer.endsAt <= now,
+    isDone: (timer: KitchenTimer) => timer.pausedRemaining === undefined && timer.endsAt <= now,
     load() {
       const id = sessionId();
       if (id === loadedFor) return;
@@ -155,6 +172,39 @@ export function createTimers(sessionId: () => string | null, url: () => string =
         timers: [...state.timers.filter((t) => t.stepIndex !== stepIndex), timer]
       })).then(() => closeTimerNotification(id, stepIndex));
     },
+    pause(stepIndex: number) {
+      const id = loadedFor;
+      const timer = timers.find((t) => t.stepIndex === stepIndex);
+      now = Date.now();
+      if (!id || !timer || timer.pausedRemaining !== undefined || timer.endsAt <= now) return;
+      const paused = { ...timer, pausedRemaining: remaining(timer) };
+      timers = timers.map((t) => (t === timer ? paused : t));
+      cache(id);
+      void queue(id, (state) => ({
+        ...state,
+        timers: state.timers.map((t) =>
+          t.stepIndex === stepIndex && t.endsAt === timer.endsAt ? paused : t
+        )
+      })).then(() => closeTimerNotification(id, stepIndex));
+    },
+    resume(stepIndex: number) {
+      const id = loadedFor;
+      const timer = timers.find((t) => t.stepIndex === stepIndex);
+      if (!id || !timer || timer.pausedRemaining === undefined) return;
+      now = Date.now();
+      unlockAudio();
+      const resumed = { stepIndex, label: timer.label, endsAt: now + timer.pausedRemaining * 1000 };
+      timers = timers.map((t) => (t === timer ? resumed : t));
+      cache(id);
+      void queue(id, (state) => ({
+        ...state,
+        timers: state.timers.map((t) =>
+          t.stepIndex === stepIndex && t.endsAt === timer.endsAt && t.pausedRemaining !== undefined
+            ? resumed
+            : t
+        )
+      }));
+    },
     dismiss(stepIndex: number) {
       const id = loadedFor;
       if (!id) return;
@@ -177,14 +227,14 @@ export function createTimers(sessionId: () => string | null, url: () => string =
       return index;
     },
     refresh,
-    tick(): () => void {
+    tick(clock: Window = window): () => void {
       const read = () => {
         now = Date.now();
         checkAlarms();
       };
-      const ticking = setInterval(read, 1000);
+      const ticking = clock.setInterval(read, 1000);
       const onVisible = () => {
-        if (document.visibilityState === 'visible') {
+        if (clock.document.visibilityState === 'visible') {
           now = Date.now();
           void refresh().then(read);
         }
@@ -193,12 +243,12 @@ export function createTimers(sessionId: () => string | null, url: () => string =
         if (event.data?.type === 'culina:timers-changed' && event.data.sessionId === loadedFor)
           void refresh().then(read);
       };
-      document.addEventListener('visibilitychange', onVisible);
+      clock.document.addEventListener('visibilitychange', onVisible);
       navigator.serviceWorker?.addEventListener('message', onMessage);
       read();
       return () => {
-        clearInterval(ticking);
-        document.removeEventListener('visibilitychange', onVisible);
+        clock.clearInterval(ticking);
+        clock.document.removeEventListener('visibilitychange', onVisible);
         navigator.serviceWorker?.removeEventListener('message', onMessage);
       };
     },

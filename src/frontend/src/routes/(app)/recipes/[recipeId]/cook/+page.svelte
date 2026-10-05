@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
@@ -11,6 +11,7 @@
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import StepTimer from '$features/cooking/StepTimer.svelte';
+  import CookingPipToggle from '$features/cooking/CookingPipToggle.svelte';
   import {
     kitchenTimers as timers,
     kitchenWakeLock as wakeLock
@@ -117,6 +118,17 @@
     }
   });
 
+  // A resumed session may carry a different yield from a cooking deep link.
+  // Make that displayed yield the session's yield, so every kitchen view agrees.
+  $effect(() => {
+    const target = servings;
+    const active = cooking.session?.sessionId;
+    if (over || !ready || !active) return;
+    untrack(() => {
+      if (cooking.session?.servings !== target) void cooking.rescale(target);
+    });
+  });
+
   function scale(value: number) {
     // See the detail page: `replaceState` moves the address bar without
     // telling the page, and every amount here is derived from the yield.
@@ -125,7 +137,6 @@
       keepFocus: true,
       noScroll: true
     });
-    void cooking.rescale(value);
   }
 
   function move(index: number) {
@@ -304,6 +315,7 @@
           <span aria-hidden="true">{wakeLock.held ? '◉' : '○'}</span>
           {wakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
         </span>
+        <CookingPipToggle recipe={recipes.detail} />
       </div>
 
       <RecipeSurface
@@ -324,6 +336,8 @@
             secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
             onstart={() => timers.start(currentStep, duration, stepName)}
             ondismiss={() => timers.dismiss(currentStep)}
+            onpause={() => timers.pause(currentStep)}
+            onresume={() => timers.resume(currentStep)}
           />
         {/if}
 
