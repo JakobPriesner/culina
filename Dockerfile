@@ -86,7 +86,7 @@ ARG SOURCE=https://github.com/jakobpriesner/culina
 
 LABEL org.opencontainers.image.title="Culina" \
       org.opencontainers.image.description="Your recipes, the way you cook them." \
-      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0" \
       org.opencontainers.image.source="${SOURCE}" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.version="${VERSION}"
