@@ -44,4 +44,10 @@ public sealed record Response
     /// it lives on the client, where the person correcting it is.
     /// </remarks>
     public string? Text { get; init; }
+
+    /// <summary>Written caption or description, when published separately.</summary>
+    public string? Caption { get; init; }
+
+    /// <summary>Public speech captions, when the source makes them available.</summary>
+    public string? Transcript { get; init; }
 }

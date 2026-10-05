@@ -152,6 +152,29 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
         Assert.False(read.Json!.Value.TryGetProperty("origin", out var origin) && origin.ValueKind is not JsonValueKind.Null);
     }
 
+    [Fact]
+    public async Task ImportedRecipe_ShouldKeepItsOriginalLink_InTheExistingProvenance()
+    {
+        using var world = await SignedInAsync();
+        var created = await world.Client.PostAsync("/api/v1/recipes",
+            new { householdId = world.HouseholdId, title = "Beans", sourceUrl = "https://example.com/beans", draftId = Guid.CreateVersion7() }, Token);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var origin = read.Json!.Value.GetProperty("origin");
+        Assert.Equal("web", origin.GetProperty("kind").GetString());
+        Assert.Equal("https://example.com/beans", origin.GetProperty("sourceUrl").GetString());
+    }
+
+    [Fact]
+    public async Task ImportedRecipe_ShouldRefuseAScriptLink_BeforeCreatingAnything()
+    {
+        using var world = await SignedInAsync();
+        var created = await world.Client.PostAsync("/api/v1/recipes",
+            new { householdId = world.HouseholdId, title = "Beans", sourceUrl = "javascript:alert(1)" }, Token);
+        Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private sealed record World(ApiClient Client, Guid HouseholdId) : IDisposable

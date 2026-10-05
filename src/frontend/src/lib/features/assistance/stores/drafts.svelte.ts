@@ -4,7 +4,7 @@ import { registerStore } from '$shell/stores';
 import type { Draft } from '../draftToRecipe';
 
 /** Which of the three that post JSON. A photograph posts multipart and is its own method. */
-export type DraftKind = 'idea' | 'text' | 'revision';
+export type DraftKind = 'idea' | 'text' | 'revision' | 'social';
 
 interface Ask {
   kind: DraftKind;
@@ -14,6 +14,7 @@ interface Ask {
   /** Which recipe to rewrite, for a revision. */
   recipeId?: string;
   language: string;
+  transcript?: string;
 }
 
 /** Reading one out of a photograph, which goes up as multipart. */
@@ -90,6 +91,7 @@ class DraftStore {
         kind: request.kind,
         householdId: request.householdId,
         material: request.material,
+        transcript: request.transcript,
         recipeId: request.recipeId,
         language: request.language
       })
@@ -108,6 +110,25 @@ class DraftStore {
     });
 
     return this.#follow(`/api/v1/recipe-drafts/photographs?${query}`, body);
+  }
+
+  /** All screenshots and their caption form one read job and one budget reservation. */
+  readMedia(request: {
+    householdId: string;
+    language: string;
+    photos: readonly File[];
+    material: string;
+    transcript: string;
+  }): Promise<AppError | null> {
+    const body = new FormData();
+    for (const file of request.photos) body.append('photos', file);
+    body.append('material', request.material);
+    body.append('transcript', request.transcript);
+    const query = new URLSearchParams({
+      householdId: request.householdId,
+      language: request.language
+    });
+    return this.#follow(`/api/v1/recipe-drafts/media?${query}`, body);
   }
 
   /** Throws the draft away, accepted or not. */

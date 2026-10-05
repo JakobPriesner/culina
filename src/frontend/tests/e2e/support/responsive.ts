@@ -109,6 +109,7 @@ export async function responsiveData(
     const url = new URL(route.request().url());
     const path = url.pathname.replace('/api/v1', '');
     const reply = (json: unknown) => route.fulfill({ json, headers: { ETag: '"v1"' } });
+    if (path === '/recipe-intakes') return reply([]);
     if (path === '/users/me')
       return reply({
         userId,

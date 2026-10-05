@@ -40,6 +40,12 @@ public sealed record ComposeRecipeDraftCommand(
 
     /// <summary>What kind of photograph, when there is one.</summary>
     public string? PhotographMediaType { get; init; }
+
+    /// <summary>More pages of the same recipe.</summary>
+    public IReadOnlyList<RecipePicture> Pictures { get; init; } = [];
+
+    /// <summary>Speech captions from the source video.</summary>
+    public string? Transcript { get; init; }
 }
 
 /// <summary>
@@ -159,16 +165,18 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         }
 
         var photographed = command.Kind == "photo";
+        var social = command.Kind == "social";
         var material = Material(command);
 
         // A photograph on its own is enough; words on their own are enough;
         // neither is not.
-        if (material is null && !photographed)
+        if (material is null && !photographed && command.Pictures.Count == 0
+            && string.IsNullOrWhiteSpace(command.Transcript))
         {
             return AssistanceErrors.NothingToWorkFrom;
         }
 
-        if (material is { Length: > LongestMaterial })
+        if ((material?.Length ?? 0) + (command.Transcript?.Length ?? 0) > LongestMaterial)
         {
             return AssistanceErrors.TooMuchToWorkFrom;
         }
@@ -188,10 +196,11 @@ internal sealed class ComposeRecipeDraftCommandHandler(
                 Language = language,
                 Instruction = writing
                     ? AssistantPrompts.Draft(language)
-                    : AssistantPrompts.Read(language),
-                Material = material,
+                    : social ? AssistantPrompts.Social(language) : AssistantPrompts.Read(language),
+                Material = social ? AssistantPrompts.SocialMaterial(material, command.Transcript) : material,
                 Picture = command.Photograph,
-                PictureMediaType = command.PhotographMediaType
+                PictureMediaType = command.PhotographMediaType,
+                Pictures = command.Pictures
             };
         });
     }

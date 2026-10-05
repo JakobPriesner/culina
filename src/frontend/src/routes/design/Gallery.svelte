@@ -1,7 +1,7 @@
 <script lang="ts">
   import FourStates from '$ds/__fixtures__/FourStates.svelte';
   import Overlays from '$ds/__fixtures__/Overlays.svelte';
-  import OllaGallery from './OllaGallery.svelte';
+  import OlliGallery from './OlliGallery.svelte';
   import {
     Button,
     type ButtonVariant,
@@ -247,8 +247,8 @@
   </section>
 
   <section>
-    <h2>Olla</h2>
-    <OllaGallery />
+    <h2>Olli</h2>
+    <OlliGallery />
   </section>
 
   <section>

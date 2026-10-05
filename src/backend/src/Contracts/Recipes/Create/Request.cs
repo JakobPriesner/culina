@@ -26,4 +26,7 @@ public sealed record Request
     /// it is a field here rather than an endpoint of its own.
     /// </remarks>
     public Guid? DraftId { get; init; }
+
+    /// <summary>The public page the recipe was imported from.</summary>
+    public string? SourceUrl { get; init; }
 }

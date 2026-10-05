@@ -24,8 +24,8 @@
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
-  import { ollaSetting } from '$shell/olla/setting.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -284,7 +284,7 @@
   };
 </script>
 
-{#snippet peeking()}<Olla pose="peeking" />{/snippet}
+{#snippet peeking()}<Olli pose="peeking" />{/snippet}
 <svelte:head><title>{m['plan.title']()}</title></svelte:head>
 
 <Page>
@@ -396,7 +396,7 @@
       <EmptyState
         title={m['plan.empty.title']()}
         body={m['plan.empty.description']()}
-        art={ollaSetting.shown ? peeking : undefined}
+        art={olliSetting.shown ? peeking : undefined}
       >
         {#snippet action()}
           <Button variant="primary" href={resolve('/(app)')}>{m['plan.empty.action']()}</Button>

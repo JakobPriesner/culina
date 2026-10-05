@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { importPush } from '$features/import/push.svelte';
+  import { Button } from '$ds';
   import { Switch } from '$ds';
   import AppIconChoice from '$shell/AppIconChoice.svelte';
   import { m } from '$shell/i18n';
   import LocalePicker from '$shell/LocalePicker.svelte';
   import MeasurementPicker from '$shell/MeasurementPicker.svelte';
-  import { ollaSetting } from '$shell/olla/setting.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import ThemeChoice from '$shell/ThemeChoice.svelte';
 
   import SettingsRow from '../SettingsRow.svelte';
@@ -46,11 +48,24 @@
     <MeasurementPicker compact />
   </SettingsRow>
 
-  <SettingsRow label={m['me.olla']()} description={m['me.olla.hint']()}>
+  <SettingsRow label={m['me.olli']()} description={m['me.olli.hint']()}>
     <Switch
-      checked={ollaSetting.shown}
-      label={m['me.olla']()}
-      onchange={(checked) => ollaSetting.show(checked)}
+      checked={olliSetting.shown}
+      label={m['me.olli']()}
+      onchange={(checked) => olliSetting.show(checked)}
     />
   </SettingsRow>
+  {#if importPush.supported}
+    <SettingsRow
+      label={m['intake.notify']()}
+      description={importPush.enabled ? m['intake.notificationsOn']() : m['intake.continues']()}
+    >
+      <Button
+        onclick={() => void (importPush.enabled ? importPush.disable() : importPush.enable())}
+        loading={importPush.busy}
+        >{importPush.enabled ? m['intake.notificationsOff']() : m['intake.notify']()}</Button
+      >
+    </SettingsRow>
+    {#if importPush.failed}<p role="alert">{m['intake.notificationFailed']()}</p>{/if}
+  {/if}
 </SettingsSection>

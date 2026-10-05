@@ -2,13 +2,13 @@
   import { resolve } from '$app/paths';
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
 
   /**
    * A settings page that is the administrator's, opened by somebody who isn't.
    *
-   * Told as a kitchen tells it: Olla on duty, holding the order, or — with
-   * Olla turned off — the order itself on the rail, saying who cooks it. Both
+   * Told as a kitchen tells it: Olli on duty, holding the order, or — with
+   * Olli turned off — the order itself on the rail, saying who cooks it. Both
    * are decoration; the heading and the line under it say it in words.
    */
   interface Props {
@@ -20,7 +20,7 @@
 </script>
 
 <div class="refused">
-  <Olla pose="onDuty" size="lg">
+  <Olli pose="onDuty" size="lg">
     {#snippet fallback()}
       <div class="pass" aria-hidden="true">
         <span class="rail"></span>
@@ -34,7 +34,7 @@
         </div>
       </div>
     {/snippet}
-  </Olla>
+  </Olli>
 
   <h1 class="title">{m['notAllowed.title']()}</h1>
   <p class="body">{m['notAllowed.body']()}</p>
