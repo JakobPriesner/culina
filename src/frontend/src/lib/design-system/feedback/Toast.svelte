@@ -39,23 +39,37 @@
   onfocusin={() => onpause(toast.id)}
   onfocusout={() => onresume(toast.id)}
 >
-  <p class="message">{toast.message()}</p>
-
-  {#if toast.action}
-    <button class="action" type="button" onclick={() => onact(toast.id)}>
-      {toast.action.label()}
-    </button>
+  {#if toast.art}
+    <span class="art">{@render toast.art()}</span>
   {/if}
+  <div class="surface">
+    <p class="message">{toast.message()}</p>
 
-  <IconButton label={dismissLabel} size="sm" onclick={() => ondismiss(toast.id)}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-    </svg>
-  </IconButton>
+    {#if toast.action}
+      <button class="action" type="button" onclick={() => onact(toast.id)}>
+        {toast.action.label()}
+      </button>
+    {/if}
+
+    <IconButton label={dismissLabel} size="sm" onclick={() => ondismiss(toast.id)}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+      </svg>
+    </IconButton>
+  </div>
 </div>
 
 <style>
   .toast {
+    position: relative;
+    isolation: isolate;
+    pointer-events: auto;
+    animation: enter var(--duration-base) var(--ease-spatial);
+  }
+
+  .surface {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: var(--space-3);
@@ -64,17 +78,15 @@
     border-radius: var(--radius-md);
     background: var(--surface-overlay);
     box-shadow: var(--shadow-overlay);
-    pointer-events: auto;
-    animation: enter var(--duration-base) var(--ease-spatial);
   }
 
   /* The tone is a stripe on the leading edge, never the only signal: the
      message says what happened in words. */
-  .success {
+  .success .surface {
     border-inline-start: 3px solid var(--success);
   }
 
-  .danger {
+  .danger .surface {
     border-inline-start: 3px solid var(--danger);
   }
 
@@ -82,6 +94,19 @@
     flex: 1;
     min-width: 0;
     font-size: var(--text-sm);
+  }
+
+  .art {
+    position: absolute;
+    z-index: 0;
+    inset-block-start: 0;
+    inset-inline-start: var(--space-4);
+    pointer-events: none;
+    animation: peek 3600ms var(--ease-out) both;
+  }
+
+  .art:empty {
+    display: none;
   }
 
   .action {
@@ -102,6 +127,32 @@
     background: var(--surface-hover);
   }
 
+  /* A short appearance above the card, then back behind its opaque surface.
+     The artwork never takes width from the message or its Undo action. */
+  @keyframes peek {
+    0%,
+    100% {
+      opacity: 0;
+      transform: translateY(var(--space-2));
+    }
+
+    15% {
+      opacity: 1;
+      transform: translateY(calc(-100% + var(--space-2))) rotate(-4deg);
+    }
+
+    25% {
+      opacity: 1;
+      transform: translateY(calc(-100% + var(--space-2))) rotate(3deg);
+    }
+
+    38%,
+    75% {
+      opacity: 1;
+      transform: translateY(calc(-100% + var(--space-2)));
+    }
+  }
+
   @keyframes enter {
     from {
       opacity: 0;
@@ -112,6 +163,11 @@
   @media (prefers-reduced-motion: reduce) {
     .toast {
       animation: none;
+    }
+
+    .art {
+      animation: none;
+      transform: translateY(calc(-100% + var(--space-2)));
     }
   }
 </style>
