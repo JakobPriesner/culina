@@ -1,3 +1,5 @@
+import type { Snippet } from 'svelte';
+
 /**
  * The queue of short messages, and the undo that makes them worth having.
  *
@@ -29,6 +31,8 @@ export interface Toast {
   readonly message: ToastWords;
   readonly tone: ToastTone;
   readonly action?: ToastAction;
+  /** Optional decoration that peeks from behind the card; the message carries the meaning. */
+  readonly art?: Snippet;
   /** How long it stays. Zero means until it is dismissed. */
   readonly durationMs: number;
 }
@@ -37,6 +41,7 @@ export interface ToastRequest {
   readonly message: ToastWords;
   readonly tone?: ToastTone;
   readonly action?: ToastAction;
+  readonly art?: Snippet;
   readonly durationMs?: number;
 }
 
