@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Olla from '$shell/olla/Olla.svelte';
-  import { poses, type Pose } from '$shell/olla/poses';
+  import Olli from '$shell/olli/Olli.svelte';
+  import { poses, type Pose } from '$shell/olli/poses';
 
   /*
-   * Olla in every pose, for looking at the motion.
+   * Olli in every pose, for looking at the motion.
    *
    * The big one moves between poses as they are chosen, which is the case the
    * springs exist for; the row below arrives in each pose once.
@@ -14,7 +14,7 @@
 </script>
 
 <div class="stage">
-  <Olla {pose} size="lg" />
+  <Olli {pose} size="lg" />
   <div class="choices">
     {#each names as name (name)}
       <button type="button" aria-pressed={pose === name} onclick={() => (pose = name)}>
@@ -27,15 +27,15 @@
 <div class="all">
   {#each names as name (name)}
     <figure>
-      <Olla pose={name} />
+      <Olli pose={name} />
       <figcaption>{name}</figcaption>
     </figure>
   {/each}
 </div>
 
 <div class="small">
-  <Olla pose="celebrating" size="sm" still />
-  <Olla pose="hello" size="sm" still />
+  <Olli pose="celebrating" size="sm" still />
+  <Olli pose="hello" size="sm" still />
   <span>Small and still, for toasts.</span>
 </div>
 

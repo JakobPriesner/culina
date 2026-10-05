@@ -5,7 +5,7 @@
   import AssistFailure from '$features/assistance/AssistFailure.svelte';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
   import { imageSrcset, imageUrl } from '../recipeImage';
 
   /**
@@ -201,7 +201,7 @@
 />
 
 {#snippet drawingArt()}
-  <Olla pose="reading" size="sm" still />
+  <Olli pose="reading" size="sm" still />
 {/snippet}
 
 <!-- Absent entirely where no assistant can draw — which includes every

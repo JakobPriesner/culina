@@ -30,7 +30,9 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
 
         var fetched = await pages.FetchAsync(address, cancellationToken).ConfigureAwait(false);
 
-        return tracked.Record(fetched.Map(ToDraft));
+        return tracked.Record(await fetched.Match(
+            page => ToDraftAsync(page, cancellationToken),
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false));
     }
 
     /// <summary>
@@ -43,7 +45,7 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
     /// set of heuristics — on the side where the person correcting them is —
     /// beats two that quietly disagree.
     /// </remarks>
-    private static Response ToDraft(WebPage page)
+    private async Task<Result<Response>> ToDraftAsync(WebPage page, CancellationToken cancellationToken)
     {
         var published = HtmlText.JsonLdBlocks(page.Html)
             .Select(RecipeJsonLd.Read)
@@ -51,12 +53,25 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
 
         if (published is null)
         {
+            var source = SocialRecipeText.Read(page.Html);
+            var transcript = source.Transcript;
+            if (transcript.Length == 0 && source.CaptionTrack is { } track
+                && Uri.TryCreate(page.Url, track, out var captionUrl))
+            {
+                // The same SSRF, redirect, size and deadline checks as the page.
+                // A private or unavailable track never prevents reading its caption.
+                var fetched = await pages.FetchAsync(captionUrl, cancellationToken).ConfigureAwait(false);
+                transcript = fetched.Match(captions => SocialRecipeText.Transcript(captions.Html), _ => string.Empty);
+            }
+
             return new Response
             {
                 SourceUrl = page.Url.ToString(),
                 IngredientLines = [],
                 Steps = [],
-                Text = HtmlText.ReadableText(page.Html)
+                Text = source.Caption.Length > 0 ? source.Caption : HtmlText.ReadableText(page.Html),
+                Caption = source.Caption,
+                Transcript = transcript
             };
         }
 

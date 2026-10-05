@@ -1,8 +1,8 @@
 /**
- * Olla's poses, as data.
+ * Olli's poses, as data.
  *
  * The pot itself never changes; a pose is only where the parts sit — the
- * handles, the hat, the eyes and mouth — plus one prop and what Olla does once
+ * handles, the hat, the eyes and mouth — plus one prop and what Olli does once
  * on arriving in it. Keeping that here, apart from the drawing, is what lets
  * one component move smoothly from any pose to any other: every pose is a set
  * of targets for the same springs.
@@ -12,6 +12,9 @@ export type Pose =
   | 'peeking'
   | 'reading'
   | 'watching'
+  | 'thinking'
+  | 'writing'
+  | 'idea'
   | 'celebrating'
   | 'puzzled'
   | 'dozing'
@@ -39,12 +42,12 @@ export interface PoseSpec {
   readonly glance?: readonly [x: number, y: number];
   /** How far the pot sits lower than usual. */
   readonly sag: number;
-  readonly prop?: 'card' | 'plug' | 'ticket';
+  readonly prop?: 'card' | 'plug' | 'ticket' | 'phone' | 'pencil';
   /** What rises from the pot on arrival. Nothing at all when unplugged. */
-  readonly steam: 'wisp' | 'question' | 'sleep' | 'sparks' | 'none';
+  readonly steam: 'wisp' | 'question' | 'sleep' | 'sparks' | 'none' | 'bulb';
   /**
    * Somebody is stuck or refused. Mailchimp's rule: no playfulness there, so
-   * Olla does not react to being poked.
+   * Olli does not react to being poked.
    */
   readonly sombre: boolean;
 }
@@ -86,19 +89,50 @@ export const poses: Record<Pose, PoseSpec> = {
     steam: 'wisp',
     sombre: false
   },
-  /*
-   * The assistant's text arriving. Olla leans in and follows it; it does not
-   * write it. The four-colour glow stays the one sign of what a machine made.
-   */
   watching: {
     eyes: 'open',
     mouth: 'smile',
-    arms: [-10, -10],
-    tilt: 4,
-    hatTilt: 2,
-    look: [1.5, 2],
+    arms: [-8, 32],
+    tilt: 2,
+    hatTilt: 1,
+    look: [3, 1.5],
     sag: 0,
-    steam: 'wisp',
+    prop: 'phone',
+    steam: 'none',
+    sombre: false
+  },
+  thinking: {
+    eyes: 'open',
+    mouth: 'o',
+    arms: [0, 12],
+    tilt: -4,
+    hatTilt: -2,
+    look: [-2, -3],
+    sag: 0,
+    steam: 'none',
+    sombre: false
+  },
+  writing: {
+    eyes: 'open',
+    mouth: 'smile',
+    arms: [-10, -18],
+    tilt: 3,
+    hatTilt: 1,
+    look: [1, 3],
+    sag: 0,
+    prop: 'pencil',
+    steam: 'none',
+    sombre: false
+  },
+  idea: {
+    eyes: 'happy',
+    mouth: 'smile',
+    arms: [18, 18],
+    tilt: 0,
+    hatTilt: -2,
+    look: [0, -1],
+    sag: 0,
+    steam: 'bulb',
     sombre: false
   },
   celebrating: {

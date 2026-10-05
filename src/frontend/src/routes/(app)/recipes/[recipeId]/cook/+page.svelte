@@ -24,7 +24,7 @@
   import { m } from '$shell/i18n';
   import { haptics } from '$shell/haptics';
   import NotFound from '$shell/NotFound.svelte';
-  import Olla from '$shell/olla/Olla.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -280,7 +280,7 @@
 </script>
 
 {#snippet cookedArt()}
-  <Olla pose="celebrating" size="sm" still />
+  <Olli pose="celebrating" size="sm" still />
 {/snippet}
 
 <svelte:head>

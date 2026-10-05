@@ -6,8 +6,8 @@
   import type { CookbookRules } from '$features/cookbooks/types';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
-  import { ollaSetting } from '$shell/olla/setting.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import LibraryActions from '$shell/LibraryActions.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
   import Page from '$shell/Page.svelte';
@@ -68,7 +68,7 @@
   }
 </script>
 
-{#snippet peeking()}<Olla pose="peeking" />{/snippet}
+{#snippet peeking()}<Olli pose="peeking" />{/snippet}
 <svelte:head><title>{m['cookbooks.title']()}</title></svelte:head>
 
 <Page>
@@ -95,7 +95,7 @@
     <EmptyState
       title={m['cookbooks.empty.title']()}
       body={m['cookbooks.empty.body']()}
-      art={ollaSetting.shown ? peeking : undefined}
+      art={olliSetting.shown ? peeking : undefined}
     >
       {#snippet action()}
         <Button variant="primary" onclick={() => (making = true)}>

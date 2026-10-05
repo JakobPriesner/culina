@@ -10,6 +10,7 @@
 
   import HouseholdSwitcher from '$features/auth/HouseholdSwitcher.svelte';
   import { session } from '$features/auth/session.svelte';
+  import IntakeRuntime from '$features/import/IntakeRuntime.svelte';
   import KitchenRuntime from '$features/cooking/KitchenRuntime.svelte';
   import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
@@ -219,6 +220,7 @@
   <!-- The slot is reserved whether or not anything is in it, so the bar
        appearing never pushes the page. -->
   <div class="dock" bind:clientHeight={dockHeight}>
+    <IntakeRuntime />
     <NowCookingBar />
     {@render dock?.()}
   </div>

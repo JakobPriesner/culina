@@ -117,6 +117,7 @@ public static class DependencyInjection
         // Nothing depends on the order itself.
         return services
             // Users
+            .AddScoped<Application.Recipes.Intake.RecipeIntake>()
             .AddScoped<ICommandHandler<RegisterUserCommand, Contracts.Users.Register.Response>,
                 RegisterUserCommandHandler>()
             .AddScoped<RegistrationDependencies>()

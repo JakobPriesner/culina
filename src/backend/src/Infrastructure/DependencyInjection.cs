@@ -63,6 +63,10 @@ public static class DependencyInjection
             .AddIdentity()
             .AddRecipeImport()
             .AddAssistance()
+            .AddScoped<IRecipeIntakeJobs, RecipeIntakeJobs>()
+            .AddSingleton<PushTransport>()
+            .AddScoped<IIntakeNotifications, IntakeNotifications>()
+            .AddHostedService<RecipeIntakeWorker>()
             .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton(TimeProvider.System);
     }

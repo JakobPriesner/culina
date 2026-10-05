@@ -1,3 +1,4 @@
+import { keepSharedRecipe } from './lib/features/import/sharedRecipe';
 /// <reference lib="webworker" />
 // The `$service-worker` module is declared in service-worker.d.ts, which
 // tsconfig.worker.json names alongside this file. `pnpm check` runs it: the
@@ -7,7 +8,6 @@
 import { base, build, files, version } from '$service-worker';
 import {
   applyTimerAction,
-  editTimerState,
   forgetKitchen,
   type TimerNotice
 } from './lib/features/cooking/timerState';
@@ -206,24 +206,46 @@ worker.addEventListener('message', (event) => {
   // person closed the browser without signing out and another signed in must
   // not answer the second one from the first one's cache.
   if (type === 'culina:forget') {
-    event.waitUntil(
-      Promise.all([caches.delete(privateCacheName), forgetKitchen(), clearKitchenBadge()])
-    );
+    event.waitUntil(Promise.all([caches.delete(privateCacheName), forgetKitchen()]));
   }
 });
 
 /**
  * Brings the cooking app back to the front when a notification is clicked.
  */
+worker.addEventListener('push', (event) => {
+  if (!event.data) return;
+  try {
+    const notice = event.data.json() as {
+      title?: string;
+      body?: string;
+      url?: string;
+      tag?: string;
+    };
+    if (typeof notice.url !== 'string' || !/^\/recipes\/imports\/[0-9a-f-]{36}$/.test(notice.url))
+      return;
+    event.waitUntil(
+      worker.registration.showNotification(notice.title ?? 'Culina', {
+        body: notice.body,
+        tag: notice.tag,
+        icon: `${base}/icon-192.png`,
+        data: { type: 'culina:intake', url: `${base}${notice.url}` }
+      })
+    );
+  } catch {
+    /* Malformed pushes do not navigate or expose arbitrary content. */
+  }
+});
+
 worker.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const notice = event.notification.data as TimerNotice | undefined;
+  const notice = event.notification.data as
+    (TimerNotice | { type: 'culina:intake'; url: string }) | undefined;
   event.waitUntil(
     (async () => {
       if (notice?.type === 'culina:timer' && event.action) {
         const changed = await applyTimerAction(notice, event.action);
         if (changed) {
-          await updateKitchenBadge();
           const clients = await worker.clients.matchAll({
             type: 'window',
             includeUncontrolled: true
@@ -238,7 +260,9 @@ worker.addEventListener('notificationclick', (event) => {
       const safe =
         target.origin === worker.location.origin &&
         target.pathname.startsWith(`${base}/recipes/`) &&
-        target.pathname.endsWith('/cook');
+        (target.pathname.endsWith('/cook') ||
+          (notice?.type === 'culina:intake' &&
+            /^\/recipes\/imports\/[0-9a-f-]{36}$/.test(target.pathname.slice(base.length))));
       const href = safe ? target.href : new URL(document, worker.location.origin).href;
       const clients = await worker.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const client = clients.find((page) => page.url === href) ?? clients[0];
@@ -254,42 +278,32 @@ worker.addEventListener('notificationclick', (event) => {
   );
 });
 
-type BadgeNavigator = WorkerNavigator & {
-  setAppBadge?: (count: number) => Promise<void>;
-  clearAppBadge?: () => Promise<void>;
-};
-async function clearKitchenBadge() {
-  try {
-    await (worker.navigator as BadgeNavigator).clearAppBadge?.();
-  } catch {
-    /* Optional. */
-  }
-}
-async function updateKitchenBadge() {
-  const badge = await editTimerState('__badge');
-  const state = badge?.url ? await editTimerState(badge.url) : null;
-  const running =
-    state?.timers.filter(
-      (timer) => timer.pausedRemaining === undefined && timer.endsAt > Date.now()
-    ).length ?? 0;
-  const count = running || badge?.shoppingItems || 0;
-  try {
-    const api = worker.navigator as BadgeNavigator;
-    if (count > 0) await api.setAppBadge?.(count);
-    else await api.clearAppBadge?.();
-  } catch {
-    /* Optional. */
-  }
-}
-
 worker.addEventListener('fetch', (event) => {
   const request = event.request;
+
+  const url = new URL(request.url);
+
+  if (
+    request.method === 'POST' &&
+    url.origin === worker.location.origin &&
+    url.pathname === '/recipes/import'
+  ) {
+    event.respondWith(
+      (async () => {
+        try {
+          const id = await keepSharedRecipe(await request.formData());
+          return Response.redirect(new URL(`/recipes/new?share=${id}`, url.origin), 303);
+        } catch {
+          return Response.redirect(new URL('/recipes/new?shareError=1', url.origin), 303);
+        }
+      })()
+    );
+    return;
+  }
 
   if (request.method !== 'GET') {
     return;
   }
-
-  const url = new URL(request.url);
 
   if (url.origin !== worker.location.origin) {
     return;
@@ -434,7 +448,6 @@ async function fetchAndStore(request: Request, cache: Cache | null): Promise<Res
     if (response.status === 401) {
       await caches.delete(privateCacheName).catch(() => false);
       await forgetKitchen();
-      await clearKitchenBadge();
 
       return response;
     }

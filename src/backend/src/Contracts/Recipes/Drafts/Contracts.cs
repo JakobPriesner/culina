@@ -9,7 +9,7 @@ namespace Contracts.Recipes.Drafts;
 public sealed record Request
 {
     /// <summary>
-    /// What is being asked for: <c>idea</c>, <c>text</c> or <c>revision</c>.
+    /// What is being asked for: <c>idea</c>, <c>text</c>, <c>social</c> or <c>revision</c>.
     /// </summary>
     public required string Kind { get; init; }
 
@@ -25,6 +25,9 @@ public sealed record Request
     /// person supplied, which the server never treats as an instruction.
     /// </remarks>
     public string? Material { get; init; }
+
+    /// <summary>Spoken captions, kept apart from the measured written recipe.</summary>
+    public string? Transcript { get; init; }
 
     /// <summary>Which recipe to rewrite, for <c>revision</c>.</summary>
     public Guid? RecipeId { get; init; }

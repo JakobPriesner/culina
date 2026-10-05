@@ -23,7 +23,11 @@ public sealed record CreateRecipeCommand(
     string Title,
     Guid UserId,
     Language DeviceLanguage,
-    Guid? DraftId = null);
+    Guid? DraftId = null)
+{
+    /// <summary>The original public recipe page, if there is one.</summary>
+    public string? SourceUrl { get; init; }
+}
 
 internal sealed class CreateRecipeCommandHandler(
     IRecipeRepository recipes,
@@ -46,7 +50,12 @@ internal sealed class CreateRecipeCommandHandler(
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var prepared = permitted.Bind(() => RecipeTitle.Create(command.Title));
+        var prepared = permitted.Bind(() =>
+            command.SourceUrl is { } url &&
+            (!Uri.TryCreate(url, UriKind.Absolute, out var address)
+                || address.Scheme is not ("http" or "https") || url.Length > 2048)
+                ? Result<RecipeTitle>.Failure(ImportErrors.UnreachableAddress)
+                : RecipeTitle.Create(command.Title));
 
         var result = await prepared.Match(
             title => StoreAsync(command, title, cancellationToken),
@@ -119,7 +128,7 @@ internal sealed class CreateRecipeCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        if (command.DraftId is not { } draftId)
+        if (command.DraftId is null && command.SourceUrl is null)
         {
             return;
         }
@@ -128,10 +137,10 @@ internal sealed class CreateRecipeCommandHandler(
                 new RecipeOrigin(
                     recipe.Id,
                     recipe.HouseholdId,
-                    SourceKind.Assistant,
+                    command.SourceUrl is null ? SourceKind.Assistant : SourceKind.Web,
                     SourceId: null,
-                    draftId.ToString(),
-                    SourceUrl: null,
+                    (command.DraftId ?? Guid.CreateVersion7()).ToString(),
+                    command.SourceUrl,
                     now),
                 cancellationToken)
             .ConfigureAwait(false);

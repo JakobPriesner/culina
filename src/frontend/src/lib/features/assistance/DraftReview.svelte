@@ -2,9 +2,11 @@
   import { Button, Checkbox, GenerationAura, Modal, Skeleton } from '$ds';
   import type { AppError } from '$api';
   import { m } from '$shell/i18n';
+  import { explain } from '$shell/explain';
 
   import AssistFailure from './AssistFailure.svelte';
   import DraftProgress from './DraftProgress.svelte';
+  import DraftWriting from './DraftWriting.svelte';
   import {
     acceptEverything,
     acceptNothing,
@@ -49,6 +51,8 @@
     current: Recipe;
     /** Whether more of the draft is still arriving. */
     writing?: boolean;
+    saving?: boolean;
+    saveError?: AppError | null;
     /**
      * Why the assistant stopped, when it stopped part-way.
      *
@@ -57,6 +61,8 @@
      * button the dialog is covering.
      */
     error?: AppError | null;
+    /** Source comparison for an intake draft; no recipe exists yet. */
+    source?: { text: string; transcript: string; url: string; photos: string[]; assisted: boolean };
     onaccept: (patch: Partial<Recipe>) => void;
     onclose: () => void;
   }
@@ -66,7 +72,10 @@
     draft,
     current,
     writing = false,
+    saving = false,
+    saveError = null,
     error = null,
+    source,
     onaccept,
     onclose
   }: Props = $props();
@@ -148,66 +157,94 @@
 
 <Modal
   bind:open
-  title={m['assist.improve.title']()}
+  wide={!!source}
+  title={source ? m['import.review.title']() : m['assist.improve.title']()}
   closeLabel={m['assist.close']()}
   onclose={close}
 >
-  <p class="lead">{m['assist.improve.lead']()}</p>
-
-  {#if writing}
-    <div class="progress">
-      <GenerationAura />
-      <DraftProgress
-        label={draft ? m['assist.improve.writing']() : m['assist.improve.asking']()}
-        arriving={draft !== null}
-      />
+  {#if source}
+    <p class="lead">{m['import.review.hint']()}</p>
+    <div class="source-comparison">
+      <section class="original" aria-label={m['import.review.source']()}>
+        <h3>{m['import.review.source']()}</h3>
+        {#if source.url}
+          <!-- External URL validated by intake, not an application route. -->
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+          <a href={source.url} target="_blank" rel="noopener noreferrer"
+            >{m['import.review.openSource']()}</a
+          >
+        {/if}
+        {#if source.text}<p class="source-text">{source.text}</p>{/if}
+        {#if source.transcript}
+          <h4>{m['import.review.transcript']()}</h4>
+          <p class="source-text">{source.transcript}</p>
+        {/if}
+        {#each source.photos as photo (photo)}
+          <img src={photo} alt={m['import.review.photo']()} />
+        {/each}
+      </section>
+      <DraftWriting {draft} {writing} />
     </div>
-  {/if}
+  {:else}
+    <p class="lead">{m['assist.improve.lead']()}</p>
 
-  {#if !draft && writing}
-    <div class="forming" aria-hidden="true">
-      <Skeleton width="9rem" height="1rem" />
-      <Skeleton width="100%" height="3.5rem" shape="block" />
-      <Skeleton width="7rem" height="1rem" />
-      <Skeleton width="82%" height="1rem" />
-    </div>
-  {:else if parts.length === 0 && !writing && !error}
-    <p class="lead">{m['assist.nothing']()}</p>
-  {:else if draft}
-    <ul class="parts">
-      {#each parts as [key, label, before, after] (key)}
-        <li class="part arrival">
-          <Checkbox
-            checked={accepted[key]}
-            {label}
-            onchange={(checked) => (accepted = { ...accepted, [key]: checked })}
-          />
+    {#if writing}
+      <div class="progress">
+        <GenerationAura />
+        <DraftProgress
+          label={draft ? m['assist.improve.writing']() : m['assist.improve.asking']()}
+          arriving={draft !== null}
+        />
+      </div>
+    {/if}
 
-          <div class="compare">
-            <p class="side">
-              <span class="which">{m['assist.before']()}</span>
-              <span class="was">{before || m['assist.empty']()}</span>
-            </p>
-            <p class="side">
-              <span class="which">{m['assist.after']()}</span>
-              <span>{after || m['assist.empty']()}</span>
-            </p>
-          </div>
-        </li>
-      {/each}
-    </ul>
+    {#if !draft && writing}
+      <div class="forming" aria-hidden="true">
+        <Skeleton width="9rem" height="1rem" />
+        <Skeleton width="100%" height="3.5rem" shape="block" />
+        <Skeleton width="7rem" height="1rem" />
+        <Skeleton width="82%" height="1rem" />
+      </div>
+    {:else if parts.length === 0 && !writing && !error}
+      <p class="lead">{m['assist.nothing']()}</p>
+    {:else if draft}
+      <ul class="parts">
+        {#each parts as [key, label, before, after] (key)}
+          <li class="part arrival">
+            <Checkbox
+              checked={accepted[key]}
+              {label}
+              onchange={(checked) => (accepted = { ...accepted, [key]: checked })}
+            />
 
-    {#if draft.steps.length > 0}
-      <ol class="steps">
-        {#each draft.steps as step, index (index)}
-          <li class="arrival">
-            {#if step.title}<span class="stepTitle">{step.title}</span>{/if}
-            {step.text}
+            <div class="compare">
+              <p class="side">
+                <span class="which">{m['assist.before']()}</span>
+                <span class="was">{before || m['assist.empty']()}</span>
+              </p>
+              <p class="side">
+                <span class="which">{m['assist.after']()}</span>
+                <span>{after || m['assist.empty']()}</span>
+              </p>
+            </div>
           </li>
         {/each}
-      </ol>
+      </ul>
+
+      {#if draft.steps.length > 0}
+        <ol class="steps">
+          {#each draft.steps as step, index (index)}
+            <li class="arrival">
+              {#if step.title}<span class="stepTitle">{step.title}</span>{/if}
+              {step.text}
+            </li>
+          {/each}
+        </ol>
+      {/if}
     {/if}
   {/if}
+
+  {#if saveError}<p class="warning" role="alert">{explain(saveError)}</p>{/if}
 
   {#if error}
     <AssistFailure {error} />
@@ -215,14 +252,23 @@
 
   <!-- Said here rather than only on the button, because this is the moment
        somebody decides whether to trust it. -->
-  {#if draft}
+  {#if draft && (!source || source.assisted)}
     <p class="warning">{m['assist.warning']()}</p>
   {/if}
 
   {#snippet footer()}
     <Button variant="ghost" onclick={close}>{m['assist.discard']()}</Button>
 
-    {#if draft && parts.length > 0}
+    {#if source && draft && parts.length > 0}
+      <Button
+        variant="primary"
+        loading={saving}
+        disabled={writing || saving || !!error}
+        onclick={() => onaccept(toPatch(draft, acceptEverything(draft), current))}
+      >
+        {m['import.review.accept']()}
+      </Button>
+    {:else if draft && parts.length > 0}
       <Button
         variant="secondary"
         disabled={writing}
@@ -238,6 +284,40 @@
 </Modal>
 
 <style>
+  .source-comparison {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+    align-items: start;
+  }
+  .original {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .original h3,
+  .original h4 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+  .original img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+  }
+  .source-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: var(--text-sm);
+  }
+  @media (max-width: 40rem) {
+    .source-comparison {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   .lead {
     max-width: var(--measure);
     color: var(--text-muted);

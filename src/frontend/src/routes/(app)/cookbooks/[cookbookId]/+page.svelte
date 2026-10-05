@@ -18,8 +18,8 @@
   import { restoreCookbook } from '$features/trash/trash';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
-  import Olla from '$shell/olla/Olla.svelte';
-  import { ollaSetting } from '$shell/olla/setting.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -303,7 +303,7 @@
   }
 </script>
 
-{#snippet peeking()}<Olla pose="peeking" />{/snippet}
+{#snippet peeking()}<Olli pose="peeking" />{/snippet}
 <svelte:head><title>{cookbook?.name ?? m['cookbooks.title']()}</title></svelte:head>
 
 <Page>
@@ -532,7 +532,7 @@
       <EmptyState
         title={m['cookbooks.detail.empty.title']()}
         body={automatic ? m['cookbooks.detail.noMatch.body']() : m['cookbooks.detail.empty.body']()}
-        art={ollaSetting.shown && !automatic ? peeking : undefined}
+        art={olliSetting.shown && !automatic ? peeking : undefined}
       >
         {#snippet action()}
           {#if automatic}
