@@ -16,8 +16,9 @@ import { readDevice, writeDevice } from './deviceStorage';
  *
  * Choosing one points the document's links at that icon's files. A browser
  * reads the manifest and the touch icon when Culina is installed, not before,
- * so a choice made before installing is the one the install gets; an icon
- * already on a home screen follows on whatever terms that platform sets.
+ * so a choice made before installing is the one the install gets; an app
+ * already installed on a home screen or desktop keeps its original icon
+ * until re-added.
  */
 class AppIconStore {
   #current = $state<AppIcon>(defaultAppIcon);

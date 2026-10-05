@@ -49,7 +49,7 @@
   "locale.label": "Sprache",
   "me.appearance": "Darstellung",
   "me.appIcon": "App-Symbol",
-  "me.appIcon.hint": "Das Symbol, das dieses Gerät für Culina zeigt, im Browser-Tab und auf dem Home-Bildschirm. Ein iPhone oder iPad, auf dem Culina schon liegt, behält das alte Symbol, bis du Culina erneut hinzufügst.",
+  "me.appIcon.hint": "Das Symbol, das dieses Gerät für Culina zeigt: im Browser-Tab und bei neuen Installationen. Eine bereits auf dem Home-Bildschirm oder Desktop installierte App behält das ursprüngliche Symbol, bis sie erneut hinzugefügt wird.",
   "me.household": "Haushalt",
   "me.theme": "Darstellung",
   "me.title": "Einstellungen",
