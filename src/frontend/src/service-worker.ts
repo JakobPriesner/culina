@@ -268,7 +268,10 @@ async function clearKitchenBadge() {
 async function updateKitchenBadge() {
   const badge = await editTimerState('__badge');
   const state = badge?.url ? await editTimerState(badge.url) : null;
-  const running = state?.timers.filter((timer) => timer.endsAt > Date.now()).length ?? 0;
+  const running =
+    state?.timers.filter(
+      (timer) => timer.pausedRemaining === undefined && timer.endsAt > Date.now()
+    ).length ?? 0;
   const count = running || badge?.shoppingItems || 0;
   try {
     const api = worker.navigator as BadgeNavigator;

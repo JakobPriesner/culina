@@ -90,3 +90,49 @@ it('rings once across two windows, using the chime and foreground haptic cadence
     stopSecond();
   }
 });
+
+it('persists a pause across reloads and ignores a stale notification while paused', async () => {
+  const kitchen = createTimers(() => 's1');
+  kitchen.start(0, 120, 'Simmer');
+  await kitchen.refresh();
+  const deadline = kitchen.timers[0]!.endsAt;
+  kitchen.pause(0);
+  await kitchen.refresh();
+  const restored = createTimers(() => 's1');
+  restored.load();
+  await restored.refresh();
+  expect(restored.timers[0]!.pausedRemaining).toBeGreaterThan(0);
+  expect(restored.runningCount).toBe(0);
+  expect(
+    await applyTimerAction(
+      { type: 'culina:timer', sessionId: 's1', stepIndex: 0, endsAt: deadline, url: '/' },
+      'next'
+    )
+  ).toBe(false);
+  const seconds = restored.remaining(restored.timers[0]!);
+  restored.resume(0);
+  await restored.refresh();
+  expect(restored.timers[0]!.pausedRemaining).toBeUndefined();
+  expect(restored.remaining(restored.timers[0]!)).toBe(seconds);
+  expect(restored.runningCount).toBe(1);
+});
+
+it('does not sound an alarm when a paused deadline passes', async () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+  const kitchen = createTimers(() => 's1');
+  kitchen.start(0, 30, 'Simmer');
+  await kitchen.refresh();
+  kitchen.pause(0);
+  await kitchen.refresh();
+  vi.setSystemTime(Date.now() + 60_000);
+  const stop = kitchen.tick();
+  try {
+    await kitchen.refresh();
+    expect(kitchen.remaining(kitchen.timers[0]!)).toBe(30);
+    expect(kitchen.isDone(kitchen.timers[0]!)).toBe(false);
+    expect(notifyTimerDone).not.toHaveBeenCalled();
+    expect(playKitchenChime).not.toHaveBeenCalled();
+  } finally {
+    stop();
+  }
+});

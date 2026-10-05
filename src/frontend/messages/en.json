@@ -1441,5 +1441,16 @@
   "kitchen.oled": "OLED black",
   "kitchen.awake": "Screen stays awake",
   "kitchen.canSleep": "Screen may sleep",
-  "kitchen.timer": "Timer"
+  "kitchen.timer": "Timer",
+  "cooking.pip.title": "Kitchen companion",
+  "cooking.pip.open": "Float cooking window",
+  "cooking.pip.close": "Close floating window",
+  "cooking.pip.return": "Back to cooking",
+  "cooking.pip.finish": "Back to finish",
+  "cooking.pip.timers": "Timers",
+  "cooking.pip.navigation": "Cooking steps",
+  "cooking.pip.failed": "The floating window could not open. Keep cooking here and try again.",
+  "cooking.timer.pause": "Pause timer",
+  "cooking.timer.resume": "Resume timer",
+  "cooking.timer.paused": "Paused at {minutes}:{seconds}"
 }

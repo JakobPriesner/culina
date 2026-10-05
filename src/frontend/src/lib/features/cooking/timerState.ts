@@ -4,6 +4,8 @@ export interface KitchenTimer {
   readonly endsAt: number;
   readonly label: string;
   readonly notified?: boolean;
+  /** Seconds held while paused; the old deadline must not ring. */
+  readonly pausedRemaining?: number;
 }
 
 export interface TimerState {
@@ -35,7 +37,9 @@ export function validTimers(value: unknown): KitchenTimer[] {
       Number.isInteger(timer.stepIndex) &&
       timer.stepIndex >= 0 &&
       Number.isFinite(timer.endsAt) &&
-      typeof timer.label === 'string'
+      typeof timer.label === 'string' &&
+      (timer.pausedRemaining === undefined ||
+        (Number.isFinite(timer.pausedRemaining) && timer.pausedRemaining > 0))
   );
 }
 
@@ -93,7 +97,7 @@ export async function applyTimerAction(notice: TimerNotice, action: string): Pro
     const timer = state.timers.find(
       (t) => t.stepIndex === notice.stepIndex && t.endsAt === notice.endsAt
     );
-    if (!timer) return state;
+    if (!timer || timer.pausedRemaining !== undefined) return state;
     changed = true;
     state.timers = state.timers.filter((t) => t !== timer);
     if (action.startsWith('minute-')) {
