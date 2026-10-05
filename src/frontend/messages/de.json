@@ -1441,5 +1441,16 @@
   "kitchen.oled": "OLED-Schwarz",
   "kitchen.awake": "Bildschirm bleibt wach",
   "kitchen.canSleep": "Bildschirm kann ausgehen",
-  "kitchen.timer": "Timer"
+  "kitchen.timer": "Timer",
+  "cooking.pip.title": "Küchenbegleiter",
+  "cooking.pip.open": "Kochfenster schweben lassen",
+  "cooking.pip.close": "Schwebendes Fenster schließen",
+  "cooking.pip.return": "Zurück zum Kochen",
+  "cooking.pip.finish": "Zurück zum Fertigstellen",
+  "cooking.pip.timers": "Timer",
+  "cooking.pip.navigation": "Kochschritte",
+  "cooking.pip.failed": "Das schwebende Fenster konnte nicht geöffnet werden. Koche hier weiter und versuche es erneut.",
+  "cooking.timer.pause": "Timer pausieren",
+  "cooking.timer.resume": "Timer fortsetzen",
+  "cooking.timer.paused": "Pausiert bei {minutes}:{seconds}"
 }

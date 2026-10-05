@@ -166,3 +166,44 @@ describe('when the recipe is deleted', () => {
     expect(cooking.session?.recipeId).toBe('r1');
   });
 });
+
+describe('scaling while another kitchen view advances', () => {
+  it('does not rewind a step when the scale response arrives', async () => {
+    let answer!: (value: Response) => void;
+    let held = false;
+    serverAnswers((request) => {
+      if (request.method === 'PATCH' && !held) {
+        held = true;
+        return new Promise<Response>((resolve) => {
+          answer = resolve;
+        });
+      }
+      return json(session());
+    });
+    await cooking.resume();
+    const scaling = cooking.rescale(6);
+    await vi.waitFor(() => expect(answer).toBeTypeOf('function'));
+    cooking.moveTo('r1', 2);
+    answer(json(session({ servings: 6, currentStepIndex: 0 })));
+    await scaling;
+    expect(cooking.session?.servings).toBe(6);
+    expect(cooking.session?.currentStepIndex).toBe(2);
+  });
+  it('does not resurrect a session ended while scaling', async () => {
+    let answer!: (value: Response) => void;
+    serverAnswers((request) =>
+      request.method === 'PATCH'
+        ? new Promise<Response>((resolve) => {
+            answer = resolve;
+          })
+        : json(session())
+    );
+    await cooking.resume();
+    const scaling = cooking.rescale(6);
+    await vi.waitFor(() => expect(answer).toBeTypeOf('function'));
+    await cooking.end(false);
+    answer(json(session({ servings: 6 })));
+    await scaling;
+    expect(cooking.session).toBeNull();
+  });
+});

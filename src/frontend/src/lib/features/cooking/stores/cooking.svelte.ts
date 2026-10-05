@@ -19,6 +19,7 @@ class CookingStore {
   /** Coalesces the step advances a fast cook produces. */
   #pendingStep: number | null = null;
   #sending = false;
+  #scaleRevision = 0;
 
   get session(): CookSession | null {
     return this.#session;
@@ -117,6 +118,7 @@ class CookingStore {
       return;
     }
 
+    const revision = ++this.#scaleRevision;
     this.#session = { ...session, servings };
 
     const result = await request(() =>
@@ -126,13 +128,13 @@ class CookingStore {
       })
     );
 
-    if (result.ok) {
-      this.#session = result.value;
-    } else {
-      // Put back exactly what was there: an amount that silently failed to save
-      // is worse than one that visibly did not change.
-      this.#session = session;
-    }
+    // Steps can advance in either kitchen view while scaling is in flight.
+    // Adopt only the yield, and only for the latest ask in the same session.
+    if (this.#session?.sessionId !== session.sessionId || revision !== this.#scaleRevision) return;
+    this.#session = {
+      ...this.#session,
+      servings: result.ok ? result.value.servings : session.servings
+    };
   }
 
   /** Finishing and giving up are both "over", but only one means it worked. */
