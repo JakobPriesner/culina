@@ -2,160 +2,223 @@ import { SvelteSet } from 'svelte/reactivity';
 
 import { haptics } from '$shell/haptics';
 import { playKitchenChime, unlockAudio } from './kitchenAudio';
-import { notifyTimerDone, requestTimerNotificationPermission } from './timerNotification';
+import {
+  closeTimerNotification,
+  notifyTimerDone,
+  requestTimerNotificationPermission
+} from './timerNotification';
+import { editTimerState, validTimers, type KitchenTimer, type TimerState } from './timerState';
+export type { KitchenTimer } from './timerState';
 
-/**
- * Kitchen timers.
- *
- * Deliberately not on the server. A timer must keep counting while the app is
- * closed and the phone is in a pocket, which means it has to be a wall-clock
- * deadline stored on the device — not a duration ticked down by a page that may
- * not be running. A cooking session is a fact worth persisting; a timer is
- * local ephemera.
- */
-export interface KitchenTimer {
-  /** Which step it belongs to. */
-  readonly stepIndex: number;
-  /** When it goes off, as an absolute time. */
-  readonly endsAt: number;
-  readonly label: string;
-}
+const storageKey = (id: string) => `culina.timers.${id}`;
 
-const storageKey = (sessionId: string) => `culina.timers.${sessionId}`;
-
-export function createTimers(sessionId: () => string | null) {
+export function createTimers(sessionId: () => string | null, url: () => string = () => '/') {
   let timers = $state<KitchenTimer[]>([]);
   let now = $state(Date.now());
+  let nextStep = $state<number | undefined>();
+  let loadedFor: string | null = null;
+  let revision = 0;
+  let pending = Promise.resolve();
   const alerted = new SvelteSet<string>();
 
-  function checkAlarms() {
-    for (const timer of timers) {
-      if (timer.endsAt <= now) {
-        const key = `${timer.stepIndex}:${timer.endsAt}`;
-        if (!alerted.has(key)) {
-          alerted.add(key);
-          playKitchenChime();
-          haptics.alarm();
-          notifyTimerDone(timer.label);
-        }
-      }
-    }
-  }
-
-  let ticking: ReturnType<typeof setInterval> | undefined;
-
-  /** Seconds left, or zero once it has gone off. Never negative. */
-  const remaining = (timer: KitchenTimer): number =>
-    Math.max(0, Math.round((timer.endsAt - now) / 1000));
-
-  function persist() {
-    const id = sessionId();
-
-    if (!id) {
-      return;
-    }
-
+  function cache(id: string) {
     try {
       localStorage.setItem(storageKey(id), JSON.stringify(timers));
     } catch {
-      // A blocked store costs the timer its persistence, not its tick.
+      /* Optional. */
     }
   }
 
+  function queue(id: string, edit: (state: TimerState) => TimerState, adopt = false) {
+    const version = ++revision;
+    pending = pending.then(async () => {
+      const state = await editTimerState(id, edit);
+      if (adopt && state && loadedFor === id && version === revision) {
+        timers = state.timers;
+        nextStep = state.nextStep;
+        cache(id);
+      }
+    });
+    return pending;
+  }
+
+  async function refresh() {
+    const id = loadedFor;
+    const version = revision;
+    if (!id) return;
+    await pending;
+    const state = await editTimerState(id);
+    if (state?.initialized && loadedFor === id && version === revision) {
+      timers = state.timers;
+      nextStep = state.nextStep;
+      cache(id);
+    }
+  }
+
+  function checkAlarms() {
+    const id = loadedFor;
+    if (!id) return;
+    for (const timer of timers) {
+      const key = `${id}:${timer.stepIndex}:${timer.endsAt}`;
+      if (timer.endsAt > now || timer.notified || alerted.has(key)) continue;
+      alerted.add(key);
+      const href = url();
+      pending = pending.then(async () => {
+        let claimed = false;
+        const state = await editTimerState(id, (stored) => {
+          stored.timers = stored.timers.map((t) => {
+            if (t.stepIndex !== timer.stepIndex || t.endsAt !== timer.endsAt || t.notified)
+              return t;
+            claimed = true;
+            return { ...t, notified: true };
+          });
+          return stored;
+        });
+        if (
+          loadedFor !== id ||
+          !timers.some((t) => t.stepIndex === timer.stepIndex && t.endsAt === timer.endsAt)
+        )
+          return;
+        if (!state || claimed) {
+          playKitchenChime();
+          // OS notification vibration handles hidden windows.
+          if (document.visibilityState === 'visible') haptics.alarm();
+          await notifyTimerDone(timer.label, {
+            type: 'culina:timer',
+            sessionId: id,
+            stepIndex: timer.stepIndex,
+            endsAt: timer.endsAt,
+            url: href
+          });
+        }
+      });
+    }
+  }
+
+  const remaining = (timer: KitchenTimer) => Math.max(0, Math.ceil((timer.endsAt - now) / 1000));
   return {
     get timers() {
       return timers;
     },
-
+    get runningCount() {
+      return timers.filter((t) => t.endsAt > now).length;
+    },
+    get nextStep() {
+      return nextStep;
+    },
     remaining,
-
-    /** True once a timer has gone off and has not been dismissed. */
-    isDone: (timer: KitchenTimer) => remaining(timer) === 0,
-
-    /** Reads back whatever was still running, discarding what has expired. */
+    isDone: (timer: KitchenTimer) => timer.endsAt <= now,
     load() {
       const id = sessionId();
-
-      if (!id) {
-        return;
-      }
-
+      if (id === loadedFor) return;
+      loadedFor = id;
+      revision++;
+      alerted.clear();
+      nextStep = undefined;
+      now = Date.now();
+      timers = [];
+      if (!id) return;
       try {
-        const raw = localStorage.getItem(storageKey(id));
-        const stored = raw ? (JSON.parse(raw) as KitchenTimer[]) : [];
-
-        // A wall-clock deadline is still correct after the app was closed for
-        // an hour; a duration would not have been.
-        timers = stored.filter((timer) => typeof timer.endsAt === 'number');
+        timers = validTimers(JSON.parse(localStorage.getItem(storageKey(id)) ?? '[]'));
       } catch {
-        timers = [];
+        /* Invalid legacy storage is discarded. */
       }
+      const legacy = $state.snapshot(timers);
+      const href = url();
+      void queue(
+        id,
+        (state) => ({ ...state, url: href, timers: state.initialized ? state.timers : legacy }),
+        true
+      );
     },
-
     start(stepIndex: number, seconds: number, label: string) {
+      const id = sessionId();
+      if (
+        !id ||
+        !Number.isInteger(stepIndex) ||
+        stepIndex < 0 ||
+        !Number.isFinite(seconds) ||
+        seconds <= 0
+      )
+        return;
+      if (loadedFor !== id) this.load();
       unlockAudio();
       void requestTimerNotificationPermission();
-
-      timers = [
-        ...timers.filter((timer) => timer.stepIndex !== stepIndex),
-        { stepIndex, endsAt: Date.now() + seconds * 1000, label }
-      ];
-
-      persist();
+      now = Date.now();
+      const timer = { stepIndex, endsAt: now + seconds * 1000, label };
+      timers = [...timers.filter((t) => t.stepIndex !== stepIndex), timer];
+      cache(id);
+      const href = url();
+      void queue(id, (state) => ({
+        ...state,
+        url: href,
+        timers: [...state.timers.filter((t) => t.stepIndex !== stepIndex), timer]
+      })).then(() => closeTimerNotification(id, stepIndex));
     },
-
     dismiss(stepIndex: number) {
-      for (const timer of timers.filter((t) => t.stepIndex === stepIndex)) {
-        alerted.delete(`${timer.stepIndex}:${timer.endsAt}`);
-      }
-      timers = timers.filter((timer) => timer.stepIndex !== stepIndex);
-      persist();
+      const id = loadedFor;
+      if (!id) return;
+      timers = timers.filter((t) => t.stepIndex !== stepIndex);
+      cache(id);
+      void queue(id, (state) => ({
+        ...state,
+        timers: state.timers.filter((t) => t.stepIndex !== stepIndex)
+      })).then(() => closeTimerNotification(id, stepIndex));
     },
-
-    /**
-     * One interval for every timer, rather than one each.
-     *
-     * The clock is also read the moment the app comes back to the front. A
-     * backgrounded tab has its intervals throttled to once a minute or stopped
-     * altogether, so the first thing somebody sees on unlocking their phone
-     * would otherwise be a number that is up to a minute stale — and a kitchen
-     * timer showing the wrong number is worse than one showing none.
-     */
+    consumeNextStep() {
+      const id = loadedFor;
+      const index = nextStep;
+      nextStep = undefined;
+      if (id && index !== undefined)
+        void queue(id, (state) => {
+          if (state.nextStep === index) delete state.nextStep;
+          return state;
+        });
+      return index;
+    },
+    refresh,
     tick(): () => void {
       const read = () => {
         now = Date.now();
         checkAlarms();
       };
-
-      ticking = setInterval(read, 1000);
-
+      const ticking = setInterval(read, 1000);
       const onVisible = () => {
         if (document.visibilityState === 'visible') {
-          read();
+          now = Date.now();
+          void refresh().then(read);
         }
       };
-
+      const onMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'culina:timers-changed' && event.data.sessionId === loadedFor)
+          void refresh().then(read);
+      };
       document.addEventListener('visibilitychange', onVisible);
-
+      navigator.serviceWorker?.addEventListener('message', onMessage);
+      read();
       return () => {
         clearInterval(ticking);
         document.removeEventListener('visibilitychange', onVisible);
+        navigator.serviceWorker?.removeEventListener('message', onMessage);
       };
     },
-
     clear() {
-      const id = sessionId();
-
+      const id = loadedFor;
+      revision++;
       timers = [];
+      nextStep = undefined;
       alerted.clear();
-
       if (id) {
         try {
           localStorage.removeItem(storageKey(id));
         } catch {
-          // Nothing to do.
+          /* Optional. */
         }
+        void queue(id, (state) => ({ ...state, timers: [], nextStep: undefined })).then(() =>
+          closeTimerNotification(id)
+        );
       }
+      loadedFor = null;
     }
   };
 }

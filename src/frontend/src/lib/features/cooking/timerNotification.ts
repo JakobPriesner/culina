@@ -1,57 +1,84 @@
-/**
- * Triggers a native system notification when a kitchen timer has elapsed.
- *
- * Uses the active Service Worker registration when available, which allows
- * notifications with actions on iOS/Android PWA standalone mode.
- */
+import { m } from '$shell/i18n';
+import { alarmCadence, type TimerNotice } from './timerState';
+
 export async function requestTimerNotificationPermission(): Promise<void> {
-  if (
-    typeof window !== 'undefined' &&
-    'Notification' in window &&
-    Notification.permission === 'default'
-  ) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (Notification.permission === 'default') {
     try {
       await Notification.requestPermission();
     } catch {
-      // Ignored
+      /* Optional. */
     }
   }
 }
 
-export function notifyTimerDone(label: string): void {
+export async function notifyTimerDone(label: string, notice: TimerNotice): Promise<void> {
   if (
     typeof window === 'undefined' ||
     !('Notification' in window) ||
     Notification.permission !== 'granted'
-  ) {
+  )
     return;
-  }
-
-  const title = label || 'Timer';
-  const options: NotificationOptions = {
-    body: 'Timer finished!',
+  const title = label || m['kitchen.timer']();
+  const options = {
+    body: m['kitchen.timerFinished'](),
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    tag: `culina-timer-${label}`
+    tag: `culina-timer-${notice.sessionId}-${notice.stepIndex}`,
+    renotify: true,
+    data: notice,
+    vibrate: alarmCadence,
+    silent: false,
+    actions: [
+      { action: 'minute-1', title: m['kitchen.minute1']() },
+      { action: 'minute-2', title: m['kitchen.minute2']() },
+      { action: 'dismiss', title: m['app.dismiss']() },
+      { action: 'next', title: m['cooking.next']() }
+    ]
   };
-
-  if ('serviceWorker' in navigator) {
-    void navigator.serviceWorker.ready
-      .then((reg) => {
-        void reg.showNotification(title, options);
-      })
-      .catch(() => {
-        try {
-          new Notification(title, options);
-        } catch {
-          // Ignored
-        }
-      });
-  } else {
-    try {
-      new Notification(title, options);
-    } catch {
-      // Ignored
+  // Platforms may cap actions (commonly two) or omit them altogether.
+  const limit = (Notification as typeof Notification & { maxActions?: number }).maxActions;
+  if (typeof limit === 'number') options.actions = options.actions.slice(0, limit);
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) {
+      try {
+        await reg.showNotification(title, options);
+      } catch {
+        const fallback = { ...options, actions: [] };
+        await reg.showNotification(title, fallback);
+      }
+      return;
     }
+  } catch {
+    /* Fall back to a window notification. */
+  }
+  try {
+    const fallback = { ...options, actions: [] };
+    const notification = new Notification(title, fallback);
+    notification.onclick = () => {
+      window.focus();
+      window.location.assign(notice.url);
+      notification.close();
+    };
+  } catch {
+    /* Notifications must never break a timer. */
+  }
+}
+
+export async function closeTimerNotification(sessionId: string, stepIndex?: number) {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const notifications = await reg?.getNotifications();
+    for (const notification of notifications ?? []) {
+      const data = notification.data as Partial<TimerNotice> | undefined;
+      if (
+        data?.sessionId === sessionId &&
+        (stepIndex === undefined || data.stepIndex === stepIndex)
+      )
+        notification.close();
+    }
+  } catch {
+    /* Optional. */
   }
 }

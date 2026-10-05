@@ -1431,5 +1431,15 @@
   "auth.join.confirm.body": "Somebody sent you a link to their household. Join only if you know who it was: its members will see your name, and whatever you add while you're in it belongs to their kitchen.",
   "auth.join.confirm.submit": "Join household",
   "me.olla": "Show Olla",
-  "me.olla.hint": "The little pot that keeps empty pages company and cheers when you finish something. Turn it off for plain pages. Kept on this device."
+  "me.olla.hint": "The little pot that keeps empty pages company and cheers when you finish something. Turn it off for plain pages. Kept on this device.",
+  "kitchen.timerFinished": "Timer finished!",
+  "kitchen.minute1": "+1 min",
+  "kitchen.minute2": "+2 min",
+  "kitchen.lighting": "Kitchen display",
+  "kitchen.normal": "Normal",
+  "kitchen.glare": "Glare contrast",
+  "kitchen.oled": "OLED black",
+  "kitchen.awake": "Screen stays awake",
+  "kitchen.canSleep": "Screen may sleep",
+  "kitchen.timer": "Timer"
 }

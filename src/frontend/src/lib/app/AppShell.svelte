@@ -10,6 +10,7 @@
 
   import HouseholdSwitcher from '$features/auth/HouseholdSwitcher.svelte';
   import { session } from '$features/auth/session.svelte';
+  import KitchenRuntime from '$features/cooking/KitchenRuntime.svelte';
   import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
 
@@ -144,6 +145,8 @@
     viewportHeight > 0 && headerHeight + dockHeight + barHeight > viewportHeight / 2
   );
 </script>
+
+<KitchenRuntime />
 
 <svelte:window bind:innerHeight={viewportHeight} onkeydown={shortcut} />
 

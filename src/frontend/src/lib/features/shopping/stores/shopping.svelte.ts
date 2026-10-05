@@ -34,6 +34,10 @@ class ShoppingStore {
   #householdId: string | null = null;
   #error = $state<AppError | null>(null);
 
+  get householdId() {
+    return this.#list ? this.#householdId : null;
+  }
+
   get status() {
     return this.#status;
   }

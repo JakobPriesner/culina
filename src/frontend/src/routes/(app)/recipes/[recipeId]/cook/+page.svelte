@@ -4,15 +4,18 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, ErrorState, IconButton, Sheet, Skeleton } from '$ds';
+  import { Button, ErrorState, IconButton, Select, Sheet, Skeleton } from '$ds';
   import { busy } from '$shell/busy.svelte';
   import { session } from '$features/auth/session.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import StepTimer from '$features/cooking/StepTimer.svelte';
-  import { createTimers } from '$features/cooking/timers.svelte';
-  import { createWakeLock } from '$features/cooking/wakeLock.svelte';
+  import {
+    kitchenTimers as timers,
+    kitchenWakeLock as wakeLock
+  } from '$features/cooking/kitchen.svelte';
+  import { kitchenLighting } from '$features/cooking/lighting.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
@@ -32,9 +35,6 @@
    */
   const recipeId = $derived(page.params.recipeId ?? '');
   const servings = $derived(yieldFrom(page.url, recipes.detail));
-
-  const wakeLock = createWakeLock();
-  const timers = createTimers(() => cooking.session?.sessionId ?? null);
 
   const totalSteps = $derived(recipes.detail?.steps.length ?? 0);
 
@@ -68,15 +68,11 @@
   const advance = () => (onLastStep ? finish(true) : move(currentStep + 1));
 
   onMount(() => {
-    const stopHolding = wakeLock.engage();
-    const stopTicking = timers.tick();
     // Nothing interrupts somebody at a hob — not even an offer. See
     // `$shell/busy`.
     const release = busy.hold();
 
     return () => {
-      stopHolding();
-      stopTicking();
       release();
     };
   });
@@ -110,6 +106,14 @@
       void cooking.start(recipeId, servings, session.activeHouseholdId).then(() => timers.load());
     } else {
       timers.load();
+    }
+  });
+
+  $effect(() => {
+    const index = timers.nextStep;
+    if (index !== undefined && ready && totalSteps > 0) {
+      timers.consumeNextStep();
+      cooking.moveTo(recipeId, Math.min(index, totalSteps - 1));
     }
   });
 
@@ -283,6 +287,25 @@
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
     <div class="cook" style:--controls-height="{controlsHeight}px">
+      <div class="kitchen-display">
+        <label for="kitchen-lighting">{m['kitchen.lighting']()}</label>
+        <Select
+          id="kitchen-lighting"
+          value={kitchenLighting.mode}
+          inline
+          options={[
+            { value: 'normal', label: m['kitchen.normal']() },
+            { value: 'glare', label: m['kitchen.glare']() },
+            { value: 'oled', label: m['kitchen.oled']() }
+          ]}
+          onchange={(value) => kitchenLighting.choose(value)}
+        />
+        <span class="wake-status" class:held={wakeLock.held}>
+          <span aria-hidden="true">{wakeLock.held ? '◉' : '○'}</span>
+          {wakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
+        </span>
+      </div>
+
       <RecipeSurface
         recipe={recipes.detail}
         emphasis="cook"
@@ -416,6 +439,23 @@
 </Sheet>
 
 <style>
+  .kitchen-display {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--layout-gutter-start);
+    background: var(--surface);
+    color: var(--text);
+    font-size: var(--text-sm);
+  }
+  .wake-status {
+    color: var(--text-muted);
+  }
+  .wake-status.held {
+    color: var(--text-success);
+  }
+
   /* What the controls stand over: their own height, the gap they float at and
      as much again, so a step's last line is not flush against them. */
   .cook {

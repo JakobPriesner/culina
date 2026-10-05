@@ -1,0 +1,163 @@
+/* Explicit kitchen overrides; regular themes resume when the session ends. */
+@media screen and (forced-colors: none) {
+  :root[data-theme][data-kitchen-lighting='glare'] {
+    color-scheme: light;
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-sunken: #ffffff;
+    --surface-glass: #ffffff;
+    --surface-nav-glass: #ffffff;
+    --surface-overlay: #ffffff;
+    --surface-overlay-glass: #ffffff;
+    --surface-accent-subtle: #eeeeee;
+    --surface-highlight: #dddddd;
+    --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
+    --surface-hover: #eeeeee;
+    --surface-feature: var(--c-olive-900);
+    --text-on-feature: var(--c-sand-50);
+    --surface-selected: #dddddd;
+
+    --text: #111111;
+    --text-muted: #333333;
+    --text-subtle: #444444;
+    --text-on-accent: var(--c-white);
+    --text-danger: var(--c-rust-600);
+    --text-success: #244a17;
+
+    --border: #555555;
+    --border-strong: #333333;
+    --border-focus: #244a17;
+    --border-accent: var(--c-olive-300);
+
+    --accent: #244a17;
+    --accent-hover: #193810;
+    --accent-active: #193810;
+    --accent-contrast: var(--c-white);
+    --brand-accent: #663600;
+
+    --danger: #851a15;
+    --danger-hover: #851a15;
+    --danger-subtle: var(--c-rust-200);
+    --success: #244a17;
+    --success-subtle: var(--c-sage-200);
+    --warning: #664000;
+    --warning-subtle: var(--c-amber-200);
+
+    --generating-ground: var(--c-sand-100);
+    --generating-1: rgb(255 153 82);
+    --generating-2: rgb(255 92 138);
+    --generating-3: rgb(176 112 255);
+    --generating-4: rgb(84 150 255);
+    --generating-panel: rgb(20 17 14 / 44%);
+    --generating-panel-border: rgb(255 255 255 / 16%);
+    --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
+
+    --control-on-media: rgb(20 17 14 / 62%);
+    --control-on-media-hover: rgb(20 17 14 / 78%);
+    --border-on-media: rgb(255 255 255 / 22%);
+    --text-on-media: var(--c-white);
+
+    --shadow-card: none;
+    --shadow-overlay: none;
+    --shadow-glass: none;
+    --scrim: rgb(31 26 22 / 45%);
+
+    --skeleton-base: var(--c-sand-200);
+    --skeleton-highlight: var(--c-sand-100);
+
+    --mascot-line: var(--c-sand-900);
+    --mascot-body: var(--c-olive-400);
+    --mascot-shine: color-mix(in srgb, var(--c-olive-300) 55%, var(--c-olive-400));
+    --mascot-rim: var(--c-olive-500);
+    --mascot-hat: var(--c-white);
+    --mascot-hat-shade: var(--c-sand-200);
+    --mascot-cheek: var(--c-saffron-400);
+    --mascot-mouth: var(--c-rust-600);
+    --mascot-paper: var(--c-sand-50);
+    --mascot-paper-line: var(--c-sand-300);
+    --mascot-steam: var(--c-sand-400);
+  }
+  :root[data-theme][data-kitchen-lighting='oled'] {
+    color-scheme: dark;
+    --surface: #000000;
+    --surface-raised: #000000;
+    --surface-sunken: #000000;
+    --surface-glass: #000000;
+    --surface-nav-glass: #000000;
+    --surface-overlay: #000000;
+    --surface-overlay-glass: #000000;
+    --surface-accent-subtle: #151e12;
+    --surface-highlight: #263323;
+    --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
+    --surface-hover: #171717;
+    --surface-feature: var(--c-olive-900);
+    --text-on-feature: var(--c-sand-50);
+    --surface-selected: #242424;
+
+    --text: #dddddd;
+    --text-muted: #b5b5b5;
+    --text-subtle: #a3a3a3;
+    --text-on-accent: var(--c-sand-950);
+    --text-danger: #f7aba7;
+    --text-success: #a9c9a1;
+
+    --border: #606060;
+    --border-strong: #888888;
+    --border-focus: var(--c-olive-300);
+    /* Darker rather than lighter here: the capsule it edges is olive-800, and a
+     pale hairline around a dark fill is a cut-out, not an edge. */
+    --border-accent: var(--c-olive-600);
+
+    /* Lighter than the light-mode accent: the same hue on a dark ground reads as
+     muddy, and contrast has to be earned in both directions. */
+    --accent: var(--c-olive-300);
+    --accent-hover: var(--c-olive-100);
+    --accent-active: var(--c-olive-100);
+    --accent-contrast: var(--c-sand-950);
+    --brand-accent: var(--c-saffron-400);
+
+    --danger: #f08a85;
+    --danger-hover: #f7aba7;
+    --danger-subtle: #5c1f1f;
+    --success: #a9c9a1;
+    --success-subtle: #2b3a27;
+    --warning: #e3bd6c;
+    --warning-subtle: #4a3a18;
+
+    /* The same four lights as on paper: they are bright enough to glow on
+     charcoal and soft enough, once blurred, not to shout on sand. */
+    --generating-ground: #000000;
+    --generating-1: rgb(255 153 82);
+    --generating-2: rgb(255 92 138);
+    --generating-3: rgb(176 112 255);
+    --generating-4: rgb(84 150 255);
+    --generating-panel: rgb(20 17 14 / 52%);
+    --generating-panel-border: rgb(255 255 255 / 16%);
+    --generating-panel-shadow: 0 0.5rem 2rem rgb(0 0 0 / 24%);
+
+    --control-on-media: rgb(20 17 14 / 62%);
+    --control-on-media-hover: rgb(20 17 14 / 78%);
+    --border-on-media: rgb(255 255 255 / 22%);
+    --text-on-media: var(--c-white);
+
+    --shadow-card: none;
+    --shadow-overlay: none;
+    --shadow-glass: none;
+    --scrim: rgb(0 0 0 / 65%);
+
+    --skeleton-base: var(--c-sand-800);
+    --skeleton-highlight: var(--c-sand-700);
+
+    --mascot-line: var(--c-sand-900);
+    --mascot-body: var(--c-olive-400);
+    --mascot-shine: color-mix(in srgb, var(--c-olive-300) 55%, var(--c-olive-400));
+    --mascot-rim: var(--c-olive-500);
+    --mascot-hat: var(--c-white);
+    --mascot-hat-shade: var(--c-sand-200);
+    --mascot-cheek: var(--c-saffron-400);
+    --mascot-mouth: var(--c-rust-600);
+    --mascot-paper: var(--c-sand-50);
+    --mascot-paper-line: var(--c-sand-300);
+    --mascot-steam: var(--c-sand-500);
+  }
+}

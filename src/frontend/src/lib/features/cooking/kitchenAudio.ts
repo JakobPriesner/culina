@@ -31,7 +31,7 @@ export function unlockAudio(): void {
   try {
     const ctx = getContext();
     if (ctx && ctx.state === 'suspended') {
-      void ctx.resume();
+      void ctx.resume().catch(() => {});
     }
   } catch {
     // Ignored.
@@ -46,7 +46,7 @@ export function playKitchenChime(): void {
       return;
     }
     if (ctx.state === 'suspended') {
-      void ctx.resume();
+      void ctx.resume().catch(() => {});
     }
 
     const now = ctx.currentTime;
