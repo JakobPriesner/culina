@@ -207,8 +207,10 @@ jobs:
             echo '```bash'
             echo "cosign verify ${REGISTRY}/${IMAGE}:${GITHUB_REF_NAME} \\"
             # The signing identity keeps the repository's own case, unlike the
-            # image reference above.
-            echo "  --certificate-identity-regexp '^https://github.com/${GITHUB_REPOSITORY}/' \\"
+            # image reference above. It names this workflow at this tag, exactly:
+            # anything looser also accepts the signature ci.yml puts on every
+            # `edge` image built from main.
+            echo "  --certificate-identity 'https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}' \\"
             echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
             echo '```'
           } > notes.md
