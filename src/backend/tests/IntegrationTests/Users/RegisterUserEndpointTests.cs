@@ -1,5 +1,7 @@
 using System.Net;
+using Application.Abstractions.Settings;
 using IntegrationTests.Fixtures;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Users;
 
@@ -134,7 +136,70 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Register_ShouldMakeExactlyOneAdministrator_WhenFirstRegistrationsRace()
+    {
+        // Arrange
+        await postgres.ResetAsync(Token);
+
+        // Act
+        var responses = await RegisterAllAtOnceAsync(8);
+
+        // Assert
+        // Each of these saw an empty instance when it arrived. Only one may
+        // act on that; the rest are judged by the registration policy, which
+        // is closed by default.
+        var created = Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
+        Assert.True(created.Json!.Value.GetProperty("isAdmin").GetBoolean());
+        Assert.All(
+            responses.Where(response => response != created),
+            refused => Assert.Equal("users.registration_closed", refused.ProblemCode));
+
+        Assert.Equal(1L, await postgres.QuerySingleAsync<long>("select count(*) from users where is_admin;", Token));
+        Assert.Equal(1L, await postgres.QuerySingleAsync<long>("select count(*) from households;", Token));
+    }
+
+    [Fact]
+    public async Task Register_ShouldStopAtTheUserLimit_WhenRegistrationsRaceForTheLastPlace()
+    {
+        // Arrange
+        await postgres.ResetAsync(Token);
+        using var first = postgres.Api.NewApiClient();
+        await first.PostAsync("/api/v1/users", Body("first@example.com"), Token);
+
+        var settings = postgres.Api.Services.GetRequiredService<RegistrationSettings>();
+        settings.OpenRegistration = true;
+        settings.RequireInvitation = false;
+        settings.MaxUsers = 2;
+
+        // Act
+        var responses = await RegisterAllAtOnceAsync(8);
+
+        // Assert
+        Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
+        Assert.Equal(2L, await postgres.QuerySingleAsync<long>("select count(*) from users;", Token));
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    /// <summary>
+    /// Sends one registration per client, all released together, so they
+    /// arrive while each of the others is still in flight.
+    /// </summary>
+    private async Task<IReadOnlyList<ApiResponse>> RegisterAllAtOnceAsync(int count)
+    {
+        var clients = Enumerable.Range(0, count).Select(_ => postgres.Api.NewApiClient()).ToList();
+
+        try
+        {
+            return await Task.WhenAll(clients.Select((client, index) =>
+                client.PostAsync("/api/v1/users", Body($"racer{index}@example.com"), Token)));
+        }
+        finally
+        {
+            clients.ForEach(client => client.Dispose());
+        }
+    }
 
     private static object Body(string email) => new
     {

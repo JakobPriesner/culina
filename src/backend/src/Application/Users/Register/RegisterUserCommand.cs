@@ -39,13 +39,15 @@ internal sealed class RegisterUserCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Users.Register");
 
+        // A first look, so a refusal the policy can make now costs no Argon2
+        // run. It decides nothing: the count is read again under the
+        // registration lock, and that reading is the one that counts.
         var existing = await users.CountAsync(cancellationToken).ConfigureAwait(false);
-        var isFirstAccount = existing == 0;
 
-        var accepted = MayRegister(isFirstAccount, existing).Bind(() => Validate(command));
+        var accepted = MayRegister(existing).Bind(() => Validate(command));
 
         var result = await accepted.Match(
-            account => StoreAsync(account, isFirstAccount, command, cancellationToken),
+            account => StoreAsync(account, command, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
@@ -56,9 +58,9 @@ internal sealed class RegisterUserCommandHandler(
     /// in, and that account becomes the administrator who can then open
     /// registration to everyone else.
     /// </summary>
-    private Result MayRegister(bool isFirstAccount, int existingUsers)
+    private Result MayRegister(int existingUsers)
     {
-        if (isFirstAccount)
+        if (existingUsers == 0)
         {
             return Result.Success();
         }
@@ -92,10 +94,11 @@ internal sealed class RegisterUserCommandHandler(
 
     private async Task<Result<Response>> StoreAsync(
         NewAccount account,
-        bool isFirstAccount,
         RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
+        // Hashed before the transaction, so the registration lock is held for
+        // a few statements rather than for an Argon2 run.
         var user = User.Register(
             account.Email,
             account.DisplayName,
@@ -108,13 +111,29 @@ internal sealed class RegisterUserCommandHandler(
         return await unitOfWork.InTransactionAsync(
             async token =>
             {
-                var added = await users.AddAsync(user, isFirstAccount, token).ConfigureAwait(false);
+                // Counted under the lock: otherwise every registration that
+                // arrives on an empty instance sees it empty and becomes an
+                // administrator, and a race for the last place fills several.
+                var existing = await users.CountForRegistrationAsync(token).ConfigureAwait(false);
 
-                return await added.Match(
-                    () => PlaceAsync(user, isFirstAccount, command, token),
+                return await MayRegister(existing).Match(
+                    () => AddAsync(user, isFirstAccount: existing == 0, command, token),
                     error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Result<Response>> AddAsync(
+        User user,
+        bool isFirstAccount,
+        RegisterUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        var added = await users.AddAsync(user, isFirstAccount, cancellationToken).ConfigureAwait(false);
+
+        return await added.Match(
+            () => PlaceAsync(user, isFirstAccount, command, cancellationToken),
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
     /// <summary>

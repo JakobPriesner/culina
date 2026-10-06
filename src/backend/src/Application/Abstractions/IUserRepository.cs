@@ -20,6 +20,17 @@ public interface IUserRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<int> CountAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// How many accounts exist, read under a lock that holds every other
+    /// registration back until the surrounding transaction ends.
+    /// </summary>
+    /// <remarks>
+    /// Only meaningful inside a unit of work: outside one the lock is released
+    /// as soon as the statement ends, and decides nothing.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancels the wait and the query.</param>
+    Task<int> CountForRegistrationAsync(CancellationToken cancellationToken);
+
     /// <summary>Stores a new account.</summary>
     /// <param name="user">The account to store.</param>
     /// <param name="isAdmin">Whether this account administers the instance.</param>
