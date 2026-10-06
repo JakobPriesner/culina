@@ -208,10 +208,113 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // The account is written before the code is checked, so a refusal has
-        // to take it back: otherwise anyone could sign in to an invite-only
-        // instance, and the address would be spent for a later honest attempt.
+        // A refusal leaves nothing behind: otherwise anyone could sign in to
+        // an invite-only instance, and the address would be spent for a later
+        // honest attempt.
         Assert.Equal("auth.invalid_credentials", signedIn.ProblemCode);
+        Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-real-code")]
+    public async Task Registration_ShouldNotSayAnAddressIsTaken_ToSomebodyWithoutAWorkingInvitation(string? code)
+    {
+        // Arrange
+        using var admin = await AdminAsync();
+        await admin.PutAsync(
+            "/api/v1/settings/registration",
+            new { openRegistration = true, requireInvitation = true, maxUsers = 100 },
+            Token);
+
+        using var stranger = postgres.Api.NewApiClient();
+
+        // Act
+        var probed = await stranger.PostAsync(
+            "/api/v1/users",
+            new { email = "ada@example.com", displayName = "Mallory", password = Password, invitationCode = code },
+            Token);
+
+        // Assert
+        // The invitation is settled before the address is: on an invite-only
+        // instance, registration must not be a way to learn who has an account.
+        Assert.Equal("households.invitation_invalid", probed.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Registration_ShouldNotSayAnAddressIsTaken_WhenRegistrationIsClosed()
+    {
+        // Arrange
+        using var admin = await AdminAsync();
+        using var stranger = postgres.Api.NewApiClient();
+
+        // Act
+        var probed = await stranger.PostAsync(
+            "/api/v1/users",
+            new { email = "ada@example.com", displayName = "Mallory", password = Password },
+            Token);
+
+        // Assert
+        Assert.Equal("users.registration_closed", probed.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Registration_ShouldSayAnAddressIsTaken_OnceThePolicyAdmitsTheCaller()
+    {
+        // Arrange
+        using var admin = await AdminAsync();
+        await admin.PutAsync(
+            "/api/v1/settings/registration",
+            new { openRegistration = true, requireInvitation = false, maxUsers = 100 },
+            Token);
+
+        using var newcomer = postgres.Api.NewApiClient();
+
+        // Act
+        var taken = await newcomer.PostAsync(
+            "/api/v1/users",
+            new { email = "ada@example.com", displayName = "Ada", password = Password },
+            Token);
+
+        // Assert
+        // Accepted on purpose: with registration open to everyone and no email
+        // to send a "you already have an account" message, saying so is the
+        // only way the person in front of the form finds out.
+        Assert.Equal(HttpStatusCode.Conflict, taken.StatusCode);
+        Assert.Equal("users.email_already_used", taken.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Registration_ShouldLeaveTheInvitationUnused_WhenTheAddressTurnsOutToBeTaken()
+    {
+        // Arrange
+        using var admin = await AdminAsync();
+        await admin.PutAsync(
+            "/api/v1/settings/registration",
+            new { openRegistration = true, requireInvitation = true, maxUsers = 100 },
+            Token);
+
+        var householdId = (await admin.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        var code = (await admin.PostAsync($"/api/v1/households/{householdId}/invitations", new { }, Token))
+            .Json!.Value.GetProperty("code").GetString();
+
+        using var newcomer = postgres.Api.NewApiClient();
+
+        // Act
+        var taken = await newcomer.PostAsync(
+            "/api/v1/users",
+            new { email = "ada@example.com", displayName = "Grace", password = Password, invitationCode = code },
+            Token);
+        var retried = await newcomer.PostAsync(
+            "/api/v1/users",
+            new { email = "grace@example.com", displayName = "Grace", password = Password, invitationCode = code },
+            Token);
+
+        // Assert
+        // Somebody holding a working invitation is somebody the instance would
+        // admit, so they are told; the code is not spent on the refusal.
+        Assert.Equal("users.email_already_used", taken.ProblemCode);
         Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
     }
 
