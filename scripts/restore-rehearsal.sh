@@ -32,6 +32,7 @@ export CULINA_IMAGE="$IMAGE"
 export CULINA_PORT="$PORT"
 export ForwardedHeaders__KnownNetworks="172.16.0.0/12"
 export Database__Password="rehearsal_password"
+export POSTGRES_SUPERUSER_PASSWORD="rehearsal_superuser_password"
 
 compose() {
   docker compose -p "$PROJECT" -f "$ROOT/compose.yaml" -f "$ROOT/compose.prod.yaml" "$@"

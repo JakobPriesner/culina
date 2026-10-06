@@ -135,7 +135,11 @@ image: ## Build the production container image
 	docker build -t culina:local .
 
 image-run: ## Run the production image against the dev database
-	docker compose -f compose.yaml -f compose.prod.yaml up --build
+	@# compose.prod.yaml requires both passwords rather than assume the
+	@# development ones. The dev database was created with those, so say so.
+	Database__Password=$${Database__Password:-culina_dev_password} \
+		POSTGRES_SUPERUSER_PASSWORD=$${POSTGRES_SUPERUSER_PASSWORD:-postgres} \
+		docker compose -f compose.yaml -f compose.prod.yaml up --build
 
 clean: ## Remove build output from both halves
 	cd $(BACKEND) && dotnet clean

@@ -22,6 +22,12 @@ services:
       # entered on the setup screen. Required here, so a production database
       # never starts with the development password.
       CULINA_APP_PASSWORD: ${Database__Password:?set Database__Password in .env}
+      # The superuser's, required for the same reason. The app never uses it,
+      # but the setup screen and Settings → Server accept any role and
+      # password — and postgres/postgres would be a superuser login anyone who
+      # reaches either could type in, which is code execution in this
+      # container. Read only when the volume is first initialised.
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD in .env to a long random password}
 
   app:
     image: ${CULINA_IMAGE:-ghcr.io/jakobpriesner/culina:latest}
@@ -51,7 +57,7 @@ services:
       #
       # Secure cookies default to on: the proxy in front of this terminates
       # TLS, so the cookie must be marked Secure even though this process
-      # speaks plain HTTP to it.
+      # speaks plain HTTP to it. Leave this unset.
       Cookies__Secure: ${Cookies__Secure:-}
       # One of these is required, and required to be specific: trusting every
       # proxy lets any client forge its own address, which makes per-IP rate

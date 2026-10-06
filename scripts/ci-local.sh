@@ -74,6 +74,7 @@ compose() {
   CULINA_IMAGE="culina:ci-local" \
     CULINA_PORT="$PORT" \
     Database__Password="culina_ci_password" \
+    POSTGRES_SUPERUSER_PASSWORD="culina_ci_superuser_password" \
     RateLimits__LoginPerIpPerMinute=1000 \
     RateLimits__RegisterPerIpPerHour=1000 \
     RateLimits__RequestsPerSessionPerMinute=20000 \
