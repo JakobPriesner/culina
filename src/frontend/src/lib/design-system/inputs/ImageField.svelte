@@ -74,6 +74,8 @@
     generatingLabel?: string;
     /** Optional decoration shown only during generation, beside the status. */
     generatingArt?: Snippet;
+    /** Whether the decorative generation background may move. */
+    animateGeneration?: boolean;
     /**
      * One more thing that can be done to the picture, from the caller.
      *
@@ -108,6 +110,7 @@
     generating = false,
     generatingLabel,
     generatingArt,
+    animateGeneration = true,
     extraAction,
     failure = null,
     onpick,
@@ -275,7 +278,11 @@
            runs round its edge. Nothing in it fills up or reaches an end: the
            provider reports elapsed time, not percentage complete, and the
            interface must not invent one. -->
-      <div class="generating-overlay" out:fade={{ duration: reducedMotion.current ? 0 : 260 }}>
+      <div
+        class="generating-overlay"
+        class:paused={!animateGeneration}
+        out:fade={{ duration: reducedMotion.current ? 0 : 260 }}
+      >
         <div class="drawing" aria-hidden="true">
           <span class="wash wash-one"></span>
           <span class="wash wash-two"></span>
@@ -287,8 +294,15 @@
 
         {#if generatingLabel}
           <div class="caption">
-            {@render generatingArt?.()}
-            <GenerationStatus label={generatingLabel} tone="on-media" align="center" />
+            <div class="art">
+              {@render generatingArt?.()}
+            </div>
+            <GenerationStatus
+              label={generatingLabel}
+              tone="on-media"
+              align="center"
+              indicator={!generatingArt}
+            />
           </div>
         {/if}
       </div>
@@ -374,6 +388,7 @@
   .frame {
     position: relative;
     width: min(30rem, 100%);
+    container-type: inline-size;
   }
 
   .frame.filled {
@@ -531,6 +546,10 @@
     will-change: transform;
   }
 
+  .paused .wash {
+    animation-play-state: paused;
+  }
+
   .wash-one {
     top: -30%;
     left: -20%;
@@ -595,6 +614,25 @@
     background: var(--generating-panel);
     box-shadow: var(--generating-panel-shadow);
     backdrop-filter: blur(10px);
+  }
+
+  .art {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    pointer-events: auto;
+  }
+  .art:empty {
+    display: none;
+  }
+  .art :global(.olli) {
+    width: clamp(4rem, 33cqw, 9rem);
+    height: auto;
+  }
+  .art :global(.icon-button) {
+    color: var(--text-on-media);
+    background: var(--generating-panel);
+    border-color: var(--generating-panel-border);
   }
 
   @keyframes float-one {

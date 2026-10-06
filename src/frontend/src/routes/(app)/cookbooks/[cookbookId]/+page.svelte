@@ -19,7 +19,6 @@
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
-  import { olliSetting } from '$shell/olli/setting.svelte';
   import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -532,7 +531,7 @@
       <EmptyState
         title={m['cookbooks.detail.empty.title']()}
         body={automatic ? m['cookbooks.detail.noMatch.body']() : m['cookbooks.detail.empty.body']()}
-        art={olliSetting.shown && !automatic ? peeking : undefined}
+        art={!automatic ? peeking : undefined}
       >
         {#snippet action()}
           {#if automatic}

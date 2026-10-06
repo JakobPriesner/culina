@@ -95,28 +95,18 @@
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     'Noto Sans', sans-serif;
 
-  /* Motion. Short, and only where it explains something. */
+  /* Motion roles: feedback, content, entering a surface, leaving a surface.
+     A dismissal is quicker than an entrance; neither holds up an action. */
   --duration-fast: 120ms;
   --duration-base: 200ms;
   --duration-slow: 320ms;
+  --duration-enter: 280ms;
+  --duration-exit: 180ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spatial: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
 
   --z-sticky: 10;
   --z-overlay: 100;
   --z-toast: 200;
-}
-
-/*
- * The angle the assistant's lights have turned to.
- *
- * Registered so it can be animated: an unregistered custom property jumps from
- * one value to the next, and a conic gradient that jumps is a strobe. Shared by
- * every generation surface so the glow round a draft and the orb beside its
- * label turn as one.
- */
-@property --generating-turn {
-  syntax: '<angle>';
-  inherits: true;
-  initial-value: 0deg;
 }

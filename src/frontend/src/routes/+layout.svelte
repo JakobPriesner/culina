@@ -22,21 +22,32 @@
   }
 
   let { children }: Props = $props();
+  let activeTransition: ViewTransition | undefined;
 
   onNavigate((navigation) => {
+    // Filters and serving counts update in place. Only a different screen
+    // needs a transition, and a second navigation can interrupt the first.
+    activeTransition?.skipTransition();
     if (
       typeof document === 'undefined' ||
       !('startViewTransition' in document) ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      navigation.from?.url.pathname === navigation.to?.url.pathname
     ) {
       return;
     }
 
     return new Promise((resolve) => {
-      document.startViewTransition(async () => {
+      try {
+        activeTransition = document.startViewTransition(async () => {
+          resolve();
+          await navigation.complete;
+        });
+        // Interrupted snapshots are expected, and never block navigation.
+        void activeTransition.finished.catch(() => undefined);
+      } catch {
         resolve();
-        await navigation.complete;
-      });
+      }
     });
   });
 

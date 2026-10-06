@@ -50,9 +50,9 @@
 
   <SettingsRow label={m['me.olli']()} description={m['me.olli.hint']()}>
     <Switch
-      checked={olliSetting.shown}
+      checked={olliSetting.animated}
       label={m['me.olli']()}
-      onchange={(checked) => olliSetting.show(checked)}
+      onchange={(checked) => olliSetting.animate(checked)}
     />
   </SettingsRow>
   {#if importPush.supported}

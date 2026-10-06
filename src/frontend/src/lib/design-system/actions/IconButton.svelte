@@ -70,7 +70,13 @@
     cursor: pointer;
     transition:
       background-color var(--duration-fast) var(--ease-out),
-      color var(--duration-fast) var(--ease-out);
+      color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .icon-button:active:not(:disabled) {
+    transform: scale(0.94);
+    background: var(--surface-selected);
   }
 
   .icon-button:hover:not(:disabled) {

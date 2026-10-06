@@ -258,10 +258,64 @@
     }
   }
 
-  /* Both shapes arrive from where they will be, so the movement explains the
-     relationship rather than decorating it. */
-  .dialog[open] .panel {
-    animation: rise var(--duration-base) var(--ease-spatial);
+  /* Keep native focus/closing semantics. Supporting browsers keep the surface
+     in the top layer just long enough to paint its exit, without JS timers. */
+  @supports (overlay: auto) and (transition-behavior: allow-discrete) {
+    .dialog {
+      --dialog-travel: var(--space-2);
+      --dialog-scale: 0.985;
+      opacity: 0;
+      transform: translateY(var(--dialog-travel)) scale(var(--dialog-scale));
+      transition:
+        opacity var(--duration-exit) var(--ease-in),
+        transform var(--duration-exit) var(--ease-in),
+        display var(--duration-exit) allow-discrete,
+        overlay var(--duration-exit) allow-discrete;
+    }
+
+    .dialog[open] {
+      opacity: 1;
+      transform: none;
+      transition-duration: var(--duration-enter);
+      transition-timing-function: var(--ease-spatial);
+    }
+
+    .dialog::backdrop {
+      opacity: 0;
+      transition:
+        opacity var(--duration-exit) var(--ease-out),
+        display var(--duration-exit) allow-discrete,
+        overlay var(--duration-exit) allow-discrete;
+    }
+
+    .dialog[open]::backdrop {
+      opacity: 1;
+      transition-duration: var(--duration-enter);
+    }
+
+    @starting-style {
+      .dialog[open] {
+        opacity: 0;
+        transform: translateY(var(--dialog-travel)) scale(var(--dialog-scale));
+      }
+
+      .dialog[open]::backdrop {
+        opacity: 0;
+      }
+    }
+
+    @media (width < 48rem) {
+      .sheet {
+        --dialog-travel: var(--space-8);
+        --dialog-scale: 1;
+      }
+    }
+  }
+
+  @supports not (overlay: auto) {
+    .dialog[open] .panel {
+      animation: rise var(--duration-enter) var(--ease-spatial);
+    }
   }
 
   @keyframes rise {
@@ -272,6 +326,12 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .dialog,
+    .dialog::backdrop {
+      transition: none;
+      transform: none;
+    }
+
     .dialog[open] .panel {
       animation: none;
     }

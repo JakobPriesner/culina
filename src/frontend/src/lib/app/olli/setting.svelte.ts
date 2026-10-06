@@ -1,30 +1,27 @@
 import { readDevice, writeDevice } from '../deviceStorage';
 
-const storageKey = 'culina.olli';
+const storageKey = 'culina.olli.motion';
 
-/**
- * Whether this device shows Olli at all.
- *
- * A mascot is charming until it isn't, and the people who tire of one should
- * not have to look at it again: Mailchimp added a way to turn Freddie off for
- * exactly that reason. Kept on the device, like the app icon — a calm laptop
- * and a cheerful phone in the same kitchen are both reasonable.
- */
+/** Olli stays visible; only motion is a device preference. */
+export function readOlliMotion(): boolean {
+  const choice = readDevice(storageKey);
+  if (choice !== null) return choice !== 'off';
+  // Respect an older request for a quiet interface without hiding Olli.
+  return (readDevice('culina.olli') ?? readDevice('culina.olla')) !== 'hidden';
+}
+
 class OlliSetting {
-  #shown = $state((readDevice(storageKey) ?? readDevice('culina.olla')) !== 'hidden');
-
-  get shown(): boolean {
-    return this.#shown;
+  #animated = $state(readOlliMotion());
+  get animated(): boolean {
+    return this.#animated;
   }
-
-  show(shown: boolean): void {
-    this.#shown = shown;
-    writeDevice(storageKey, shown ? 'shown' : 'hidden');
+  animate(animated: boolean): void {
+    this.#animated = animated;
+    writeDevice(storageKey, animated ? 'on' : 'off');
   }
-
   /** For tests: forget the choice. */
   reset(): void {
-    this.#shown = true;
+    this.#animated = true;
   }
 }
 

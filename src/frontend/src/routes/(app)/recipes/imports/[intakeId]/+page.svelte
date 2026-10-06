@@ -1,7 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { prefersReducedMotion } from 'svelte/motion';
-  import { olliSetting } from '$shell/olli/setting.svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { Button } from '$ds';
@@ -41,7 +39,6 @@
   const step = $derived(
     job?.stage === 'queued' ? -1 : job?.stage === 'saving' ? 2 : stages.indexOf(job?.stage ?? '')
   );
-  let paused = $state(false);
   let loaded = $state(false);
   let retrying = $state(false);
   let retryId: string | undefined;
@@ -71,7 +68,9 @@
   <a class="back" href="/recipes">← {m['intake.back']()}</a>
   {#if job}
     <section class="status">
-      <Olli {pose} size="lg" still={paused} working={working && !paused} />
+      <div class="mascot">
+        <Olli {pose} size="lg" {working} />
+      </div>
       <div class="status-copy">
         <p class="eyebrow">{m['intake.activity']()}</p>
         <h1>
@@ -96,11 +95,6 @@
             {/each}
           </ol>
           <div class="actions">
-            {#if olliSetting.shown && !prefersReducedMotion.current}
-              <Button variant="ghost" onclick={() => (paused = !paused)}
-                >{paused ? m['intake.resume']() : m['intake.pause']()}</Button
-              >
-            {/if}
             {#if importPush.supported && !importPush.enabled}
               <Button onclick={() => void importPush.enable()} loading={importPush.busy}
                 >{m['intake.notify']()}</Button
@@ -177,9 +171,24 @@
   }
   .status {
     display: flex;
-    gap: var(--space-6);
+    gap: var(--space-8);
     align-items: center;
     padding-block: var(--space-6);
+  }
+  .mascot {
+    flex: none;
+    display: grid;
+    place-items: center;
+    padding: var(--space-3);
+    border-radius: var(--radius-full);
+    background: radial-gradient(ellipse, var(--surface-accent-subtle), transparent 72%);
+  }
+  .mascot:empty {
+    display: none;
+  }
+  .mascot :global(.olli) {
+    width: 13rem;
+    height: 13rem;
   }
   .status-copy {
     flex: 1;
@@ -234,7 +243,7 @@
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
+    gap: var(--space-2) var(--space-4);
     font-size: var(--text-xs);
     margin-block: var(--space-4);
     color: var(--text-muted);
@@ -245,19 +254,31 @@
     gap: var(--space-1);
   }
   .stages span {
-    width: 1.25rem;
-    height: 1.25rem;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
     border: 1px solid var(--border);
     display: grid;
     place-items: center;
     border-radius: 50%;
+    transition:
+      background-color var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out);
   }
   .stages [aria-current] {
     color: var(--text);
     font-weight: var(--weight-medium);
   }
   .complete span {
-    background: var(--surface-sunken);
+    background: var(--surface-accent-subtle);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .stages [aria-current] span {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
   }
   .comparison {
     display: grid;
@@ -308,8 +329,16 @@
       align-items: flex-start;
       gap: var(--space-2);
     }
-    .status :global(svg) {
+    .mascot {
       align-self: center;
+    }
+    .mascot :global(.olli) {
+      width: 11rem;
+      height: 11rem;
+    }
+    .stages {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .comparison {
       grid-template-columns: 1fr;

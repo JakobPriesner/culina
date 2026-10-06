@@ -121,7 +121,7 @@
       {/if}
 
       {#if refused}
-        <NotAllowed item={refused.label()} />
+        <NotAllowed />
       {:else}
         {@render children()}
       {/if}

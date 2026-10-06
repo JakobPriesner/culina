@@ -2,6 +2,9 @@
   import FourStates from '$ds/__fixtures__/FourStates.svelte';
   import Overlays from '$ds/__fixtures__/Overlays.svelte';
   import OlliGallery from './OlliGallery.svelte';
+  import DraftProgress from '$features/assistance/DraftProgress.svelte';
+  import Olli from '$shell/olli/Olli.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import {
     Button,
     type ButtonVariant,
@@ -225,9 +228,15 @@
         dropLabel="Drop the photo here"
         generating={drawing}
         generatingLabel="Drawing…"
+        generatingArt={drawingOlli}
+        animateGeneration={olliSetting.animated}
         onpick={() => {}}
         onremove={() => {}}
       />
+
+      {#snippet drawingOlli()}
+        <Olli pose="drawing" size="md" working={drawing} />
+      {/snippet}
 
       <Checkbox bind:checked={drawing} label="Keep drawing" />
 
@@ -249,6 +258,15 @@
   <section>
     <h2>Olli</h2>
     <OlliGallery />
+  </section>
+
+  <section id="ai-motion">
+    <h2>AI recipe work</h2>
+    <div class="generated">
+      <GenerationAura />
+      <DraftProgress label="Refining your recipe…" arriving={true} />
+      <p>A clear work scene, with readable status and optional motion.</p>
+    </div>
   </section>
 
   <section>

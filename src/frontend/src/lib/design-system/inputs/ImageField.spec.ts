@@ -231,4 +231,15 @@ describe('while an image is being generated', () => {
     expect(screen.getByRole('button', { name: 'Replace the photo' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remove the photo' })).toBeDisabled();
   });
+
+  it('keeps generation readable with decorative motion disabled', () => {
+    const { container } = render({
+      generating: true,
+      generatingLabel: 'Creating image… 15s',
+      animateGeneration: false
+    });
+    expect(container.querySelector('.generating-overlay')).toHaveClass('paused');
+    expect(screen.getByRole('status')).toHaveTextContent('Creating image… 15s');
+    expect(screen.queryByRole('button', { name: /animation/i })).not.toBeInTheDocument();
+  });
 });

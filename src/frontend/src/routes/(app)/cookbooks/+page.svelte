@@ -7,7 +7,6 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
-  import { olliSetting } from '$shell/olli/setting.svelte';
   import LibraryActions from '$shell/LibraryActions.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
   import Page from '$shell/Page.svelte';
@@ -95,7 +94,7 @@
     <EmptyState
       title={m['cookbooks.empty.title']()}
       body={m['cookbooks.empty.body']()}
-      art={olliSetting.shown ? peeking : undefined}
+      art={peeking}
     >
       {#snippet action()}
         <Button variant="primary" onclick={() => (making = true)}>

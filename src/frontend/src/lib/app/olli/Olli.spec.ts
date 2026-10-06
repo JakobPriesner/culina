@@ -1,11 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
-import { createRawSnippet } from 'svelte';
 import { beforeEach, describe, expect, it } from 'vitest';
-
 import Olli from './Olli.svelte';
-import { olliSetting } from './setting.svelte';
-
-const fallback = createRawSnippet(() => ({ render: () => '<p>The plain version</p>' }));
+import { olliSetting, readOlliMotion } from './setting.svelte';
 
 beforeEach(() => {
   localStorage.clear();
@@ -13,39 +9,33 @@ beforeEach(() => {
 });
 
 describe('Olli', () => {
-  it('is decoration: the page says it in words, so a screen reader hears nothing', () => {
+  it('is decoration; the page says it in words', () => {
     const { container } = render(Olli, { props: { pose: 'hello' } });
-
     expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
-
-  it('gives way to the plain version when this device turned it off', () => {
-    olliSetting.show(false);
-
-    const { container } = render(Olli, { props: { pose: 'peeking', fallback } });
-
-    expect(container.querySelector('svg')).not.toBeInTheDocument();
-    expect(screen.getByText('The plain version')).toBeInTheDocument();
-  });
-
-  it('leaves nothing behind when turned off and there is no plain version', () => {
-    olliSetting.show(false);
-
-    const { container } = render(Olli, { props: { pose: 'hello' } });
-
-    expect(container.querySelector('svg')).not.toBeInTheDocument();
-  });
-
-  it('remembers being turned off on this device', () => {
-    olliSetting.show(false);
-
-    expect(localStorage.getItem('culina.olli')).toBe('hidden');
-  });
-
-  it('is fully there at once when it must not move', () => {
-    const { container } = render(Olli, { props: { pose: 'celebrating', size: 'sm', still: true } });
-
+  it('stays fully visible when motion is disabled', () => {
+    olliSetting.animate(false);
+    const { container } = render(Olli, { props: { pose: 'drawing', working: true } });
     expect(container.querySelector('svg > g')).toHaveAttribute('opacity', '1');
+    expect(container.querySelector('.brush')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toHaveAttribute('data-phase', 'still');
+    expect(localStorage.getItem('culina.olli.motion')).toBe('off');
+  });
+  it('migrates both legacy hidden choices to stillness and prefers the new setting', () => {
+    localStorage.setItem('culina.olla', 'hidden');
+    expect(readOlliMotion()).toBe(false);
+    localStorage.setItem('culina.olli', 'shown');
+    expect(readOlliMotion()).toBe(true);
+    localStorage.setItem('culina.olli', 'hidden');
+    expect(readOlliMotion()).toBe(false);
+    localStorage.setItem('culina.olli.motion', 'on');
+    expect(readOlliMotion()).toBe(true);
+  });
+  it('watches with a phone and one pair of handles', () => {
+    const { container } = render(Olli, { props: { pose: 'watching', still: true } });
+    expect(container.querySelector('.earbuds')).not.toBeInTheDocument();
+    expect(container.querySelector('.phone')).toBeInTheDocument();
+    expect(container.querySelectorAll('.handle')).toHaveLength(2);
   });
 });

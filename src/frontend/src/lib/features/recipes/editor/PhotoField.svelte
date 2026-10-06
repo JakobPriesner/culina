@@ -6,6 +6,7 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import { imageSrcset, imageUrl } from '../recipeImage';
 
   /**
@@ -194,6 +195,7 @@
     ? m['assist.draw.elapsed']({ seconds: drawnFor })
     : m['assist.draw.working']()}
   generatingArt={drawingArt}
+  animateGeneration={olliSetting.animated}
   extraAction={canDraw ? drawAction : undefined}
   {failure}
   onpick={upload}
@@ -201,7 +203,7 @@
 />
 
 {#snippet drawingArt()}
-  <Olli pose="reading" size="sm" still />
+  <Olli pose="drawing" size="md" working={drawing} />
 {/snippet}
 
 <!-- Absent entirely where no assistant can draw — which includes every

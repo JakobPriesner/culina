@@ -254,6 +254,10 @@
       'bar';
   }
 
+  .content {
+    view-transition-name: page-content;
+  }
+
   .header {
     grid-area: header;
     position: sticky;

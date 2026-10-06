@@ -14,6 +14,7 @@ export type Pose =
   | 'watching'
   | 'thinking'
   | 'writing'
+  | 'drawing'
   | 'idea'
   | 'celebrating'
   | 'puzzled'
@@ -42,7 +43,7 @@ export interface PoseSpec {
   readonly glance?: readonly [x: number, y: number];
   /** How far the pot sits lower than usual. */
   readonly sag: number;
-  readonly prop?: 'card' | 'plug' | 'ticket' | 'phone' | 'pencil';
+  readonly prop?: 'card' | 'plug' | 'ticket' | 'phone' | 'pencil' | 'brush';
   /** What rises from the pot on arrival. Nothing at all when unplugged. */
   readonly steam: 'wisp' | 'question' | 'sleep' | 'sparks' | 'none' | 'bulb';
   /**
@@ -121,6 +122,18 @@ export const poses: Record<Pose, PoseSpec> = {
     look: [1, 3],
     sag: 0,
     prop: 'pencil',
+    steam: 'none',
+    sombre: false
+  },
+  drawing: {
+    eyes: 'open',
+    mouth: 'smile',
+    arms: [-10, -18],
+    tilt: -2,
+    hatTilt: 2,
+    look: [3, 2],
+    sag: 0,
+    prop: 'brush',
     steam: 'none',
     sombre: false
   },

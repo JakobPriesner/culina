@@ -73,15 +73,15 @@ describe('an administrator-only settings page', () => {
     }
   );
 
-  it('puts the refused order on a ticket when Olli is turned off', async () => {
-    olliSetting.show(false);
+  it('keeps Olli on duty when motion is disabled', async () => {
+    olliSetting.animate(false);
     location.pathname = '/me/ai';
     await signedInAs(false);
 
     renderWithProviders(SettingsLayout, { props: { children } });
 
-    // The order on the ticket is the page that was refused.
-    expect(screen.getByText('1 × Assistant')).toBeInTheDocument();
+    expect(document.querySelector('svg.olli')).toBeInTheDocument();
+    expect(document.querySelector('svg.olli > g')).toHaveAttribute('opacity', '1');
   });
 
   it('opens as usual for an administrator', async () => {

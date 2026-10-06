@@ -1,23 +1,6 @@
 <script lang="ts">
-  /**
-   * Light flowing round the edge of something the assistant is generating.
-   *
-   * The language of Apple Intelligence: four colours turning slowly round a
-   * frame, a crisp line on the edge and a soft glow either side of it. It says
-   * "the assistant is working on this" about a place on the page, which a
-   * status line beside it cannot do — and it needs no progress it does not
-   * have.
-   *
-   * Drop it into a container that is `position: relative`; it takes the
-   * container's corner radius. By default it sits behind the container's
-   * content, so the glow tints the ground under the words and never the words
-   * themselves — the container needs `isolation: isolate` for that.
-   *
-   * It fades in and out with `active` in CSS rather than with a Svelte
-   * transition, so it can stay mounted beside content that should disappear
-   * the moment the work ends — an outro would hold its whole block on screen
-   * for as long as the fade lasts.
-   */
+  /** A restrained static colour edge. The colours stay still, so
+   * large recipe surfaces do not repaint a moving gradient on every frame. */
   interface Props {
     /** Whether the work is running. */
     active?: boolean;
@@ -29,7 +12,6 @@
 </script>
 
 <span class="aura" class:active class:over aria-hidden="true">
-  <span class="layer wide"><span class="ring"></span></span>
   <span class="layer soft"><span class="ring"></span></span>
   <span class="layer"><span class="ring"></span></span>
 </span>
@@ -46,15 +28,14 @@
     visibility: hidden;
     opacity: 0;
     transition:
-      opacity 480ms var(--ease-out),
-      visibility 0s 480ms;
-    animation: turn 5s linear infinite;
+      opacity var(--duration-enter) var(--ease-out),
+      visibility 0s var(--duration-enter);
   }
 
   .active {
     visibility: visible;
     opacity: 1;
-    transition: opacity 480ms var(--ease-out);
+    transition: opacity var(--duration-enter) var(--ease-out);
   }
 
   @starting-style {
@@ -79,24 +60,17 @@
      own light is on the edge. */
   .soft {
     filter: blur(6px);
-    opacity: 0.85;
-  }
-
-  .wide {
-    filter: blur(22px);
-    opacity: 0.6;
-    animation: breathe 3.2s ease-in-out infinite;
+    opacity: 0.3;
   }
 
   .ring {
     padding: 2px;
-    background: conic-gradient(
-      from var(--generating-turn),
+    background: linear-gradient(
+      135deg,
       var(--generating-1),
       var(--generating-2),
       var(--generating-3),
-      var(--generating-4),
-      var(--generating-1)
+      var(--generating-4)
     );
     /* Everything but the padding is cut away, which leaves the gradient as a
        line that follows the container's own corners. */
@@ -110,31 +84,9 @@
     padding: 4px;
   }
 
-  .wide .ring {
-    padding: 8px;
-  }
-
-  @keyframes turn {
-    to {
-      --generating-turn: 360deg;
-    }
-  }
-
-  @keyframes breathe {
-    0%,
-    100% {
-      opacity: 0.45;
-    }
-
-    50% {
-      opacity: 0.75;
-    }
-  }
-
-  /* Still lit, no longer moving: the edge keeps saying where the work is. */
   @media (prefers-reduced-motion: reduce) {
     .aura,
-    .wide {
+    .soft {
       transition: none;
       animation: none;
     }
