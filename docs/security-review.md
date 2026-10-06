@@ -122,7 +122,7 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | Requirement | Verdict | Evidence |
 | --- | --- | --- |
 | Security headers on every response | Met | `EveryResponse_ShouldCarryTheSecurityHeader_WhenHandled` |
-| CSP with no `unsafe-inline` | Met | A per-response nonce; the one inline script carries it |
+| CSP with no `unsafe-inline` | Met | A nonce per rendered document; the one inline script carries it. The document is `no-store`, but an installed app's service worker precaches the rendered shell together with the CSP header it came with and serves it for every navigation until the next deploy, so on such a device the nonce is fixed per build rather than per response. That is deliberate (header and document always match, and the app opens offline) and harmless while there is no markup sink: no `{@html}`, and no `style` attribute in `app.html` |
 | CSRF defence on every unsafe request | Met | Token **and** origin, checked in that order. `UnsafeRequest_ShouldBeRejected_WhenTheHeaderIsMissing`, `UnsafeRequest_ShouldBeRejected_WhenTheTokenBelongsToAnotherSession`, `Request_ShouldBeRejected_WhenCookiesAreNotSecureAndTheOriginIsForeign` |
 | Exactly one endpoint is exempt from CSRF, deliberately | Met | `ExemptEndpoint_ShouldStillBeTheOnlyOneExempted`. Signing in has no session to carry a token, and without the exemption a lost CSRF cookie makes even signing out impossible |
 | Forwarded headers trusted only from named proxies | Met | `ForwardedHeadersSettings`, validated at startup; trusting everything would let any client forge its address |
@@ -144,7 +144,7 @@ something sent to them. The flow is custom, which is why it is recorded here.
 
 | Requirement | Verdict | Evidence |
 | --- | --- | --- |
-| Authenticated responses are not cached generically | Met | An allow-list of exact paths, and a test that nothing else can appear in the store: `keeps nothing from the API that anyone did not ask it to` |
+| Authenticated responses are not cached generically | Met | An allow-list of exact shapes in `service-worker.ts`: who is signed in (`/users/me`), the recipe list, each recipe and a household's shopping list (network-first), and recipe images (cache-first, content-addressed). A test checks that nothing else can appear in the store: `keeps nothing from the API that anyone did not ask it to` |
 | Private material is cleared when the session changes | Met | On sign-in as well as sign-out, and by the worker itself on the first 401 to one of its reads, for a session that ended while the app was closed. `is gone from the device the moment anyone signs out`, `keeps nothing of the first person for the second`, `forgets the private cache when the server says the session is gone` |
 | Cached responses never override the server while online | Met | Network-first for everything but the immutable image; the cache only catches a fall |
 | The store is bounded | Met | 120 entries, oldest evicted |
