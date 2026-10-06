@@ -5,8 +5,8 @@ import type { Plugin } from 'vite';
 import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes.js';
 
 /**
- * Writes the three small public files that are easy to forget and awkward to
- * get wrong by hand.
+ * Writes the two small public files that are easy to forget and awkward to get
+ * wrong by hand.
  *
  * Generated rather than committed because each one repeats something that lives
  * elsewhere — the list of public routes, and the site's own address — and a
@@ -16,10 +16,9 @@ import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes.
  * need an absolute URL are skipped: a self-hosted instance on a private network
  * has no public address and should not invent one.
  *
- * `PUBLIC_SECURITY_CONTACT` is where a vulnerability report should go — a
- * mailto: or a URL the operator actually reads. Without it there is no
- * security.txt at all, because a contact nobody reads is worse than the absence
- * of one: it tells a finder they have reported something when they have not.
+ * security.txt is not here. It names the operator's own contact, which a
+ * published image cannot know, so the server writes it from its configuration
+ * (`Site__SecurityContact`) for every request.
  */
 export function siteFiles(): Plugin {
   return {
@@ -35,17 +34,12 @@ export function siteFiles(): Plugin {
 
       async handler() {
         const site = trimSlash(process.env['PUBLIC_SITE_URL'] ?? '');
-        const contact = process.env['PUBLIC_SECURITY_CONTACT'] ?? '';
         const outDir = 'build';
 
         await write(outDir, 'robots.txt', robots(site));
 
         if (site) {
           await write(outDir, 'sitemap.xml', sitemap(site));
-        }
-
-        if (site && contact) {
-          await write(outDir, '.well-known/security.txt', securityTxt(site, contact));
         }
       }
     }
@@ -85,26 +79,6 @@ export function sitemap(site: string): string {
 ${urls}
 </urlset>
 `;
-}
-
-/**
- * RFC 9116. `Expires` is a year out from the build, which is the honest value:
- * an expired security.txt is worse than none, and the thing that keeps it fresh
- * is that every release regenerates it.
- */
-export function securityTxt(site: string, contact: string, now = new Date()): string {
-  const expires = new Date(now);
-
-  expires.setUTCFullYear(expires.getUTCFullYear() + 1);
-  expires.setUTCMilliseconds(0);
-
-  return [
-    `Contact: ${contact}`,
-    `Expires: ${expires.toISOString().replace(/\.\d{3}Z$/, 'Z')}`,
-    'Preferred-Languages: en, de',
-    `Canonical: ${site}/.well-known/security.txt`,
-    ''
-  ].join('\n');
 }
 
 async function write(outDir: string, path: string, contents: string): Promise<void> {

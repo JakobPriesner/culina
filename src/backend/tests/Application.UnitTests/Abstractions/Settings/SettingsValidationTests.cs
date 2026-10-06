@@ -210,6 +210,52 @@ public class SettingsValidationTests
         Assert.False(settings.InsecureWithoutConsent);
     }
 
+    [Theory]
+    [InlineData("http://example.com/report")]
+    [InlineData("ftp://example.com/report")]
+    public void SiteValidate_ShouldThrow_WhenTheSecurityContactIsNotOneTheRfcAllows(string contact)
+    {
+        // Arrange
+        var settings = new SiteSettings { SecurityContact = new Uri(contact) };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains("Site__SecurityContact", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("mailto:security@example.com")]
+    [InlineData("https://example.com/report")]
+    [InlineData("tel:+49-30-1234567")]
+    public void SiteValidate_ShouldPass_WhenTheSecurityContactIsOneTheRfcAllows(string contact)
+    {
+        // Arrange
+        var settings = new SiteSettings { Url = new Uri("https://culina.example.com"), SecurityContact = new Uri(contact) };
+
+        // Act
+        settings.Validate();
+
+        // Assert
+        Assert.NotNull(settings.SecurityContact);
+    }
+
+    [Fact]
+    public void SiteValidate_ShouldThrow_WhenTheUrlIsNotAWebAddress()
+    {
+        // Arrange
+        var settings = new SiteSettings { Url = new Uri("ftp://culina.example.com") };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains("Site__Url", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void StorageValidate_ShouldCreateTheDirectories_WhenTheyDoNotExist()
     {

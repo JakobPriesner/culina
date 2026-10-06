@@ -210,6 +210,16 @@ The key is encrypted with the data-protection key ring before it is stored — s
 `Storage__DataProtectionKeyPath` above, and `operations.md` for what losing that
 directory now means.
 
+## Site
+
+What the instance says about itself to strangers. Both optional, neither in the
+app.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `Site__SecurityContact` | unset | Where a vulnerability report about this instance should go — a `mailto:`, `https://` or `tel:` address you actually read. Set, `/.well-known/security.txt` (RFC 9116) names it; unset, that path is a `404`, because a contact nobody reads is worse than none. |
+| `Site__Url` | unset | This instance's public address, such as `https://culina.example.com`. Gives security.txt its `Canonical:` line. |
+
 ## Telemetry
 
 | Variable | Default | |
@@ -233,8 +243,7 @@ the image yourself.
 
 | Variable | Effect when unset |
 | --- | --- |
-| `PUBLIC_SITE_URL` | No sitemap and no security.txt. An instance on a private network has no public address and should not invent one. |
-| `PUBLIC_SECURITY_CONTACT` | No security.txt. A contact nobody reads is worse than none: it tells a finder they have reported something when they have not. |
+| `PUBLIC_SITE_URL` | No sitemap. An instance on a private network has no public address and should not invent one. security.txt is not built at all: the server writes it from `Site__SecurityContact`, above. |
 | `VITE_GALLERY` | The design-system gallery is not built in. A release must leave this unset; CI asserts that what ships contains none of it. |
 
 ## What is not here
