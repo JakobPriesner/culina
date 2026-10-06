@@ -205,7 +205,9 @@ jobs:
       # compose.prod.yaml refuses to be read at all without these — including
       # by `logs`, which is why they are here and not on the step that starts
       # the stack.
-      Database__Password: culina_ci_password
+      # A quote and a space, so every run proves scripts/db-init.sh passes it
+      # to SQL as a value and not as SQL.
+      Database__Password: "the app's own password"
       POSTGRES_SUPERUSER_PASSWORD: culina_ci_superuser_password
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -66,6 +66,9 @@ BASE="http://localhost:${PORT}"
 # The account CI signs the suites in with, on an instance that exists for it.
 EMAIL="ci@culina.test"
 PASSWORD="a sentence nobody else would pick"
+# The app role's. A quote and a space, so every run proves scripts/db-init.sh
+# passes it to SQL as a value and not as SQL.
+DB_PASSWORD="the app's own password"
 LANES=""
 
 # The stack's settings go to compose alone. Exported, the raised rate limits
@@ -75,7 +78,7 @@ LANES=""
 compose() {
   CULINA_IMAGE="culina:ci-local" \
     CULINA_PORT="127.0.0.1:${PORT}" \
-    Database__Password="culina_ci_password" \
+    Database__Password="$DB_PASSWORD" \
     POSTGRES_SUPERUSER_PASSWORD="culina_ci_superuser_password" \
     RateLimits__LoginPerIpPerMinute=1000 \
     RateLimits__RegisterPerIpPerHour=1000 \
@@ -210,7 +213,7 @@ LANES="$LANES $!"
 {
   step "image" "$TREE" docker build -t culina:ci-local --build-arg REVISION="$SHORT" . &&
     step "stack" "$TREE" compose up -d --wait &&
-    step "database setup" "$TREE" env Database__Password=culina_ci_password \
+    step "database setup" "$TREE" env Database__Password="$DB_PASSWORD" \
       scripts/setup-database.sh "$BASE" &&
     step "first account" "$TREE" first_account
 } &
