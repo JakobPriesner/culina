@@ -6,6 +6,7 @@ using Domain.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.Processing;
 
 namespace Infrastructure.Storage;
@@ -46,7 +47,37 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
     /// screen and thousands of frames, and each one is a full allocation. A
     /// recipe photo is a still, so nothing past the first is worth decoding.
     /// </remarks>
-    private static readonly DecoderOptions FirstFrameOnly = new() { MaxFrames = 1 };
+    private static readonly DecoderOptions FirstFrameOnly = new()
+    {
+        MaxFrames = 1,
+        Configuration = Bounded()
+    };
+
+    /// <summary>
+    /// The largest single buffer the decoder may ask for, in megabytes.
+    /// </summary>
+    /// <remarks>
+    /// A little over one frame at the pixel ceiling, four bytes a pixel (244
+    /// MB). The pixel count alone does not bound memory, because a pixel is not
+    /// always four bytes: a sixteen-bit PNG decodes to eight, so an image well
+    /// inside the pixel ceiling could still ask for half a gigabyte. Past this
+    /// the allocator refuses instead of allocating, and the upload is told it
+    /// has too many pixels.
+    /// </remarks>
+    private const int MostBufferMegabytes = 256;
+
+    /// <summary>
+    /// How many images may be decoded at once, across every upload.
+    /// </summary>
+    /// <remarks>
+    /// The two ceilings above bound one image; nothing bounded how many. A
+    /// handful of the largest permitted photos arriving together — a recipe
+    /// photo, a cook photo and a library import at once — was a handful of
+    /// quarter gigabytes, plus a rotated copy of each. Two at a time keeps the
+    /// decoder's share of memory fixed however many arrive, and an upload is
+    /// rare enough that the next one waiting a second costs nothing.
+    /// </remarks>
+    private static readonly SemaphoreSlim Decoding = new(2, 2);
 
     public async Task<Result<StoredImage>> StoreAsync(
         Stream content,
@@ -152,9 +183,37 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
         }
     }
 
-    private async Task<Result<StoredImage>> ReEncodeAsync(
+    private Task<Result<StoredImage>> ReEncodeAsync(
         Stream buffered,
+        CancellationToken cancellationToken) =>
+        DecodeAsync(buffered, image => StoreRenditionsAsync(image, cancellationToken), cancellationToken);
+
+    private async Task<StoredImage> StoreRenditionsAsync(Image image, CancellationToken cancellationToken)
+    {
+        var renditions = await RenderAsync(image, cancellationToken).ConfigureAwait(false);
+        var hash = Convert.ToHexStringLower(SHA256.HashData(renditions[^1].Bytes));
+
+        foreach (var rendition in renditions)
+        {
+            await WriteAsync(hash, rendition).ConfigureAwait(false);
+        }
+
+        return new StoredImage(hash, image.Width, image.Height, renditions[^1].Bytes.Length);
+    }
+
+    /// <summary>
+    /// Opens an untrusted image and hands it over the right way up.
+    /// </summary>
+    /// <remarks>
+    /// The one way into the decoder, so that every image decoded here passes
+    /// the same checks: the header before any pixel, the first frame only, no
+    /// buffer past the ceiling, and only so many at once.
+    /// </remarks>
+    private static async Task<Result<TOut>> DecodeAsync<TOut>(
+        Stream buffered,
+        Func<Image, Task<TOut>> use,
         CancellationToken cancellationToken)
+        where TOut : notnull
     {
         ImageInfo header;
 
@@ -178,21 +237,14 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
 
         buffered.Position = 0;
 
-        Image image;
+        await Decoding.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
             // Decoding is the format check. A content type and an extension are
             // both attacker-supplied, and neither says what the bytes are.
-            image = await Image.LoadAsync(FirstFrameOnly, buffered, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
-        {
-            return ImageErrors.Unreadable;
-        }
+            using var image = await Image.LoadAsync(FirstFrameOnly, buffered, cancellationToken).ConfigureAwait(false);
 
-        using (image)
-        {
             // A phone writes a photograph taken upright as landscape pixels
             // plus an orientation tag, and that tag is the only thing saying
             // which way up it goes. The re-encoding drops every tag — which is
@@ -203,16 +255,41 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             // middle.
             image.Mutate(context => context.AutoOrient());
 
-            var renditions = await RenderAsync(image, cancellationToken).ConfigureAwait(false);
-            var hash = Convert.ToHexStringLower(SHA256.HashData(renditions[^1].Bytes));
-
-            foreach (var rendition in renditions)
-            {
-                await WriteAsync(hash, rendition).ConfigureAwait(false);
-            }
-
-            return new StoredImage(hash, image.Width, image.Height, renditions[^1].Bytes.Length);
+            return Result<TOut>.Success(await use(image).ConfigureAwait(false));
         }
+        catch (Exception failure) when (OverTheCeiling(failure))
+        {
+            return ImageErrors.TooManyPixels;
+        }
+        catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
+        {
+            return ImageErrors.Unreadable;
+        }
+        finally
+        {
+            Decoding.Release();
+        }
+    }
+
+    /// <summary>
+    /// A buffer the allocator refused, however it surfaced.
+    /// </summary>
+    /// <remarks>
+    /// A decoder wraps the refusal as content it could not read; resizing and
+    /// rotating throw it as it is. Either way the image was too big, not broken.
+    /// </remarks>
+    private static bool OverTheCeiling(Exception failure) =>
+        failure is InvalidMemoryOperationException
+        || failure.InnerException is InvalidMemoryOperationException;
+
+    private static Configuration Bounded()
+    {
+        var configuration = Configuration.Default.Clone();
+
+        configuration.MemoryAllocator = MemoryAllocator.Create(
+            new MemoryAllocatorOptions { AllocationLimitMegabytes = MostBufferMegabytes });
+
+        return configuration;
     }
 
     private static async Task<List<Rendition>> RenderAsync(

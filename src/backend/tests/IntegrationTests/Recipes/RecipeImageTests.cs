@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using IntegrationTests.Fixtures;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace IntegrationTests.Recipes;
@@ -201,6 +202,35 @@ public class RecipeImageTests(PostgresFixture postgres)
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("recipes.image_too_many_pixels", response.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Upload_ShouldRefuseAnImageWhoseOneFrameIsTooLargeInMemory_RatherThanFail()
+    {
+        // Arrange
+        // Inside the pixel ceiling, but sixteen bits a channel: each pixel
+        // decodes to eight bytes rather than four, so one frame asks for more
+        // than a quarter of a gigabyte. The allocator refuses it, and that has
+        // to reach the cook as an answer about the image, not as a 500.
+        var (client, recipeId) = await SeedAsync();
+
+        // Act
+        var response = await UploadAsync(client, recipeId, DeepPng(6000, 6000), "deep.png", "image/png");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("recipes.image_too_many_pixels", response.ProblemCode);
+    }
+
+    /// <summary>A blank PNG at sixteen bits a channel.</summary>
+    private static byte[] DeepPng(int width, int height)
+    {
+        using var image = new Image<Rgba64>(width, height);
+        using var buffer = new MemoryStream();
+
+        image.Save(buffer, new PngEncoder { BitDepth = PngBitDepth.Bit16, ColorType = PngColorType.RgbWithAlpha });
+
+        return buffer.ToArray();
     }
 
     [Fact]
