@@ -14,7 +14,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         // a household is never useful without its members.
         var reader = await executor.QueryMultipleAsync(
             """
-            select id, name, created_at, version, inherits_from from households where id = @householdId;
+            select id, name, created_at, version, inherits_from, inherits_set_by from households where id = @householdId;
             select household_id, user_id, role, joined_at
             from household_members where household_id = @householdId;
             """,
@@ -42,7 +42,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
     {
         var reader = await executor.QueryMultipleAsync(
             """
-            select h.id, h.name, h.created_at, h.version, h.inherits_from
+            select h.id, h.name, h.created_at, h.version, h.inherits_from, h.inherits_set_by
             from households h
             join household_members m on m.household_id = h.id
             where m.user_id = @userId
@@ -72,19 +72,20 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
 
         await executor.ExecuteAsync(
             """
-            insert into households (id, name, created_at, version, inherits_from)
-            values (@id, @name, @createdAt, 1, @inheritsFrom);
+            insert into households (id, name, created_at, version, inherits_from, inherits_set_by)
+            values (@id, @name, @createdAt, 1, @inheritsFrom, @inheritsSetBy);
             """,
             new
             {
                 id = household.Id,
                 name = household.Name.Value,
                 createdAt = household.CreatedAt,
-                inheritsFrom = household.InheritsFrom
+                inheritsFrom = household.InheritsFrom,
+                inheritsSetBy = household.InheritsSetBy
             },
             cancellationToken).ConfigureAwait(false);
 
-        await ReplaceMembersAsync(household, cancellationToken).ConfigureAwait(false);
+        await SaveMembersAsync(household, cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -99,7 +100,8 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         var version = await executor.ExecuteScalarAsync<long?>(
             """
             update households
-            set name = @name, inherits_from = @inheritsFrom, version = version + 1
+            set name = @name, inherits_from = @inheritsFrom, inherits_set_by = @inheritsSetBy,
+                version = version + 1
             where id = @id and version = @expectedVersion
             returning version;
             """,
@@ -108,6 +110,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
                 id = household.Id,
                 name = household.Name.Value,
                 inheritsFrom = household.InheritsFrom,
+                inheritsSetBy = household.InheritsSetBy,
                 expectedVersion
             },
             cancellationToken).ConfigureAwait(false);
@@ -117,7 +120,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
             return ConcurrencyErrors.VersionMismatch;
         }
 
-        await ReplaceMembersAsync(household, cancellationToken).ConfigureAwait(false);
+        await SaveMembersAsync(household, cancellationToken).ConfigureAwait(false);
 
         return version.Value;
     }
@@ -263,19 +266,27 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
     }
 
     /// <summary>
-    /// Rewrites the membership list wholesale.
+    /// Writes the membership list: whoever left is deleted, everybody else is
+    /// inserted or has their role brought up to date.
     /// </summary>
     /// <remarks>
-    /// A household has a handful of members, so replacing them is simpler than
-    /// diffing and cannot drift from the aggregate the domain just validated.
-    /// It runs inside the caller's transaction, so the delete and the inserts
-    /// are never observed apart.
+    /// Not delete-everybody-and-insert-again, although a household has only a
+    /// handful of members: an heir's inheritance hangs off the membership of
+    /// whoever set it (0028), and deleting that row cuts the heir loose. So a
+    /// row is deleted only when that person has really gone — which is exactly
+    /// when the heirs they opened this household to must stop reading it. It
+    /// runs inside the caller's transaction, so the change is never observed
+    /// half made.
     /// </remarks>
-    private async Task ReplaceMembersAsync(Household household, CancellationToken cancellationToken)
+    private async Task SaveMembersAsync(Household household, CancellationToken cancellationToken)
     {
         await executor.ExecuteAsync(
-            "delete from household_members where household_id = @householdId;",
-            new { householdId = household.Id },
+            "delete from household_members where household_id = @householdId and user_id <> all(@userIds);",
+            new
+            {
+                householdId = household.Id,
+                userIds = household.Members.Select(member => member.UserId).ToArray()
+            },
             cancellationToken).ConfigureAwait(false);
 
         foreach (var member in household.Members)
@@ -283,7 +294,8 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
             await executor.ExecuteAsync(
                 """
                 insert into household_members (household_id, user_id, role, joined_at)
-                values (@householdId, @userId, @role, @joinedAt);
+                values (@householdId, @userId, @role, @joinedAt)
+                on conflict (household_id, user_id) do update set role = excluded.role;
                 """,
                 new
                 {
