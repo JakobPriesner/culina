@@ -116,6 +116,31 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
         Assert.False(File.Exists(factory.ServerSettingsFile));
     }
 
+    [Theory]
+    [InlineData("{ \"RateLimits\": { \"ImportsPerHour\": ")]
+    [InlineData("[\"an array, not the object Culina writes\"]")]
+    public async Task Update_ShouldRefuseAndLeaveTheFileAlone_WhenItWasBrokenByHand(string broken)
+    {
+        // Arrange
+        using var factory = new CulinaApiFactory(postgres);
+        using var admin = await AdminAsync(factory);
+        var proposal = await ProposalAsync(admin);
+        proposal["rateLimits"]!["sharedRecipesPerIpPerMinute"] = 200;
+        Directory.CreateDirectory(Path.GetDirectoryName(factory.ServerSettingsFile)!);
+        await File.WriteAllTextAsync(factory.ServerSettingsFile, broken, Token);
+
+        // Act
+        var response = await admin.PutAsync("/api/v1/settings/server", proposal, Token);
+
+        // Assert
+        // A typed refusal, not a 500 — and not a fresh file in its place, which
+        // would throw away whatever the hand edit was for.
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("settings.file_unreadable", response.ProblemCode);
+        Assert.Equal(broken, await File.ReadAllTextAsync(factory.ServerSettingsFile, Token));
+        Assert.Equal(0, factory.Restarts.Scheduled);
+    }
+
     [Fact]
     public async Task Update_ShouldRefuseAProxyNetworkThatWouldTrustEveryClient_AndSaveNothing()
     {
