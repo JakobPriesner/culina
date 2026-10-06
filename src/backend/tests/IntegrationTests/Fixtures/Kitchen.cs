@@ -119,6 +119,19 @@ internal sealed record Kitchen(ApiClient Client, Guid HouseholdId)
         return recipeId;
     }
 
+    /// <summary>Gives a recipe a picture, as the editor does.</summary>
+    internal async Task PictureAsync(Guid recipeId, byte[] picture)
+    {
+        var file = new ByteArrayContent(picture);
+        file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+
+        var content = new MultipartFormDataContent { { file, "file", "picture.png" } };
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}/image") { Content = content };
+        var response = await Client.SendAsync(request, Token);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    }
+
     /// <summary>A search, as the library asks it.</summary>
     internal Task<ApiResponse> SearchAsync(string query) =>
         Client.GetAsync(

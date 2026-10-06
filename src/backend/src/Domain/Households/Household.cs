@@ -21,7 +21,8 @@ public sealed class Household
         DateTimeOffset createdAt,
         long version,
         List<HouseholdMember> members,
-        Guid? inheritsFrom)
+        Guid? inheritsFrom,
+        Guid? inheritsSetBy)
     {
         Id = id;
         Name = name;
@@ -29,6 +30,7 @@ public sealed class Household
         Version = version;
         this.members = members;
         InheritsFrom = inheritsFrom;
+        InheritsSetBy = inheritsSetBy;
     }
 
     /// <summary>The household's identifier.</summary>
@@ -51,6 +53,18 @@ public sealed class Household
     /// </summary>
     public Guid? InheritsFrom { get; private set; }
 
+    /// <summary>
+    /// Who set <see cref="InheritsFrom"/>: a member of that household, whose
+    /// recipes they chose to show here.
+    /// </summary>
+    /// <remarks>
+    /// The link lasts only as long as their membership of the parent. When
+    /// they leave it, or are shown out, the database drops the link with the
+    /// membership, so nobody keeps reading a kitchen through a household of
+    /// their own after that kitchen has let them go.
+    /// </remarks>
+    public Guid? InheritsSetBy { get; private set; }
+
     /// <summary>Creates a household with its first owner.</summary>
     /// <param name="name">The validated name.</param>
     /// <param name="ownerId">The person creating it.</param>
@@ -65,7 +79,8 @@ public sealed class Household
             createdAt,
             version: 1,
             [new HouseholdMember(ownerId, HouseholdRole.Owner, createdAt)],
-            inheritsFrom: null);
+            inheritsFrom: null,
+            inheritsSetBy: null);
     }
 
     /// <summary>Rebuilds a household from storage.</summary>
@@ -75,18 +90,20 @@ public sealed class Household
     /// <param name="version">The stored version.</param>
     /// <param name="members">Its members.</param>
     /// <param name="inheritsFrom">The household it inherits recipes from, if any.</param>
+    /// <param name="inheritsSetBy">Who set <paramref name="inheritsFrom"/>, if anybody.</param>
     public static Household Restore(
         Guid id,
         HouseholdName name,
         DateTimeOffset createdAt,
         long version,
         IEnumerable<HouseholdMember> members,
-        Guid? inheritsFrom)
+        Guid? inheritsFrom,
+        Guid? inheritsSetBy)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(members);
 
-        return new Household(id, name, createdAt, version, [.. members], inheritsFrom);
+        return new Household(id, name, createdAt, version, [.. members], inheritsFrom, inheritsSetBy);
     }
 
     /// <summary>Renames the household. Owners only.</summary>
@@ -114,14 +131,18 @@ public sealed class Household
         ArgumentNullException.ThrowIfNull(parent);
 
         return HouseholdMembershipPolicy.CanInherit(this, parent, parentLibrary, actingUserId)
-            .Tap(() => InheritsFrom = parent.Id);
+            .Tap(() =>
+            {
+                InheritsFrom = parent.Id;
+                InheritsSetBy = actingUserId;
+            });
     }
 
     /// <summary>Stops inheriting anybody's recipes. Owners only.</summary>
     /// <param name="actingUserId">Who is asking.</param>
     public Result StopInheriting(Guid actingUserId) =>
         HouseholdMembershipPolicy.CanAdminister(this, actingUserId)
-            .Tap(() => InheritsFrom = null);
+            .Tap(ForgetInheritance);
 
     /// <summary>
     /// Stops inheriting from a household whose owner has asked it to.
@@ -138,7 +159,7 @@ public sealed class Household
         ArgumentNullException.ThrowIfNull(parent);
 
         return HouseholdMembershipPolicy.CanCutInheritance(this, parent, actingUserId)
-            .Tap(() => InheritsFrom = null);
+            .Tap(ForgetInheritance);
     }
 
     /// <summary>Adds someone to the household.</summary>
@@ -184,4 +205,10 @@ public sealed class Household
 
     /// <summary>How many owners the household has.</summary>
     public int OwnerCount => members.Count(member => member.Role == HouseholdRole.Owner);
+
+    private void ForgetInheritance()
+    {
+        InheritsFrom = null;
+        InheritsSetBy = null;
+    }
 }

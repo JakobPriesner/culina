@@ -49,7 +49,7 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
     {
         var reader = await executor.QueryMultipleAsync(
             """
-            select h.id, h.name, h.created_at, h.version, h.inherits_from, h.deleted_at
+            select h.id, h.name, h.created_at, h.version, h.inherits_from, h.inherits_set_by, h.deleted_at
             from households_with_deleted h
             join household_members m on m.household_id = h.id
             where m.user_id = @userId and m.role = 'owner' and h.deleted_at is not null
@@ -79,7 +79,7 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
     {
         var reader = await executor.QueryMultipleAsync(
             """
-            select id, name, created_at, version, inherits_from, deleted_at
+            select id, name, created_at, version, inherits_from, inherits_set_by, deleted_at
             from households_with_deleted
             where id = @householdId and deleted_at is not null;
 
@@ -219,6 +219,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
 
         public Guid? InheritsFrom { get; init; }
 
+        public Guid? InheritsSetBy { get; init; }
+
         public DateTimeOffset DeletedAt { get; init; }
 
         public HouseholdRow ToHouseholdRow() => new()
@@ -227,7 +229,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
             Name = Name,
             CreatedAt = CreatedAt,
             Version = Version,
-            InheritsFrom = InheritsFrom
+            InheritsFrom = InheritsFrom,
+            InheritsSetBy = InheritsSetBy
         };
     }
 }

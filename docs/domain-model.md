@@ -77,6 +77,14 @@ household it was cooked in, not the one it belongs to.
 - Only an owner of the inheriting household may set it, and only to a household
   they are in; a loop is refused with `households.inheritance_cycle`. Deleting
   the parent sets `InheritsFrom` to null.
+- The link remembers who set it (`InheritsSetBy`) and lasts only while they are
+  in the parent. Removed, leaving, or their account deleted: the link is
+  dropped in the same transaction, because it is a foreign key to their
+  membership row of the parent (`on delete set null`). Without that, somebody
+  shown out of a kitchen would go on reading it through a household of their
+  own. Each link answers to its own parent, so in a chain only the links whose
+  setter left are cut. Memberships are therefore saved as changes, never by
+  deleting everybody and inserting them again.
 - The household being inherited from sees every household that reads its
   recipes, and its owners may cut a direct heir loose
   (`Household.StopInheritingFrom`) without being in it. One inheriting through

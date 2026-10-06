@@ -14,6 +14,8 @@ internal sealed record HouseholdRow
     public long Version { get; init; }
 
     public Guid? InheritsFrom { get; init; }
+
+    public Guid? InheritsSetBy { get; init; }
 }
 
 /// <summary>One household in another's chain of inheritance.</summary>
@@ -85,7 +87,8 @@ internal static class HouseholdRowMappings
             row.CreatedAt,
             row.Version,
             members.Select(member => member.ToDomain()),
-            row.InheritsFrom);
+            row.InheritsFrom,
+            row.InheritsSetBy);
     }
 
     internal static Application.Abstractions.HouseholdMemberView ToView(this HouseholdMemberViewRow row)

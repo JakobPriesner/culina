@@ -135,7 +135,66 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
         (await scope.Households.FindAsync(household.Id, Token)).ShouldBeSuccess();
     }
 
+    [Fact]
+    public async Task Update_ShouldKeepAnHeirsInheritance_WhenWhoeverSetItOnlyChangesRole()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var (parent, heir, setter) = await InheritingAsync(scope);
+        parent.ChangeRole(setter, HouseholdRole.Owner, parent.Members[0].UserId).ShouldBeSuccess();
+
+        // Act
+        (await scope.Households.UpdateAsync(parent, parent.Version, Token)).ShouldBeSuccess();
+
+        // Assert
+        // Saving the parent's members must not delete and re-insert them:
+        // the heir's link hangs off the setter's membership row.
+        var reloaded = (await scope.Households.FindAsync(heir.Id, Token)).ShouldBeSuccess();
+        Assert.Equal(parent.Id, reloaded.InheritsFrom);
+        Assert.Equal(setter, reloaded.InheritsSetBy);
+    }
+
+    [Fact]
+    public async Task DeletingAnAccount_ShouldEndTheInheritanceItSetUp()
+    {
+        // Arrange
+        // There is no endpoint for it; an operator deleting the row is the
+        // case, and the database has to close the link on its own.
+        await using var scope = await NewScopeAsync();
+        var (_, heir, setter) = await InheritingAsync(scope);
+
+        // Act
+        await new DbExecutor(scope.Session).ExecuteAsync(
+            "delete from users where id = @setter;",
+            new { setter },
+            Token);
+
+        // Assert
+        var reloaded = (await scope.Households.FindAsync(heir.Id, Token)).ShouldBeSuccess();
+        Assert.Null(reloaded.InheritsFrom);
+        Assert.Null(reloaded.InheritsSetBy);
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    /// <summary>
+    /// A parent kitchen, a plain member of it, and a household of that
+    /// member's own that they made inherit the parent.
+    /// </summary>
+    private static async Task<(Household Parent, Household Heir, Guid Setter)> InheritingAsync(RepositoryScope scope)
+    {
+        var owner = await scope.AddUserAsync("owner@example.com");
+        var setter = await scope.AddUserAsync("setter@example.com");
+        var parent = AHousehold(owner, "Parents");
+        parent.Add(setter, HouseholdRole.Member, Now).ShouldBeSuccess();
+        await scope.Households.AddAsync(parent, Token);
+
+        var heir = AHousehold(setter, "Flat");
+        heir.Inherit(parent, [parent.Id], setter).ShouldBeSuccess();
+        await scope.Households.AddAsync(heir, Token);
+
+        return (parent, heir, setter);
+    }
 
     private static Household AHousehold(Guid owner, string name = "Kitchen") =>
         Household.Create(HouseholdName.Create(name).ShouldBeSuccess(), owner, Now);
