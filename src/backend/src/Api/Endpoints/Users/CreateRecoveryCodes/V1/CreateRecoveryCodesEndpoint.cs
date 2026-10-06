@@ -22,7 +22,10 @@ internal sealed class CreateRecoveryCodesEndpoint : IEndpoint
             {
                 var result = await handler
                     .Handle(
-                        new CreateRecoveryCodesCommand(context.CurrentUser().UserId, request.Password),
+                        new CreateRecoveryCodesCommand(
+                            context.CurrentUser().UserId,
+                            request.Password,
+                            context.ClientAddress()),
                         cancellationToken)
                     .ConfigureAwait(false);
 

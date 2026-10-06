@@ -128,7 +128,10 @@ already trusts it, which is usually the whole answer.
 ## Password hashing
 
 Argon2id. Raise `MemoryKib` as far as the host tolerates; existing hashes keep
-verifying and are upgraded transparently on the next successful sign-in.
+verifying and are upgraded transparently on the next successful sign-in. At
+most one hash per processor core runs at a time — every sign-in hashes, an
+unknown address included — so the memory a burst of sign-ins can claim is
+`MemoryKib` times the core count, and further sign-ins wait their turn.
 
 | Variable | Default | |
 | --- | --- | --- |
@@ -154,7 +157,11 @@ All of these are in the app.
 
 Login is limited per address **and** per account: per-address alone lets a
 botnet spread an attack on one account across many addresses, and per-account
-alone lets one address walk a password list across many accounts.
+alone lets one address walk a password list across many accounts. An attempt
+is counted before the password is checked, so simultaneous guesses cannot slip
+past the limit. An address the account has signed in from in the last 30 days
+gets a per-account budget of its own, so somebody guessing from elsewhere
+cannot lock the owner out at home; every other address shares the account's.
 
 ## The assistant
 
