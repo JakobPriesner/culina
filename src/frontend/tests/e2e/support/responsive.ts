@@ -76,10 +76,24 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
 export async function responsiveData(
   page: Page,
   locale: 'de' | 'en' = 'de',
-  { extraIngredients = 0, activeCooking = true } = {}
+  { extraIngredients = 0, activeCooking = true, longSteps = false } = {}
 ) {
   const detail = {
     ...recipe,
+    steps: longSteps
+      ? recipe.steps.map((step) => ({
+          ...step,
+          segments: [
+            {
+              type: 'text' as const,
+              value: Array.from(
+                { length: 8 },
+                (_, i) => `Abschnitt ${i + 1}. ${step.segments[0]!.value}`
+              ).join('\n\n')
+            }
+          ]
+        }))
+      : recipe.steps,
     groups: [
       {
         ingredients: [
