@@ -27,10 +27,13 @@ services:
       CULINA_DB: ${POSTGRES_DB:-culina}
       CULINA_APP_USER: ${Database__Username:-culina_app}
       CULINA_APP_PASSWORD: ${Database__Password:-culina_dev_password}
-    # Published for local development only. compose.prod.yaml removes this, so
-    # the database is reachable only on the internal network.
+    # Published for local development only, and to this machine only: the
+    # superuser's password here is a development one, and a database on every
+    # interface is a superuser login for whoever shares the café's Wi-Fi.
+    # compose.prod.yaml removes this, so the database is reachable only on the
+    # internal network.
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       # PostgreSQL 18 expects a single mount at /var/lib/postgresql and places
       # the cluster in a version-specific subdirectory, which is what makes

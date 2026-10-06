@@ -69,10 +69,12 @@ PASSWORD="a sentence nobody else would pick"
 LANES=""
 
 # The stack's settings go to compose alone. Exported, the raised rate limits
-# would reach the integration tests, and those assert the real ones.
+# would reach the integration tests, and those assert the real ones. Published
+# to this machine only, because those limits, a known account and a trusted
+# container network are nothing to offer the rest of the network.
 compose() {
   CULINA_IMAGE="culina:ci-local" \
-    CULINA_PORT="$PORT" \
+    CULINA_PORT="127.0.0.1:${PORT}" \
     Database__Password="culina_ci_password" \
     POSTGRES_SUPERUSER_PASSWORD="culina_ci_superuser_password" \
     RateLimits__LoginPerIpPerMinute=1000 \
