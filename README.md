@@ -105,7 +105,9 @@ cp .env.example .env
 make dev
 ```
 
-PostgreSQL in a container, the API with hot reload, the frontend dev server.
+PostgreSQL in a container, the API with hot reload, the frontend dev server,
+all reachable from this machine only — `make dev LAN=1` opens the frontend to
+your network, for trying it on a phone.
 The app is at <http://localhost:5173> with `/api` proxied to the backend, so
 development is same-origin exactly like production — which is why Culina has no
 CORS policy anywhere. `make` with no target lists every command.

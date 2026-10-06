@@ -104,6 +104,10 @@ location / {
 The two `X-Forwarded-*` headers matter: without them Culina sees your proxy as
 every visitor and marks cookies for the wrong scheme.
 
+With the proxy on the same host, as here, set `CULINA_PORT=127.0.0.1:8080` in
+`.env`: Culina's plain-HTTP port is then published to that machine only, and
+nobody on the network can go around the proxy.
+
 ## Upgrading
 
 ```bash

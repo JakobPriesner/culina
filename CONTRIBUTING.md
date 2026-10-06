@@ -10,7 +10,9 @@ make dev
 ```
 
 That is PostgreSQL in a container, the API with hot reload, and the frontend dev
-server. The app is at <http://localhost:5173>; `/api` is proxied to the backend,
+server, each listening on this machine only; `make dev LAN=1` opens the
+frontend to your network, for trying it on a phone. The app is at
+<http://localhost:5173>; `/api` is proxied to the backend,
 so development is same-origin exactly like production — which is why Culina has
 no CORS policy anywhere and no development-only authentication path.
 
