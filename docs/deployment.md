@@ -98,7 +98,8 @@ and what the app can edit, is in `configuration.md`.
 | `Storage__ImagePath` | `/data/images` | |
 | `Storage__DataProtectionKeyPath` | `/data/keys` | |
 | `Storage__ConfigPath` | `/data/config` | where `culina.json` lives |
-| `Cookies__Secure` | `true` | only ever `false` for local HTTP dev |
+| `Cookies__Secure` | `true` | `false` is refused outside Development, unless… |
+| `Cookies__AllowInsecureOutsideDevelopment` | `false` | …this is `true`; plain-HTTP instances only |
 | `ForwardedHeaders__KnownProxies` | — | comma-separated; required behind a proxy |
 | `PasswordHashing__*` | Argon2id defaults | memory, iterations, parallelism |
 | `RateLimits__*` | sensible | login, registration, invitation redemption |
@@ -192,7 +193,7 @@ bead when something needs action.
 | | |
 | --- | --- |
 | **Local dev** | `docker compose up -d db` + `dotnet watch` + `pnpm dev`. Vite proxies `/api` → backend so the app is same-origin in development too — cookies and CSRF behave exactly as in production, which is why there is no CORS anywhere and no dev-only auth path. |
-| **Local prod check** | `docker compose -f compose.yaml -f compose.prod.yaml up` — the real image, real migrations, `Cookies__Secure=false` behind a local proxy only. |
+| **Local prod check** | `docker compose -f compose.yaml -f compose.prod.yaml up` — the real image, real migrations, secure cookies on: browsers (and curl) treat `http://localhost` as secure, so nothing needs `Cookies__Secure=false`. Anything reached over plain HTTP by another name needs `Cookies__AllowInsecureOutsideDevelopment=true` as well. |
 | **Production** | The published image behind the operator's proxy. Deploy = pull the new tag, restart. Migrations run at boot. |
 
 ## Operating it

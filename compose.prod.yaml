@@ -59,6 +59,11 @@ services:
       # TLS, so the cookie must be marked Secure even though this process
       # speaks plain HTTP to it. Leave this unset.
       Cookies__Secure: ${Cookies__Secure:-}
+      # Not under Settings → Server, and not something to set lightly: without
+      # it Culina refuses to run with secure cookies off, from here or from
+      # the app, because the session cookie then travels in cleartext. Only an
+      # instance reached over plain HTTP on a network you trust needs it.
+      Cookies__AllowInsecureOutsideDevelopment: ${Cookies__AllowInsecureOutsideDevelopment:-}
       # One of these is required, and required to be specific: trusting every
       # proxy lets any client forge its own address, which makes per-IP rate
       # limiting useless and every security log line a guess.

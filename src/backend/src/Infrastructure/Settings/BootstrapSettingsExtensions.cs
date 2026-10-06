@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.Settings;
 
@@ -16,13 +17,15 @@ public static class BootstrapSettingsExtensions
     /// <summary>Adds all bootstrap settings records as validated singletons.</summary>
     /// <param name="services">The container to register into.</param>
     /// <param name="configuration">The configuration to read from.</param>
+    /// <param name="environment">Where the process runs, which some settings depend on.</param>
     public static IServiceCollection AddBootstrapSettings(
         this IServiceCollection services,
-        IConfiguration configuration) =>
+        IConfiguration configuration,
+        IHostEnvironment environment) =>
         services
             .AddDatabaseSettings(configuration)
             .AddStorageSettings(configuration)
-            .AddCookieSettings(configuration)
+            .AddCookieSettings(configuration, environment)
             .AddPasswordHashingSettings(configuration)
             .AddRateLimitSettings(configuration)
             .AddForwardedHeadersSettings(configuration)

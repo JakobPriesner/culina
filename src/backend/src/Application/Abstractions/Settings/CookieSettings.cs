@@ -28,11 +28,35 @@ public sealed record CookieSettings
     public const string CsrfCookieName = "culina.csrf";
 
     /// <summary>
+    /// The key a deployment sets to run without secure cookies anywhere but
+    /// in Development: <c>Cookies__AllowInsecureOutsideDevelopment=true</c>.
+    /// </summary>
+    public const string AllowInsecureKey = "AllowInsecureOutsideDevelopment";
+
+    /// <summary>
     /// Whether cookies are marked <c>Secure</c>. Only local HTTP development
     /// justifies false — with it true, the <c>__Host-</c> prefix means the
     /// browser refuses the cookie over plain HTTP and login cannot work.
     /// </summary>
     public bool Secure { get; init; } = true;
+
+    /// <summary>
+    /// Whether this deployment may run with <see cref="Secure"/> off: always
+    /// in Development, anywhere else only when <see cref="AllowInsecureKey"/>
+    /// says so.
+    /// </summary>
+    /// <remarks>
+    /// Decided at startup from the environment the process runs in, and never
+    /// saved by the app. Without secure cookies the session travels in
+    /// cleartext over plain HTTP and loses the <c>__Host-</c> prefix, so a
+    /// sibling subdomain can set it — that is the operator's risk to take, not
+    /// something an administrator, or whoever reaches the setup screen first,
+    /// can switch on from a form.
+    /// </remarks>
+    public bool InsecureAllowed { get; init; }
+
+    /// <summary>Secure cookies are off where nobody allowed it.</summary>
+    public bool InsecureWithoutConsent => !Secure && !InsecureAllowed;
 
     /// <summary>How long a session lives without activity.</summary>
     public int SessionDays { get; init; } = 30;
@@ -61,6 +85,14 @@ public sealed record CookieSettings
     /// <summary>Throws when any value would make the process unable to serve.</summary>
     public void Validate()
     {
+        if (InsecureWithoutConsent)
+        {
+            throw new InvalidOperationException(
+                $"Configuration {SectionName}__{nameof(Secure)} is false outside the Development environment, "
+                + "which sends the session cookie without Secure and without its __Host- prefix. Serve Culina "
+                + $"over HTTPS and leave it true, or set {SectionName}__{AllowInsecureKey}=true to accept that.");
+        }
+
         SettingsGuard.InRange(SessionDays, 1, 365, SectionName, nameof(SessionDays));
 
         // Never longer than the lifetime itself: an interval that outlives the
