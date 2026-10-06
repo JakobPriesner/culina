@@ -138,6 +138,51 @@ public class HouseholdMembershipPolicyTests
         result.ShouldBeFailure(HouseholdErrors.NotAMember);
     }
 
+    [Theory]
+    [MemberData(nameof(AnyTarget))]
+    public void Remove_ShouldSayTheHouseholdDoesNotExist_ToAStranger_WhoeverTheyName(Guid target)
+    {
+        // Arrange
+        var household = AHousehold();
+
+        // Act
+        var result = household.Remove(target, actingUserId: Stranger);
+
+        // Assert
+        // One answer for a member, a non-member and the stranger themselves:
+        // anything else tells a stranger the household exists and who is in it.
+        result.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
+    }
+
+    [Theory]
+    [MemberData(nameof(AnyTarget))]
+    public void ChangeRole_ShouldSayTheHouseholdDoesNotExist_ToAStranger_WhoeverTheyName(Guid target)
+    {
+        // Arrange
+        var household = AHousehold();
+
+        // Act
+        var result = household.ChangeRole(target, HouseholdRole.Owner, actingUserId: Stranger);
+
+        // Assert
+        result.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
+    }
+
+    [Fact]
+    public void ChangeRole_ShouldSayNotOwner_ToAPlainMember_EvenForSomebodyWhoIsNotInIt()
+    {
+        // Arrange
+        var household = AHousehold();
+
+        // Act
+        var result = household.ChangeRole(Stranger, HouseholdRole.Owner, actingUserId: Member);
+
+        // Assert
+        result.ShouldBeFailure(HouseholdErrors.NotOwner);
+    }
+
+    public static TheoryData<Guid> AnyTarget() => [Owner, Member, Stranger, Guid.CreateVersion7()];
+
     [Fact]
     public void Add_ShouldFail_WhenTheUserIsAlreadyInTheHousehold()
     {

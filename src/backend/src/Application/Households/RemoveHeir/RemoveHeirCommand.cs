@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Telemetry;
+using Domain.Households;
 using Domain.Shared;
 
 namespace Application.Households.RemoveHeir;
@@ -28,11 +29,15 @@ internal sealed class RemoveHeirCommandHandler(
                 var parent = await households.FindAsync(command.HouseholdId, token).ConfigureAwait(false);
                 var heir = await households.FindAsync(command.HeirId, token).ConfigureAwait(false);
 
-                // The parent first: somebody who is not in it learns that it
-                // does not exist, before anything is said about the heir.
-                var cut = parent.Bind(from => heir.Bind(to => to
-                    .StopInheritingFrom(from, command.UserId)
-                    .Map(() => to)));
+                // The parent first, and whether the caller may administer it:
+                // somebody who is not in it learns that it does not exist,
+                // before anything — even whether it exists — is said about
+                // the heir.
+                var cut = parent.Bind(from => HouseholdMembershipPolicy
+                    .CanAdminister(from, command.UserId)
+                    .Bind(() => heir.Bind(to => to
+                        .StopInheritingFrom(from, command.UserId)
+                        .Map(() => to))));
 
                 return await cut.Match(
                     async household =>

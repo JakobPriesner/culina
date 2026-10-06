@@ -104,25 +104,32 @@ public static class HouseholdMembershipPolicy
     /// <param name="household">The household in question.</param>
     /// <param name="userId">Who is being removed.</param>
     /// <param name="actingUserId">Who is asking.</param>
+    /// <remarks>
+    /// The caller's own standing is checked before anything is said about the
+    /// target: answering "not a member" to a stranger would tell them the
+    /// household exists, and answering it only for some ids would tell them
+    /// who is in it.
+    /// </remarks>
     public static Result CanRemove(Household household, Guid userId, Guid actingUserId)
     {
         ArgumentNullException.ThrowIfNull(household);
-
-        var target = household.Find(userId);
-
-        if (target is null)
-        {
-            return HouseholdErrors.NotAMember;
-        }
 
         var leavingThemselves = userId == actingUserId;
         var permitted = leavingThemselves
             ? CanView(household, actingUserId)
             : CanAdminister(household, actingUserId);
 
-        return permitted.Bind(() => WouldStrandTheHousehold(household, target.Role)
-            ? HouseholdErrors.LastOwner
-            : Result.Success());
+        return permitted.Bind(() =>
+        {
+            if (household.Find(userId) is not { } target)
+            {
+                return HouseholdErrors.NotAMember;
+            }
+
+            return WouldStrandTheHousehold(household, target.Role)
+                ? HouseholdErrors.LastOwner
+                : Result.Success();
+        });
     }
 
     /// <summary>
@@ -132,6 +139,10 @@ public static class HouseholdMembershipPolicy
     /// <param name="userId">Whose role changes.</param>
     /// <param name="role">The new role.</param>
     /// <param name="actingUserId">Who is asking.</param>
+    /// <remarks>
+    /// The caller first, as in <see cref="CanRemove"/>, so a stranger learns
+    /// nothing about the household or who is in it.
+    /// </remarks>
     public static Result CanChangeRole(
         Household household,
         Guid userId,
@@ -140,18 +151,18 @@ public static class HouseholdMembershipPolicy
     {
         ArgumentNullException.ThrowIfNull(household);
 
-        var target = household.Find(userId);
-
-        if (target is null)
+        return CanAdminister(household, actingUserId).Bind(() =>
         {
-            return HouseholdErrors.NotAMember;
-        }
+            if (household.Find(userId) is not { } target)
+            {
+                return HouseholdErrors.NotAMember;
+            }
 
-        return CanAdminister(household, actingUserId)
-            .Bind(() => target.Role == HouseholdRole.Owner && role != HouseholdRole.Owner
+            return target.Role == HouseholdRole.Owner && role != HouseholdRole.Owner
                 && household.OwnerCount == 1
                 ? HouseholdErrors.LastOwner
-                : Result.Success());
+                : Result.Success();
+        });
     }
 
     private static bool WouldStrandTheHousehold(Household household, HouseholdRole removedRole) =>

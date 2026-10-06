@@ -100,6 +100,49 @@ public class BoundaryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Stranger_ShouldLearnNothingAboutWhoIsInAnotherHousehold_OrWhoInheritsIt()
+    {
+        // Arrange
+        // The real owner and the real heir next to invented ids: an answer
+        // that differs between them says who is in the household, and that
+        // it exists at all.
+        var (owner, stranger) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var strangerClient = stranger;
+
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var ownerId = (await owner.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();
+        var heirId = (await owner.PostAsync("/api/v1/households", new { name = "Flat", inheritsFrom = householdId }, Token))
+            .Json!.Value.GetProperty("householdId").GetGuid();
+        var invented = Guid.NewGuid();
+
+        // Act
+        var answers = new[]
+        {
+            await stranger.DeleteAsync($"/api/v1/households/{householdId}/members/{ownerId}", Token),
+            await stranger.DeleteAsync($"/api/v1/households/{householdId}/members/{invented}", Token),
+            await stranger.PatchAsync($"/api/v1/households/{householdId}/members/{ownerId}", new { role = "member" }, Token),
+            await stranger.PatchAsync($"/api/v1/households/{householdId}/members/{invented}", new { role = "member" }, Token),
+            await stranger.DeleteAsync($"/api/v1/households/{householdId}/heirs/{heirId}", Token),
+            await stranger.DeleteAsync($"/api/v1/households/{householdId}/heirs/{invented}", Token)
+        };
+
+        // Assert
+        Assert.All(answers, answer =>
+        {
+            Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
+            Assert.Equal("households.not_found", answer.ProblemCode);
+        });
+        Assert.Single(answers.Select(answer => answer.Json!.Value.GetProperty("detail").GetString()).Distinct());
+
+        // And nothing changed, which is the part that matters.
+        var members = await owner.GetAsync($"/api/v1/households/{householdId}/members", Token);
+        var heirs = await owner.GetAsync($"/api/v1/households/{householdId}/heirs", Token);
+        Assert.Equal("owner", members.Json!.Value.GetProperty("items")[0].GetProperty("role").GetString());
+        Assert.Equal(1, heirs.Json!.Value.GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
     public async Task Delete_ShouldAnswerTheSame_ForAStrangerAndForNothingAtAll()
     {
         // Arrange
