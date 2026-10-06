@@ -28,6 +28,9 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      # Same reason as CI's security job: uploading a SARIF reads the run it
+      # came from, and a token without this gets a 403 rather than a report.
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
