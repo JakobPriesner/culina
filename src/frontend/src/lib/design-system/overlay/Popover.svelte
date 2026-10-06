@@ -182,4 +182,32 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+
+  /* Opacity only: placement measures this box while opening, so animating its
+     geometry would feed transient dimensions back into the positioning. */
+  @supports (overlay: auto) and (transition-behavior: allow-discrete) {
+    .panel {
+      opacity: 0;
+      transition:
+        opacity var(--duration-fast) var(--ease-out),
+        display var(--duration-fast) allow-discrete,
+        overlay var(--duration-fast) allow-discrete;
+    }
+
+    .panel:popover-open {
+      opacity: 1;
+    }
+
+    @starting-style {
+      .panel:popover-open {
+        opacity: 0;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel {
+      transition: none;
+    }
+  }
 </style>

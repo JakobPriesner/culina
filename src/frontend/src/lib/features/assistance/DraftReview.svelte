@@ -415,19 +415,17 @@
   }
 
   .arrival {
-    animation: arrive 420ms var(--ease-out) both;
+    animation: arrive var(--duration-base) var(--ease-out) both;
   }
 
   @keyframes arrive {
     from {
       opacity: 0;
-      filter: blur(3px);
-      transform: translateY(0.45rem);
+      transform: translateY(var(--space-1));
     }
 
     to {
       opacity: 1;
-      filter: blur(0);
       transform: translateY(0);
     }
   }

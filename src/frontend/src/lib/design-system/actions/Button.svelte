@@ -150,7 +150,8 @@
       background-color var(--duration-fast) var(--ease-out),
       border-color var(--duration-fast) var(--ease-out),
       color var(--duration-fast) var(--ease-out),
-      box-shadow var(--duration-fast) var(--ease-out);
+      box-shadow var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
   }
 
   .sm {
@@ -280,6 +281,7 @@
 
   .button:active:not([aria-disabled='true']) {
     box-shadow: none;
+    transform: scale(0.985);
   }
   .primary:active:not([aria-disabled='true']) {
     background: var(--accent-active);

@@ -44,8 +44,7 @@ test.describe('background intake @offline', () => {
     await expect(
       page.getByText('You can leave this page or close the app.', { exact: false })
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Pause animation', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Play animation', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /animation/i })).toHaveCount(0);
     await page.goto('/recipes');
     await expect(page.getByRole('link', { name: 'Olli is working', exact: true })).toBeVisible();
     stage = 'writing';
@@ -126,7 +125,7 @@ test.describe('background intake @offline', () => {
     expect(submitted).toContain('https://example.com/beans');
     await expect(page.getByRole('status').filter({ hasText: 'Reading the source' })).toBeVisible();
   });
-  test('shows the real work props and stops repeating animation when paused', async ({
+  test('shows work props without earbuds and respects disabled motion', async ({
     page
   }, testInfo) => {
     await responsiveData(page, 'en', { activeCooking: false });
@@ -142,11 +141,13 @@ test.describe('background intake @offline', () => {
     await page.route('**/api/v1/recipe-intakes', (route) => route.fulfill({ json: [job] }));
     await page.route(`**/api/v1/recipe-intakes/${id}`, (route) => route.fulfill({ json: job }));
     await page.goto(`/recipes/imports/${id}`);
-    await expect(page.locator('.earbuds')).toBeVisible();
+    await expect(page.locator('.earbuds')).toHaveCount(0);
     await expect(page.locator('.phone')).toBeVisible();
-    await page.getByRole('button', { name: 'Pause animation', exact: true }).click();
     await page.screenshot({ path: testInfo.outputPath('olli-watching.png'), fullPage: true });
+    await page.goto('/me/appearance');
+    await page.getByRole('switch', { name: 'Animate Olli', exact: true }).click();
     job = { ...job, stage: 'writing' };
+    await page.goto(`/recipes/imports/${id}`);
     await page.reload();
     await expect(page.locator('.pencil')).toBeVisible();
     // Inspect a frame during the first stroke, with ordinary motion enabled.
@@ -154,7 +155,6 @@ test.describe('background intake @offline', () => {
     await page
       .locator('svg.olli')
       .screenshot({ path: testInfo.outputPath('olli-writing-motion.png') });
-    await page.getByRole('button', { name: 'Pause animation', exact: true }).click();
     const pen = page.locator('.pencil').locator('..');
     const pausedTransform = await pen.getAttribute('transform');
     await page.waitForTimeout(800);

@@ -25,7 +25,6 @@
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
-  import { olliSetting } from '$shell/olli/setting.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -396,7 +395,7 @@
       <EmptyState
         title={m['plan.empty.title']()}
         body={m['plan.empty.description']()}
-        art={olliSetting.shown ? peeking : undefined}
+        art={peeking}
       >
         {#snippet action()}
           <Button variant="primary" href={resolve('/(app)')}>{m['plan.empty.action']()}</Button>

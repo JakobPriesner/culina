@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { olliSetting } from '$shell/olli/setting.svelte';
   import type { Toast, ToastTone } from '$shell/toaster.svelte';
 
   import IconButton from '../actions/IconButton.svelte';
@@ -40,7 +41,7 @@
   onfocusout={() => onresume(toast.id)}
 >
   {#if toast.art}
-    <span class="art">{@render toast.art()}</span>
+    <span class="art" class:still-art={!olliSetting.animated}>{@render toast.art()}</span>
   {/if}
   <div class="surface">
     <p class="message">{toast.message()}</p>
@@ -103,6 +104,11 @@
     inset-inline-start: var(--space-4);
     pointer-events: none;
     animation: peek 3600ms var(--ease-out) both;
+  }
+
+  .still-art {
+    animation: none;
+    transform: translateY(calc(-100% + var(--space-2)));
   }
 
   .art:empty {
