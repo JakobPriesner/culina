@@ -41,15 +41,20 @@ cd culina
 cp .env.example .env
 ```
 
-Fill in `.env`. One value has no sensible default and the compose file will
-refuse to start without it:
+Fill in `.env`. Two values have no sensible default, and the compose file will
+refuse to start without them:
 
-- `Database__Password` — anything long and random.
+- `Database__Password` — the app's own role. Anything long and random.
+- `POSTGRES_SUPERUSER_PASSWORD` — the database superuser's, which the app never
+  uses. Long, random and different. The setup screen accepts any role, so a
+  guessable superuser password is a way to run the app as one.
 
 Where your proxy sits (`ForwardedHeaders__KnownNetworks` or `__KnownProxies`)
 matters just as much, but it can be set in `.env` or on the setup screen, which
 shows the address your proxy's requests actually arrive from. Secure cookies are
-on by default; leave them on behind a proxy that terminates TLS.
+on by default; leave them on behind a proxy that terminates TLS. Everything else
+in the copied file is safe as it is — the development values in it are commented
+out or left empty.
 
 Then:
 
@@ -109,6 +114,17 @@ docker compose -f compose.yaml -f compose.prod.yaml up -d
 The database image in `compose.yaml` is pinned to a digest, so `pull` moves
 PostgreSQL only when you take a newer `compose.yaml` from the repository, which
 is kept current with PostgreSQL 18's patch releases.
+
+**From before `POSTGRES_SUPERUSER_PASSWORD` was required**, compose refuses to
+start until `.env` sets it — and setting it changes nothing in a database that
+already exists, whose superuser still has the password it was created with,
+usually `postgres`. Put the new one in `.env`, then give it to the database
+too:
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml exec db \
+    psql -U postgres -c '\password postgres'
+```
 
 Migrations run at boot, inside an advisory lock so a restart cannot race
 itself, and each in its own transaction. A migration that fails logs `Critical`
