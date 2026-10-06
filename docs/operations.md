@@ -344,7 +344,11 @@ previous release's dump.
 - **What broke in somebody's browser.** The web app sends its uncaught errors,
   failed renders, service-worker failures and content-security-policy
   violations to the server, which logs them under the category
-  `Culina.WebApp`, event id 1700 — so they reach stdout with everything else,
+  `Culina.WebApp.Untrusted`, event id 1700 (`UntrustedWebAppReport`), always at
+  `Warning` and with every field named `Client…` — anybody can send one, so
+  none of it is the server's word, and none of it pages anyone as an `Error`.
+  Line breaks and other control characters in what a browser sent are logged
+  as spaces. They reach stdout with everything else,
   and the collector as a service of their own, `culina-web`, beside the
   server's `culina-api`, carrying the same request id, user and trace. Nothing
   goes from a browser to the collector directly, and nothing new needs

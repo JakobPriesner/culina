@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Application.Abstractions.Messaging;
 using Application.Telemetry;
 using Contracts.LogRecords;
@@ -48,11 +49,13 @@ public sealed record ReportedRecord(
 /// <para>
 /// Anybody can call this, signed in or not, because a sign-in page can break
 /// too. So every field has a ceiling, the batch has one, the endpoint has a
-/// rate limit of its own, and the level is decided here from the event code
-/// rather than taken from the request.
+/// rate limit per caller and one for every caller together, every line is a
+/// <c>Warning</c> however the browser describes it, and no text reaches the log
+/// with a line break or another control character in it: a console that does
+/// not escape them would otherwise print a forged line of the server's own.
 /// </para>
 /// </remarks>
-internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
+internal sealed partial class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
     : ICommandHandler<CreateLogRecordsCommand>
 {
     internal const int MostRecords = 10;
@@ -122,27 +125,28 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
 
     private void Write(CreateLogRecordsCommand command)
     {
+        if (!logger.IsEnabled(LogLevel.Warning))
+        {
+            return;
+        }
+
         // Not validated, because nobody chooses it on purpose; cut, because it
         // is still somebody else's text.
-        var userAgent = command.UserAgent.Length > LongestUserAgent
+        var userAgent = Printable(command.UserAgent.Length > LongestUserAgent
             ? command.UserAgent[..LongestUserAgent]
-            : command.UserAgent;
+            : command.UserAgent);
+        var appVersion = Printable(command.AppVersion);
 
         List<KeyValuePair<string, object>> shared =
         [
             new("user_agent.original", userAgent),
-            new("culina.web.app_version", command.AppVersion),
+            new("culina.web.app_version", appVersion),
             .. command.Client.Select(Bounded)
         ];
 
         foreach (var record in command.Records)
         {
-            var level = LevelOf(record.Event);
-
-            if (!logger.IsEnabled(level))
-            {
-                continue;
-            }
+            var message = Printable(record.Message);
 
             // A scope rather than more template holes: the exporter turns each
             // pair into an attribute of the line, and the message stays readable.
@@ -150,22 +154,14 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
                 [.. shared, .. record.Context.Select(Bounded)]);
 
             logger.Reported(
-                level,
-                command.AppVersion,
+                appVersion,
                 userAgent,
-                record.Event,
-                record.Route ?? "(none)",
-                record.Message,
-                record.Stack is { Length: > 0 } stack ? new WebAppException(record.Message, stack) : null);
+                Printable(record.Event),
+                Printable(record.Route ?? "(none)"),
+                message,
+                record.Stack is { Length: > 0 } stack ? new WebAppException(message, Printable(stack)) : null);
         }
     }
-
-    /// <summary>
-    /// A blocked resource is the policy working, which is security-relevant
-    /// rather than a defect; everything else is the app being wrong.
-    /// </summary>
-    private static LogLevel LevelOf(string @event) =>
-        @event == LogRecordVocabulary.CspViolation ? LogLevel.Warning : LogLevel.Error;
 
     /// <summary>
     /// Cuts what the browser described itself with rather than refusing it:
@@ -179,7 +175,22 @@ internal sealed class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
             var value => value
         });
 
-    private static string Cut(string text) => text.Length > LongestAttribute ? text[..LongestAttribute] : text;
+    private static string Cut(string text) =>
+        Printable(text.Length > LongestAttribute ? text[..LongestAttribute] : text);
+
+    /// <summary>
+    /// The text with every line break and every other control or formatting
+    /// character, bidirectional overrides included, turned into a space.
+    /// </summary>
+    /// <remarks>
+    /// A browser's stack loses its line breaks with the rest. Each frame still
+    /// starts with its own <c>at</c>, and a stack that can start a new line can
+    /// start a forged one.
+    /// </remarks>
+    private static string Printable(string text) => Unprintable().Replace(text, " ");
+
+    [GeneratedRegex(@"[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]")]
+    private static partial Regex Unprintable();
 
     private static bool Longer(string? value, int limit) => value?.Length > limit;
 }
