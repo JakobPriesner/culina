@@ -16,8 +16,11 @@ const me = '/api/v1/users/me';
 /** The last request the client actually sent. */
 let sent: Request[] = [];
 
-function respondWith(...responses: Response[]) {
-  const queue = [...responses];
+/** A reply, or a function making one when the request arrives, for a side effect in between. */
+type Reply = Response | (() => Response);
+
+function respondWith(...replies: Reply[]) {
+  const queue = [...replies];
 
   vi.stubGlobal(
     'fetch',
@@ -26,7 +29,11 @@ function respondWith(...responses: Response[]) {
 
       const next = queue.shift();
 
-      return next ? Promise.resolve(next) : Promise.reject(new TypeError('Failed to fetch'));
+      if (!next) {
+        return Promise.reject(new TypeError('Failed to fetch'));
+      }
+
+      return Promise.resolve(typeof next === 'function' ? next() : next);
     })
   );
 }
@@ -408,29 +415,45 @@ describe('an expired session', () => {
 });
 
 describe('a rejected CSRF token', () => {
-  it('is retried exactly once', async () => {
-    respondWith(
-      problem(403, { code: ErrorCodes.csrfInvalid, detail: 'Could not verify.' }),
-      json({}, { status: 201 })
-    );
+  const refused = () => problem(403, { code: ErrorCodes.csrfInvalid, detail: 'Could not verify.' });
 
-    const result = await request(() =>
-      http.POST('/api/v1/sessions', { body: { email: 'a@b.c', password: 'x' } })
-    );
+  /** The refusal, after another tab signed in while this request was on its way. */
+  const refusedAfterSignInElsewhere = () => {
+    document.cookie = 'culina.csrf=after; path=/';
+
+    return refused();
+  };
+
+  const signIn = () =>
+    request(() => http.POST('/api/v1/sessions', { body: { email: 'a@b.c', password: 'x' } }));
+
+  beforeEach(() => {
+    document.cookie = 'culina.csrf=before; path=/';
+  });
+
+  it('is not resent when the cookie is unchanged, because the same token earns the same refusal', async () => {
+    respondWith(refused(), json({}, { status: 201 }));
+
+    const result = await signIn();
+
+    expect(sent).toHaveLength(1);
+    expect(result.ok === false && result.error.code).toBe(ErrorCodes.csrfInvalid);
+  });
+
+  it('is retried once, with the new token, when the cookie changed in the meantime', async () => {
+    respondWith(refusedAfterSignInElsewhere, json({}, { status: 201 }));
+
+    const result = await signIn();
 
     expect(sent).toHaveLength(2);
+    expect(sent[1]?.headers.get('X-Culina-CSRF')).toBe('after');
     expect(result.ok).toBe(true);
   });
 
   it('gives up after the second refusal rather than looping', async () => {
-    respondWith(
-      problem(403, { code: ErrorCodes.csrfInvalid, detail: 'Could not verify.' }),
-      problem(403, { code: ErrorCodes.csrfInvalid, detail: 'Could not verify.' })
-    );
+    respondWith(refusedAfterSignInElsewhere, refused());
 
-    const result = await request(() =>
-      http.POST('/api/v1/sessions', { body: { email: 'a@b.c', password: 'x' } })
-    );
+    const result = await signIn();
 
     expect(sent).toHaveLength(2);
     expect(result.ok === false && result.error.code).toBe(ErrorCodes.csrfInvalid);
