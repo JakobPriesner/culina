@@ -46,18 +46,37 @@ beforeAll(async () => {
   addEventListener.mockRestore();
 });
 
-const stored = new Response('{"title":"as last seen"}', { status: 200 });
+/** A copy as the worker keeps it: the body, and whose it is. */
+const keptFor = (owner: string | null, body: string) =>
+  new Response(body, { status: 200, headers: owner ? { 'X-Culina-Owner': owner } : {} });
 
-beforeEach(() => {
-  vi.useFakeTimers();
+const stored = keptFor('u1', '{"title":"as last seen"}');
+
+/** A private cache holding these copies by path. Returns what gets put into it. */
+function privateCache(copies: Record<string, Response>) {
+  const put = new Map<string, Response>();
+  const pathOf = (key: Request | string) =>
+    new URL(typeof key === 'string' ? key : key.url, location.origin).pathname;
+
   vi.stubGlobal('caches', {
     open: () =>
       Promise.resolve({
-        match: () => Promise.resolve(stored),
-        put: () => Promise.resolve(),
+        match: (key: Request | string) => Promise.resolve(copies[pathOf(key)]),
+        put: (key: Request, response: Response) =>
+          Promise.resolve(void put.set(pathOf(key), response)),
         keys: () => Promise.resolve([]),
         delete: () => Promise.resolve(true)
       })
+  });
+
+  return put;
+}
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  privateCache({
+    '/api/v1/users/me': keptFor('u1', '{"userId":"u1"}'),
+    '/api/v1/recipes/r1': stored
   });
 
   return () => {
@@ -66,18 +85,26 @@ beforeEach(() => {
   };
 });
 
-/** Sends a recipe read through the worker and records what it answers. */
-function readRecipe() {
-  const answer: { response?: Response } = {};
+/** Sends a read through the worker and records what it answers, and when it is done. */
+function read(path: string) {
+  const answer: { response?: Response; failed?: boolean; settled: Promise<unknown> } = {
+    settled: Promise.resolve()
+  };
 
   onFetch({
-    request: new Request(new URL('/api/v1/recipes/r1', location.origin)),
-    respondWith: (pending: Promise<Response>) => void pending.then((r) => (answer.response = r)),
-    waitUntil: () => {}
+    request: new Request(new URL(path, location.origin)),
+    respondWith: (pending: Promise<Response>) =>
+      void pending.then(
+        (r) => (answer.response = r),
+        () => (answer.failed = true)
+      ),
+    waitUntil: (pending: Promise<unknown>) => (answer.settled = pending)
   });
 
   return answer;
 }
+
+const readRecipe = () => read('/api/v1/recipes/r1');
 
 it('answers a recipe read from the cache when the network stalls', async () => {
   vi.stubGlobal('fetch', () => new Promise(() => {}));
@@ -99,6 +126,85 @@ it('still answers from the network when it answers in time', async () => {
   await vi.advanceTimersByTimeAsync(0);
 
   expect(answer.response).toBe(fresh);
+});
+
+/*
+ * The cache is emptied on every sign-in and sign-out, but only if the message
+ * saying so arrives. Each copy also names the user it was read for, and the
+ * worker answers nobody else with it.
+ */
+
+const offline = () => Promise.reject(new TypeError('Failed to fetch'));
+
+/** What a same-origin fetch hands the worker. A constructed Response says 'default'. */
+const fromNetwork = (body: string) =>
+  Object.defineProperty(new Response(body, { status: 200 }), 'type', { value: 'basic' });
+
+it('answers the person it was kept for from the copy when offline', async () => {
+  vi.stubGlobal('fetch', offline);
+
+  const answer = readRecipe();
+
+  await vi.advanceTimersByTimeAsync(0);
+
+  expect(answer.response).toBe(stored);
+});
+
+it('does not answer one person offline with the copy kept for another', async () => {
+  // The network's last word was that u2 is signed in; r1 was read for u1.
+  privateCache({
+    '/api/v1/users/me': keptFor('u2', '{"userId":"u2"}'),
+    '/api/v1/recipes/r1': stored
+  });
+  vi.stubGlobal('fetch', offline);
+
+  const answer = readRecipe();
+
+  await vi.advanceTimersByTimeAsync(2_500);
+
+  expect(answer.response).toBeUndefined();
+  expect(answer.failed).toBe(true);
+});
+
+it('does not answer from a copy that does not say whose it is', async () => {
+  privateCache({
+    '/api/v1/users/me': keptFor('u1', '{"userId":"u1"}'),
+    '/api/v1/recipes/r1': keptFor(null, '{"title":"kept before copies had owners"}')
+  });
+  vi.stubGlobal('fetch', offline);
+
+  const answer = readRecipe();
+
+  await vi.advanceTimersByTimeAsync(2_500);
+
+  expect(answer.failed).toBe(true);
+});
+
+it('keeps a fresh copy for whoever was signed in when the read began', async () => {
+  const put = privateCache({ '/api/v1/users/me': keptFor('u1', '{"userId":"u1"}') });
+
+  vi.stubGlobal('fetch', () => Promise.resolve(fromNetwork('{"title":"fresh"}')));
+
+  const answer = readRecipe();
+
+  await vi.advanceTimersByTimeAsync(0);
+  await answer.settled;
+
+  expect(put.get('/api/v1/recipes/r1')?.headers.get('X-Culina-Owner')).toBe('u1');
+  expect(await put.get('/api/v1/recipes/r1')?.text()).toBe('{"title":"fresh"}');
+});
+
+it('takes who is signed in from the answer to that read itself', async () => {
+  const put = privateCache({ '/api/v1/users/me': keptFor('u1', '{"userId":"u1"}') });
+
+  vi.stubGlobal('fetch', () => Promise.resolve(fromNetwork('{"userId":"u2"}')));
+
+  const answer = read('/api/v1/users/me');
+
+  await vi.advanceTimersByTimeAsync(0);
+  await answer.settled;
+
+  expect(put.get('/api/v1/users/me')?.headers.get('X-Culina-Owner')).toBe('u2');
 });
 
 it('keeps the private cache when a new build takes over', async () => {
