@@ -7,6 +7,7 @@
   import { Button, ErrorState, IconButton, Select, Sheet, Skeleton } from '$ds';
   import { busy } from '$shell/busy.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { autoScrollStep } from '$features/cooking/autoScrollStep';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
@@ -213,6 +214,7 @@
    * all change it.
    */
   let controlsHeight = $state(0);
+  let autoScrolling = $state(false);
   let notesOpen = $state(false);
   let kitchenOpen = $state(false);
 
@@ -299,7 +301,16 @@
 
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
-    <div class="cook" style:--controls-height="{controlsHeight}px">
+    <div
+      class="cook"
+      style:--controls-height="{controlsHeight}px"
+      use:autoScrollStep={{
+        enabled: autoScrolling && ready && !over,
+        step: currentStep,
+        suspended: notesOpen || kitchenOpen,
+        onstop: () => (autoScrolling = false)
+      }}
+    >
       <RecipeSurface
         recipe={recipes.detail}
         emphasis="cook"
@@ -327,9 +338,24 @@
           <p class="progress">
             {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
           </p>
-          <Button size="sm" label={m['kitchen.controls']()} onclick={() => (kitchenOpen = true)}>
-            {m['kitchen.short']()}
+          <Button
+            size="sm"
+            label={autoScrolling ? m['cooking.autoScroll.stop']() : undefined}
+            disabled={!ready}
+            onclick={() => (autoScrolling = !autoScrolling)}
+          >
+            {autoScrolling ? m['cooking.autoScroll.stopShort']() : m['cooking.autoScroll.start']()}
           </Button>
+          <IconButton
+            size="sm"
+            bordered
+            label={m['kitchen.controls']()}
+            onclick={() => (kitchenOpen = true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7h16M4 17h16M9 4v6M15 14v6" stroke-linecap="round" />
+            </svg>
+          </IconButton>
         </div>
 
         <div class="moves">
@@ -437,6 +463,7 @@
   onclose={() => (kitchenOpen = false)}
 >
   {#if recipes.detail && recipes.detail.id === recipeId}
+    <p class="auto-scroll-hint">{m['cooking.autoScroll.hint']()}</p>
     <div class="kitchen-display">
       <label for="kitchen-lighting">{m['kitchen.lighting']()}</label>
       <Select
@@ -470,6 +497,11 @@
 </Sheet>
 
 <style>
+  .auto-scroll-hint {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
   .kitchen-display {
     display: flex;
     align-items: center;
@@ -552,9 +584,10 @@
   .control-summary {
     display: flex;
     flex: 1 0 auto;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
   .progress {
@@ -584,14 +617,6 @@
     .controls {
       flex-direction: column;
       align-items: stretch;
-    }
-
-    .control-summary {
-      display: flex;
-      flex: 1 0 auto;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
     }
 
     .progress {
