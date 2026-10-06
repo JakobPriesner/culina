@@ -115,8 +115,8 @@ cookie-authenticated responses invites BREACH.
   readable CSRF cookie — in **one** place, the generated-client wrapper
   (`frontend-api-client`), never per call site.
 - A `401` clears local auth state and routes to login; it never triggers a
-  silent retry loop. A `403` with code `auth.csrf_invalid` refreshes the CSRF
-  token once, then retries once, then gives up.
+  silent retry loop. A `403` with code `auth.csrf_invalid` is retried once,
+  only if the CSRF cookie changed while the request was out, then given up on.
 - No credential, id token or user object is persisted to `localStorage` or
   `sessionStorage`. The server is the source of truth; the client keeps the
   current user in memory and re-fetches `/users/me` on load.

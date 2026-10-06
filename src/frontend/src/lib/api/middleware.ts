@@ -1,15 +1,12 @@
 import type { Middleware } from 'openapi-fetch';
 
-import { readCookie } from './cookies';
+import { csrfToken } from './cookies';
 import { cached, invalidate, remember } from './etagCache';
 import { ErrorCodes } from './problem';
 import { sessionExpired } from './session';
 
 /** The header the backend checks on every unsafe cookie-authenticated request. */
 const csrfHeader = 'X-Culina-CSRF';
-
-/** Readable on purpose: echoing it in a header is what an attacker's page cannot do. */
-const csrfCookie = 'culina.csrf';
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -27,7 +24,7 @@ export const csrf: Middleware = {
       return undefined;
     }
 
-    const token = readCookie(csrfCookie);
+    const token = csrfToken();
 
     if (token) {
       request.headers.set(csrfHeader, token);

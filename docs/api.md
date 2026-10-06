@@ -394,7 +394,9 @@ Everything cross-cutting lives there once:
   `AppError` carries `code`, `detail`, `status`, `requestId` and one entry per
   wrong field. **Branch on `code`; `detail` is prose and will be reworded.**
 - A 401 clears the cache and notifies the shell, exactly once, never retried.
-- A 403 with `auth.csrf_invalid` is retried exactly once, then given up on.
+- A 403 with `auth.csrf_invalid` is retried exactly once, and only when the
+  CSRF cookie changed while the request was out (another tab signed in);
+  resending the same token would only earn the same refusal.
 - A 15-second deadline per request, combined with the caller's own signal so a
   request still dies with the component that started it.
 
