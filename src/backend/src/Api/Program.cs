@@ -1,6 +1,7 @@
 using Api;
 using Api.Endpoints.Health;
 using Api.Endpoints.Setup;
+using Api.Endpoints.WellKnown;
 using Api.Extensions;
 using Api.Infrastructure;
 using Application;
@@ -105,6 +106,7 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
     app.UseAuthorization();           // 14. Policies, after identity is established.
 
     app.MapHealthEndpoints();
+    app.MapSecurityTxt();
     app.MapEndpoints();
     app.MapSinglePageAppFallback();
 

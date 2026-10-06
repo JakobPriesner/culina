@@ -92,9 +92,10 @@ export default defineConfig({
       }
     }),
 
-    // robots.txt, sitemap.xml and security.txt, written from the one list of
-    // public routes so they cannot disagree with each other. Last, so it writes
-    // into the directory the adapter has finished producing.
+    // robots.txt and sitemap.xml, written from the one list of public routes
+    // so they cannot disagree with each other. Last, so it writes into the
+    // directory the adapter has finished producing. security.txt is the
+    // server's: see SecurityTxtEndpoint.
     siteFiles()
   ],
 
