@@ -1502,5 +1502,9 @@
   "problem.Push.TooManyDevices": "Too many devices are registered for notifications.",
   "import.intake.iphone": "On iPhone, choose Copy link in Instagram, then paste the link here. Culina cannot appear in the iPhone share menu.",
   "kitchen.controls": "Kitchen controls",
-  "kitchen.short": "Kitchen"
+  "kitchen.short": "Kitchen",
+  "cooking.autoScroll.start": "Auto-scroll",
+  "cooking.autoScroll.stop": "Stop scrolling",
+  "cooking.autoScroll.hint": "Auto-scroll slowly reads long steps down and back up, pausing at each end. Touch the recipe or scroll manually to stop. With reduced motion, it shows overlapping portions without animation.",
+  "cooking.autoScroll.stopShort": "Stop"
 }

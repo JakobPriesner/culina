@@ -1502,5 +1502,9 @@
   "problem.Push.TooManyDevices": "Zu viele Geräte sind für Benachrichtigungen registriert.",
   "import.intake.iphone": "Wähle auf dem iPhone in Instagram „Link kopieren“ und füge den Link hier ein. Culina kann im Teilen-Menü des iPhones nicht erscheinen.",
   "kitchen.controls": "Küchensteuerung",
-  "kitchen.short": "Küche"
+  "kitchen.short": "Küche",
+  "cooking.autoScroll.start": "Auto-Scroll",
+  "cooking.autoScroll.stop": "Scrollen stoppen",
+  "cooking.autoScroll.hint": "Auto-Scroll bewegt lange Schritte langsam nach unten und wieder nach oben, mit einer Pause an beiden Enden. Berühre das Rezept oder scrolle selbst, um zu stoppen. Bei reduzierter Bewegung werden überlappende Abschnitte ohne Animation gezeigt.",
+  "cooking.autoScroll.stopShort": "Stopp"
 }
