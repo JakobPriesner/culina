@@ -106,6 +106,10 @@ docker compose -f compose.yaml -f compose.prod.yaml pull
 docker compose -f compose.yaml -f compose.prod.yaml up -d
 ```
 
+The database image in `compose.yaml` is pinned to a digest, so `pull` moves
+PostgreSQL only when you take a newer `compose.yaml` from the repository, which
+is kept current with PostgreSQL 18's patch releases.
+
 Migrations run at boot, inside an advisory lock so a restart cannot race
 itself, and each in its own transaction. A migration that fails logs `Critical`
 and the process exits non-zero: a half-migrated database must not serve traffic.

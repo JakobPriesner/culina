@@ -128,7 +128,9 @@ jobs:
     # runtime surprise weeks later, in somebody's kitchen.
     services:
       postgres:
-        image: postgres:18-alpine
+        # The digest compose.yaml pins. Dependabot moves that one, not this:
+        # keep the two the same when its pull request lands.
+        image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: culina

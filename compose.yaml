@@ -6,7 +6,10 @@
 
 services:
   db:
-    image: postgres:18-alpine
+    # Pinned to a digest, like the Dockerfile's base images: a moved tag would
+    # change the database under every deployment with no diff here. Dependabot
+    # moves it within 18; a major version is a pg_upgrade, never a bump.
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     # No container_name on purpose: a fixed name makes the file unusable for
     # more than one project at a time, and checking a production compose
     # against a running development one is exactly when that matters.

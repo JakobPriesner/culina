@@ -137,7 +137,8 @@ step() {
 # at the same time never read a client halfway through being rewritten.
 contract() {
   docker run -d --rm --name "$CONTRACT_DB" -p 127.0.0.1::5432 \
-    -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=culina postgres:18-alpine || return 1
+    -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=culina \
+    postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873 || return 1
 
   # Over TCP, which the entrypoint's first, initialising start does not listen on.
   local deadline=$((SECONDS + 60))

@@ -1,0 +1,52 @@
+# What keeps the pins from going stale.
+#
+# Every action is pinned to a commit and every base image to a digest, so that
+# nothing changes without a diff in this repository. That is only safe while
+# something proposes the diff: a pin nobody moves is a pin to last month's CVEs.
+# One grouped pull request per ecosystem a week, and it goes through CI like
+# any other change.
+#
+# Not npm or NuGet: those are locked, audited on every run and every night, and
+# moved by hand when an audit or a feature asks for it.
+
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ['*']
+
+  # The Dockerfile's base images.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      base-images:
+        patterns: ['*']
+    # A new digest for the same tag, or a newer tag within the same major. Node,
+    # .NET and the runtime image move a major deliberately, together with CI.
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  # compose.yaml's database. Its digest is repeated in ci.yml's contract job
+  # and scripts/ci-local.sh, which this does not read; keep them in step.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      compose-images:
+        patterns: ['*']
+    # PostgreSQL 18 to 19 is a pg_upgrade of everybody's data, never a bump.
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']

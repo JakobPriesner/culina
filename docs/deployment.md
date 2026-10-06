@@ -74,6 +74,10 @@ stage 3  dotnet/aspnet:10.0-noble-chiseled
   from a running server, so the image build needs no database.
 - Chiseled runtime: no shell, no package manager — a much smaller attack
   surface and a much smaller CVE feed.
+- Every base image (and the database in `compose.yaml`) is pinned to a digest
+  next to its tag, so a moved or compromised tag cannot change what ships
+  without a diff. Dependabot (`.github/dependabot.yml`) proposes new digests
+  and action SHAs weekly, never a major version.
 - Labels carry `org.opencontainers.image.source`, `.revision` and `.version` so
   GitHub Packages can link the image to this repository and a running container
   can be traced back to a commit.
