@@ -47,12 +47,11 @@ const serverSettings = {
 const json = (body: object, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-const unreachable = {
-  type: 'urn:culina:problem:settings.database_unreachable',
+const refused = {
+  type: 'urn:culina:problem:settings.database_login_refused',
   status: 400,
-  detail:
-    'Culina could not connect to that database: password authentication failed for user "culina_app".',
-  code: 'settings.database_unreachable',
+  detail: 'The database server refused the user name, the password or the database name.',
+  code: 'settings.database_login_refused',
   requestId: 'r1'
 };
 
@@ -66,7 +65,7 @@ function serverAnswers(connects: boolean) {
     const url = request.url;
 
     if (request.method === 'PUT' && url.includes('/settings/database')) {
-      if (!connects) return Promise.resolve(json(unreachable, 400));
+      if (!connects) return Promise.resolve(json(refused, 400));
 
       startedAt = '2026-09-24T10:00:02Z';
       stage = 'account';
@@ -118,7 +117,7 @@ describe('setting up a fresh instance', () => {
     expect(screen.getByRole('heading', { name: 'Connect a database' })).toBeInTheDocument();
   });
 
-  it('says why a database was refused, in the server’s own words too', async () => {
+  it('says why a database was refused, in the reader’s language', async () => {
     serverAnswers(false);
 
     renderWithProviders(SetupPage, atStage('database'));
@@ -127,9 +126,11 @@ describe('setting up a fresh instance', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
     await settle();
 
-    // The headline is translated; the reason is only the server's to give.
-    expect(screen.getByText("Culina couldn't connect to that database.")).toBeInTheDocument();
-    expect(screen.getByText(/password authentication failed/)).toBeInTheDocument();
+    // Only the kind of failure: the server keeps its own words for its log.
+    expect(
+      screen.getByText('The database server refused the user, the password or the database name.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/refused the user name/)).not.toBeInTheDocument();
   });
 
   it('goes on once the server is back with the database, cookies set for this page', async () => {

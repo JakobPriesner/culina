@@ -72,11 +72,47 @@ public static class SettingsErrors
         $"The proxy network '{network}' is too wide to trust: every client in it could claim any address. Name your proxy's own network, at most a /8 for IPv4 or a /32 for IPv6, such as 172.16.0.0/12.",
         ErrorType.Validation);
 
-    /// <summary>The database could not be reached with the details given.</summary>
-    /// <param name="reason">What the connection attempt reported.</param>
-    public static Error DatabaseUnreachable(string reason) => new(
+    // The connection failures below are deliberately coarse. The check
+    // connects to any host and port it is given, so the socket's or the
+    // server's own words would make it a port scanner; the detail goes to the
+    // log, named with the address, where the operator can read it.
+
+    /// <summary>Nothing answered at that host and port.</summary>
+    public static readonly Error DatabaseUnreachable = new(
         "settings.database_unreachable",
-        $"Culina could not connect to that database: {reason.TrimEnd('.')}.",
+        "Culina could not reach a database server at that address. Check the host and the port, and that the server is running.",
+        ErrorType.Validation);
+
+    /// <summary>A PostgreSQL server answered, and refused the role, the password or the database name.</summary>
+    public static readonly Error DatabaseLoginRefused = new(
+        "settings.database_login_refused",
+        "The database server refused the user name, the password or the database name.",
+        ErrorType.Validation);
+
+    /// <summary>The connection could not be encrypted, as the settings require.</summary>
+    public static readonly Error DatabaseTlsFailed = new(
+        "settings.database_tls_failed",
+        "Culina could not set up an encrypted connection with that server. Enable TLS on the database server, or turn the TLS requirement off if the database is on the same private network.",
+        ErrorType.Validation);
+
+    /// <summary>Something answered, but not as a PostgreSQL server Culina could use.</summary>
+    public static readonly Error DatabaseNotPostgres = new(
+        "settings.database_not_postgres",
+        "Something answered at that address, but not a PostgreSQL server Culina can use.",
+        ErrorType.Validation);
+
+    /// <summary>
+    /// The role is a superuser.
+    /// </summary>
+    /// <remarks>
+    /// Refused because a superuser can run programs on the database server
+    /// (<c>COPY … TO PROGRAM</c>), so a flaw in Culina would become one in the
+    /// server. The migrations need nothing more than a role that owns the
+    /// database.
+    /// </remarks>
+    public static readonly Error DatabaseSuperuser = new(
+        "settings.database_superuser",
+        "Culina must connect as a role of its own, not as a superuser. Create a role that owns the database and enter that instead.",
         ErrorType.Validation);
 
     /// <summary>
