@@ -1,4 +1,4 @@
-import { readCookie } from './cookies';
+import { csrfToken } from './cookies';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
 import { sessionExpired } from './session';
 
@@ -55,9 +55,6 @@ const backoffMs = [500, 1000, 2000, 4000, 8000];
 
 /** The header the backend checks on every unsafe cookie-authenticated request. */
 const csrfHeader = 'X-Culina-CSRF';
-
-/** Readable on purpose: echoing it in a header is what an attacker's page cannot do. */
-const csrfCookie = 'culina.csrf';
 
 /**
  * Reads a server-sent event stream.
@@ -149,7 +146,7 @@ async function start(
   body: BodyInit | null,
   signal: AbortSignal
 ): Promise<{ body?: ReadableStream<Uint8Array>; error?: AppError }> {
-  const token = readCookie(csrfCookie);
+  const token = csrfToken();
   let response: Response;
 
   try {

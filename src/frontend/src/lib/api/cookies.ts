@@ -1,10 +1,18 @@
+/** Readable on purpose: echoing it in a header is what an attacker's page cannot do. */
+const csrfCookie = 'culina.csrf';
+
+/** The CSRF token as the browser holds it right now, which another tab can change. */
+export function csrfToken(): string | null {
+  return readCookie(csrfCookie);
+}
+
 /**
  * Reads a cookie the browser is willing to show us.
  *
  * Only the CSRF cookie is readable — the session cookie is `HttpOnly` by
  * design — so this exists for exactly one caller and stays deliberately small.
  */
-export function readCookie(name: string): string | null {
+function readCookie(name: string): string | null {
   if (typeof document === 'undefined') {
     return null;
   }

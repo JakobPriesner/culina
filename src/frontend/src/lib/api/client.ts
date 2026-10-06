@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch';
 
 import type { paths } from './generated/schema';
+import { csrfToken } from './cookies';
 import { conditionalRequests, csrf, expiredSessions } from './middleware';
 import { ErrorCodes, offline, timedOut, toAppError } from './problem';
 import { err, ok, type Result } from './result';
@@ -88,9 +89,10 @@ interface Call<TData> {
  * and resending the same token would only earn the same refusal.
  */
 export async function request<TData>(call: () => Promise<Call<TData>>): Promise<Result<TData>> {
+  const tokenSent = csrfToken();
   const first = await attempt(call);
 
-  if (first.ok || first.error.code !== ErrorCodes.csrfInvalid) {
+  if (first.ok || first.error.code !== ErrorCodes.csrfInvalid || csrfToken() === tokenSent) {
     return first;
   }
 
