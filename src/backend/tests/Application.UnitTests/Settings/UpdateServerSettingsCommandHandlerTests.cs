@@ -90,13 +90,55 @@ public class UpdateServerSettingsCommandHandlerTests
         Assert.Null(world.Configuration.Saved);
     }
 
+    [Fact]
+    public async Task Handle_ShouldRefuseInsecureCookies_WhenTheDeploymentDoesNotAllowThem()
+    {
+        // Arrange
+        var world = new World();
+
+        // Act
+        var result = await world.Handle(Command(cookies: new CookieSettings { Secure = false }));
+
+        // Assert
+        result.ShouldBeFailure(SettingsErrors.InsecureCookies);
+        Assert.Null(world.Configuration.Saved);
+        Assert.Equal(0, world.Restart.Scheduled);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldRefuseInsecureCookies_EvenWhenTheProposalClaimsTheyAreAllowed()
+    {
+        // Arrange
+        var world = new World();
+
+        // Act
+        var result = await world.Handle(Command(cookies: new CookieSettings { Secure = false, InsecureAllowed = true }));
+
+        // Assert
+        result.ShouldBeFailure(SettingsErrors.InsecureCookies);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldSaveInsecureCookies_WhenTheDeploymentAllowsThem()
+    {
+        // Arrange
+        var world = new World(cookies: new CookieSettings { InsecureAllowed = true });
+
+        // Act
+        var change = (await world.Handle(Command(cookies: new CookieSettings { Secure = false }))).ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal(ServerChange.Restarting, change);
+        Assert.Equal(new Dictionary<string, string> { ["Cookies:Secure"] = "false" }, world.Configuration.Saved);
+    }
+
     private static UpdateServerSettingsCommand Command(
         CookieSettings? cookies = null,
         RateLimitSettings? limits = null,
         string? endpoint = null) =>
         new(cookies ?? new CookieSettings(), new ForwardedHeadersSettings(), limits ?? new RateLimitSettings(), endpoint, "grpc");
 
-    private sealed class World(TelemetrySettings? telemetry = null)
+    private sealed class World(TelemetrySettings? telemetry = null, CookieSettings? cookies = null)
     {
         public FakeServerConfiguration Configuration { get; } = new();
 
@@ -104,7 +146,7 @@ public class UpdateServerSettingsCommandHandlerTests
 
         public Task<Result<ServerChange>> Handle(UpdateServerSettingsCommand command) =>
             new UpdateServerSettingsCommandHandler(
-                    new CookieSettings(),
+                    cookies ?? new CookieSettings(),
                     new ForwardedHeadersSettings(),
                     new RateLimitSettings(),
                     telemetry ?? new TelemetrySettings(),

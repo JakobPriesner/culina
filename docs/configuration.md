@@ -64,7 +64,8 @@ A setting that stops Culina starting is named in its log. Set that setting's
 variable in the environment — it overrides the file — or delete the key from
 `culina.json` (or the whole file) and restart the container. The classic case
 is turning secure cookies on while Culina is reached over plain `http://`:
-nobody can sign in, and `Cookies__Secure=false` gets you back in.
+nobody can sign in, and `Cookies__Secure=false` with
+`Cookies__AllowInsecureOutsideDevelopment=true` gets you back in.
 
 ## Database
 
@@ -105,7 +106,8 @@ protects later would otherwise change key on every restart.
 
 | Variable | Default | |
 | --- | --- | --- |
-| `Cookies__Secure` | `true` | In the app. Only plain-HTTP access justifies `false`. With it true the session cookie takes the `__Host-` prefix, which requires HTTPS — over plain `http://` the browser refuses it and signing in cannot work. Changing it signs everybody out once, because the cookie changes name. |
+| `Cookies__Secure` | `true` | In the app. Only plain-HTTP access justifies `false`. With it true the session cookie takes the `__Host-` prefix, which requires HTTPS — over plain `http://` the browser refuses it and signing in cannot work (`localhost` is the exception browsers make). Changing it signs everybody out once, because the cookie changes name. |
+| `Cookies__AllowInsecureOutsideDevelopment` | `false` | Not in the app. Outside the `Development` environment Culina refuses to start with `Cookies__Secure=false`, and refuses to save it from the app, unless this is `true` — a session cookie in cleartext, without its `__Host-` prefix, is the deployment's risk to accept, not an administrator's switch. Every start with insecure cookies logs a warning (event id 1603). |
 | `Cookies__SessionDays` | `30` | In the app. How long a session survives without activity. Activity slides it: a device in regular use is never signed out. |
 | `Cookies__RenewAfterHours` | `24` | In the app. How long a session may sit unused before the next request extends it and re-issues both cookies. Culina has no refresh token — the cookie is an opaque reference, so this renewal is what takes its place. Lower costs a write per request for nothing; `0` renews on every request and only a test wants that. |
 

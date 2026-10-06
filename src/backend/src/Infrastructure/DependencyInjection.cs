@@ -24,6 +24,7 @@ using Infrastructure.Settings;
 using Infrastructure.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 
 namespace Infrastructure;
@@ -42,13 +43,15 @@ public static class DependencyInjection
     /// <summary>Adds settings, persistence and the adapters built on them.</summary>
     /// <param name="services">The container to register into.</param>
     /// <param name="configuration">The configuration to read settings from.</param>
+    /// <param name="environment">Where the process runs.</param>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         // First, so a misconfigured process fails during startup rather than on
         // the first request that needed a value.
-        services.AddBootstrapSettings(configuration);
+        services.AddBootstrapSettings(configuration, environment);
 
         DapperConfiguration.Apply();
 

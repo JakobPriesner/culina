@@ -22,6 +22,19 @@ public static class SettingsErrors
         "Culina cannot save server settings, because its configuration directory is not writable. Mount a volume at Storage__ConfigPath (/data/config in the image).",
         ErrorType.Unavailable);
 
+    /// <summary>
+    /// Secure cookies turned off on a deployment that has not allowed it.
+    /// </summary>
+    /// <remarks>
+    /// A failure of its own rather than an invalid value, because the screen
+    /// offers the switch and has to say why it will not move: the deployment
+    /// decides this, not the form.
+    /// </remarks>
+    public static readonly Error InsecureCookies = new(
+        "settings.insecure_cookies",
+        "Secure cookies can only be turned off in development, or where the deployment sets Cookies__AllowInsecureOutsideDevelopment=true.",
+        ErrorType.Validation);
+
     /// <summary>Every request but the setup's, until there is a database.</summary>
     public static readonly Error SetupRequired = new(
         "settings.setup_required",

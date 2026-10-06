@@ -368,5 +368,6 @@ lid.
 | --- | --- |
 | The app exits at boot with a configuration message | It is telling you exactly which value it cannot work with. Every setting is validated at startup on purpose. |
 | Sign-in works and then every action fails | Almost always `Cookies__Secure=true` behind a proxy that is not forwarding `X-Forwarded-Proto`. |
+| The app exits at boot naming `Cookies__AllowInsecureOutsideDevelopment` | Secure cookies were turned off, in `.env` or in an older `culina.json`. Reach Culina through your TLS proxy and unset `Cookies__Secure`; only an instance on plain `http://` in a network you trust should set the variable it names instead. |
 | Rate limits trigger for everyone at once | `ForwardedHeaders__KnownProxies`/`KnownNetworks` is not set, so every request looks like it comes from the proxy. |
 | Photographs vanished after a deploy | `/data/images` was not a volume. There is no recovering them without a backup. |

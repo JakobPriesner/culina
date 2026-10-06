@@ -94,8 +94,10 @@ public sealed class CulinaApiFactory(
         builder.UseSetting("Storage:DataProtectionKeyPath", Path.Combine(dataRoot, "keys"));
         builder.UseSetting("Storage:ConfigPath", Path.Combine(dataRoot, "config"));
         // There is no TLS over the test client, so a __Host- cookie would be
-        // refused outright.
+        // refused outright. Production refuses to start like that unless the
+        // deployment says so, and this one does.
         builder.UseSetting("Cookies:Secure", "false");
+        builder.UseSetting("Cookies:AllowInsecureOutsideDevelopment", "true");
 
         builder.UseSetting("RateLimits:RegisterPerIpPerHour", "10000");
         builder.UseSetting("RateLimits:LoginPerIpPerMinute", "10000");

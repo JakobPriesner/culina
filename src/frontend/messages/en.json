@@ -1110,7 +1110,7 @@
   "server.signIn.hint": "How the session cookie behaves, and how long a session lasts.",
   "server.secure": "Secure cookies",
   "server.secure.hint": "Send the session cookie over HTTPS only. Keep this on whenever Culina is reached through https://.",
-  "server.secure.http": "This browser reached Culina over plain HTTP. With secure cookies on, nobody can sign in this way — turn it off, or open Culina through https:// first.",
+  "server.secure.http": "This browser reached Culina over plain HTTP. With secure cookies on, nobody can sign in this way — open Culina through https:// first. Turning them off works only where the server's deployment allows it.",
   "server.sessionDays": "Days a session lasts",
   "server.sessionDays.hint": "Without being used. Every visit extends it.",
   "server.renewAfterHours": "Hours before a visit extends a session",
@@ -1506,5 +1506,11 @@
   "cooking.autoScroll.start": "Auto-scroll",
   "cooking.autoScroll.stop": "Stop scrolling",
   "cooking.autoScroll.hint": "Auto-scroll slowly reads long steps down and back up, pausing at each end. Touch the recipe or scroll manually to stop. With reduced motion, it shows overlapping portions without animation.",
-  "cooking.autoScroll.stopShort": "Stop"
+  "cooking.autoScroll.stopShort": "Stop",
+  "notAllowed.ticket.order": "Order #403",
+  "notAllowed.ticket.table": "Table: settings",
+  "notAllowed.ticket.chef": "Head chef only",
+  "intake.pause": "Pause animation",
+  "intake.resume": "Play animation",
+  "problem.settings.insecure_cookies": "Secure cookies can only be turned off when this server's deployment allows it. Open Culina through https:// instead."
 }

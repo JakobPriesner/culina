@@ -184,6 +184,33 @@ public class SettingsValidationTests
     }
 
     [Fact]
+    public void CookieValidate_ShouldThrow_WhenCookiesAreInsecureWhereNobodyAllowedIt()
+    {
+        // Arrange
+        var settings = new CookieSettings { Secure = false };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains("Cookies__AllowInsecureOutsideDevelopment", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CookieValidate_ShouldPass_WhenCookiesAreInsecureWhereTheDeploymentAllowsIt()
+    {
+        // Arrange
+        var settings = new CookieSettings { Secure = false, InsecureAllowed = true };
+
+        // Act
+        settings.Validate();
+
+        // Assert
+        Assert.False(settings.InsecureWithoutConsent);
+    }
+
+    [Fact]
     public void StorageValidate_ShouldCreateTheDirectories_WhenTheyDoNotExist()
     {
         // Arrange

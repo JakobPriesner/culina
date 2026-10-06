@@ -66,7 +66,7 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
 
     builder.Services
         .AddApplication()
-        .AddInfrastructure(builder.Configuration)
+        .AddInfrastructure(builder.Configuration, builder.Environment)
         .AddPresentation()
         .AddEndpoints();
 
@@ -128,6 +128,11 @@ static void LogStarting(WebApplication app)
         database.Name,
         storage.ImagePath,
         telemetry.Endpoint?.Host ?? "nowhere");
+
+    if (!app.Services.GetRequiredService<CookieSettings>().Secure)
+    {
+        app.Logger.InsecureCookies(app.Environment.EnvironmentName);
+    }
 }
 
 // The host for an instance nobody has configured a database for. The same
