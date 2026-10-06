@@ -13,18 +13,37 @@ import { resolve } from '$app/paths';
  * - `https://evil.example` — another site outright.
  * - `//evil.example` — protocol-relative, and a browser reads it as another
  *   site even though it starts with a slash.
- * - `/\evil.example` — some parsers normalise the backslash to a slash, which
+ * - `/\evil.example` — the URL parser reads the backslash as a slash, which
  *   turns it into the case above.
+ * - `/<tab>/evil.example` (`/%09/…` in the link) — the parser drops tabs and
+ *   newlines, which also turns it into the case above.
  * - anything not starting with `/` — relative to wherever we happen to be.
+ *
+ * Rather than list every trick, the target is resolved the way the browser
+ * would resolve it and must land on this origin. What comes back is that
+ * resolved path, never the raw string, so no later consumer — `goto` or a
+ * plain `location.href` — can read it differently.
  */
 export function safeRedirect(next: string | null): string {
   const home = resolve('/(app)');
 
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) {
+  if (!next || !next.startsWith('/')) {
     return home;
   }
 
-  return next;
+  let target: URL;
+  try {
+    target = new URL(next, location.origin);
+  } catch {
+    // `//exa mple` and the like: a host the parser refuses is no place to go.
+    return home;
+  }
+
+  if (target.origin !== location.origin) {
+    return home;
+  }
+
+  return target.pathname + target.search + target.hash;
 }
 
 /**

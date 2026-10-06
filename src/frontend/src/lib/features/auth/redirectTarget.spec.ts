@@ -15,16 +15,37 @@ describe('where to go after signing in', () => {
     expect(safeRedirect('/recipes?q=soup')).toBe('/recipes?q=soup');
   });
 
+  it('keeps the fragment, which is where on the page somebody was', () => {
+    expect(safeRedirect('/recipes/123#step-3')).toBe('/recipes/123#step-3');
+  });
+
   it.each([
     ['another site outright', 'https://evil.example/steal'],
     ['protocol-relative, which a browser reads as another site', '//evil.example'],
-    ['a backslash some parsers normalise into a second slash', '/\\evil.example'],
+    ['a backslash the URL parser reads as a second slash', '/\\evil.example'],
+    ['a tab the URL parser drops, leaving two slashes', '/\t/evil.example'],
+    ['a newline the URL parser drops, leaving two slashes', '/\n/evil.example'],
+    ['a host the URL parser refuses', '//exa mple'],
     ['relative to wherever we happen to be', 'recipes'],
     ['a scheme that is not navigation at all', 'javascript:alert(1)'],
     ['nothing at all', null],
     ['empty', '']
   ])('refuses %s', (_, next) => {
     expect(safeRedirect(next)).toBe('/');
+  });
+
+  // How the tab arrives in practice: percent-encoded in the link, and decoded
+  // by the time the page reads `next` from its own URL.
+  it('refuses a tab sent percent-encoded in the link', () => {
+    const link = new URL('http://culina.test/login?next=/%09/evil.example');
+
+    expect(safeRedirect(link.searchParams.get('next'))).toBe('/');
+  });
+
+  it('keeps a percent-escape that was never decoded on this origin', () => {
+    const target = new URL(safeRedirect('/%09/evil.example'), location.origin);
+
+    expect(target.origin).toBe(location.origin);
   });
 });
 
