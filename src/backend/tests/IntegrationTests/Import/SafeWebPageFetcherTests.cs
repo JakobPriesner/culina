@@ -132,6 +132,11 @@ internal sealed class LoopbackServer : IDisposable
 
                     var stream = client.GetStream();
 
+                    // The request is read before answering: closing a socket
+                    // with unread bytes in it resets the connection, and the
+                    // client would see that instead of the answer.
+                    await ReadRequestAsync(stream).ConfigureAwait(false);
+
                     await stream
                         .WriteAsync(System.Text.Encoding.ASCII.GetBytes(response))
                         .ConfigureAwait(false);
@@ -140,6 +145,10 @@ internal sealed class LoopbackServer : IDisposable
             catch (SocketException)
             {
                 // The listener was stopped, which is how this ends.
+            }
+            catch (IOException)
+            {
+                // A client gave up mid-request, which ends a test server too.
             }
             catch (ObjectDisposedException)
             {
@@ -154,6 +163,27 @@ internal sealed class LoopbackServer : IDisposable
 
     /// <summary>How many connections it actually received. Must stay zero.</summary>
     internal int Requests => Volatile.Read(ref requests);
+
+    private static async Task ReadRequestAsync(Stream stream)
+    {
+        var seen = new List<byte>();
+        var buffer = new byte[1024];
+
+        while (!EndsWithBlankLine(seen))
+        {
+            var read = await stream.ReadAsync(buffer).ConfigureAwait(false);
+
+            if (read == 0)
+            {
+                return;
+            }
+
+            seen.AddRange(buffer.AsSpan(0, read));
+        }
+    }
+
+    private static bool EndsWithBlankLine(List<byte> seen) =>
+        seen.Count >= 4 && seen[^4] == '\r' && seen[^3] == '\n' && seen[^2] == '\r' && seen[^1] == '\n';
 
     public void Dispose()
     {
