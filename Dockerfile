@@ -8,6 +8,11 @@
 #
 # Three stages, so nothing that built the app is in what ships: no Node, no
 # .NET SDK, no shell, no package manager.
+#
+# Every base image is pinned to a digest, for the reason the workflows pin
+# actions to a commit: a tag is a name its owner can move, and a moved tag
+# changes what ships with no diff here. The tag stays beside it so a reader
+# knows what the digest is; Dependabot moves both (.github/dependabot.yml).
 
 # ── 1. The app ───────────────────────────────────────────────────────────────
 # Built on whatever machine is doing the building, not once per architecture it
@@ -15,7 +20,7 @@
 # same bytes for arm64 as for amd64 — and running `pnpm install` a second time
 # under emulation is how a two-architecture build goes from fifteen minutes to
 # more than ninety and is killed by the timeout.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS frontend
 
 WORKDIR /src
 
@@ -35,7 +40,7 @@ COPY src/frontend/ ./
 RUN pnpm generate:api && pnpm build
 
 # ── 2. The server ────────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS backend
 
 WORKDIR /src
 
@@ -77,7 +82,7 @@ RUN mkdir -p /data/images /data/keys /data/config
 # ── 3. What ships ────────────────────────────────────────────────────────────
 # Chiseled: no shell and no package manager, which is both a much smaller
 # attack surface and a much smaller CVE feed to keep up with.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:48e51f2f6798897be7ac4e775c049ed8fe60d3190f637e1f9c9dc7513efa659c AS runtime
 
 # Traceable to a commit, from `docker inspect`, without asking anyone.
 ARG REVISION=unknown

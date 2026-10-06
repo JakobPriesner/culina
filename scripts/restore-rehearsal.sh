@@ -24,6 +24,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$(mktemp -d)"
 BASE="http://localhost:${PORT}"
 PASSWORD="a sentence nobody else would pick"
+# What packs and unpacks the volumes, the key ring among them. Pinned to a
+# digest like every other image this repository runs.
+TAR_IMAGE="alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"
 
 export CULINA_IMAGE="$IMAGE"
 export CULINA_PORT="$PORT"
@@ -96,11 +99,11 @@ echo "  ${RECIPES_BEFORE} recipes, ${MEMBERS_BEFORE} member(s), one photograph"
 # ── The backup the runbook names ─────────────────────────────────────────────
 say "Backing up"
 compose exec -T db pg_dump -U postgres --format=custom culina > "$WORK/culina.dump"
-docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" alpine \
+docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
   tar czf /backup/images.tar.gz -C /data . >/dev/null
-docker run --rm -v "${PROJECT}_culina-keys:/data" -v "$WORK:/backup" alpine \
+docker run --rm -v "${PROJECT}_culina-keys:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
   tar czf /backup/keys.tar.gz -C /data . >/dev/null
-docker run --rm -v "${PROJECT}_culina-config:/data" -v "$WORK:/backup" alpine \
+docker run --rm -v "${PROJECT}_culina-config:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
   tar czf /backup/config.tar.gz -C /data . >/dev/null
 
 echo "  $(du -h "$WORK/culina.dump" | cut -f1) database, $(du -h "$WORK/images.tar.gz" | cut -f1) images"
@@ -120,12 +123,12 @@ compose exec -T db psql -U postgres -d postgres -c "drop database if exists culi
 compose exec -T db psql -U postgres -d postgres -c "create database culina owner culina_app;" >/dev/null
 compose exec -T db pg_restore -U postgres -d culina --no-owner --role=culina_app < "$WORK/culina.dump" >/dev/null
 
-docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" alpine \
+docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
   tar xzf /backup/images.tar.gz -C /data >/dev/null
-docker run --rm -v "${PROJECT}_culina-keys:/data" -v "$WORK:/backup" alpine \
+docker run --rm -v "${PROJECT}_culina-keys:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
   tar xzf /backup/keys.tar.gz -C /data >/dev/null
 # Without it the app comes back to the setup screen, asking for the database.
-docker run --rm -v "${PROJECT}_culina-config:/data" -v "$WORK:/backup" alpine \
+docker run --rm -v "${PROJECT}_culina-config:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
   tar xzf /backup/config.tar.gz -C /data >/dev/null
 
 compose up -d >/dev/null
