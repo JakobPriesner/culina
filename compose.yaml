@@ -17,6 +17,8 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-culina}
       POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      # This fallback and CULINA_APP_PASSWORD's below are development
+      # passwords; compose.prod.yaml requires real ones instead.
       POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres}
       # Culina stores every user-facing string as-is and compares
       # case-insensitively in SQL where it matters, so the cluster only needs a

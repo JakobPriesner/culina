@@ -77,7 +77,8 @@ hit the monthly ceiling you set.
 git clone https://github.com/jakobpriesner/culina.git
 cd culina
 cp .env.example .env
-# Fill in Database__Password and the address of your reverse proxy.
+# Fill in Database__Password, POSTGRES_SUPERUSER_PASSWORD and the address of
+# your reverse proxy.
 docker compose -f compose.yaml -f compose.prod.yaml up -d
 ```
 

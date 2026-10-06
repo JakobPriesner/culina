@@ -202,10 +202,11 @@ jobs:
       COMPOSE_FILE: compose.yaml:compose.prod.yaml
       COMPOSE_PROJECT_NAME: culina-e2e
       CULINA_PORT: '8080'
-      # compose.prod.yaml refuses to be read at all without this — including by
-      # `logs`, which is why it is here and not on the step that starts the
-      # stack.
+      # compose.prod.yaml refuses to be read at all without these — including
+      # by `logs`, which is why they are here and not on the step that starts
+      # the stack.
       Database__Password: culina_ci_password
+      POSTGRES_SUPERUSER_PASSWORD: culina_ci_superuser_password
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
