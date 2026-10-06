@@ -4,6 +4,12 @@
 # SBOM, and signatures for both — so someone pulling `ghcr.io/.../culina` can
 # prove it came from this repository and this commit, without trusting the
 # registry.
+#
+# A tag is a claim anybody with push access can make about any commit, so it is
+# checked before anything is built: the commit must already be on main, and CI
+# must have passed on it. And no tag moves until the image behind it has been
+# scanned, signed and attested — the build goes up by digest only, and `latest`
+# is the last thing to change rather than the first.
 
 name: Release
 
@@ -22,8 +28,44 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # The gates the `edge` image waits for, reused rather than repeated: CI's run
+  # for this exact commit on main. A tag on a commit that is red, still running,
+  # or never merged publishes nothing. Re-run this workflow once CI is green —
+  # the tag does not have to be pushed again.
+  gate:
+    name: On main, and CI passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read # the history, to find main
+      actions: read # CI's runs for the tagged commit
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: The tagged commit is on main and CI passed on it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # An annotated tag is an object of its own; what CI ran on is the
+          # commit it points at.
+          commit=$(git rev-parse "${GITHUB_SHA}^{commit}")
+          if ! git merge-base --is-ancestor "$commit" origin/main; then
+            echo "::error::${GITHUB_REF_NAME} points at ${commit}, which is not on main. Merge it, then tag the merged commit."
+            exit 1
+          fi
+          passed=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+            -f head_sha="$commit" -f branch=main -f event=push -f status=success \
+            --jq '.total_count')
+          if [ "$passed" -eq 0 ]; then
+            echo "::error::CI has not passed on ${commit}. Once it has, re-run this workflow."
+            exit 1
+          fi
+
   publish:
     name: Publish
+    needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -63,13 +105,15 @@ jobs:
             type=semver,pattern=v{{major}}.{{minor}}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
+      # Pushed by digest and nothing else: the registry holds the image, but no
+      # tag anybody pulls points at it yet. The tags come last, once it has
+      # passed the scan.
       - id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             REVISION=${{ github.sha }}
@@ -81,17 +125,19 @@ jobs:
           sbom: true
 
       # A last look at what is about to be recommended to people. The same scan
-      # as CI, against the pushed image rather than a local build.
+      # as CI, against the pushed image rather than a local build — and before
+      # any tag points at it, so a finding here fails the job with `latest`
+      # still on the previous release.
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.ref_name }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
 
       - uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.ref_name }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
           format: spdx-json
           output-file: culina-sbom.spdx.json
 
@@ -115,6 +161,20 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+      # Only now does anything people pull move. Given one source, imagetools
+      # copies the index as it is, so every tag resolves to the digest that was
+      # scanned and signed above.
+      - name: Tag the scanned image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          args=()
+          while read -r tag; do
+            if [ -n "$tag" ]; then args+=(--tag "$tag"); fi
+          done <<< "$TAGS"
+          docker buildx imagetools create "${args[@]}" "${REGISTRY}/${IMAGE}@${DIGEST}"
 
       # The release points to the exact image built and signed above. Its
       # change list comes from commits since the previous tag.

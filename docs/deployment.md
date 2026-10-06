@@ -160,11 +160,22 @@ the generated frontend client cannot drift, because drift fails the build.
 
 ### `release.yml` — on a tag `v*`
 
-Builds `linux/amd64` + `linux/arm64` with Buildx, pushes to GHCR tagged
-`vX.Y.Z`, `vX.Y` and `latest`, generates an SBOM (Syft), signs the image and the
-SBOM with Cosign (keyless OIDC), and attaches SLSA build provenance. The release
-links to the GitHub Packages image and gives both a versioned and a digest-pinned
-pull command. Its change notes are generated from commits since the previous tag.
+Publishes nothing unless the tagged commit is already on `main` and `ci.yml`'s
+run for that commit on `main` succeeded; a tag on a red, unfinished or unmerged
+commit stops at the first job (re-run the workflow once CI is green). Then it
+builds `linux/amd64` + `linux/arm64` with Buildx and pushes the image to GHCR
+**by digest only**, scans that digest with Trivy (fails on HIGH/CRITICAL, fixed
+only), generates an SBOM (Syft), signs the image and the SBOM with Cosign
+(keyless OIDC) and attaches SLSA build provenance. Only after all of that are
+`vX.Y.Z`, `vX.Y` and `latest` pointed at the digest, so an image that fails the
+scan is never tagged. The release links to the GitHub Packages image and gives
+both a versioned and a digest-pinned pull command. Its change notes are
+generated from commits since the previous tag.
+
+The workflow runs from the tagged commit's own copy of `release.yml`, so the
+check above stops mistakes, not somebody with push access who edits it away.
+Restrict who may create, move or delete `v*` tags with a tag ruleset in the
+repository settings.
 
 ### `nightly.yml`
 
