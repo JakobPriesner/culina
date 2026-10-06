@@ -20,7 +20,6 @@
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
-  import { olliSetting } from '$shell/olli/setting.svelte';
   import { toaster } from '$shell/toaster.svelte';
   import Page from '$shell/Page.svelte';
 
@@ -396,11 +395,7 @@
       {/snippet}
     </EmptyState>
   {:else if recipes.status === 'ready' && recipes.items.length === 0}
-    <EmptyState
-      title={m['recipes.empty.title']()}
-      body={m['recipes.empty.body']()}
-      art={olliSetting.shown ? peeking : undefined}
-    >
+    <EmptyState title={m['recipes.empty.title']()} body={m['recipes.empty.body']()} art={peeking}>
       {#snippet icon()}
         <svg
           viewBox="0 0 48 48"

@@ -18,7 +18,6 @@
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
-  import { olliSetting } from '$shell/olli/setting.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -308,11 +307,7 @@
          blank and then jump. -->
     <ShoppingListSkeleton />
   {:else if shopping.status === 'ready' && shopping.items.length === 0}
-    <EmptyState
-      title={m['shopping.empty.title']()}
-      body={m['shopping.empty.body']()}
-      art={olliSetting.shown ? peeking : undefined}
-    >
+    <EmptyState title={m['shopping.empty.title']()} body={m['shopping.empty.body']()} art={peeking}>
       {#snippet action()}
         <!-- The invitation is the thing that fills a list fastest, and it is
              the same one the button above offers. Sending somebody off to the
