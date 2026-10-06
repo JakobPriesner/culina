@@ -41,4 +41,15 @@ internal static partial class ServerLogs
         string databaseName,
         string imagePath,
         string telemetryExport);
+
+    /// <summary>
+    /// Every start without secure cookies, Development included, so an
+    /// instance that runs this way says so in its log rather than only in its
+    /// configuration.
+    /// </summary>
+    [LoggerMessage(
+        EventId = LogEvents.ServerBase + 3,
+        Level = LogLevel.Warning,
+        Message = "Cookies are not Secure in {Environment}: the session cookie goes without its __Host- prefix and travels in cleartext over plain HTTP. Only local development should run like this")]
+    internal static partial void InsecureCookies(this ILogger logger, string environment);
 }

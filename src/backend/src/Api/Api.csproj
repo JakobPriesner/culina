@@ -13,6 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Never in the image. It holds the development database password and
+         turns secure cookies off, so ASPNETCORE_ENVIRONMENT=Development on a
+         real deployment would quietly do both. -->
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Infrastructure/Infrastructure.csproj" />
     <ProjectReference Include="../Application/Application.csproj" />
     <ProjectReference Include="../Contracts/Contracts.csproj" />

@@ -42,9 +42,15 @@ internal sealed class UpdateServerSettingsCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Settings.UpdateServer");
 
-        var result = await Proposal(command).Match(
-            proposed => ApplyAsync(proposed, cancellationToken),
-            error => Task.FromResult(Result<ServerChange>.Failure(error))).ConfigureAwait(false);
+        // Whether cookies may go without Secure is the deployment's to say,
+        // decided at startup, and never the proposal's.
+        var proposal = command with { Cookies = command.Cookies with { InsecureAllowed = cookies.InsecureAllowed } };
+
+        var result = proposal.Cookies.InsecureWithoutConsent
+            ? SettingsErrors.InsecureCookies
+            : await Proposal(proposal).Match(
+                proposed => ApplyAsync(proposed, cancellationToken),
+                error => Task.FromResult(Result<ServerChange>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
     }
