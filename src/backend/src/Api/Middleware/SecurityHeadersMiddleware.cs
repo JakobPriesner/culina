@@ -8,15 +8,18 @@ namespace Api.Middleware;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Runs third in the pipeline, before anything can begin writing a body — once
-/// the response has started, headers can no longer be added.
+/// Runs third in the pipeline, before anything can begin writing a body, and
+/// applies the headers in <c>OnStarting</c>, just before they are sent. Set any
+/// earlier, they did not survive a defect: the exception handler clears every
+/// header before it writes the problem document, so a 500 went out with no
+/// policy at all. The callback is not cleared with them.
 /// </para>
 /// <para>
-/// The caching decision is deferred to <c>OnStarting</c> instead, because
-/// whether a response is authenticated is not known this early. By then the
-/// endpoint has had its chance to set a deliberate policy (a conditional read
-/// sets <c>private, no-cache</c>), and anything else authenticated falls back
-/// to <c>no-store</c> so private data stays out of shared caches.
+/// The caching decision waits for <c>OnStarting</c> too, because whether a
+/// response is authenticated is not known this early. By then the endpoint has
+/// had its chance to set a deliberate policy (a conditional read sets
+/// <c>private, no-cache</c>), and anything else authenticated falls back to
+/// <c>no-store</c> so private data stays out of shared caches.
 /// </para>
 /// </remarks>
 /// <param name="next">The rest of the pipeline.</param>
@@ -28,24 +31,30 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var headers = context.Response.Headers;
+        // Decided now, not as the response starts: the app shell reads the
+        // nonce while it renders.
+        var contentSecurityPolicy = ContentSecurityPolicyFor(context);
 
+        context.Response.OnStarting(() =>
+        {
+            ApplySecurityHeaders(context.Response.Headers, contentSecurityPolicy);
+            ApplyCachePolicy(context);
+
+            return Task.CompletedTask;
+        });
+
+        return next(context);
+    }
+
+    private static void ApplySecurityHeaders(IHeaderDictionary headers, string contentSecurityPolicy)
+    {
         headers.XContentTypeOptions = SecurityHeaders.ContentTypeOptions;
         headers.XFrameOptions = SecurityHeaders.FrameOptions;
         headers["Referrer-Policy"] = SecurityHeaders.ReferrerPolicy;
         headers["Cross-Origin-Opener-Policy"] = SecurityHeaders.OpenerPolicy;
         headers["Cross-Origin-Resource-Policy"] = SecurityHeaders.ResourcePolicy;
         headers["Permissions-Policy"] = SecurityHeaders.PermissionsPolicy;
-        headers.ContentSecurityPolicy = ContentSecurityPolicyFor(context);
-
-        context.Response.OnStarting(static state =>
-        {
-            ApplyCachePolicy((HttpContext)state);
-
-            return Task.CompletedTask;
-        }, context);
-
-        return next(context);
+        headers.ContentSecurityPolicy = contentSecurityPolicy;
     }
 
     private static string ContentSecurityPolicyFor(HttpContext context)

@@ -1,4 +1,14 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Api.Endpoints;
+using Api.Infrastructure;
 using IntegrationTests.Fixtures;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Pipeline;
 
@@ -145,6 +155,55 @@ public class SecurityHeadersTests(PostgresFixture postgres)
         Assert.False(response.Headers.Contains("Strict-Transport-Security"));
     }
 
+    [Fact]
+    public async Task UnhandledException_ShouldStillCarryEverySecurityHeaderAndTheRequestId()
+    {
+        // Arrange
+        using var api = new CulinaApiFactory(postgres);
+        using var defective = api.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton<IEndpoint, ThrowingEndpoint>()));
+        using var client = defective.CreateClient();
+
+        // Act
+        using var response = await client.GetAsync(
+            new Uri(ThrowingEndpoint.Path, UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        // The exception handler clears every header before it writes the
+        // problem document, which is how a 500 used to go out with none.
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("nosniff", Single(response, "X-Content-Type-Options"));
+        Assert.Equal("DENY", Single(response, "X-Frame-Options"));
+        Assert.Equal("no-referrer", Single(response, "Referrer-Policy"));
+        Assert.Equal("same-origin", Single(response, "Cross-Origin-Opener-Policy"));
+        Assert.Equal("same-origin", Single(response, "Cross-Origin-Resource-Policy"));
+        Assert.Equal("camera=(self), microphone=(), geolocation=()", Single(response, "Permissions-Policy"));
+        Assert.Contains("default-src 'none'", Policy(response), StringComparison.Ordinal);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal("server.unexpected", problem.GetProperty("code").GetString());
+        Assert.Equal(problem.GetProperty("requestId").GetString(), Single(response, "X-Request-Id"));
+    }
+
     private static string Policy(HttpResponseMessage response) =>
         string.Join(" ", response.Headers.GetValues("Content-Security-Policy"));
+
+    private static string Single(HttpResponseMessage response, string header)
+    {
+        Assert.True(response.Headers.TryGetValues(header, out var values), $"{header} was not set");
+
+        return Assert.Single(values);
+    }
+
+    /// <summary>A defect, mapped only in the host this class builds for it.</summary>
+    private sealed class ThrowingEndpoint : IEndpoint
+    {
+        internal const string Path = $"{ApiPaths.V1}/test-only/defect";
+
+        public void MapEndpoint(IEndpointRouteBuilder app) =>
+            app.MapGet(Path, IResult () => throw new InvalidOperationException("A defect, on purpose."))
+                .AllowAnonymous();
+    }
 }
