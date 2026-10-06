@@ -30,7 +30,8 @@ import {
  * That cache holds somebody's data on what may be a shared kitchen tablet, so
  * it is not allowed to outlive a session: the app empties it when anyone signs
  * in or out (see `culina:forget`), and the worker empties it itself the first
- * time the server answers one of its reads with a 401.
+ * time the server answers one of its reads with a 401. Should both of those
+ * miss, every copy still says whose it is (see `ownerHeader`).
  */
 const worker = self as unknown as ServiceWorkerGlobalScope;
 
@@ -69,6 +70,30 @@ const privateCacheName = 'culina-private';
  * recipe collection is close enough to least used.
  */
 const privateCacheLimit = 120;
+
+/**
+ * Who is signed in, as far as the worker knows: the last answer the network
+ * gave to this read, which is kept like the others.
+ */
+const whoIsSignedIn = `${base}/api/v1/users/me`;
+
+/**
+ * Names the user a kept copy was read for.
+ *
+ * The cache is keyed by address only, and `/recipes/r1` is the same address
+ * for everybody. Emptying it on sign-in and sign-out depends on a message from
+ * the page reaching the worker, which a tab closed straight after signing out
+ * may never send. So every copy is stored with this header — the user
+ * `whoIsSignedIn` named when the read began, or for that read itself the user
+ * it answered with — and a copy is only ever answered to that same user. Once
+ * the network has said somebody else is signed in, the last person's copies
+ * are never shown again, offline or not; a copy with no owner is never shown.
+ *
+ * What it cannot do is tell two people apart while the network says nothing:
+ * somebody picking up a tablet offline is, to the worker, whoever was signed
+ * in last.
+ */
+const ownerHeader = 'X-Culina-Owner';
 
 /**
  * How long a network-first read waits for the network when there is a copy.
@@ -402,7 +427,9 @@ function policyFor(url: URL): CachePolicy | null {
 async function apiResponse(event: FetchEvent, policy: CachePolicy): Promise<Response> {
   const request = event.request;
   const cache = await caches.open(privateCacheName).catch(() => null);
-  const cached = cache ? await cache.match(request).catch(() => undefined) : undefined;
+  const owner = cache ? await signedInAs(cache) : null;
+  const kept = cache ? await cache.match(request).catch(() => undefined) : undefined;
+  const cached = owner && kept?.headers.get(ownerHeader) === owner ? kept : undefined;
 
   if (cached && policy === 'cache-first') {
     return cached;
@@ -411,7 +438,7 @@ async function apiResponse(event: FetchEvent, policy: CachePolicy): Promise<Resp
   // Started once and awaited once: a `Request` is spent by the fetch that used
   // it, so there is no second attempt to be had. Kept alive past the answer,
   // so a slow network that loses to the deadline still refreshes the copy.
-  const fresh = fetchAndStore(request, cache);
+  const fresh = fetchAndStore(request, cache, owner);
 
   event.waitUntil(fresh);
 
@@ -436,8 +463,12 @@ function deadline(): Promise<null> {
   return new Promise((resolve) => setTimeout(() => resolve(null), networkDeadlineMs));
 }
 
-/** Fetches, stores what is worth storing, and never rejects. */
-async function fetchAndStore(request: Request, cache: Cache | null): Promise<Response | null> {
+/** Fetches, stores what is worth storing for `owner`, and never rejects. */
+async function fetchAndStore(
+  request: Request,
+  cache: Cache | null,
+  owner: string | null
+): Promise<Response | null> {
   try {
     const response = await fetch(request);
 
@@ -460,8 +491,13 @@ async function fetchAndStore(request: Request, cache: Cache | null): Promise<Res
     // cache stays writable but is no longer the one `caches.open` returns.
     if (cache && response.ok && response.type === 'basic') {
       try {
-        await cache.put(request, response.clone());
-        await trim(cache);
+        const readFor =
+          new URL(request.url).pathname === whoIsSignedIn ? await userIdIn(response) : owner;
+
+        if (readFor) {
+          await cache.put(request, ownedCopy(response, readFor));
+          await trim(cache);
+        }
       } catch {
         // Out of quota, or a response the Cache API will not take. Worth
         // nothing and worth failing over even less.
@@ -472,6 +508,32 @@ async function fetchAndStore(request: Request, cache: Cache | null): Promise<Res
   } catch {
     return null;
   }
+}
+
+/** The user the kept `whoIsSignedIn` names, or nobody when there is none. */
+async function signedInAs(cache: Cache): Promise<string | null> {
+  const me = await cache.match(whoIsSignedIn).catch(() => undefined);
+
+  return me?.headers.get(ownerHeader) ?? null;
+}
+
+async function userIdIn(response: Response): Promise<string | null> {
+  const { userId } = (await response.clone().json()) as { userId?: unknown };
+
+  return typeof userId === 'string' ? userId : null;
+}
+
+/** The response as it came, plus whose it is. */
+function ownedCopy(response: Response, owner: string): Response {
+  const headers = new Headers(response.headers);
+
+  headers.set(ownerHeader, owner);
+
+  return new Response(response.clone().body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 /** Drops the oldest entries once the cache is over its limit. */
