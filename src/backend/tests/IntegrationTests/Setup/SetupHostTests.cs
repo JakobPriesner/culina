@@ -88,7 +88,7 @@ public class SetupHostTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Database_ShouldBeRefusedWithTheServersReason_WhenThePasswordIsWrong()
+    public async Task Database_ShouldBeRefusedWithoutTheServersOwnWords_WhenThePasswordIsWrong()
     {
         // Arrange
         using var factory = new SetupApiFactory();
@@ -111,8 +111,11 @@ public class SetupHostTests(PostgresFixture postgres)
             Token);
 
         // Assert
+        // Which kind of failure, and nothing the server said: anybody may ask
+        // this during setup, of any address.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("settings.database_unreachable", response.ProblemCode);
+        Assert.Equal("settings.database_login_refused", response.ProblemCode);
+        Assert.DoesNotContain("password authentication failed", response.Body, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, factory.Restarts.Scheduled);
         Assert.False(File.Exists(factory.ServerSettingsFile));
     }

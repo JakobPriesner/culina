@@ -13,10 +13,11 @@
    * a restart that does not come back says where to look and how to undo it,
    * rather than spinning forever.
    *
-   * For the two database failures, the server's own words follow the
+   * For a database Culina cannot run in, the server's own words follow the
    * translated headline: they carry the part only the server knows — the
-   * password that was refused, the extension that is missing and the
-   * statement that adds it.
+   * extension that is missing and the statement that adds it. A connection
+   * that failed has no such words to add: the server says only which kind of
+   * failure it was, and keeps the rest for its log.
    */
   interface Props {
     phase: SavePhase;
@@ -26,7 +27,7 @@
 
   let { phase, outcome, onretry }: Props = $props();
 
-  const withDetail = new Set(['settings.database_unreachable', 'settings.database_unsuitable']);
+  const withDetail = new Set(['settings.database_unsuitable']);
 </script>
 
 {#if phase === 'restarting'}

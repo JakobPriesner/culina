@@ -49,13 +49,13 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     {
         // Arrange
         var world = new World();
-        world.Check.FailWith = SettingsErrors.DatabaseUnreachable("password authentication failed");
+        world.Check.FailWith = SettingsErrors.DatabaseUnreachable;
 
         // Act
         var result = await world.Handle(Command(host: "db.internal"));
 
         // Assert
-        Assert.Equal("settings.database_unreachable", result.ShouldBeFailure().Code);
+        result.ShouldBeFailure(SettingsErrors.DatabaseUnreachable);
         Assert.Null(world.Configuration.Saved);
         Assert.Equal(0, world.Restart.Scheduled);
     }

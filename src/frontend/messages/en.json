@@ -1173,7 +1173,7 @@
   "setup.unreadable": "Culina couldn't read its settings. Check that the server is running, then try again.",
   "problem.settings.not_writable": "These settings can't be saved: Culina's configuration directory isn't writable.",
   "problem.settings.setup_required": "Culina isn't set up yet.",
-  "problem.settings.database_unreachable": "Culina couldn't connect to that database.",
+  "problem.settings.database_unreachable": "Nothing answered at that address. Check the host and the port, and that the database server is running.",
   "problem.settings.database_unsuitable": "Culina can't run in that database yet.",
   "related.reason.kinds": "Also: {shared}",
   "related.reason.ingredients": "Shares {shared}",
@@ -1517,5 +1517,9 @@
   "server.maxSessionDays.hint": "Counted from signing in, however often it is used. Then a fresh sign-in is needed.",
   "problem.settings.proxy_network_too_wide": "That proxy network is too wide to trust: every client in it could claim any address. Name your proxy's own network, no wider than a /8 for IPv4 or a /32 for IPv6, such as 172.16.0.0/12.",
   "server.limit.archiveExportsPerHour": "Archives taken per hour, per person",
-  "problem.settings.file_unreadable": "These settings can't be saved: culina.json in Culina's configuration directory was changed by hand and can no longer be read. Correct or remove the file, then save again."
+  "problem.settings.file_unreadable": "These settings can't be saved: culina.json in Culina's configuration directory was changed by hand and can no longer be read. Correct or remove the file, then save again.",
+  "problem.settings.database_login_refused": "The database server refused the user, the password or the database name.",
+  "problem.settings.database_tls_failed": "Culina couldn't set up an encrypted connection with that server. Enable TLS on the database server, or turn off “Require TLS” if the database is on the same private network.",
+  "problem.settings.database_not_postgres": "Something answered at that address, but not a PostgreSQL server Culina can use.",
+  "problem.settings.database_superuser": "Culina has to connect as a role of its own, not as a superuser. Use the role that owns Culina's database."
 }

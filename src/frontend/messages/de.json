@@ -1173,7 +1173,7 @@
   "setup.unreadable": "Culina konnte seine Einstellungen nicht lesen. Prüfe, ob der Server läuft, und versuch es noch einmal.",
   "problem.settings.not_writable": "Diese Einstellungen lassen sich nicht speichern: Das Konfigurationsverzeichnis von Culina ist nicht beschreibbar.",
   "problem.settings.setup_required": "Culina ist noch nicht eingerichtet.",
-  "problem.settings.database_unreachable": "Culina konnte sich nicht mit dieser Datenbank verbinden.",
+  "problem.settings.database_unreachable": "Unter dieser Adresse hat nichts geantwortet. Prüfe Host und Port und ob der Datenbankserver läuft.",
   "problem.settings.database_unsuitable": "Culina kann in dieser Datenbank noch nicht laufen.",
   "related.reason.kinds": "Auch: {shared}",
   "related.reason.ingredients": "Teilt {shared}",
@@ -1517,5 +1517,9 @@
   "server.maxSessionDays.hint": "Ab der Anmeldung gezählt, egal wie oft sie genutzt wird. Danach ist eine neue Anmeldung nötig.",
   "problem.settings.proxy_network_too_wide": "Dieses Proxy-Netz ist zu groß, um ihm zu vertrauen: Jeder Client darin könnte sich als beliebige Adresse ausgeben. Gib das Netz deines Proxys an, höchstens ein /8 für IPv4 oder ein /32 für IPv6, etwa 172.16.0.0/12.",
   "server.limit.archiveExportsPerHour": "Exportierte Archive pro Stunde und Person",
-  "problem.settings.file_unreadable": "Diese Einstellungen lassen sich nicht speichern: Die Datei culina.json im Konfigurationsverzeichnis von Culina wurde von Hand geändert und ist nicht mehr lesbar. Korrigiere oder entferne sie und speichere dann erneut."
+  "problem.settings.file_unreadable": "Diese Einstellungen lassen sich nicht speichern: Die Datei culina.json im Konfigurationsverzeichnis von Culina wurde von Hand geändert und ist nicht mehr lesbar. Korrigiere oder entferne sie und speichere dann erneut.",
+  "problem.settings.database_login_refused": "Der Datenbankserver hat den Benutzer, das Passwort oder den Datenbanknamen abgelehnt.",
+  "problem.settings.database_tls_failed": "Culina konnte keine verschlüsselte Verbindung zu diesem Server aufbauen. Aktiviere TLS auf dem Datenbankserver, oder schalte „TLS verlangen“ aus, wenn die Datenbank im selben privaten Netz liegt.",
+  "problem.settings.database_not_postgres": "Unter dieser Adresse hat etwas geantwortet, aber kein PostgreSQL-Server, den Culina nutzen kann.",
+  "problem.settings.database_superuser": "Culina muss sich mit einer eigenen Rolle verbinden, nicht als Superuser. Verwende die Rolle, der die Datenbank von Culina gehört."
 }
