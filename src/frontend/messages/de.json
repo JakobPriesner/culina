@@ -1417,9 +1417,6 @@
   "notAllowed.title": "Dieser Herd ist Chefsache",
   "notAllowed.body": "Diese Einstellungen verändern die Küche für alle, deshalb können nur Administratoren sie bearbeiten. Wenn hier etwas angepasst werden soll, frag einen Administrator.",
   "notAllowed.back": "Zurück zu den Einstellungen",
-  "notAllowed.ticket.order": "Bestellung #403",
-  "notAllowed.ticket.table": "Tisch: Einstellungen",
-  "notAllowed.ticket.chef": "Nur für die Küchenleitung",
   "auth.cold.title": "Deine Sitzung ist kalt geworden",
   "auth.cold.body": "Du warst eine Weile weg, also hat Culina den Herd ausgeschaltet. Melde dich an, dann heizen wir genau da wieder ein, wo du aufgehört hast.",
   "auth.cold.submit": "Herd wieder anschalten",
@@ -1502,5 +1499,8 @@
   "problem.RecipeIntake.QueueFull": "Drei Importe laufen bereits. Warte, bis einer fertig ist.",
   "problem.RecipeIntake.IdInUse": "Bitte starte diesen Import erneut.",
   "problem.Push.InvalidSubscription": "Dieses Gerät konnte keine Benachrichtigungen aktivieren.",
-  "problem.Push.TooManyDevices": "Zu viele Geräte sind für Benachrichtigungen registriert."
+  "problem.Push.TooManyDevices": "Zu viele Geräte sind für Benachrichtigungen registriert.",
+  "import.intake.iphone": "Wähle auf dem iPhone in Instagram „Link kopieren“ und füge den Link hier ein. Culina kann im Teilen-Menü des iPhones nicht erscheinen.",
+  "kitchen.controls": "Küchensteuerung",
+  "kitchen.short": "Küche"
 }

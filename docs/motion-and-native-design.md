@@ -24,7 +24,7 @@ gradient, morphing orb and moving text gradient produced competing visual signal
 and recurring paint work. The new generation frame has still colours, status
 copy stays plain, and completed fields arrive with a short fade and 4px travel.
 The optional status light pulses twice and settles; Olli's work loop is visible,
-pausable and respects reduced motion.
+controlled in Settings and respects reduced motion.
 
 ## Implemented system
 
@@ -84,3 +84,41 @@ Validate the complete journey on iOS and Android devices: launch, sign-in,
 navigation, keyboard/form editing, recipe import and improvement, backgrounding,
 offline cooking, push/deep-link return and accessibility. Profile frame pacing on
 an older supported phone before describing the native experience as finished.
+
+## Navigation and flow refinement
+
+A selection marker now moves between peer destinations, recipe view choices
+and tabs in 220ms. Only the decorative surface moves: labels, hit targets and
+keyboard focus keep their positions. Interrupted movement starts from the
+currently painted position through native CSS transitions. Position uses a transform;
+width changes affect only the absolutely positioned decoration, preserving rounded
+corners without stretching labels or shadows. Resize and reduced-motion changes settle directly.
+Tab content arrives with a short fade and 4px rise, while page changes retain
+the existing content dissolve. Settings gives its rail a separate snapshot so
+only the category panel changes. Snapshot layers ignore pointer events, allowing
+another navigation immediately. Selection never changes category font weight,
+which avoids wrapping changes on narrow screens.
+
+The document reserves classic scrollbar space with `scrollbar-gutter: stable`.
+Both document and body are locked behind a modal; nested modals release the lock
+only after the last closes, restoring prior styles. Older engines retain a
+scrollbar on shorter pages and use measured padding during modal locks. Popover
+and modal scroll areas also reserve their own gutters. Overlay scrollbars keep
+the platform's normal behaviour and take no extra space.
+
+These decisions follow [Apple's motion guidance](https://developer.apple.com/design/human-interface-guidelines/motion)
+on purposeful feedback and continuity, [MDN's scrollbar gutter reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-gutter)
+on stable layout, and [SvelteKit's navigation lifecycle](https://svelte.dev/docs/kit/$app-navigation#onNavigate)
+on integrating transitions without delaying navigation. The timings and visual
+choices are Culina's own, tuned to its existing design. Desktop and mobile
+browser checks cover marker alignment, rapid switching, keyboard selection,
+resize, settings Back navigation, reduced motion and background scroll locking.
+Native iOS device testing remains part of the future Capacitor integration.
+
+Validation uses desktop Chromium, touch Chromium and mobile WebKit. This Mac
+uses overlay scrollbars; browser checks assert stable page geometry, while unit
+tests exercise the legacy classic-scrollbar compensation with a measured gap.
+
+The root loading/error screen imports its display component directly, avoiding
+a preload of the full design-system bundle before a page needs it. The release
+budget remains unchanged; the verified shell first-load measure is 62.9 kB gzip.

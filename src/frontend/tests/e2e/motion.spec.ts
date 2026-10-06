@@ -7,7 +7,8 @@ test.describe('polished motion @offline', () => {
   test('closing paints an exit while native focus returns immediately', async ({ page }) => {
     await page.goto('/design');
     const trigger = page.getByRole('button', { name: 'Open modal', exact: true });
-    await trigger.click();
+    await trigger.focus();
+    await trigger.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Rename recipe' });
     await expect(dialog).toBeVisible();
     await expect.poll(() => dialog.evaluate((node) => getComputedStyle(node).opacity)).toBe('1');
@@ -26,7 +27,8 @@ test.describe('polished motion @offline', () => {
     expect(state.focus).toBe('Open modal');
     if (state.supported) expect(state.painting).toBe(true);
     await expect(dialog).toBeHidden();
-    await trigger.click();
+    await trigger.focus();
+    await trigger.press('Enter');
     await expect(dialog).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -35,7 +37,9 @@ test.describe('polished motion @offline', () => {
   test('reduced motion opens and closes without travel or a delayed exit', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/design');
-    await page.getByRole('button', { name: 'Open sheet', exact: true }).click();
+    const trigger = page.getByRole('button', { name: 'Open sheet', exact: true });
+    await trigger.focus();
+    await trigger.press('Enter');
     const dialog = page.getByRole('dialog');
     expect(await dialog.evaluate((node) => getComputedStyle(node).transform)).toBe('none');
     const display = await dialog.evaluate((node: HTMLDialogElement) => {
@@ -51,6 +55,8 @@ test.describe('polished motion @offline', () => {
   }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await responsiveData(page, 'en', { activeCooking: false });
+    // Reload can flush queued telemetry; this offline specimen has no server.
+    await page.route('**/api/v1/log-records', (route) => route.fulfill({ status: 204 }));
     await page.goto('/design#ai-motion');
     const work = page.locator('#ai-motion');
     const olli = work.locator('svg.olli');

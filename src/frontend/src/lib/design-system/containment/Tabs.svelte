@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { selectionIndicator } from './selectionIndicator';
 
   /**
    * Two or three views of the same thing.
@@ -68,11 +69,18 @@
 </script>
 
 <div class="tabs">
-  <div bind:this={strip} class="strip" role="tablist" aria-label={label}>
+  <div
+    bind:this={strip}
+    use:selectionIndicator={{ selected, underline: true }}
+    class="strip"
+    role="tablist"
+    aria-label={label}
+  >
     {#each tabs as tab (tab.id)}
       <button
         id={tabId(tab.id)}
         class="tab"
+        data-selection={tab.id}
         type="button"
         role="tab"
         aria-selected={selected === tab.id}
@@ -86,19 +94,24 @@
     {/each}
   </div>
 
-  <div id={panelId(selected)} class="panel" role="tabpanel" aria-labelledby={tabId(selected)}>
-    {@render children(selected)}
-  </div>
+  {#key selected}
+    <div id={panelId(selected)} class="panel" role="tabpanel" aria-labelledby={tabId(selected)}>
+      {@render children(selected)}
+    </div>
+  {/key}
 </div>
 
 <style>
   .strip {
+    position: relative;
     display: flex;
     gap: var(--space-1);
     border-bottom: 1px solid var(--border);
   }
 
   .tab {
+    position: relative;
+    z-index: 1;
     padding: var(--space-3) var(--space-4);
     min-height: var(--control-sm);
     border: none;
@@ -108,7 +121,7 @@
     font: inherit;
     font-weight: var(--weight-medium);
     cursor: pointer;
-    /* The underline slides in; the label does not move. */
+    /* Only the marker moves; labels and keyboard focus stay in place. */
     transition:
       color var(--duration-fast) var(--ease-out),
       border-color var(--duration-fast) var(--ease-out);
@@ -119,11 +132,27 @@
   }
 
   .tab[aria-selected='true'] {
-    border-bottom-color: var(--accent);
     color: var(--text);
+  }
+
+  .strip:not([data-indicator-ready]) .tab[aria-selected='true'] {
+    border-bottom-color: var(--accent);
+  }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(var(--space-1));
+    }
   }
 
   .panel {
     padding-block: var(--space-4);
+    animation: panel-in var(--duration-base) var(--ease-out);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .panel {
+      animation: none;
+    }
   }
 </style>

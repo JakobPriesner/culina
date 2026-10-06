@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { selectionIndicator } from '$ds/containment/selectionIndicator';
   import { page } from '$app/state';
   import { destinations } from './navigation';
   import { m } from './i18n';
@@ -7,19 +8,23 @@
   /** The same direct destinations: a top bar on desktop and a bottom bar on phones. */
   let { placement }: { placement: 'top' | 'bottom' } = $props();
   const current = $derived(page.url.pathname);
+  const selected = $derived(destinations.find((destination) => destination.match(current))?.href);
 </script>
 
-<nav class="nav {placement}" aria-label={m['nav.label']()}>
+<nav use:selectionIndicator={{ selected }} class="nav {placement}" aria-label={m['nav.label']()}>
   {#each destinations as destination (destination.href)}
     {@const active = destination.match(current)}
     <a
       class="destination"
+      data-selection={placement === 'top' ? destination.href : undefined}
       class:active
       href={destination.href}
       aria-current={active ? 'page' : undefined}
     >
-      <span class="icon" aria-hidden="true"
-        ><NavIcon icon={destination.icon} current={active} /></span
+      <span
+        class="icon"
+        data-selection={placement === 'bottom' ? destination.href : undefined}
+        aria-hidden="true"><NavIcon icon={destination.icon} current={active} /></span
       >
       <span class="label">{destination.label()}</span>
     </a>
@@ -28,10 +33,14 @@
 
 <style>
   .nav {
+    position: relative;
+    isolation: isolate;
     display: flex;
   }
 
   .destination {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     border: none;
@@ -77,13 +86,17 @@
     font-weight: var(--weight-medium);
   }
 
-  .top .destination.active {
+  .top:not([data-indicator-ready]) .destination.active {
     background: var(--surface-raised);
     color: var(--text);
     box-shadow: var(--shadow-card);
   }
 
-  .top .destination:hover {
+  .top .destination.active {
+    color: var(--text);
+  }
+
+  .top .destination:not(.active):hover {
     background: var(--surface-selected);
     box-shadow: var(--shadow-card);
   }
@@ -122,12 +135,12 @@
     color: var(--accent);
   }
 
-  .bottom .destination.active .icon {
+  .bottom:not([data-indicator-ready]) .destination.active .icon {
     background: var(--surface-raised);
     box-shadow: var(--shadow-card);
   }
 
-  .bottom .destination:hover .icon {
+  .bottom .destination:not(.active):hover .icon {
     background: var(--surface-selected);
     box-shadow: var(--shadow-card);
   }

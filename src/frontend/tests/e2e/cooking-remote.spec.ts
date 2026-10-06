@@ -70,9 +70,16 @@ test.describe('cooking remote @offline', () => {
     const asset = page.waitForResponse((response) =>
       /cooking-silence[^/]*\.wav/.test(response.url())
     );
+    const kitchen = page.getByRole('button', { name: 'Kitchen controls', exact: true });
+    await expect(kitchen).toBeInViewport();
+    await kitchen.click();
     await page.getByRole('button', { name: 'Remote controls', exact: true }).click();
     expect((await asset).ok()).toBe(true);
     await expect(page.getByRole('button', { name: 'Turn off remote' })).toBeVisible();
+    await page
+      .getByRole('dialog', { name: 'Kitchen controls' })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
     await expect
       .poll(() => page.evaluate(() => navigator.mediaSession.metadata?.title))
       .toContain('Step 1 of 4');

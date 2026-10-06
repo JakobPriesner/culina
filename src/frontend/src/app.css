@@ -24,6 +24,14 @@ html {
      chosen mode rather than the operating system's. */
   color-scheme: light;
   -webkit-tap-highlight-color: transparent;
+  /* Keep the reading column and chrome fixed across page and overlay changes. */
+  scrollbar-gutter: stable;
+}
+
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
 }
 
 html[data-mode='dark'] {
@@ -180,13 +188,32 @@ img {
   animation: none;
   mix-blend-mode: normal;
 }
-::view-transition-group(page-content) {
+/* Snapshots must never intercept a second navigation or an overlay action. */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(settings-navigation) {
   animation: none;
 }
-::view-transition-old(page-content) {
+::view-transition-old(settings-navigation) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(settings-navigation) {
+  animation: none;
+}
+
+::view-transition-group(page-content),
+::view-transition-group(settings-content) {
+  animation: none;
+}
+::view-transition-old(page-content),
+::view-transition-old(settings-content) {
   animation: var(--duration-fast) var(--ease-out) both vt-fade-out;
 }
-::view-transition-new(page-content) {
+::view-transition-new(page-content),
+::view-transition-new(settings-content) {
   animation: var(--duration-base) var(--ease-out) both vt-fade-in;
   mix-blend-mode: normal;
 }
@@ -283,4 +310,23 @@ img {
 
 @page {
   margin: 18mm 16mm;
+}
+
+/* Shared selection decoration: the control's labels remain stationary. */
+.selection-indicator {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-card);
+  left: 0;
+  top: 0;
+  transition:
+    transform 220ms var(--ease-out),
+    width 220ms var(--ease-out);
+}
+.selection-indicator.underline {
+  background: var(--accent);
+  box-shadow: none;
 }

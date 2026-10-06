@@ -136,6 +136,10 @@
     align-items: start;
   }
 
+  .rail {
+    view-transition-name: settings-navigation;
+  }
+
   .legend {
     /* Only worth the line on the desktop rail, where it captions a column.
        Above a wrapping row of pills it would caption nothing. */
@@ -176,7 +180,6 @@
   .category.selected {
     background: var(--surface-accent-subtle);
     color: var(--accent);
-    font-weight: var(--weight-semibold);
   }
 
   /* Capped well short of the page, because a settings row is a label on the
@@ -184,6 +187,7 @@
      centimetre of eye travel per setting with nothing in between. The rail
      takes the width the panel gives up. */
   .panel {
+    view-transition-name: settings-content;
     display: flex;
     flex-direction: column;
     gap: var(--layout-section-gap);

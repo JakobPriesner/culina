@@ -40,6 +40,16 @@ if (typeof globalThis.matchMedia !== 'function') {
   })) as typeof matchMedia;
 }
 
+// jsdom has no layout or resize notifications. Browser tests exercise the
+// measured layouts; component tests only need the observer's lifecycle.
+if (typeof globalThis.ResizeObserver !== 'function') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 /*
  * Nor does jsdom have the Web Animations API, which every Svelte transition
  * runs on. A component that fades something out therefore throws the moment

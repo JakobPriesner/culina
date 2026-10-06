@@ -61,6 +61,7 @@ describe.each(appIcons)('the %s manifest', (icon) => {
       id: string;
       icons: { src: string; purpose: string }[];
       shortcuts: { icons: { src: string }[] }[];
+      share_target: unknown;
     };
 
   it('names only files that exist', () => {
@@ -80,6 +81,17 @@ describe.each(appIcons)('the %s manifest', (icon) => {
 
   it('is the same app, so an install keeps its identity whatever the icon', () => {
     expect(manifest().id).toBe('/');
+  });
+
+  it('receives the same links, captions and screenshots whatever the icon', () => {
+    const target = JSON.parse(read('manifest.webmanifest')).share_target;
+    expect(target).toMatchObject({
+      action: '/recipes/import',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: { title: 'title', text: 'text', url: 'url', files: expect.any(Array) }
+    });
+    expect(manifest().share_target).toEqual(target);
   });
 
   it('has a shape for every mask a launcher cuts and for themed icons', () => {

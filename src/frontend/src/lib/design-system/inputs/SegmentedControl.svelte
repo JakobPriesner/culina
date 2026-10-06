@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { selectionIndicator } from '../containment/selectionIndicator';
   /**
    * Two or three ways of looking at the same thing, all named at once.
    *
@@ -27,10 +28,11 @@
   let { segments, selected, label, onselect }: Props = $props();
 </script>
 
-<div class="segments" role="group" aria-label={label}>
+<div use:selectionIndicator={{ selected }} class="segments" role="group" aria-label={label}>
   {#each segments as segment (segment.id)}
     <button
       class="segment"
+      data-selection={segment.id}
       type="button"
       aria-pressed={selected === segment.id}
       onclick={() => onselect(segment.id)}
@@ -44,6 +46,8 @@
   /* One control with a seam down it, not two buttons that happen to touch:
      the shared border is what says the two are alternatives. */
   .segments {
+    position: relative;
+    isolation: isolate;
     display: inline-flex;
     padding: var(--space-1);
     gap: var(--space-1);
@@ -53,6 +57,8 @@
   }
 
   .segment {
+    position: relative;
+    z-index: 1;
     padding: var(--space-1) var(--space-2);
     min-height: var(--control-sm);
     border: none;
@@ -76,6 +82,10 @@
   /* Raised, not accented: this picks a view, and a control painted in the
      accent colour asks to be pressed as if something were about to happen. */
   .segment[aria-pressed='true'] {
+    color: var(--text);
+  }
+
+  .segments:not([data-indicator-ready]) .segment[aria-pressed='true'] {
     background: var(--surface-raised);
     color: var(--text);
     box-shadow: var(--shadow-card);

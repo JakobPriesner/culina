@@ -150,6 +150,11 @@ export async function responsiveData(
     if (path === `/cookbooks/${cookbookId}`) return reply(cookbook);
     if (path === `/recipes/${recipeId}/cookbooks`)
       return reply({ items: [{ cookbookId, name: cookbook.name }] });
+    if (path === '/cook-sessions' && route.request().method() === 'POST') {
+      activeCooking = true;
+      cooking = { ...cooking, ...route.request().postDataJSON() };
+      return reply(cooking);
+    }
     if (path === '/cook-sessions/current') {
       if (!activeCooking) {
         return route.fulfill({ status: 404, json: { type: 'not-found' } });

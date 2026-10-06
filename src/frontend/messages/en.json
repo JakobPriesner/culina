@@ -1417,9 +1417,6 @@
   "notAllowed.title": "Only the head chef touches this stove",
   "notAllowed.body": "These settings change the kitchen for everyone, so only administrators can edit them. Ask yours if something needs a tweak.",
   "notAllowed.back": "Back to settings",
-  "notAllowed.ticket.order": "Order #403",
-  "notAllowed.ticket.table": "Table: settings",
-  "notAllowed.ticket.chef": "Head chef only",
   "auth.cold.title": "Your session went cold",
   "auth.cold.body": "You were away a while, so Culina turned the stove off. Sign in to fire it back up, right where you left off.",
   "auth.cold.submit": "Turn the heat back on",
@@ -1502,5 +1499,8 @@
   "problem.RecipeIntake.QueueFull": "Three imports are already running. Wait for one to finish.",
   "problem.RecipeIntake.IdInUse": "Please start this import again.",
   "problem.Push.InvalidSubscription": "This device could not register for notifications.",
-  "problem.Push.TooManyDevices": "Too many devices are registered for notifications."
+  "problem.Push.TooManyDevices": "Too many devices are registered for notifications.",
+  "import.intake.iphone": "On iPhone, choose Copy link in Instagram, then paste the link here. Culina cannot appear in the iPhone share menu.",
+  "kitchen.controls": "Kitchen controls",
+  "kitchen.short": "Kitchen"
 }

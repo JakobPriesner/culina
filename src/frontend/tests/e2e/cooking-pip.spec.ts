@@ -86,11 +86,16 @@ test.describe('floating kitchen companion @offline', () => {
       )
     );
     await page.goto(`/recipes/${recipeId}/cook?yield=4`);
+    await page.getByRole('button', { name: 'Kitchen controls' }).click();
     const toggle = page.getByRole('button', { name: 'Float cooking window' });
     await expect(toggle).toBeVisible();
     const opened = context.waitForEvent('page');
     await toggle.click();
     const child = await opened;
+    await page
+      .getByRole('dialog', { name: 'Kitchen controls' })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
     child.on('console', (message) => watchPolicy(message.text()));
     await expect(child.getByRole('heading', { name: 'Butter sauce', level: 1 })).toBeVisible();
     await expect(child.getByText('400 g butter')).toBeVisible();
@@ -104,6 +109,7 @@ test.describe('floating kitchen companion @offline', () => {
     await expect(page.getByRole('button', { name: 'Resume timer' })).toBeVisible();
     await page.getByRole('button', { name: 'Resume timer' }).click();
     await expect(child.getByRole('button', { name: 'Pause timer' })).toHaveCount(2);
+    await page.getByRole('button', { name: 'Kitchen controls' }).click();
     for (const mode of ['glare', 'oled', 'normal']) {
       await page.getByLabel('Kitchen display').selectOption(mode);
       if (mode === 'normal')
@@ -119,6 +125,10 @@ test.describe('floating kitchen companion @offline', () => {
       );
       await expectReflow(child);
     }
+    await page
+      .getByRole('dialog', { name: 'Kitchen controls' })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
     await child.setViewportSize({ width: 420, height: 560 });
     await expect(child.locator('body')).toHaveCSS('background-color', 'rgb(250, 249, 246)');
     await child.screenshot({ path: testInfo.outputPath('companion.png'), fullPage: true });
@@ -132,6 +142,7 @@ test.describe('floating kitchen companion @offline', () => {
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
     await expect(page.getByText('Step 2 of 2', { exact: true })).toBeVisible();
     await expect.poll(() => child.isClosed()).toBe(true);
+    await page.getByRole('button', { name: 'Kitchen controls' }).click();
     const again = context.waitForEvent('page');
     await page.getByRole('button', { name: 'Float cooking window' }).click();
     await again;

@@ -151,26 +151,26 @@ test.describe('responsive production layouts @offline', () => {
     await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
   });
 
-  test('start cooking stays in the recipe instead of floating above mobile navigation', async ({
+  for (const [width, height] of [
+    [320, 568],
+    [390, 844],
+    [844, 390],
+    [1024, 900],
+    [1280, 900]
+  ] as const) {
+    test(`start cooking stays visible and settles after the recipe at ${width}px`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
+      await expectStartCookingReachable(page, width, height);
+    });
+  }
+
+  test('mobile cooking action is visible on arrival and settles while scrolling', async ({
     page
-  }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
-    await page.setViewportSize({ width: 390, height: 844 });
-    await responsiveData(page, 'de', { activeCooking: false });
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto(`/recipes/${recipeId}`);
-
-    const start = page.getByRole('button', { name: 'Kochen starten', exact: true });
-    const action = page.locator('article.surface > footer.foot');
-    await expect(start).toBeVisible();
-    await expect(start).not.toBeInViewport();
-    expect(await action.evaluate((element) => getComputedStyle(element).position)).toBe('static');
-
-    await start.scrollIntoViewIfNeeded();
-    const actionBox = (await action.boundingBox())!;
-    const navigationBox = (await page.locator('nav.bottom').boundingBox())!;
-    expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(navigationBox.y);
-    await expectReflow(page);
+  }) => {
+    const viewport = page.viewportSize()!;
+    await expectStartCookingReachable(page, viewport.width, viewport.height);
   });
 
   for (const [width, height] of [
@@ -274,4 +274,63 @@ async function expectCurrentStepReadable(page: Page) {
   await page.evaluate((by) => scrollBy(0, by), Math.max(0, at.bottom - at.clearBottom));
   const scrolled = await measure();
   expect(scrolled.bottom).toBeLessThanOrEqual(scrolled.clearBottom + 1);
+}
+
+async function expectStartCookingReachable(page: Page, width: number, height: number) {
+  await page.setViewportSize({ width, height });
+  await responsiveData(page, 'de', { activeCooking: false });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(`/recipes/${recipeId}`);
+
+  const start = page.getByRole('button', { name: 'Kochen starten', exact: true });
+  const action = page.locator('article.surface > .cook-action > footer.foot');
+  await expect(start).toBeVisible();
+  await expect(start).toBeInViewport({ ratio: 1 });
+  expect(await action.evaluate((element) => getComputedStyle(element).position)).toBe(
+    width < 1024 ? 'fixed' : 'relative'
+  );
+
+  const actionBox = (await action.boundingBox())!;
+  const bottom = width < 1024 ? (await page.locator('nav.bottom').boundingBox())!.y : height;
+  expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(bottom);
+
+  if (width < 1024) {
+    // Keep the action clear of navigation when the visible screen gets shorter.
+    await page.setViewportSize({ width, height: height - 100 });
+    await expect(start).toBeInViewport({ ratio: 1 });
+    await expect
+      .poll(async () => {
+        const button = (await action.boundingBox())!;
+        return button.y + button.height - (await page.locator('nav.bottom').boundingBox())!.y;
+      })
+      .toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width, height });
+    await expect.poll(async () => (await action.boundingBox())!.y).toBeCloseTo(actionBox.y, 0);
+  }
+
+  // It stays at the same viewport position while reading the recipe.
+  await page.evaluate(() => window.scrollTo(0, 150));
+  await expect(start).toBeInViewport({ ratio: 1 });
+  expect((await action.boundingBox())!.y).toBeCloseTo(actionBox.y, 0);
+
+  // Once reached, its place follows the document, rather than floating over
+  // the notes and related recipes that come after it.
+  await page.locator('article.surface > .body').evaluate((element, dockedTop) => {
+    const gap = parseFloat(getComputedStyle(element.parentElement!).rowGap);
+    window.scrollTo(
+      0,
+      window.scrollY + element.getBoundingClientRect().bottom + gap - (dockedTop - 80)
+    );
+  }, actionBox.y);
+  await expect.poll(async () => (await action.boundingBox())!.y).toBeLessThan(actionBox.y);
+  const restingBox = (await action.boundingBox())!;
+  await page.evaluate(() => window.scrollBy(0, 60));
+  await expect.poll(async () => (await action.boundingBox())!.y).toBeCloseTo(restingBox.y - 60, 0);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(start).toBeInViewport({ ratio: 1 });
+  expect((await action.boundingBox())!.y).toBeCloseTo(actionBox.y, 0);
+  await expectReflow(page);
+  await start.click();
+  await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
 }

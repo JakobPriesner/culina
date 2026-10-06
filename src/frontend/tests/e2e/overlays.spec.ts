@@ -45,7 +45,9 @@ test.describe('overlays @offline', () => {
   test('gives focus back to the control that opened it', async ({ page }) => {
     const trigger = page.getByRole('button', { name: 'Open modal' });
 
-    await trigger.click();
+    // Safari leaves pointer-activated buttons unfocused. Exercise keyboard focus restoration.
+    await trigger.focus();
+    await trigger.press('Enter');
     await page.getByRole('button', { name: 'Close' }).click();
 
     await expect(page.getByRole('dialog')).toBeHidden();

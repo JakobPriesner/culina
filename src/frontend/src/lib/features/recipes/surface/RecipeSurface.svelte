@@ -12,6 +12,7 @@
     type IngredientsView
   } from './ingredientsView';
   import { createScaling } from './scaled.svelte';
+  import { dockCookingAction } from './dockCookingAction';
   import ScaleToAmountSheet from './ScaleToAmountSheet.svelte';
   import IngredientList from './IngredientList.svelte';
   import ServingsControl from './ServingsControl.svelte';
@@ -876,15 +877,14 @@
     onapply={(value) => onservings?.(value)}
   />
 
-  {#if hasActions}
+  {#snippet cookingAction()}
     <footer class="foot">
       {#if cooking}
         <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
       {:else if canCook}
         <!--
-          One button, alone, after the recipe. On wide screens it stays within
-          reach while the recipe is read; on compact screens it remains in the
-          document instead of forming a second action bar above navigation.
+          One button, alone, after the recipe. It stays within reach while the
+          recipe is read, then settles here when its place enters the viewport.
 
           It is here rather than beside the title because the decision is made
           at the end of the reading, not at the start of it: you look at the
@@ -898,6 +898,16 @@
         </Button>
       {/if}
     </footer>
+  {/snippet}
+
+  {#if hasActions}
+    {#if cooking}
+      {@render cookingAction()}
+    {:else}
+      <div class="cook-action" use:dockCookingAction>
+        {@render cookingAction()}
+      </div>
+    {/if}
   {/if}
 </article>
 
@@ -1328,10 +1338,8 @@
   }
 
   /*
-   * At the end of the recipe, in the document. Compact screens keep it here:
-   * the shell already owns their bottom edge with its navigation, and a second
-   * bar above the first gives the recipe two endings instead of one. So does
-   * cooking, whose step navigation is the page's own strip at that edge.
+   * At the end of the recipe, in the document. Cooking keeps it here because
+   * its step navigation already owns the page's bottom edge.
    */
   .foot {
     max-width: 100%;
@@ -1343,7 +1351,7 @@
   }
 
   /*
-   * On a wide screen, within reach while the recipe is read — and standing on
+   * Within reach while the recipe is read — and standing on
    * a strip of its own rather than on the recipe.
    *
    * A button floating over the method sat in the middle of a line of it:
@@ -1358,22 +1366,29 @@
    * view that is the pinned ingredient list, and in the per-step view each
    * step's own ingredients, so nothing in that column is free to stand on.
    *
-   * Short screens keep it in flow too: on a laptop turned landscape-short, a
-   * strip is a fifth of what is left.
+   * The shell's bottom inset keeps it above compact-screen navigation. Bottom
+   * stickiness brings it into view before its normal position, then lets it
+   * scroll with the document once the reader reaches the end of the recipe.
    */
-  @media screen and (width >= 64rem) and (height >= 32rem) {
-    .surface:not(.cooking) .foot {
+  @media screen {
+    .cook-action {
       position: sticky;
       bottom: max(var(--bottom-inset), env(safe-area-inset-bottom, 0px));
       z-index: var(--z-sticky);
       align-self: stretch;
+      margin-block-end: var(--space-8);
+    }
+
+    .cook-action .foot {
+      position: relative;
+      margin-block-end: 0;
       padding-block: var(--space-8) var(--space-6);
     }
 
     /* A gradient and not a blur, for the header's reason: what passes under it
        is a centred column on a flat background. Solid behind the button, so
        no half-line shows around it; faded above, so the edge is soft. */
-    .surface:not(.cooking) .foot::before {
+    .cook-action .foot::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -1389,6 +1404,25 @@
    * undoing these rules to get them back.
    */
   @media screen and (width < 64rem) {
+    .cook-action {
+      position: static;
+      min-height: var(--action-height, 0px);
+    }
+
+    .cook-action .foot {
+      position: relative;
+      margin-block-end: 0;
+    }
+
+    .cook-action .foot:global(.docked) {
+      position: fixed;
+      top: var(--action-top);
+      bottom: auto;
+      left: var(--action-left);
+      width: var(--action-width);
+      z-index: var(--z-sticky);
+    }
+
     .body {
       grid-template-columns: 1fr;
       gap: var(--space-8);
@@ -1539,6 +1573,10 @@
       width: 100%;
     }
 
+    .surface:not(.cooking) .foot {
+      padding-block: var(--space-4) var(--space-3);
+    }
+
     .foot :global(.button) {
       flex: 1;
     }
@@ -1565,7 +1603,8 @@
   @media print {
     .hero,
     .servings,
-    .foot {
+    .foot,
+    .cook-action {
       display: none !important;
     }
 
