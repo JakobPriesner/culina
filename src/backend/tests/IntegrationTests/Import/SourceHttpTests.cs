@@ -1,4 +1,7 @@
+using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using Application.Abstractions.Settings;
 using Domain.Import;
@@ -105,5 +108,102 @@ public class SourceHttpTests
 
         // Assert
         Assert.Equal(3, result.ShouldBeSuccess().GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetAsync_ShouldGiveUp_WhenTheAnswerStallsAfterItsHeaders()
+    {
+        // Arrange
+        // Headers at once, then nothing. The client's own timeout has stopped
+        // counting by then, so only a deadline over the body ends this.
+        using var server = new StallingServer();
+        using var http = new SourceHttp(Storage, admits: _ => true, deadline: TimeSpan.FromSeconds(1));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        // Act
+        var result = await http
+            .GetAsync<JsonElement>(server.Url, Token, Cancellation)
+            .ConfigureAwait(true);
+
+        // Assert
+        result.ShouldBeFailure(ImportErrors.CouldNotFetch);
+        Assert.InRange(clock.Elapsed, TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
+    public async Task PostFormAsync_ShouldGiveUp_WhenTheAnswerStallsAfterItsHeaders()
+    {
+        // Arrange
+        using var server = new StallingServer();
+        using var http = new SourceHttp(Storage, admits: _ => true, deadline: TimeSpan.FromSeconds(1));
+        var form = new Dictionary<string, string>(StringComparer.Ordinal) { ["username"] = "ada" };
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        // Act
+        var result = await http
+            .PostFormAsync<JsonElement>(server.Url, form, Cancellation)
+            .ConfigureAwait(true);
+
+        // Assert
+        result.ShouldBeFailure(ImportErrors.CouldNotFetch);
+        Assert.InRange(clock.Elapsed, TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(10));
+    }
+}
+
+/// <summary>
+/// A server that sends a JSON answer's headers and its first byte, and then
+/// nothing more until it is disposed.
+/// </summary>
+internal sealed class StallingServer : IDisposable
+{
+    private readonly TcpListener listener = new(IPAddress.Loopback, 0);
+    private readonly List<TcpClient> held = [];
+
+    internal StallingServer()
+    {
+        listener.Start();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+
+                    lock (held)
+                    {
+                        held.Add(client);
+                    }
+
+                    var stream = client.GetStream();
+
+                    // Enough of the request to know it has been sent.
+                    await stream.ReadAsync(new byte[4096]).ConfigureAwait(false);
+
+                    await stream
+                        .WriteAsync(Encoding.ASCII.GetBytes(
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 1000\r\n\r\n{"))
+                        .ConfigureAwait(false);
+                }
+            }
+            catch (Exception stopped) when (stopped is SocketException or ObjectDisposedException or IOException)
+            {
+                // The listener was stopped, which is how this ends.
+            }
+        });
+    }
+
+    internal Uri Url => new($"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/api/recipe/");
+
+    public void Dispose()
+    {
+        listener.Stop();
+        listener.Dispose();
+
+        lock (held)
+        {
+            held.ForEach(client => client.Dispose());
+        }
     }
 }
