@@ -155,13 +155,18 @@ uncaught errors, unhandled rejections, failed renders (the root
 `<svelte:boundary>` and `handleError` in `hooks.client.ts`), CSP violations and
 service-worker failures (posted to a page, since the worker never calls the
 API) to `POST /api/v1/log-records`. `CreateLogRecordsCommandHandler` writes one
-`WebAppLogs.Reported` line per record — category `Culina.WebApp`, event id
-1700 — so they leave with the server's exporter and logging scope.
+`WebAppLogs.Reported` line per record — category `Culina.WebApp.Untrusted`,
+event id 1700 — so they leave with the server's exporter and logging scope.
 
-- The event is a closed set (`LogRecordVocabulary`); the server picks the level
-  from it. Never accept a level from the browser.
+- The event is a closed set (`LogRecordVocabulary`). Every record is a
+  `Warning` with `Client…` fields: anybody can send one, and a stranger must
+  never be able to write an `Error`. Never accept a level from the browser.
+- Every string the browser sent loses its control characters (line breaks
+  included) before it is logged, so a console that does not escape them cannot
+  be handed a forged line.
 - Anonymous on purpose (a sign-in page breaks too), so it has its own fixed
-  rate limit and every field a ceiling. Raise neither casually.
+  rate limits — per address and for every caller together — and every field a
+  ceiling. Raise none of them casually.
 - A browser stack travels as `WebAppException`, which is exported as
   `exception.stacktrace`.
 - Send a route id (`/(app)/recipes/[recipeId]`), never `location.href`.

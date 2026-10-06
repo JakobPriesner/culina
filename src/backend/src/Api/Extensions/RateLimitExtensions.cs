@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Api.Infrastructure;
 using Application.Abstractions.Settings;
 using Application.Telemetry;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Extensions;
 
@@ -70,13 +71,26 @@ internal static class RateLimitExtensions
     /// <remarks>
     /// Anonymous, because a sign-in page can break too, and every request
     /// becomes up to ten log lines — so without a ceiling of its own, anybody
-    /// could fill the operator's disk through it. Fixed rather than a setting:
+    /// could fill the operator's disk through it — per address, and for every
+    /// address together (see <see cref="SharedByEveryone"/>). Fixed rather than a setting:
     /// the app sends at most one batch every few seconds, so this is a limit on
     /// misuse, never on the app, and nobody has a reason to tune it.
     /// </remarks>
     internal const string LogRecords = "log-records";
 
     private const int LogRecordBatchesPerMinute = 20;
+
+    /// <summary>
+    /// What every caller together may send to <see cref="LogRecords"/> in a
+    /// minute.
+    /// </summary>
+    /// <remarks>
+    /// A limit per address means little to many addresses, or behind a proxy
+    /// trusted too widely, and the endpoint is anonymous. Ten browsers each
+    /// reporting as fast as the app ever sends fit; past that, reports are
+    /// dropped rather than the operator's disk filled.
+    /// </remarks>
+    private const int LogRecordBatchesPerMinuteFromEveryone = 120;
 
     internal static IServiceCollection AddCulinaRateLimiter(this IServiceCollection services)
     {
@@ -112,9 +126,13 @@ internal static class RateLimitExtensions
 
             // A generous ceiling on everything else, so one misbehaving client
             // cannot exhaust the connection pool. Per address, so a made-up
-            // session cookie cannot buy a fresh budget.
-            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-                PerAddress(context, limits.RequestsPerSessionPerMinute, TimeSpan.FromMinutes(1)));
+            // session cookie cannot buy a fresh budget. Then the ceilings every
+            // caller of one endpoint shares, which an endpoint's own policy
+            // cannot add: it has one partition, and that is per address.
+            options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
+                PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                    PerAddress(context, limits.RequestsPerSessionPerMinute, TimeSpan.FromMinutes(1))),
+                PartitionedRateLimiter.Create<HttpContext, string>(SharedByEveryone));
 
             options.OnRejected = async (context, cancellationToken) =>
             {
@@ -174,6 +192,15 @@ internal static class RateLimitExtensions
     /// </remarks>
     private static RateLimitPartition<string> PerAddress(HttpContext context, int permit, TimeSpan window) =>
         FixedWindow($"ip:{context.Connection.RemoteIpAddress}", permit, window);
+
+    /// <summary>
+    /// One budget for every caller of an endpoint that needs one, whoever and
+    /// wherever they are.
+    /// </summary>
+    private static RateLimitPartition<string> SharedByEveryone(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == LogRecords
+            ? FixedWindow($"everyone:{LogRecords}", LogRecordBatchesPerMinuteFromEveryone, TimeSpan.FromMinutes(1))
+            : RateLimitPartition.GetNoLimiter(string.Empty);
 
     private static RateLimitPartition<string> FixedWindow(string key, int permit, TimeSpan window) =>
         RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
