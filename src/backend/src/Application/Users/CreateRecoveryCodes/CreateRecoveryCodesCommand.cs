@@ -10,7 +10,8 @@ namespace Application.Users.CreateRecoveryCodes;
 /// <summary>Makes a new set of recovery codes, replacing any earlier set.</summary>
 /// <param name="UserId">Who is asking.</param>
 /// <param name="Password">Their password, to prove it is them.</param>
-public sealed record CreateRecoveryCodesCommand(Guid UserId, string Password);
+/// <param name="IpAddress">The client address, which decides whose attempt budget is used.</param>
+public sealed record CreateRecoveryCodesCommand(Guid UserId, string Password, string? IpAddress);
 
 internal sealed class CreateRecoveryCodesCommandHandler(
     IUserRepository users,
@@ -30,7 +31,12 @@ internal sealed class CreateRecoveryCodesCommandHandler(
         using var tracked = UseCaseActivity.Start("Users.CreateRecoveryCodes");
 
         var found = await users.FindAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        var confirmed = found.Bind(user => confirmation.Confirm(user, command.Password).Map(() => user));
+        var confirmed = await found.Match(
+            async user => (await confirmation
+                    .ConfirmAsync(user, command.Password, command.IpAddress, cancellationToken)
+                    .ConfigureAwait(false))
+                .Map(() => user),
+            error => Task.FromResult(Result<User>.Failure(error))).ConfigureAwait(false);
 
         var result = await confirmed.Match(
             user => CreateAsync(user, cancellationToken),

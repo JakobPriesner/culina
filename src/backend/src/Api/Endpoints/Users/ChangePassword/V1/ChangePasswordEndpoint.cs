@@ -27,7 +27,8 @@ internal sealed class ChangePasswordEndpoint : IEndpoint
                             user.UserId,
                             user.SessionId,
                             request.CurrentPassword,
-                            request.NewPassword),
+                            request.NewPassword,
+                            context.ClientAddress()),
                         cancellationToken)
                     .ConfigureAwait(false);
 

@@ -99,7 +99,7 @@ internal sealed class RegisterUserCommandHandler(
         var user = User.Register(
             account.Email,
             account.DisplayName,
-            passwordHasher.Hash(account.Password),
+            await passwordHasher.HashAsync(account.Password, cancellationToken).ConfigureAwait(false),
             dependencies.Time.GetUtcNow());
 
         // The account and the household it lands in are one atomic step: an

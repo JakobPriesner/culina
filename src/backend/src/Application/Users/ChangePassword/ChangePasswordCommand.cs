@@ -11,11 +11,13 @@ namespace Application.Users.ChangePassword;
 /// <param name="SessionId">The session they are asking from, which stays signed in.</param>
 /// <param name="CurrentPassword">Their password now, to prove it is them.</param>
 /// <param name="NewPassword">What it becomes.</param>
+/// <param name="IpAddress">The client address, which decides whose attempt budget is used.</param>
 public sealed record ChangePasswordCommand(
     Guid UserId,
     Guid SessionId,
     string CurrentPassword,
-    string NewPassword);
+    string NewPassword,
+    string? IpAddress);
 
 internal sealed class ChangePasswordCommandHandler(
     IUserRepository users,
@@ -35,8 +37,12 @@ internal sealed class ChangePasswordCommandHandler(
         var acceptable = User.EnsureAcceptablePassword(command.NewPassword);
         var found = await users.FindAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
-        var confirmed = acceptable.Bind(() => found.Bind(user =>
-            confirmation.Confirm(user, command.CurrentPassword).Map(() => user)));
+        var confirmed = await acceptable.Bind(() => found).Match(
+            async user => (await confirmation
+                    .ConfirmAsync(user, command.CurrentPassword, command.IpAddress, cancellationToken)
+                    .ConfigureAwait(false))
+                .Map(() => user),
+            error => Task.FromResult(Result<User>.Failure(error))).ConfigureAwait(false);
 
         var result = await confirmed.Match(
             user => SaveAsync(user, command, cancellationToken),
@@ -45,11 +51,12 @@ internal sealed class ChangePasswordCommandHandler(
         return tracked.Record(result);
     }
 
-    private Task<Result> SaveAsync(User user, ChangePasswordCommand command, CancellationToken cancellationToken)
+    private async Task<Result> SaveAsync(User user, ChangePasswordCommand command, CancellationToken cancellationToken)
     {
-        user.ChangePasswordHash(passwordHasher.Hash(command.NewPassword));
+        user.ChangePasswordHash(
+            await passwordHasher.HashAsync(command.NewPassword, cancellationToken).ConfigureAwait(false));
 
-        return unitOfWork.InTransactionAsync(
+        return await unitOfWork.InTransactionAsync(
             async token =>
             {
                 var saved = await users.UpdateAsync(user, user.Version, token).ConfigureAwait(false);
@@ -63,6 +70,6 @@ internal sealed class ChangePasswordCommandHandler(
 
                 return saved.Bind(_ => Result.Success());
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 }

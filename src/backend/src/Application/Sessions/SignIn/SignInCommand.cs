@@ -12,7 +12,10 @@ namespace Application.Sessions.SignIn;
 /// <summary>Signs a user in.</summary>
 /// <param name="Email">The address they registered with.</param>
 /// <param name="Password">Their password.</param>
-/// <param name="IpAddress">The client address, for the devices screen.</param>
+/// <param name="IpAddress">
+/// The client address, for the devices screen and for whose attempt budget the
+/// guess is counted against.
+/// </param>
 /// <param name="UserAgent">The browser, for the devices screen.</param>
 public sealed record SignInCommand(
     string Email,
@@ -41,12 +44,14 @@ internal sealed class SignInCommandHandler(
         var now = dependencies.Time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
 
-        if (attempts.IsLockedOut(accountKey, now))
+        // Counted before the password is checked, so simultaneous guesses
+        // cannot all slip through before the first failure is written down.
+        if (!attempts.TryReserve(accountKey, command.IpAddress, now))
         {
             // Reported as invalid credentials rather than "too many attempts":
             // telling an attacker they found a real account and merely locked
             // it out is the one thing this whole path exists to avoid.
-            return tracked.Record(Failed(accountKey, now));
+            return tracked.Record(Refused());
         }
 
         var user = await FindAsync(command.Email, cancellationToken).ConfigureAwait(false);
@@ -55,16 +60,17 @@ internal sealed class SignInCommandHandler(
         // response takes the same time either way. Skipping the work for an
         // unknown address turns this endpoint into an enumeration oracle no
         // matter how careful the error message is.
-        var verification = passwordHasher.Verify(
+        var verification = await passwordHasher.VerifyAsync(
             command.Password,
-            user?.PasswordHash ?? passwordHasher.DecoyHash);
+            user?.PasswordHash ?? passwordHasher.DecoyHash,
+            cancellationToken).ConfigureAwait(false);
 
         if (user is null || verification == PasswordVerification.Failed)
         {
-            return tracked.Record(Failed(accountKey, now));
+            return tracked.Record(Refused());
         }
 
-        attempts.Clear(accountKey);
+        attempts.Succeeded(accountKey, command.IpAddress, now);
 
         if (verification == PasswordVerification.ValidButNeedsRehash)
         {
@@ -91,9 +97,8 @@ internal sealed class SignInCommandHandler(
         return found.Match<User?>(user => user, _ => null);
     }
 
-    private Result<SignInOutcome> Failed(string accountKey, DateTimeOffset now)
+    private Result<SignInOutcome> Refused()
     {
-        attempts.RecordFailure(accountKey, now);
         CulinaTelemetry.LoginFailures.Add(1);
         AuthenticationLogs.SignInRefused(logger);
 
@@ -104,7 +109,7 @@ internal sealed class SignInCommandHandler(
     {
         // The owner proved the password, so the stored hash can be replaced
         // with one at the current cost — no reset email, no interruption.
-        user.ChangePasswordHash(passwordHasher.Hash(password));
+        user.ChangePasswordHash(await passwordHasher.HashAsync(password, cancellationToken).ConfigureAwait(false));
 
         await users.UpdateAsync(user, user.Version, cancellationToken).ConfigureAwait(false);
     }

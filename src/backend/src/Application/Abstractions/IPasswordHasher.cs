@@ -3,16 +3,26 @@ namespace Application.Abstractions;
 /// <summary>
 /// Hashes and verifies passwords.
 /// </summary>
+/// <remarks>
+/// Asynchronous because a caller may have to wait its turn: each hash holds a
+/// large block of memory for its whole run, so only a few run at once and the
+/// rest queue rather than fail.
+/// </remarks>
 public interface IPasswordHasher
 {
     /// <summary>Hashes a password with the currently configured parameters.</summary>
     /// <param name="password">The plaintext, which is never stored or logged.</param>
-    string Hash(string password);
+    /// <param name="cancellationToken">Stops waiting for a turn.</param>
+    Task<string> HashAsync(string password, CancellationToken cancellationToken);
 
     /// <summary>Checks a password against a stored hash, in constant time.</summary>
     /// <param name="password">The plaintext supplied by the caller.</param>
     /// <param name="encodedHash">The stored hash, including its parameters.</param>
-    PasswordVerification Verify(string password, string encodedHash);
+    /// <param name="cancellationToken">Stops waiting for a turn.</param>
+    Task<PasswordVerification> VerifyAsync(
+        string password,
+        string encodedHash,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// A hash of a value nobody knows, for verifying against when the account
