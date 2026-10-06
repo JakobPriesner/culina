@@ -16,11 +16,18 @@ internal sealed class CreatePasswordResetEndpoint : IEndpoint
 
         app.MapPost($"{ApiPaths.V1}/password-resets", async (
                 Request request,
+                HttpContext context,
                 ICommandHandler<ResetPasswordCommand> handler,
                 CancellationToken cancellationToken) =>
             {
+                var command = new ResetPasswordCommand(
+                    request.Email,
+                    request.Code,
+                    request.Password,
+                    context.ClientAddress());
+
                 var result = await handler
-                    .Handle(new ResetPasswordCommand(request.Email, request.Code, request.Password), cancellationToken)
+                    .Handle(command, cancellationToken)
                     .ConfigureAwait(false);
 
                 return result.Match(Results.NoContent, CustomResults.Problem);

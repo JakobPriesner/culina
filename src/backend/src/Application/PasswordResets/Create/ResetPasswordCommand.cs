@@ -13,7 +13,8 @@ namespace Application.PasswordResets.Create;
 /// <param name="Email">The address the account signs in with.</param>
 /// <param name="Code">A saved or issued recovery code, as typed.</param>
 /// <param name="Password">The new password.</param>
-public sealed record ResetPasswordCommand(string Email, string Code, string Password);
+/// <param name="IpAddress">The client address, which decides whose attempt budget is used.</param>
+public sealed record ResetPasswordCommand(string Email, string Code, string Password, string? IpAddress);
 
 internal sealed class ResetPasswordCommandHandler(
     IUserRepository users,
@@ -48,19 +49,19 @@ internal sealed class ResetPasswordCommandHandler(
         var now = time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
 
-        // Reported as an invalid code rather than "too many attempts", for the
-        // reason sign-in does the same: a lockout confirms the account exists.
-        var result = attempts.IsLockedOut(accountKey, now)
+        // Counted before the code is checked, as sign-in does, and reported as
+        // an invalid code rather than "too many attempts" for the same reason:
+        // a lockout confirms the account exists.
+        var result = !attempts.TryReserve(accountKey, command.IpAddress, now)
             ? SessionErrors.InvalidRecoveryCode
             : await Email.Create(command.Email).Match(
                 email => RedeemAsync(email, command, now, cancellationToken),
                 _ => Task.FromResult(Result.Failure(SessionErrors.InvalidRecoveryCode))).ConfigureAwait(false);
 
         result.Match(
-            () => attempts.Clear(accountKey),
+            () => attempts.Succeeded(accountKey, command.IpAddress, now),
             _ =>
             {
-                attempts.RecordFailure(accountKey, now);
                 CulinaTelemetry.RecoveryFailures.Add(1);
                 AuthenticationLogs.RecoveryRefused(logger);
             });
@@ -98,7 +99,7 @@ internal sealed class ResetPasswordCommandHandler(
     {
         // Hashed only once the code is known to be good, so guessing codes
         // costs the server a lookup and never an Argon2 run.
-        user.ChangePasswordHash(passwordHasher.Hash(password));
+        user.ChangePasswordHash(await passwordHasher.HashAsync(password, cancellationToken).ConfigureAwait(false));
 
         var saved = await users.UpdateAsync(user, user.Version, cancellationToken).ConfigureAwait(false);
 

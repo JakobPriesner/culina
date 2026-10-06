@@ -30,22 +30,28 @@ internal sealed class PasswordConfirmation(
     /// <summary>Succeeds when the password is the account's current one.</summary>
     /// <param name="user">Whose password.</param>
     /// <param name="password">What they typed.</param>
-    internal Result Confirm(User user, string? password)
+    /// <param name="clientAddress">Where they are, which decides whose attempt budget is used.</param>
+    /// <param name="cancellationToken">Cancels the check.</param>
+    internal async Task<Result> ConfirmAsync(
+        User user,
+        string? password,
+        string? clientAddress,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
 
         var now = time.GetUtcNow();
         var accountKey = AccountKey.For(user.Email.Value);
 
-        if (!attempts.IsLockedOut(accountKey, now)
-            && passwordHasher.Verify(password ?? string.Empty, user.PasswordHash) != PasswordVerification.Failed)
+        if (attempts.TryReserve(accountKey, clientAddress, now)
+            && await passwordHasher.VerifyAsync(password ?? string.Empty, user.PasswordHash, cancellationToken)
+                .ConfigureAwait(false) != PasswordVerification.Failed)
         {
-            attempts.Clear(accountKey);
+            attempts.Succeeded(accountKey, clientAddress, now);
 
             return Result.Success();
         }
 
-        attempts.RecordFailure(accountKey, now);
         CulinaTelemetry.LoginFailures.Add(1);
         AuthenticationLogs.ConfirmationRefused(logger);
 

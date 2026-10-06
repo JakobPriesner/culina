@@ -1,3 +1,4 @@
+using Api.Infrastructure;
 using Application.Sessions.SignIn;
 using Request = Contracts.Sessions.SignIn.Request;
 
@@ -14,9 +15,7 @@ internal static class SignInRequestExtensions
         return new SignInCommand(
             request.Email,
             request.Password,
-            // Correct only because forwarded headers ran first and trust only
-            // the configured proxies.
-            context.Connection.RemoteIpAddress?.ToString(),
+            context.ClientAddress(),
             context.Request.Headers.UserAgent.ToString());
     }
 }

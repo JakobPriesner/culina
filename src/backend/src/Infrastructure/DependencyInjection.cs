@@ -159,9 +159,11 @@ public static class DependencyInjection
             .AddHostedService<ImportWorker>();
 
     private static IServiceCollection AddIdentity(this IServiceCollection services) =>
-        // Stateless and thread-safe, so one instance serves every request.
         services
+            // One instance, so its cap on simultaneous hashes covers every
+            // request rather than each one.
             .AddSingleton<IPasswordHasher, Argon2PasswordHasher>()
+            // Stateless and thread-safe, so one instance serves every request.
             .AddSingleton<ISecretTokens, SecretTokens>()
             .AddScoped<ISessionStore, SessionStore>()
             // Singleton: the attempt counters must be shared across requests.
