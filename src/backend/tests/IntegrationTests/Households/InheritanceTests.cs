@@ -344,6 +344,43 @@ public class InheritanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task RemovingAMember_ShouldEndTheInheritanceTheySetUp_AndNoOtherOne()
+    {
+        // Arrange
+        // Grace was a plain member of Ada's kitchen and pointed a household of
+        // her own at it. Ada's flat inherits it too, by Ada's own choice.
+        var (ada, grace, graceId, gracesKitchen, bolognese) = await GraceInheritingAdasKitchenAsync();
+        var flat = await CreateAsync(ada.Client, "Flat", inheritsFrom: ada.HouseholdId);
+        var whileInside = await grace.GetAsync($"/api/v1/recipes/{bolognese}/image", Token);
+
+        // Act
+        var removed = await ada.Client.DeleteAsync($"/api/v1/households/{ada.HouseholdId}/members/{graceId}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, whileInside.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, removed.StatusCode);
+        await AssertCutOffAsync(grace, gracesKitchen, bolognese);
+
+        // Ada is still in her kitchen, so the flat she pointed at it keeps it.
+        var flatLibrary = await ada.Client.GetAsync($"/api/v1/recipes?householdId={flat}", Token);
+        Assert.Contains(Items(flatLibrary), item => item.GetProperty("recipeId").GetGuid() == bolognese);
+    }
+
+    [Fact]
+    public async Task LeavingAHousehold_ShouldEndTheInheritanceTheLeaverSetUp()
+    {
+        // Arrange
+        var (ada, grace, graceId, gracesKitchen, bolognese) = await GraceInheritingAdasKitchenAsync();
+
+        // Act
+        var left = await grace.DeleteAsync($"/api/v1/households/{ada.HouseholdId}/members/{graceId}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, left.StatusCode);
+        await AssertCutOffAsync(grace, gracesKitchen, bolognese);
+    }
+
+    [Fact]
     public async Task Copy_ShouldGiveTheHeirARecipeOfItsOwn_ThatItCanChange()
     {
         // Arrange
@@ -449,6 +486,43 @@ public class InheritanceTests(PostgresFixture postgres)
         return (ada, grace, flat, bolognese);
     }
 
+    /// <summary>
+    /// Ada's kitchen with a photographed Bolognese in it, Grace as a plain
+    /// member of it, and a kitchen of Grace's own that she made inherit it.
+    /// </summary>
+    private async Task<(Kitchen Ada, ApiClient Grace, Guid GraceId, Guid GracesKitchen, Guid Bolognese)>
+        GraceInheritingAdasKitchenAsync()
+    {
+        var ada = await Kitchen.OpenAsync(postgres);
+        var bolognese = await RecipeAsync(ada.Client, ada.HouseholdId, "Bolognese");
+        await ada.PictureAsync(bolognese, TestImages.Png(2, 2));
+
+        var grace = await Kitchen.StrangerAsync(postgres);
+        var graceId = await JoinAsync(ada.HouseholdId, grace);
+        var gracesKitchen = await CreateAsync(grace, "Grace's kitchen", inheritsFrom: ada.HouseholdId);
+
+        return (ada, grace, graceId, gracesKitchen, bolognese);
+    }
+
+    /// <summary>
+    /// Nothing of the recipe reaches Grace any more: not in her kitchen's
+    /// library, not by id, not its picture, and not as a copy of her own.
+    /// </summary>
+    private static async Task AssertCutOffAsync(ApiClient grace, Guid gracesKitchen, Guid recipeId)
+    {
+        var library = await grace.GetAsync($"/api/v1/recipes?householdId={gracesKitchen}", Token);
+        var read = await grace.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var image = await grace.GetAsync($"/api/v1/recipes/{recipeId}/image", Token);
+        var copy = await grace.PostAsync($"/api/v1/recipes/{recipeId}/copies", new { householdId = gracesKitchen }, Token);
+        var me = await grace.GetAsync("/api/v1/users/me", Token);
+
+        Assert.DoesNotContain(Items(library), item => item.GetProperty("recipeId").GetGuid() == recipeId);
+        Assert.Equal(HttpStatusCode.NotFound, read.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, image.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, copy.StatusCode);
+        Assert.Equal(0, Membership(me, gracesKitchen).GetProperty("inheritsFrom").GetArrayLength());
+    }
+
     /// <summary>Grace's own kitchen, made to inherit the flat.</summary>
     private static async Task<Guid> GracesKitchenInheritingAsync(ApiClient grace, Guid flat)
     {
@@ -498,7 +572,7 @@ public class InheritanceTests(PostgresFixture postgres)
     }
 
     /// <summary>Arranged directly: invitations are tested on their own.</summary>
-    private async Task JoinAsync(Guid householdId, ApiClient member)
+    private async Task<Guid> JoinAsync(Guid householdId, ApiClient member)
     {
         var memberId = (await member.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();
 
@@ -511,6 +585,8 @@ public class InheritanceTests(PostgresFixture postgres)
             """,
             new { householdId, memberId },
             Token);
+
+        return memberId;
     }
 
     private async Task<Guid> CookedInAsync(Guid recipeId)

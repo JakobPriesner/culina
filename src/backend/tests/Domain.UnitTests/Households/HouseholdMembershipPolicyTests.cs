@@ -195,6 +195,38 @@ public class HouseholdMembershipPolicyTests
     }
 
     [Fact]
+    public void Inherit_ShouldRememberWhoSetIt_SoTheLinkCanEndWithTheirMembershipOfTheParent()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var parent = AHousehold("Parents");
+
+        // Act
+        heir.Inherit(parent, [parent.Id], actingUserId: Owner).ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal(Owner, heir.InheritsSetBy);
+    }
+
+    [Fact]
+    public void StopInheriting_ShouldForgetWhoSetIt()
+    {
+        // Arrange
+        var heir = AHousehold();
+        var parent = AHousehold("Parents");
+        heir.Inherit(parent, [parent.Id], actingUserId: Owner).ShouldBeSuccess();
+
+        // Act
+        var result = heir.StopInheriting(actingUserId: Owner);
+
+        // Assert
+        // A link is both halves or neither; the database refuses half of one.
+        result.ShouldBeSuccess();
+        Assert.Null(heir.InheritsFrom);
+        Assert.Null(heir.InheritsSetBy);
+    }
+
+    [Fact]
     public void Inherit_ShouldFail_WhenTheCallerIsOnlyAMemberOfTheHeir()
     {
         // Arrange
@@ -284,7 +316,8 @@ public class HouseholdMembershipPolicyTests
             Now,
             version: 1,
             [new HouseholdMember(Stranger, HouseholdRole.Owner, Now)],
-            inheritsFrom: parent.Id);
+            inheritsFrom: parent.Id,
+            inheritsSetBy: Stranger);
 
         // Act
         var result = heir.StopInheritingFrom(parent, actingUserId: Owner);
@@ -294,6 +327,7 @@ public class HouseholdMembershipPolicyTests
         // without being in the household that does.
         result.ShouldBeSuccess();
         Assert.Null(heir.InheritsFrom);
+        Assert.Null(heir.InheritsSetBy);
     }
 
     [Fact]
@@ -301,7 +335,7 @@ public class HouseholdMembershipPolicyTests
     {
         // Arrange
         var parent = AHousehold("Parents");
-        var heir = Household.Restore(Guid.CreateVersion7(), HouseholdName.Create("Flat").ShouldBeSuccess(), Now, 1, [], parent.Id);
+        var heir = Household.Restore(Guid.CreateVersion7(), HouseholdName.Create("Flat").ShouldBeSuccess(), Now, 1, [], parent.Id, Stranger);
 
         // Act
         var result = heir.StopInheritingFrom(parent, actingUserId: Member);
@@ -317,7 +351,7 @@ public class HouseholdMembershipPolicyTests
         // Arrange
         var parent = AHousehold("Parents");
         var elsewhere = Guid.CreateVersion7();
-        var heir = Household.Restore(Guid.CreateVersion7(), HouseholdName.Create("Flat").ShouldBeSuccess(), Now, 1, [], elsewhere);
+        var heir = Household.Restore(Guid.CreateVersion7(), HouseholdName.Create("Flat").ShouldBeSuccess(), Now, 1, [], elsewhere, Stranger);
 
         // Act
         var result = heir.StopInheritingFrom(parent, actingUserId: Owner);
