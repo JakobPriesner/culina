@@ -93,6 +93,7 @@
   onDestroy(() => drafts.dismiss());
   let reading = $state(false);
   let failure = $state<string | null>(null);
+  let iphoneShareHelp = $state(false);
 
   const canPasteClipboard =
     typeof navigator !== 'undefined' &&
@@ -100,6 +101,9 @@
     typeof navigator.clipboard?.readText === 'function';
 
   onMount(() => {
+    iphoneShareHelp =
+      /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (initialText) {
       text = initialText;
       open = true;
@@ -286,6 +290,7 @@
   <section class="paste" aria-labelledby="paste-heading">
     <h2 id="paste-heading" class="heading">{m['import.intake.source']()}</h2>
     <p class="hint">{m['import.intake.hint']()}</p>
+    {#if iphoneShareHelp}<p class="hint">{m['import.intake.iphone']()}</p>{/if}
 
     <div class="from-url">
       <Field label={m['import.url.label']()}>

@@ -180,6 +180,7 @@
      */
     overflow-x: clip;
     overflow-y: auto;
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
   }
 

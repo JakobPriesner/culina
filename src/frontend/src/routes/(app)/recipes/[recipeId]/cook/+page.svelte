@@ -214,6 +214,7 @@
    */
   let controlsHeight = $state(0);
   let notesOpen = $state(false);
+  let kitchenOpen = $state(false);
 
   function stepFromKeyboard(event: KeyboardEvent) {
     if (!ready || event.defaultPrevented) {
@@ -299,27 +300,6 @@
 <Page>
   {#if recipes.detail && recipes.detail.id === recipeId}
     <div class="cook" style:--controls-height="{controlsHeight}px">
-      <div class="kitchen-display">
-        <label for="kitchen-lighting">{m['kitchen.lighting']()}</label>
-        <Select
-          id="kitchen-lighting"
-          value={kitchenLighting.mode}
-          inline
-          options={[
-            { value: 'normal', label: m['kitchen.normal']() },
-            { value: 'glare', label: m['kitchen.glare']() },
-            { value: 'oled', label: m['kitchen.oled']() }
-          ]}
-          onchange={(value) => kitchenLighting.choose(value)}
-        />
-        <span class="wake-status" class:held={wakeLock.held}>
-          <span aria-hidden="true">{wakeLock.held ? '◉' : '○'}</span>
-          {wakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
-        </span>
-        <CookingPipToggle recipe={recipes.detail} />
-        <CookingRemoteToggle recipe={recipes.detail} />
-      </div>
-
       <RecipeSurface
         recipe={recipes.detail}
         emphasis="cook"
@@ -343,9 +323,14 @@
           />
         {/if}
 
-        <p class="progress">
-          {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
-        </p>
+        <div class="control-summary">
+          <p class="progress">
+            {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
+          </p>
+          <Button size="sm" label={m['kitchen.controls']()} onclick={() => (kitchenOpen = true)}>
+            {m['kitchen.short']()}
+          </Button>
+        </div>
 
         <div class="moves">
           <IconButton
@@ -446,6 +431,36 @@
 </Page>
 
 <Sheet
+  open={kitchenOpen}
+  title={m['kitchen.controls']()}
+  closeLabel={m['picker.close']()}
+  onclose={() => (kitchenOpen = false)}
+>
+  {#if recipes.detail && recipes.detail.id === recipeId}
+    <div class="kitchen-display">
+      <label for="kitchen-lighting">{m['kitchen.lighting']()}</label>
+      <Select
+        id="kitchen-lighting"
+        value={kitchenLighting.mode}
+        inline
+        options={[
+          { value: 'normal', label: m['kitchen.normal']() },
+          { value: 'glare', label: m['kitchen.glare']() },
+          { value: 'oled', label: m['kitchen.oled']() }
+        ]}
+        onchange={(value) => kitchenLighting.choose(value)}
+      />
+      <span class="wake-status" class:held={wakeLock.held}>
+        <span aria-hidden="true">{wakeLock.held ? '◉' : '○'}</span>
+        {wakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
+      </span>
+      <CookingPipToggle recipe={recipes.detail} />
+      <CookingRemoteToggle recipe={recipes.detail} />
+    </div>
+  {/if}
+</Sheet>
+
+<Sheet
   open={notesOpen}
   title={m['notes.title']()}
   closeLabel={m['picker.close']()}
@@ -459,13 +474,13 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--layout-gutter-start);
-    background: var(--surface);
+    gap: var(--space-4);
+    padding-block: var(--space-3);
     color: var(--text);
     font-size: var(--text-sm);
   }
   .wake-status {
+    flex-basis: 100%;
     color: var(--text-muted);
   }
   .wake-status.held {
@@ -534,6 +549,14 @@
     box-shadow: var(--shadow-overlay);
   }
 
+  .control-summary {
+    display: flex;
+    flex: 1 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
   .progress {
     color: var(--text-muted);
     font-size: var(--text-sm);
@@ -561,6 +584,14 @@
     .controls {
       flex-direction: column;
       align-items: stretch;
+    }
+
+    .control-summary {
+      display: flex;
+      flex: 1 0 auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
     }
 
     .progress {

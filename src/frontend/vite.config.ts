@@ -103,7 +103,7 @@ export default defineConfig({
   // Development is same-origin on purpose. Proxying /api means cookies,
   // SameSite and CSRF behave exactly as they do in production, which is why
   // Culina has no CORS policy anywhere and no dev-only auth path.
-  server: { port: 5173, proxy: apiProxy },
+  server: { host: '0.0.0.0', port: 5173, proxy: apiProxy },
 
   // The same proxy for `vite preview`, so the end-to-end suite exercises the
   // built app against a real backend rather than a different arrangement.
