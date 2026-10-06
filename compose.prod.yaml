@@ -82,6 +82,10 @@ services:
       RateLimits__RequestsPerSessionPerMinute: ${RateLimits__RequestsPerSessionPerMinute:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-culina-api}
+      # Not under Settings → Server: what /.well-known/security.txt says, and
+      # whether it exists at all.
+      Site__SecurityContact: ${Site__SecurityContact:-}
+      Site__Url: ${Site__Url:-}
     # Every interface unless CULINA_PORT names an address as well:
     # 127.0.0.1:8080 publishes to this machine only, which is all a proxy on
     # the same host needs, and what the rehearsal and ci-local use.

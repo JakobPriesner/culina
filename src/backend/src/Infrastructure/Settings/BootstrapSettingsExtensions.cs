@@ -30,5 +30,6 @@ public static class BootstrapSettingsExtensions
             .AddRateLimitSettings(configuration)
             .AddForwardedHeadersSettings(configuration)
             .AddImportSettings(configuration)
+            .AddSiteSettings(configuration)
             .AddTelemetrySettings(configuration);
 }

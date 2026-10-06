@@ -53,20 +53,21 @@ page rather than omitting the file.
 
 ## security.txt
 
-At **`static/.well-known/security.txt`** (RFC 9116) — the canonical path; a
-copy at the root is optional.
+At **`/.well-known/security.txt`** (RFC 9116), and **not a static file**: the
+contact belongs to whoever runs the instance, and a published image is the same
+bytes for everyone. The backend writes it per request from `Site__SecurityContact`
+and `Site__Url` (`Api/Endpoints/WellKnown/SecurityTxtEndpoint`), and answers
+`404` when no contact is configured.
 
 ```
 Contact: mailto:security@example.com
-Expires: 2027-01-01T00:00:00.000Z
+Expires: 2027-04-04T12:00:00Z
 Preferred-Languages: en, de
 Canonical: https://example.com/.well-known/security.txt
-Policy: https://example.com/security-policy
 ```
 
 `Expires` is mandatory and must be in the future — an expired `security.txt`
-is worse than none. Review it whenever the contact address changes, and put a
-reminder in the release checklist.
+is worse than none. Written per request, it is always half a year out.
 
 ## Web manifest and icons
 
@@ -113,8 +114,9 @@ prompt looks broken.
 
 - [ ] `robots.txt` disallows every authenticated route and names the sitemap.
 - [ ] `sitemap.xml` is build-generated from the public route list.
-- [ ] `.well-known/security.txt` exists with a working `Contact` and a future
-      `Expires`.
+- [ ] `/.well-known/security.txt` is served by the backend from
+      `Site__SecurityContact`, with a future `Expires`, and never shadowed by a
+      static file.
 - [ ] `manifest.webmanifest` + 192/512/maskable icons + favicon +
       apple-touch-icon, matching the real branding.
 - [ ] Cache headers: immutable for hashed assets, short for static files,

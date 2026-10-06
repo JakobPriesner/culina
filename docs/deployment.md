@@ -229,25 +229,30 @@ bead when something needs action.
 - Dependency and image scanning gate the pipeline; `NuGetAudit` is already on
   at `low` in `Directory.Build.props`, so a vulnerable transitive package fails
   the compile, not the review.
-- `/.well-known/security.txt` ships with a working contact and a future
-  `Expires` (`frontend-static-assets`).
+- `/.well-known/security.txt` is written by the server from the operator's
+  `Site__SecurityContact`, with an `Expires` always half a year out, and is a
+  `404` until one is set (`frontend-static-assets`).
 
 ## Public files
 
-`robots.txt`, `sitemap.xml` and `.well-known/security.txt` are written at build
-time from one list of public routes (`src/lib/app/publicRoutes.ts`), so a new
-public route cannot end up allowed in one and missing from the other.
+`robots.txt` and `sitemap.xml` are written at build time from one list of
+public routes (`src/lib/app/publicRoutes.ts`), so a new public route cannot end
+up allowed in one and missing from the other. `PUBLIC_SITE_URL`, optional, is
+the address the sitemap is written for; without it there is no sitemap, because
+an instance on a private network has no public address and should not invent
+one.
 
-Two build-time variables control them, both optional:
+`/.well-known/security.txt` is the exception, because what it says belongs to
+the operator rather than to the build: the server writes it on every request
+from two runtime settings, both optional.
 
 | Variable | Effect when unset |
 | --- | --- |
-| `PUBLIC_SITE_URL` | No sitemap and no security.txt. An instance on a private network has no public address and should not invent one. |
-| `PUBLIC_SECURITY_CONTACT` | No security.txt. A contact nobody reads is worse than none: it tells a finder they have reported something when they have not. |
+| `Site__SecurityContact` | No security.txt — a `404`. A contact nobody reads is worse than none: it tells a finder they have reported something when they have not. A `mailto:`, `https://` or `tel:` address. |
+| `Site__Url` | No `Canonical:` line in it. |
 
-`security.txt` expires a year after the build. That is the honest value, and
-what keeps it fresh is that every release regenerates it — an expired
-security.txt is worse than no security.txt.
+Its `Expires` is half a year from the moment it is asked for, so it is never
+stale — RFC 9116 asks for less than a year.
 
 None of this is access control. Every route in the `Disallow` list returns 401
 to a stranger; robots.txt only asks well-behaved crawlers not to advertise that

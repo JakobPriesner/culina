@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { robots, securityTxt, sitemap } from './siteFiles';
+import { robots, sitemap } from './siteFiles';
 import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes.js';
 
 /*
- * Three small public files, each one a thing that is embarrassing to get wrong
+ * Two small public files, each one a thing that is embarrassing to get wrong
  * and impossible to notice: nobody reads robots.txt again after writing it.
  */
 const site = 'https://culina.example.com';
@@ -48,27 +48,5 @@ describe('sitemap.xml', () => {
 
   it('never lists a protected one', () => {
     expect(sitemap(site)).not.toContain('/me');
-  });
-});
-
-describe('security.txt', () => {
-  it('expires in the future, because an expired one is worse than none', () => {
-    const contents = securityTxt(
-      site,
-      'mailto:security@example.com',
-      new Date('2026-09-12T00:00:00Z')
-    );
-
-    expect(contents).toContain('Expires: 2027-09-12T00:00:00Z');
-  });
-
-  it('carries the contact it was given, not a guess', () => {
-    expect(securityTxt(site, 'mailto:security@example.com')).toContain(
-      'Contact: mailto:security@example.com'
-    );
-  });
-
-  it('names both languages a report may be written in', () => {
-    expect(securityTxt(site, 'mailto:a@b.c')).toContain('Preferred-Languages: en, de');
   });
 });

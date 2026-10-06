@@ -25,8 +25,9 @@ do not run, no denial of service, no accessing data that is not yours. There is
 no bounty; this is a recipe app written by one person.
 
 Each instance publishes `/.well-known/security.txt` with its own operator's
-contact, when its operator has configured one. For a vulnerability in Culina
-itself, use the advisory link above.
+contact, when its operator has configured one (`Site__SecurityContact`). That
+is for a problem with that instance. For a vulnerability in Culina itself, use
+the advisory link above.
 
 ## What is in scope
 
