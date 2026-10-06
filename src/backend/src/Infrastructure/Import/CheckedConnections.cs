@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using Domain.Import;
 
 namespace Infrastructure.Import;
 
@@ -23,15 +22,41 @@ namespace Infrastructure.Import;
 /// </remarks>
 internal static class CheckedConnections
 {
-    /// <summary>A connect callback for <see cref="SocketsHttpHandler"/>.</summary>
-    /// <param name="allowPrivate">
-    /// Whether an address on a private network may be reached. False for
-    /// anything a stranger can aim — a pasted link — and true only for a
-    /// connection the operator has opted into, because their own recipe server
-    /// is very often the machine next door.
+    /// <summary>
+    /// A handler whose every connection goes to a checked address.
+    /// </summary>
+    /// <param name="admits">
+    /// Which resolved addresses may be reached. Public only for anything a
+    /// stranger can aim — a pasted link — and wider only for a connection the
+    /// operator has opted into, because their own recipe server is very often
+    /// the machine next door.
     /// </param>
-    internal static Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> To(
-        bool allowPrivate) =>
+    /// <remarks>
+    /// <para>
+    /// Never through a proxy. Through one, the connection this handler opens is
+    /// to the proxy, so the address that gets checked is the proxy's — and the
+    /// proxy then connects wherever it is asked, cloud metadata and the
+    /// database container included. Left at its default, an
+    /// <c>HTTP_PROXY</c> or <c>HTTPS_PROXY</c> in the environment would switch
+    /// every check here off without anything saying so.
+    /// </para>
+    /// <para>
+    /// Never following a redirect by itself, either: a followed redirect is a
+    /// second request nobody checked the address of. Whoever wants redirects
+    /// follows them by hand, through this handler again.
+    /// </para>
+    /// </remarks>
+    internal static SocketsHttpHandler Handler(Func<IPAddress, bool> admits) => new()
+    {
+        UseProxy = false,
+        AllowAutoRedirect = false,
+        AutomaticDecompression = DecompressionMethods.All,
+        ConnectTimeout = TimeSpan.FromSeconds(5),
+        ConnectCallback = To(admits)
+    };
+
+    private static Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> To(
+        Func<IPAddress, bool> admits) =>
         async (context, cancellationToken) =>
         {
             var host = context.DnsEndPoint.Host;
@@ -40,7 +65,7 @@ internal static class CheckedConnections
                 ? [literal]
                 : await Dns.GetHostAddressesAsync(host, cancellationToken).ConfigureAwait(false);
 
-            var allowed = Array.Find(addresses, address => allowPrivate || PublicAddress.IsPublic(address))
+            var allowed = Array.Find(addresses, address => admits(address))
                 ?? throw new InvalidOperationException("The address is not one this may connect to.");
 
 #pragma warning disable CA2000 // The stream returned below owns the socket.

@@ -66,16 +66,10 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
     {
         this.logger = logger;
 
-        handler = new SocketsHttpHandler
-        {
-            // Followed by hand instead, so every hop is validated.
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.All,
-            ConnectTimeout = TimeSpan.FromSeconds(5),
-            // Never private, whatever the operator allows for a connected
-            // source: this address came from a text box anyone can type in.
-            ConnectCallback = CheckedConnections.To(allowPrivate: false)
-        };
+        // Never private, whatever the operator allows for a connected source:
+        // this address came from a text box anyone can type in. Redirects are
+        // followed by hand below, so every hop is validated.
+        handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
 

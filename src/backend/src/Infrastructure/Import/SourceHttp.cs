@@ -69,15 +69,11 @@ internal sealed class SourceHttp : IDisposable
         // number rather than a second one that can drift away from it.
         maxPictureBytes = storage.MaxImageBytes;
 
-        handler = new SocketsHttpHandler
-        {
-            // Nothing legitimate redirects an API call, and a followed redirect
-            // would hand the token to whatever it pointed at.
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.All,
-            ConnectTimeout = TimeSpan.FromSeconds(5),
-            ConnectCallback = CheckedConnections.To(settings.AllowPrivateSourceAddresses)
-        };
+        // Redirects are never followed: nothing legitimate redirects an API
+        // call, and a followed redirect would hand the token to whatever it
+        // pointed at.
+        handler = CheckedConnections.Handler(
+            admits: settings.AllowPrivateSourceAddresses ? _ => true : PublicAddress.IsPublic);
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
 
