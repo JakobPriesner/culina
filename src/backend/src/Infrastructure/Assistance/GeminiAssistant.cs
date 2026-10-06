@@ -230,7 +230,8 @@ internal sealed class GeminiAssistant(
         // offers between what the app says and what a stranger pasted.
         SystemInstruction = new Content { Parts = [new Part { Text = request.Instruction }] },
         ResponseMimeType = "application/json",
-        ResponseJsonSchema = RecipeSchema.Definition
+        ResponseJsonSchema = RecipeSchema.Definition,
+        MaxOutputTokens = Composition.MostOutputTokens
     };
 
     /// <summary>

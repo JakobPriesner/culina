@@ -18,8 +18,8 @@ namespace Application.Abstractions;
 /// <para>
 /// Reserve-then-record rather than record-afterwards, because a check that
 /// reads the total and then writes a row is a check two simultaneous requests
-/// both pass. The reservation is one statement, so the database is what decides
-/// who was first.
+/// both pass. Reservations are taken one at a time under a database lock, so
+/// the database is what decides who was first.
 /// </para>
 /// </remarks>
 public interface IAssistanceLedger

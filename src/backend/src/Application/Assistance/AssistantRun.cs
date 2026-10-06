@@ -52,12 +52,21 @@ public sealed partial class AssistantRun(
     /// What one composition might cost, reserved before the real number exists.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A guess, and deliberately a generous one: its only job is to stop two
     /// simultaneous requests both fitting into the last of the money, and it is
     /// replaced by the real figure a few seconds later. Erring high means a
     /// budget stops slightly early under load, which is the safe direction.
+    /// </para>
+    /// <para>
+    /// Sized to the ceiling every ask carries: <see cref="Composition.MostOutputTokens"/>
+    /// at the dearest output price the price table lists, ten dollars a
+    /// million, is eight cents, and the rest covers a long paste or a few
+    /// photographs going in. A call can still come in a little over, never
+    /// many times over.
+    /// </para>
     /// </remarks>
-    private const decimal ComposeEstimate = 0.05m;
+    private const decimal ComposeEstimate = 0.10m;
 
     /// <summary>What one picture might cost. Dearer, and more variable.</summary>
     private const decimal DrawEstimate = 0.20m;

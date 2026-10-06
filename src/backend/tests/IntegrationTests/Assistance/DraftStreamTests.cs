@@ -167,6 +167,35 @@ public class DraftStreamTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Draft_ShouldCapWhatTheModelMayWrite_AtWhatTheReservationCovers()
+    {
+        // Arrange
+        using var provider = new StubProvider(Written);
+        var world = await ConnectedAsync(provider);
+
+        // Act
+        await world.Client.PostAsync(
+            "/api/v1/recipe-drafts",
+            new
+            {
+                kind = "idea",
+                householdId = world.HouseholdId,
+                material = "something with aubergines",
+                language = "en"
+            },
+            Token);
+
+        // Assert
+        // The budget sets aside a fixed sum before the call. Without a ceiling
+        // on the answer, one call could cost any amount past it.
+        var asked = JsonDocument.Parse(provider.LastRequest).RootElement;
+
+        Assert.Equal(
+            Composition.MostOutputTokens,
+            asked.GetProperty("max_completion_tokens").GetInt32());
+    }
+
+    [Fact]
     public async Task Draft_ShouldReadANullAsSilence_NotAsAValue()
     {
         // Arrange

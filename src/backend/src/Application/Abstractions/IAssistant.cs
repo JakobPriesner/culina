@@ -157,6 +157,19 @@ public sealed record Connected(string ApiKey, string BaseUrl, string Model);
 /// </remarks>
 public sealed record Composition
 {
+    /// <summary>
+    /// The most a model may write in answer, thinking included where the
+    /// provider counts it.
+    /// </summary>
+    /// <remarks>
+    /// Sent with every ask, because the reservation taken before a call is a
+    /// fixed sum and an answer with no ceiling can cost any amount past it. A
+    /// recipe, even a long one read off eight screenshots, is under two
+    /// thousand tokens of JSON; the rest is room for a model that thinks before
+    /// it writes. <c>AssistantRun</c>'s estimate is sized to this.
+    /// </remarks>
+    public const int MostOutputTokens = 8_192;
+
     /// <summary>Which capability this is, for the ledger.</summary>
     public required Capability Capability { get; init; }
 

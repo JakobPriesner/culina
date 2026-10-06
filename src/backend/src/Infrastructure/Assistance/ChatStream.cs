@@ -212,7 +212,8 @@ internal static class ChatAsk
     internal static ChatOptions Options() => new()
     {
         ResponseFormat = ChatResponseFormat.ForJsonSchema(RecipeSchema.AsJson, RecipeSchema.Name),
-        AdditionalProperties = new AdditionalPropertiesDictionary { ["strict"] = true }
+        AdditionalProperties = new AdditionalPropertiesDictionary { ["strict"] = true },
+        MaxOutputTokens = Composition.MostOutputTokens
     };
 
     /// <summary>What somebody pasted, typed or photographed. Untrusted.</summary>

@@ -7,8 +7,12 @@ namespace Infrastructure.Persistence.Assistance;
 
 /// <summary>Counts what the assistant has been asked for, and what it cost.</summary>
 /// <param name="executor">Runs the SQL.</param>
+/// <param name="transactions">Holds the reservation lock until its row is committed.</param>
 /// <param name="time">The injected clock, for when a call happened.</param>
-internal sealed class AssistanceLedger(DbExecutor executor, TimeProvider time) : IAssistanceLedger
+internal sealed class AssistanceLedger(
+    DbExecutor executor,
+    IUnitOfWork transactions,
+    TimeProvider time) : IAssistanceLedger
 {
     /// <summary>
     /// What still counts against the budget.
@@ -21,17 +25,49 @@ internal sealed class AssistanceLedger(DbExecutor executor, TimeProvider time) :
     /// </remarks>
     private const string Spent = "coalesce(sum(coalesce(cost, estimate)), 0)";
 
-    public async Task<Result<Guid>> ReserveAsync(
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// One reservation at a time, instance-wide. A single <c>insert … where
+    /// spent + estimate &lt;= budget</c> is not enough on its own: under read
+    /// committed each statement reads a snapshot taken as it starts, so twenty
+    /// simultaneous requests all see the same total, all find room, and all
+    /// insert. The advisory lock makes the next reservation wait until the
+    /// previous one has committed, and its statement then starts late enough
+    /// to see that row.
+    /// </para>
+    /// <para>
+    /// One lock rather than one per person: the instance budget is shared by
+    /// everybody, and a reservation is a single insert held for milliseconds,
+    /// so queueing them all costs nothing anybody could notice.
+    /// </para>
+    /// </remarks>
+    public Task<Result<Guid>> ReserveAsync(
         Reservation reservation,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(reservation);
 
+        return transactions.InTransactionAsync(
+            async token =>
+            {
+                await executor.ExecuteAsync(
+                        "select pg_advisory_xact_lock(hashtextextended('assistance_usage', 0));",
+                        null,
+                        token)
+                    .ConfigureAwait(false);
+
+                return await InsertIfRoomAsync(reservation, token).ConfigureAwait(false);
+            },
+            cancellationToken);
+    }
+
+    private async Task<Result<Guid>> InsertIfRoomAsync(
+        Reservation reservation,
+        CancellationToken cancellationToken)
+    {
         var id = CulinaId.New();
 
-        // One statement, so two simultaneous requests cannot both read a total
-        // that leaves room and then both write. Whoever the database serves
-        // second sees the first one's row.
         var written = await executor.ExecuteAsync(
                 $"""
                  insert into assistance_usage
