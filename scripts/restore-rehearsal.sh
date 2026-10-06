@@ -3,9 +3,11 @@
 # Proves the backup is a backup.
 #
 # Stands up a clean instance, puts real data in it, takes the four backups the
-# runbook names, destroys everything a failed disk would destroy, restores, and
-# then checks that what came back is what went in — counts, and a photograph
-# that the person who uploaded it can still fetch and a stranger still cannot.
+# runbook names (without the encryption it puts on the secrets, which is the
+# operator's tool and key), destroys everything a failed disk would destroy,
+# restores, and then checks that what came back is what went in — counts, and a
+# photograph that the person who uploaded it can still fetch and a stranger
+# still cannot.
 #
 # An untested backup is a hope. This is the test, written down so it can be run
 # again before a release rather than remembered as having gone well once.
@@ -106,6 +108,11 @@ MEMBERS_BEFORE="$(api "${BASE}/api/v1/households/${HOUSEHOLD}/members" | python3
 echo "  ${RECIPES_BEFORE} recipes, ${MEMBERS_BEFORE} member(s), one photograph"
 
 # ── The backup the runbook names ─────────────────────────────────────────────
+# Side by side, unencrypted, only because $WORK is a scratch directory that
+# lives for this run and holds a throwaway instance. A real backup must never
+# do this: the key ring decrypts the secrets in the dump, and culina.json names
+# the database password, so docs/operations.md encrypts those two with a key of
+# their own and keeps them apart from the dump and the photographs.
 say "Backing up"
 compose exec -T db pg_dump -U postgres --format=custom culina > "$WORK/culina.dump"
 docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" "$TAR_IMAGE" \

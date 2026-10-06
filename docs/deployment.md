@@ -209,8 +209,10 @@ bead when something needs action.
   export. Unset, the app logs JSON to stdout and exports nothing. Culina
   invents no telemetry configuration names of its own.
 - **Backups**: `pg_dump` for the database plus a copy of `/data/images`,
-  `/data/keys` and `/data/config`. The documented restore procedure is tested as part of the
-  release checklist — an untested backup is a hope.
+  `/data/keys` and `/data/config` — the last two encrypted and kept apart from
+  the dump, because together they decrypt the secrets in it. The documented
+  restore procedure is tested as part of the release checklist — an untested
+  backup is a hope.
 - **Rollback**: redeploy the previous tag. Safe as long as no migration since
   then was destructive, which is why migrations are additive by default and a
   destructive one is called out in its release notes.

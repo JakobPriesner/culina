@@ -147,7 +147,22 @@ upgrade is affected, and it happens exactly once.
 
 ## Backing up
 
-Four things, and all four are needed:
+Four things, and all four are needed. They are two kinds of thing, and they
+must not travel together:
+
+- **The data** — the database and the photographs. The dump holds every recipe,
+  every account and password hash, and the model provider's API key and the
+  push-notification key, both encrypted. The API tokens of connected recipe
+  libraries are in it as they are.
+- **The secrets** — the key ring, which decrypts those two keys, and
+  `culina.json`, which holds the database password in plain text when it was
+  entered on the setup screen. Neither file is encrypted on the volume.
+
+Together they are the whole instance; apart, a stolen dump decrypts nothing and
+names no password. So archive the secrets separately, encrypt them with a key
+of their own — not the one your data backups use — and keep them somewhere
+else. The commands below use [age](https://age-encryption.org) with a recipient
+kept for secrets only; anything you already encrypt backups with will do.
 
 ```bash
 # 1. The database.
@@ -158,15 +173,16 @@ docker compose -f compose.yaml -f compose.prod.yaml exec -T db \
 docker run --rm -v culina_culina-images:/data -v "$PWD":/backup alpine \
     tar czf /backup/culina-images-$(date +%F).tar.gz -C /data .
 
-# 3. The key ring.
-docker run --rm -v culina_culina-keys:/data -v "$PWD":/backup alpine \
-    tar czf /backup/culina-keys-$(date +%F).tar.gz -C /data .
+# 3. The key ring, encrypted on its way out, never written in the clear.
+docker run --rm -v culina_culina-keys:/data alpine tar czf - -C /data . \
+    | age -r "$CULINA_SECRETS_RECIPIENT" > culina-keys-$(date +%F).tar.gz.age
 
-# 4. What was set up in the app. Holds the database password when it was
-#    entered on the setup screen, so keep the archive as private as .env.
-docker run --rm -v culina_culina-config:/data -v "$PWD":/backup alpine \
-    tar czf /backup/culina-config-$(date +%F).tar.gz -C /data .
+# 4. What was set up in the app, the database password among it. The same.
+docker run --rm -v culina_culina-config:/data alpine tar czf - -C /data . \
+    | age -r "$CULINA_SECRETS_RECIPIENT" > culina-config-$(date +%F).tar.gz.age
 ```
+
+Then send 1 and 2 to wherever your backups go, and 3 and 4 somewhere else.
 
 Volume names are prefixed with your compose project name — `docker volume ls`
 shows the real ones.
@@ -174,10 +190,17 @@ shows the real ones.
 The key ring is the one that used to be cheap to lose and no longer is. It now
 encrypts the model provider's API key, so restoring an instance without it
 leaves the assistant switched off with an unreadable key stored — which the app
-treats as "no assistant is configured" rather than as an error. An administrator
-enters the key again and everything else is where it was. Nothing else is lost:
-Culina's session cookie carries an opaque reference rather than an encrypted
-payload, so the key ring still has nothing to do with who stays signed in.
+treats as "no assistant is configured" rather than as an error, and an
+administrator enters the key again. It also encrypts the key notifications are
+signed with, and without it a finished import no longer notifies anyone.
+Nothing else is lost: Culina's session cookie carries an opaque reference
+rather than an encrypted payload, so the key ring still has nothing to do with
+who stays signed in.
+
+The key ring is not encrypted on its own volume. Anyone who can read
+`/data/keys` on the host can already read the database it protects, so
+encrypting it there would only move the question to wherever its key lived;
+what matters is that no copy of it ever sits next to a copy of the dump.
 
 ## Restoring
 
@@ -200,10 +223,15 @@ docker compose -f compose.yaml -f compose.prod.yaml exec -T db \
 docker run --rm -v culina_culina-images:/data -v "$PWD":/backup alpine \
     tar xzf /backup/culina-images-2026-09-13.tar.gz -C /data
 
+# The key ring, decrypted on its way in. Without it the assistant's key has to
+# be entered again, and import notifications stop.
+age -d -i culina-secrets.key culina-keys-2026-09-13.tar.gz.age \
+    | docker run --rm -i -v culina_culina-keys:/data alpine tar xzf - -C /data
+
 # What was set up in the app. Without it Culina comes back to the setup
 # screen, asking for the database's password again.
-docker run --rm -v culina_culina-config:/data -v "$PWD":/backup alpine \
-    tar xzf /backup/culina-config-2026-09-13.tar.gz -C /data
+age -d -i culina-secrets.key culina-config-2026-09-13.tar.gz.age \
+    | docker run --rm -i -v culina_culina-config:/data alpine tar xzf - -C /data
 
 docker compose -f compose.yaml -f compose.prod.yaml up -d
 ```
@@ -254,6 +282,9 @@ self-hosted instance:
 - **Encrypted at rest if it leaves your network.** The dump contains every
   recipe, every address and every password hash. Argon2id hashes are not
   reversible, but they are not something to hand out either.
+- **The secrets apart from the data.** The key ring and `culina.json` under a
+  different key and in a different place from the dump, as above — one
+  stolen backup should never be the whole instance.
 - **Readable only by whoever runs the instance.** `chmod 600`, and an object
   store bucket that is not public.
 - **Watched.** A backup that silently stopped six weeks ago is the usual way
