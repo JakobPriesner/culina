@@ -35,6 +35,20 @@ public static class SettingsErrors
         "Secure cookies can only be turned off in development, or where the deployment sets Cookies__AllowInsecureOutsideDevelopment=true.",
         ErrorType.Validation);
 
+    /// <summary>
+    /// The settings file is no longer the JSON object Culina wrote.
+    /// </summary>
+    /// <remarks>
+    /// Edited by hand since the process started, most likely. Refused rather
+    /// than saved over, because writing the form's values into a fresh file
+    /// would throw away whatever that edit was for. Unavailable for the same
+    /// reason as <see cref="NotWritable"/>: nothing about the request is wrong.
+    /// </remarks>
+    public static readonly Error FileUnreadable = new(
+        "settings.file_unreadable",
+        "Culina cannot save server settings, because culina.json in its configuration directory is no longer a JSON object it can read. Correct or remove the file, then save again.",
+        ErrorType.Unavailable);
+
     /// <summary>Every request but the setup's, until there is a database.</summary>
     public static readonly Error SetupRequired = new(
         "settings.setup_required",

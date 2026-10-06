@@ -1516,5 +1516,6 @@
   "server.maxSessionDays": "Tage, die eine Sitzung höchstens hält",
   "server.maxSessionDays.hint": "Ab der Anmeldung gezählt, egal wie oft sie genutzt wird. Danach ist eine neue Anmeldung nötig.",
   "problem.settings.proxy_network_too_wide": "Dieses Proxy-Netz ist zu groß, um ihm zu vertrauen: Jeder Client darin könnte sich als beliebige Adresse ausgeben. Gib das Netz deines Proxys an, höchstens ein /8 für IPv4 oder ein /32 für IPv6, etwa 172.16.0.0/12.",
-  "server.limit.archiveExportsPerHour": "Exportierte Archive pro Stunde und Person"
+  "server.limit.archiveExportsPerHour": "Exportierte Archive pro Stunde und Person",
+  "problem.settings.file_unreadable": "Diese Einstellungen lassen sich nicht speichern: Die Datei culina.json im Konfigurationsverzeichnis von Culina wurde von Hand geändert und ist nicht mehr lesbar. Korrigiere oder entferne sie und speichere dann erneut."
 }
