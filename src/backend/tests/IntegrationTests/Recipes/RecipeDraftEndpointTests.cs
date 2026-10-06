@@ -69,6 +69,55 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Revision_ShouldBeRefused_WhenBilledToAnotherOfTheCallersKitchens()
+    {
+        // Arrange
+        // A cook in two households, rewriting a recipe from one of them and
+        // asking for the other to pay. They may edit the recipe and they may
+        // spend in both kitchens, but not one kitchen's money on the other's
+        // recipe.
+        var world = await SignedInAsync();
+        var recipeId = await RecipeAsync(world);
+        var holidayFlat = (await world.Client.PostAsync(
+                "/api/v1/households",
+                new { name = "Holiday flat" },
+                Token))
+            .Json!.Value.GetProperty("householdId").GetGuid();
+
+        // Act
+        var response = await world.Client.PostAsync(
+            "/api/v1/recipe-drafts",
+            new { kind = "revision", householdId = holidayFlat, recipeId },
+            Token);
+
+        // Assert
+        // Not found, as for any recipe the caller cannot use here — and decided
+        // before the assistant is consulted, or this would answer "not
+        // configured" instead.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("recipes.not_found", response.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Revision_ShouldGetPastTheRecipeCheck_WhenBilledToTheRecipesOwnKitchen()
+    {
+        // Arrange
+        var world = await SignedInAsync();
+        var recipeId = await RecipeAsync(world);
+
+        // Act
+        var response = await world.Client.PostAsync(
+            "/api/v1/recipe-drafts",
+            new { kind = "revision", householdId = world.HouseholdId, recipeId },
+            Token);
+
+        // Assert
+        // As far as an instance with no assistant lets it go.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("assistance.not_configured", response.ProblemCode);
+    }
+
+    [Fact]
     public async Task Draft_ShouldBeRefused_ForSomebodyWhoIsNotSignedIn()
     {
         // Arrange
@@ -176,6 +225,13 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    private static async Task<Guid> RecipeAsync(World world) =>
+        (await world.Client.PostAsync(
+            "/api/v1/recipes",
+            new { householdId = world.HouseholdId, title = "Bolognese" },
+            Token))
+        .Json!.Value.GetProperty("recipeId").GetGuid();
 
     private sealed record World(ApiClient Client, Guid HouseholdId) : IDisposable
     {

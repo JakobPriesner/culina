@@ -218,7 +218,15 @@ internal sealed class ComposeRecipeDraftCommandHandler(
             .EditableAsync(recipes, households, recipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        return editable.Map(recipe => new Composition
+        // Editable by the caller is not enough: the call is billed to the
+        // household in the request, so the recipe has to be that household's.
+        // Otherwise somebody in two kitchens could charge one for rewriting
+        // the other's recipes.
+        var owned = editable.Bind(recipe => recipe.HouseholdId == command.HouseholdId
+            ? Result<Recipe>.Success(recipe)
+            : RecipeErrors.NotFound(recipeId));
+
+        return owned.Map(recipe => new Composition
         {
             Capability = Capability.Improve,
             // What it is stored as, which is the caller's business and not the
