@@ -44,7 +44,7 @@ internal sealed class RegisterUserCommandHandler(
         // registration lock, and that reading is the one that counts.
         var existing = await users.CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var accepted = MayRegister(existing).Bind(() => Validate(command));
+        var accepted = MayRegister(existing, command.InvitationCode).Bind(() => Validate(command));
 
         var result = await accepted.Match(
             account => StoreAsync(account, command, cancellationToken),
@@ -58,7 +58,7 @@ internal sealed class RegisterUserCommandHandler(
     /// in, and that account becomes the administrator who can then open
     /// registration to everyone else.
     /// </summary>
-    private Result MayRegister(int existingUsers)
+    private Result MayRegister(int existingUsers, string? invitationCode)
     {
         if (existingUsers == 0)
         {
@@ -70,8 +70,16 @@ internal sealed class RegisterUserCommandHandler(
             return UserErrors.RegistrationClosed;
         }
 
-        return existingUsers >= dependencies.Registration.MaxUsers
-            ? UserErrors.MaxUsersReached
+        if (existingUsers >= dependencies.Registration.MaxUsers)
+        {
+            return UserErrors.MaxUsersReached;
+        }
+
+        // Refused before anything looks at the address, so a stranger without
+        // a code learns nothing from an invite-only instance about who has an
+        // account there.
+        return dependencies.Registration.RequireInvitation && string.IsNullOrWhiteSpace(invitationCode)
+            ? HouseholdErrors.InvitationInvalid
             : Result.Success();
     }
 
@@ -116,23 +124,52 @@ internal sealed class RegisterUserCommandHandler(
                 // administrator, and a race for the last place fills several.
                 var existing = await users.CountForRegistrationAsync(token).ConfigureAwait(false);
 
-                return await MayRegister(existing).Match(
-                    () => AddAsync(user, isFirstAccount: existing == 0, command, token),
+                var admitted = await MayRegister(existing, command.InvitationCode).Match(
+                    () => AdmitAsync(existing == 0, command.InvitationCode, token),
+                    error => Task.FromResult(Result<Admission>.Failure(error))).ConfigureAwait(false);
+
+                return await admitted.Match(
+                    admission => AddAsync(user, admission, command.HouseholdName, token),
                     error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<Result<Response>> AddAsync(
-        User user,
+    /// <summary>
+    /// Settles where the account will go before it is written.
+    /// </summary>
+    /// <remarks>
+    /// Writing the account is what reports an address that is already
+    /// registered, so an invitation that does not work is refused first: that
+    /// answer only ever reaches somebody this instance would let in.
+    /// </remarks>
+    private async Task<Result<Admission>> AdmitAsync(
         bool isFirstAccount,
-        RegisterUserCommand command,
+        string? invitationCode,
         CancellationToken cancellationToken)
     {
-        var added = await users.AddAsync(user, isFirstAccount, cancellationToken).ConfigureAwait(false);
+        if (isFirstAccount || string.IsNullOrWhiteSpace(invitationCode))
+        {
+            return new Admission(isFirstAccount, Invitation: null);
+        }
+
+        var found = await invitations.FindByCodeAsync(invitationCode, cancellationToken).ConfigureAwait(false);
+
+        return found.Bind(invitation => invitation.IsUsable(dependencies.Time.GetUtcNow())
+            ? Result<Admission>.Success(new Admission(IsFirstAccount: false, invitation))
+            : HouseholdErrors.InvitationInvalid);
+    }
+
+    private async Task<Result<Response>> AddAsync(
+        User user,
+        Admission admission,
+        string? householdName,
+        CancellationToken cancellationToken)
+    {
+        var added = await users.AddAsync(user, admission.IsFirstAccount, cancellationToken).ConfigureAwait(false);
 
         return await added.Match(
-            () => PlaceAsync(user, isFirstAccount, command, cancellationToken),
+            () => PlaceAsync(user, admission, householdName, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
@@ -142,44 +179,28 @@ internal sealed class RegisterUserCommandHandler(
     /// </summary>
     private async Task<Result<Response>> PlaceAsync(
         User user,
-        bool isFirstAccount,
-        RegisterUserCommand command,
+        Admission admission,
+        string? householdName,
         CancellationToken cancellationToken)
     {
-        if (isFirstAccount)
+        if (admission.IsFirstAccount)
         {
-            var created = await FirstHouseholdIdAsync(user, true, command.HouseholdName, cancellationToken)
+            var created = await FirstHouseholdIdAsync(user, householdName, cancellationToken)
                 .ConfigureAwait(false);
 
             return user.ToRegisterResponse(isAdmin: true, created);
         }
 
-        if (string.IsNullOrWhiteSpace(command.InvitationCode))
+        if (admission.Invitation is null)
         {
-            // Allowed only when the policy does not demand a code; the account
-            // then starts with no household and the client offers to create one.
-            return dependencies.Registration.RequireInvitation
-                ? HouseholdErrors.InvitationInvalid
-                : user.ToRegisterResponse(isAdmin: false, householdId: null);
+            // Admitted without a code only when the policy does not demand
+            // one; the account then starts with no household and the client
+            // offers to create one.
+            return user.ToRegisterResponse(isAdmin: false, householdId: null);
         }
 
-        return await JoinByInvitationAsync(user, command.InvitationCode, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    private async Task<Result<Response>> JoinByInvitationAsync(
-        User user,
-        string code,
-        CancellationToken cancellationToken)
-    {
-        var found = await invitations.FindByCodeAsync(code, cancellationToken).ConfigureAwait(false);
-
-        var redeemed = found.Bind(invitation => invitation
-            .Redeem(user.Id, dependencies.Time.GetUtcNow())
-            .Map(() => invitation));
-
-        return await redeemed.Match(
-            invitation => AddToHouseholdAsync(user, invitation, cancellationToken),
+        return await admission.Invitation.Redeem(user.Id, user.CreatedAt).Match(
+            () => AddToHouseholdAsync(user, admission.Invitation, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
@@ -210,17 +231,11 @@ internal sealed class RegisterUserCommandHandler(
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
-    private async Task<Guid?> FirstHouseholdIdAsync(
+    private async Task<Guid> FirstHouseholdIdAsync(
         User user,
-        bool isFirstAccount,
         string? householdName,
         CancellationToken cancellationToken)
     {
-        if (!isFirstAccount)
-        {
-            return null;
-        }
-
         // A blank or over-long household name is not worth failing a
         // registration over: a household can be renamed, a failed sign-up
         // cannot be undone.
@@ -258,4 +273,9 @@ internal sealed class RegisterUserCommandHandler(
 
     /// <summary>The validated inputs, so nothing downstream re-parses them.</summary>
     private sealed record NewAccount(Email Email, DisplayName DisplayName, string Password);
+
+    /// <summary>What the policy decided, before anything was written.</summary>
+    /// <param name="IsFirstAccount">Whether this is the instance's administrator.</param>
+    /// <param name="Invitation">The working invitation it joins with, if any.</param>
+    private sealed record Admission(bool IsFirstAccount, HouseholdInvitation? Invitation);
 }
