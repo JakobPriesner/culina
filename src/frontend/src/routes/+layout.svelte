@@ -7,7 +7,7 @@
   import { goto, onNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import { handleSessionExpiry } from '$api';
-  import { ErrorState } from '$ds';
+  import ErrorState from '$ds/feedback/ErrorState.svelte';
   import { loginUrlFor } from '$features/auth/redirectTarget';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';

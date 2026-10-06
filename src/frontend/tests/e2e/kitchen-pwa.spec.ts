@@ -69,6 +69,9 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
       );
     });
     await page.goto(`/recipes/${recipeId}/cook`);
+    const kitchen = page.getByRole('button', { name: 'Kitchen controls' });
+    await expect(kitchen).toBeInViewport();
+    await kitchen.click();
     const display = page.getByLabel('Kitchen display');
     await expect(display).toBeVisible();
     await expect(page.getByText('Screen stays awake')).toBeVisible();
@@ -85,7 +88,12 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
       expect(background).toBe(mode === 'glare' ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)');
       await page.screenshot({ path: testInfo.outputPath(`kitchen-${mode}.png`), fullPage: true });
     }
+    await page
+      .getByRole('dialog', { name: 'Kitchen controls' })
+      .getByRole('button', { name: 'Close', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Next step', exact: true }).click();
+    await expect(kitchen).toBeInViewport();
     await expect(page.getByText('Step 2 of 4', { exact: true })).toBeVisible();
     await expect
       .poll(() =>
@@ -122,6 +130,9 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
     await page.setViewportSize({ width: 320, height: 720 });
     await responsiveData(page, 'de');
     await page.goto(`/recipes/${recipeId}/cook`);
+    const kitchen = page.getByRole('button', { name: 'Küchensteuerung' });
+    await expect(kitchen).toBeInViewport();
+    await kitchen.click();
     const display = page.getByLabel('Küchenanzeige');
     await expect(display).toBeVisible();
     for (const mode of ['glare', 'oled', 'normal']) {

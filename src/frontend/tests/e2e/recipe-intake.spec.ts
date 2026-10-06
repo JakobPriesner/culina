@@ -5,6 +5,37 @@ import { expectReflow, responsiveData } from './support/responsive';
 test.describe('source review @offline', () => {
   test.use({ serviceWorkers: 'block' });
 
+  test('offers the copy-link import path on iPhone', async ({ page }) => {
+    await responsiveData(page, 'en', { activeCooking: false });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'userAgent', {
+        get: () => 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'
+      });
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { readText: async () => 'https://www.instagram.com/reel/recipe/' }
+      });
+    });
+    await page.route('**/api/v1/recipe-imports', (route) =>
+      route.fulfill({
+        json: {
+          sourceUrl: 'https://www.instagram.com/reel/recipe/',
+          title: 'Beans',
+          ingredientLines: ['120 g beans'],
+          steps: ['Fry the beans.']
+        }
+      })
+    );
+    await page.goto('/recipes/new?text=Beans');
+    await expect(
+      page.getByText('Culina cannot appear in the iPhone share menu.', { exact: false })
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Paste copied link', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'A link to a recipe' })).toHaveValue(
+      'https://www.instagram.com/reel/recipe/'
+    );
+    await expect(page.getByText('Fry the beans.', { exact: true })).toBeVisible();
+  });
+
   test('keeps a shared caption with its URL, reviews before saving, and reflows', async ({
     page
   }, testInfo) => {
