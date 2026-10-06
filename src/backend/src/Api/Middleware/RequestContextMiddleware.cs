@@ -39,7 +39,16 @@ internal sealed class RequestContextMiddleware(RequestDelegate next)
         var requestId = Activity.Current?.TraceId.ToString() ?? Guid.CreateVersion7().ToString("n");
 
         RequestContext.SetRequestId(context, requestId);
-        context.Response.Headers[CulinaHeaders.RequestId] = requestId;
+
+        // As the response starts rather than now: the exception handler clears
+        // every header before it writes the problem document, and a 500 is the
+        // response whose id somebody most needs.
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers[CulinaHeaders.RequestId] = requestId;
+
+            return Task.CompletedTask;
+        });
 
         using var scope = logger.BeginScope(new LogScope(
             new KeyValuePair<string, object?>(
