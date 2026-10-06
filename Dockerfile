@@ -29,8 +29,10 @@ WORKDIR /src
 RUN corepack enable
 
 # Manifests first, on their own layer: they change far less often than the
-# source, so an ordinary code change reuses the install.
-COPY src/frontend/package.json src/frontend/pnpm-lock.yaml ./
+# source, so an ordinary code change reuses the install. pnpm-workspace.yaml
+# holds the overrides, and a frozen install refuses a lockfile whose overrides
+# it cannot see.
+COPY src/frontend/package.json src/frontend/pnpm-lock.yaml src/frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # The client is generated from the committed OpenAPI document, never from a
