@@ -110,7 +110,7 @@ internal sealed class LoopbackServer : IDisposable
     private readonly TcpListener listener;
     private int requests;
 
-    internal LoopbackServer(string body)
+    internal LoopbackServer(string body, int status = 200, string contentType = "text/html")
     {
         listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
@@ -127,7 +127,7 @@ internal sealed class LoopbackServer : IDisposable
                     Interlocked.Increment(ref requests);
 
                     var response =
-                        "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"
+                        $"HTTP/1.1 {status} Answered\r\nContent-Type: {contentType}\r\n"
                         + $"Content-Length: {body.Length}\r\nConnection: close\r\n\r\n{body}";
 
                     var stream = client.GetStream();

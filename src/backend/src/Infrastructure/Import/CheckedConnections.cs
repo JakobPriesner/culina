@@ -31,6 +31,11 @@ internal static class CheckedConnections
     /// operator has opted into, because their own recipe server is very often
     /// the machine next door.
     /// </param>
+    /// <param name="dialling">
+    /// Told about every connection before it is dialled: the name and port that
+    /// were asked for, and the checked address that is about to be connected
+    /// to. Nothing is ever sent on a connection this has not been told about.
+    /// </param>
     /// <remarks>
     /// <para>
     /// Never through a proxy. Through one, the connection this handler opens is
@@ -46,17 +51,20 @@ internal static class CheckedConnections
     /// follows them by hand, through this handler again.
     /// </para>
     /// </remarks>
-    internal static SocketsHttpHandler Handler(Func<IPAddress, bool> admits) => new()
-    {
-        UseProxy = false,
-        AllowAutoRedirect = false,
-        AutomaticDecompression = DecompressionMethods.All,
-        ConnectTimeout = TimeSpan.FromSeconds(5),
-        ConnectCallback = To(admits)
-    };
+    internal static SocketsHttpHandler Handler(
+        Func<IPAddress, bool> admits,
+        Action<DnsEndPoint, IPAddress>? dialling = null) => new()
+        {
+            UseProxy = false,
+            AllowAutoRedirect = false,
+            AutomaticDecompression = DecompressionMethods.All,
+            ConnectTimeout = TimeSpan.FromSeconds(5),
+            ConnectCallback = To(admits, dialling)
+        };
 
     private static Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> To(
-        Func<IPAddress, bool> admits) =>
+        Func<IPAddress, bool> admits,
+        Action<DnsEndPoint, IPAddress>? dialling) =>
         async (context, cancellationToken) =>
         {
             var host = context.DnsEndPoint.Host;
@@ -67,6 +75,8 @@ internal static class CheckedConnections
 
             var allowed = Array.Find(addresses, address => admits(address))
                 ?? throw new InvalidOperationException("The address is not one this may connect to.");
+
+            dialling?.Invoke(context.DnsEndPoint, allowed);
 
 #pragma warning disable CA2000 // The stream returned below owns the socket.
             var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };

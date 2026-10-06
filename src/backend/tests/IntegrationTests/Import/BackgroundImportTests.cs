@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Application.Abstractions.Settings;
+using Infrastructure.Import;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -320,12 +322,14 @@ public class BackgroundImportTests(PostgresFixture postgres)
         postgres,
         new Dictionary<string, string>
         {
-            // The fake Tandoor is on loopback, which is exactly the case this
-            // setting exists for: somebody's own recipe server, next door.
-            ["Import:AllowPrivateSourceAddresses"] = "true",
             ["RateLimits:SourceRequestsPerHour"] = "10000",
             ["Logging:LogLevel:Default"] = logLevel
-        });
+        },
+        // The fake Tandoor is on loopback, which no setting lets a deployment
+        // reach — not even the one that allows private addresses — so the
+        // client that talks to it is swapped for one that may.
+        replace: services => services.AddSingleton(provider =>
+            new SourceHttp(provider.GetRequiredService<StorageSettings>(), admits: _ => true)));
 
     private async Task<ApiClient> SignedInAsync(CulinaApiFactory factory)
     {

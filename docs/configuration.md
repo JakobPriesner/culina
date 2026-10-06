@@ -202,6 +202,19 @@ The limits "per person" count against the signed-in account, whichever device,
 session or address it uses, so signing in again does not buy a fresh
 allowance.
 
+## Importing
+
+| Variable | Default | |
+| --- | --- | --- |
+| `Import__AllowPrivateSourceAddresses` | `false` | In the app. Lets a connected recipe library (a Tandoor) live on a private network: 10/8, 172.16/12, 192.168/16, 100.64/10 and IPv6 unique local addresses. Never loopback, link-local, cloud metadata, `0.0.0.0` or multicast, so a Tandoor on the same machine has to be addressed by its LAN or container-network name. Never applies to importing from a pasted link. |
+
+Everything the server fetches for someone — a pasted link, a connected
+library — connects directly and ignores `HTTP_PROXY` and
+`HTTPS_PROXY`: through a proxy, the address checked would be the proxy's, not
+the one it goes on to reach. A connected library on a private address gets only
+"could not be read" back when something fails, even for a wrong token, so the
+error cannot be used to map the network.
+
 ## The assistant
 
 Nothing. There is no environment variable for it, and that is deliberate: the
