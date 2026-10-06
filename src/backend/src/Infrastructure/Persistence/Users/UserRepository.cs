@@ -14,6 +14,12 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
     /// <summary>The unique index the email column carries, named for the catch below.</summary>
     private const string EmailUniqueConstraint = "users_email_key";
 
+    /// <summary>
+    /// An arbitrary but fixed key ("users"), so every registration competes
+    /// for the same lock. Distinct from the migration runner's.
+    /// </summary>
+    private const long RegistrationLockKey = 0x7573657273;
+
     public async Task<Result<User>> FindAsync(Guid userId, CancellationToken cancellationToken)
     {
         var row = await executor.QuerySingleOrDefaultAsync<UserRow>(
@@ -38,6 +44,21 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
 
     public Task<int> CountAsync(CancellationToken cancellationToken) =>
         executor.ExecuteScalarAsync<int>("select count(*) from users;", null, cancellationToken)!;
+
+    public async Task<int> CountForRegistrationAsync(CancellationToken cancellationToken)
+    {
+        // Held until the transaction ends, so the count and the insert that
+        // follows it are one step for each registration in turn. Two
+        // statements rather than one: under READ COMMITTED a statement sees
+        // what was committed when it started, and a count in the same
+        // statement as the lock would miss the registration it waited for.
+        await executor.ExecuteAsync(
+            "select pg_advisory_xact_lock(@key);",
+            new { key = RegistrationLockKey },
+            cancellationToken).ConfigureAwait(false);
+
+        return await CountAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task<Result> AddAsync(User user, bool isAdmin, CancellationToken cancellationToken)
     {
