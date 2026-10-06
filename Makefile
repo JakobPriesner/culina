@@ -44,12 +44,17 @@ help: ## Show this help
 
 # ── Running ──────────────────────────────────────────────────────────────────
 
-dev: db-up ## Start the database, the API and the frontend dev server
+# This machine only, unless asked: `make dev LAN=1` lets a phone on the same
+# network open the frontend — and so everybody else on that network, which is
+# why it is not the default.
+VITE_HOST := $(if $(LAN),--host,)
+
+dev: db-up ## Start the database, the API and the frontend dev server (LAN=1: reachable from your network)
 	@echo "API      http://localhost:5000"
 	@echo "Frontend http://localhost:5173  (proxies /api to the API)"
 	@set -m; \
 		(cd $(API) && exec dotnet watch run --non-interactive < /dev/null) & api=$$!; \
-		(cd $(FRONTEND) && exec pnpm exec vite dev --host < /dev/null) & web=$$!; \
+		(cd $(FRONTEND) && exec pnpm exec vite dev $(VITE_HOST) < /dev/null) & web=$$!; \
 		trap 'stop() { $(stop) ; }; stop $$api; stop $$web; exit 0' INT TERM; \
 		wait
 

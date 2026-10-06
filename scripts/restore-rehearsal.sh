@@ -29,7 +29,9 @@ PASSWORD="a sentence nobody else would pick"
 TAR_IMAGE="alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"
 
 export CULINA_IMAGE="$IMAGE"
-export CULINA_PORT="$PORT"
+# This machine only: the instance has a known password and trusts forwarded
+# headers from every container network.
+export CULINA_PORT="127.0.0.1:${PORT}"
 export ForwardedHeaders__KnownNetworks="172.16.0.0/12"
 export Database__Password="rehearsal_password"
 export POSTGRES_SUPERUSER_PASSWORD="rehearsal_superuser_password"
