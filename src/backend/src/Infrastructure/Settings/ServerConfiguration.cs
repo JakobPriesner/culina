@@ -61,7 +61,10 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
         {
             Directory.CreateDirectory(Source.Directory);
 
-            var document = await ReadAsync(cancellationToken).ConfigureAwait(false);
+            if (await ReadAsync(cancellationToken).ConfigureAwait(false) is not { } document)
+            {
+                return SettingsErrors.FileUnreadable;
+            }
 
             foreach (var (key, value) in values.Where(entry => !IsPinned(entry.Key)))
             {
@@ -90,7 +93,16 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
         ?? throw new InvalidOperationException(
             "The settings file is not among the configuration sources. Program must call AddServerConfigurationFile.");
 
-    private async Task<JsonObject> ReadAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// The file as it is now, or null when it is no longer a JSON object.
+    /// </summary>
+    /// <remarks>
+    /// The process started from this file, so it parsed then; a file that no
+    /// longer parses, or holds something other than an object, was edited by
+    /// hand since. Saving over it would silently throw that edit away, so the
+    /// caller refuses instead and leaves the file as it is.
+    /// </remarks>
+    private async Task<JsonObject?> ReadAsync(CancellationToken cancellationToken)
     {
         if (!File.Exists(Source.FilePath))
         {
@@ -101,12 +113,15 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
 
         await using (stream.ConfigureAwait(false))
         {
-            // The process started from this file, so it parsed then; a file
-            // that no longer parses was edited by hand since, and saving over
-            // it would silently throw that edit away.
-            return await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false)
-                    as JsonObject
-                ?? [];
+            try
+            {
+                return await JsonNode.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false)
+                    as JsonObject;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
     }
 
@@ -119,17 +134,39 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
     {
         var temporary = $"{Source.FilePath}.saving";
 
-        await File.WriteAllTextAsync(temporary, document.ToJsonString(Indented), cancellationToken)
-            .ConfigureAwait(false);
+        var writer = new StreamWriter(CreatePrivate(temporary));
 
-        // It holds the database password, so only the account the app runs as
-        // may read it.
-        if (!OperatingSystem.IsWindows())
+        await using (writer.ConfigureAwait(false))
         {
-            File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            await writer.WriteAsync(document.ToJsonString(Indented).AsMemory(), cancellationToken)
+                .ConfigureAwait(false);
         }
 
         File.Move(temporary, Source.FilePath, overwrite: true);
+    }
+
+    /// <summary>
+    /// Creates a file only the account the app runs as may read, from its
+    /// first byte.
+    /// </summary>
+    /// <remarks>
+    /// It is about to hold the database password. Created with the process's
+    /// umask and narrowed afterwards, it would be readable by everyone for as
+    /// long as the write took. A file left behind by a crash is removed first,
+    /// because opening an existing file keeps whatever mode it already had.
+    /// </remarks>
+    internal static FileStream CreatePrivate(string path)
+    {
+        File.Delete(path);
+
+        var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+
+        if (!OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        }
+
+        return new FileStream(path, options);
     }
 
     private static void Set(JsonObject document, string key, string value)

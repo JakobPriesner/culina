@@ -15,7 +15,11 @@ the one before it:
 Saving a change on the settings screen writes it to `culina.json` and
 **restarts Culina in place**: the host is built again from the new
 configuration, which takes a second or two, and every value goes through the
-same startup validation as before. Nothing is applied half-way.
+same startup validation as before. Nothing is applied half-way. The file is
+written readable by the app's own user only, from its first byte, because it
+can hold the database password. If you edited it by hand and it no longer
+reads as a JSON object, saving is refused (`settings.file_unreadable`) and the
+file is left exactly as it is — correct or remove it, then save again.
 
 Everything an administrator changes while the app runs *without* a restart —
 who may register, the assistant — lives in the database instead, and is not
