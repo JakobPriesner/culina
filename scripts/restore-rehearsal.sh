@@ -33,7 +33,9 @@ export CULINA_IMAGE="$IMAGE"
 # headers from every container network.
 export CULINA_PORT="127.0.0.1:${PORT}"
 export ForwardedHeaders__KnownNetworks="172.16.0.0/12"
-export Database__Password="rehearsal_password"
+# A quote and a space, so the rehearsal also proves scripts/db-init.sh takes
+# the password as a value and not as SQL.
+export Database__Password="the rehearsal's password"
 export POSTGRES_SUPERUSER_PASSWORD="rehearsal_superuser_password"
 # Production's cookies, whatever a development .env beside the compose files
 # says: an insecure one would stop the app at boot. curl, like a browser, sends
