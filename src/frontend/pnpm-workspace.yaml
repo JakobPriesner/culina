@@ -1,0 +1,9 @@
+# Not a workspace: one package. pnpm 11 reads its settings from this file and
+# no longer from a `pnpm` field in package.json.
+
+overrides:
+  # GHSA-pxg6-pf52-xh8x: cookie before 0.7.0 accepts a name, path or domain
+  # with characters outside the cookie grammar. SvelteKit 2 still asks for
+  # ^0.6.0 (only 3 moved on), and 0.7 is the same API with the check added.
+  # Remove this once @sveltejs/kit no longer resolves to a 0.6.
+  cookie@<0.7.0: ^0.7.2
