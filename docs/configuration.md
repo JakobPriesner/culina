@@ -44,12 +44,17 @@ with `settings.setup_required`, `/health/ready` answers `200` so a proxy routes
 to it, and the log says so as a warning. The screen asks for:
 
 1. **The database.** Culina connects before saving anything, and refuses a
-   database it could not run in: a wrong password, a host that does not
-   resolve, a role that may not install the `citext`, `pg_trgm` and `unaccent`
-   extensions (trusted extensions, which the first migration installs as the
-   application role given `CREATE` on the database), or a role that may not
-   create tables — each with the reason and, where there is one, the SQL a
-   superuser has to run. Then it restarts into the real app.
+   database it could not run in: nothing answering at the address, a refused
+   user, password or database name, a TLS requirement the server cannot meet,
+   a superuser role, a role that may not install the `citext`, `pg_trgm` and
+   `unaccent` extensions (trusted extensions, which the first migration
+   installs as the application role given `CREATE` on the database), or a role
+   that may not create tables — the last two with the SQL a superuser has to
+   run. A connection that fails is only named by its kind: the server's own
+   message, with the address it tried, is in Culina's log as a warning
+   (event 1960), because anybody may ask for this check during setup and the
+   exact message would tell them what listens on any address.
+   Then it restarts into the real app.
 2. **How people reach it**: secure cookies (defaulted from whether the browser
    is on `https://`) and which proxy to trust (it shows the address requests
    actually arrive from). Everything else is folded away with its defaults.
@@ -78,7 +83,7 @@ nobody can sign in, and `Cookies__Secure=false` with
 | `Database__Host` | — | yes | **Required**, here or on the setup screen. Host name or address. |
 | `Database__Port` | `5432` | yes | |
 | `Database__Name` | — | yes | **Required**, here or on the setup screen. |
-| `Database__Username` | — | yes | **Required**, here or on the setup screen. The application role. Never a superuser — the migrations do not need one, and a compromised app should not be able to drop the cluster. |
+| `Database__Username` | — | yes | **Required**, here or on the setup screen. The application role. Never a superuser — the migrations do not need one, and a compromised app should not be able to drop the cluster. The setup and settings screens refuse a superuser. |
 | `Database__Password` | — | yes | **Required**, here or on the setup screen. Never logged, never echoed by an endpoint, never in a problem document. Entered in the app, it is stored in `culina.json`, which only the app's own user may read. |
 | `Database__RequireSsl` | `true` | yes | Set to `false` only when the database is on the same private network and nothing else is. |
 | `Database__MaxPoolSize` | `20` | yes | |

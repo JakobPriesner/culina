@@ -42,6 +42,17 @@ public sealed class PostgresFixture : IAsyncLifetime
         RequireSsl = false
     };
 
+    /// <summary>The same server as its superuser, which Culina must refuse to run as.</summary>
+    public DatabaseSettings SuperuserSettings
+    {
+        get
+        {
+            var own = new NpgsqlConnectionStringBuilder(container.GetConnectionString());
+
+            return Settings with { Username = own.Username!, Password = own.Password! };
+        }
+    }
+
     public async ValueTask InitializeAsync()
     {
         await container.StartAsync();
