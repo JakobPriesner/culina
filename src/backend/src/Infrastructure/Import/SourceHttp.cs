@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -58,9 +60,31 @@ internal sealed class SourceHttp : IDisposable
     private readonly HttpClient client;
     private readonly int maxPictureBytes;
 
+    /// <summary>
+    /// Every server, as host and port, that this has dialled at an address
+    /// off the public internet.
+    /// </summary>
+    /// <remarks>
+    /// Remembered when the connection is made and never forgotten. That is what
+    /// makes it hold against a name that resolves publicly once and privately
+    /// the next time: every answer from a private address arrived over a
+    /// connection that was remembered before anything was sent on it.
+    /// </remarks>
+    private readonly ConcurrentDictionary<string, bool> privateServers =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public SourceHttp(ImportSettings settings, StorageSettings storage)
+        : this(storage, Reach(settings))
     {
-        ArgumentNullException.ThrowIfNull(settings);
+    }
+
+    /// <summary>A client that connects to whatever <paramref name="admits"/> allows.</summary>
+    /// <remarks>
+    /// Separate from the public constructor for the tests, whose recipe servers
+    /// are on loopback — which no setting lets a deployment reach.
+    /// </remarks>
+    internal SourceHttp(StorageSettings storage, Func<IPAddress, bool> admits)
+    {
         ArgumentNullException.ThrowIfNull(storage);
 
         // The same ceiling an upload gets. A picture that arrives from another
@@ -72,8 +96,7 @@ internal sealed class SourceHttp : IDisposable
         // Redirects are never followed: nothing legitimate redirects an API
         // call, and a followed redirect would hand the token to whatever it
         // pointed at.
-        handler = CheckedConnections.Handler(
-            admits: settings.AllowPrivateSourceAddresses ? _ => true : PublicAddress.IsPublic);
+        handler = CheckedConnections.Handler(admits, dialling: Remember);
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
 
@@ -96,27 +119,14 @@ internal sealed class SourceHttp : IDisposable
     /// the one thing the person can actually fix and the one thing they are
     /// most likely to have got wrong. Everything else is "could not fetch",
     /// deliberately: this endpoint must not become a way to ask which addresses
-    /// answer and which merely time out.
+    /// answer and which merely time out. See <see cref="VagueAsync{T}"/>.
     /// </remarks>
-    internal async Task<Result<TBody>> GetAsync<TBody>(
+    internal Task<Result<TBody>> GetAsync<TBody>(
         Uri url,
         AuthenticationHeaderValue authorization,
         CancellationToken cancellationToken)
-        where TBody : notnull
-    {
-        try
-        {
-            return await SendAsync<TBody>(url, authorization, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
-                                            or InvalidOperationException or IOException)
-        {
-            // Never with the host or the reason attached. Telling a caller that
-            // one address was refused and another merely timed out is how this
-            // would become a port scanner with a friendly error message.
-            return ImportErrors.CouldNotFetch;
-        }
-    }
+        where TBody : notnull =>
+        VagueAsync(url, () => SendAsync<TBody>(url, authorization, cancellationToken));
 
     /// <summary>
     /// Posts a form and reads JSON back, without an <c>Authorization</c> header.
@@ -138,31 +148,12 @@ internal sealed class SourceHttp : IDisposable
     /// their names, and not the body on a failure.
     /// </para>
     /// </remarks>
-    internal async Task<Result<TBody>> PostFormAsync<TBody>(
+    internal Task<Result<TBody>> PostFormAsync<TBody>(
         Uri url,
         IReadOnlyDictionary<string, string> form,
         CancellationToken cancellationToken)
-        where TBody : notnull
-    {
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Post, url)
-            {
-                Content = new FormUrlEncodedContent(form)
-            };
-
-            using var response = await client
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .ConfigureAwait(false);
-
-            return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
-                                            or InvalidOperationException or IOException)
-        {
-            return ImportErrors.CouldNotFetch;
-        }
-    }
+        where TBody : notnull =>
+        VagueAsync(url, () => PostAsync<TBody>(url, form, cancellationToken));
 
     /// <summary>
     /// Reads a picture, and refuses anything that is not one.
@@ -193,16 +184,77 @@ internal sealed class SourceHttp : IDisposable
 
         deadline.CancelAfter(PictureDeadline);
 
+        return await VagueAsync(url, () => ReadPictureAsync(url, authorization, deadline.Token))
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Makes one call, and says no more than "could not fetch" when it fails.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Never with the host or the reason attached. Telling a caller that one
+    /// address was refused and another merely timed out is how this would
+    /// become a port scanner with a friendly error message.
+    /// </para>
+    /// <para>
+    /// And nothing more specific at all about a server on a private network,
+    /// which only an operator who allowed private addresses can have reached.
+    /// There, "refused", "not understood", "too large" and "could not fetch"
+    /// would together tell whoever set up a connection which services run
+    /// inside the network and what they speak — so all four are one answer.
+    /// The cost is that a wrong token for a recipe server on the LAN reads as
+    /// "could not fetch" rather than "refused", which is a price worth paying
+    /// for not mapping the network.
+    /// </para>
+    /// </remarks>
+    private async Task<Result<T>> VagueAsync<T>(Uri url, Func<Task<Result<T>>> call)
+        where T : notnull
+    {
+        Result<T> answer;
+
         try
         {
-            return await ReadPictureAsync(url, authorization, deadline.Token).ConfigureAwait(false);
+            answer = await call().ConfigureAwait(false);
         }
         catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
                                             or InvalidOperationException or IOException)
         {
             return ImportErrors.CouldNotFetch;
         }
+
+        return privateServers.ContainsKey(ServerKey(url.IdnHost, url.Port))
+            ? answer.Match(Result<T>.Success, _ => Result<T>.Failure(ImportErrors.CouldNotFetch))
+            : answer;
     }
+
+    /// <summary>
+    /// What a connected source may be: the internet, and the household's own
+    /// network only when the operator has said so.
+    /// </summary>
+    private static Func<IPAddress, bool> Reach(ImportSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        return settings.AllowPrivateSourceAddresses
+            ? address => PublicAddress.IsPublic(address) || PublicAddress.IsPrivateNetwork(address)
+            : PublicAddress.IsPublic;
+    }
+
+    private void Remember(DnsEndPoint server, IPAddress address)
+    {
+        if (!PublicAddress.IsPublic(address))
+        {
+            privateServers.TryAdd(ServerKey(server.Host, server.Port), true);
+        }
+    }
+
+    /// <remarks>
+    /// Without brackets, because an IPv6 literal is written with them in a URL
+    /// and may arrive without them as the name a connection is asked for.
+    /// </remarks>
+    private static string ServerKey(string host, int port) =>
+        $"{host.Trim('[', ']')}:{port.ToString(CultureInfo.InvariantCulture)}";
 
     private async Task<Result<Stream>> ReadPictureAsync(
         Uri url,
@@ -276,6 +328,24 @@ internal sealed class SourceHttp : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
         request.Headers.Authorization = authorization;
+
+        using var response = await client
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await ReadAsync<TBody>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Result<TBody>> PostAsync<TBody>(
+        Uri url,
+        IReadOnlyDictionary<string, string> form,
+        CancellationToken cancellationToken)
+        where TBody : notnull
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new FormUrlEncodedContent(form)
+        };
 
         using var response = await client
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)

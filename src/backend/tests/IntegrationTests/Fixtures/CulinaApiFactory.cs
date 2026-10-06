@@ -43,10 +43,16 @@ namespace IntegrationTests.Fixtures;
 /// a rule is proven by fixing nine terms and moving the tenth — and a weight
 /// is not configuration, so it is replaced in the container rather than set.
 /// </param>
+/// <param name="replace">
+/// Services one test class swaps in after the app's own, for the rare thing no
+/// setting may change — such as a recipe-source client that can reach a fake
+/// server on loopback, which no deployment is allowed to reach.
+/// </param>
 public sealed class CulinaApiFactory(
     PostgresFixture postgres,
     IReadOnlyDictionary<string, string>? overrides = null,
-    RankingWeights? weights = null) : WebApplicationFactory<Program>
+    RankingWeights? weights = null,
+    Action<IServiceCollection>? replace = null) : WebApplicationFactory<Program>
 {
     private readonly string dataRoot =
         Path.Combine(Path.GetTempPath(), $"culina-test-{Guid.CreateVersion7():n}");
@@ -122,6 +128,8 @@ public sealed class CulinaApiFactory(
             {
                 services.AddSingleton(weights);
             }
+
+            replace?.Invoke(services);
         });
     }
 
