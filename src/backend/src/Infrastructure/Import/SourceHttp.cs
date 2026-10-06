@@ -30,7 +30,10 @@ namespace Infrastructure.Import;
 /// </remarks>
 internal sealed class SourceHttp : IDisposable
 {
-    /// <summary>How long one call to the other app may take.</summary>
+    /// <summary>
+    /// How long one call to the other app may take, reading its answer
+    /// included.
+    /// </summary>
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(20);
 
     /// <summary>
@@ -59,6 +62,7 @@ internal sealed class SourceHttp : IDisposable
     private readonly SocketsHttpHandler handler;
     private readonly HttpClient client;
     private readonly int maxPictureBytes;
+    private readonly TimeSpan deadline;
 
     /// <summary>
     /// Every server, as host and port, that this has dialled at an address
@@ -81,11 +85,14 @@ internal sealed class SourceHttp : IDisposable
     /// <summary>A client that connects to whatever <paramref name="admits"/> allows.</summary>
     /// <remarks>
     /// Separate from the public constructor for the tests, whose recipe servers
-    /// are on loopback — which no setting lets a deployment reach.
+    /// are on loopback — which no setting lets a deployment reach — and which
+    /// would rather not wait twenty seconds to see a deadline pass.
     /// </remarks>
-    internal SourceHttp(StorageSettings storage, Func<IPAddress, bool> admits)
+    internal SourceHttp(StorageSettings storage, Func<IPAddress, bool> admits, TimeSpan? deadline = null)
     {
         ArgumentNullException.ThrowIfNull(storage);
+
+        this.deadline = deadline ?? Deadline;
 
         // The same ceiling an upload gets. A picture that arrives from another
         // app is stored by exactly the same code that stores one somebody
@@ -98,7 +105,7 @@ internal sealed class SourceHttp : IDisposable
         // pointed at.
         handler = CheckedConnections.Handler(admits, dialling: Remember);
 
-        client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
+        client = new HttpClient(handler, disposeHandler: false) { Timeout = this.deadline };
 
         // Said plainly, as the page fetcher does. This is one person moving
         // their own recipes, not a crawler, and pretending to be a browser
@@ -126,7 +133,7 @@ internal sealed class SourceHttp : IDisposable
         AuthenticationHeaderValue authorization,
         CancellationToken cancellationToken)
         where TBody : notnull =>
-        VagueAsync(url, () => SendAsync<TBody>(url, authorization, cancellationToken));
+        VagueAsync(url, deadline, token => SendAsync<TBody>(url, authorization, token), cancellationToken);
 
     /// <summary>
     /// Posts a form and reads JSON back, without an <c>Authorization</c> header.
@@ -153,7 +160,7 @@ internal sealed class SourceHttp : IDisposable
         IReadOnlyDictionary<string, string> form,
         CancellationToken cancellationToken)
         where TBody : notnull =>
-        VagueAsync(url, () => PostAsync<TBody>(url, form, cancellationToken));
+        VagueAsync(url, deadline, token => PostAsync<TBody>(url, form, token), cancellationToken);
 
     /// <summary>
     /// Reads a picture, and refuses anything that is not one.
@@ -175,23 +182,24 @@ internal sealed class SourceHttp : IDisposable
     /// end must not be the end of the process.
     /// </para>
     /// </remarks>
-    internal async Task<Result<Stream>> GetPictureAsync(
+    internal Task<Result<Stream>> GetPictureAsync(
         Uri url,
         AuthenticationHeaderValue authorization,
-        CancellationToken cancellationToken)
-    {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        deadline.CancelAfter(PictureDeadline);
-
-        return await VagueAsync(url, () => ReadPictureAsync(url, authorization, deadline.Token))
-            .ConfigureAwait(false);
-    }
+        CancellationToken cancellationToken) =>
+        VagueAsync(url, PictureDeadline, token => ReadPictureAsync(url, authorization, token), cancellationToken);
 
     /// <summary>
-    /// Makes one call, and says no more than "could not fetch" when it fails.
+    /// Makes one call within a deadline, and says no more than "could not
+    /// fetch" when it fails.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// The deadline covers the whole call, the answer's body included. The
+    /// client's own timeout stops counting once the headers arrive, and every
+    /// call here asks for the headers first — so without this, a server that
+    /// sends them and then a byte a minute would hold the call until the host
+    /// shut down, and a background import with it.
+    /// </para>
     /// <para>
     /// Never with the host or the reason attached. Telling a caller that one
     /// address was refused and another merely timed out is how this would
@@ -208,14 +216,22 @@ internal sealed class SourceHttp : IDisposable
     /// for not mapping the network.
     /// </para>
     /// </remarks>
-    private async Task<Result<T>> VagueAsync<T>(Uri url, Func<Task<Result<T>>> call)
+    private async Task<Result<T>> VagueAsync<T>(
+        Uri url,
+        TimeSpan limit,
+        Func<CancellationToken, Task<Result<T>>> call,
+        CancellationToken cancellationToken)
         where T : notnull
     {
+        using var within = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        within.CancelAfter(limit);
+
         Result<T> answer;
 
         try
         {
-            answer = await call().ConfigureAwait(false);
+            answer = await call(within.Token).ConfigureAwait(false);
         }
         catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
                                             or InvalidOperationException or IOException)
