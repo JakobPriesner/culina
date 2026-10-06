@@ -32,17 +32,18 @@ public class CreateLogRecordsCommandHandlerTests
         // Assert
         result.ShouldBeSuccess();
         Assert.Equal(2, loggers.Lines.Count);
-        Assert.All(loggers.Lines, line => Assert.Equal(WebAppLogs.Category, line.Category));
+        Assert.All(loggers.Lines, line => Assert.Equal("Culina.WebApp.Untrusted", line.Category));
         Assert.All(loggers.Lines, line => Assert.Equal(1700, line.EventId));
+        Assert.All(loggers.Lines, line => Assert.Equal("UntrustedWebAppReport", line.EventName));
     }
 
     [Theory]
-    [InlineData("uncaught_error", LogLevel.Error)]
-    [InlineData("unhandled_rejection", LogLevel.Error)]
-    [InlineData("render_failed", LogLevel.Error)]
-    [InlineData("service_worker_failed", LogLevel.Error)]
-    [InlineData("csp_violation", LogLevel.Warning)]
-    public async Task Handle_ShouldDecideTheLevelFromTheEvent(string @event, LogLevel expected)
+    [InlineData("uncaught_error")]
+    [InlineData("unhandled_rejection")]
+    [InlineData("render_failed")]
+    [InlineData("service_worker_failed")]
+    [InlineData("csp_violation")]
+    public async Task Handle_ShouldWriteAWarning_WhateverTheEvent(string @event)
     {
         // Arrange
         var loggers = new RecordingLoggers();
@@ -52,9 +53,69 @@ public class CreateLogRecordsCommandHandlerTests
         await handler.Handle(Command(Record(@event)), Token);
 
         // Assert
-        // The browser never says how serious it is. A page that could choose
-        // its own level could page somebody at night.
-        Assert.Equal(expected, Assert.Single(loggers.Lines).Level);
+        // Anybody can send one. An Error is a defect in this server, and a
+        // stranger who could write one could page somebody at night.
+        Assert.Equal(LogLevel.Warning, Assert.Single(loggers.Lines).Level);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldNameEveryFieldAsTheClients_SoNoneReadsAsTheServersOwn()
+    {
+        // Arrange
+        var loggers = new RecordingLoggers();
+        var handler = new CreateLogRecordsCommandHandler(loggers);
+
+        // Act
+        await handler.Handle(Command(Record("uncaught_error")), Token);
+
+        // Assert
+        var line = Assert.Single(loggers.Lines);
+        Assert.StartsWith("Untrusted report from the web app", line.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            ["ClientAppVersion", "ClientEvent", "ClientMessage", "ClientRoute", "ClientUserAgent"],
+            line.Fields.Keys.Where(key => key != "{OriginalFormat}").Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task Handle_ShouldReplaceLineBreaksAndControlCharacters_InEverythingTheCallerSent()
+    {
+        // Arrange
+        var loggers = new RecordingLoggers();
+        var handler = new CreateLogRecordsCommandHandler(loggers);
+        const string forged = "\r\n12:00:00 fail: Api[1800] Unhandled exception\u0007\u202e\u2028";
+        var record = Record("uncaught_error") with
+        {
+            Message = "broke" + forged,
+            Stack = "at a" + forged,
+            Route = "/route" + forged,
+            Context = [new("culina.web.occurred_at", "now" + forged)]
+        };
+        var command = Command(record) with
+        {
+            AppVersion = "v1" + forged,
+            UserAgent = "Mozilla" + forged,
+            Client = [new("browser.platform", "macOS" + forged), new("culina.web.languages", new[] { "de" + forged })]
+        };
+
+        // Act
+        await handler.Handle(command, Token);
+
+        // Assert
+        // A console that does not escape a line break would print the rest as
+        // a line of the server's own.
+        var line = Assert.Single(loggers.Lines);
+        string[] written =
+        [
+            line.Message,
+            line.Exception!.Message,
+            line.Exception.StackTrace!,
+            .. line.Fields.Values.Select(value => $"{value}"),
+            .. line.Attributes.Values.Select(value => value is string[] texts ? string.Join(",", texts) : $"{value}")
+        ];
+
+        Assert.All(written, text => Assert.DoesNotContain(text, character =>
+            char.IsControl(character) || character is '\u202e' or '\u2028'));
+        Assert.Contains("broke  12:00:00 fail: Api[1800] Unhandled exception", line.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -172,6 +233,9 @@ public class CreateLogRecordsCommandHandlerTests
         string Category,
         LogLevel Level,
         int EventId,
+        string? EventName,
+        string Message,
+        IReadOnlyDictionary<string, object?> Fields,
         Exception? Exception,
         IReadOnlyDictionary<string, object> Attributes);
 
@@ -211,7 +275,15 @@ public class CreateLogRecordsCommandHandlerTests
                 TState state,
                 Exception? exception,
                 Func<TState, Exception?, string> formatter) =>
-                lines.Add(new Line(category, logLevel, eventId.Id, exception, scope));
+                lines.Add(new Line(
+                    category,
+                    logLevel,
+                    eventId.Id,
+                    eventId.Name,
+                    formatter(state, exception),
+                    (state as IEnumerable<KeyValuePair<string, object?>>)?.ToDictionary() ?? new Dictionary<string, object?>(),
+                    exception,
+                    scope));
         }
     }
 }

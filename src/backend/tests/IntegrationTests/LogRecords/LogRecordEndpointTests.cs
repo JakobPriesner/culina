@@ -1,5 +1,10 @@
 using System.Net;
+using System.Net.Http.Json;
 using IntegrationTests.Fixtures;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.LogRecords;
 
@@ -64,6 +69,71 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_ShouldRefuseEverybody_OnceAllCallersTogetherReachTheSharedCeiling()
+    {
+        // Arrange
+        using var api = new CulinaApiFactory(postgres);
+        using var host = api.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton<IStartupFilter, ClientAddressFromHeader>()));
+        using var client = new ApiClient(host.CreateClient());
+
+        // Act
+        var accepted = 0;
+
+        for (var caller = 1; caller <= 120; caller++)
+        {
+            var response = await client.SendAsync(Report(caller), Token);
+            accepted += response.StatusCode == HttpStatusCode.Accepted ? 1 : 0;
+        }
+
+        var refused = await client.SendAsync(Report(121), Token);
+
+        // Assert
+        // One report from each of 121 addresses: none of them near its own
+        // limit, and still the last one refused, because a botnet is many
+        // addresses and the disk is one.
+        Assert.Equal(120, accepted);
+        Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
+        Assert.Equal("request.rate_limited", refused.ProblemCode);
+    }
+
+    private static HttpRequestMessage Report(int caller)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/log-records")
+        {
+            Content = JsonContent.Create(Batch("uncaught_error"))
+        };
+
+        request.Headers.Add(ClientAddressFromHeader.Header, $"203.0.113.{caller}");
+
+        return request;
+    }
+
+    /// <summary>
+    /// Lets a test speak from many addresses, which the in-memory test server
+    /// otherwise cannot.
+    /// </summary>
+    private sealed class ClientAddressFromHeader : IStartupFilter
+    {
+        internal const string Header = "X-Test-Client-Address";
+
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, following) =>
+            {
+                if (context.Request.Headers.TryGetValue(Header, out var address))
+                {
+                    context.Connection.RemoteIpAddress = IPAddress.Parse(address.ToString());
+                }
+
+                return following(context);
+            });
+
+            next(app);
+        };
     }
 
     private static object Batch(string @event) =>

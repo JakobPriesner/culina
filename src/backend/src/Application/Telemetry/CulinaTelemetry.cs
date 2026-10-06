@@ -20,7 +20,11 @@ public static class CulinaTelemetry
     /// The log category the web app's records are written under, which is
     /// exported as a service of its own.
     /// </summary>
-    public const string WebAppCategory = "Culina.WebApp";
+    /// <remarks>
+    /// Named untrusted because anybody can send one. Still under
+    /// <c>Culina.WebApp</c>, so a level filter set on that keeps applying.
+    /// </remarks>
+    public const string WebAppCategory = "Culina.WebApp.Untrusted";
 
     /// <summary>The one source use-case spans are started on.</summary>
     public static readonly ActivitySource ActivitySource = new(Name);
