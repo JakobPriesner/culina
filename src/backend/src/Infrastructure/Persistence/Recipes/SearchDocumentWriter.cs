@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Domain.Search;
 
 namespace Infrastructure.Persistence.Recipes;
@@ -79,19 +80,28 @@ internal sealed class SearchDocumentWriter(DbExecutor executor)
             new { recipeIds = recipeIds.ToArray() },
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var source in sources)
+        // One statement for the whole batch, whose documents travel as JSON:
+        // each has a list of its own, and an array of arrays is not something
+        // unnest will take apart.
+        var documents = sources.Select(source => new
         {
-            var concepts = CulinaryLexicon.Describe(source.Title, source.Tags, source.Ingredients);
+            id = source.RecipeId,
+            concepts = CulinaryLexicon.Describe(source.Title, source.Tags, source.Ingredients).ToArray()
+        });
 
-            await executor.ExecuteAsync(
-                """
-                update recipe_search_documents
-                set concepts = @concepts, lexicon_version = @version
-                where recipe_id = @recipeId;
-                """,
-                new { recipeId = source.RecipeId, concepts = concepts.ToArray(), version = CulinaryLexicon.Version },
-                cancellationToken).ConfigureAwait(false);
-        }
+        await executor.ExecuteAsync(
+            """
+            update recipe_search_documents d
+            set concepts = batch.concepts, lexicon_version = @version
+            from jsonb_to_recordset(@documents::jsonb) as batch(id uuid, concepts text[])
+            where d.recipe_id = batch.id;
+            """,
+            new
+            {
+                documents = JsonSerializer.Serialize(documents),
+                version = CulinaryLexicon.Version
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>The three things the lexicon reads about a recipe.</summary>

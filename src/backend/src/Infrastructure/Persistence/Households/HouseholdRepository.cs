@@ -287,22 +287,21 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
             },
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var member in household.Members)
-        {
-            await executor.ExecuteAsync(
-                """
-                insert into household_members (household_id, user_id, role, joined_at)
-                values (@householdId, @userId, @role, @joinedAt)
-                on conflict (household_id, user_id) do update set role = excluded.role;
-                """,
-                new
-                {
-                    householdId = household.Id,
-                    userId = member.UserId,
-                    role = member.Role.ToStorage(),
-                    joinedAt = member.JoinedAt
-                },
-                cancellationToken).ConfigureAwait(false);
-        }
+        await executor.ExecuteAsync(
+            """
+            insert into household_members (household_id, user_id, role, joined_at)
+            select @householdId, user_id, role, joined_at
+            from unnest(@userIds::uuid[], @roles::text[], @joinedAts::timestamptz[])
+                as m(user_id, role, joined_at)
+            on conflict (household_id, user_id) do update set role = excluded.role;
+            """,
+            new
+            {
+                householdId = household.Id,
+                userIds = household.Members.Select(member => member.UserId).ToArray(),
+                roles = household.Members.Select(member => member.Role.ToStorage()).ToArray(),
+                joinedAts = household.Members.Select(member => member.JoinedAt).ToArray()
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 }
