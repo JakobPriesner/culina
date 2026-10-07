@@ -29,11 +29,11 @@ internal sealed class GetShareQueryHandler(
         // it, so anyone who may not read the recipe may certainly not read the
         // key — and gets told the recipe does not exist, as everywhere else.
         var editable = await RecipeAccess
-            .EditableAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
+            .EditableHouseholdAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var found = await editable.Match(
-            recipe => shares.FindAsync(recipe.Id, cancellationToken),
+            _ => shares.FindAsync(query.RecipeId, cancellationToken),
             error => Task.FromResult(Result<Domain.Recipes.RecipeShare>.Failure(error)))
             .ConfigureAwait(false);
 

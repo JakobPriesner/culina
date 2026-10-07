@@ -40,25 +40,24 @@ internal sealed class DismissSuggestionCommandHandler(
         // it, so hiding one cannot be used to find out whether somebody else's
         // recipe exists.
         var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .VisibleHouseholdAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await visible.Match(
-            recipe => Write(recipe, command, cancellationToken),
+            _ => Write(command, cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
     }
 
     private async Task<Result> Write(
-        Recipe recipe,
         DismissSuggestionCommand command,
         CancellationToken cancellationToken)
     {
         if (!command.Hidden)
         {
             var restored = await feedback
-                .RestoreAsync(command.UserId, recipe.Id, cancellationToken)
+                .RestoreAsync(command.UserId, command.RecipeId, cancellationToken)
                 .ConfigureAwait(false);
 
             return restored.Match(
@@ -72,7 +71,7 @@ internal sealed class DismissSuggestionCommandHandler(
         }
 
         var dismissed = await feedback
-            .DismissAsync(command.UserId, recipe.Id, time.GetUtcNow(), cancellationToken)
+            .DismissAsync(command.UserId, command.RecipeId, time.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);
 
         return dismissed.Match(

@@ -28,7 +28,7 @@ internal sealed class ReadMediaRecipeDraftEndpoint : IEndpoint
                 ICommandHandler<ComposeRecipeDraftCommand, DraftProgress> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (photos.Count > 8 || photos.Sum(file => file.Length) > 40 * 1024 * 1024
+                if (photos.Count > DraftLimits.MaxPhotos || photos.Sum(file => file.Length) > DraftLimits.MaxPhotoBytes
                     || photos.Any(file => file.Length == 0 || file.Length > storage.MaxImageBytes))
                 {
                     return CustomResults.Problem(AssistanceErrors.TooMuchToWorkFrom);

@@ -37,7 +37,7 @@ public static class SearchText
 
         foreach (var character in value)
         {
-            expanded.Append(character switch
+            var replacement = character switch
             {
                 'ß' or 'ẞ' => "ss",
                 'Ä' => "Ae",
@@ -47,8 +47,18 @@ public static class SearchText
                 'Ü' => "Ue",
                 'ü' => "ue",
                 'æ' => "ae",
-                _ => Translate(character).ToString()
-            });
+                _ => null
+            };
+
+            // A character is appended as itself, not turned into a string first.
+            if (replacement is null)
+            {
+                expanded.Append(Translate(character));
+            }
+            else
+            {
+                expanded.Append(replacement);
+            }
         }
 
         return Words(expanded);
@@ -63,7 +73,7 @@ public static class SearchText
 
         foreach (var character in value)
         {
-            stripped.Append(character switch
+            var replacement = character switch
             {
                 'ß' or 'ẞ' => "ss",
                 'Ä' => "A",
@@ -72,8 +82,17 @@ public static class SearchText
                 'ö' => "o",
                 'Ü' => "U",
                 'ü' => "u",
-                _ => Translate(character).ToString()
-            });
+                _ => null
+            };
+
+            if (replacement is null)
+            {
+                stripped.Append(Translate(character));
+            }
+            else
+            {
+                stripped.Append(replacement);
+            }
         }
 
         return Words(stripped);

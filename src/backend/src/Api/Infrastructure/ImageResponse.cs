@@ -91,7 +91,7 @@ internal static class ImageResponse
             var written = await delivery.WriteToAsync(buffer, cancellationToken).ConfigureAwait(false);
 
             return written.Match(
-                () => Results.Bytes(buffer.ToArray(), "image/webp"),
+                () => Results.Bytes(buffer.GetBuffer().AsMemory(0, (int)buffer.Length), "image/webp"),
                 CustomResults.Problem);
         }
     }

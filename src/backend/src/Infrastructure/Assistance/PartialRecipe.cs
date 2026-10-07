@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using System.Text.Json;
 using Application.Abstractions;
@@ -44,6 +45,13 @@ internal sealed class PartialRecipe
     /// </remarks>
     private string lastRead = string.Empty;
 
+    /// <summary>
+    /// Whether anything has arrived that could move a cut point. Rescanning
+    /// the whole text for every token is quadratic in the length of the answer,
+    /// and a cut point only appears with one of <c>, } ]</c>.
+    /// </summary>
+    private bool cutPointArrived;
+
     /// <summary>Everything the model has written so far.</summary>
     internal string Text => written.ToString();
 
@@ -54,6 +62,7 @@ internal sealed class PartialRecipe
         if (text is { Length: > 0 })
         {
             written.Append(text);
+            cutPointArrived |= text.AsSpan().IndexOfAny(CutPointCharacters) >= 0;
         }
     }
 
@@ -66,6 +75,13 @@ internal sealed class PartialRecipe
     /// </remarks>
     internal DraftedRecipe? Read()
     {
+        if (!cutPointArrived)
+        {
+            return null;
+        }
+
+        cutPointArrived = false;
+
         if (Closed(written.ToString()) is not { } repaired || repaired == lastRead)
         {
             return null;
@@ -95,6 +111,8 @@ internal sealed class PartialRecipe
     /// the last two steps missing would hide that.
     /// </remarks>
     internal DraftedRecipe? ReadWhole() => Parse(written.ToString());
+
+    private static readonly SearchValues<char> CutPointCharacters = SearchValues.Create(",}]");
 
     private static DraftedRecipe? Parse(string json)
     {

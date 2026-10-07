@@ -11,6 +11,16 @@ public interface IRecipeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken);
 
+    /// <summary>The household a recipe belongs to, without loading the recipe.</summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <remarks>
+    /// For the operations that only need to know whose it is, to decide whether
+    /// the caller may touch it: loading the whole aggregate to read one column
+    /// is six result sets spent on a question one row answers.
+    /// </remarks>
+    Task<Result<Guid>> HouseholdOfAsync(Guid recipeId, CancellationToken cancellationToken);
+
     /// <summary>Finds matching recipes, one page at a time.</summary>
     /// <param name="search">What to look for.</param>
     /// <param name="cancellationToken">Cancels the query.</param>

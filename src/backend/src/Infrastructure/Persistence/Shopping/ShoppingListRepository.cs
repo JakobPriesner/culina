@@ -151,34 +151,63 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             new { listId = list.Id },
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var item in list.Items)
+        // One statement for the items and one for their sources, whatever the
+        // size of the list: every tick, add and edit lands here, and a round
+        // trip per row is what made a long list slow to tick.
+        var items = list.Items;
+
+        await executor.ExecuteAsync(
+            """
+            insert into shopping_list_items
+                (id, list_id, name, name_key, quantity, unit, section,
+                 is_checked, checked_at, sort_order, is_manual)
+            select id, @listId, name, name_key, quantity, unit, section,
+                   is_checked, checked_at, sort_order, is_manual
+            from unnest(
+                @ids::uuid[], @names::text[], @nameKeys::text[], @quantities::numeric[], @units::text[],
+                @sections::text[], @checked::boolean[], @checkedAts::timestamptz[], @sortOrders::integer[],
+                @manual::boolean[])
+                as item(id, name, name_key, quantity, unit, section,
+                        is_checked, checked_at, sort_order, is_manual);
+            """,
+            new
+            {
+                listId = list.Id,
+                ids = items.Select(item => item.Id).ToArray(),
+                names = items.Select(item => item.Name.Value).ToArray(),
+                nameKeys = items.Select(item => item.Name.ComparisonKey).ToArray(),
+                quantities = items.Select(item => item.Quantity.Amount).ToArray(),
+                units = items.Select(item => ShoppingWords.Of(item.Quantity.Unit)).ToArray(),
+                sections = items.Select(item => ShoppingWords.Of(item.Section)).ToArray(),
+                @checked = items.Select(item => item.IsChecked).ToArray(),
+                checkedAts = items.Select(item => item.CheckedAt).ToArray(),
+                sortOrders = items.Select(item => item.SortOrder).ToArray(),
+                manual = items.Select(item => item.IsManual).ToArray()
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        var sources = items.SelectMany(item => item.Sources.Select(source => (item, source))).ToArray();
+
+        if (sources.Length > 0)
         {
             await executor.ExecuteAsync(
                 """
-                insert into shopping_list_items
-                    (id, list_id, name, name_key, quantity, unit, section,
-                     is_checked, checked_at, sort_order, is_manual)
-                values
-                    (@id, @listId, @name, @nameKey, @quantity, @unit, @section,
-                     @isChecked, @checkedAt, @sortOrder, @isManual);
+                insert into shopping_list_item_sources (item_id, recipe_id, plan_entry_id, quantity, unit)
+                select item_id, recipe_id, plan_entry_id, quantity, unit
+                from unnest(
+                    @itemIds::uuid[], @recipeIds::uuid[], @planEntryIds::uuid[], @quantities::numeric[],
+                    @units::text[])
+                    as source(item_id, recipe_id, plan_entry_id, quantity, unit);
                 """,
                 new
                 {
-                    id = item.Id,
-                    listId = list.Id,
-                    name = item.Name.Value,
-                    nameKey = item.Name.ComparisonKey,
-                    quantity = item.Quantity.Amount,
-                    unit = ShoppingWords.Of(item.Quantity.Unit),
-                    section = ShoppingWords.Of(item.Section),
-                    isChecked = item.IsChecked,
-                    checkedAt = item.CheckedAt,
-                    sortOrder = item.SortOrder,
-                    isManual = item.IsManual
+                    itemIds = sources.Select(one => one.item.Id).ToArray(),
+                    recipeIds = sources.Select(one => one.source.RecipeId).ToArray(),
+                    planEntryIds = sources.Select(one => one.source.PlanEntryId).ToArray(),
+                    quantities = sources.Select(one => one.source.Quantity.Amount).ToArray(),
+                    units = sources.Select(one => ShoppingWords.Of(one.source.Quantity.Unit)).ToArray()
                 },
                 cancellationToken).ConfigureAwait(false);
-
-            await InsertSourcesAsync(item, cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success();
@@ -215,27 +244,6 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
-    }
-
-    private async Task InsertSourcesAsync(ShoppingListItem item, CancellationToken cancellationToken)
-    {
-        foreach (var source in item.Sources)
-        {
-            await executor.ExecuteAsync(
-                """
-                insert into shopping_list_item_sources (item_id, recipe_id, plan_entry_id, quantity, unit)
-                values (@itemId, @recipeId, @planEntryId, @quantity, @unit);
-                """,
-                new
-                {
-                    itemId = item.Id,
-                    recipeId = source.RecipeId,
-                    planEntryId = source.PlanEntryId,
-                    quantity = source.Quantity.Amount,
-                    unit = ShoppingWords.Of(source.Quantity.Unit)
-                },
-                cancellationToken).ConfigureAwait(false);
-        }
     }
 
     private static Result<ShoppingListItem> ToItem(ShoppingItemRow row, IEnumerable<ShoppingSourceRow> sources) =>
