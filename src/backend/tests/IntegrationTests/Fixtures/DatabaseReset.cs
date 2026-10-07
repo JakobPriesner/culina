@@ -41,8 +41,24 @@ internal static class DatabaseReset
 
         var list = string.Join(", ", names.Select(name => $"public.{name}"));
 
-        await connection.ExecuteAsync(new CommandDefinition(
-            $"truncate table {list} restart identity cascade;",
-            cancellationToken: cancellationToken));
+        // A hosted notification reader can acquire these tables in another
+        // order. PostgreSQL rolls the entire TRUNCATE back on a deadlock, so
+        // retry that statement alone; other failures must still fail the test.
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    $"truncate table {list} restart identity cascade;",
+                    cancellationToken: cancellationToken));
+
+                return;
+            }
+            catch (PostgresException failure) when (
+                failure.SqlState == PostgresErrorCodes.DeadlockDetected && attempt < 2)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+            }
+        }
     }
 }
