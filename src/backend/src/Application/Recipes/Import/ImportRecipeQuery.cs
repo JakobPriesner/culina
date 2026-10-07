@@ -9,7 +9,7 @@ namespace Application.Recipes.Import;
 
 /// <summary>Reads a recipe from a web page.</summary>
 /// <param name="Url">The address a person pasted.</param>
-/// <param name="UserId">Who is asking. Only signed-in people may.</param>
+/// <param name="UserId">Who is asking; signed-in people only.</param>
 public sealed record ImportRecipeQuery(string Url, Guid UserId);
 
 internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
@@ -36,14 +36,11 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
     }
 
     /// <summary>
-    /// What the page said, structured if it published structure and as words
-    /// if it did not.
+    /// What the page said: structured if it published structure, else its readable text.
     /// </summary>
     /// <remarks>
-    /// The fallback is the page's readable text rather than a second parser
-    /// here. The client already reads a pasted recipe with heuristics, and one
-    /// set of heuristics — on the side where the person correcting them is —
-    /// beats two that quietly disagree.
+    /// The text fallback keeps one set of heuristics, in the client where the person corrects them,
+    /// rather than two that disagree.
     /// </remarks>
     private async Task<Result<Response>> ToDraftAsync(WebPage page, CancellationToken cancellationToken)
     {
@@ -58,8 +55,8 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
             if (transcript.Length == 0 && source.CaptionTrack is { } track
                 && Uri.TryCreate(page.Url, track, out var captionUrl))
             {
-                // The same SSRF, redirect, size and deadline checks as the page.
-                // A private or unavailable track never prevents reading its caption.
+                // Same SSRF, redirect, size and deadline checks as the page; an unavailable track
+                // never blocks its caption.
                 var fetched = await pages.FetchAsync(captionUrl, cancellationToken).ConfigureAwait(false);
                 transcript = fetched.Match(captions => SocialRecipeText.Transcript(captions.Html), _ => string.Empty);
             }

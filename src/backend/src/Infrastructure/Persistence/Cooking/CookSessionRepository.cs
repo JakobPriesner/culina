@@ -80,8 +80,7 @@ internal sealed class CookSessionRepository(DbExecutor executor) : ICookSessionR
             new { sessionId, userId },
             cancellationToken).ConfigureAwait(false);
 
-        // Not found and not yours are the same answer: otherwise the difference
-        // tells a stranger that a session with this id exists.
+        // Not found and not yours answer alike, or the difference reveals that a session with this id exists.
         return row is null ? CookingErrors.SessionNotFound : row.ToSession();
     }
 
@@ -92,9 +91,7 @@ internal sealed class CookSessionRepository(DbExecutor executor) : ICookSessionR
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        // Both statements or neither. The partial unique index refuses a second
-        // active session, so the abandonment is not a courtesy — it is what
-        // makes the insert legal.
+        // Both statements or neither: the partial unique index refuses a second active session, so the abandonment makes the insert legal.
         await executor.ExecuteAsync(
             """
             update cook_sessions
@@ -134,9 +131,7 @@ internal sealed class CookSessionRepository(DbExecutor executor) : ICookSessionR
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        // Two columns, no version check. This runs on every step advance, and
-        // making each one a concurrency event would leave a second device
-        // permanently stale for no benefit.
+        // Two columns, no version check: this runs on every step advance, and a concurrency event would leave a second device stale.
         var changed = await executor.ExecuteAsync(
             """
             update cook_sessions
@@ -161,8 +156,7 @@ internal sealed class CookSessionRepository(DbExecutor executor) : ICookSessionR
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        // The version is in the WHERE, so zero rows means somebody else changed
-        // it first — never a read-then-write race.
+        // The version is in the WHERE, so zero rows means somebody else changed it first.
         var changed = await executor.ExecuteAsync(
             """
             update cook_sessions

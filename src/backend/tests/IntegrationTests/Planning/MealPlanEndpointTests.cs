@@ -3,21 +3,12 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Planning;
 
-/// <summary>
-/// Moving a planned meal, end to end.
-/// </summary>
-/// <remarks>
-/// Rearranging is the commonest edit a plan gets — a week is agreed on Sunday
-/// and then argued with all week — and the part worth a real database is the
-/// renumbering, which is the only place a position can quietly stop being an
-/// index.
-/// </remarks>
+/// <summary>Moving a planned meal end to end; the part worth a real database is the renumbering.</summary>
 [Collection(RequiresDatabase.Name)]
 public class MealPlanEndpointTests(PostgresFixture postgres)
 {
     private const string Password = "correct horse battery staple";
 
-    /// <summary>A Monday, so the week under test is the one being asked for.</summary>
     private static readonly DateOnly Monday = new(2026, 9, 14);
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -25,7 +16,6 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Move_ShouldPutTheMealOnAnotherDayWithoutRePlanningIt()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeAsync(client, householdId, "Curry");
@@ -37,20 +27,17 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
 
         var entryId = MealsOn(planned, Monday)[0].GetProperty("entryId").GetGuid();
 
-        // Act
         var response = await client.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{entryId}",
             new { date = Monday.AddDays(3) },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(MealsOn(response, Monday));
 
         var moved = Assert.Single(MealsOn(response, Monday.AddDays(3)));
 
-        // What is cooked and for how many does not move with the date. Doing
-        // this as a remove plus an add is exactly how both would be lost.
+        // Servings and the like must survive the move (a remove plus add would lose them).
         Assert.Equal(6m, moved.GetProperty("servings").GetDecimal());
         Assert.Equal("lunch", moved.GetProperty("slot").GetString());
     }
@@ -58,7 +45,6 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Move_ShouldPlaceAMealWhereItWasDropped()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -76,14 +62,11 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
                 Token),
             Monday)[2];
 
-        // Act
-        // The last one, dropped onto the gap above the first.
         var response = await client.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{third.GetProperty("entryId").GetGuid()}",
             new { date = Monday, position = 0 },
             Token);
 
-        // Assert
         var titles = MealsOn(response, Monday)
             .Select(meal => meal.GetProperty("title").GetString())
             .ToList();
@@ -94,10 +77,7 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Move_ShouldCountTheGapsTheSameWayGoingDownAsGoingUp()
     {
-        // Arrange
-        // Moving something down a day is where a reorder goes one off: the
-        // meal vacates a place above its destination on the way past. Dropping
-        // into the gap below everything has to mean the bottom either way.
+        // Moving down a day is where reorders go off by one; dropping below everything must mean the bottom.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -120,15 +100,11 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
             new { date = Monday, position = 0 },
             Token);
 
-        // Act
-        // The day now reads Third, First, Second. First is dragged to the gap
-        // below all three of them.
         var response = await client.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{day[0].GetProperty("entryId").GetGuid()}",
             new { date = Monday, position = 3 },
             Token);
 
-        // Assert
         var titles = MealsOn(response, Monday)
             .Select(meal => meal.GetProperty("title").GetString())
             .ToList();
@@ -139,9 +115,7 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Move_ShouldPlaceAMealWhereItWasDroppedOnADayWithGaps()
     {
-        // Arrange
-        // Taking a meal off leaves its number unused, so the day is no longer
-        // numbered from zero when the next one is dropped onto it.
+        // Removing a meal leaves its number unused, so a day is not numbered from zero.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -163,15 +137,11 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
             $"/api/v1/households/{householdId}/meal-plan/{day[0].GetProperty("entryId").GetGuid()}",
             Token);
 
-        // Act
-        // The day now reads Second, Third, Fourth. Fourth is dropped onto the
-        // gap between the other two.
         var response = await client.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{day[3].GetProperty("entryId").GetGuid()}",
             new { date = Monday, position = 1 },
             Token);
 
-        // Assert
         var titles = MealsOn(response, Monday)
             .Select(meal => meal.GetProperty("title").GetString())
             .ToList();
@@ -182,7 +152,6 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Move_ShouldRefuseAPositionThatIsNotAnIndex()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeAsync(client, householdId, "Curry");
@@ -194,20 +163,17 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
 
         var entryId = MealsOn(planned, Monday)[0].GetProperty("entryId").GetGuid();
 
-        // Act
         var response = await client.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{entryId}",
             new { date = Monday, position = -1 },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
     public async Task Move_ShouldNotFindSomebodyElsesPlannedMeal()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeAsync(client, householdId, "Curry");
@@ -221,13 +187,11 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
 
         using var stranger = await SecondAccountAsync();
 
-        // Act
         var response = await stranger.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{entryId}",
             new { date = Monday.AddDays(1) },
             Token);
 
-        // Assert
         // 404, not 403: a stranger learns nothing about which plans exist.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

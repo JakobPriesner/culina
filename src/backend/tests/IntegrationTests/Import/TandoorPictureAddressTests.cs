@@ -3,17 +3,7 @@ using Infrastructure.Import.Tandoor;
 
 namespace IntegrationTests.Import;
 
-/// <summary>
-/// Which picture addresses the server will follow.
-/// </summary>
-/// <remarks>
-/// The address of a recipe's photo arrives inside a response, which makes it
-/// data from the other server rather than anything a person typed. Following it
-/// wherever it points would hand a compromised — or merely odd — instance the
-/// ability to name the address this server connects to, which is the one thing
-/// the whole import is careful about. So the rule is: the connection's own
-/// origin, and nowhere else.
-/// </remarks>
+/// <summary>The picture address is data from the other server, so only the connection's own origin is followed.</summary>
 public class TandoorPictureAddressTests
 {
     [Theory]
@@ -24,12 +14,9 @@ public class TandoorPictureAddressTests
         "https://recipes.example.com/media/pie.jpg")]
     public void APictureOnTheSameServer_ShouldBeFollowed(string written, string expected)
     {
-        // Act
         var url = TandoorLibrary.OnTheSameServer(Source(), written);
 
-        // Assert
-        // A path is the usual case — Tandoor's own media directory — and a
-        // whole address is what an instance configured with one produces.
+        // A path is the usual case; a whole address is what an instance configured with one produces.
         Assert.Equal(expected, url?.ToString());
     }
 
@@ -47,10 +34,8 @@ public class TandoorPictureAddressTests
     [InlineData("file:///etc/passwd")]
     public void APictureAnywhereElse_ShouldNotBe(string written)
     {
-        // Act
         var url = TandoorLibrary.OnTheSameServer(Source(), written);
 
-        // Assert
         Assert.Null(url);
     }
 
@@ -59,7 +44,6 @@ public class TandoorPictureAddressTests
     [InlineData("   ")]
     public void ARecipeWithNoPicture_ShouldAskForNothing(string written)
     {
-        // Act & Assert
         Assert.Null(TandoorLibrary.OnTheSameServer(Source(), written));
     }
 

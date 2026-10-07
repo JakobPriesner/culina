@@ -61,14 +61,7 @@ internal sealed class WatchRecipeImportEndpoint : IEndpoint
     private static IResult Stream(ImportProgress progress) =>
         TypedResults.ServerSentEvents(Numbered(progress.Events));
 
-    /// <summary>
-    /// Numbers each event, so a reconnect can say where it got to.
-    /// </summary>
-    /// <remarks>
-    /// The id is how many outcomes the stream has sent, which is exactly what
-    /// the handler wants back to resume — no table of offsets, and no meaning
-    /// to keep in step between the two ends.
-    /// </remarks>
+    // The id is how many outcomes were sent, which is exactly what a reconnect needs: no offset table.
     private static async IAsyncEnumerable<SseItem<ImportEvent>> Numbered(
         IAsyncEnumerable<ImportEvent> events)
     {

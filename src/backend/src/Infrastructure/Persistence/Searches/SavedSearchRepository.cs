@@ -33,7 +33,9 @@ internal sealed record SavedSearchRow
 /// <param name="executor">Runs the SQL.</param>
 internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchRepository
 {
-    /// <summary>Named so a future rename fails loudly rather than turning a conflict into a 500.</summary>
+    /// <summary>
+    /// Named so a future rename fails loudly rather than turning a conflict into a 500.
+    /// </summary>
     private const string NamedOnce = "saved_searches_named_once_idx";
 
     private const string Columns =
@@ -88,10 +90,8 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
         }
         catch (PostgresException failure) when (failure.ConstraintName == NamedOnce)
         {
-            // The sanctioned exception to "never catch to return a failure":
-            // two people can save a search by the same name between a check and
-            // this insert, and the unique index is the only place that can
-            // settle the race.
+            // The sanctioned exception to "never catch to return a failure": the unique index alone
+            // settles two people saving the same name at once.
             return SavedSearchErrors.NameTaken;
         }
     }
@@ -112,8 +112,7 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
                 Parameters(search),
                 cancellationToken).ConfigureAwait(false);
 
-            // Deleted between the read and the write, which is the same answer
-            // as never having existed.
+            // Deleted between the read and the write: the same answer as never having existed.
             return rows == 0 ? SavedSearchErrors.NotFound(search.Id) : Result.Success();
         }
         catch (PostgresException failure) when (failure.ConstraintName == NamedOnce)
@@ -153,12 +152,8 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
             row.UpdatedAt);
 
     /// <summary>
-    /// The name as stored.
+    /// The name as stored; a row it would now reject is corrupt, a defect and not a bad request.
     /// </summary>
-    /// <remarks>
-    /// It went through the value object on the way in, so a row carrying one it
-    /// would now reject is a corrupt row — a defect, not a bad request.
-    /// </remarks>
     private static SavedSearchName Unwrap(Result<SavedSearchName> result) =>
         result.Match(
             name => name,

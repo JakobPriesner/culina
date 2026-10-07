@@ -7,37 +7,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Assistance;
 
-/// <summary>
-/// Reading a recipe off an <see cref="IChatClient"/> as it is written.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Shared by the two adapters whose providers offer that interface, for the
-/// same reason their <c>ComposeAsync</c> methods read alike: what differs
-/// between OpenAI and a model on your own machine is where the client points
-/// and what its refusals mean, and neither of those is the loop.
-/// </para>
-/// <para>
-/// The loop is the part that is easy to get wrong twice. A streaming call ends
-/// in three ways — it finishes, it throws something the provider owns, or it
-/// finishes having said nothing usable — and every one of them has to end with
-/// a part carrying <see cref="Composing.Finished"/>, because that part is what
-/// settles the ledger. A provider whose stream simply stopped would otherwise
-/// hold its reservation against the budget until the month turned.
-/// </para>
-/// </remarks>
+/// <summary>Reads a recipe off an <see cref="IChatClient"/> as it is written, shared by the two adapters that offer one.</summary>
 internal static class ChatStream
 {
-    /// <summary>Asks for a recipe and yields it as it arrives.</summary>
-    /// <param name="client">The provider, already pointed and credentialled.</param>
-    /// <param name="request">What to do, and what to do it to.</param>
-    /// <param name="kind">Which provider, for the log line.</param>
-    /// <param name="logger">Records an answer that could not be read.</param>
-    /// <param name="recognised">
-    /// What a thrown failure means to this provider, or null where the failure
-    /// is not one the provider owns and should not be swallowed.
-    /// </param>
-    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <summary>
+    /// Asks for a recipe and yields it as it arrives. <c>recognised</c> maps a provider-owned failure to an error, or null to let it propagate.
+    /// </summary>
+    /// <remarks>
+    /// Every ending (finished, provider failure, unusable answer) yields a <see cref="Composing.Finished"/> part: it settles the ledger,
+    /// and without it the reservation would hold until the month turned.
+    /// </remarks>
     internal static async IAsyncEnumerable<Composing> ComposeAsync(
         IChatClient client,
         Composition request,
@@ -50,9 +29,7 @@ internal static class ChatStream
         var usage = default(ModelUsage);
         string? finishReason = null;
 
-        // Advanced by hand rather than with `await foreach`, because a `yield`
-        // may not live inside a `try` that catches — and every part of this
-        // that talks to the provider has to be inside one.
+        // Advanced by hand: a `yield` cannot sit inside a `try` that catches, and provider calls need one.
         var parts = client
             .GetStreamingResponseAsync(ChatAsk.Conversation(request), ChatAsk.Options(), cancellationToken)
             .GetAsyncEnumerator(cancellationToken);
@@ -64,9 +41,7 @@ internal static class ChatStream
                 ChatResponseUpdate? part = null;
                 Exception? thrown = null;
 
-                // A `yield` may live in a `try` with a `finally` and not in one
-                // with a `catch`, so the failure is caught here and acted on
-                // below rather than where it happened.
+                // The failure is caught here and acted on below, for the same reason.
                 try
                 {
                     if (await parts.MoveNextAsync().ConfigureAwait(false))
@@ -122,15 +97,7 @@ internal static class ChatStream
         yield return new Composing { Recipe = written, Finished = true, Usage = usage };
     }
 
-    /// <summary>
-    /// The last part of a stream that ended badly.
-    /// </summary>
-    /// <remarks>
-    /// It still carries the recipe, and deliberately: a provider that cut out
-    /// after the ingredients wrote something worth keeping, and the screen can
-    /// offer it beside the reason rather than throwing away work that was paid
-    /// for. No usage, because a call that did not finish did not report any.
-    /// </remarks>
+    /// <summary>The last part of a stream that ended badly. Keeps the recipe so far (it was paid for); no usage.</summary>
     private static Composing Stopped(PartialRecipe answer, Error failure) => new()
     {
         Recipe = answer.SoFar(),
@@ -138,14 +105,7 @@ internal static class ChatStream
         Failure = failure
     };
 
-    /// <summary>
-    /// The counts, which arrive once and not necessarily at the end.
-    /// </summary>
-    /// <remarks>
-    /// Kept rather than overwritten: a provider that sends usage mid-stream and
-    /// nothing after it would otherwise be recorded as having cost nothing,
-    /// which is the exact fault the SDKs were adopted to remove.
-    /// </remarks>
+    /// <summary>The counts, which arrive once and not necessarily at the end; kept so mid-stream usage is not overwritten with zero.</summary>
     private static ModelUsage Counted(ChatResponseUpdate part, ModelUsage soFar)
     {
         var counted = part.Contents.OfType<UsageContent>().FirstOrDefault()?.Details;
@@ -159,55 +119,19 @@ internal static class ChatStream
     }
 }
 
-/// <summary>
-/// How a recipe is asked for, wherever it is asked for.
-/// </summary>
-/// <remarks>
-/// <para>
-/// One place, because there are three callers — the two providers that answer
-/// at once and the loop that reads one being written — and three copies of
-/// "what we ask a model for" is three things to keep in step. The first time
-/// they drifted, two of them asked for a shape and the third asked for nothing
-/// in particular.
-/// </para>
-/// <para>
-/// The instruction and the material never meet. The instruction is the system
-/// message and is written by this application; the material is a user message
-/// and is whatever somebody pasted, typed or photographed — which on a shared
-/// instance means whatever somebody <em>else</em> pasted, typed or
-/// photographed.
-/// </para>
-/// </remarks>
+/// <summary>How a recipe is asked for, in one place for all three callers. The instruction (system) and the material (user) never meet.</summary>
 internal static class ChatAsk
 {
     /// <summary>The two turns, kept apart.</summary>
-    /// <param name="request">What to do, and what to do it to.</param>
     internal static List<ChatMessage> Conversation(Composition request) =>
     [
         new(ChatRole.System, request.Instruction),
         new(ChatRole.User, Material(request))
     ];
 
-    /// <summary>
-    /// A structured output, asked for strictly.
-    /// </summary>
+    /// <summary>A structured output, asked for strictly so the provider enforces the schema rather than merely seeing it.</summary>
     /// <remarks>
-    /// <para>
-    /// <c>strict</c> is the difference between a schema the provider enforces
-    /// while it decodes and one it was merely shown. Without it the client
-    /// library still rewrites the schema to require every property — so the
-    /// answer was being asked for in a shape nothing held it to, and the one
-    /// failure mode that survives structured output, an answer that is not the
-    /// shape it was given, stayed possible for no benefit.
-    /// </para>
-    /// <para>
-    /// Set through <c>AdditionalProperties</c> because that is the only way the
-    /// abstraction offers: <c>ChatResponseFormat.ForJsonSchema</c> has no
-    /// parameter for it, and the OpenAI client reads this key. A provider that
-    /// does not know the key ignores it, which is the right behaviour for one
-    /// whose schemas are always enforced — a model on your own machine is
-    /// decoded against the grammar either way.
-    /// </para>
+    /// Set through <c>AdditionalProperties</c> (the only route the abstraction offers); providers that do not know the key ignore it.
     /// </remarks>
     internal static ChatOptions Options() => new()
     {

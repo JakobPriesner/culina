@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace IntegrationTests.Infrastructure;
 
-/// <summary>
-/// Which parts of a path may be written down, and which open something.
-/// </summary>
+/// <summary>Which parts of a path may be written down, and which open something.</summary>
 public class SecretPathsTests
 {
     [Theory]
@@ -19,11 +17,8 @@ public class SecretPathsTests
     [InlineData("/join/BREAD-4711", "/join/***")]
     public void Redact_ShouldReplaceTheSecretSegment_UnderEveryRouteThatCarriesOne(string path, string expected)
     {
-        // Arrange
-        // Act
         var redacted = SecretPaths.Redact(new PathString(path));
 
-        // Assert
         Assert.Equal(expected, redacted);
     }
 
@@ -36,11 +31,8 @@ public class SecretPathsTests
     [InlineData("/")]
     public void Redact_ShouldLeaveThePathAlone_WhenNothingInItOpensAnything(string path)
     {
-        // Arrange
-        // Act
         var redacted = SecretPaths.Redact(new PathString(path));
 
-        // Assert
         // An id names a row and opens nothing on its own; an operator needs it.
         Assert.Equal(path, redacted);
     }

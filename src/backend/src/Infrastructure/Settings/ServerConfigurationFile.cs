@@ -5,15 +5,7 @@ using Microsoft.Extensions.FileProviders;
 
 namespace Infrastructure.Settings;
 
-/// <summary>
-/// Adds the file an administrator's server settings are saved to.
-/// </summary>
-/// <remarks>
-/// Directly above the <c>appsettings</c> files and below everything else —
-/// user secrets, the environment, the command line. So the file overrides the
-/// defaults shipped with the app, and anything the deployment says overrides
-/// the file. See <see cref="IServerConfiguration"/> for why that order.
-/// </remarks>
+/// <summary>Adds the file an administrator's server settings are saved to, above <c>appsettings</c> and below user secrets, environment and command line; see <see cref="IServerConfiguration"/>.</summary>
 public static class ServerConfigurationFile
 {
     /// <summary>The file's name inside <c>Storage__ConfigPath</c>.</summary>
@@ -51,20 +43,12 @@ public static class ServerConfigurationFile
     }
 }
 
-/// <summary>
-/// The settings file as a configuration source, marked so it can be found
-/// among the providers again.
-/// </summary>
+/// <summary>The settings file as a configuration source, marked so it can be found among the providers again.</summary>
 internal sealed class ServerConfigurationSource : JsonConfigurationSource
 {
     /// <summary>Reads <see cref="ServerConfigurationFile.FileName"/> from a directory.</summary>
     /// <param name="directory">The directory, absolute.</param>
-    /// <remarks>
-    /// Read once and never watched: the process runs on the settings it started
-    /// with, and a saved change applies by starting the host again. A directory
-    /// that does not exist yet reads as an empty file — it is created on the
-    /// first save, and the host that starts after that save finds it.
-    /// </remarks>
+    /// <remarks>Read once, never watched: a saved change applies on host restart. A missing directory reads as an empty file.</remarks>
     internal ServerConfigurationSource(string directory)
     {
         Directory = directory;

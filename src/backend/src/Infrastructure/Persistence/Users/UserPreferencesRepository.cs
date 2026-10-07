@@ -21,7 +21,6 @@ internal sealed record UserPreferencesRow
 }
 
 /// <summary>Stores one person's preferences.</summary>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class UserPreferencesRepository(DbExecutor executor) : IUserPreferencesRepository
 {
     public async Task<UserPreferences> GetAsync(Guid userId, CancellationToken cancellationToken)
@@ -43,9 +42,7 @@ internal sealed class UserPreferencesRepository(DbExecutor executor) : IUserPref
     {
         ArgumentNullException.ThrowIfNull(preferences);
 
-        // Upsert rather than insert-or-update in two statements: the row is
-        // created lazily, so the first save is indistinguishable from the
-        // hundredth and neither can race the other.
+        // Upsert: the row is created lazily, so the first save cannot race the hundredth.
         var version = await executor.ExecuteScalarAsync<long?>(
             """
             insert into user_settings (user_id, locale, theme, mode, measurement_system, version)
@@ -72,15 +69,7 @@ internal sealed class UserPreferencesRepository(DbExecutor executor) : IUserPref
     }
 }
 
-/// <summary>
-/// Turns preference rows into domain values and back.
-/// </summary>
-/// <remarks>
-/// Enums are stored as text so a database dump is readable and inserting an
-/// enum member later cannot renumber existing rows. An unknown stored value
-/// falls back to the default rather than throwing: a preference is not worth
-/// failing a request over, and the next save corrects it.
-/// </remarks>
+/// <summary>Turns preference rows into domain values and back. Enums are stored as text; an unknown value falls back to the default rather than failing a request.</summary>
 internal static class UserPreferencesRowMappings
 {
     internal static UserPreferences ToDomain(this UserPreferencesRow row)
@@ -89,10 +78,7 @@ internal static class UserPreferencesRowMappings
 
         return UserPreferences.Restore(
             row.UserId,
-            // An unrecognised stored value falls back to the default rather
-            // than throwing: a preference is not worth failing a request over,
-            // and the next save corrects it. For the language the default is
-            // null — follow the device — which is also what "system" reads as.
+            // Unrecognised values fall back to the default; for language that is null (follow the device).
             PreferenceCodes.ToLanguage(row.Locale),
             row.Theme,
             PreferenceCodes.ToMode(row.Mode) ?? ThemeMode.System,

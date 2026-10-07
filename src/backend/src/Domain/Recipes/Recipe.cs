@@ -2,14 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Recipes;
 
-/// <summary>
-/// A recipe, owned by a household.
-/// </summary>
-/// <remarks>
-/// Only the title is required. Everything else can be filled in later, because
-/// the most common reason to open the create form is to write something down
-/// before forgetting it.
-/// </remarks>
+/// <summary>A recipe, owned by a household. Only the title is required.</summary>
 public sealed class Recipe
 {
     /// <summary>More ingredients than anyone could cook from.</summary>
@@ -69,10 +62,7 @@ public sealed class Recipe
     /// <summary>Time in the oven or on the hob.</summary>
     public int? CookMinutes { get; private set; }
 
-    /// <summary>
-    /// Total time, derived and never stored: a stored total is a second source
-    /// of truth that eventually disagrees with its parts.
-    /// </summary>
+    /// <summary>Derived, never stored: a stored total would eventually disagree with its parts.</summary>
     public int? TotalMinutes => PrepMinutes is null && CookMinutes is null
         ? null
         : (PrepMinutes ?? 0) + (CookMinutes ?? 0);
@@ -106,17 +96,8 @@ public sealed class Recipe
         Groups.SelectMany(group => group.Ingredients);
 
     /// <summary>Starts a new recipe.</summary>
-    /// <param name="householdId">Which household owns it.</param>
-    /// <param name="title">What it is called.</param>
-    /// <param name="createdBy">Who wrote it down.</param>
-    /// <param name="language">The language it is being written in.</param>
-    /// <param name="now">The injected current time.</param>
     /// <remarks>
-    /// The language is asked for rather than defaulted, because the default it
-    /// used to have was English and nothing ever overwrote it for a recipe
-    /// somebody typed. It is not a detail either: the search index picks its
-    /// stemmer from this field, so a German recipe stored as English is one
-    /// <c>Tomaten</c> away from not finding itself.
+    /// The language is required, not defaulted: the search index picks its stemmer from it.
     /// </remarks>
     public static Recipe Create(
         Guid householdId,
@@ -131,13 +112,6 @@ public sealed class Recipe
     }
 
     /// <summary>Rebuilds a recipe from storage.</summary>
-    /// <param name="id">Its id.</param>
-    /// <param name="householdId">Which household owns it.</param>
-    /// <param name="title">What it is called.</param>
-    /// <param name="createdBy">Who wrote it down.</param>
-    /// <param name="createdAt">When it was written down.</param>
-    /// <param name="updatedAt">When it last changed.</param>
-    /// <param name="version">The stored version.</param>
     public static Recipe Restore(
         Guid id,
         Guid householdId,
@@ -149,15 +123,12 @@ public sealed class Recipe
     {
         ArgumentNullException.ThrowIfNull(title);
 
-        // English until Describe says otherwise, which every path out of
-        // storage does: a row carries a language and the reader applies it.
+        // English until Describe says otherwise; every read path applies the row's language.
         return new Recipe(
             id, householdId, title, createdBy, Language.En, createdAt, updatedAt, version);
     }
 
     /// <summary>Sets everything that is not the ingredient list or the steps.</summary>
-    /// <param name="details">The new values.</param>
-    /// <param name="now">The injected current time.</param>
     public Result Describe(RecipeDetails details, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(details);
@@ -179,17 +150,8 @@ public sealed class Recipe
         return Result.Success();
     }
 
-    /// <summary>
-    /// Replaces the ingredient list and the steps together.
-    /// </summary>
-    /// <param name="groups">The new ingredient groups.</param>
-    /// <param name="steps">The new steps.</param>
-    /// <param name="now">The injected current time.</param>
-    /// <remarks>
-    /// They are set in one call because they are not independent: a step may
-    /// only refer to an ingredient the recipe has, so validating either alone
-    /// would let a save pass that the pair does not.
-    /// </remarks>
+    /// <summary>Replaces the ingredient list and the steps together.</summary>
+    /// <remarks>Together because steps may only reference ingredients the recipe has.</remarks>
     public Result SetContents(
         IReadOnlyList<IngredientGroup> groups,
         IReadOnlyList<Step> steps,
@@ -204,16 +166,13 @@ public sealed class Recipe
             .Select(ingredient => ingredient.Id)
             .ToHashSet();
 
-        // Counted before the set collapses them, for the same reason the step
-        // cap is: the limit is on lines a cook reads, not on distinct ids.
+        // Counted before the set collapses duplicates: the limit is on lines, not distinct ids.
         if (lines > MaxIngredients)
         {
             return RecipeErrors.TooManyIngredients;
         }
 
-        // Two lines claiming one id would pass every check here and then fail
-        // as a primary-key violation on insert, which reaches the caller as a
-        // 500 rather than as the validation failure it is.
+        // Duplicate ids would otherwise surface as a primary-key violation (500) on insert.
         if (ingredientIds.Count != lines)
         {
             return RecipeErrors.DuplicateIngredient;
@@ -229,8 +188,7 @@ public sealed class Recipe
             return RecipeErrors.TooManySteps;
         }
 
-        // A step is updated in place by its id, so two sharing one would not
-        // even fail: the second would quietly overwrite the first.
+        // Steps are updated in place by id, so a duplicate would silently overwrite.
         if (steps.DistinctBy(step => step.Id).Count() != steps.Count)
         {
             return RecipeErrors.DuplicateStep;
@@ -248,19 +206,9 @@ public sealed class Recipe
         return Result.Success();
     }
 
-    /// <summary>
-    /// The same recipe in another household, with ids of its own.
-    /// </summary>
-    /// <param name="householdId">The household the copy belongs to.</param>
-    /// <param name="createdBy">Who is making the copy.</param>
-    /// <param name="now">The injected current time.</param>
+    /// <summary>The same recipe in another household, with ids of its own.</summary>
     /// <remarks>
-    /// Independent from the moment it exists: every ingredient line gets a new
-    /// id, and every step's mentions and needs are carried over to the copy's
-    /// own lines. A step still pointing at the original's lines would break the
-    /// first time the other household changed its recipe — and changing it is
-    /// exactly what they are still free to do. The picture is not the domain's
-    /// to copy; it is a stored file, shared by reference.
+    /// Every ingredient gets a new id and steps are remapped to them. The image is shared by reference.
     /// </remarks>
     public Result<Recipe> CopyInto(Guid householdId, Guid createdBy, DateTimeOffset now)
     {
@@ -297,8 +245,6 @@ public sealed class Recipe
     }
 
     /// <summary>Attaches or clears the hero image.</summary>
-    /// <param name="imageId">The stored image, or null to remove it.</param>
-    /// <param name="now">The injected current time.</param>
     public void SetImage(Guid? imageId, DateTimeOffset now)
     {
         ImageId = imageId;
@@ -306,33 +252,11 @@ public sealed class Recipe
     }
 
     /// <summary>Records that this recipe has been written to storage.</summary>
-    /// <param name="version">The version the database assigned.</param>
     public void AcceptVersion(long version) => Version = version;
 
-    /// <summary>
-    /// Reports a step that needs an ingredient the recipe no longer has.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An ingredient that existed before the change gets the more helpful
-    /// "step N still needs that ingredient"; one that never existed gets the
-    /// plain unknown-reference error. The distinction matters because the
-    /// first is an editing mistake with an obvious fix and the second is a
-    /// malformed request.
-    /// </para>
-    /// <para>
-    /// The removals are looked for across every step before the unknown ids
-    /// are, because a step's needs are a set with no order of its own: deciding
-    /// between the two messages by whichever id came out of the set first would
-    /// make the same request answer differently on different runs.
-    /// </para>
-    /// <para>
-    /// This is also what keeps the stored reference index honest. Every id here
-    /// is written to a table with a foreign key onto the ingredient rows, so a
-    /// step allowed through with an id the recipe does not have would fail as a
-    /// database error rather than as a named failure.
-    /// </para>
-    /// </remarks>
+    // Prefers "step N still needs that ingredient" for a removed ingredient over the unknown-reference
+    // error, checked across all steps first so the answer does not depend on set order. Also keeps the
+    // reference table's foreign key from failing as a database error.
     private Error? DanglingReference(IReadOnlyList<Step> steps, HashSet<Guid> ingredientIds)
     {
         var removed = Ingredients.Select(ingredient => ingredient.Id).ToHashSet();
@@ -356,13 +280,6 @@ public sealed class Recipe
 }
 
 /// <summary>Everything about a recipe except its ingredients and steps.</summary>
-/// <param name="Title">What it is called.</param>
-/// <param name="Description">A short introduction.</param>
-/// <param name="Language">The language it is written in.</param>
-/// <param name="Yield">What it makes.</param>
-/// <param name="PrepMinutes">Hands-on time.</param>
-/// <param name="CookMinutes">Time in the oven or on the hob.</param>
-/// <param name="Tags">Its tag slugs.</param>
 public sealed record RecipeDetails(
     RecipeTitle Title,
     string? Description,

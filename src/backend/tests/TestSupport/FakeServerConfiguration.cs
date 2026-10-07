@@ -4,8 +4,8 @@ using Domain.Shared;
 namespace TestSupport;
 
 /// <summary>
-/// The configuration a process started with, in memory, and a settings file
-/// that records what was written to it.
+/// The configuration a process started with, in memory, and a settings file that records what was
+/// written.
 /// </summary>
 public sealed class FakeServerConfiguration : IServerConfiguration
 {

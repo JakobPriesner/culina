@@ -7,14 +7,13 @@ namespace IntegrationTests.Suggestions.Replay;
 /// <param name="RecallAt5">Share of entries whose recipe was in the first five.</param>
 /// <param name="RecallAt10">Share of entries whose recipe was in the first ten.</param>
 /// <param name="ReciprocalRank">
-/// Mean of one over the recipe's position, zero when it was not in the list:
-/// recall that also cares whether the answer was first or fifth.
+/// Mean of one over the recipe's position (zero if absent): recall that cares about first versus
+/// fifth.
 /// </param>
-/// <param name="ChanceAt5">
-/// What recall@5 a shuffled library would have scored, for scale. A ranker is
-/// only worth its SQL by the distance it keeps from this.
+/// <param name="ChanceAt5">The recall@5 a shuffled library would score, for scale.</param>
+/// <param name="Quality">
+/// Whether the shortlists were worth looking at, whatever they predicted.
 /// </param>
-/// <param name="Quality">Whether the shortlists were worth looking at, whatever they predicted.</param>
 internal sealed record ReplayScore(
     int Points,
     double RecallAt5,
@@ -41,29 +40,18 @@ internal sealed record ReplayScore(
 }
 
 /// <summary>
-/// A replay scored twice: on the history the app could not have influenced, and
-/// on the recent past.
+/// A replay scored twice: on history the app could not have influenced, and on the recent past.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Both, because of the caveat in <c>docs/suggestions-research.md</c> §M.1: the
-/// objective is "predict what they cooked", and once the app suggests things,
-/// part of what they cook is the ranker's own output. A weight vector can then
-/// score well by agreeing with an older version of itself.
-/// </para>
-/// <para>
-/// The frozen slice ends the day suggestions shipped, so it stays a permanent
-/// reference point that no later ranking can have shaped. The rolling window is
-/// what the household is like now. A change worth making moves the first without
-/// hurting the second.
-/// </para>
+/// Both, per <c>docs/suggestions-research.md</c> §M.1: once suggestions ship, part of what is
+/// cooked is the ranker's own output. The frozen slice ends the day suggestions shipped; a change
+/// worth making moves it without hurting the rolling window.
 /// </remarks>
 internal sealed record ReplayReport(ReplayScore Frozen, ReplayScore Rolling)
 {
-    /// <summary>The day suggestions first reached anybody's front page, in commit 9ccc063.</summary>
+    /// <summary>The day suggestions first reached a front page, in commit 9ccc063.</summary>
     internal static readonly DateTimeOffset SuggestionsLaunched = new(2026, 9, 18, 0, 0, 0, TimeSpan.Zero);
 
-    /// <summary>How far back "now" reaches, from the newest entry predicted.</summary>
     internal const int RollingDays = 180;
 
     internal static ReplayReport Of(IReadOnlyList<ReplayOutcome> outcomes)
@@ -81,7 +69,6 @@ internal sealed record ReplayReport(ReplayScore Frozen, ReplayScore Rolling)
             ReplayScore.Of([.. outcomes.Where(outcome => outcome.Point.MadeAt > rollingFrom)]));
     }
 
-    /// <summary>A small table, for a test's output and a commit message.</summary>
     public override string ToString() =>
         string.Join(
             Environment.NewLine,

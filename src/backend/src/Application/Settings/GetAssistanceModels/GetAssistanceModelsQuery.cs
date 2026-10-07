@@ -27,10 +27,7 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
     {
         using var tracked = UseCaseActivity.Start("Settings.GetAssistanceModels");
 
-        // Sequential rather than in parallel. Three calls on a screen somebody
-        // opened deliberately is not worth the concurrency, and doing them one
-        // at a time means a slow provider delays the answer rather than three
-        // simultaneous connections to three companies.
+        // Sequential: three calls on a deliberate screen, and a slow provider delays the answer instead of three simultaneous connections.
         List<ProviderModelsContract> listed = [];
 
         foreach (var kind in AssistantKind.All.Where(kind =>
@@ -58,10 +55,7 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
         return listed.Match(
             models =>
             {
-                // How many, and how many of them draw. A provider that answers
-                // with an empty catalogue and one that was never asked look
-                // identical from the screen, and the difference is the whole
-                // of what an administrator needs to know next.
+                // Counts, since an empty catalogue and one never asked look identical on screen.
                 var drawing = models.Count(model => model.CanDraw);
 
                 Listed(logger, kind.Code, models.Count, drawing);
@@ -80,19 +74,14 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
             },
             error =>
             {
-                // Said twice on purpose. The screen carries the reason to the
-                // administrator looking at it now; the log carries it to
-                // whoever reads it afterwards, which is the only record that
-                // one provider out of three stopped answering.
+                // Said twice: the screen tells the administrator now, the log is the only record that one provider stopped answering.
                 CouldNotList(logger, kind.Code, error.Code);
 
                 return new ProviderModelsContract
                 {
                     Provider = kind.Code,
                     Reachable = false,
-                    // The first place an administrator finds out that the key
-                    // they pasted does not work, so the reason is worth
-                    // carrying.
+                    // The first place an administrator learns the pasted key does not work.
                     Problem = error.Code,
                     Models = []
                 };
@@ -111,14 +100,7 @@ internal sealed partial class GetAssistanceModelsQueryHandler(
         Message = "Provider {Provider} could not be asked what it offers: {Reason}")]
     private static partial void CouldNotList(ILogger logger, string provider, string reason);
 
-    /// <summary>
-    /// Enough of a connection to ask what it offers.
-    /// </summary>
-    /// <remarks>
-    /// No model on it: listing is the one call that does not need one, and
-    /// putting a resolved default here would mean the screen could not list
-    /// models until a model had been chosen.
-    /// </remarks>
+    // Enough of a connection to ask what it offers. No model: listing needs none, and a default would block listing until one is chosen.
     private Result<Connected> Resolve(AssistantKind kind)
     {
         if (settings.ConnectionFor(kind) is not { IsUsable: true } connection)

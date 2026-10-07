@@ -7,18 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Persistence.Trash;
 
-/// <summary>
-/// Removes, once a day, what has been in a bin for longer than the retention.
-/// </summary>
+/// <summary>Removes, once a day, what has been in a bin for longer than the retention.</summary>
 /// <remarks>
-/// Daily is precise enough: the promise is "at least thirty days", and a
-/// recipe that goes on day thirty-one has been kept, not lost. A first pass
-/// runs shortly after start, so an instance that was down for a week does not
-/// carry a week's overdue rows until tomorrow.
+/// Daily is precise enough for "at least thirty days". A first pass runs shortly after start, so an
+/// instance that was down for a week does not carry overdue rows until tomorrow.
 /// </remarks>
-/// <param name="scopeFactory">Creates the scope the handler lives in.</param>
-/// <param name="time">The injected clock.</param>
-/// <param name="logger">Records what was removed.</param>
 internal sealed class TrashPurger(
     IServiceScopeFactory scopeFactory,
     TimeProvider time,

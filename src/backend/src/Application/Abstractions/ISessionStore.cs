@@ -29,10 +29,7 @@ public interface ISessionStore
     /// <summary>Saves that a session was used, and how far its expiry moved.</summary>
     /// <param name="session">The touched session.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    /// <returns>
-    /// <c>auth.not_authenticated</c> when the session was revoked or lapsed
-    /// after it was read; it is then left exactly as it is.
-    /// </returns>
+    /// <returns><c>auth.not_authenticated</c> when the session was revoked or lapsed after it was read; it is then left unchanged.</returns>
     Task<Result> RenewAsync(Session session, CancellationToken cancellationToken);
 
     /// <summary>Ends one session.</summary>

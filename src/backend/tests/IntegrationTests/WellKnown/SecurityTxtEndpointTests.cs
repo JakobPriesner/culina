@@ -4,10 +4,6 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.WellKnown;
 
-/// <summary>
-/// security.txt comes from the running instance's configuration, because the
-/// image is the same for everyone and the contact is not.
-/// </summary>
 [Collection(RequiresDatabase.Name)]
 public class SecurityTxtEndpointTests(PostgresFixture postgres)
 {
@@ -68,8 +64,7 @@ public class SecurityTxtEndpointTests(PostgresFixture postgres)
         var response = await client.GetAsync("/.well-known/security.txt", Token);
 
         // Assert
-        // Not the app shell, which is what any other unknown path gets: a
-        // finder must not take a page of HTML for a policy.
+        // Not the app shell: a finder must not take HTML for a policy.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.DoesNotContain("<html", response.Body, StringComparison.OrdinalIgnoreCase);
     }

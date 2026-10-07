@@ -5,36 +5,15 @@ using Domain.Recipes;
 namespace Application.Assistance;
 
 /// <summary>
-/// Turns what a model said into a draft somebody can read.
+/// Turns what a model said into a draft somebody can read. Lenient on purpose: nothing is written down here,
+/// so an unusable unit is dropped, a nameless line or wordless step is dropped, and only an answer with nothing in it is refused.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Lenient on purpose, and this is the one place in the backend where that is
-/// the right answer. Everywhere else a value that cannot become a domain object
-/// is a failure, because everywhere else something is about to be written down.
-/// Nothing is written down here: a draft is shown back for correction, and
-/// refusing a whole recipe because one line said "a splash" would be throwing
-/// away nineteen good lines to be right about one.
-/// </para>
-/// <para>
-/// So a quantity that cannot be a quantity loses its unit and keeps its number,
-/// a line with no name at all is dropped, and a step with no words is dropped.
-/// The result is always something a person can fix by hand, which is what they
-/// were going to do anyway.
-/// </para>
-/// <para>
-/// The one refusal left is an answer with nothing in it — no title, no
-/// ingredients and no steps. That is not a draft to correct, it is a model that
-/// did not answer, and saying so lets somebody ask again.
-/// </para>
-/// </remarks>
 internal static class DraftMapping
 {
-    /// <summary>How long a step's text may be before it is certainly not a step.</summary>
+    // How long a step's text may be before it is certainly not a step.
     private const int LongestStep = 4000;
 
-    /// <summary>Whether there is enough here to be worth showing.</summary>
-    /// <param name="draft">What the model said.</param>
+    // Whether there is enough here to be worth showing.
     internal static bool IsUsable(this DraftedRecipe draft)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -44,24 +23,11 @@ internal static class DraftMapping
             || draft.Steps.Count > 0;
     }
 
-    /// <summary>Turns it into the shape the client reads.</summary>
-    /// <param name="draft">What the model said.</param>
-    /// <remarks>
-    /// A new id every time. Two asks are two drafts, and could become two
-    /// recipes, so they must not share an external id.
-    /// </remarks>
+    // Turns it into the shape the client reads, under a new id: two asks are two drafts.
     internal static Response ToResponse(this DraftedRecipe draft) =>
         draft.ToResponse(Guid.CreateVersion7());
 
-    /// <summary>Turns it into the shape the client reads, under an id of its own.</summary>
-    /// <param name="draft">What the model said.</param>
-    /// <param name="draftId">The id this draft already has.</param>
-    /// <remarks>
-    /// For a draft that arrives in pieces. Every piece is the same draft
-    /// growing, so every piece carries the same id — a fresh one per piece
-    /// would leave a client unable to tell a second ask from the next few
-    /// characters of the first.
-    /// </remarks>
+    // As above under the draft's own id: every piece of a streamed draft is the same draft growing.
     internal static Response ToResponse(this DraftedRecipe draft, Guid draftId)
     {
         ArgumentNullException.ThrowIfNull(draft);
@@ -90,15 +56,7 @@ internal static class DraftMapping
         Ingredients = [.. group.Ingredients.Select(ToIngredient).OfType<DraftIngredientContract>()]
     };
 
-    /// <summary>
-    /// One line, or nothing when it has no noun.
-    /// </summary>
-    /// <remarks>
-    /// The name is the only part that cannot be missing. A line with an amount
-    /// and no ingredient is not a shorter line, it is a mistake — and one the
-    /// person correcting the draft could not fix without knowing what the model
-    /// meant.
-    /// </remarks>
+    // One line, or nothing without a noun: an amount with no ingredient is a mistake the person could not fix.
     private static DraftIngredientContract? ToIngredient(DraftedIngredient line)
     {
         if (Trimmed(line.Name) is not { } name)
@@ -115,21 +73,13 @@ internal static class DraftMapping
         };
     }
 
-    /// <summary>
-    /// The unit if the app could store it, otherwise nothing.
-    /// </summary>
-    /// <remarks>
-    /// Asked of the domain rather than guessed at here, so the rule has one
-    /// home. A unit is any word, so most of what a model writes survives; what
-    /// does not is the classic "200g" arriving as a unit because the amount
-    /// lost its space, and dropping it keeps the 200.
-    /// </remarks>
+    // The unit if the domain could store it, else nothing: drops "200g" arriving as a unit and keeps the 200.
     private static string? Usable(string? unit) =>
         string.IsNullOrWhiteSpace(unit)
             ? null
             : Unit.Create(unit).Match<string?>(measure => measure.Code, _ => null);
 
-    /// <summary>One step, or nothing when it says nothing.</summary>
+    // One step, or nothing when it says nothing.
     private static DraftStepContract? ToStep(DraftedStep step)
     {
         if (Trimmed(step.Text) is not { } text || text.Length > LongestStep)
@@ -145,11 +95,7 @@ internal static class DraftMapping
         };
     }
 
-    /// <summary>Times outside what a recipe can hold are dropped, not clamped.</summary>
-    /// <remarks>
-    /// Clamping would turn a model's nonsense into a plausible number somebody
-    /// might not check. A blank is obviously a blank.
-    /// </remarks>
+    // Times outside what a recipe can hold are dropped, not clamped, so nonsense never becomes a plausible number.
     private static int? Minutes(int? value) => value is > 0 and <= Recipe.MaxMinutes ? value : null;
 
     private static string? Trimmed(string? value) =>

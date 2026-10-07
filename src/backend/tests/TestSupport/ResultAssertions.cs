@@ -3,21 +3,10 @@ using Xunit.Sdk;
 
 namespace TestSupport;
 
-/// <summary>
-/// Reads a <see cref="Result"/> in a test.
-/// </summary>
-/// <remarks>
-/// <c>Match</c> is the only way to observe an outcome, which is exactly right
-/// in production code and verbose in an assertion. These live in one place so
-/// the pattern is not rewritten in every test, and they always compare the
-/// error <b>code</b> — never the description, which is prose and will be
-/// reworded.
-/// </remarks>
+/// <summary>Reads a <see cref="Result"/> in a test, always comparing the error <b>code</b>, never the reworded description.</summary>
 public static class ResultAssertions
 {
     /// <summary>Asserts success and returns the value.</summary>
-    /// <typeparam name="TValue">What the operation produced.</typeparam>
-    /// <param name="result">The outcome under test.</param>
     public static TValue ShouldBeSuccess<TValue>(this Result<TValue> result)
         where TValue : notnull =>
         result.Match(
@@ -25,8 +14,6 @@ public static class ResultAssertions
             error => throw new XunitException(
                 $"Expected success, but the operation failed with '{error.Code}': {error.Description}"));
 
-    /// <summary>Asserts success.</summary>
-    /// <param name="result">The outcome under test.</param>
     public static void ShouldBeSuccess(this Result result) =>
         result.Match(
             () => { },
@@ -34,8 +21,6 @@ public static class ResultAssertions
                 $"Expected success, but the operation failed with '{error.Code}': {error.Description}"));
 
     /// <summary>Asserts failure with the expected error code.</summary>
-    /// <param name="result">The outcome under test.</param>
-    /// <param name="expected">The error the operation should have returned.</param>
     public static void ShouldBeFailure(this Result result, Error expected)
     {
         ArgumentNullException.ThrowIfNull(expected);
@@ -46,9 +31,6 @@ public static class ResultAssertions
     }
 
     /// <summary>Asserts failure with the expected error code.</summary>
-    /// <typeparam name="TValue">What a success would have produced.</typeparam>
-    /// <param name="result">The outcome under test.</param>
-    /// <param name="expected">The error the operation should have returned.</param>
     public static void ShouldBeFailure<TValue>(this Result<TValue> result, Error expected)
         where TValue : notnull
     {
@@ -60,8 +42,6 @@ public static class ResultAssertions
     }
 
     /// <summary>Asserts failure and returns the error, for asserting on its causes.</summary>
-    /// <typeparam name="TValue">What a success would have produced.</typeparam>
-    /// <param name="result">The outcome under test.</param>
     public static Error ShouldBeFailure<TValue>(this Result<TValue> result)
         where TValue : notnull =>
         result.Match<Error>(

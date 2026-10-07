@@ -1,14 +1,6 @@
 namespace Api.Infrastructure;
 
-/// <summary>
-/// The per-request values the pipeline puts on <see cref="HttpContext.Items"/>.
-/// </summary>
-/// <remarks>
-/// <c>RequestContextMiddleware</c> writes these; problem documents, log scopes
-/// and the SPA's content-security policy read them. A problem document leaves
-/// its error code here for the request line, and authentication leaves the
-/// session's CSRF digest for <c>CsrfMiddleware</c>.
-/// </remarks>
+/// <summary>The per-request values the pipeline puts on <see cref="HttpContext.Items"/>, written by <c>RequestContextMiddleware</c> and authentication.</summary>
 internal static class RequestContext
 {
     private const string RequestIdKey = "culina.request_id";
@@ -19,10 +11,7 @@ internal static class RequestContext
     internal static void SetRequestId(HttpContext context, string requestId) =>
         context.Items[RequestIdKey] = requestId;
 
-    /// <summary>
-    /// The correlation id, or null before <c>RequestContextMiddleware</c> has
-    /// run — which happens for responses written by the host itself.
-    /// </summary>
+    /// <summary>The correlation id, or null before <c>RequestContextMiddleware</c> has run (e.g. host-written responses).</summary>
     internal static string? RequestId(HttpContext context) =>
         context.Items.TryGetValue(RequestIdKey, out var value) ? value as string : null;
 
@@ -43,10 +32,7 @@ internal static class RequestContext
     internal static void SetCsrfTokenHash(HttpContext context, ReadOnlyMemory<byte> digest) =>
         context.Items[CsrfTokenHashKey] = digest;
 
-    /// <summary>
-    /// The CSRF digest of the session this request was authenticated with, or
-    /// null when authentication admitted none.
-    /// </summary>
+    /// <summary>The CSRF digest of the session this request authenticated with, or null when none was admitted.</summary>
     internal static ReadOnlyMemory<byte>? CsrfTokenHash(HttpContext context) =>
         context.Items.TryGetValue(CsrfTokenHashKey, out var value) ? value as ReadOnlyMemory<byte>? : null;
 }

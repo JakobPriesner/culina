@@ -1,21 +1,9 @@
 namespace Domain.Assistance;
 
 /// <summary>
-/// One of the four things the assistant can be asked to do.
+/// One of the four things the assistant can be asked to do. A string like <see cref="AssistantKind"/>, kept
+/// per use (not merged into "compose") so the ledger shows where the money went.
 /// </summary>
-/// <remarks>
-/// <para>
-/// A string for the same reason <see cref="AssistantKind"/> is one: every use
-/// is written to the ledger, and the admin screen that reads it back is a table
-/// somebody has to be able to make sense of.
-/// </para>
-/// <para>
-/// Four capabilities, but only two of them are different work — three compose a
-/// recipe and one draws a picture. They are kept apart here anyway, because
-/// what this type is for is telling somebody where their money went, and
-/// "compose" would answer that question with a word nobody used.
-/// </para>
-/// </remarks>
 public sealed record Capability
 {
     private Capability(string code) => Code = code;

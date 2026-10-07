@@ -3,23 +3,9 @@ using Domain.Shared;
 namespace Domain.Import;
 
 /// <summary>
-/// Another app's recipe library, connected to this household.
+/// Another app's recipe library connected to a household, remembered so repeat imports need no new token.
+/// <see cref="Secret"/> goes only to the database and an <c>Authorization</c> header; no response carries it.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Remembered rather than asked for each time, because importing is not a
-/// one-off. The reason somebody connects a Tandoor instance is that they are
-/// moving out of it, and moving out of an app takes weeks: you bring the
-/// hundred you cook from, you use this app for a month, and then you come back
-/// for the rest. A connection that forgot itself would ask for the token again
-/// every time.
-/// </para>
-/// <para>
-/// It holds a credential, which is the whole reason <see cref="Secret"/> is
-/// write-only from the outside: it goes into the database and into an
-/// <c>Authorization</c> header, and into nothing else. No response carries it.
-/// </para>
-/// </remarks>
 public sealed class RecipeSource
 {
     /// <summary>Longer than any name anyone gives a server of their own.</summary>
@@ -68,15 +54,9 @@ public sealed class RecipeSource
     public SourceAddress Address { get; }
 
     /// <summary>
-    /// The API token, or null when the stored one can no longer be read.
+    /// The API token, or null when the stored one can no longer be decrypted (a restore without the key ring).
     /// Never returned to a caller.
     /// </summary>
-    /// <remarks>
-    /// Null is what an instance restored without its key ring finds: the token
-    /// was stored encrypted, the ciphertext is intact, and nothing can decrypt
-    /// it. The connection still lists and can still be disconnected; reading
-    /// from it waits until somebody connects it again.
-    /// </remarks>
     public string? Secret { get; }
 
     /// <summary>Whether this connection has to be made again before it can be read.</summary>
@@ -88,14 +68,7 @@ public sealed class RecipeSource
     /// <summary>When it was connected.</summary>
     public DateTimeOffset CreatedAt { get; }
 
-    /// <summary>
-    /// When recipes were last taken from it, or null if never.
-    /// </summary>
-    /// <remarks>
-    /// The difference between "connected" and "used", which is the difference
-    /// between a connection worth offering again and one somebody set up and
-    /// forgot.
-    /// </remarks>
+    /// <summary>When recipes were last taken from it, or null if never.</summary>
     public DateTimeOffset? LastUsedAt { get; private set; }
 
     /// <summary>Incremented by every write.</summary>
@@ -133,8 +106,6 @@ public sealed class RecipeSource
             return ImportErrors.InvalidSourceToken;
         }
 
-        // Named after its address when nobody says otherwise, which is both
-        // what it is and what distinguishes two of them.
         var name = string.IsNullOrWhiteSpace(label) ? address.Origin.Host : label.Trim();
 
         return name.Length > MaxLabelLength

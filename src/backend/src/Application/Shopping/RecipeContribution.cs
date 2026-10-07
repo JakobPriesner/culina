@@ -5,24 +5,17 @@ using Domain.Shopping;
 
 namespace Application.Shopping;
 
-/// <summary>
-/// What a recipe puts on the list, at the servings being cooked.
-/// </summary>
+/// <summary>What a recipe puts on the list, at the servings being cooked.</summary>
 /// <remarks>
-/// One path for every way a recipe reaches the list — from its page, from a
-/// cookbook, from a planned week — because merging is the entire value of the
-/// list, and two paths would be two places for it to be subtly different.
+/// One path for every way a recipe reaches the list (page, cookbook, planned week): merging is the
+/// list's whole value, and two paths would drift.
 /// </remarks>
 internal static class RecipeContribution
 {
-    /// <summary>Adds every ingredient, each remembering which recipe and meal asked for it.</summary>
-    /// <param name="list">The list to add to.</param>
-    /// <param name="recipe">The recipe.</param>
-    /// <param name="servings">How many it is being made for.</param>
-    /// <param name="planEntryId">The planned meal it is for, or null for the recipe by itself.</param>
-    /// <param name="plannedDate">Which day that meal is planned for.</param>
-    /// <param name="plannedSlot">Which meal of that day it is.</param>
-    /// <param name="overrides">Where this household says things are found.</param>
+    /// <summary>
+    /// Adds every ingredient, each remembering which recipe and meal asked for it; a null
+    /// <c>planEntryId</c> means the recipe by itself.
+    /// </summary>
     internal static Result Add(
         ShoppingList list,
         Recipe recipe,
@@ -32,14 +25,11 @@ internal static class RecipeContribution
         MealSlot? plannedSlot,
         IReadOnlyDictionary<string, ShoppingSection> overrides)
     {
-        // Exact decimal arithmetic, and the sum is stored unrounded. A recipe
-        // for two scaled to five contributes 2.5 × its amounts, and three such
-        // recipes must add up to what they actually add up to — rounding each
-        // one first would compound the error into a number nobody asked for.
+        // Exact decimal arithmetic, summed unrounded: rounding each recipe first would compound the
+        // error.
         var factor = recipe.Yield.Amount > 0 ? servings / recipe.Yield.Amount : 1m;
 
-        // `Bind` short-circuits, so the first ingredient that cannot be read
-        // stops the rest: half a recipe on the list is worse than none of it.
+        // `Bind` short-circuits: half a recipe on the list is worse than none.
         return recipe.Groups
             .SelectMany(group => group.Ingredients)
             .Aggregate(
@@ -60,12 +50,9 @@ internal static class RecipeContribution
     }
 
     /// <summary>
-    /// Multiplies an amount, leaving alone the ones that do not scale.
+    /// Multiplies an amount, leaving alone the ones that do not scale: a pinch is a gesture, and no
+    /// amount has nothing to multiply.
     /// </summary>
-    /// <remarks>
-    /// A pinch is a gesture: doubling a recipe does not double it. An
-    /// ingredient with no amount has nothing to multiply.
-    /// </remarks>
     private static Quantity Scale(Quantity quantity, decimal factor)
     {
         if (!quantity.Scales || quantity.Amount is not { } amount)

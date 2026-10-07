@@ -21,20 +21,11 @@ public enum MeasurementSystem
     /// <summary>Grams, millilitres, Celsius.</summary>
     Metric = 0,
 
-    /// <summary>
-    /// Ounces, cups, Fahrenheit. Stored from the start but not yet rendered:
-    /// converting honestly is harder than it looks, so v1 always shows metric.
-    /// </summary>
+    /// <summary>Ounces, cups, Fahrenheit. Stored but not yet rendered: v1 always shows metric.</summary>
     Imperial = 1
 }
 
-/// <summary>
-/// How one person wants the app to look and read.
-/// </summary>
-/// <remarks>
-/// Person-owned, never household-owned: two people sharing a kitchen do not
-/// share an appetite for dark mode.
-/// </remarks>
+/// <summary>How one person wants the app to look and read. Person-owned, never household-owned.</summary>
 public sealed class UserPreferences
 {
     /// <summary>The longest theme id the database column accepts.</summary>
@@ -62,22 +53,10 @@ public sealed class UserPreferences
     /// <summary>Whose preferences these are.</summary>
     public Guid UserId { get; }
 
-    /// <summary>
-    /// The language they read the interface in, or null when it follows
-    /// whichever device they are reading on.
-    /// </summary>
-    /// <remarks>
-    /// Null is a choice, not the absence of one, and it is where everybody
-    /// starts: a phone set to German and a laptop set to English can each read
-    /// in their own language. Anything the server has to write in a language
-    /// asks the device that is asking — see <c>Accept-Language</c>.
-    /// </remarks>
+    /// <summary>The language they read the interface in, or null to follow the device (a choice, and the default; see <c>Accept-Language</c>).</summary>
     public Language? Language { get; private set; }
 
-    /// <summary>
-    /// The theme id. A free string rather than an enum, because themes are
-    /// files in the frontend and the backend has no business enumerating them.
-    /// </summary>
+    /// <summary>The theme id: a free string, since themes are frontend files.</summary>
     public string Theme { get; private set; }
 
     /// <summary>Light, dark, or follow the device.</summary>
@@ -91,14 +70,7 @@ public sealed class UserPreferences
 
     /// <summary>The preferences a new account starts with.</summary>
     /// <remarks>
-    /// Version zero, because nothing has been written yet and the read of these
-    /// carries an ETag derived from it. At version one it was indistinguishable
-    /// from the row the first save creates — so that save changed the values,
-    /// left the ETag alone, and the next read was answered 304 with the
-    /// defaults. The first time anybody chose a language, a theme, an
-    /// appearance or a unit system, it saved and the app went on showing what
-    /// it had. The second change worked, which is what made it look like a
-    /// timing problem.
+    /// Version zero, not one: at one the ETag matched the row the first save creates, so that save was answered 304 with the defaults.
     /// </remarks>
     /// <param name="userId">Whose they are.</param>
     public static UserPreferences Default(Guid userId) =>

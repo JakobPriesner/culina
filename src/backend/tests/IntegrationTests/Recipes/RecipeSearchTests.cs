@@ -22,7 +22,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Never a bare array: an array has nowhere to grow paging metadata.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(3, response.Json!.Value.GetProperty("total").GetInt32());
         Assert.Equal(3, response.Json!.Value.GetProperty("items").GetArrayLength());
@@ -56,8 +55,7 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Bolognese has no stated time, so it is excluded rather than counted
-        // as zero minutes: "I have 25 minutes" asks for recipes known to fit.
+        // Bolognese has no stated time, so it is excluded rather than counted as zero.
         Assert.Equal(["Omelette"], Titles(response));
     }
 
@@ -76,7 +74,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Repeating a tag means "both", not "either".
         Assert.Equal(["Omelette"], Titles(both));
         Assert.Equal(2, one.Json!.Value.GetProperty("items").GetArrayLength());
     }
@@ -85,8 +82,7 @@ public class RecipeSearchTests(PostgresFixture postgres)
     public async Task Search_ShouldAskForATagOnce_WhenItIsGivenTwice()
     {
         // Arrange
-        // A recipe carries a tag once, so asking for it twice asked for
-        // something no recipe could satisfy and quietly returned nothing.
+        // A repeated tag must not become an unsatisfiable requirement.
         var world = await SeedAsync();
 
         // Act
@@ -114,8 +110,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // This is the whole "what can I cook?" feature: no pantry, so nothing
-        // to go stale.
         var first = response.Json!.Value.GetProperty("items")[0];
         Assert.Equal("Lasagne", first.GetProperty("title").GetString());
         var match = first.GetProperty("ingredientMatch");
@@ -136,7 +130,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // A plain browse should not be cluttered with "uses 0 of 0".
         var first = response.Json!.Value.GetProperty("items")[0];
         Assert.Equal(System.Text.Json.JsonValueKind.Null, first.GetProperty("ingredientMatch").ValueKind);
     }
@@ -163,7 +156,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
         while (cursor is not null);
 
         // Assert
-        // Keyset paging, so the pages tile the result set exactly.
         Assert.Equal(["Bolognese", "Lasagne", "Omelette"], seen);
     }
 
@@ -181,9 +173,7 @@ public class RecipeSearchTests(PostgresFixture postgres)
         string forged)
     {
         // Arrange
-        // Opaque is not sealed: anybody can base64 some JSON, and the keys are
-        // cast in SQL. One that is not what the sort writes is as unreadable
-        // as a malformed cursor, and gets the same answer: the first page.
+        // Cursors are forgeable and their keys are cast in SQL; mismatched keys are treated as a malformed cursor.
         var world = await SeedAsync();
         var path = $"/api/v1/recipes?householdId={world.HouseholdId}&sort={Uri.EscapeDataString(sort)}";
         var cursor = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(forged));
@@ -201,9 +191,7 @@ public class RecipeSearchTests(PostgresFixture postgres)
     public async Task Search_ShouldResume_WhenACursorScoreIsTooSmallForPostgreSqlToRead()
     {
         // Arrange
-        // A double that underflows to zero here is "out of range" to
-        // PostgreSQL, so the key is written back as the zero it was read as
-        // rather than passed through as it came.
+        // A double that underflows to zero is "out of range" to PostgreSQL, so it is written back as zero.
         var world = await SeedAsync();
         var cursor = Base64Url.EncodeToString(
             Encoding.UTF8.GetBytes("""{"Sort":4,"Keys":["0","1e-400","2026-10-01T00:00:00Z"]}"""));
@@ -244,7 +232,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // A recipe with no stated time is not "the quickest", it is unknown.
         Assert.Equal(["Omelette", "Lasagne", "Bolognese"], Titles(response));
     }
 
@@ -260,7 +247,6 @@ public class RecipeSearchTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // A silently ignored parameter returns data that looks right.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 

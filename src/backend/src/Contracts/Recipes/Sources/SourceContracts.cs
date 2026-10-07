@@ -9,44 +9,16 @@ public sealed record ConnectSourceRequest
     /// <summary>Which app. Currently only <c>tandoor</c>.</summary>
     public required string Kind { get; init; }
 
-    /// <summary>
-    /// Where it is: <c>https://recipes.example.com</c>.
-    /// </summary>
-    /// <remarks>
-    /// Anything after the host is dropped, because people paste what is in the
-    /// address bar and a path kept here would be prefixed onto every request
-    /// this connection ever makes.
-    /// </remarks>
+    /// <summary>Where it is, such as <c>https://recipes.example.com</c>. Anything after the host is dropped.</summary>
     public required string Address { get; init; }
 
-    /// <summary>
-    /// The API token from that app.
-    /// </summary>
-    /// <remarks>
-    /// Goes in, and never comes back out. No response on this API carries it.
-    /// Send this <em>or</em> a username and password, never both.
-    /// </remarks>
+    /// <summary>The app's API token. Never returned. Send this or a username and password, not both.</summary>
     public string? Token { get; init; }
 
-    /// <summary>
-    /// The name that account signs in with over there.
-    /// </summary>
-    /// <remarks>
-    /// The alternative to <see cref="Token"/>, and the one most people can
-    /// actually supply: "make an API token first" is a thing somebody has to go
-    /// and learn before they can start, and it is where most attempts to move
-    /// recipes stop.
-    /// </remarks>
+    /// <summary>The account name over there; the alternative to <see cref="Token"/>.</summary>
     public string? Username { get; init; }
 
-    /// <summary>
-    /// The password for that account.
-    /// </summary>
-    /// <remarks>
-    /// Used once, to ask that app for a token, and then dropped. It is never
-    /// stored, never logged, and never returned. What is kept is the token that
-    /// came back — the same token the person would have made by hand.
-    /// </remarks>
+    /// <summary>Used once to obtain a token, then dropped. Never stored, logged or returned.</summary>
     public string? Password { get; init; }
 
     /// <summary>What to call it here. Its host name, when this is left out.</summary>
@@ -108,88 +80,38 @@ public sealed record SourceRecipeSummary
     public string? Description { get; init; }
 
     /// <summary>
-    /// A picture of it, over there.
+    /// A picture of it, over there. Not drawn in the picker (a browser has no token for that server);
+    /// this server fetches it on import.
     /// </summary>
-    /// <remarks>
-    /// Reported, but deliberately not drawn in the picker. A browser loading it
-    /// would be asking that server directly, with no token — and media behind a
-    /// sign-in is common enough that a grid of broken pictures is the likelier
-    /// outcome than a grid of photos. The picture is fetched by this server,
-    /// with the token, when the recipe is actually brought over.
-    /// </remarks>
     public string? ImageUrl { get; init; }
 
     /// <summary>How long it takes, when that app says.</summary>
     public int? TotalMinutes { get; init; }
 
-    /// <summary>
-    /// The recipe this one already is here, when it has been brought over
-    /// before.
-    /// </summary>
-    /// <remarks>
-    /// The single most important field on this contract. Importing is not a
-    /// one-off — people come back for what is new — and a picker that cannot
-    /// say "you already have this" makes the second visit as much work as the
-    /// first.
-    /// </remarks>
+    /// <summary>The recipe here that this one was already imported as, if any.</summary>
     public Guid? AlreadyHere { get; init; }
 }
 
 /// <summary>Asks for some of their recipes to be brought over.</summary>
 public sealed record ImportFromSourceRequest
 {
-    /// <summary>
-    /// Which of their recipes, by the id the browse gave back.
-    /// </summary>
-    /// <remarks>
-    /// The whole selection, in one request. It names the work rather than doing
-    /// it: the answer comes back as soon as the import has a name and a shelf,
-    /// and the recipes arrive afterwards, over the stream.
-    /// </remarks>
+    /// <summary>The whole selection, by the ids the browse gave back. Answered once the import is named; recipes follow over the stream.</summary>
     public required IReadOnlyList<string> ExternalIds { get; init; }
 
-    /// <summary>
-    /// Bring them over even where one looks like a recipe already here.
-    /// </summary>
-    /// <remarks>
-    /// Off unless somebody said so, recipe by recipe, having been shown what
-    /// each one looks like: a household may genuinely want two Bolognese, and
-    /// only a person can say that it does.
-    /// </remarks>
+    /// <summary>Bring them over even where one looks like a recipe already here. Only set after the person confirmed it.</summary>
     public bool AllowLookalikes { get; init; }
 
-    /// <summary>
-    /// The shelf of an earlier import to land on, instead of a new one.
-    /// </summary>
-    /// <remarks>
-    /// What "import these anyway" sends, so the recipes held back from an
-    /// import end up beside the ones that came over with them rather than on a
-    /// second shelf with the same name.
-    /// </remarks>
+    /// <summary>The shelf of an earlier import to land on, instead of a new one.</summary>
     public Guid? CookbookId { get; init; }
 }
 
 /// <summary>An import that has been accepted and is now running.</summary>
-/// <remarks>
-/// Everything a caller needs to follow it and to leave: the id of the stream to
-/// listen on, and the shelf the recipes are landing on whether or not anybody
-/// is still watching.
-/// </remarks>
 public sealed record ImportStartedResponse
 {
     /// <summary>Which import. Stream it at <c>imports/{importId}/events</c>.</summary>
     public required Guid ImportId { get; init; }
 
-    /// <summary>
-    /// The cookbook everything from this import is going onto.
-    /// </summary>
-    /// <remarks>
-    /// Known before the first recipe is fetched, which is what lets the screen
-    /// offer the way out of it from the beginning. Four hundred recipes
-    /// arriving into a library is invisible; four hundred recipes on a shelf
-    /// called "From Tandoor, 17 September" is a thing you can look at, share,
-    /// and delete.
-    /// </remarks>
+    /// <summary>The cookbook everything from this import is going onto; known before the first recipe is fetched.</summary>
     public required Guid CookbookId { get; init; }
 
     /// <summary>What it is called.</summary>
@@ -199,12 +121,10 @@ public sealed record ImportStartedResponse
     public required int Total { get; init; }
 }
 
-/// <summary>One line of an import's progress, as the stream sends it.</summary>
-/// <remarks>
-/// One event per recipe finished, in the order they finished, and one last
-/// event with no recipe on it saying the run is over. Every event carries the
-/// running count, so a client that joined late or missed one is still right.
-/// </remarks>
+/// <summary>
+/// One line of an import's progress: one per finished recipe, then a last one with no recipe.
+/// Each carries the running count, so a late joiner is still right.
+/// </summary>
 public sealed record ImportEvent
 {
     /// <summary>What happened to one recipe, or null on the last event.</summary>
@@ -229,21 +149,11 @@ public sealed record ImportedRecipe
 
     /// <summary>
     /// <c>imported</c>, <c>already_here</c>, <c>looks_like</c> or <c>failed</c>.
+    /// Only <c>failed</c> is an error; <c>looks_like</c> is held back for a person to decide.
     /// </summary>
-    /// <remarks>
-    /// "We already had it" is not a failure and must not be counted as one.
-    /// Nor is <c>looks_like</c>: the recipe was read and could have been
-    /// written, and was held back only because the household has one like it —
-    /// a question for a person, not something that went wrong. Told per recipe
-    /// rather than as a total, so twelve that could not be read can be shown
-    /// by name instead of as a number.
-    /// </remarks>
     public required string Outcome { get; init; }
 
-    /// <summary>
-    /// The recipe here, when there is one: the one it became, the one it
-    /// already was, or the one it looks like.
-    /// </summary>
+    /// <summary>The recipe here, when there is one: the one it became, the one it already was, or the one it looks like.</summary>
     public Guid? RecipeId { get; init; }
 
     /// <summary>What it looks like, for <c>looks_like</c>.</summary>
@@ -256,10 +166,7 @@ public sealed record ImportedRecipe
     public string? Reason { get; init; }
 }
 
-/// <summary>
-/// A recipe already here that an imported one looks like — "Sieht aus wie
-/// „Spaghetti Bolognese“ (12× gekocht, 4 gleiche Zutaten)".
-/// </summary>
+/// <summary>A recipe already here that an imported one looks like.</summary>
 public sealed record ImportLookalike
 {
     /// <summary>Its title.</summary>

@@ -3,13 +3,9 @@ using Domain.Shared;
 namespace Domain.Users;
 
 /// <summary>
-/// The canonical lowercase spelling of every preference value.
+/// The canonical lowercase spelling of every preference value, defined once for the wire contract
+/// and the storage mapper.
 /// </summary>
-/// <remarks>
-/// One definition, used by the wire contract and by the storage mapper alike.
-/// They were briefly two identical switch expressions in two layers, which is
-/// how "system" and "System" become different values in three places.
-/// </remarks>
 public static class PreferenceCodes
 {
     /// <summary>The code for following the device, for a language or an appearance.</summary>
@@ -39,8 +35,8 @@ public static class PreferenceCodes
     };
 
     /// <summary>
-    /// Reads a language code, or null when it is not one — <c>system</c>
-    /// included, which leaves the language to the device.
+    /// Reads a language code, or null when it is not one; <c>system</c> included, which leaves it
+    /// to the device.
     /// </summary>
     public static Language? ToLanguage(string? code) => code switch
     {

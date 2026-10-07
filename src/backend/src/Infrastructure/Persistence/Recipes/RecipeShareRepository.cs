@@ -50,11 +50,8 @@ internal sealed class RecipeShareRepository(DbExecutor executor) : IRecipeShareR
     {
         ArgumentNullException.ThrowIfNull(share);
 
-        // `do nothing` and then read: the insert and the read of what is
-        // actually there happen in one statement, so two people pressing share
-        // at the same moment are handed the identical link rather than one of
-        // them replacing the other's. `returning` alone would say nothing when
-        // the conflict fired, which is exactly the case that has to work.
+        // Insert and read in one statement, so concurrent shares get the identical link;
+        // `returning` alone returns nothing when the conflict fires.
         var row = await executor.QuerySingleOrDefaultAsync<RecipeShareRow>(
             $"""
              with inserted as (
@@ -82,9 +79,7 @@ internal sealed class RecipeShareRepository(DbExecutor executor) : IRecipeShareR
 
     public async Task<Result> RemoveAsync(Guid recipeId, CancellationToken cancellationToken)
     {
-        // Deleting nothing is success: "this recipe is not shared" is the state
-        // the caller asked for, and a second tap on "stop sharing" is not an
-        // error to put on somebody's screen.
+        // Deleting nothing is success: "not shared" is the requested state.
         await executor.ExecuteAsync(
             "delete from recipe_shares where recipe_id = @recipeId;",
             new { recipeId },

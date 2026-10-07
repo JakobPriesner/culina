@@ -31,10 +31,7 @@ internal sealed class DeleteHouseholdEndpoint : IEndpoint
 
                         return result.Match(
                             Results.NoContent,
-                            // Already in the bin, never there, or not the
-                            // caller's: one answer for all three, as a recipe
-                            // gives. A second tap on Delete is the outcome the
-                            // caller wanted, and a stranger learns nothing.
+                            // One answer for in the bin, never there, or not the caller's, as a recipe gives.
                             error => error.Code == HouseholdErrors.NotFound(householdId).Code
                                 ? Results.NoContent()
                                 : CustomResults.Problem(error));

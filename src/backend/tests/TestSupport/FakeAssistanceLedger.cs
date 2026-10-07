@@ -4,25 +4,16 @@ using Domain.Shared;
 
 namespace TestSupport;
 
-/// <summary>
-/// Counts what was asked for, without a database.
-/// </summary>
-/// <remarks>
-/// Records the settlements rather than the reservations, because the property
-/// worth asserting is the one that is easy to get wrong: a call that failed
-/// must still be settled, or its estimate holds budget nobody spent until the
-/// month turns.
-/// </remarks>
+/// <summary>Counts reservations and settlements without a database.</summary>
+/// <remarks>Settlements matter most: a failed call must still be settled, or its estimate holds budget until the month turns.</remarks>
 public sealed class FakeAssistanceLedger : IAssistanceLedger
 {
     private readonly List<Settlement> settled = [];
 
     private readonly List<Reservation> reserved = [];
 
-    /// <summary>What was reserved, in order.</summary>
     public IReadOnlyList<Reservation> Reservations => reserved;
 
-    /// <summary>What was settled, in order.</summary>
     public IReadOnlyList<Settlement> Settled => settled;
 
     /// <summary>When set, every reservation is refused with this.</summary>
@@ -52,7 +43,7 @@ public sealed class FakeAssistanceLedger : IAssistanceLedger
         Task.FromResult(new UsageSummary(0m, 0, 0, 0, 0, [], []));
 }
 
-/// <summary>Prices everything the same, so a test's arithmetic is its own.</summary>
+/// <summary>Prices every call the same.</summary>
 /// <param name="each">What every call costs.</param>
 public sealed class FakeModelPrices(decimal? each = 0.01m) : IModelPrices
 {

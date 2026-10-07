@@ -3,14 +3,11 @@ using Domain.Import;
 
 namespace Domain.UnitTests.Import;
 
-/// <summary>
-/// The one piece of this codebase where a mistake is a hole rather than a bug.
-/// </summary>
+/// <summary>The one piece of this codebase where a mistake is a hole rather than a bug.</summary>
 /// <remarks>
-/// "Paste a link and I will read it" means the server does the reading, from
-/// inside whatever network it is deployed in. Every address below is one
-/// somebody has actually used to make a server read something it should not
-/// have, and each is here because leaving it out is how the next one gets in.
+/// "Paste a link and I will read it" makes the server read from inside whatever network it is
+/// deployed in. Every address below has been used to make a server read what it should not, and
+/// each is here because leaving it out is how the next one gets in.
 /// </remarks>
 public class PublicAddressTests
 {
@@ -40,7 +37,6 @@ public class PublicAddressTests
     [InlineData("255.255.255.255")]
     public void IsPublic_ShouldRefuse_EveryAddressThatIsNotTheOpenInternet(string address)
     {
-        // Arrange & Act & Assert
         Assert.False(PublicAddress.IsPublic(IPAddress.Parse(address)));
     }
 
@@ -67,7 +63,6 @@ public class PublicAddressTests
     [InlineData("4000::1")]
     public void IsPublic_ShouldRefuse_TheSameRangesInIPv6(string address)
     {
-        // Arrange & Act & Assert
         Assert.False(PublicAddress.IsPublic(IPAddress.Parse(address)));
     }
 
@@ -77,7 +72,6 @@ public class PublicAddressTests
     [InlineData("::ffff:10.0.0.1")]
     public void IsPublic_ShouldRefuse_APrivateAddressWrappedInIPv6(string address)
     {
-        // Arrange & Act & Assert
         // An IPv4 address written as IPv6 is the same address. Checking the
         // wrapper instead of the value is exactly how ::ffff:127.0.0.1 gets in.
         Assert.False(PublicAddress.IsPublic(IPAddress.Parse(address)));
@@ -101,17 +95,14 @@ public class PublicAddressTests
     [InlineData("2001:db9::1")]
     public void IsPublic_ShouldAllow_AnOrdinaryWebsite(string address)
     {
-        // Arrange & Act & Assert
-        // The edges matter as much as the middles: 172.15 and 172.32 are both
-        // public, and a range check written with the wrong comparison would
-        // block half the internet or let the private network through.
+        // The edges matter as much as the middles: 172.15 and 172.32 are public, and a wrong
+        // comparison would block half the internet or let the private network through.
         Assert.True(PublicAddress.IsPublic(IPAddress.Parse(address)));
     }
 
     [Fact]
     public void IsPublic_ShouldRefuse_Nothing()
     {
-        // Arrange & Act & Assert
         Assert.False(PublicAddress.IsPublic(null));
     }
 
@@ -134,7 +125,6 @@ public class PublicAddressTests
     [InlineData("::ffff:192.168.1.1")]
     public void IsPrivateNetwork_ShouldAllow_TheNetworksAHomeServerIsOn(string address)
     {
-        // Arrange & Act & Assert
         Assert.True(PublicAddress.IsPrivateNetwork(IPAddress.Parse(address)));
     }
 
@@ -177,7 +167,6 @@ public class PublicAddressTests
     [InlineData("198.18.0.1")]
     public void IsPrivateNetwork_ShouldRefuse_WhatAllowingPrivateAddressesNeverAllows(string address)
     {
-        // Arrange & Act & Assert
         // The operator's switch opens the house's own network and nothing
         // else: none of these is where a recipe library lives.
         Assert.False(PublicAddress.IsPrivateNetwork(IPAddress.Parse(address)));
@@ -200,14 +189,12 @@ public class PublicAddressTests
     [InlineData("2606:4700:4700::1111")]
     public void IsPrivateNetwork_ShouldRefuse_AnAddressJustOutsideTheRanges(string address)
     {
-        // Arrange & Act & Assert
         Assert.False(PublicAddress.IsPrivateNetwork(IPAddress.Parse(address)));
     }
 
     [Fact]
     public void IsPrivateNetwork_ShouldRefuse_Nothing()
     {
-        // Arrange & Act & Assert
         Assert.False(PublicAddress.IsPrivateNetwork(null));
     }
 }

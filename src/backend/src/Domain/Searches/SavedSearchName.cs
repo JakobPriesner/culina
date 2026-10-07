@@ -2,13 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Searches;
 
-/// <summary>
-/// What a saved search is called.
-/// </summary>
-/// <remarks>
-/// Short on purpose: the name is read as a chip beside the search field, and a
-/// chip whose label wraps is one that pushes the results off the screen.
-/// </remarks>
+/// <summary>What a saved search is called; short because it is read as a chip beside the search field.</summary>
 public sealed record SavedSearchName
 {
     /// <summary>The longest name that still fits on a chip.</summary>
@@ -20,7 +14,6 @@ public sealed record SavedSearchName
     public string Value { get; }
 
     /// <summary>Parses a name, returning a failure rather than throwing.</summary>
-    /// <param name="value">What the caller supplied.</param>
     public static Result<SavedSearchName> Create(string? value)
     {
         var trimmed = value?.Trim();

@@ -1,22 +1,9 @@
 namespace Infrastructure.Import.Tandoor;
 
-/// <summary>
-/// Tandoor's own shapes, as its API actually sends them.
-/// </summary>
+/// <summary>Tandoor's own shapes, as its API actually sends them.</summary>
 /// <remarks>
-/// <para>
-/// Foreign types, and they stay foreign: nothing outside this folder sees one.
-/// They are named after Tandoor's fields rather than after ours on purpose —
-/// a DTO that quietly renamed <c>working_time</c> to <c>PrepMinutes</c> would
-/// be doing the mapping in the place nobody looks for it, and the day Tandoor
-/// changes what <c>working_time</c> means, nobody would find it either.
-/// </para>
-/// <para>
-/// Everything is nullable, including things Tandoor's documentation says are
-/// required. A library somebody has been keeping for five years has been
-/// through five years of Tandoor versions, and the import has to survive the
-/// rows those left behind.
-/// </para>
+/// Foreign types, named after Tandoor's fields (not ours) so mapping happens in one visible place.
+/// Everything is nullable: a years-old library carries rows from many Tandoor versions.
 /// </remarks>
 internal sealed record TandoorPage<TItem>
 {
@@ -39,7 +26,7 @@ internal sealed record TandoorRecipeSummary
 
     public string? Description { get; init; }
 
-    /// <summary>An absolute URL, or a path on the instance, or nothing.</summary>
+    /// <summary>An absolute URL, a path on the instance, or nothing.</summary>
     public string? Image { get; init; }
 
     /// <summary>Hands-on minutes.</summary>
@@ -86,16 +73,11 @@ internal sealed record TandoorKeyword
     public string? Label { get; init; }
 }
 
-/// <summary>
-/// One of Tandoor's steps, which is where its ingredients live.
-/// </summary>
+/// <summary>One of Tandoor's steps, which is where its ingredients live.</summary>
 /// <remarks>
-/// The structural difference between the two apps, and the reason
-/// <see cref="TandoorMapping"/> exists. Tandoor hangs ingredients off steps;
-/// this app keeps one ingredient list for the recipe and lets a step point into
-/// it. A step whose <see cref="ShowAsHeader"/> is set and whose instruction is
-/// empty is Tandoor's way of writing "For the sauce:", which is exactly this
-/// app's ingredient group.
+/// Tandoor hangs ingredients off steps; this app keeps one list and lets steps point into it (see
+/// <see cref="TandoorMapping"/>). A header step with no instruction is Tandoor's "For the sauce:",
+/// i.e. our ingredient group.
 /// </remarks>
 internal sealed record TandoorStep
 {
@@ -144,14 +126,11 @@ internal sealed record TandoorNamed
 }
 
 /// <summary>
-/// What Tandoor answers when it trades a sign-in for a token.
+/// What Tandoor answers when it trades a sign-in for a token; only the token is read and kept.
 /// </summary>
 /// <remarks>
-/// It returns rather more than this — an id, a scope, an expiry, a user id —
-/// and only the token is read, because only the token is kept. Note that the
-/// token Tandoor issues this way carries its full <c>read write app</c> scope
-/// and is the same one it would hand back next time: this does not mint a
-/// throwaway, and Culina never writes with it.
+/// The token carries Tandoor's full <c>read write app</c> scope and is not a throwaway; Culina
+/// never writes with it.
 /// </remarks>
 internal sealed record TandoorToken
 {

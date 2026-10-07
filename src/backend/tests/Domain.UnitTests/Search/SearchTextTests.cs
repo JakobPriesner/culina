@@ -2,10 +2,6 @@ using Domain.Search;
 
 namespace Domain.UnitTests.Search;
 
-/// <summary>
-/// Both German transliterations, and nothing a LIKE pattern could mistake for
-/// a wildcard.
-/// </summary>
 public class SearchTextTests
 {
     [Theory]

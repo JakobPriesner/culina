@@ -9,30 +9,8 @@ using Infrastructure.Persistence.Suggestions;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>
-/// Finds recipes.
+/// Finds recipes in one query, so the count and the page cannot disagree.
 /// </summary>
-/// <remarks>
-/// <para>
-/// One query does the filtering, the ranking, the count and the page. Splitting
-/// it would mean the count and the page could disagree when something changes
-/// between them, and a "showing 20 of 19" is the kind of small wrongness people
-/// notice.
-/// </para>
-/// <para>
-/// Ingredient matching is the whole of Culina's "what can I cook?" feature.
-/// There is no pantry to maintain — the caller names two or three things they
-/// want to use up, and the ranking does the rest — which is precisely why it
-/// cannot go stale.
-/// </para>
-/// <para>
-/// Free text is answered from <c>recipe_search_documents</c> rather than by
-/// scanning the recipe tables, through the lanes in
-/// <see cref="RecipeSearchLanes"/>. The join is a left join on purpose: a
-/// recipe whose document is somehow missing still lists, still filters and
-/// still pages, and is only unfindable by words until the next write rebuilds
-/// it.
-/// </para>
-/// </remarks>
 /// <param name="executor">Runs the SQL.</param>
 /// <param name="time">The clock the suggested order is ranked against.</param>
 /// <param name="weights">What each term of the suggested order is worth.</param>
@@ -43,42 +21,14 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     /// <summary>A hard ceiling, enforced here and not only in the endpoint.</summary>
     internal const int MaxLimit = 100;
 
-    /// <summary>
-    /// How alike two words have to be before one counts as the other misspelt.
-    /// </summary>
+    /// <summary>How alike two words have to be before one counts as the other misspelt.</summary>
     /// <remarks>
-    /// <para>
-    /// A constant rather than a setting. It is a relevance parameter, not an
-    /// operational one: changing it changes which results people see, so it
-    /// belongs in a commit next to the test case that moved it rather than in
-    /// an environment variable nobody reviews.
-    /// </para>
-    /// <para>
-    /// Half, and the number is not a guess. Trigram similarity counts shared
-    /// three-letter windows, and a single transposed or missing letter in the
-    /// middle of a word destroys three of them at once: "Bolgnese" scores
-    /// 0.58 against "Bolognese" and "Bolognäse" 0.62, so anything stricter
-    /// refuses the misspellings this was built to survive.
-    /// </para>
-    /// <para>
-    /// Strict word similarity — against a whole word of the title, not the best
-    /// stretch of it. The looser measure scored "Schnitzel" well against
-    /// "Rührei mit Schnittlauch" on the strength of "schnit" alone, so a
-    /// library with no Schnitzel answered with scrambled eggs; against the
-    /// whole word "schnittlauch" it is 0.35.
-    /// The cost of being generous is contained by where it lands — a match
-    /// found only this way is two tiers down, below everything the query
-    /// actually names.
-    /// </para>
-    /// <para>
-    /// Also what every connection sets <c>pg_trgm.strict_word_similarity_threshold</c>
-    /// to (see <see cref="CulinaDataSource"/>), so that the trigram index on
-    /// titles hands back at least every title this counts as a match.
-    /// </para>
+    /// Strict word similarity against a whole title word: the looser measure matched "Schnitzel" to "Schnittlauch".
+    /// A relevance parameter, so a constant. Also the connection's <c>pg_trgm.strict_word_similarity_threshold</c> (see <see cref="CulinaDataSource"/>).
     /// </remarks>
     internal const double FuzzyThreshold = 0.5d;
 
-    /// <summary>The candidate projection and the filter, built once per shape rather than per request.</summary>
+    // Built once per shape rather than per request.
     private static readonly string ScoredCandidates = Candidates(scored: true);
 
     private static readonly string PlainCandidates = Candidates(scored: false);
@@ -87,37 +37,8 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
 
     private static readonly string PlainFilter = Filtered(scored: false);
 
-    /// <summary>
-    /// Which recipes hold each of some named ingredients, worked out once.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Asked once for the whole query rather than once per recipe. The obvious
-    /// spelling — a correlated subquery in the projection — runs the ILIKE for
-    /// every recipe in the household times every name, and
-    /// <c>recipe_ingredients_name_trgm_idx</c> cannot help it: a pattern
-    /// correlated with an <c>unnest</c> is not something an index can be asked
-    /// for.
-    /// </para>
-    /// <para>
-    /// Measured over ten thousand recipes with two ingredients named, this is
-    /// the difference between 636 ms and 51. The shape of the cost matters more
-    /// than the number: as a correlated subquery, ten times the recipes cost
-    /// thirty-seven times the time, and this way it costs 1.2 times.
-    /// </para>
-    /// <para>
-    /// It is also what keeps the two scans below honest. The count and the page
-    /// each apply the filters, so a filter that is expensive to apply would be
-    /// paid for twice — which made an ingredient shelf slower, not faster,
-    /// until this was here.
-    /// </para>
-    /// <para>
-    /// Counted by position rather than by word, because the subquery this
-    /// replaces counted the array it was given: two entries that happen to say
-    /// the same thing were two wants satisfied, and staying exactly as wrong
-    /// about that as before is the point of a change that is only about speed.
-    /// </para>
-    /// </remarks>
+    // Which recipes hold each named ingredient, computed once per query. A correlated subquery
+    // cannot use the trigram index and was ~12x slower; counted by position, as that subquery was.
     private static string Holders(string ingredients) => $"""
         select g.recipe_id, count(distinct one.position) as matched
         from unnest({ingredients}) with ordinality as one(name, position)
@@ -128,14 +49,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         group by g.recipe_id
         """;
 
-    /// <summary>
-    /// The tables a search reads.
-    /// </summary>
-    /// <remarks>
-    /// Kept apart from <see cref="Rules"/> so that the count can read the same
-    /// tables without the cook log, which only the rows on the page and the
-    /// most-cooked order have any use for.
-    /// </remarks>
+    // The tables a search reads; apart from Rules so the count skips the cook log.
     private static string Sources(bool scored) => $"""
         from q
         cross join recipes r
@@ -147,55 +61,30 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         {RecipeSearchLanes.LanguageJoin}
         """;
 
-    /// <summary>
-    /// Which rows survive.
-    /// </summary>
-    /// <remarks>
-    /// Written once and used twice — by the count, which selects nothing but
-    /// the id, and by the candidates, which select what the ordering needs. Two
-    /// copies of a filter is two ways for a total to disagree with the list it
-    /// is a total of.
-    /// </remarks>
+    // Which rows survive; shared by the count and the candidates so a total cannot disagree with its list.
     private static string Rules(bool scored) => $$"""
         where r.household_id = any(@library)
-          -- Hidden from the suggested order and from nowhere else: the recipe
-          -- is still the household's, still searchable and still on its
-          -- shelves. "Stop suggesting this" is not "delete this".
+          -- Hidden from the suggested order only: "stop suggesting this" is not "delete this".
           {{(scored ? "and not coalesce(s.dismissed, false)" : string.Empty)}}
-          -- Words are answered by the search documents, one index per lane,
-          -- in `hits`. Both escapes are decided while planning, because both
-          -- are about a parameter: without words, or with none that survive
-          -- the fold, this line is gone from the plan and `hits` never runs.
+          -- Words are answered by `hits`; both escapes are planner-time, so `hits` never runs without words.
           and (@query::text is null or not ({{RecipeSearchLanes.HasText}})
                or r.id in (select recipe_id from hits))
           and (@tagCount = 0 or (
                 select count(distinct t.slug) from recipe_tags rt
                 join tags t on t.id = rt.tag_id
                 where rt.recipe_id = r.id and t.slug = any(@tags::text[])) = @tagCount)
-          -- A shelf is a filter over the collection, not a second collection.
-          -- Everything else here — the search, the tags, the time ceiling, the
-          -- ingredient ranking — therefore works inside a cookbook for free,
-          -- and a cookbook's rows outside this household's library match
-          -- nothing because the household predicate above has already applied.
+          -- A shelf is a filter over the library, so every other filter works inside a cookbook.
           and (@cookbookId is null or exists (
                 select 1 from cookbook_recipes cr
                 where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id))
-          -- A shelf that fills itself, asked here rather than remembered
-          -- anywhere: this is the whole of "a new recipe appears on it by
-          -- itself". The rules live in SmartShelfSql because the cookbook card
-          -- counts the same recipes this lists, and the two must not drift.
+          -- Smart-shelf rules live in SmartShelfSql; the cookbook card counts with the same predicate.
           and {{SmartShelfSql.Matches(
                     "@ruleTags::text[]",
                     "@ruleIngredients::text[]",
                     "@ruleMaxMinutes",
                     held: "coalesce(required.matched, 0)")}}
-          -- What a query was understood to ask beyond its words. Each line is
-          -- gone from the plan when the query asked nothing of its kind.
-          --
-          -- A diet is kept when somebody said so — the title or a tag names
-          -- it — or, for the diets an ingredient can refute, when nothing in
-          -- the recipe does. A missing document can show neither, so it is
-          -- not presumed to keep anything.
+          -- Diet: kept when the title or a tag says so, or, for refutable diets, when no ingredient
+          -- refutes it. A missing document shows neither, so it presumes nothing.
           and (cardinality(@diets::text[]) = 0 or coalesce(
                 d.concepts @> @diets::text[]
                 or (@dietPresumable and not (d.concepts && @dietRefutedBy::text[])), false))
@@ -203,8 +92,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
           and (cardinality(@cuisines::text[]) = 0 or coalesce(d.concepts && @cuisines::text[], false))
           and (cardinality(@ingredientConcepts::text[]) = 0
                or coalesce(d.concepts && @ingredientConcepts::text[], false))
-          -- Left out by what it is when the lexicon knows it, and by the name
-          -- of an ingredient line when it does not.
+          -- Excluded by lexicon concept, or by ingredient name when the lexicon does not know it.
           and (cardinality(@excludedConcepts::text[]) = 0
                or not coalesce(d.concepts && @excludedConcepts::text[], false))
           and unwanted.recipe_id is null
@@ -212,24 +100,8 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
           and (@maxMinutes is null or {{RecipeSql.FitsWithin("@maxMinutes")}})
         """;
 
-    /// <summary>
-    /// What a candidate row carries: its identity, and everything the ordering
-    /// and the ranking need in order to place it.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Everything here is either a plain column of a table already being
-    /// scanned or a number the tier and the score are built from. What a recipe
-    /// <em>looks like</em> is not here — the tag list is a correlated subquery
-    /// with a join and an order by, and computing it for a whole library in
-    /// order to show twenty of them was the single most expensive thing in this
-    /// query.
-    /// </para>
-    /// <para>
-    /// Two constant strings, because only the suggested order pays for the
-    /// scoring join and only a plain browse should pay for neither.
-    /// </para>
-    /// </remarks>
+    // A candidate row: identity plus what the ordering needs. The tag list is deliberately
+    // absent (correlated and costly for a whole library); only the scored order pays for the scoring join.
     private static string Candidates(bool scored) => $$"""
         select
             r.id,
@@ -242,20 +114,11 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             r.yield_label,
             r.language,
             r.updated_at,
-            -- One scan for both facts rather than two over the same index:
-            -- cook_log_recipe_user_idx is (recipe_id, user_id, made_at desc),
-            -- so the count and the latest entry come out of one lookup. It is
-            -- here rather than below the page because the most-cooked order
-            -- sorts by it.
+            -- One lookup for count and latest entry; here, not below the page, because the most-cooked order sorts by it.
             coalesce(mine.cook_count, 0) as cook_count,
             mine.last_cooked_at,
             {{(scored ? "coalesce(s.score, 0)" : "0::numeric")}} as suggestion_score,
-            -- From the document, which counted them when the recipe was
-            -- written. The subquery is the fallback for a document that has
-            -- gone missing, and coalesce only reaches it when one has: counting
-            -- ingredients per row was 620 ms over two thousand recipes, and it
-            -- was the most expensive thing in this query long before search
-            -- was rewritten.
+            -- From the document; the subquery only covers a missing document (it cost 620 ms per 2000 recipes).
             coalesce(d.ingredient_count, (
                 select count(*) from recipe_ingredients ri
                 join ingredient_groups g on g.id = ri.group_id
@@ -285,25 +148,13 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         var resume = cursor is null ? null : RecipeSearchSql.ResumePredicate(search.Sort);
         var scored = search.Sort == RecipeSort.Suggested;
 
-        // Joined in only when it is what the order asks for. Ninety lines of
-        // common table expressions on every plain browse would be work done to
-        // multiply by zero.
+        // Joined in only when the order asks for it.
         var scoring = scored ? $"{SuggestionScoringSql.Ctes},\n            " : string.Empty;
 
         var order = RecipeSearchSql.OrderBy(search.Sort);
 
-        // One extra row tells us whether there is a next page without a second
-        // count query.
-        //
-        // The total is counted over `matching`, which selects nothing but the
-        // id, rather than over the rows below it. Counting the full projection
-        // is what a window function on top of it amounts to, and it forbids the
-        // limit from ever reaching an index: every recipe in the household has
-        // to be built before twenty of them can be returned. Over ten thousand
-        // recipes that was a quarter of a second for a page of twenty.
-        //
-        // Both still read the same rules in the same statement, so the count
-        // cannot disagree with the list it counts.
+        // One extra row says whether a next page exists. The total counts `matching` (ids only):
+        // counting the full projection would stop the limit reaching an index.
         var sql = $$"""
             with {{scoring}}{{(scored ? ScoredFilter : PlainFilter)}},
             candidates as ({{(scored ? ScoredCandidates : PlainCandidates)}}),
@@ -323,10 +174,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             select
                 page.*,
                 (select count(*) from matching) as total_count,
-                -- Asked for the rows that survived, not for the library. This
-                -- is a correlated subquery with a join and an order by in it,
-                -- and it is the reason the projection above holds nothing that
-                -- only decides what a recipe looks like.
+                -- Looked up for the page's rows only, not the library.
                 coalesce(
                     array(
                         select t.slug from recipe_tags rt
@@ -349,8 +197,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
 
         var page = rows.Take(limit).ToList();
 
-        // A diet is only ever presumed when every diet asked for can be: the
-        // rest are kept by assertion alone, so an unasserted row has none.
+        // A diet is only presumed when every requested diet can be; unasserted rows carry none.
         var presumable = search.Constraints.Diets is [var first, ..] ? first : null;
 
         return new RecipePage(
@@ -359,16 +206,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
 
-    /// <summary>
-    /// Counts what every match could be narrowed by.
-    /// </summary>
-    /// <remarks>
-    /// Over the same <c>matching</c> set the page is cut from, in the same
-    /// words, so a refinement's count is exactly how many results it leaves.
-    /// A second statement rather than more columns on the page: it runs once
-    /// per question, on its first page only, and the page stays the shape it
-    /// was.
-    /// </remarks>
+    /// <summary>Counts what every match could be narrowed by, over the same <c>matching</c> set as the page.</summary>
     internal async Task<SearchFacets> FacetsAsync(RecipeSearch search, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(search);
@@ -427,10 +265,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         public int Count { get; init; }
     }
 
-    /// <summary>
-    /// The query and every table expression that decides which recipes match:
-    /// what the page, the count and the facets are all cut from.
-    /// </summary>
+    // Every table expression that decides which recipes match; the page, count and facets are cut from it.
     private static string Filtered(bool scored) => $$"""
         q as ({{RecipeSearchLanes.QueryCte}}),
         hits as ({{RecipeSearchLanes.Hits}}),
@@ -440,23 +275,9 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
         matching as (select r.id {{Sources(scored)}} {{Rules(scored)}})
         """;
 
-    /// <summary>
-    /// Why a row on the page answers the query, when its title does not say.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The question a reader asks silently about every result they did not
-    /// expect, answered in one quiet line: "Zutat: Hähnchenbrust", "Ähnlich:
-    /// Dessert". Nothing for a title match, because "it is called that" is not
-    /// worth a line, and always something for a match through the lexicon
-    /// alone — an associative match must look different from a real one.
-    /// </para>
-    /// <para>
-    /// Worked out for the rows on the page only, after the order is settled:
-    /// the ingredient and tag it names are looked up for twenty recipes, not
-    /// for every candidate.
-    /// </para>
-    /// </remarks>
+    // Why a page row answers the query when its title does not. Nothing for a title match;
+    // always something for a lexicon-only match, so an associative hit looks different.
+    // Run on the page's rows only, after ordering.
     private const string MatchReasonSql = """
         select
             case
@@ -468,8 +289,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             end as kind,
             case
                 when not page.has_text or page.tier <= 1 or page.fuzzy_title then null
-                -- What the recipe is that answered, which for a stand-in is
-                -- not what was asked: a Beef Stew answers "Gulasch" as a stew.
+                -- For a stand-in this is the recipe's concept, not the asked one: Beef Stew answers "Gulasch" as a stew.
                 when page.tier = 5 then (
                     select answer.concept
                     from unnest(@conceptAnswers::text[]) with ordinality as answer(concept, at)

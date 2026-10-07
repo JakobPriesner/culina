@@ -89,9 +89,7 @@ internal sealed class PlanMealCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Planning.PlanMeal");
 
-        // Through the recipe, not the household: it proves in one step both
-        // that the caller is a member and that the recipe is this household's
-        // own or one it inherits.
+        // Via the recipe: proves membership and that the recipe is this household's or inherited.
         var recipe = await RecipeAccess
             .VisibleInAsync(
                 recipes,
@@ -149,15 +147,7 @@ internal sealed class PlanMealCommandHandler(
             },
             cancellationToken);
 
-    /// <summary>
-    /// The week the changed day belongs to.
-    /// </summary>
-    /// <remarks>
-    /// The week is the screen, so returning it is what saves the client a
-    /// refetch to draw anything. It is derived from the day that changed rather
-    /// than taken from the request, because the client is looking at the week
-    /// that contains it.
-    /// </remarks>
+    /// <summary>The week containing the changed day, so the client needs no refetch.</summary>
     internal static async Task<Result<MealPlanResponse>> ReadWeekAsync(
         IMealPlanRepository plans,
         Guid householdId,
@@ -174,15 +164,7 @@ internal sealed class PlanMealCommandHandler(
     }
 }
 
-/// <summary>
-/// Moves a planned meal to another day, and to another place in that day.
-/// </summary>
-/// <remarks>
-/// The commonest edit a plan gets: a week is agreed on Sunday and then rearranged
-/// all week. Doing it by taking the meal off and putting it back on would lose
-/// the servings it was planned for and the slot it was in, which is why this is
-/// a move rather than two writes the client stitches together.
-/// </remarks>
+/// <summary>Moves a planned meal to another day and place, keeping its servings and slot.</summary>
 internal sealed class MoveMealCommandHandler(
     IMealPlanRepository plans,
     IHouseholdRepository households,
@@ -197,9 +179,7 @@ internal sealed class MoveMealCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Planning.MoveMeal");
 
-        // Membership is enough: the entry is already this household's, and the
-        // recipe on it was checked when it was planned. Nothing here can point
-        // the plan at a recipe it could not see before.
+        // Membership suffices: the entry is already this household's and its recipe was checked when planned.
         var allowed = await HouseholdAccess
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
@@ -236,8 +216,7 @@ internal sealed class MoveMealCommandHandler(
             return PlanningErrors.InvalidPosition;
         }
 
-        // An omitted slot keeps the one it had. That is what dragging sends:
-        // dragging a dinner onto Thursday moves a dinner.
+        // An omitted slot keeps its current one (what dragging sends).
         var slot = command.Draft.Slot is null
             ? Result<MealSlot>.Success(entry.Slot)
             : PlanningWords.ToSlot(command.Draft.Slot);
@@ -253,9 +232,7 @@ internal sealed class MoveMealCommandHandler(
         MealSlot slot,
         CancellationToken cancellationToken)
     {
-        // Last when no place was asked for, which is what the move sheet sends:
-        // it answers "which day", and the end of the day is where a meal that
-        // was not aimed at a gap belongs.
+        // Last when no place was asked for: the move sheet only picks a day.
         var sortOrder = command.Draft.Position ?? await plans
             .NextSortOrderAsync(command.HouseholdId, command.Draft.Date, cancellationToken)
             .ConfigureAwait(false);

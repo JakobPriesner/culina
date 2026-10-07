@@ -2,11 +2,7 @@ using Domain.Sessions;
 
 namespace Domain.UnitTests.Sessions;
 
-/// <summary>
-/// The sliding expiry, which is what keeps somebody signed in on a device they
-/// use. Culina issues no refresh token — the cookie is an opaque reference, so
-/// renewal is a property of the row rather than an exchange.
-/// </summary>
+/// <summary>The sliding expiry that keeps somebody signed in on a device they use; the cookie is an opaque reference, so renewal is a property of the row.</summary>
 public class SessionTests
 {
     private static readonly DateTimeOffset SignedInAt = new(2026, 9, 1, 8, 0, 0, TimeSpan.Zero);
@@ -17,14 +13,11 @@ public class SessionTests
     [Fact]
     public void Touch_ShouldMoveTheExpiryForward_SoDailyUseNeverLapses()
     {
-        // Arrange
         var session = NewSession();
         var threeWeeksLater = SignedInAt.AddDays(21);
 
-        // Act
         session.Touch(threeWeeksLater, Lifetime, Ceiling);
 
-        // Assert
         Assert.Equal(threeWeeksLater.Add(Lifetime), session.ExpiresAt);
         Assert.Equal(threeWeeksLater, session.LastSeenAt);
         Assert.True(session.IsActive(SignedInAt.AddDays(45)));
@@ -33,16 +26,13 @@ public class SessionTests
     [Fact]
     public void Touch_ShouldStopAtTheCeiling_HoweverOftenTheSessionIsUsed()
     {
-        // Arrange
         var session = NewSession();
 
-        // Act
         for (var day = 1; day <= 100; day++)
         {
             session.Touch(SignedInAt.AddDays(day), Lifetime, Ceiling);
         }
 
-        // Assert
         // A stolen cookie used every day used to live for ever.
         Assert.Equal(SignedInAt.Add(Ceiling), session.ExpiresAt);
         Assert.False(session.IsActive(SignedInAt.Add(Ceiling)));
@@ -51,14 +41,11 @@ public class SessionTests
     [Fact]
     public void Touch_ShouldOnlyShortenTheLastStretch_WhenTheCeilingIsNear()
     {
-        // Arrange
         var session = NewSession();
         var lateInLife = SignedInAt.AddDays(80);
 
-        // Act
         session.Touch(lateInLife, Lifetime, Ceiling);
 
-        // Assert
         Assert.Equal(SignedInAt.Add(Ceiling), session.ExpiresAt);
         Assert.Equal(lateInLife, session.LastSeenAt);
     }
@@ -66,52 +53,40 @@ public class SessionTests
     [Fact]
     public void IsDueForRenewal_ShouldSayNo_WhenTheSessionWasJustUsed()
     {
-        // Arrange
         var session = NewSession();
 
-        // Act
         var due = session.IsDueForRenewal(SignedInAt.AddMinutes(5), Daily);
 
-        // Assert
-        // Every page view would otherwise cost a write, and a session used
-        // twice in a minute is no more alive than one used once.
+        // Every page view would otherwise cost a write.
         Assert.False(due);
     }
 
     [Fact]
     public void IsDueForRenewal_ShouldSayYes_OnceTheIntervalHasPassed()
     {
-        // Arrange
         var session = NewSession();
 
-        // Act
         var due = session.IsDueForRenewal(SignedInAt.Add(Daily), Daily);
 
-        // Assert
         Assert.True(due);
     }
 
     [Fact]
     public void IsDueForRenewal_ShouldMeasureFromTheLastUse_NotFromSignIn()
     {
-        // Arrange
         var session = NewSession();
         session.Touch(SignedInAt.AddDays(10), Lifetime, Ceiling);
 
-        // Act
         var due = session.IsDueForRenewal(SignedInAt.AddDays(10).AddHours(1), Daily);
 
-        // Assert
         Assert.False(due);
     }
 
     [Fact]
     public void IsDueForRenewal_ShouldAlwaysSayYes_WhenTheIntervalIsZero()
     {
-        // Arrange
         var session = NewSession();
 
-        // Act & Assert
         Assert.True(session.IsDueForRenewal(SignedInAt, TimeSpan.Zero));
     }
 

@@ -2,13 +2,7 @@ using Application.Abstractions;
 
 namespace IntegrationTests.Suggestions.Replay;
 
-/// <summary>
-/// The arithmetic of the four shortlist metrics, on lists written by hand.
-/// </summary>
-/// <remarks>
-/// No database: these are sums over lists, and the replay tests already prove
-/// the lists are the ones the ranker would have shown.
-/// </remarks>
+/// <summary>The arithmetic of the four shortlist metrics on hand-written lists; no database.</summary>
 public class ShortlistQualityTests
 {
     private static readonly Guid Ada = Guid.NewGuid();
@@ -18,16 +12,13 @@ public class ShortlistQualityTests
     [Fact]
     public void Of_ShouldReportTheWorstCase_WhenTheSameRecipeLeadsEveryList()
     {
-        // Arrange
         var staple = Guid.NewGuid();
         var outcomes = Enumerable.Range(0, 4)
             .Select(day => Outcome(Monday.AddDays(day), library: 10, (staple, CookCount: 3)))
             .ToList();
 
-        // Act
         var quality = ShortlistQuality.Of(outcomes);
 
-        // Assert
         Assert.Equal(0.1, quality.Coverage, precision: 6);
         // The first evening has nothing earlier to repeat; the next three do.
         Assert.Equal(0.75, quality.RepetitionRate, precision: 6);
@@ -38,15 +29,12 @@ public class ShortlistQualityTests
     [Fact]
     public void Of_ShouldReportTheBestCase_WhenEveryRecipeIsShownOnceToSomebodyWhoHasCookedNone()
     {
-        // Arrange
         var outcomes = Enumerable.Range(0, 4)
             .Select(day => Outcome(Monday.AddDays(day), library: 4, (Guid.NewGuid(), CookCount: 0)))
             .ToList();
 
-        // Act
         var quality = ShortlistQuality.Of(outcomes);
 
-        // Assert
         Assert.Equal(1, quality.Coverage, precision: 6);
         Assert.Equal(0, quality.RepetitionRate);
         Assert.Equal(1, quality.NoveltyShare, precision: 6);
@@ -56,7 +44,6 @@ public class ShortlistQualityTests
     [Fact]
     public void Of_ShouldNotCountARepeat_WhenTheEarlierListWasMoreThanAWeekAgo()
     {
-        // Arrange
         var staple = Guid.NewGuid();
         List<ReplayOutcome> outcomes =
         [
@@ -64,25 +51,19 @@ public class ShortlistQualityTests
             Outcome(Monday.AddDays(8), library: 10, (staple, CookCount: 1))
         ];
 
-        // Act
         var quality = ShortlistQuality.Of(outcomes);
 
-        // Assert
         Assert.Equal(0, quality.RepetitionRate);
     }
 
     [Fact]
     public void Of_ShouldOnlyJudgeTheShortlist_NotTheRestOfTheReplayedList()
     {
-        // Arrange
-        // Ten are replayed so recall@10 can be read; five are what the front page
-        // shows, and only what was shown can have been repetitive.
+        // Ten are replayed so recall@10 can be read; only the five shown can have been repetitive.
         var list = Enumerable.Range(0, 10).Select(_ => (Guid.NewGuid(), CookCount: 0)).ToArray();
 
-        // Act
         var quality = ShortlistQuality.Of([Outcome(Monday, library: 20, list)]);
 
-        // Assert
         Assert.Equal(0.25, quality.Coverage, precision: 6);
     }
 

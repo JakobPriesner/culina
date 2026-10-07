@@ -3,14 +3,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Cooking;
 
-/// <summary>
-/// At most one session per person, enforced by the database.
-/// </summary>
-/// <remarks>
-/// That invariant is what makes "what am I cooking?" a single unambiguous
-/// answer, and it is the thing application code gets wrong when two devices act
-/// at the same moment.
-/// </remarks>
+/// <summary>At most one session per person, enforced by the database, so "what am I cooking?" has one answer even when two devices act at once.</summary>
 [Collection(RequiresDatabase.Name)]
 public class CookSessionEndpointTests(PostgresFixture postgres)
 {
@@ -21,13 +14,10 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Current_ShouldSayNothingIsCooking_WhenNothingIs()
     {
-        // Arrange
         using var client = await SignedInAsync();
 
-        // Act
         var response = await client.GetAsync("/api/v1/cook-sessions/current", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("cooking.session_not_found", response.ProblemCode);
     }
@@ -35,20 +25,16 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Start_ShouldReturnTheSession_WithTheRecipeTitle()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var recipeId = await RecipeAsync(client, "Lemon orzo");
 
-        // Act
         var response = await client.PostAsync(
             "/api/v1/cook-sessions",
             new { recipeId, servings = 4 },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        // The title travels with it, so the resume bar is one request and not
-        // two on every page.
+        // The title travels with it, so the resume bar is one request.
         Assert.Equal("Lemon orzo", response.Json!.Value.GetProperty("recipeTitle").GetString());
         Assert.Equal(0, response.Json!.Value.GetProperty("currentStepIndex").GetInt32());
     }
@@ -56,19 +42,15 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Start_ShouldGiveUpTheOneAlreadyGoing()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var first = await RecipeAsync(client, "Lemon orzo");
         var second = await RecipeAsync(client, "Tomato soup");
 
         await client.PostAsync("/api/v1/cook-sessions", new { recipeId = first, servings = 2 }, Token);
 
-        // Act
         await client.PostAsync("/api/v1/cook-sessions", new { recipeId = second, servings = 2 }, Token);
 
-        // Assert
-        // One answer, and it is the newer one. The partial unique index is what
-        // guarantees there is only ever one to find.
+        // One answer, the newer; the partial unique index guarantees there is only one to find.
         var current = await client.GetAsync("/api/v1/cook-sessions/current", Token);
 
         Assert.Equal(HttpStatusCode.OK, current.StatusCode);
@@ -78,7 +60,6 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldMoveTheStep_WithoutBumpingTheVersion()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var recipeId = await RecipeAsync(client, "Lemon orzo");
         var started = await client.PostAsync(
@@ -89,24 +70,20 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
         var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
         var version = started.Json!.Value.GetProperty("version").GetInt64();
 
-        // Act
         var moved = await client.PatchAsync(
             $"/api/v1/cook-sessions/{sessionId}",
             new { currentStepIndex = 2 },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, moved.StatusCode);
         Assert.Equal(2, moved.Json!.Value.GetProperty("currentStepIndex").GetInt32());
-        // A step advance happens constantly; making each one a concurrency
-        // event would leave a second device permanently stale for no benefit.
+        // Step advances are constant; making each a concurrency event would leave a second device stale for no benefit.
         Assert.Equal(version, moved.Json!.Value.GetProperty("version").GetInt64());
     }
 
     [Fact]
     public async Task Update_ShouldBumpTheVersion_WhenTheScalingChanges()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var recipeId = await RecipeAsync(client, "Lemon orzo");
         var started = await client.PostAsync(
@@ -117,13 +94,11 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
         var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
         var version = started.Json!.Value.GetProperty("version").GetInt64();
 
-        // Act
         var rescaled = await client.PatchAsync(
             $"/api/v1/cook-sessions/{sessionId}",
             new { servings = 6 },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, rescaled.StatusCode);
         Assert.Equal(6, rescaled.Json!.Value.GetProperty("servings").GetDecimal());
         Assert.True(rescaled.Json!.Value.GetProperty("version").GetInt64() > version);
@@ -132,7 +107,6 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task End_ShouldLeaveNothingCooking()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var recipeId = await RecipeAsync(client, "Lemon orzo");
         var started = await client.PostAsync(
@@ -142,10 +116,8 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
 
         var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
 
-        // Act
         var ended = await client.DeleteAsync($"/api/v1/cook-sessions/{sessionId}?completed=true", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, ended.StatusCode);
 
         var current = await client.GetAsync("/api/v1/cook-sessions/current", Token);
@@ -156,7 +128,6 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldNotFindSomebodyElsesSession()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var recipeId = await RecipeAsync(client, "Lemon orzo");
         var started = await client.PostAsync(
@@ -168,13 +139,11 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
 
         using var stranger = await SecondAccountAsync();
 
-        // Act
         var response = await stranger.PatchAsync(
             $"/api/v1/cook-sessions/{sessionId}",
             new { currentStepIndex = 1 },
             Token);
 
-        // Assert
         // 404, not 403: telling them it exists is telling them something.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

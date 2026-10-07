@@ -43,10 +43,9 @@ internal sealed class CreatePasswordResetEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .AllowAnonymous()
-            // Like signing in, this is a way back for somebody with no working
-            // session, so a stale CSRF token must not stand in the way. The
-            // code is the credential, and the endpoint reads only a JSON body,
-            // which a cross-site form cannot send; see CsrfExempt.
+            // A way back for somebody with no working session, so a stale CSRF token must not block
+            // it; the code is the credential and only a JSON body is read, which a cross-site form
+            // cannot send (see CsrfExempt).
             .WithMetadata(new CsrfExempt())
             .RequireRateLimiting(RateLimitExtensions.Login);
     }

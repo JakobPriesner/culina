@@ -1,21 +1,6 @@
 namespace Domain.Shopping;
 
-/// <summary>
-/// Guesses where in a shop a thing is found, from its name.
-/// </summary>
-/// <remarks>
-/// <para>
-/// A default that is right most of the time and corrected in one tap, rather
-/// than a configuration screen nobody opens. When it is wrong the cost is that
-/// one line sits under the wrong heading, which nobody will notice while
-/// holding a basket.
-/// </para>
-/// <para>
-/// German and English together, because a household writes both — half the
-/// recipes came from a German blog and half from an English one, and the
-/// shopping list does not care which.
-/// </para>
-/// </remarks>
+/// <summary>Guesses the shop section of an item from its name, in German and English.</summary>
 public static class SectionKeywords
 {
     /// <summary>Where a thing called this is found, or <c>Other</c>.</summary>
@@ -28,9 +13,7 @@ public static class SectionKeywords
 
         foreach (var (keyword, section) in Table)
         {
-            // Contains rather than equals: "rote zwiebel" and "spring onion"
-            // both have to find their way, and a shopping list is written in
-            // phrases rather than lemmas.
+            // Contains, not equals: items are phrases ("rote zwiebel").
             if (key.Contains(keyword, StringComparison.Ordinal))
             {
                 return section;
@@ -40,13 +23,7 @@ public static class SectionKeywords
         return ShoppingSection.Other;
     }
 
-    /// <summary>
-    /// The keyword table, longest keywords first.
-    /// </summary>
-    /// <remarks>
-    /// Order matters: "kokosmilch" must be found before "milch", or coconut
-    /// milk ends up in the dairy aisle.
-    /// </remarks>
+    // Longest keywords first: "kokosmilch" must match before "milch".
     private static readonly (string Keyword, ShoppingSection Section)[] Table = Build();
 
     private static (string, ShoppingSection)[] Build()
@@ -124,7 +101,6 @@ public static class SectionKeywords
             "muellbeutel", "bin bag", "folie", "foil", "backpapier", "parchment",
             "schwamm", "sponge");
 
-        // Longest first, so a specific keyword beats the general one it contains.
         return [.. entries.OrderByDescending(entry => entry.Item1.Length)];
     }
 }

@@ -3,21 +3,12 @@ using System.Text.Json;
 
 namespace IntegrationTests.Fixtures;
 
-/// <summary>
-/// Drives the API the way a browser does.
-/// </summary>
+/// <summary>Drives the API the way a browser does.</summary>
 /// <remarks>
-/// <para>
-/// The cookie jar and the CSRF header are not bypassed for convenience: that
-/// path is precisely what these tests exist to prove. A helper that quietly
-/// skipped the CSRF token would make every security test pass for the wrong
-/// reason.
-/// </para>
-/// <para>
-/// Responses come back as <see cref="ApiResponse"/> rather than as a thrown
-/// exception, so a test asserts on a status and a problem <c>code</c> the same
-/// way the frontend branches on them.
-/// </para>
+/// The cookie jar and the CSRF header are not bypassed for convenience: that path is what the tests
+/// prove, and a helper that skipped the token would make every security test pass for the wrong
+/// reason. Responses come back as <see cref="ApiResponse"/>, not exceptions, so a test asserts on
+/// status and problem <c>code</c> as the frontend branches.
 /// </remarks>
 public sealed class ApiClient(HttpClient http) : IDisposable
 {
@@ -48,10 +39,10 @@ public sealed class ApiClient(HttpClient http) : IDisposable
     public Task<ApiResponse> DeleteAsync(string path, CancellationToken cancellationToken) =>
         SendAsync(new HttpRequestMessage(HttpMethod.Delete, path), cancellationToken);
 
-    /// <summary>Deletes with a precondition, for a resource whose delete requires one.</summary>
-    /// <param name="path">What to delete.</param>
-    /// <param name="ifMatch">The ETag the caller holds, quotes included.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <summary>
+    /// Deletes with a precondition (<c>ifMatch</c>: the ETag the caller holds, quotes included),
+    /// for a resource whose delete requires one.
+    /// </summary>
     public Task<ApiResponse> DeleteAsync(string path, string ifMatch, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Delete, path);
@@ -61,11 +52,9 @@ public sealed class ApiClient(HttpClient http) : IDisposable
     }
 
     /// <summary>
-    /// Reads what is at <paramref name="path"/> and deletes that version of it:
-    /// the shape of somebody deleting the thing they are looking at.
+    /// Reads what is at <paramref name="path"/> and deletes that version of it: somebody deleting
+    /// the thing they are looking at.
     /// </summary>
-    /// <param name="path">What to delete.</param>
-    /// <param name="cancellationToken">Cancels the calls.</param>
     public async Task<ApiResponse> DeleteCurrentAsync(string path, CancellationToken cancellationToken)
     {
         var read = await GetAsync(path, cancellationToken);
@@ -75,15 +64,10 @@ public sealed class ApiClient(HttpClient http) : IDisposable
     }
 
     /// <summary>
-    /// Sends a request built by the caller, for header-level tests. Takes
-    /// ownership of the message, which is single-use.
+    /// Sends a request built by the caller, for header-level tests, taking ownership of the
+    /// single-use message; <c>attachCsrf</c> false omits the CSRF header, the shape of a cross-site
+    /// request riding this browser's cookie jar.
     /// </summary>
-    /// <param name="request">The request to send.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
-    /// <param name="attachCsrf">
-    /// False to deliberately omit the CSRF header, which is the shape of a
-    /// cross-site request riding this browser's cookie jar.
-    /// </param>
     public async Task<ApiResponse> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken,
@@ -106,8 +90,8 @@ public sealed class ApiClient(HttpClient http) : IDisposable
 
         RememberCsrfToken(response);
 
-        // Read as bytes, then decoded: an image response is not text, and a
-        // test that wants to look inside one needs what was actually sent.
+        // Read as bytes, then decoded: an image response is not text, and a test looking inside
+        // needs what was sent.
         var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
         return new ApiResponse(

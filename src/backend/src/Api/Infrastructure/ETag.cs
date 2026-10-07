@@ -3,55 +3,32 @@ using Domain.Shared;
 
 namespace Api.Infrastructure;
 
-/// <summary>
-/// Conditional requests, built on each entity's monotonic version.
-/// </summary>
+/// <summary>Conditional requests, built on each entity's monotonic version.</summary>
 /// <remarks>
-/// <para>
-/// The ETag is derived from the version rather than from hashing the response
-/// body. Hashing costs a full render on every request, changes when an
-/// unrelated field's formatting changes, and yields no concurrency token. A
-/// version is cheap, stable, and already the thing optimistic concurrency
-/// needs.
-/// </para>
-/// <para>
-/// One mechanism solves two problems: <c>If-None-Match</c> avoids resending
-/// unchanged data, and <c>If-Match</c> stops two writers clobbering each other.
-/// </para>
-/// <para>
-/// <strong>A version alone identifies a resource only when the URL does.</strong>
-/// <c>/users/me</c> means a different person for every session, and two people
-/// are both at version 1 on the day they sign up — so a browser holding one
-/// person's response would revalidate it, be told 304, and show their data to
-/// the next person to sign in on that device. Any route whose meaning depends
-/// on who is asking must use the overload that takes the entity's identity.
-/// </para>
+/// The tag derives from the version, not a body hash: cheaper, stable, and already what
+/// <c>If-Match</c> needs. <c>If-None-Match</c> skips unchanged data. A version identifies a
+/// resource only when the URL does: a route whose meaning depends on the caller (<c>/users/me</c>)
+/// must use the overload taking the entity identity, or one person's cached response is revalidated
+/// for the next.
 /// </remarks>
 internal static class ETag
 {
     private const string Prefix = "v";
 
     /// <summary>
-    /// Formats a version as a strong entity tag, for a URL that already names
-    /// the entity.
+    /// Formats a version as a strong entity tag, for a URL that already names the entity.
     /// </summary>
     internal static string Of(long version) =>
         $"\"{Prefix}{version.ToString(CultureInfo.InvariantCulture)}\"";
 
-    /// <summary>
-    /// Formats a tag for a URL that does not name the entity it returns, and
-    /// whose response may contain more than that entity.
-    /// </summary>
+    /// <summary>Formats a tag for a URL that does not name the entity it returns.</summary>
     /// <param name="version">The entity's version.</param>
     /// <param name="identity">Which entity this URL resolved to for this caller.</param>
     /// <param name="variant">
-    /// Everything else the response body depends on. A tag must change whenever
-    /// any part of the body does: <c>/users/me</c> lists the households the
-    /// account belongs to, and joining one does not change the account.
+    /// Everything else the body depends on, so the tag changes whenever any part of it does.
     /// </param>
     /// <remarks>
-    /// The version stays last, so <see cref="Read"/> can still recover it for
-    /// <c>If-Match</c> on a write.
+    /// The version stays last so <see cref="Read"/> can recover it for <c>If-Match</c>.
     /// </remarks>
     internal static string Of(long version, Guid identity, string variant = "") =>
         variant.Length == 0
@@ -59,12 +36,11 @@ internal static class ETag
             : $"\"{identity:N}-{variant}-{Prefix}{version.ToString(CultureInfo.InvariantCulture)}\"";
 
     /// <summary>
-    /// Folds a set of values into a short, stable discriminator for a tag.
+    /// Folds a set of values into a short, order-independent discriminator for a tag.
     /// </summary>
     /// <remarks>
-    /// Order-independent and collision-resistant enough for a validator: the
-    /// cost of a collision is one stale read, not a wrong write, and a wrong
-    /// write is still stopped by <c>If-Match</c> on the version.
+    /// A collision costs one stale read, not a wrong write: <c>If-Match</c> still guards the
+    /// version.
     /// </remarks>
     internal static string Fingerprint(IEnumerable<string> parts)
     {
@@ -74,8 +50,8 @@ internal static class ETag
 
         foreach (var part in parts)
         {
-            // FNV-1a over each part, then combined with XOR so the order two
-            // households come back in cannot change the tag.
+            // FNV-1a per part, combined with XOR so the order households come back in cannot change
+            // the tag.
             var hash = 14695981039346656037UL;
 
             foreach (var character in part)
@@ -90,8 +66,7 @@ internal static class ETag
     }
 
     /// <summary>
-    /// Parses a version out of an entity tag, or returns null when the value is
-    /// not one this server issued.
+    /// Parses a version out of an entity tag, or null when the value is not one this server issued.
     /// </summary>
     internal static long? Read(string? headerValue)
     {
@@ -102,8 +77,8 @@ internal static class ETag
 
         var trimmed = headerValue.Trim();
 
-        // Weak validators are accepted on read: a proxy may weaken an ETag it
-        // forwards, and the version it carries is still exact.
+        // Weak validators are accepted: a proxy may weaken a tag it forwards, and the version is
+        // still exact.
         if (trimmed.StartsWith("W/", StringComparison.Ordinal))
         {
             trimmed = trimmed[2..];
@@ -111,8 +86,7 @@ internal static class ETag
 
         trimmed = trimmed.Trim('"');
 
-        // A tag may carry an identity before the version. Only the version is
-        // ever compared on a write: the identity is fixed by the route.
+        // Only the version is compared on a write; the identity is fixed by the route.
         var lastSegment = trimmed[(trimmed.LastIndexOf('-') + 1)..];
 
         if (!lastSegment.StartsWith(Prefix, StringComparison.Ordinal))
@@ -126,31 +100,13 @@ internal static class ETag
     }
 
     /// <summary>
-    /// Returns the body with an <c>ETag</c>, or <c>304</c> with no body when the
-    /// caller already has this version.
+    /// Returns the body with an <c>ETag</c>, or <c>304</c> with no body when the caller already has
+    /// this version.
     /// </summary>
-    /// <typeparam name="TBody">The response shape.</typeparam>
-    /// <param name="context">The current request.</param>
-    /// <param name="body">The response to send when it has changed.</param>
-    /// <param name="version">The entity's current version.</param>
     internal static IResult Ok<TBody>(HttpContext context, TBody body, long version) =>
         Respond(context, body, Of(version));
 
-    /// <summary>
-    /// The same, for a URL whose meaning depends on who is asking.
-    /// </summary>
-    /// <typeparam name="TBody">The response shape.</typeparam>
-    /// <param name="context">The current request.</param>
-    /// <param name="body">The response to send when it has changed.</param>
-    /// <param name="version">The entity's current version.</param>
-    /// <param name="identity">
-    /// The entity this URL resolved to for this caller. Without it, two
-    /// entities at the same version share a tag and one caller's cached
-    /// response is served to another.
-    /// </param>
-    /// <param name="variant">
-    /// Everything else the body depends on — see <see cref="Of(long, Guid, string)"/>.
-    /// </param>
+    /// <summary>The same, for a URL whose meaning depends on who is asking.</summary>
     internal static IResult Ok<TBody>(
         HttpContext context,
         TBody body,
@@ -165,26 +121,19 @@ internal static class ETag
 
         context.Response.Headers.ETag = tag;
 
-        // Private, because a recipe belongs to one household; no-cache, because
-        // the client must revalidate rather than reuse a stale copy blindly.
+        // Private, because a recipe belongs to one household; no-cache, so the client revalidates.
         context.Response.Headers.CacheControl = "private, no-cache";
 
-        // Compared whole, not by version: a tag from a different entity must
-        // never match, however its version happens to line up.
+        // Compared whole, not by version: a tag from a different entity must never match.
         return Matches(context.Request.Headers.IfNoneMatch, tag)
             ? Results.StatusCode(StatusCodes.Status304NotModified)
             : Results.Ok(body);
     }
 
     /// <summary>
-    /// Reads the version a writer claims to be updating.
+    /// Reads the version a writer claims to be updating: <c>428</c> when <c>If-Match</c> is absent,
+    /// <c>400</c> when malformed.
     /// </summary>
-    /// <param name="context">The current request.</param>
-    /// <returns>
-    /// The version, or a failure: <c>428</c> when the header is absent, so the
-    /// client knows to read and retry, and <c>400</c> when it is present but
-    /// malformed — which is a client bug, not a stale version.
-    /// </returns>
     internal static Result<long> RequireIfMatch(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -201,24 +150,11 @@ internal static class ETag
             : RequestErrors.MalformedIfMatch;
     }
 
-    /// <summary>
-    /// Whether the caller already holds exactly this tag.
-    /// </summary>
+    /// <summary>Whether the caller already holds exactly this tag.</summary>
     /// <remarks>
-    /// String comparison, ignoring only a weak-validator prefix a proxy may
-    /// have added. Comparing parsed versions instead is what let one person's
-    /// cached response be revalidated into a 304 for another.
-    /// </remarks>
-    /// <summary>
-    /// Whether the client already holds this exact body.
-    /// </summary>
-    /// <param name="headerValues">What arrived in <c>If-None-Match</c>.</param>
-    /// <param name="tag">The tag this response would carry, quotes included.</param>
-    /// <remarks>
-    /// Internal because the images are served outside <see cref="Respond"/>:
-    /// their bodies are bytes rather than JSON and their tag is a content hash
-    /// rather than a version, but the conditional half of the exchange is the
-    /// same exchange and is not worth a second implementation.
+    /// Whole-string comparison, ignoring a weak prefix a proxy may add: comparing parsed versions
+    /// let one person's cached response revalidate into a 304 for another. Internal because image
+    /// serving, outside <see cref="Respond"/>, shares the conditional half.
     /// </remarks>
     internal static bool Matches(IEnumerable<string?> headerValues, string tag) =>
         headerValues.Any(value => Strong(value) == tag);

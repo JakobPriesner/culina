@@ -5,36 +5,15 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Recipes.Evaluation;
 
-/// <summary>
-/// How good search is, as numbers, over a library built to be difficult.
-/// </summary>
+/// <summary>Scores search quality over a deliberately tricky mixed German/English golden library.</summary>
 /// <remarks>
-/// <para>
-/// Sixty recipes — forty German, twenty English, because the corpus is mixed
-/// and a monolingual fixture hides the interesting bugs — and forty-four queries
-/// across every kind people type, each with graded judgments: 2 for what the
-/// query is for, 1 for a fair answer, nothing for the rest. The library holds
-/// the traps on purpose: three Bolognese and a Ragù that is not one, compounds
-/// no stemmer splits, Müsli spelt three ways, recipes that look vegetarian and
-/// have fish sauce or chicken stock in them, recipes with no stated time, and
-/// English recipes with German ingredient names.
-/// </para>
-/// <para>
-/// The rule-based cases in <see cref="RecipeSearchRelevanceTests"/> say what
-/// must never happen; this says how well the rest goes. A change that improves
-/// the average and breaks one query is reported by name, per class, so the
-/// person making it is told before it merges. The data is
-/// <c>golden-library.json</c>, and adding a case is editing a list.
-/// </para>
+/// Queries carry graded judgments (2 intended, 1 fair, 0 otherwise); data is <c>golden-library.json</c>.
+/// <see cref="RecipeSearchRelevanceTests"/> covers what must never happen; this covers how well the rest goes.
 /// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class SearchEvaluationTests(PostgresFixture postgres)
 {
-    /// <summary>
-    /// The bar the whole set has to clear. Precision over the first three —
-    /// what fits above the fold on a phone — and graded ranking quality over
-    /// the first ten.
-    /// </summary>
+    // Precision over the first three (what fits above the fold on a phone) and NDCG over the first ten.
     private const double PrecisionAtThreeTarget = 0.85;
 
     private const double NdcgAtTenTarget = 0.80;
@@ -63,8 +42,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
         var precision = ranked.Average(one => one.PrecisionAtThree);
         var ndcg = ranked.Average(one => one.NdcgAtTen);
 
-        // The two that are invariants rather than scores: a diet is never
-        // broken, and a match through the lexicon is never above a real one.
+        // Invariants rather than scores: a diet is never broken, a lexicon match never outranks a real one.
         Assert.True(outcomes.All(one => one.Violations.Count == 0), report);
         Assert.True(outcomes.All(one => one.Disciplined), report);
         Assert.True(outcomes.All(one => one.EmptyAsExpected), report);
@@ -80,8 +58,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
         var titles = items.Select(item => item.GetProperty("title").GetString()!).ToList();
         var grades = titles.Select(title => query.Grades.GetValueOrDefault(title)).ToList();
 
-        // Precision over the first three, out of as many relevant recipes as
-        // there are: a known-item query with one right answer can score 1.
+        // Out of at most as many as are relevant, so a known-item query with one answer can score 1.
         var relevant = query.Grades.Count(pair => pair.Value > 0);
         var precision = relevant == 0
             ? 1.0
@@ -89,7 +66,7 @@ public class SearchEvaluationTests(PostgresFixture postgres)
 
         var ndcg = Ndcg(query, grades, 10);
 
-        // A concept match never above a match of any other kind.
+        // A concept match never above any other kind.
         var concept = items.Select(item =>
             item.TryGetProperty("matchReason", out var reason)
             && reason.ValueKind == JsonValueKind.Object
@@ -116,10 +93,6 @@ public class SearchEvaluationTests(PostgresFixture postgres)
             query.Chips is null || query.Chips.SequenceEqual(chips, StringComparer.Ordinal));
     }
 
-    /// <summary>
-    /// Graded ranking quality over the first <paramref name="depth"/>, out of
-    /// the best order the judgments allow.
-    /// </summary>
     private static double Ndcg(GoldenQuery query, List<int> grades, int depth)
     {
         var ideal = Dcg(query.Grades.Values.OrderDescending().Take(depth));
@@ -127,7 +100,6 @@ public class SearchEvaluationTests(PostgresFixture postgres)
         return ideal == 0 ? 1.0 : Dcg(grades.Take(depth)) / ideal;
     }
 
-    /// <summary>Discounted cumulative gain, with gains of 2^grade − 1.</summary>
     private static double Dcg(IEnumerable<int> grades) =>
         grades.Select((grade, rank) => (Math.Pow(2, grade) - 1) / Math.Log2(rank + 2)).Sum();
 

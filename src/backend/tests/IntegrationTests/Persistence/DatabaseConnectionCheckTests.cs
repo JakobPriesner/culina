@@ -10,9 +10,8 @@ using TestSupport;
 namespace IntegrationTests.Persistence;
 
 /// <summary>
-/// The check connects to any address it is given, during setup for anybody.
-/// So it says which kind of failure it was and nothing more, and the detail
-/// goes to the log.
+/// The check connects to any address it is given, during setup for anybody, so it says only which
+/// kind of failure it was; the detail goes to the log.
 /// </summary>
 [Collection(RequiresDatabase.Name)]
 public sealed class DatabaseConnectionCheckTests : IDisposable
@@ -32,13 +31,10 @@ public sealed class DatabaseConnectionCheckTests : IDisposable
     [Fact]
     public async Task CheckAsync_ShouldSayOnlyThatNothingAnswered_WhenNothingListensOnThePort()
     {
-        // Arrange
         var port = ScriptedServer.ClosedPort();
 
-        // Act
         var result = await Check(Loopback(port));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseUnreachable);
         var line = Assert.Single(logs.Lines, line => line.EventId == 1960);
         Assert.Equal(LogLevel.Warning, line.Level);
@@ -50,13 +46,10 @@ public sealed class DatabaseConnectionCheckTests : IDisposable
     [Fact]
     public async Task CheckAsync_ShouldSayOnlyThatTheLoginWasRefused_WhenThePasswordIsWrong()
     {
-        // Arrange
         var settings = postgres.Settings with { Password = "not the password" };
 
-        // Act
         var result = await Check(settings);
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseLoginRefused);
         Assert.Contains("28P01", Assert.Single(logs.Lines)["Reason"], StringComparison.Ordinal);
     }
@@ -64,13 +57,10 @@ public sealed class DatabaseConnectionCheckTests : IDisposable
     [Fact]
     public async Task CheckAsync_ShouldSayItIsNotADatabase_WhenSomethingElseAnswers()
     {
-        // Arrange
         using var web = new ScriptedServer(Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\n\r\n"));
 
-        // Act
         var result = await Check(Loopback(web.Port));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseNotPostgres);
     }
 
@@ -79,16 +69,13 @@ public sealed class DatabaseConnectionCheckTests : IDisposable
     [InlineData(new byte[] { (byte)'R', 0, 0, 0, 12, 0, 0, 0, 5, 1, 2, 3, 4 })]
     public async Task CheckAsync_ShouldNeverSendThePassword_WhenTheServerAsksForItInClearTextOrAsMd5(byte[] request)
     {
-        // Arrange
         // What a server that only pretends to be PostgreSQL asks for, so that
         // it is handed the password: in clear text, or as an MD5 it can crack.
         using var impostor = new ScriptedServer(request);
         var settings = Loopback(impostor.Port);
 
-        // Act
         var result = await Check(settings);
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseInsecureAuth);
         var sent = Encoding.ASCII.GetString(await impostor.ReceivedAfterReply);
         Assert.DoesNotContain(settings.Password, sent, StringComparison.Ordinal);
@@ -98,48 +85,38 @@ public sealed class DatabaseConnectionCheckTests : IDisposable
     [Fact]
     public async Task CheckAsync_ShouldRefuseAServer_ThatAsksForNoPasswordAtAll()
     {
-        // Arrange
         // "trust": anybody may sign in as anybody, which is not a database to
         // keep a household's data in.
         using var trusting = new ScriptedServer([(byte)'R', 0, 0, 0, 8, 0, 0, 0, 0]);
 
-        // Act
         var result = await Check(Loopback(trusting.Port));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseInsecureAuth);
     }
 
     [Fact]
     public async Task CheckAsync_ShouldSayEncryptionFailed_WhenTlsIsRequiredAndTheServerOffersNone()
     {
-        // Arrange
         var settings = postgres.Settings with { RequireSsl = true };
 
-        // Act
         var result = await Check(settings);
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseTlsFailed);
     }
 
     [Fact]
     public async Task CheckAsync_ShouldRefuseTheRole_WhenItIsASuperuser()
     {
-        // Act
         var result = await Check(postgres.SuperuserSettings);
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseSuperuser);
     }
 
     [Fact]
     public async Task CheckAsync_ShouldAccept_TheApplicationsOwnRole()
     {
-        // Act
         var result = await Check(postgres.Settings);
 
-        // Assert
         result.ShouldBeSuccess();
         Assert.Empty(logs.Lines);
     }

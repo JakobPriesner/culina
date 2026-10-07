@@ -1,12 +1,9 @@
 namespace Api.Middleware;
 
-/// <summary>
-/// The security headers, and the reason each one is set.
-/// </summary>
+/// <summary>The security headers, and the reason each one is set.</summary>
 /// <remarks>
-/// Deliberately absent: HSTS, an HTTPS redirect, and response compression. TLS
-/// terminates at the operator's reverse proxy, which owns HSTS, and compressing
-/// cookie-authenticated responses invites BREACH.
+/// Absent on purpose: HSTS and the HTTPS redirect (TLS ends at the operator's proxy) and
+/// compression (BREACH).
 /// </remarks>
 internal static class SecurityHeaders
 {
@@ -25,56 +22,41 @@ internal static class SecurityHeaders
     /// <summary>Blocks cross-origin embedding of our responses.</summary>
     internal const string ResourcePolicy = "same-origin";
 
-    /// <summary>
-    /// Least privilege for device APIs: only the camera is listed, because
-    /// taking a recipe photo is the one capability the app asks for.
-    /// </summary>
+    /// <summary>Least privilege for device APIs: only the camera, for recipe photos.</summary>
     internal const string PermissionsPolicy = "camera=(self), microphone=(), geolocation=()";
 
     /// <summary>
-    /// A JSON response needs nothing at all, so it is allowed nothing. This is
-    /// the policy that applies to every API response.
+    /// A JSON response needs nothing, so it is allowed nothing; applies to every API response.
     /// </summary>
     internal const string ApiContentSecurityPolicy =
         "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
     /// <summary>
-    /// The one style attribute the document may carry: SvelteKit's route
-    /// announcer, which its generated root component writes with a fixed
-    /// visually-hidden <c>style</c> after the first client-side navigation.
+    /// The one style attribute the document may carry: SvelteKit's route announcer, hidden via a
+    /// fixed <c>style</c>.
     /// </summary>
     /// <remarks>
-    /// A nonce cannot be put on an attribute, so without this the announcer
-    /// lost its styles on every signed-out deep link and the browser logged a
-    /// violation. <c>unsafe-hashes</c> allows this exact value and nothing
-    /// else — any other style attribute is still refused. The hash is of the
-    /// string in <c>@sveltejs/kit</c>'s <c>write_root.js</c>; if an upgrade
-    /// changes it, the <c>@image</c> end-to-end spec reports the violation.
+    /// A nonce cannot go on an attribute; <c>unsafe-hashes</c> allows only this exact value. If a
+    /// <c>@sveltejs/kit</c> upgrade changes the string, the <c>@image</c> end-to-end spec reports
+    /// the violation.
     /// </remarks>
     internal const string AnnouncerStyleHash = "sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=";
 
-    /// <summary>The only Trusted Types policies a page may create, each a named string-to-markup/URL sink.</summary>
+    /// <summary>The only Trusted Types policies a page may create.</summary>
     /// <remarks>
-    /// <c>sveltekit-trusted-url</c> is unused while Culina registers the worker itself.
-    /// <c>culina-worker-url</c> lives in <c>updates.svelte.ts</c>. No <c>default</c> policy,
-    /// so a library writing strings into the DOM is refused.
+    /// No <c>default</c> policy, so a library writing strings into the DOM is refused;
+    /// <c>culina-worker-url</c> lives in <c>updates.svelte.ts</c>.
     /// </remarks>
     internal const string TrustedTypesPolicies =
         "svelte-trusted-html sveltekit-trusted-url culina-worker-url";
 
     /// <summary>
-    /// The SPA document's policy. There is no <c>unsafe-inline</c> and no
-    /// <c>unsafe-eval</c> anywhere — either one disables the protection the
-    /// rest of the policy provides. The inline blocks the app needs (the theme
-    /// applied before first paint, SvelteKit's boot script, and the boot
-    /// screen's styles) carry the per-response nonce.
+    /// The SPA document's policy: no <c>unsafe-inline</c> or <c>unsafe-eval</c>; the inline blocks
+    /// carry the per-response nonce.
     /// </summary>
     /// <remarks>
-    /// The nonce is named for styles as well as scripts. Without it
-    /// <c>style-src 'self'</c> blocks the inline block <em>and</em> every
-    /// <c>style</c> attribute in the document, which is how the boot screen
-    /// came to render as unstyled text in the corner in production while
-    /// looking correct under the dev server, which sets no policy at all.
+    /// The nonce covers styles too: without it <c>style-src 'self'</c> blocks inline styles, which
+    /// the dev server (no policy) hides.
     /// </remarks>
     internal static string DocumentContentSecurityPolicy(string nonce) =>
         string.Join(

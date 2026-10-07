@@ -16,13 +16,10 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Create_ShouldMakeTheCallerAnOwner_SoTheHouseholdIsAdministrable()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
 
-        // Act
         var response = await owner.PostAsync("/api/v1/households", new { name = "Cabin" }, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal("owner", response.Json!.Value.GetProperty("yourRole").GetString());
         Assert.NotNull(response.Headers.Location);
@@ -31,14 +28,11 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task GetAll_ShouldListTheFirstHouseholdAndAnyOthers()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         await owner.PostAsync("/api/v1/households", new { name = "Cabin" }, Token);
 
-        // Act
         var response = await owner.GetAsync("/api/v1/households", Token);
 
-        // Assert
         // One created with the first account, one created just now.
         Assert.Equal(2, response.Json!.Value.GetProperty("items").GetArrayLength());
     }
@@ -46,16 +40,13 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task GetById_ShouldReturn404ForANonMember_NotAForbidden()
     {
-        // Arrange
         var (owner, stranger) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
 
-        // Act
         var response = await stranger.GetAsync($"/api/v1/households/{householdId}", Token);
 
-        // Assert
-        // Answering "forbidden" would confirm the household exists, which is
-        // exactly what a non-member has no business learning.
+        // "Forbidden" would confirm the household exists, which a non-member has no business
+        // learning.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("households.not_found", response.ProblemCode);
         owner.Dispose();
@@ -65,15 +56,12 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task GetById_ShouldAnswer304_WhenNothingHasChanged()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var first = await owner.GetAsync($"/api/v1/households/{householdId}", Token);
 
-        // Act
         var again = await GetIfNoneMatchAsync(owner, householdId, first.ETag!);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotModified, again.StatusCode);
         Assert.Equal(first.ETag, again.ETag);
     }
@@ -81,20 +69,16 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task GetById_ShouldTagEachRoleApart_BecauseTheBodySaysWhichOneYouHold()
     {
-        // Arrange
-        // Same household, same version, different body. On a shared device the
-        // browser revalidates what the last person was sent, and a shared tag
-        // would answer 304 over somebody else's role.
+        // Same household, same version, different body: on a shared device a shared tag would
+        // answer 304 over somebody else's role.
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         await AddMemberAsync(householdId, member);
 
         var ownersCopy = await owner.GetAsync($"/api/v1/households/{householdId}", Token);
 
-        // Act
         var membersRead = await GetIfNoneMatchAsync(member, householdId, ownersCopy.ETag!);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, membersRead.StatusCode);
         Assert.Equal("member", membersRead.Json!.Value.GetProperty("yourRole").GetString());
         Assert.NotEqual(ownersCopy.ETag, membersRead.ETag);
@@ -105,9 +89,7 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task GetById_ShouldChangeItsTag_WhenAMemberRenamesThemselves()
     {
-        // Arrange
-        // A new name is a write to the account, not to the household, so the
-        // household's version stays where it was.
+        // A new name writes the account, not the household, so the household's version stays.
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         await AddMemberAsync(householdId, member);
@@ -116,10 +98,8 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
         var account = await member.GetAsync("/api/v1/users/me", Token);
         await PatchAsync(member, "/api/v1/users/me", account.ETag!, new { displayName = "Grace Hopper" });
 
-        // Act
         var after = await GetIfNoneMatchAsync(owner, householdId, before.ETag!);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
         Assert.Contains(
             after.Json!.Value.GetProperty("members").EnumerateArray(),
@@ -131,18 +111,15 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldRequireIfMatch_AndRejectAStaleOne()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         var householdId = await CabinAsync(owner);
         var stale = (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).ETag!;
 
         await PatchAsync(owner, $"/api/v1/households/{householdId}", stale, new { name = "Hut" });
 
-        // Act
         var missing = await owner.DeleteAsync($"/api/v1/households/{householdId}", Token);
         var outdated = await owner.DeleteAsync($"/api/v1/households/{householdId}", stale, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.PreconditionRequired, missing.StatusCode);
         Assert.Equal(HttpStatusCode.PreconditionFailed, outdated.StatusCode);
 
@@ -154,14 +131,11 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldSucceedForAnOwner_WithACurrentIfMatch()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         var householdId = await CabinAsync(owner);
 
-        // Act
         var response = await owner.DeleteCurrentAsync($"/api/v1/households/{householdId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         var gone = await owner.GetAsync($"/api/v1/households/{householdId}", Token);
@@ -172,17 +146,14 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Rename_ShouldBeRefusedForAPlainMember_EvenThoughTheyCanSeeIt()
     {
-        // Arrange
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         await AddMemberAsync(householdId, member);
 
         var current = await member.GetAsync($"/api/v1/households/{householdId}", Token);
 
-        // Act
         var response = await PatchAsync(member, $"/api/v1/households/{householdId}", current.ETag!, new { name = "Mine now" });
 
-        // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("households.not_owner", response.ProblemCode);
         owner.Dispose();
@@ -192,15 +163,12 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Rename_ShouldSucceedForAnOwner_WithACurrentIfMatch()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var current = await owner.GetAsync($"/api/v1/households/{householdId}", Token);
 
-        // Act
         var response = await PatchAsync(owner, $"/api/v1/households/{householdId}", current.ETag!, new { name = "The Kitchen" });
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("The Kitchen", response.Json!.Value.GetProperty("name").GetString());
     }
@@ -208,15 +176,12 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task RemoveMember_ShouldRefuseToStrandTheHousehold_WhenItIsTheLastOwner()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var me = (await owner.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();
 
-        // Act
         var response = await owner.DeleteAsync($"/api/v1/households/{householdId}/members/{me}", Token);
 
-        // Assert
         // The last owner cannot leave, even voluntarily: a household with no
         // owner can never be administered again.
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -226,15 +191,12 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task RemoveMember_ShouldLetAMemberLeaveOnTheirOwn()
     {
-        // Arrange
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var memberId = await AddMemberAsync(householdId, member);
 
-        // Act
         var response = await member.DeleteAsync($"/api/v1/households/{householdId}/members/{memberId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var members = await owner.GetAsync($"/api/v1/households/{householdId}/members", Token);
         Assert.Equal(1, members.Json!.Value.GetProperty("items").GetArrayLength());
@@ -245,13 +207,11 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task ChangeRole_ShouldPromoteAMember_AndThenLetTheOriginalOwnerLeave()
     {
-        // Arrange
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var memberId = await AddMemberAsync(householdId, member);
         var ownerId = (await owner.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();
 
-        // Act
         var promoted = await PatchAsync(
             owner,
             $"/api/v1/households/{householdId}/members/{memberId}",
@@ -259,7 +219,6 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
             new { role = "owner" });
         var left = await owner.DeleteAsync($"/api/v1/households/{householdId}/members/{ownerId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, promoted.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, left.StatusCode);
         owner.Dispose();
@@ -269,19 +228,16 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task ChangeRole_ShouldRejectAnUnknownRole_NamingTheField()
     {
-        // Arrange
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var memberId = await AddMemberAsync(householdId, member);
 
-        // Act
         var response = await PatchAsync(
             owner,
             $"/api/v1/households/{householdId}/members/{memberId}",
             etag: null,
             new { role = "overlord" });
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("households.invalid_role", response.ProblemCode);
         owner.Dispose();
@@ -291,15 +247,12 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldBeRefusedForAPlainMember()
     {
-        // Arrange
         var (owner, member) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         await AddMemberAsync(householdId, member);
 
-        // Act
         var response = await member.DeleteCurrentAsync($"/api/v1/households/{householdId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("households.not_owner", response.ProblemCode);
         Assert.Equal(HttpStatusCode.OK, (await member.GetAsync($"/api/v1/households/{householdId}", Token)).StatusCode);
@@ -310,18 +263,15 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldAnswerTheSame_ForAStrangerAndForNothingAtAll()
     {
-        // Arrange
         var (owner, stranger) = await TwoUsersAsync();
         var householdId = await FirstHouseholdIdAsync(owner);
         var etag = (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).ETag!;
 
-        // Act
         var theirs = await stranger.DeleteAsync($"/api/v1/households/{householdId}", etag, Token);
         var nothing = await stranger.DeleteAsync($"/api/v1/households/{Guid.NewGuid()}", etag, Token);
 
-        // Assert
-        // Telling the two apart would confirm which household ids exist; and
-        // the answer being a success must not mean anything was deleted.
+        // Telling the two apart would confirm which household ids exist, and a success must not
+        // mean anything was deleted.
         Assert.Equal(nothing.StatusCode, theirs.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).StatusCode);
         owner.Dispose();
@@ -331,17 +281,14 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldAnswer204Again_ForAHouseholdAlreadyInTheBin()
     {
-        // Arrange
         using var owner = await FreshOwnerAsync();
         var householdId = await CabinAsync(owner);
         var etag = (await owner.GetAsync($"/api/v1/households/{householdId}", Token)).ETag!;
         await owner.DeleteAsync($"/api/v1/households/{householdId}", etag, Token);
 
-        // Act
         // A second tap, with the version the first one was sent with.
         var again = await owner.DeleteAsync($"/api/v1/households/{householdId}", etag, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, again.StatusCode);
     }
 
@@ -384,8 +331,7 @@ public class HouseholdEndpointTests(PostgresFixture postgres)
         var memberId = (await member.GetAsync("/api/v1/users/me", Token))
             .Json!.Value.GetProperty("userId").GetGuid();
 
-        // Invitations are a separate bead; membership is arranged directly so
-        // the authorisation rules can be tested now.
+        // Arranged directly: joining by invitation is not what is under test here.
         await using var session = postgres.NewSession();
         var executor = new DbExecutor(session);
 

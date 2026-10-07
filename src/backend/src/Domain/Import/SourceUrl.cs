@@ -1,24 +1,11 @@
 namespace Domain.Import;
 
-/// <summary>
-/// The address of a recipe's original, fit to be shown as a link.
-/// </summary>
+/// <summary>The address of a recipe's original, fit to be shown as a link.</summary>
 /// <remarks>
-/// <para>
-/// It arrives from places this app does not control — a connected Tandoor's
-/// <c>source_url</c>, the page a pasted link redirected to, a share sheet, a
-/// request body — and it ends up as the <c>href</c> on every reading of the
-/// recipe, the public share page included, labelled with its host.
-/// </para>
-/// <para>
-/// So only an absolute <c>http</c> or <c>https</c> address with a host is one.
-/// <c>javascript:</c>, <c>data:</c>, <c>file:</c> and the schemes desktop apps
-/// register for themselves (<c>search-ms:</c>, <c>ms-officecmd:</c>) are not
-/// places a link on a recipe should go, and
-/// <c>javascript://chefkoch.de/%0a…</c> would even be labelled "chefkoch.de".
-/// What is kept is the address as parsed, so the host shown and the address
-/// followed are read from the same thing.
-/// </para>
+/// It comes from places this app does not control and becomes an <c>href</c> (public share page
+/// included), so only an absolute <c>http</c>/<c>https</c> address with a host qualifies:
+/// <c>javascript://chefkoch.de/%0a…</c> would even be labelled "chefkoch.de". The address as parsed
+/// is kept, so shown host and followed address come from one thing.
 /// </remarks>
 public sealed record SourceUrl
 {
@@ -30,9 +17,10 @@ public sealed record SourceUrl
     /// <summary>The address, as parsed.</summary>
     public string Value { get; }
 
-    /// <summary>Reads an address, or says there is none worth linking to.</summary>
-    /// <param name="text">Whatever came in as the original's address.</param>
-    /// <returns>The address, or null if it is not an http or https one with a host.</returns>
+    /// <summary>
+    /// Reads an address, or says there is none worth linking to (not an http or https one with a
+    /// host).
+    /// </summary>
     public static SourceUrl? From(string? text)
     {
         var trimmed = text?.Trim();

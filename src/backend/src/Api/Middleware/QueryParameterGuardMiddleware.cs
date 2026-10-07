@@ -4,20 +4,9 @@ using Domain.Shared;
 namespace Api.Middleware;
 
 /// <summary>
-/// Rejects query parameters an endpoint does not declare.
+/// Rejects query parameters an endpoint does not declare (via <c>.WithQueryParameters("query", "tag")</c>),
+/// because a silently ignored filter returns wrong data that looks right.
 /// </summary>
-/// <remarks>
-/// <para>
-/// A silently ignored filter returns wrong data that looks right, which is far
-/// worse than an error: the caller believes it asked for vegan recipes under
-/// 30 minutes and gets everything. A typo in a parameter name must fail loudly.
-/// </para>
-/// <para>
-/// Endpoints declare their parameters with
-/// <c>.WithQueryParameters("query", "tag")</c>. An endpoint that declares none
-/// accepts none.
-/// </para>
-/// </remarks>
 /// <param name="next">The rest of the pipeline.</param>
 internal sealed class QueryParameterGuardMiddleware(RequestDelegate next)
 {
@@ -26,8 +15,7 @@ internal sealed class QueryParameterGuardMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(logger);
 
-        // Only API paths are guarded: the SPA's own routes carry whatever query
-        // the browser and the app put there.
+        // Only API paths are guarded; the SPA's routes carry arbitrary queries.
         if (!ApiPaths.IsApi(context.Request.Path) || context.Request.Query.Count == 0)
         {
             return next(context);
@@ -37,9 +25,7 @@ internal sealed class QueryParameterGuardMiddleware(RequestDelegate next)
 
         if (endpoint is null)
         {
-            // Nothing matched this path. Letting routing answer with its own
-            // 404 is more useful than blaming a query parameter on an address
-            // that does not exist.
+            // Nothing matched; let routing answer with its own 404.
             return next(context);
         }
 

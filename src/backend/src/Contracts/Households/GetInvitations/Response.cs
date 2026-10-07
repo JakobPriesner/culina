@@ -7,13 +7,10 @@ public sealed record Response
     public required IReadOnlyList<InvitationSummary> Items { get; init; }
 }
 
-/// <summary>
-/// An open invitation.
-/// </summary>
+/// <summary>An open invitation.</summary>
 /// <remarks>
-/// Deliberately carries no code. The code is shown once, at creation, and only
-/// its digest is stored — so listing invitations cannot hand one out, and a
-/// leaked screenshot of this list is harmless.
+/// Carries no code: it is shown once at creation and only its digest is stored, so listing cannot
+/// hand one out.
 /// </remarks>
 public sealed record InvitationSummary
 {

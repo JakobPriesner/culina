@@ -11,13 +11,9 @@ using Domain.Shared;
 namespace Application.Archive;
 
 /// <summary>Writes a household's recipes out as a file.</summary>
-/// <param name="HouseholdId">Whose kitchen.</param>
-/// <param name="UserId">Who is asking, and whose notes go in it.</param>
-/// <param name="Destination">Where to write it.</param>
 public sealed record ExportArchiveQuery(Guid HouseholdId, Guid UserId, Stream Destination);
 
 /// <summary>What was written, so the response can name the file.</summary>
-/// <param name="Recipes">How many went in.</param>
 public sealed record ArchiveWritten(int Recipes);
 
 internal sealed class ExportArchiveQueryHandler(
@@ -29,21 +25,10 @@ internal sealed class ExportArchiveQueryHandler(
     TimeProvider time)
     : IQueryHandler<ExportArchiveQuery, ArchiveWritten>
 {
-    /// <summary>
-    /// How many recipes are read at a time.
-    /// </summary>
-    /// <remarks>
-    /// A page rather than all of them. A household with four hundred recipes
-    /// should not put four hundred aggregates in memory to write a file that is
-    /// streamed out anyway.
-    /// </remarks>
+    // A page at a time, so a large household does not put every aggregate in memory.
     private const int Page = 50;
 
-    /// <summary>The rendition an archive carries.</summary>
-    /// <remarks>
-    /// The largest one. An archive is what somebody is left with, and a
-    /// thumbnail is not a photograph of dinner.
-    /// </remarks>
+    // The largest rendition: an archive is what somebody is left with.
     private const int ImageWidth = 1600;
 
     public async Task<Result<ArchiveWritten>> Handle(
@@ -66,15 +51,7 @@ internal sealed class ExportArchiveQueryHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Writes the file straight to the response, a recipe at a time.
-    /// </summary>
-    /// <remarks>
-    /// Streamed rather than serialised: with its photographs inline, an archive
-    /// of a well-used household is tens of megabytes, and building it in memory
-    /// to hand to a serialiser would make the export the largest allocation in
-    /// the process.
-    /// </remarks>
+    // Streamed, not serialised: with photographs inline an archive is tens of megabytes.
     private async Task<ArchiveWritten> WriteAsync(
         ExportArchiveQuery query,
         CancellationToken cancellationToken)
@@ -134,16 +111,12 @@ internal sealed class ExportArchiveQueryHandler(
 
                     if (archived is null)
                     {
-                        // Deleted between the page and the read. One recipe
-                        // missing beats a failed export of four hundred.
+                        // Deleted between the page and the read: one missing recipe beats a failed export.
                         continue;
                     }
 
-                    // Serialised to bytes and written raw, rather than handed
-                    // to the serialiser: `JsonSerializer.Serialize` flushes the
-                    // writer when it finishes, and a synchronous flush into a
-                    // response body is refused outright by Kestrel. Flushing is
-                    // this loop's job, once per recipe, asynchronously.
+                    // Written raw because JsonSerializer.Serialize flushes synchronously, which Kestrel refuses;
+                    // flushing is this loop's job, asynchronously, once per recipe.
                     writer.WriteRawValue(
                         JsonSerializer.SerializeToUtf8Bytes(archived, RecipeArchive.Format),
                         skipInputValidation: true);

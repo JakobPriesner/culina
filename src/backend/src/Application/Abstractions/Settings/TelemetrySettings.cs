@@ -1,25 +1,13 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// Where traces, metrics and logs are exported to, if anywhere.
-/// </summary>
+/// <summary>Where traces, metrics and logs are exported to, if anywhere.</summary>
 /// <remarks>
-/// <para>
-/// The keys are the standard OpenTelemetry names rather than a Culina section,
-/// because the SDK reads them itself: whatever is set here is what the exporter
-/// uses, and a collector's documentation can be followed word for word.
-/// </para>
-/// <para>
-/// Unset means JSON logs on stdout and nothing exported — the exporter is not
-/// even registered, because without a collector it retries against localhost
-/// forever and fills the log with noise.
-/// </para>
+/// Standard OpenTelemetry keys, which the SDK reads itself. Unset means JSON logs on stdout and no
+/// exporter at all: without a collector it retries against localhost forever.
 /// </remarks>
 public sealed record TelemetrySettings
 {
-    /// <summary>
-    /// No section: the OpenTelemetry names sit at the root of the configuration.
-    /// </summary>
+    /// <summary>No section: the OpenTelemetry names sit at the root of the configuration.</summary>
     public const string SectionName = "";
 
     /// <summary>The collector's address.</summary>
@@ -38,12 +26,9 @@ public sealed record TelemetrySettings
     public Uri? Endpoint { get; init; }
 
     /// <summary>
-    /// <see cref="Grpc"/> or <see cref="HttpProtobuf"/>.
+    /// <see cref="Grpc"/> or <see cref="HttpProtobuf"/>; the wrong one fails silently (gRPC pointed
+    /// at an HTTP port exports nothing).
     /// </summary>
-    /// <remarks>
-    /// Worth having next to the address, because the wrong one fails silently:
-    /// a gRPC exporter pointed at an HTTP port exports nothing and says nothing.
-    /// </remarks>
     public string Protocol { get; init; } = Grpc;
 
     /// <summary>Throws when any value would make the process unable to serve.</summary>

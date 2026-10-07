@@ -1,18 +1,9 @@
 namespace Api.Infrastructure;
 
 /// <summary>
-/// Request-pipeline and security log lines. Event ids 1800-1899.
+/// Request-pipeline and security log lines, event ids 1800-1899. Each takes the request, not its path,
+/// so the path always goes through <see cref="SecretPaths"/>.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Source-generated: the template is checked at compile time, the disabled path
-/// allocates nothing, and no message can be accidentally interpolated.
-/// </para>
-/// <para>
-/// Each line takes the request rather than its path, so the path is always
-/// written through <see cref="SecretPaths"/> and a new caller cannot forget it.
-/// </para>
-/// </remarks>
 internal static partial class PipelineLogs
 {
     internal static void Unhandled(this ILogger logger, HttpRequest request, Exception exception) =>

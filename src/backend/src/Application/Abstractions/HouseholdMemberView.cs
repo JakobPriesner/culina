@@ -1,13 +1,6 @@
 namespace Application.Abstractions;
 
-/// <summary>
-/// A household member with the one thing the domain does not carry: their name.
-/// </summary>
-/// <remarks>
-/// A read model, not an entity. <c>Household</c> holds user ids because
-/// membership rules never need a name; the members screen does, and joining in
-/// SQL is cheaper than loading a user per member.
-/// </remarks>
+/// <summary>A household member plus their name, which the domain does not carry. A read model joined in SQL.</summary>
 /// <param name="UserId">Who.</param>
 /// <param name="DisplayName">What they are called.</param>
 /// <param name="Role">What they may do.</param>

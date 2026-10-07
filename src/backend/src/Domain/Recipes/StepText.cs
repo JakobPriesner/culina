@@ -4,34 +4,21 @@ using Domain.Shared;
 
 namespace Domain.Recipes;
 
-/// <summary>
-/// Reads and writes the stored form of a step's text.
-/// </summary>
+/// <summary>Reads and writes the stored form of a step's text.</summary>
 /// <remarks>
-/// <para>
-/// References are stored as inline tokens — <c>[[ingredient:0f1c…]]</c> — and
-/// not as character offsets. Offsets rot the moment someone edits a word
-/// earlier in the sentence, and a silently wrong offset would attach the wrong
-/// amount to the wrong ingredient.
-/// </para>
-/// <para>
-/// The token form never leaves the database: the API exposes segments, so this
-/// encoding can change without a new API version.
-/// </para>
+/// References are inline tokens (<c>[[ingredient:0f1c…]]</c>), not offsets, which rot when a word
+/// earlier in the sentence is edited. The token form never leaves the database, so it can change
+/// without a new API version.
 /// </remarks>
 public static class StepText
 {
     private const string Open = "[[ingredient:";
     private const string Close = "]]";
 
-    /// <summary>
-    /// Escapes a literal <c>[[</c> so text that happens to contain one cannot
-    /// be read back as a reference.
-    /// </summary>
+    /// <summary>Escapes a literal <c>[[</c> so it cannot be read back as a reference.</summary>
     private const string EscapedOpen = "[\\[";
 
     /// <summary>Splits stored text into its segments.</summary>
-    /// <param name="stored">The text as it is stored.</param>
     public static Result<IReadOnlyList<StepSegment>> Parse(string? stored)
     {
         if (stored is null)
@@ -86,7 +73,6 @@ public static class StepText
     }
 
     /// <summary>Writes segments back into the stored form.</summary>
-    /// <param name="segments">The segments to store.</param>
     public static string Serialise(IReadOnlyList<StepSegment> segments)
     {
         ArgumentNullException.ThrowIfNull(segments);
@@ -117,10 +103,9 @@ public static class StepText
     }
 
     /// <summary>
-    /// Every ingredient a step refers to, for rebuilding the reference index
-    /// and for refusing to delete an ingredient a step still mentions.
+    /// Every ingredient a step refers to, for the reference index and for refusing to delete one
+    /// still mentioned.
     /// </summary>
-    /// <param name="segments">The step's segments.</param>
     public static IReadOnlySet<Guid> ReferencedIngredients(IReadOnlyList<StepSegment> segments)
     {
         ArgumentNullException.ThrowIfNull(segments);
@@ -130,8 +115,7 @@ public static class StepText
             .ToHashSet();
     }
 
-    /// <summary>The words alone, for search indexing and for a plain-text export.</summary>
-    /// <param name="segments">The step's segments.</param>
+    /// <summary>The words alone, for search indexing and plain-text export.</summary>
     public static string PlainText(IReadOnlyList<StepSegment> segments)
     {
         ArgumentNullException.ThrowIfNull(segments);

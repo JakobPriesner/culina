@@ -1,57 +1,29 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// The session cookie's attributes.
-/// </summary>
+/// <summary>The session cookie's attributes.</summary>
 /// <remarks>
-/// The name is fixed rather than configurable: the <c>__Host-</c> prefix is
-/// what pins the cookie to this exact origin, and a deployment that could
-/// rename it could also accidentally drop the prefix and the protection with
-/// it.
+/// The name is fixed: the <c>__Host-</c> prefix pins the cookie to this origin, and a configurable name could drop it.
 /// </remarks>
 public sealed record CookieSettings
 {
     /// <summary>The configuration section these values are read from.</summary>
     public const string SectionName = "Cookies";
 
-    /// <summary>
-    /// The session cookie's name. The <c>__Host-</c> prefix requires
-    /// <c>Secure</c>, <c>Path=/</c> and no <c>Domain</c> attribute, so a
-    /// subdomain cannot set or overwrite it.
-    /// </summary>
+    /// <summary>The session cookie's name. The <c>__Host-</c> prefix requires <c>Secure</c>, <c>Path=/</c> and no <c>Domain</c>.</summary>
     public const string SessionCookieName = "__Host-culina.session";
 
-    /// <summary>
-    /// The readable companion cookie carrying the CSRF token. Not
-    /// <c>HttpOnly</c>, because the client has to echo it back in a header.
-    /// </summary>
+    /// <summary>The readable CSRF companion cookie. Not <c>HttpOnly</c>: the client echoes it in a header.</summary>
     public const string CsrfCookieName = "culina.csrf";
 
-    /// <summary>
-    /// The key a deployment sets to run without secure cookies anywhere but
-    /// in Development: <c>Cookies__AllowInsecureOutsideDevelopment=true</c>.
-    /// </summary>
+    /// <summary>The key that allows insecure cookies outside Development: <c>Cookies__AllowInsecureOutsideDevelopment=true</c>.</summary>
     public const string AllowInsecureKey = "AllowInsecureOutsideDevelopment";
 
-    /// <summary>
-    /// Whether cookies are marked <c>Secure</c>. Only local HTTP development
-    /// justifies false — with it true, the <c>__Host-</c> prefix means the
-    /// browser refuses the cookie over plain HTTP and login cannot work.
-    /// </summary>
+    /// <summary>Whether cookies are marked <c>Secure</c>. Only local HTTP development justifies false; the <c>__Host-</c> prefix otherwise makes login impossible.</summary>
     public bool Secure { get; init; } = true;
 
-    /// <summary>
-    /// Whether this deployment may run with <see cref="Secure"/> off: always
-    /// in Development, anywhere else only when <see cref="AllowInsecureKey"/>
-    /// says so.
-    /// </summary>
+    /// <summary>Whether this deployment may run with <see cref="Secure"/> off: always in Development, elsewhere only via <see cref="AllowInsecureKey"/>.</summary>
     /// <remarks>
-    /// Decided at startup from the environment the process runs in, and never
-    /// saved by the app. Without secure cookies the session travels in
-    /// cleartext over plain HTTP and loses the <c>__Host-</c> prefix, so a
-    /// sibling subdomain can set it — that is the operator's risk to take, not
-    /// something an administrator, or whoever reaches the setup screen first,
-    /// can switch on from a form.
+    /// Decided at startup, never saved by the app: it is the operator's risk, not something an administrator or the first visitor to setup can switch on.
     /// </remarks>
     public bool InsecureAllowed { get; init; }
 
@@ -61,30 +33,13 @@ public sealed record CookieSettings
     /// <summary>How long a session lives without activity.</summary>
     public int SessionDays { get; init; } = 30;
 
-    /// <summary>
-    /// How long a session may go unused before the next request extends it.
-    /// </summary>
+    /// <summary>How long a session may go unused before the next request extends it.</summary>
     /// <remarks>
-    /// The sliding renewal is what keeps somebody signed in on a device they
-    /// actually use: without it <see cref="SessionDays"/> counts from the
-    /// moment they signed in, and using Culina every day makes no difference to
-    /// the day they are signed out. Renewing on every request would turn the
-    /// one indexed read an authenticated request costs into a read and a write,
-    /// so it happens at most once per interval — a day is invisible against a
-    /// thirty-day lifetime and costs one write per device per day. Zero renews
-    /// on every request, which only a test has a reason to ask for.
+    /// Sliding renewal keeps used devices signed in; at most once per interval so a request stays a read, not a write. Zero renews every request (tests only).
     /// </remarks>
     public int RenewAfterHours { get; init; } = 24;
 
-    /// <summary>
-    /// How long a session may live at all, however much it is used.
-    /// </summary>
-    /// <remarks>
-    /// Renewal slides the expiry while a session is used, so without a ceiling
-    /// a stolen cookie that is used now and then would never expire. Past this
-    /// many days since signing in, renewal stops and the next sign-in is a
-    /// fresh one.
-    /// </remarks>
+    /// <summary>How long a session may live at all, however much it is used, so a stolen cookie cannot renew forever.</summary>
     public int MaxSessionDays { get; init; } = 90;
 
     /// <summary>How long a session lives without activity, as a span.</summary>
@@ -109,14 +64,10 @@ public sealed record CookieSettings
 
         SettingsGuard.InRange(SessionDays, 1, 365, SectionName, nameof(SessionDays));
 
-        // Never longer than the lifetime itself: an interval that outlives the
-        // session it is meant to extend is a renewal that never happens, and
-        // the symptom is people being signed out for no visible reason.
+        // Never longer than the lifetime itself, or renewal never happens and people are signed out unexplained.
         SettingsGuard.InRange(RenewAfterHours, 0, SessionDays * 24, SectionName, nameof(RenewAfterHours));
 
-        // Never shorter than the idle lifetime, which it would silently cut
-        // short; ten years is as good as no ceiling, and no smaller number is
-        // more right than another.
+        // Never shorter than the idle lifetime; ten years is as good as no ceiling.
         SettingsGuard.InRange(MaxSessionDays, SessionDays, 3650, SectionName, nameof(MaxSessionDays));
     }
 }

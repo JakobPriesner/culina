@@ -2,9 +2,8 @@ namespace Contracts.Recipes.GetTags;
 
 /// <summary>The tags a household's recipes carry.</summary>
 /// <remarks>
-/// Not paged. A household's vocabulary is a few dozen words at most, and a
-/// filter bar that had to page through the things it filters by would be a
-/// filter bar nobody used.
+/// Not paged: a household's vocabulary is a few dozen words, and a filter bar that paged through
+/// what it filters by would go unused.
 /// </remarks>
 public sealed record Response
 {
@@ -22,12 +21,8 @@ public sealed record TagInUse
     public required string Name { get; init; }
 
     /// <summary>
-    /// How many recipes carry it.
+    /// How many recipes carry it, shown beside each tag since a tag on two recipes and on forty are
+    /// different offers.
     /// </summary>
-    /// <remarks>
-    /// Shown beside each one, because a tag on two recipes and a tag on forty
-    /// are different offers and a list that hid the difference would rank them
-    /// the same.
-    /// </remarks>
     public required int RecipeCount { get; init; }
 }

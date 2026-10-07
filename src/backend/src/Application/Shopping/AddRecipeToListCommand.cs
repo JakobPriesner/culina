@@ -33,9 +33,7 @@ internal sealed class AddRecipeToListCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Shopping.AddRecipe");
 
-        // In the list's household, not merely somewhere the caller can see it:
-        // that one check is both "you are in this kitchen" and "this recipe is
-        // its own or one it inherits".
+        // Checked in the list's household: proves both membership and that the recipe is its own or inherited.
         var recipe = await RecipeAccess
             .VisibleInAsync(
                 recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)

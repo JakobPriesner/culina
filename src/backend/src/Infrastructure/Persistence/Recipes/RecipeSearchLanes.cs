@@ -1,52 +1,23 @@
 namespace Infrastructure.Persistence.Recipes;
 
-/// <summary>
-/// What it means for a recipe to match some words, as SQL.
-/// </summary>
+/// <summary>What it means for a recipe to match some words, as SQL.</summary>
 /// <remarks>
-/// <para>
-/// Four kinds of evidence, each answering a question the others cannot, and
-/// each named so that the ranking can tell them apart. The search asks about
-/// them twice — <see cref="Hits"/> decides which recipes are candidates, and
-/// <see cref="Evidence"/> records <em>why</em> each one is, which is what the
-/// tier in <see cref="Tier"/> is built from — and both are here, next to each
-/// other, because they have to agree. They cannot share one text: the first
-/// has to be shaped for an index and the second for a single row. If they
-/// ever drift, the symptom is a result with no visible reason to be there,
-/// which the tier puts last rather than hiding.
-/// </para>
-/// <para>
-/// The division of labour between the lanes is not a matter of taste. Full text
-/// owns morphology in both directions — <c>Tomate</c> finds <c>Tomaten</c> and
-/// the reverse — because a stemmer reduces both to one lexeme. Trigram owns
-/// compounds and typos, because the German Snowball stemmer never decomposes a
-/// compound and <c>Hähnchenbrustfilet</c> stays one word forever. Neither
-/// subsumes the other, which is why the naive version of this change — swap
-/// <c>ilike</c> for <c>@@</c> — would have lost the compounds that already
-/// worked.
-/// </para>
+/// <see cref="Hits"/> picks candidates and <see cref="Evidence"/> records why; the two must agree.
+/// Full text owns morphology, trigram owns compounds and typos (the German stemmer never decomposes
+/// a compound).
 /// </remarks>
 internal static class RecipeSearchLanes
 {
     /// <summary>
-    /// Whether anything searchable survived the fold.
+    /// Whether anything searchable survived the fold; a punctuation-only query folds to empty,
+    /// which prefixes every title.
     /// </summary>
-    /// <remarks>
-    /// A query of nothing but punctuation — "%", "...", "???" — folds to the
-    /// empty string, and an empty string is a prefix of every title. Saying so
-    /// once makes "no content is no query" a decision with a name on it rather
-    /// than something that falls out of <c>like '%'</c> by accident.
-    /// </remarks>
     internal const string HasText = "coalesce(culina_fold_ae(@query::text), '') <> ''";
 
-    /// <summary>
-    /// The query, folded and parsed once, for every row to be compared against.
-    /// </summary>
+    /// <summary>The query, folded and parsed once, for every row to be compared against.</summary>
     /// <remarks>
-    /// Both text search configurations are built rather than one being chosen,
-    /// because a query is too short to say what language it is in — "Pasta",
-    /// "Curry" and "Butter" are both at once — while a document says so
-    /// outright. The row picks which of the two to use.
+    /// Both text search configurations are built: a query is too short to say its language ("Pasta"
+    /// is both), so the row picks.
     /// </remarks>
     internal const string QueryCte = $"""
         select
@@ -58,10 +29,7 @@ internal static class RecipeSearchLanes
             {HasText} as has_text
         """;
 
-    /// <summary>
-    /// The tsquery this row is asked with, laterally joined so the choice is
-    /// made once per row rather than repeated in every expression below.
-    /// </summary>
+    /// <summary>The tsquery this row is asked with, chosen once per row.</summary>
     internal const string LanguageJoin = """
         cross join lateral (
             select case when d.language = 'de' then q.tsq_de else q.tsq_en end as tsq
@@ -78,52 +46,20 @@ internal static class RecipeSearchLanes
         or (' ' || d.title_a || ' ') like ('% ' || q.q_a || ' %')
         """;
 
-    /// <summary>
-    /// Whether the query matched inside one weight band of the document.
-    /// </summary>
+    /// <summary>Whether the query matched inside one weight band of the document.</summary>
     /// <remarks>
-    /// <para>
-    /// A tsquery answers whether, never where, and the tier needs where — so
-    /// the vector is cut down to the one band and asked again. This used to be
-    /// a cover-density rank with every weight but one set to zero, which gives
-    /// the same answer for every document the query matches and cost thirteen
-    /// microseconds a row where this costs well under one; over the thousands
-    /// of candidates a common word brings in, it was most of the query.
-    /// </para>
-    /// <para>
-    /// Only a document the query matches can match in a band, which is the
-    /// one place this means something different from the rank it replaces: a
-    /// query with a minus in it. The rank never evaluated the minus, so a
-    /// recipe containing the excluded word still earned credit for the rest;
-    /// here it does not, which is what "-reis" was asking for. A query that is
-    /// nothing but exclusions has no band to have matched in, and says so
-    /// through <c>querytree</c>, whose answer for such a query is <c>T</c>.
-    /// </para>
+    /// A tsquery says whether, never where, so the vector is cut to one band and asked again, far
+    /// cheaper than a rank per band. A query with a minus only matches in a band when the document
+    /// matches at all.
     /// </remarks>
     private static string BandHit(char weight) =>
         $"(d.document @@ lang.tsq and querytree(lang.tsq) <> 'T' "
         + $"and ts_filter(d.document, '{{{weight}}}') @@ lang.tsq)";
 
-    /// <summary>
-    /// The cover-density rank of this row, bounded into [0, 1).
-    /// </summary>
+    /// <summary>Cover-density rank, normalised into [0, 1).</summary>
     /// <remarks>
-    /// <para>
-    /// Normalisation 32 is <c>rank / (rank + 1)</c>, which is what makes the
-    /// value comparable with the other terms of the score. Length
-    /// normalisation is deliberately not asked for on top of it: how much of
-    /// the title the query accounts for is already a term of its own, and
-    /// dividing by the document length here would count that twice.
-    /// </para>
-    /// <para>
-    /// Zero without asking when the document does not match, which is most
-    /// candidates — the substring lane brings in every compound, and a
-    /// compound is exactly what the stemmer cannot see. <c>ts_rank_cd</c> on a
-    /// document it cannot match still searches the whole of it for a cover,
-    /// and that search was the most expensive thing a broad query did. It
-    /// changes nothing but a query with a minus in it, for the reason given
-    /// under <see cref="BandHit"/>.
-    /// </para>
+    /// Zero without asking when the document does not match: <c>ts_rank_cd</c> would still scan it,
+    /// and most candidates are substring-lane compounds.
     /// </remarks>
     private const string Rank = """
         case when d.document @@ lang.tsq
@@ -132,23 +68,11 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// A term inside a word of the title, or near enough to one.
+    /// A term inside a word of the title, or near enough to one: the compound and typo lane.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The compound lane and the typo lane at once, and the reason
-    /// <c>Hähnchen</c> still finds <c>Hähnchenbrustfilet</c> after the stemmer
-    /// has given up on it.
-    /// </para>
-    /// <para>
-    /// Similarity is measured against the <em>title</em> and nowhere else, and
-    /// that is a claim about people rather than about cost: a misspelling is a
-    /// mistyped name. Nobody misspells a word buried in step four and expects
-    /// to be understood, and the substring half below already reaches every
-    /// word of the recipe. Measured, it is also the difference between three
-    /// milliseconds and a hundred and ninety, because a title is thirty
-    /// characters and a recipe is twelve hundred.
-    /// </para>
+    /// Measured against the title only: a misspelling is a mistyped name, and against a whole
+    /// document it is ~60x slower.
     /// </remarks>
     private const string FuzzyTitle = """
         exists (select 1 from unnest(q.terms) as term
@@ -158,31 +82,20 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// A term inside any word of the recipe.
+    /// A term inside any word of the recipe; substring only, which the trigram index can help with.
     /// </summary>
-    /// <remarks>
-    /// Substring only. This is what answers a compound anywhere — an
-    /// ingredient called <c>Süßkartoffel</c> found by typing
-    /// <c>Kartoffel</c> — and it stays cheap because a LIKE over a folded
-    /// document is a scan the trigram index can help with, where measuring
-    /// similarity against the whole document is not.
-    /// </remarks>
     private const string FuzzyBody = """
         exists (select 1 from unnest(q.terms) as term
                 where d.fuzzy_text like '%' || term || '%')
         """;
 
     /// <summary>
-    /// Whether a recipe answers every concept the query names, each by itself
-    /// or by what may stand in for it.
+    /// Whether a recipe answers every concept the query names, each by itself or by what may stand
+    /// in for it.
     /// </summary>
     /// <remarks>
-    /// <c>@conceptAnswers</c> lists what may answer each concept, and
-    /// <c>@conceptAsked</c> says, position for position, which concept of
-    /// <c>@concepts</c> each one answers — see
-    /// <see cref="Domain.Search.CulinaryLexicon.AnsweredBy"/>. "Gulasch" is
-    /// answered by a goulash or a stew; "Nudeln mit Tomatensoße" by something
-    /// that is pasta and is a tomato sauce or some other sauce.
+    /// <c>@conceptAnswers</c> lists what may answer each concept, <c>@conceptAsked</c> which of
+    /// <c>@concepts</c> each answers; see <see cref="Domain.Search.CulinaryLexicon.AnsweredBy"/>.
     /// </remarks>
     private const string ConceptHit = """
         (select count(distinct answer.asked)
@@ -191,7 +104,7 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// Whether the recipe carries a tag a query word is built on — see
+    /// Whether the recipe carries a tag a query word is built on; see
     /// <see cref="Domain.Search.SearchText.Modifiers"/>.
     /// </summary>
     private const string TagNamed = """
@@ -201,47 +114,11 @@ internal static class RecipeSearchLanes
             where rt.recipe_id = r.id and culina_fold_ae(t.name) = any(@tagWords::text[]))
         """;
 
-    /// <summary>
-    /// Which recipes are candidates at all: one index scan per lane, and the
-    /// ids they found.
-    /// </summary>
+    /// <summary>Which recipes are candidates at all: one index scan per lane, unioned.</summary>
     /// <remarks>
-    /// <para>
-    /// The recipes a query matches are the union of what each lane matches, and
-    /// it is asked as a union because that is the only form PostgreSQL can
-    /// answer from the indexes. The same lanes written as one <c>or</c> — which
-    /// this was — are one condition no index serves, so every text search read
-    /// every document in the household: 470 ms for "Tomaten Reis" over ten
-    /// thousand recipes. Each branch below is one lane over one index.
-    /// </para>
-    /// <para>
-    /// The query is spelt out in every branch rather than read from the
-    /// <c>q</c> row, and that is what makes the indexes usable at all.
-    /// Npgsql sends <c>@query</c> as a parameter of an unnamed statement, which
-    /// PostgreSQL plans knowing its value, and the fold functions are immutable,
-    /// so <c>culina_fold_ae(@query)</c> is worked out while planning and the
-    /// title's prefix scan becomes a range of the btree. A column of a CTE is
-    /// only known once the query runs, too late for a range.
-    /// </para>
-    /// <para>
-    /// Every lane is here, including the ones the ranking treats as weak.
-    /// Narrowing the candidate set is the one thing that cannot be undone
-    /// later: a recipe this leaves out is one no amount of ranking can bring
-    /// back. Two lanes of the old <c>or</c> are not listed because they are
-    /// already inside the substring lane — a title is the first thing in
-    /// <c>fuzzy_text</c>, in both folds, so a title holding a term is a
-    /// document holding it. That stops being true only for a query with no
-    /// term in it at all ("Ei", "und"), and those still read the titles.
-    /// </para>
-    /// <para>
-    /// A recipe with no document row is excluded from a text search rather than
-    /// from the collection, because every lane reads the documents: it still
-    /// lists, still filters and still pages, and only stops being findable by
-    /// words until the next write rebuilds it. A missing document should be
-    /// impossible — the migration backfills every row and the writer runs in
-    /// the recipe's own transaction — but "impossible" is a poor reason for a
-    /// recipe to vanish from a library.
-    /// </para>
+    /// A union, because lanes joined by one <c>or</c> are a condition no index serves. The query is
+    /// repeated in every branch rather than read from <c>q</c>: only a parameter is known at plan
+    /// time, which turns the title prefix scan into a btree range.
     /// </remarks>
     internal const string Hits = $"""
         -- Lexical, by the document's own language: what the stemmer can see.
@@ -259,32 +136,23 @@ internal static class RecipeSearchLanes
         join recipe_search_documents d on d.fuzzy_text like '%' || term || '%'
         where d.household_id = any(@library)
         union
-        -- A term near enough to a word of the title: typos. The operator is
-        -- the index's way in and the comparison after it is the rule — see
-        -- migration 0018 for why the two are separate.
+        -- A term near enough to a word of the title: typos (see migration 0018).
         select d.recipe_id
         from unnest(culina_search_terms(@query::text)) as term
         join recipe_search_documents d on term <<% d.title_ae
         where d.household_id = any(@library)
           and strict_word_similarity(term, d.title_ae) >= @fuzzyThreshold
         union
-        -- What the recipe is rather than what it says: every concept the
-        -- query names, among the ones its title, tags and ingredients do.
-        -- Waffeln for "Nachtisch", Hähnchen for "chicken". Every, not any:
-        -- "Hähnchen Reis" is a chicken dish with rice, not every dish with
-        -- either. The overlap is the index's way in and the count after it
-        -- is the rule. A query the lexicon cannot read names nothing, and is
-        -- kept out by name rather than by accident.
+        -- Every concept the query names, among those the title, tags and ingredients carry (every,
+        -- not any). The overlap is the index's way in; the count is the rule.
         select d.recipe_id from recipe_search_documents d
         where d.household_id = any(@library)
           and cardinality(@concepts::text[]) > 0
           and d.concepts && @conceptAnswers::text[]
           and {ConceptHit}
         union
-        -- A tag of the household's that a query word is built on, when the
-        -- rest of the word says nothing: "Sommergericht" for what the
-        -- household tagged "Sommer". Its own word for a thing, which is a
-        -- better answer than anything the lexicon can infer.
+        -- A household tag a query word is built on ("Sommergericht" for "Sommer"): its own word
+        -- beats the lexicon's inference.
         select rt.recipe_id from tags t
         join recipe_tags rt on rt.tag_id = t.id
         where t.household_id = any(@library)
@@ -298,9 +166,7 @@ internal static class RecipeSearchLanes
           and ({TitleWord})
         """;
 
-    /// <summary>
-    /// Why each candidate is a candidate, recorded per row for the tier.
-    /// </summary>
+    /// <summary>Why each candidate is a candidate, recorded per row for the tier.</summary>
     internal static string Evidence { get; } = $"""
         coalesce({ExactTitle}, false)                    as exact_title,
         coalesce({TitleWord}, false)                     as title_word,
@@ -321,15 +187,9 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// How much of what was asked for this recipe accounts for.
+    /// How much of what was asked for this recipe accounts for; one when nothing was asked, so
+    /// scores stay comparable.
     /// </summary>
-    /// <remarks>
-    /// A query with no terms of its own — one short word, or nothing but
-    /// joining words — has nothing to cover, and scores one rather than zero.
-    /// The value is the same for every candidate either way, so it changes no
-    /// order; it keeps scores comparable between queries, which matters when
-    /// somebody is reading them in a test failure.
-    /// </remarks>
     private const string QueryCoverage = """
         case
             when coalesce(cardinality(q.terms), 0) = 0 then 1.0::float8
@@ -340,15 +200,9 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// How much of the title the query accounts for: the specificity signal.
+    /// How much of the title the query accounts for, so "Bolognese" beats "Lasagne Bolognese
+    /// Auflauf" (field-length normalisation).
     /// </summary>
-    /// <remarks>
-    /// "Bolognese" is all of <em>Bolognese</em>, half of <em>Spaghetti
-    /// Bolognese</em> and a third of <em>Lasagne Bolognese Auflauf</em>, so the
-    /// recipe that most nearly <em>is</em> the query comes first. This is field
-    /// length normalisation — the same idea as BM25's <c>b</c> — expressed
-    /// where it can be read.
-    /// </remarks>
     private const string TitleCoverage = """
         case
             when d.title_ae is null or d.title_ae = '' or coalesce(cardinality(q.terms), 0) = 0
@@ -361,32 +215,11 @@ internal static class RecipeSearchLanes
         end
         """;
 
-    /// <summary>
-    /// How confident the system is about <em>why</em> a recipe is here.
-    /// </summary>
+    /// <summary>How confident the system is about why a recipe is here.</summary>
     /// <remarks>
-    /// <para>
-    /// The tier is compared before the score, so evidence of a better kind
-    /// always outranks more of a worse kind. That is what keeps a recipe that
-    /// merely resembles the query below one that is named by it, however the
-    /// weights below are tuned — a guarantee a single blended number cannot
-    /// make, because there is always some combination of signals that adds up
-    /// to more.
-    /// </para>
-    /// <para>
-    /// A title compound (tier 2) sits above an exact ingredient (tier 3) on
-    /// purpose. Somebody typing <c>Hähnchen</c> means the chicken dish before
-    /// the stew that happens to contain some.
-    /// </para>
-    /// <para>
-    /// A match through the lexicon alone is last (tier 5), below a word merely
-    /// found somewhere in the recipe, and below a tag of the household's that
-    /// a query word is built on — the household's own word for a thing beats
-    /// the lexicon's guess at it. The lexicon is a guess about what words
-    /// mean and a substring is a fact about what the recipe says, so however
-    /// right the guess is, it never outranks the fact — and when it is wrong,
-    /// the wrong recipe is at the bottom of the list rather than at the top.
-    /// </para>
+    /// Compared before the score, so better evidence always outranks more of a worse kind, however
+    /// the weights are tuned. The lexicon alone is last, below a household tag: a substring is a
+    /// fact about the recipe, the lexicon a guess.
     /// </remarks>
     internal const string Tier = """
         case
@@ -400,34 +233,10 @@ internal static class RecipeSearchLanes
         end
         """;
 
-    /// <summary>
-    /// How well a candidate fits, within its tier.
-    /// </summary>
+    /// <summary>How well a candidate fits, within its tier.</summary>
     /// <remarks>
-    /// <para>
-    /// Four continuous signals, weighted by hand against the cases in
-    /// <c>RecipeSearchTests</c> and summing to one. Deliberately not five: an
-    /// earlier draft also scored <em>which field</em> matched and <em>how</em>,
-    /// which the tier already decides, and counting the same evidence in both
-    /// places makes the tuning of one silently undo the other.
-    /// </para>
-    /// <para>
-    /// Five nudges sit outside the four weights, each zero unless its
-    /// question was asked: "schnell" (<see cref="QuickFit"/>), the closer
-    /// spelling within the typo tier (<see cref="TitleSimilarity"/>), a meal
-    /// that had to be set aside (<see cref="MealFit"/>), and twice the same
-    /// rule — what somebody asserted comes ahead of what is only presumed. A
-    /// title or a tag that says vegetarisch beats a recipe nothing in which
-    /// refutes it, and one that says schnell beats one whose times merely add
-    /// up to little: a household's own words are the better answer.
-    /// </para>
-    /// <para>
-    /// Every term is bounded in [0, 1] and computed per row, so nothing is
-    /// normalised across the result set. Saving a recipe therefore cannot
-    /// reorder the ones around it — in a library somebody adds to every few
-    /// days, a ranking that visibly reshuffles on every write is a ranking
-    /// people stop trusting.
-    /// </para>
+    /// Four weighted signals summing to one, plus nudges that are zero unless asked for.
+    /// Every term is per row in [0, 1], so saving a recipe never reorders its neighbours.
     /// </remarks>
     internal const string Score = """
           0.35 * title_coverage
@@ -442,35 +251,17 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// How nearly a term of the query is a whole word of the title.
+    /// How nearly a term of the query is a whole word of the title: orders the typo tier, and only
+    /// breaks ties beyond the four weights.
     /// </summary>
-    /// <remarks>
-    /// The typo lane puts every title a misspelling resembles into one tier,
-    /// and "Kartoffelgratn" resembles Kartoffelsalat as well as Kartoffelgratin
-    /// — so within the tier, the closer spelling comes first. Measured against
-    /// the title only, like the lane itself, which keeps it a few microseconds
-    /// a row. Outside the four weights, and one for an exact title, so it only
-    /// ever breaks ties the tier and the coverage left.
-    /// </remarks>
     private const string TitleSimilarity = """
         coalesce((select max(strict_word_similarity(term, d.title_ae)) from unnest(q.terms) as term), 0)::float8
         """;
 
-    /// <summary>
-    /// How well a recipe answers "schnell", when that was asked.
-    /// </summary>
+    /// <summary>How well a recipe answers "schnell", when asked.</summary>
     /// <remarks>
-    /// <para>
-    /// A preference and so a nudge, never a filter. "unter 30 Minuten" states a
-    /// number and means it; "schnell" states an intent, and turning it into
-    /// thirty minutes would silently drop the twenty-five-minute recipe
-    /// nobody wrote a time on. So a recipe known to be quick is lifted, one
-    /// with no stated time is lifted half as far, and nothing is removed.
-    /// </para>
-    /// <para>
-    /// Outside the four weights above, which sum to one: zero whenever
-    /// nobody asked, so it changes no order but the one it was asked for.
-    /// </para>
+    /// A nudge, never a filter: known-quick recipes are lifted, ones with no stated time half as
+    /// far, nothing is removed.
     /// </remarks>
     internal const string QuickFit = """
         case
@@ -483,14 +274,9 @@ internal static class RecipeSearchLanes
         """;
 
     /// <summary>
-    /// How well a recipe suits a meal that no recipe said it was.
-    /// </summary>
-    /// <remarks>
-    /// Zero for everybody unless a meal was set aside, and then: a recipe that
-    /// is some other meal is last, one that looks like the meal — for dinner,
-    /// a lunch or something warm — is first, and the rest sit between. See
+    /// How well a recipe suits a meal no recipe said it was; zero unless one was set aside. See
     /// <see cref="Domain.Search.MealRules"/>.
-    /// </remarks>
+    /// </summary>
     private const string MealFit = """
         case
             when cardinality(@mealsLike::text[]) = 0 then 0.0::float8
@@ -500,24 +286,10 @@ internal static class RecipeSearchLanes
         end
         """;
 
-    /// <summary>
-    /// How well a recipe fits the ingredients somebody said they had.
-    /// </summary>
+    /// <summary>How well a recipe fits the ingredients somebody said they had.</summary>
     /// <remarks>
-    /// <para>
-    /// Uses as many as possible of what was named, and needs as few extras as
-    /// possible — the ordering Culina's "what can I cook?" already had, kept
-    /// here as one term of the score rather than as a sort of its own. Zero
-    /// when no ingredients were named, which is the same for every candidate
-    /// and so changes nothing.
-    /// </para>
-    /// <para>
-    /// The penalty for extras is capped at half of one match, so it can only
-    /// ever break a tie between recipes that use the same number of the named
-    /// ingredients. Using one more of what somebody actually has always beats
-    /// needing fewer things they do not — which is what the two-key ordering
-    /// this replaces meant, preserved exactly rather than approximately.
-    /// </para>
+    /// Rewards named ingredients used, penalises extras by at most half a match, so extras only
+    /// break ties.
     /// </remarks>
     internal const string StructuralFit = """
         case

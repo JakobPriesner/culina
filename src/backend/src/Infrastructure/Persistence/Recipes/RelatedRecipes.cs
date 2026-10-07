@@ -3,41 +3,16 @@ using Domain.Search;
 
 namespace Infrastructure.Persistence.Recipes;
 
-/// <summary>
-/// Finds the recipes of a household most like one of its own, by the concepts
-/// their search documents are indexed under.
-/// </summary>
+/// <summary>Finds a household's recipes most like one of its own, by the concepts their search documents are indexed under.</summary>
 /// <remarks>
-/// <para>
-/// Two questions, weighted as docs/search-design.md §19.1 weighs them: what a
-/// recipe <em>is</em> — a pasta, Italian, baked — counts for 0.6, and what it
-/// is <em>made from</em> for 0.4. Somebody looking at a Bolognese is more
-/// interested in a Lasagne than in a Chili that happens to share three tins.
-/// </para>
-/// <para>
-/// Every shared concept counts by how rare it is in this kitchen. A document
-/// carries every concept with its ancestors, so almost everything is a
-/// vegetable dish of some sort, and counting "vegetable" like "mince" would
-/// make every recipe related to every other. Weighted by rarity, what nearly
-/// every recipe shares counts for nearly nothing, and what two recipes share
-/// with few others counts for the most — with no list of concepts to leave
-/// out, which would be wrong in a kitchen that cooks nothing but soup.
-/// </para>
+/// Per docs/search-design.md §19.1: what a recipe <em>is</em> counts 0.6 and what it is <em>made from</em> 0.4.
+/// Shared concepts are weighted by rarity in this kitchen, so near-universal ones count for almost nothing
+/// without a hard-coded exclusion list.
 /// </remarks>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
 {
-    /// <summary>
-    /// The least a recipe must have in common to be called related at all.
-    /// </summary>
-    /// <remarks>
-    /// Below it the only thing shared is something most of the kitchen shares,
-    /// and "also has onions in it" is not a reason anybody wants to be shown.
-    /// Measured on the golden library: at 0.15 a salmon recipe lost the fish
-    /// tacos and the Frikadellen lost every other mince recipe; at 0.1 every
-    /// one of the sixty has at least three, and nothing below it was a
-    /// relation anybody would recognise.
-    /// </remarks>
+    // The least in common to count as related: below it the only overlap is what most of the kitchen shares.
+    // Measured on the golden library; 0.1 gives every one of the sixty at least three results.
     internal const double Floor = 0.1d;
 
     public async Task<RelatedPage> FindAsync(
@@ -66,8 +41,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
             .Where(key => CulinaryLexicon.Find(key)?.Kind == ConceptKind.Ingredient)
             .ToArray();
 
-        // One more than asked for, to know whether there is a next page
-        // without counting the whole kitchen for it.
+        // One more than asked for, to know whether there is a next page.
         var rows = (await executor.QueryAsync<Row>(
             Sql.Replace("{resume}", resume is null ? string.Empty : Resume, StringComparison.Ordinal),
             new
@@ -103,22 +77,9 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
     /// <summary>Starts after the row the previous page ended on, in the same order.</summary>
     private const string Resume = "and (s.score, r.updated_at, r.id) < (@score, @updatedAt, @cursorId)";
 
-    /// <remarks>
-    /// A concept's weight is its inverse document frequency in the household,
-    /// counting the recipe asked about, so that a concept only it and one other
-    /// recipe carry is worth the most and one every recipe carries is worth
-    /// nothing. Each score is the share of the first recipe's own weight that
-    /// the other one matches, so a recipe that is everything the first is
-    /// scores 1.
-    ///
-    /// The shared concepts are listed only where they are telling — carried by
-    /// no more than half the kitchen. They still count towards the score, but
-    /// "vegetable" is true of half of everything and is not a reason.
-    ///
-    /// The score is rounded to six places so that a cursor can carry it
-    /// exactly: a page cut on a float would be resumed on a number near it,
-    /// and skip the row after it or return it twice.
-    /// </remarks>
+    // A concept's weight is its inverse document frequency in the household, counting the recipe asked about.
+    // Each score is the share of the first recipe's weight the other matches. Shared concepts are listed only
+    // when carried by at most half the kitchen. The score is rounded to six places so a cursor can carry it exactly.
     private static readonly string Sql = $$"""
         with library as (
             select count(*)::float8 as size

@@ -10,9 +10,7 @@ using TestSupport;
 
 namespace IntegrationTests.Storage;
 
-/// <summary>
-/// Renditions on a real disk, written while something else is going on.
-/// </summary>
+/// <summary>Renditions on a real disk, written while something else is going on.</summary>
 public sealed class FileSystemImageStoreTests : IDisposable
 {
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -22,13 +20,11 @@ public sealed class FileSystemImageStoreTests : IDisposable
     [Fact]
     public async Task StoreAsync_ShouldLeaveCompleteRenditions_WhenAnEarlierStoreWasCutOffMidWrite()
     {
-        // Arrange
         var photo = NoisyPng();
         var store = NewStore();
         using var cutOff = new CancellationTokenSource();
 
-        // The request goes away the moment the first file reaches the disk —
-        // a client hanging up, as far as the store can tell.
+        // The request goes away as soon as the first file reaches the disk, like a client hanging up.
         var hangUp = Task.Run(
             async () =>
             {
@@ -53,10 +49,8 @@ public sealed class FileSystemImageStoreTests : IDisposable
 
         await hangUp.ConfigureAwait(true);
 
-        // Act
         var stored = (await store.StoreAsync(new MemoryStream(photo), Token).ConfigureAwait(true)).ShouldBeSuccess();
 
-        // Assert
         foreach (var width in ImageWidths.All)
         {
             await AssertDecodesAsync(store, stored.ContentHash, width).ConfigureAwait(true);
@@ -66,13 +60,10 @@ public sealed class FileSystemImageStoreTests : IDisposable
     [Fact]
     public async Task StoreAsync_ShouldServeOnlyCompleteRenditions_WhenTheSamePhotoIsStoredConcurrently()
     {
-        // Arrange
         var photo = NoisyPng();
         var store = NewStore();
 
-        // Act
-        // Each store reads its renditions back the moment it returns, the way
-        // an import shows a picture while three more of the same are written.
+        // Each store reads its renditions back as soon as it returns, as an import does while more are written.
         var stores = Enumerable.Range(0, 8).Select(
             _ => Task.Run(
                 async () =>
@@ -89,8 +80,7 @@ public sealed class FileSystemImageStoreTests : IDisposable
 
         await Task.WhenAll(stores).ConfigureAwait(true);
 
-        // Assert
-        // Three renditions, and nothing half-written left lying beside them.
+        // Three renditions, and nothing half-written beside them.
         Assert.Equal(
             ImageWidths.All.Count,
             Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Count());
@@ -113,10 +103,7 @@ public sealed class FileSystemImageStoreTests : IDisposable
         Assert.True(image.Width <= width);
     }
 
-    /// <summary>
-    /// A photo-sized PNG of noise, so its renditions are large enough that
-    /// writing one takes a while.
-    /// </summary>
+    // Noise, so its renditions are large enough that writing one takes a while.
     private static byte[] NoisyPng()
     {
         using var image = new Image<Rgb24>(2000, 1500);

@@ -4,14 +4,9 @@ using Domain.Shared;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>
-/// Rebuilds a recipe aggregate from the six result sets that make it up.
+/// Rebuilds a recipe aggregate from its six result sets; a row that no longer parses is a data
+/// defect, so it is not a <c>Result</c>.
 /// </summary>
-/// <remarks>
-/// A row that no longer parses is a defect in the data, not an expected
-/// outcome: these values were written by this application, so a failure here
-/// means something corrupted them and a <c>Result</c> nobody could act on would
-/// only hide it.
-/// </remarks>
 internal static class RecipeAssembler
 {
     internal static Recipe Assemble(
@@ -55,9 +50,8 @@ internal static class RecipeAssembler
                 tagSlugs),
             row.UpdatedAt);
 
-        // Unlike the other two, this one can fail on values that were valid
-        // when they were written — a step's needs are checked against the
-        // ingredient list, and the two are read from separate tables.
+        // Unlike the others this can fail on once-valid values: a step's needs are checked against
+        // the ingredient list, read from another table.
         Expect(
             recipe.SetContents(
                 [.. groupRows.Select(group => ToGroup(group, ingredientRows))],

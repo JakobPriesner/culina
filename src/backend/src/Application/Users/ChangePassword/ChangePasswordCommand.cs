@@ -61,9 +61,8 @@ internal sealed class ChangePasswordCommandHandler(
             {
                 var saved = await users.UpdateAsync(user, user.Version, token).ConfigureAwait(false);
 
-                // Every other device is signed out: a password changed because
-                // somebody else knew it has to shut that somebody out, and the
-                // person changing it is holding the one device that stays.
+                // Every other device is signed out: a password changed because somebody else knew
+                // it must shut them out, and this device stays.
                 await sessions
                     .RevokeAllAsync(user.Id, command.SessionId, time.GetUtcNow(), token)
                     .ConfigureAwait(false);

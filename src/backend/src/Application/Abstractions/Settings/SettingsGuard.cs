@@ -1,15 +1,9 @@
 namespace Application.Abstractions.Settings;
 
 /// <summary>
-/// The checks a bootstrap settings record runs at startup.
+/// Startup checks for bootstrap settings. They throw, because a misconfigured deployment must fail to start
+/// rather than return a <c>Result</c>; every message names the environment variable.
 /// </summary>
-/// <remarks>
-/// These throw, and that is correct: a misconfigured process must fail to start
-/// loudly rather than fail on the first request that happened to need the
-/// value. It is a defect in the deployment, not a request outcome, so it is not
-/// a <c>Result</c>. Every message names the environment variable, so the fix is
-/// obvious from the log line alone.
-/// </remarks>
 public static class SettingsGuard
 {
     /// <summary>Requires a value to be present and not whitespace.</summary>

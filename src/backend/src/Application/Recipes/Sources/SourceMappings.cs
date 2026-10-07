@@ -4,15 +4,9 @@ using Domain.Import;
 namespace Application.Recipes.Sources;
 
 /// <summary>
-/// Turns connections and other people's recipes into what the wire carries.
+/// Turns connections and other people's recipes into what the wire carries. <see cref="RecipeSource.Secret"/> must never be mapped:
+/// a returned token ends up in network logs, caches and screenshots.
 /// </summary>
-/// <remarks>
-/// Hand-written, like every other mapper here, and with one rule that is not
-/// cosmetic: <see cref="RecipeSource.Secret"/> has no line in this file, and
-/// must never get one. A token that is returned once is a token in a browser's
-/// network log, in a client's cache, and in whatever a support screenshot
-/// happens to catch.
-/// </remarks>
 internal static class SourceMappings
 {
     internal static SourceSummary ToSummary(this RecipeSource source)

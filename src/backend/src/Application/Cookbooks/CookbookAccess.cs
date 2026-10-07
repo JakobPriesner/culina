@@ -4,14 +4,7 @@ using Domain.Shared;
 
 namespace Application.Cookbooks;
 
-/// <summary>
-/// Answers whether the caller may see or change a cookbook.
-/// </summary>
-/// <remarks>
-/// The same rule recipes follow, for the same reason: a cookbook belongs to a
-/// household, so the question is only "are you in it" — and somebody who is not
-/// is told the cookbook does not exist, never that it exists and is forbidden.
-/// </remarks>
+/// <summary>Whether the caller may see or change a cookbook: household members only, others are told it does not exist.</summary>
 internal static class CookbookAccess
 {
     internal static async Task<Result<CookbookOnAShelf>> VisibleAsync(

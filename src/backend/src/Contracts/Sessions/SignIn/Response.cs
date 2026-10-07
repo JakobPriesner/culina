@@ -18,11 +18,5 @@ public sealed record Response
     /// <summary>
     /// The CSRF token to send in <c>X-Culina-CSRF</c> on every unsafe request.
     /// </summary>
-    /// <remarks>
-    /// Returned in the body as well as in a readable cookie, so a client that
-    /// signs in can use it immediately without reading cookies at all. It is
-    /// not a credential on its own: without the session cookie it authenticates
-    /// nothing.
-    /// </remarks>
     public required string CsrfToken { get; init; }
 }

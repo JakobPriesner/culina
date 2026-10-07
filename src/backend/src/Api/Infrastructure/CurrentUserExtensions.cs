@@ -4,13 +4,9 @@ using Api.Authentication;
 namespace Api.Infrastructure;
 
 /// <summary>
-/// Reads the authenticated caller from the request.
+/// Reads the authenticated caller; only for endpoints with <c>RequireAuthorization()</c>, as no
+/// principal there is a pipeline defect.
 /// </summary>
-/// <remarks>
-/// Only for endpoints that declare <c>RequireAuthorization()</c>. Reaching one
-/// of these without a principal means the pipeline let an anonymous request
-/// through, which is a defect rather than a request outcome.
-/// </remarks>
 internal static class CurrentUserExtensions
 {
     internal static CurrentUser CurrentUser(this HttpContext context)

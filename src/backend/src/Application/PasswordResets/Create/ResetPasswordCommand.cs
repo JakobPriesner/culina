@@ -34,9 +34,7 @@ internal sealed class ResetPasswordCommandHandler(
 
         using var tracked = UseCaseActivity.Start("PasswordResets.Create");
 
-        // First, and before anything is looked up: a password that is too short
-        // is refused the same way whoever is asking, so saying so reveals
-        // nothing about the account.
+        // First, before any lookup: a short password is refused the same for everyone, so it reveals nothing.
         var result = await User.EnsureAcceptablePassword(command.Password).Match(
             () => AttemptAsync(command, cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
@@ -49,9 +47,7 @@ internal sealed class ResetPasswordCommandHandler(
         var now = time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
 
-        // Counted before the code is checked, as sign-in does, and reported as
-        // an invalid code rather than "too many attempts" for the same reason:
-        // a lockout confirms the account exists.
+        // Counted before the code is checked, and reported as an invalid code rather than "too many attempts": a lockout confirms the account exists.
         var result = !attempts.TryReserve(accountKey, command.IpAddress, now)
             ? SessionErrors.InvalidRecoveryCode
             : await Email.Create(command.Email).Match(
@@ -97,14 +93,12 @@ internal sealed class ResetPasswordCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Hashed only once the code is known to be good, so guessing codes
-        // costs the server a lookup and never an Argon2 run.
+        // Hashed only once the code is good, so guessing costs a lookup, never an Argon2 run.
         user.ChangePasswordHash(await passwordHasher.HashAsync(password, cancellationToken).ConfigureAwait(false));
 
         var saved = await users.UpdateAsync(user, user.Version, cancellationToken).ConfigureAwait(false);
 
-        // Whoever was signed in as this account — perhaps the person who took
-        // the old password — is signed out everywhere.
+        // Whoever was signed in (perhaps the person who took the old password) is signed out everywhere.
         await sessions.RevokeAllAsync(user.Id, keepSessionId: null, now, cancellationToken).ConfigureAwait(false);
 
         return saved.Bind(_ => Result.Success());

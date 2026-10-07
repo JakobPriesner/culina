@@ -1,26 +1,12 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// Who may create an account on this instance.
-/// </summary>
-/// <remarks>
-/// Settable properties, unlike the bootstrap records: an admin changes these
-/// from the app and every consumer holding the singleton sees the new value
-/// immediately.
-/// </remarks>
+/// <summary>Who may create an account on this instance. Mutable: an admin changes these and every holder of the singleton sees it.</summary>
 public sealed record RegistrationSettings : IInstanceSettings<RegistrationSettings>
 {
     /// <summary>The key this group is stored under.</summary>
     public static string GroupName => "registration";
 
-    /// <summary>
-    /// Whether anyone may create an account.
-    /// </summary>
-    /// <remarks>
-    /// Closed by default. A self-hosted instance that opened registration the
-    /// moment it came online would be discovered and filled with accounts
-    /// before its owner finished setting it up.
-    /// </remarks>
+    /// <summary>Whether anyone may create an account. Closed by default, so a new instance is not filled before its owner finishes setup.</summary>
     public bool OpenRegistration { get; set; }
 
     /// <summary>Whether a new account must present an invitation code.</summary>

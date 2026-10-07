@@ -6,8 +6,6 @@ using Infrastructure.Persistence;
 namespace Infrastructure.Identity;
 
 /// <summary>Stores sessions.</summary>
-/// <param name="executor">Runs the SQL.</param>
-/// <param name="tokens">Hashes the cookie value for lookup.</param>
 internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : ISessionStore
 {
     private const string Columns =
@@ -19,10 +17,8 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Lookup is by digest, so the raw token exists only in the request and
-        // never in an index, a log or a query plan. "Active" is in the WHERE,
-        // so no caller can forget to ask: a revoked or lapsed session's CSRF
-        // token is as dead as its cookie.
+        // Lookup is by digest, so the raw token never reaches an index, log or plan. "Active" is in the WHERE,
+        // so a revoked or lapsed session's CSRF token is as dead as its cookie.
         var row = await executor.QuerySingleOrDefaultAsync<SessionRow>(
             $"""
              select {Columns} from sessions
@@ -82,10 +78,7 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        // Writes only what renewing changes, and only to a session that is
-        // still active. The row was read earlier in the request; writing the
-        // rest of that stale copy back could undo a revocation that landed in
-        // between and bring the session back to life.
+        // Writes only what renewing changes, to a still-active session: writing back the stale copy could undo a concurrent revocation.
         var affected = await executor.ExecuteAsync(
             """
             update sessions
@@ -110,9 +103,7 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // The user id is part of the WHERE, so revoking is scoped to the
-        // caller's own sessions in SQL rather than by a check that could be
-        // forgotten at a second call site.
+        // The user id is in the WHERE, so revoking is scoped to the caller's own sessions in SQL.
         var affected = await executor.ExecuteAsync(
             """
             update sessions set revoked_at = @now

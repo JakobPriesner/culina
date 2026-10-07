@@ -8,19 +8,9 @@ using Domain.Shared;
 namespace Application.Suggestions.Dismiss;
 
 /// <summary>Hides a recipe from one person's suggestions, or stops hiding it.</summary>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Whose suggestions.</param>
-/// <param name="Hidden">True to hide it, false to take that back.</param>
 public sealed record DismissSuggestionCommand(Guid RecipeId, Guid UserId, bool Hidden);
 
-/// <summary>
-/// Records "not this".
-/// </summary>
-/// <remarks>
-/// One handler for both directions because they are one fact at one address
-/// with two possible values, and a pair of handlers would be two places for the
-/// visibility check to drift apart.
-/// </remarks>
+/// <summary>Records "not this": one handler for both directions so the visibility check cannot drift.</summary>
 internal sealed class DismissSuggestionCommandHandler(
     ISuggestionFeedback feedback,
     IRecipeRepository recipes,
@@ -36,9 +26,7 @@ internal sealed class DismissSuggestionCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Suggestions.Dismiss");
 
-        // Proved the same way every other personal write about a recipe proves
-        // it, so hiding one cannot be used to find out whether somebody else's
-        // recipe exists.
+        // Proved like every personal write about a recipe, so hiding cannot reveal whether another's recipe exists.
         var visible = await RecipeAccess
             .VisibleHouseholdAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);

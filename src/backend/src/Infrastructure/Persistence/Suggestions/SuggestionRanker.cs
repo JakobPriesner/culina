@@ -3,25 +3,13 @@ using Domain.Suggestions;
 
 namespace Infrastructure.Persistence.Suggestions;
 
-/// <summary>
-/// Ranks a household's recipes for one occasion.
-/// </summary>
+/// <summary>Ranks a household's recipes for one occasion.</summary>
 /// <remarks>
-/// <para>
-/// Two stages, and the split is where it is because of what each can do. The
-/// database scores every eligible recipe in one statement — that is arithmetic
-/// over rows, and SQL is what that is for. Choosing between the top few, pushing
-/// near-identical results apart and deciding what to say about each is a walk
-/// over at most a few dozen items, which is C#.
-/// </para>
-/// <para>
-/// Nothing here can shrink the answer below what the database returned: the
-/// diversity pass reorders and selects, it never rejects. See
-/// <see cref="ISuggestionRanker"/> for the guarantee that depends on it.
-/// </para>
+/// The database scores every eligible recipe in one statement (arithmetic over rows); choosing,
+/// pushing near-duplicates apart and explaining is a walk over a few dozen items, which is C#.
+/// Nothing here shrinks the answer below what the database returned: the diversity pass reorders
+/// and selects, never rejects (see <see cref="ISuggestionRanker"/>).
 /// </remarks>
-/// <param name="reader">Runs the scoring query.</param>
-/// <param name="weights">What each term is worth.</param>
 internal sealed class SuggestionRanker(SuggestionReader reader, RankingWeights weights)
     : ISuggestionRanker
 {
@@ -39,22 +27,12 @@ internal sealed class SuggestionRanker(SuggestionReader reader, RankingWeights w
     }
 
     /// <summary>
-    /// Picks the best, then keeps picking the best of what is left after
-    /// discounting whatever resembles an earlier pick.
+    /// Picks the best, then keeps picking the best of what is left after discounting whatever
+    /// resembles an earlier pick.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// Five suggestions that are five pasta dishes is the failure a small
-    /// library produces most often, and it is not a bug in the scoring — it is
-    /// the scoring being faithful to a taste that really is narrow. The
-    /// discount is deliberately modest for the same reason: variety that
-    /// overrides preference produces a list of things nobody wants, which is
-    /// worse than a list of similar things they do.
-    /// </para>
-    /// <para>
-    /// Greedy and O(n·k) over a pool of a few dozen. An optimal selection would
-    /// be a different complexity class for a difference nobody could see.
-    /// </para>
+    /// Greedy, O(n·k) over a few dozen. The discount is modest: variety that overrides preference
+    /// is worse than a list of similar things they do want.
     /// </remarks>
     private static List<ScoredRecipe> Diversified(
         IReadOnlyList<ScoredRecipe> candidates,

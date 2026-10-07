@@ -4,13 +4,7 @@ using Application.Cookbooks;
 
 namespace Api.Endpoints.Cookbooks.AddRecipe.V1;
 
-/// <summary>Puts a recipe on a shelf.</summary>
-/// <remarks>
-/// <c>PUT</c> on the membership itself rather than <c>POST</c> to a collection,
-/// because being on a shelf is a fact at a known address, not a new thing each
-/// time. That is what makes a double tap and a retried request both harmless —
-/// and both are ordinary on a phone.
-/// </remarks>
+/// <summary>Puts a recipe on a shelf. <c>PUT</c> on the membership, so a double tap or retried request is harmless.</summary>
 internal sealed class AddRecipeToCookbookEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

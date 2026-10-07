@@ -4,11 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Fixtures;
 
-/// <summary>
-/// One signed-in cook and their household, with a way to write recipes into it
-/// through the API — exactly as the app does, so the search documents are built
-/// by the same writes that build them in production.
-/// </summary>
+/// <summary>One signed-in cook and their household, writing recipes through the API as the app does so search documents are built by production's writes.</summary>
 /// <param name="Client">Signed in.</param>
 /// <param name="HouseholdId">Their household.</param>
 internal sealed record Kitchen(ApiClient Client, Guid HouseholdId)
@@ -40,10 +36,7 @@ internal sealed record Kitchen(ApiClient Client, Guid HouseholdId)
         return new Kitchen(client, householdId);
     }
 
-    /// <summary>
-    /// Another cook, signed in and in no household of this kitchen — the one a
-    /// recipe has to be invisible to.
-    /// </summary>
+    /// <summary>Another cook, signed in and in no household of this kitchen: the one a recipe must be invisible to.</summary>
     internal static async Task<ApiClient> StrangerAsync(PostgresFixture postgres)
     {
         ArgumentNullException.ThrowIfNull(postgres);

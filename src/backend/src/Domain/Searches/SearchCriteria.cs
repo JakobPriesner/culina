@@ -3,22 +3,7 @@ using Domain.Shared;
 
 namespace Domain.Searches;
 
-/// <summary>
-/// What a saved search asks the library for.
-/// </summary>
-/// <remarks>
-/// <para>
-/// The four things the library's toolbar holds, and nothing else. It records
-/// the question and never the answer — what matches is worked out whenever the
-/// search is applied, so a recipe written this evening is in it immediately and
-/// nothing has to be rebuilt when a filter changes.
-/// </para>
-/// <para>
-/// The words are kept exactly as they were typed. Parsing them here would give
-/// this type a second opinion about what a search means, and search already has
-/// the only one worth having.
-/// </para>
-/// </remarks>
+/// <summary>What a saved search asks the library for: the question, never the answer, with words kept as typed.</summary>
 public sealed record SearchCriteria
 {
     /// <summary>More tags than anybody would narrow by at once.</summary>
@@ -57,10 +42,6 @@ public sealed record SearchCriteria
     public bool Empty => Query is null && Tags.Count == 0 && MaxMinutes is null && Sort is null;
 
     /// <summary>Parses a set of filters, returning a failure rather than throwing.</summary>
-    /// <param name="query">The words in the search box, or null.</param>
-    /// <param name="tags">Tag slugs a recipe must all carry.</param>
-    /// <param name="maxMinutes">The longest a recipe may take, or null.</param>
-    /// <param name="sort">The order to read in, or null.</param>
     public static Result<SearchCriteria> Create(
         string? query,
         IReadOnlyList<string>? tags,
@@ -97,10 +78,6 @@ public sealed record SearchCriteria
     }
 
     /// <summary>Rebuilds filters from storage.</summary>
-    /// <param name="query">The stored words.</param>
-    /// <param name="tags">The stored tag slugs.</param>
-    /// <param name="maxMinutes">The stored ceiling.</param>
-    /// <param name="sort">The stored order.</param>
     public static SearchCriteria Restore(
         string? query,
         IReadOnlyList<string> tags,
@@ -116,14 +93,7 @@ public sealed record SearchCriteria
         return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
-    /// <summary>
-    /// Trimmed, emptied of blanks and nulls, and deduplicated.
-    /// </summary>
-    /// <remarks>
-    /// The same tag twice is one filter written twice, and a search that
-    /// reported "2 filters" for it would be counting the typing rather than the
-    /// question. Ordinal, because these are slugs rather than words.
-    /// </remarks>
+    // The same tag twice is one filter. Ordinal, because these are slugs.
     private static IReadOnlyList<string> Clean(IReadOnlyList<string>? tags)
     {
         if (tags is null)
@@ -141,21 +111,10 @@ public sealed record SearchCriteria
     }
 }
 
-/// <summary>
-/// The orders a saved search may remember.
-/// </summary>
+/// <summary>The orders a saved search may remember: the <c>sort</c> values <c>GET /recipes</c> accepts.</summary>
 /// <remarks>
-/// <para>
-/// The words <c>GET /recipes</c> accepts for <c>sort</c>, held here so that
-/// saving an order is storing the query-string value rather than translating
-/// it into something that has to be translated back.
-/// </para>
-/// <para>
-/// <c>cookbookOrder</c> is deliberately absent: it is only legal alongside a
-/// <c>cookbookId</c>, and a saved search that carried it would be one the
-/// library could not apply. An integration test holds the recipe endpoint to
-/// accepting everything in here, which is what stops the two drifting.
-/// </para>
+/// <c>cookbookOrder</c> is absent as it is only legal with a <c>cookbookId</c>. An integration test holds the
+/// endpoint to accepting everything here.
 /// </remarks>
 public static class SearchOrders
 {

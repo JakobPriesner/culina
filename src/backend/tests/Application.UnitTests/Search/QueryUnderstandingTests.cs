@@ -2,9 +2,7 @@ using Application.Search;
 
 namespace Application.UnitTests.Search;
 
-/// <summary>
-/// What a query is read to mean — and, as much, what it is not.
-/// </summary>
+/// <summary>What a query is read to mean, and as much what it is not.</summary>
 public class QueryUnderstandingTests
 {
     [Theory]
@@ -38,22 +36,17 @@ public class QueryUnderstandingTests
     [InlineData("Wiener Schnitzel", "free=Wiener Schnitzel")]
     public void Parse_ShouldExtractWhatWasMeant_AndNoMore(string query, string expected)
     {
-        // Act
         var intent = QueryUnderstanding.Parse(query);
 
-        // Assert
         Assert.Equal(expected, Summary(intent));
     }
 
     [Fact]
     public void Parse_ShouldNotTurnQuickIntoATimeFilter()
     {
-        // Act
-        // "schnell" states an intent, not a number. As thirty minutes it would
-        // silently drop the recipe nobody wrote a time on.
+        // "schnell" is an intent, not a number: as thirty minutes it would drop recipes with no time.
         var intent = QueryUnderstanding.Parse("schnell");
 
-        // Assert
         Assert.True(intent.Quick);
         Assert.Null(intent.MaxMinutes);
     }
@@ -66,10 +59,8 @@ public class QueryUnderstandingTests
     [InlineData("schnelles Abendessen")]
     public void Parse_ShouldReturnTheCharactersEveryChipWasReadFrom(string query)
     {
-        // Act
         var intent = QueryUnderstanding.Parse(query);
 
-        // Assert
         Assert.NotEmpty(intent.Applied);
         Assert.All(intent.Applied, one => Assert.Equal(one.Text, query[one.Start..one.End]));
     }
@@ -77,28 +68,22 @@ public class QueryUnderstandingTests
     [Fact]
     public void RemovingAChip_ShouldBeDeletingItsSpan_AndAskingAgain()
     {
-        // Arrange
         const string query = "vegetarisch unter 30 Minuten mit Kartoffeln";
         var time = QueryUnderstanding.Parse(query).Of(InferenceKind.Time).Single();
 
-        // Act
         var without = QueryUnderstanding.Parse(query.Remove(time.Start, time.End - time.Start));
 
-        // Assert
         Assert.Equal("diet=vegetarian; ingredient=potato; free=", Summary(without));
     }
 
     [Fact]
     public void RemovingTheOnlyIngredient_ShouldTakeTheSentenceAroundItWithIt()
     {
-        // Arrange
         const string query = "was kann ich mit Kartoffeln machen?";
         var chip = QueryUnderstanding.Parse(query).Applied.Single();
 
-        // Act
         var left = query.Remove(chip.Start, chip.End - chip.Start);
 
-        // Assert
         Assert.Equal("?", left);
         Assert.Equal(string.Empty, QueryUnderstanding.Parse(left).FreeText.Trim('?'));
     }
@@ -106,11 +91,9 @@ public class QueryUnderstandingTests
     [Fact]
     public void Parse_ShouldKeepTheWordItself_WhenTheChipSpansTheSentence()
     {
-        // Act
         var chip = QueryUnderstanding.Parse("was kann ich mit Kartoffeln machen?").Applied.Single();
         var exclusion = QueryUnderstanding.Parse("Suppe ohne Zwiebeln").Applied.Single();
 
-        // Assert
         Assert.Equal("was kann ich mit Kartoffeln machen", chip.Text);
         Assert.Equal("Kartoffeln", chip.Word);
         Assert.Equal("ohne Zwiebeln", exclusion.Text);
@@ -120,18 +103,15 @@ public class QueryUnderstandingTests
     [Fact]
     public void Parse_ShouldNameIngredients_AsAnIngredientLineWould()
     {
-        // Act
         // The ranking counts ingredients by name, and a line says "Kartoffel".
         var intent = QueryUnderstanding.Parse("etwas mit Kartoffeln");
 
-        // Assert
         Assert.Equal(["Kartoffel"], intent.Ingredients);
     }
 
     [Fact]
     public void Parse_ShouldLeaveAnEmptyQueryEmpty()
     {
-        // Act & Assert
         Assert.Equal("free=", Summary(QueryUnderstanding.Parse(null)));
         Assert.Equal("free=", Summary(QueryUnderstanding.Parse("   ")));
     }

@@ -9,15 +9,7 @@ using TestSupport;
 
 namespace IntegrationTests.Import;
 
-/// <summary>
-/// A connected source's API token, at rest.
-/// </summary>
-/// <remarks>
-/// The token is a working credential for somebody's other app, so what is
-/// proved here is what a database dump shows: never the token itself. And when
-/// the key ring that encrypted it is gone, the connection asks to be made again
-/// rather than breaking every screen that lists it.
-/// </remarks>
+/// <summary>A connected source's API token at rest: a dump must never show it, and a lost key ring must prompt reconnecting, not break screens.</summary>
 [Collection(RequiresDatabase.Name)]
 public class RecipeSourceTokenTests(PostgresFixture postgres)
 {
@@ -35,13 +27,10 @@ public class RecipeSourceTokenTests(PostgresFixture postgres)
     [Fact]
     public async Task AddAsync_ShouldStoreTheTokenEncrypted_AndReadItBack()
     {
-        // Arrange
         using var client = await SignedInAsync();
 
-        // Act
         var sourceId = await ConnectAsync();
 
-        // Assert
         var stored = await postgres.QuerySingleAsync<string>("select secret from recipe_sources", Token);
         Assert.DoesNotContain(TheToken, stored, StringComparison.Ordinal);
         Assert.True(await postgres.QuerySingleAsync<bool>("select secret_protected from recipe_sources", Token));
@@ -54,9 +43,7 @@ public class RecipeSourceTokenTests(PostgresFixture postgres)
     [Fact]
     public async Task StartAsync_ShouldEncryptATokenStoredBeforeTokensWereEncrypted()
     {
-        // Arrange
-        // A row exactly as one written before migration 0027: the plain token,
-        // and the flag the migration gave every row that existed then.
+        // A row as written before migration 0027: plain token plus the flag it gave existing rows.
         using var client = await SignedInAsync();
         var sourceId = Guid.CreateVersion7();
         await postgres.ExecuteAsync(
@@ -73,10 +60,8 @@ public class RecipeSourceTokenTests(PostgresFixture postgres)
             .OfType<RecipeSourceTokenEncryption>()
             .Single();
 
-        // Act
         await encryption.StartAsync(Token);
 
-        // Assert
         var stored = await postgres.QuerySingleAsync<string>("select secret from recipe_sources", Token);
         Assert.DoesNotContain(TheToken, stored, StringComparison.Ordinal);
         Assert.True(await postgres.QuerySingleAsync<bool>("select secret_protected from recipe_sources", Token));
@@ -86,21 +71,17 @@ public class RecipeSourceTokenTests(PostgresFixture postgres)
     [Fact]
     public async Task Browse_ShouldAskToReconnect_WhenTheStoredTokenCannotBeDecrypted()
     {
-        // Arrange
-        // What an instance restored without its key ring finds: ciphertext,
-        // intact, that nothing here can read.
+        // What an instance restored without its key ring finds: unreadable ciphertext.
         using var client = await SignedInAsync();
         var sourceId = await ConnectAsync();
         await postgres.ExecuteAsync("update recipe_sources set secret = 'CfDJ8-not-a-payload';", Token);
 
-        // Act
         var browsed = await client.GetAsync($"/api/v1/recipe-sources/{sourceId}/recipes", Token);
         var imported = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = OneRecipe },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Conflict, browsed.StatusCode);
         Assert.Equal("import.source_needs_reconnecting", browsed.Json!.Value.GetProperty("code").GetString());
         Assert.Equal("import.source_needs_reconnecting", imported.Json!.Value.GetProperty("code").GetString());
@@ -109,18 +90,14 @@ public class RecipeSourceTokenTests(PostgresFixture postgres)
     [Fact]
     public async Task Disconnect_ShouldStillWork_WhenTheStoredTokenCannotBeDecrypted()
     {
-        // Arrange
-        // Disconnecting is how such a connection gets fixed, so neither it nor
-        // the list it is chosen from may depend on the token.
+        // Disconnecting is how such a connection gets fixed, so neither it nor the list may depend on the token.
         using var client = await SignedInAsync();
         var sourceId = await ConnectAsync();
         await postgres.ExecuteAsync("update recipe_sources set secret = 'CfDJ8-not-a-payload';", Token);
 
-        // Act
         var listed = await client.GetAsync($"/api/v1/recipe-sources?householdId={householdId}", Token);
         var disconnected = await client.DeleteAsync($"/api/v1/recipe-sources/{sourceId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, listed.StatusCode);
         Assert.Single(listed.Json!.Value.GetProperty("items").EnumerateArray());
         Assert.Equal(HttpStatusCode.NoContent, disconnected.StatusCode);

@@ -2,14 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Households;
 
-/// <summary>
-/// A one-time code that lets someone join a household.
-/// </summary>
-/// <remarks>
-/// The code is a credential: anyone holding it can join. Only its digest is
-/// stored, it works once, and it expires — three independent limits, so a code
-/// that leaks from a chat log has a small window rather than an open door.
-/// </remarks>
+/// <summary>A one-time code that lets someone join a household. A credential: only its digest is stored, it works once, and it expires.</summary>
 public sealed class HouseholdInvitation
 {
     /// <summary>How long an invitation lives by default.</summary>
@@ -108,11 +101,7 @@ public sealed class HouseholdInvitation
     /// <summary>Marks the invitation used.</summary>
     /// <param name="userId">Who used it.</param>
     /// <param name="now">The injected current time.</param>
-    /// <returns>
-    /// <c>households.invitation_invalid</c> when it is expired or already used
-    /// — the same error an unknown code gets, so a code cannot be probed for
-    /// validity.
-    /// </returns>
+    /// <returns><c>households.invitation_invalid</c> when expired or used, the same error an unknown code gets so validity cannot be probed.</returns>
     public Result Redeem(Guid userId, DateTimeOffset now)
     {
         if (!IsUsable(now))

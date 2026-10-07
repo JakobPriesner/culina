@@ -6,11 +6,9 @@ namespace Infrastructure.Assistance;
 
 /// <summary>Picks the adapter for a provider.</summary>
 /// <remarks>
-/// Built from whatever was registered, exactly as <c>RecipeLibraries</c> is, so
-/// an adapter that exists but was never registered fails here with a named
-/// error rather than as a null somewhere deeper.
+/// Built from whatever was registered (like <c>RecipeLibraries</c>), so an adapter never registered
+/// fails here with a named error, not as a null deeper.
 /// </remarks>
-/// <param name="assistants">Every adapter that was registered.</param>
 internal sealed class Assistants(IEnumerable<IAssistant> assistants) : IAssistants
 {
     private readonly Dictionary<string, IAssistant> byKind =

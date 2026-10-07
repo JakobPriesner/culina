@@ -51,13 +51,9 @@ internal sealed class GetMealPlanEndpoint : IEndpoint
     }
 
     /// <summary>
-    /// Reads the day asked for, snapped to the Monday of its week.
+    /// Reads the day asked for, snapped to the Monday of its week so no caller has to work that
+    /// out.
     /// </summary>
-    /// <remarks>
-    /// Snapped here rather than demanded of the client: asking every caller to
-    /// work out which Monday a Thursday belongs to is asking for the one that
-    /// gets it wrong.
-    /// </remarks>
     private static bool TryReadFrom(string? from, out DateOnly start)
     {
         if (string.IsNullOrEmpty(from))

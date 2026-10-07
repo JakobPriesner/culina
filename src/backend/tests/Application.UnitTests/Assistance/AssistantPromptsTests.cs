@@ -6,9 +6,8 @@ using TestSupport;
 namespace Application.UnitTests.Assistance;
 
 /// <summary>
-/// That the prompts keep the two properties that are not visible by reading
-/// them: a shared leading prefix, and no untrusted text in the trailing
-/// position of a drawing prompt.
+/// The prompts' invisible properties: a shared leading prefix, and no untrusted text trailing a
+/// drawing prompt.
 /// </summary>
 public class AssistantPromptsTests
 {
@@ -29,9 +28,8 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// The cache property. Every provider reuses a leading prefix and nothing
-    /// else, so two prompts that diverge early are two prompts that never share
-    /// a cached prefill.
+    /// The cache property: providers reuse only a leading prefix, so early divergence means no
+    /// shared prefill.
     /// </summary>
     [Theory]
     [MemberData(nameof(EveryPair))]
@@ -39,9 +37,8 @@ public class AssistantPromptsTests
     {
         var shared = Shared(one, other);
 
-        // The house rules run to a few thousand characters; the capability
-        // paragraphs that follow are under a thousand. Anything below this
-        // means the shared block stopped being first.
+        // The house rules run to thousands of characters; below this the shared block is no longer
+        // first.
         Assert.True(
             shared > 1500,
             $"Two prompts share only {shared} leading characters.");
@@ -61,8 +58,7 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// Asked twice, the same prompt must be the same bytes — not merely equal.
-    /// A string rebuilt per call is a cache key that changes for no reason.
+    /// The same prompt twice must be the same bytes, not merely equal (a cache key).
     /// </summary>
     [Fact]
     public void AskingTwice_ShouldGiveBackTheSameInstance()
@@ -80,9 +76,8 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// The one that must not pick. A recipe somebody wrote in German is tidied
-    /// up in German, whatever the app has it stored as — so the prompt names no
-    /// language and asks for no translation.
+    /// Tidying must not pick a language: a German recipe is tidied in German whatever it is stored
+    /// as.
     /// </summary>
     [Fact]
     public void Improve_ShouldNameNoLanguageAtAll()
@@ -96,10 +91,8 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// The injection property, as far as a string can carry it. A recipe
-    /// description is whatever a member typed, and on an image endpoint there
-    /// is no system role to put it behind — so it must not be the last thing
-    /// the model reads.
+    /// The injection property: a description is member-typed and an image endpoint has no system
+    /// role, so it must not be read last.
     /// </summary>
     [Fact]
     public void Draw_ShouldEndWithThisAppsWords_WhenTheDescriptionTriesToTakeOver()
@@ -113,7 +106,7 @@ public class AssistantPromptsTests
         Assert.EndsWith("No text, no watermark, no hands and no people.", drawn, StringComparison.Ordinal);
     }
 
-    /// <summary>The same property, for the half that is a list rather than a sentence.</summary>
+    /// <summary>The same, for the ingredient list.</summary>
     [Fact]
     public void Draw_ShouldEndWithThisAppsWords_WhenAnIngredientTriesToTakeOver()
     {
@@ -133,7 +126,6 @@ public class AssistantPromptsTests
 
         Assert.DoesNotContain('\n', drawn);
         Assert.Contains("A dark, sticky stew.", drawn, StringComparison.Ordinal);
-        // The title, the framing and at most 200 characters of description.
         Assert.True(drawn.Length < 700, $"The prompt ran to {drawn.Length} characters.");
     }
 
@@ -155,8 +147,7 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// The whole point of the ingredient half: a dish whose title names one
-    /// part of it must still be drawn with the other parts on the plate.
+    /// A dish whose title names one part must still be drawn with the other parts on the plate.
     /// </summary>
     [Fact]
     public void Draw_ShouldNameEveryPartOfTheDish()
@@ -178,8 +169,7 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// The list of a recipe that never grouped anything is a plain list, and
-    /// a group that the de-duplication empties is not mentioned at all.
+    /// An ungrouped list is a plain list, and a group emptied by de-duplication is not mentioned.
     /// </summary>
     [Fact]
     public void Draw_ShouldListIngredientsPlainly_WhenTheRecipeHasNoGroupNames()
@@ -214,14 +204,13 @@ public class AssistantPromptsTests
 
         Assert.DoesNotContain('\n', drawn);
         Assert.Contains("Zutat 0 mit einer Zeile", drawn, StringComparison.Ordinal);
-        // The framing has to survive the list: 400 characters of it at most.
         Assert.True(drawn.Length < 1100, $"The prompt ran to {drawn.Length} characters.");
         Assert.EndsWith("No text, no watermark, no hands and no people.", drawn, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// The reason the steps are in the prompt at all: boiled potatoes and
-    /// mashed ones are the same ingredient line and a different photograph.
+    /// Steps are in the prompt because boiled and mashed potatoes are one ingredient line but
+    /// different photographs.
     /// </summary>
     [Fact]
     public void Draw_ShouldSayWhatBecameOfEachPart()
@@ -239,8 +228,7 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
-    /// A reference the ingredient list no longer answers leaves a gap rather
-    /// than a token or an exception.
+    /// A reference the list no longer answers leaves a gap, not a token or an exception.
     /// </summary>
     [Fact]
     public void Draw_ShouldLeaveAGap_WhenAStepNamesAnIngredientTheRecipeLost()
@@ -251,7 +239,6 @@ public class AssistantPromptsTests
             [],
             [AStep(new TextSegment("Die "), new IngredientSegment(Guid.NewGuid()), new TextSegment(" zerstampfen."))]);
 
-        // The gap closes up with the rest of the whitespace.
         Assert.Contains("Die zerstampfen.", drawn, StringComparison.Ordinal);
         Assert.DoesNotContain("ingredient:", drawn, StringComparison.Ordinal);
     }
@@ -275,12 +262,11 @@ public class AssistantPromptsTests
 
         Assert.DoesNotContain('\n', drawn);
         Assert.Contains("Schritt 0: lange kochen lassen.", drawn, StringComparison.Ordinal);
-        // The framing has to survive the method: 2000 characters of it at most.
         Assert.True(drawn.Length < 2700, $"The prompt ran to {drawn.Length} characters.");
         Assert.EndsWith("No text, no watermark, no hands and no people.", drawn, StringComparison.Ordinal);
     }
 
-    /// <summary>The injection property again, for the half a member writes most of.</summary>
+    /// <summary>The injection property again, for the method.</summary>
     [Fact]
     public void Draw_ShouldEndWithThisAppsWords_WhenAStepTriesToTakeOver()
     {
@@ -315,7 +301,6 @@ public class AssistantPromptsTests
         AssistantPrompts.Read(Language.De)
     ];
 
-    /// <summary>How many leading characters two prompts have in common.</summary>
     private static int Shared(string one, string other)
     {
         var shortest = Math.Min(one.Length, other.Length);

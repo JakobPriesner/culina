@@ -4,12 +4,10 @@ using Infrastructure.Persistence.Recipes;
 
 namespace Infrastructure.Persistence.Suggestions;
 
-/// <summary>One scored candidate as PostgreSQL returns it.</summary>
-/// <remarks>
-/// Every term comes back separately rather than pre-summed, which is the whole
-/// of how an explanation stays a fact: the reason is whichever term dominated,
-/// not a sentence chosen to suit a recipe that was picked for other reasons.
-/// </remarks>
+/// <summary>
+/// One scored candidate as PostgreSQL returns it; every term comes back separate, so the reason is
+/// whichever term dominated, not a sentence chosen to suit the pick.
+/// </summary>
 internal sealed record SuggestionRowData : RecipeCardRow
 {
     public string[] Features { get; init; } = [];
@@ -47,27 +45,12 @@ internal sealed record SuggestionRowData : RecipeCardRow
     public string? HouseholdSubject { get; init; }
 }
 
-/// <summary>
-/// Runs the scoring query and hands back candidates, best first.
-/// </summary>
+/// <summary>Runs the scoring query and hands back candidates, best first.</summary>
 /// <remarks>
-/// <para>
-/// Split from <see cref="SuggestionRanker"/> so that "what the database is
-/// asked" and "how the answer is chosen from" are two things you can read
-/// separately — the same reason the recipe search keeps its ordering in its own
-/// file.
-/// </para>
-/// <para>
-/// <b>What filters here and what only ranks.</b> A filter is something the
-/// caller asked for: a time ceiling, tags, ingredients to use up, recipes they
-/// already have on screen. A dismissal is the same thing said earlier. Nothing
-/// the system decides by itself is ever a filter — being cooked yesterday is a
-/// heavy penalty and never an exclusion — because a system-imposed filter is
-/// how a ranker ends up returning nothing and being unable to say why.
-/// </para>
+/// Filters are only what the caller asked for (time ceiling, tags, ingredients, recipes on screen,
+/// dismissals); nothing the system decides is a filter, since that is how a ranker returns nothing
+/// and cannot say why.
 /// </remarks>
-/// <param name="executor">Runs the SQL inside the request's transaction.</param>
-/// <param name="weights">What each term is worth.</param>
 internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weights)
 {
     internal async Task<IReadOnlyList<ScoredRecipe>> ScoreAsync(
@@ -104,10 +87,8 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                      join ingredient_groups g on g.id = ri.group_id
                      where g.recipe_id = r.id and ri.name ilike '%' || wanted || '%'))
                     as matched_ingredients,
-                -- What the diversity pass compares. Bounded, because a recipe
-                -- with sixty ingredients should not cost sixty string
-                -- comparisons per candidate pair for a number that would not
-                -- move.
+                -- Bounded: sixty ingredients should not cost sixty string comparisons per candidate
+                -- pair.
                 coalesce(
                     array(
                         select f.kind || ':' || f.feature
@@ -121,8 +102,8 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                 s.tag_subject, s.ingredient_subject, s.household_subject
             from recipes r
             join suggestion_scores s on s.recipe_id = r.id
-            -- One scan for both facts, rather than two subqueries over the same
-            -- index. cook_log_recipe_user_idx is (recipe_id, user_id, made_at desc).
+            -- One scan for both facts; cook_log_recipe_user_idx is (recipe_id, user_id, made_at
+            -- desc).
             left join lateral (
                 select count(*) as cook_count, max(c.made_at) as last_cooked_at
                 from cook_log_entries c
@@ -132,20 +113,16 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
               and not s.dismissed
               and r.id <> all (@excluded::uuid[])
               and (@likeRecipeId::uuid is null or r.id <> @likeRecipeId::uuid)
-              -- The recipe search's own clause, including its refusal to treat
-              -- an unknown time as zero: "I have 25 minutes" asks for recipes
-              -- known to fit, and an unknown time is not an answer.
+              -- The recipe search's clause: an unknown time is not an answer to "I have 25
+              -- minutes".
               and (@maxMinutes::int is null
                    or {{RecipeSql.FitsWithin("@maxMinutes::int")}})
               and (@tagCount::int = 0 or (
                     select count(distinct t.slug) from recipe_tags rt
                     join tags t on t.id = rt.tag_id
                     where rt.recipe_id = r.id and t.slug = any(@tags::text[])) = @tagCount::int)
-              -- Naming ingredients in a suggestion means "about these", so at
-              -- least one has to be in it. The recipe search ranks by them
-              -- instead, because there the list is the whole library and a
-              -- recipe without chicken is a worse match rather than not an
-              -- answer.
+              -- Naming ingredients means "about these", so at least one must be in it (the search
+              -- only ranks by them: there it is the whole library).
               and (@ingredientCount::int = 0 or exists (
                     select 1 from unnest(@ingredients::text[]) as wanted
                     join ingredient_groups g on g.recipe_id = r.id
@@ -183,13 +160,8 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
         row.Features);
 
     /// <summary>
-    /// The terms that contributed, largest first.
+    /// The terms that contributed, largest first; zero-valued terms are no reason and are dropped.
     /// </summary>
-    /// <remarks>
-    /// Zero-valued terms are dropped: a term that did nothing is not a reason
-    /// it was almost shown for, and keeping them would make the list of "what
-    /// decided this" mostly noise.
-    /// </remarks>
     private static List<ScoreTerm> Terms(SuggestionRowData row)
     {
         List<ScoreTerm> terms =
@@ -204,18 +176,15 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
             new(SuggestionReason.Similar, row.Similarity, null)
         ];
 
-        // Content is one number over two kinds of feature, so the reason picks
-        // whichever kind actually named something. An ingredient is the more
-        // concrete of the two — "you cook a lot with aubergine" says more than
-        // a tag somebody typed once — so it wins when both are available.
+        // Content is one number over two kinds of feature; the reason picks whichever named
+        // something, an ingredient first as the more concrete.
         if (row.IngredientSubject is not null && row.Content > 0)
         {
             terms[1] = new ScoreTerm(SuggestionReason.Ingredient, row.Content, row.IngredientSubject);
         }
 
-        // The repetition penalty ranks but never explains: "you had this on
-        // Tuesday" is a reason something is NOT being suggested, and printing
-        // it on a card that is being suggested would be nonsense.
+        // The repetition penalty ranks but never explains: "you had this on Tuesday" is no reason
+        // to suggest it.
         return [.. terms.Where(term => term.Contribution > 0).OrderByDescending(term => term.Contribution)];
     }
 }

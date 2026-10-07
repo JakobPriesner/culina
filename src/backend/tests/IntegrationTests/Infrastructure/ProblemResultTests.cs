@@ -26,29 +26,23 @@ public class ProblemResultTests
         ErrorType type,
         int expectedStatus)
     {
-        // Arrange
         var error = new Error("tests.example", "Something specific happened.", type);
         var context = ContextWithBody();
 
-        // Act
         await CustomResults.Problem(error).ExecuteAsync(context);
 
-        // Assert
         Assert.Equal(expectedStatus, context.Response.StatusCode);
     }
 
     [Fact]
     public async Task Problem_ShouldCarryTheCodeAndRequestId_WhenTheContextHasOne()
     {
-        // Arrange
         var error = new Error("users.email_already_used", "Already registered.", ErrorType.Conflict);
         var context = ContextWithBody();
         RequestContext.SetRequestId(context, "abc123");
 
-        // Act
         await CustomResults.Problem(error).ExecuteAsync(context);
 
-        // Assert
         var document = await ReadBodyAsync(context);
         Assert.Equal("users.email_already_used", document.GetProperty("code").GetString());
         Assert.Equal("abc123", document.GetProperty("requestId").GetString());
@@ -61,7 +55,6 @@ public class ProblemResultTests
     [Fact]
     public async Task Problem_ShouldListEveryCause_WhenTheErrorIsAValidationAggregate()
     {
-        // Arrange
         var error = new ValidationError(
         [
             new FieldError("title", "recipes.invalid_title", "A title is required."),
@@ -70,10 +63,8 @@ public class ProblemResultTests
         ]);
         var context = ContextWithBody();
 
-        // Act
         await CustomResults.Problem(error).ExecuteAsync(context);
 
-        // Assert
         var causes = (await ReadBodyAsync(context)).GetProperty("errors").EnumerateArray().ToList();
         Assert.Equal(3, causes.Count);
         Assert.Equal("title", causes[0].GetProperty("field").GetString());
@@ -85,14 +76,11 @@ public class ProblemResultTests
     [Fact]
     public async Task Problem_ShouldOmitTheRequestId_WhenThePipelineHasNotAssignedOne()
     {
-        // Arrange
         var error = new Error("tests.example", "No correlation yet.", ErrorType.Failure);
         var context = ContextWithBody();
 
-        // Act
         await CustomResults.Problem(error).ExecuteAsync(context);
 
-        // Assert
         var document = await ReadBodyAsync(context);
         Assert.False(document.TryGetProperty("requestId", out _));
     }

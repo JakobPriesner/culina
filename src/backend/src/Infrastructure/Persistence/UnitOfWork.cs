@@ -3,9 +3,7 @@ using Domain.Shared;
 
 namespace Infrastructure.Persistence;
 
-/// <summary>
-/// Runs a handler's writes inside one transaction.
-/// </summary>
+/// <summary>Runs a handler's writes inside one transaction.</summary>
 /// <param name="session">The request's connection and transaction.</param>
 internal sealed class UnitOfWork(DbSession session) : IUnitOfWork
 {
@@ -47,10 +45,7 @@ internal sealed class UnitOfWork(DbSession session) : IUnitOfWork
         }
         finally
         {
-            // Disposing an uncommitted transaction rolls it back, so a failed
-            // result and a thrown exception both leave nothing behind, there
-            // is no catch here to swallow the original failure, and no path
-            // can leave a transaction open.
+            // Disposing an uncommitted transaction rolls it back, so a failed result or exception leaves nothing behind and no path leaves one open.
             await session.EndTransactionAsync().ConfigureAwait(false);
         }
     }

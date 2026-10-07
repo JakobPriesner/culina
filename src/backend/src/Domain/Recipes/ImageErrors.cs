@@ -7,10 +7,8 @@ public static class ImageErrors
 {
     /// <summary>The upload is not an image this app can read.</summary>
     /// <remarks>
-    /// The same error whether the bytes are a text file, a format Culina does
-    /// not support, or a deliberately malformed image: the caller's fix is the
-    /// same in every case, and saying which would only help someone probing the
-    /// decoder.
+    /// One error for text, an unsupported format or a malformed image: the fix is the same, and
+    /// saying which would only help someone probing the decoder.
     /// </remarks>
     public static readonly Error Unreadable = new(
         "recipes.image_unreadable",

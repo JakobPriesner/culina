@@ -2047,8 +2047,8 @@ export interface components {
             servings: number;
             /**
              * Format: uuid
-             * @description The household it is being cooked in, for a recipe that household
-             *     inherits. Left out, the recipe's own household.
+             * @description The household it is cooked in, for an inherited recipe; left out, the recipe's own
+             *     household.
              */
             householdId?: string | null;
         };
@@ -2127,12 +2127,12 @@ export interface components {
              */
             version: number;
         };
-        /** @description Which recipes are on a cookbook, by id. */
+        /** @description Which recipes are on a cookbook, by id. Not paged: it answers "is it already on?" for a whole picker. */
         CookbooksCookbookRecipesResponse: {
             /** @description Every recipe on it. */
             recipeIds: string[];
         };
-        /** @description What a cookbook that fills itself asks for. */
+        /** @description What a cookbook that fills itself asks for. Every rule must hold. */
         CookbooksCookbookRulesContract: {
             /** @description Tag slugs a recipe must all carry. */
             tags?: string[];
@@ -2144,7 +2144,7 @@ export interface components {
              */
             maxMinutes?: number | null;
         };
-        /** @description A cookbook as it appears on a shelf. */
+        /** @description A cookbook as it appears on a shelf. Its recipes are read through `GET /recipes?cookbookId=…`. */
         CookbooksCookbookSummary: {
             /**
              * Format: uuid
@@ -2163,9 +2163,9 @@ export interface components {
              * @description How many recipes are on it.
              */
             recipeCount: number;
-            /** @description Up to four photographed recipes for the cover, oldest first. */
+            /** @description Up to four photographed recipes for the cover, oldest first so the cover stops moving. */
             coverRecipeIds: string[];
-            /** @description The same pictures, with which picture each recipe has now. */
+            /** @description The same pictures, with each recipe's current image id so a replaced picture gets a new address. */
             coverPictures: components["schemas"]["CookbooksCookbookCoverPicture"][];
             /**
              * Format: date-time
@@ -2173,7 +2173,7 @@ export interface components {
              */
             updatedAt: string;
         };
-        /** @description A page of a household's cookbooks. */
+        /** @description A page of a household's cookbooks, wrapped so paging metadata can grow. */
         CookbooksCookbooksResponse: {
             /** @description The cookbooks on this page, most recently changed first. */
             items: components["schemas"]["CookbooksCookbookSummary"][];
@@ -2208,12 +2208,12 @@ export interface components {
             /** @description What it is called. */
             name: string;
         };
-        /** @description Which cookbooks a recipe is on. */
+        /** @description Which cookbooks a recipe is on. Not paged: a recipe is on a handful of shelves. */
         CookbooksRecipeCookbooksResponse: {
             /** @description The cookbooks containing it, by name. */
             items: components["schemas"]["CookbooksRecipeCookbook"][];
         };
-        /** @description Renames a cookbook, and rewrites what it is for. */
+        /** @description Renames a cookbook, and rewrites what it is for. Both fields together: they are one form. */
         CookbooksUpdateCookbookRequest: {
             /** @description The new name. */
             name: string;
@@ -2242,10 +2242,7 @@ export interface components {
              * @description The invitation's id, for revoking it.
              */
             invitationId: string;
-            /**
-             * @description The code to share. Shown exactly once — only its digest is stored, so
-             *     this value cannot be recovered afterwards.
-             */
+            /** @description The code to share; shown once, as only its digest is stored. */
             code: string;
             /**
              * Format: date-time
@@ -2351,9 +2348,8 @@ export interface components {
             name: string;
             /**
              * Format: uuid
-             * @description The household it inherits from directly. The one asked about for a
-             *     direct heir — the only kind its owners can cut loose — or the heir it
-             *     inherits through.
+             * @description The household it inherits from directly: the one asked about for a direct heir (whose owners
+             *     can cut it loose), else the heir it inherits through.
              */
             inheritsFrom: string;
         };
@@ -2362,7 +2358,10 @@ export interface components {
             /** @description Those inheriting from it first, then those inheriting from them. */
             items: components["schemas"]["HouseholdsGetHeirsHeir"][];
         };
-        /** @description What an invitation code leads to, before it is used. */
+        /**
+         * @description What an invitation code leads to, before it is used: the name only, enough to recognise whose
+         *     kitchen it is and nothing a code holder could not learn by joining.
+         */
         HouseholdsGetInvitationByCodeResponse: {
             /** @description The name of the household the code admits to. */
             householdName: string;
@@ -2429,7 +2428,7 @@ export interface components {
             /** @description Who deleted it, by name, or null when that account no longer exists. */
             deletedBy?: string | null;
         };
-        /** @description A household as it appears in a list. */
+        /** @description A household as it appears in a list. Extended by inheritance, so a field added for one response cannot alter another. */
         HouseholdsHouseholdSummary: {
             /**
              * Format: uuid
@@ -2544,18 +2543,15 @@ export interface components {
         HouseholdsSetInheritanceRequest: {
             /**
              * Format: uuid
-             * @description The household whose recipes this one should see, or null to inherit
-             *     nothing. Required either way, so a missing field is never mistaken for
-             *     "stop inheriting".
+             * @description The household whose recipes this one should see, or null to inherit nothing. Required either way, so a missing field is never read as "stop inheriting".
              */
             householdId: string | null;
         };
         /** @description The household after the change. */
         HouseholdsSetInheritanceResponse: {
             /**
-             * @description Whose recipes it now sees, nearest first: the household it inherits
-             *     from, then the one that household inherits from, and so on. Empty when
-             *     it inherits nothing.
+             * @description Whose recipes it now sees, nearest first (the household it inherits from, then that one's
+             *     parent, and so on); empty when none.
              */
             inheritsFrom: components["schemas"]["HouseholdsInheritedHousehold"][];
             /**
@@ -2691,10 +2687,7 @@ export interface components {
             message: string;
             /** @description Where it was thrown, when there is a stack. At most 8,000 characters. */
             stack?: string | null;
-            /**
-             * @description The route it happened on, as the router names it — `/recipes/[recipeId]`,
-             *     never the address with the id in it. At most 200 characters.
-             */
+            /** @description The route as the router names it (`/recipes/[recipeId]`), never with the id. At most 200 characters. */
             route?: string | null;
             /**
              * Format: date-time
@@ -2733,10 +2726,7 @@ export interface components {
         PasswordResetsCreateRequest: {
             /** @description The address the account signs in with. */
             email: string;
-            /**
-             * @description One of the account's saved recovery codes, or one the administrator
-             *     issued. Case, spaces and dashes do not matter.
-             */
+            /** @description One of the account's saved recovery codes, or one the administrator issued. Case, spaces and dashes do not matter. */
             code: string;
             /** @description The new password. At least 12 characters. */
             password: string;
@@ -2758,15 +2748,12 @@ export interface components {
              * @description Which day it moves to. The day it is already on is allowed.
              */
             date: string;
-            /**
-             * @description `breakfast`, `lunch` or `dinner`. Omit to keep the slot
-             *             it already had.
-             */
+            /** @description `breakfast`, `lunch` or `dinner`. Omit to keep the current slot, as dragging does. */
             slot?: string | null;
             /**
              * Format: int32
-             * @description Which gap in the day it was dropped into, counted from zero. Omit to put
-             *     it last.
+             * @description Which gap in the day it was dropped into, counted from zero on the day as shown (the moved meal still in it); omit to
+             *     put it last. Only a request: the day is read in slot order, and the whole week comes back.
              */
             position?: number | null;
         };
@@ -2867,7 +2854,10 @@ export interface components {
              */
             householdId: string;
         };
-        /** @description A new recipe. */
+        /**
+         * @description A new recipe; only the household and title are required, so a bare recipe can be a placeholder
+         *     to write up later.
+         */
         RecipesCreateRequest: {
             /**
              * Format: uuid
@@ -2878,7 +2868,8 @@ export interface components {
             title: string;
             /**
              * Format: uuid
-             * @description The assistant draft this recipe is being made from, when it is.
+             * @description The assistant draft this recipe is made from, recorded as provenance beside an imported
+             *     recipe's source; omitted by every other caller.
              */
             draftId?: string | null;
             /** @description The public page the recipe was imported from. */
@@ -2898,7 +2889,7 @@ export interface components {
              * @description How much, or null when the recipe does not say.
              */
             quantity?: number | null;
-            /** @description In what, or null. */
+            /** @description In what, or null. Already checked against what the app can store; impossible units are dropped. */
             unit?: string | null;
             /** @description The shoppable noun. */
             name: string;
@@ -2920,11 +2911,11 @@ export interface components {
         /** @description One moment of a recipe being written. */
         RecipesDraftsEvent: {
             draft: components["schemas"]["RecipesDraftsResponse"];
-            /** @description Whether this is the last one. */
+            /** @description Whether this is the last one. Explicit because a proxy dropping the connection also closes the stream. */
             finished?: boolean;
             problem?: (null) | components["schemas"]["StreamingProblem"];
         };
-        /** @description Asks the assistant for a recipe. */
+        /** @description Asks the assistant for a recipe. One request with a `kind` rather than three endpoints. */
         RecipesDraftsRequest: {
             /** @description What is being asked for: `idea`, `text`, `social` or `revision`. */
             kind: string;
@@ -2933,7 +2924,7 @@ export interface components {
              * @description Whose kitchen it is for.
              */
             householdId: string;
-            /** @description The material, for `idea` and `text`. */
+            /** @description The material for `idea` and `text`: words the person supplied, never treated as an instruction. */
             material?: string | null;
             /** @description Spoken captions, kept apart from the measured written recipe. */
             transcript?: string | null;
@@ -2942,14 +2933,14 @@ export interface components {
              * @description Which recipe to rewrite, for `revision`.
              */
             recipeId?: string | null;
-            /** @description The language to answer in: `en` or `de`. */
+            /** @description The language to answer in: `en` or `de`. Sent, not inferred; ignored for a revision, which keeps its language. */
             language?: string | null;
         };
-        /** @description A recipe the assistant wrote. Not saved, and not a recipe yet. */
+        /** @description A recipe the assistant wrote. Not saved: it is read beside the original and accepted field by field. */
         RecipesDraftsResponse: {
             /**
              * Format: uuid
-             * @description This draft's own id.
+             * @description This draft's own id, sent back when the draft becomes a recipe so provenance can be recorded.
              */
             draftId: string;
             /** @description What the assistant called it. */
@@ -3178,7 +3169,7 @@ export interface components {
             interpretation?: (null) | components["schemas"]["RecipesGetAllInterpretation"];
             facets?: (null) | components["schemas"]["RecipesGetAllFacets"];
         };
-        /** @description One thing a half-typed query could become. */
+        /** @description One thing a half-typed query could become: a `recipe` (destination), an `ingredient` or `tag` (filter) or a `refinement` (completes the query). */
         RecipesGetCompletionsCompletion: {
             /** @description `recipe`, `ingredient`, `tag` or `refinement`. */
             kind: string;
@@ -3241,7 +3232,10 @@ export interface components {
             servings?: number | null;
             /** @description Anything you wrote. */
             note?: string | null;
-            /** @description Whether there is a picture of how this one turned out. */
+            /**
+             * @description Whether there is a picture of how this one turned out; a flag, not a URL, since the client
+             *     already knows both halves of `/recipes/{recipeId}/cook-log/{entryId}/photo`.
+             */
             hasPhoto: boolean;
         };
         /** @description How often you have cooked this, and when. */
@@ -3292,16 +3286,9 @@ export interface components {
         };
         /** @description Why two recipes are related, in words a person can disagree with. */
         RecipesGetRelatedRelatedReason: {
-            /**
-             * @description `kinds` when what they are is what they share most — both pasta
-             *             bakes, both Italian — or `ingredients` when it is what they are
-             *             made from.
-             */
+            /** @description `kinds` when what they are is what they share most (both pasta bakes), or `ingredients` when it is what they are made from. */
             kind: string;
-            /**
-             * @description At most three things they share, the most telling first, worded in the
-             *     language of the recipe being read.
-             */
+            /** @description At most three things they share, most telling first, in the language of the recipe being read. */
             shared: string[];
         };
         /** @description A recipe like the one being read, and why. */
@@ -3313,8 +3300,7 @@ export interface components {
             recipeId: string;
             /**
              * Format: uuid
-             * @description The household it belongs to. Another than the one asked about when that
-             *     one inherits it, which is what a card says "from" about.
+             * @description The household it belongs to; another than the one asked about when that one inherits it.
              */
             householdId: string;
             /** @description Its title. */
@@ -3402,7 +3388,10 @@ export interface components {
              * @description Prep plus cook, or null when neither is known.
              */
             totalMinutes?: number | null;
-            /** @description Whether there is a photograph to fetch. */
+            /**
+             * @description Whether there is a photograph to fetch; a flag, not an id, since the picture is served under
+             *     the same token and an id would reveal household storage.
+             */
             hasImage: boolean;
             /** @description Its ingredient groups, in order. */
             groups: components["schemas"]["RecipesIngredientGroupContract"][];
@@ -3410,7 +3399,7 @@ export interface components {
             steps: components["schemas"]["RecipesStepContract"][];
             /** @description Its tags. */
             tags: string[];
-            /** @description The address it was imported from, when it was imported. */
+            /** @description The address it was imported from, when it was. */
             sourceUrl?: string | null;
         };
         /** @description Tags a recipe could carry and does not, for somebody to add with one tap. */
@@ -3421,13 +3410,13 @@ export interface components {
         /** @description One tag worth offering. */
         RecipesGetTagSuggestionsTagSuggestion: {
             /**
-             * @description What to show and, when added, what to save: the household's own name for
-             *     it where it has one, or the lexicon's word in the recipe's language.
+             * @description What to show and, when added, save: the household's own name where it has one, else the
+             *     lexicon's word in the recipe's language.
              */
             name: string;
             /**
-             * @description The household's tag, when it already uses one for this; null for a tag
-             *     that adding would create.
+             * @description The household's tag when it already uses one for this; null for a tag that adding would
+             *     create.
              */
             slug?: string | null;
         };
@@ -3444,7 +3433,8 @@ export interface components {
             name: string;
             /**
              * Format: int32
-             * @description How many recipes carry it.
+             * @description How many recipes carry it, shown beside each tag since a tag on two recipes and on forty are
+             *     different offers.
              */
             recipeCount: number;
         };
@@ -3460,7 +3450,7 @@ export interface components {
             /** @description The address. An ordinary public http or https page. */
             url: string;
         };
-        /** @description What a page turned out to say. */
+        /** @description What a page turned out to say: a draft, never a recipe. */
         RecipesImportResponse: {
             /** @description Where it was read from, after any redirects. */
             sourceUrl: string;
@@ -3491,11 +3481,9 @@ export interface components {
         RecipesIngredientContract: {
             /**
              * Format: uuid
-             * @description The line's id, as the recipe gave it; steps refer to it. Omit to create
-             *     a new line. An id the recipe does not have creates one too, with an id
-             *     of the server's choosing, and a step in the same request that refers to
-             *     the id sent is pointed at that new line — so read the ids back from the
-             *     response rather than keeping the ones sent.
+             * @description The line's id, which steps refer to. Omit it, or send an unknown one, to create a line with
+             *     a server-chosen id: read ids back from the response, since steps are re-pointed at the new
+             *     one.
              */
             ingredientId?: string | null;
             /**
@@ -3514,14 +3502,13 @@ export interface components {
         RecipesIngredientGroupContract: {
             /**
              * Format: uuid
-             * @description The group's id, as the recipe gave it. Omit to create a new one; an id
-             *     the recipe does not have creates a new one too, with an id of the
-             *     server's choosing.
+             * @description The group's id; omit it, or send one the recipe does not have, to create a group with a
+             *     server-chosen id.
              */
             groupId?: string | null;
             /**
-             * @description The heading, or null for the implicit first group. A recipe with one
-             *     unnamed group renders as a plain list.
+             * @description The heading, or null for the implicit first group; a recipe with one unnamed group renders
+             *     as a plain list.
              */
             name?: string | null;
             /** @description Its ingredient lines, in order. */
@@ -3662,7 +3649,7 @@ export interface components {
              */
             version: number;
         };
-        /** @description Where an imported recipe came from. */
+        /** @description Where an imported recipe came from. Quiet on purpose: an imported recipe is an ordinary recipe. */
         RecipesRecipeProvenance: {
             /** @description Which sort of place: `tandoor` or `web`. */
             kind: string;
@@ -3697,8 +3684,8 @@ export interface components {
             note?: string | null;
             /**
              * Format: uuid
-             * @description The household it was cooked in, for a recipe that household inherits.
-             *     Left out, the recipe's own household.
+             * @description The household it was cooked in, for a recipe that household inherits; left out, the recipe's
+             *     own.
              */
             householdId?: string | null;
         };
@@ -3746,18 +3733,21 @@ export interface components {
             householdId: string;
             /** @description Which app. Currently only `tandoor`. */
             kind: string;
-            /** @description Where it is: `https://recipes.example.com`. */
+            /** @description Where it is, such as `https://recipes.example.com`. Anything after the host is dropped. */
             address: string;
-            /** @description The API token from that app. */
+            /** @description The app's API token. Never returned. Send this or a username and password, not both. */
             token?: string | null;
-            /** @description The name that account signs in with over there. */
+            /** @description The account name over there; the alternative to string? ConnectSourceRequest.Token. */
             username?: string | null;
-            /** @description The password for that account. */
+            /** @description Used once to obtain a token, then dropped. Never stored, logged or returned. */
             password?: string | null;
             /** @description What to call it here. Its host name, when this is left out. */
             label?: string | null;
         };
-        /** @description One line of an import's progress, as the stream sends it. */
+        /**
+         * @description One line of an import's progress: one per finished recipe, then a last one with no recipe.
+         *     Each carries the running count, so a late joiner is still right.
+         */
         RecipesSourcesImportEvent: {
             recipe?: (null) | components["schemas"]["RecipesSourcesImportedRecipe"];
             /**
@@ -3775,9 +3765,9 @@ export interface components {
         };
         /** @description Asks for some of their recipes to be brought over. */
         RecipesSourcesImportFromSourceRequest: {
-            /** @description Which of their recipes, by the id the browse gave back. */
+            /** @description The whole selection, by the ids the browse gave back. Answered once the import is named; recipes follow over the stream. */
             externalIds: string[];
-            /** @description Bring them over even where one looks like a recipe already here. */
+            /** @description Bring them over even where one looks like a recipe already here. Only set after the person confirmed it. */
             allowLookalikes?: boolean;
             /**
              * Format: uuid
@@ -3785,10 +3775,7 @@ export interface components {
              */
             cookbookId?: string | null;
         };
-        /**
-         * @description A recipe already here that an imported one looks like — "Sieht aus wie
-         *     „Spaghetti Bolognese“ (12× gekocht, 4 gleiche Zutaten)".
-         */
+        /** @description A recipe already here that an imported one looks like. */
         RecipesSourcesImportLookalike: {
             /** @description Its title. */
             title: string;
@@ -3812,7 +3799,7 @@ export interface components {
             importId: string;
             /**
              * Format: uuid
-             * @description The cookbook everything from this import is going onto.
+             * @description The cookbook everything from this import is going onto; known before the first recipe is fetched.
              */
             cookbookId: string;
             /** @description What it is called. */
@@ -3827,12 +3814,14 @@ export interface components {
         RecipesSourcesImportedRecipe: {
             /** @description Which of theirs this is about. */
             externalId: string;
-            /** @description `imported`, `already_here`, `looks_like` or `failed`. */
+            /**
+             * @description `imported`, `already_here`, `looks_like` or `failed`.
+             *             Only `failed` is an error; `looks_like` is held back for a person to decide.
+             */
             outcome: string;
             /**
              * Format: uuid
-             * @description The recipe here, when there is one: the one it became, the one it
-             *     already was, or the one it looks like.
+             * @description The recipe here, when there is one: the one it became, the one it already was, or the one it looks like.
              */
             recipeId?: string | null;
             looksLike?: (null) | components["schemas"]["RecipesSourcesImportLookalike"];
@@ -3849,7 +3838,10 @@ export interface components {
             title: string;
             /** @description Its introduction, when it has one. */
             description?: string | null;
-            /** @description A picture of it, over there. */
+            /**
+             * @description A picture of it, over there. Not drawn in the picker (a browser has no token for that server);
+             *     this server fetches it on import.
+             */
             imageUrl?: string | null;
             /**
              * Format: int32
@@ -3858,8 +3850,7 @@ export interface components {
             totalMinutes?: number | null;
             /**
              * Format: uuid
-             * @description The recipe this one already is here, when it has been brought over
-             *     before.
+             * @description The recipe here that this one was already imported as, if any.
              */
             alreadyHere?: string | null;
         };
@@ -3908,12 +3899,14 @@ export interface components {
         RecipesStepContract: {
             /**
              * Format: uuid
-             * @description The step's id, as the recipe gave it. Omit to create a new one; an id
-             *     the recipe does not have creates a new one too, with an id of the
-             *     server's choosing.
+             * @description The step's id; omit it, or send one the recipe does not have, to create a step with a
+             *     server-chosen id.
              */
             stepId?: string | null;
-            /** @description What this step is called — "Prepare the base". */
+            /**
+             * @description What this step is called, e.g. "Prepare the base"; null for most steps, which a client
+             *     labels by position. A name for this step, not a heading over the following ones.
+             */
             title?: string | null;
             /** @description Its text, split into words and ingredient references. */
             segments: components["schemas"]["RecipesStepSegmentContract"][];
@@ -3922,10 +3915,7 @@ export interface components {
              * @description How long it takes, when it waits. Drives the inline timer.
              */
             durationSeconds?: number | null;
-            /**
-             * @description Everything the step needs, as ingredient ids: what to get out before
-             *     starting it.
-             */
+            /** @description Everything the step needs, as ingredient ids: what to get out before starting it. */
             uses?: string[] | null;
         };
         /** @description One piece of a step: either words, or a reference to an ingredient. */
@@ -3952,7 +3942,7 @@ export interface components {
             /** @description The ingredient's unit, on a read. */
             unit?: string | null;
         };
-        /** @description The recipe's complete new state. */
+        /** @description The recipe's complete new state: a replacement, not a patch, since the editor saves the whole recipe. */
         RecipesUpdateRequest: {
             /** @description What to call it. */
             title: string;
@@ -3973,7 +3963,7 @@ export interface components {
              * @enum {string}
              */
             yieldKind: "servings" | "pieces";
-            /** @description The recipe's own word for what it makes — "Cake", "Gläser", "Blech". */
+            /** @description The recipe's own word for what it makes ("Cake", "Gläser"). Null for most; then the client words it from `yieldKind`. Shown as written, never pluralised or translated. */
             yieldLabel?: string | null;
             /**
              * Format: int32
@@ -3999,10 +3989,7 @@ export interface components {
         };
         /** @description A one-time code to pass on to the person who is locked out. */
         RecoveryCodesIssueResponse: {
-            /**
-             * @description The code. Shown exactly once — only its digest is stored, so it cannot
-             *     be shown again.
-             */
+            /** @description The code. Shown exactly once; only its digest is stored. */
             code: string;
             /**
              * Format: date-time
@@ -4066,7 +4053,7 @@ export interface components {
             /** @description The searches, oldest first, so the row of chips stops moving. */
             items: components["schemas"]["SearchesSavedSearchDetail"][];
         };
-        /** @description What a saved search asks the library for. */
+        /** @description What a saved search asks for: the `query`, `tag`, `maxMinutes` and `sort` of `GET /recipes`. */
         SearchesSearchCriteriaContract: {
             /** @description The words that were in the search box, or omit. */
             query?: string | null;
@@ -4077,7 +4064,10 @@ export interface components {
              * @description The longest a recipe may take, or omit for any length.
              */
             maxMinutes?: number | null;
-            /** @description The order to read in, or omit for whatever the library would choose. */
+            /**
+             * @description The order to read in, or omit for the default. One of `relevance`, `suggested`, `-updatedAt`,
+             *     `title`, `totalMinutes` or `-cookCount` (not `cookbookOrder`, which needs a cookbook).
+             */
             sort?: string | null;
         };
         /** @description Renames a saved search, and rewrites what it asks for. */
@@ -4155,7 +4145,10 @@ export interface components {
             id: string;
             /** @description What to show, where the provider says something nicer. */
             label: string;
-            /** @description Whether it makes pictures. */
+            /**
+             * @description Whether it makes pictures; read from the model's name by the adapter, as no provider states
+             *     it.
+             */
             canDraw: boolean;
         };
         /** @description One provider's models, or the reason there are none. */
@@ -4164,7 +4157,10 @@ export interface components {
             provider: string;
             /** @description Whether the provider answered. */
             reachable: boolean;
-            /** @description Why it did not, when it did not. */
+            /**
+             * @description Why the provider did not answer, as an error code (the client has the words); a wrong key
+             *     and an unreachable address both land here.
+             */
             problem?: string | null;
             /** @description What it offers, newest naming and all. */
             models: components["schemas"]["SettingsGetAssistanceModelsModelContract"][];
@@ -4262,7 +4258,7 @@ export interface components {
             totalPictures: number;
             /**
              * Format: int32
-             * @description How many calls used a model this app has no price for.
+             * @description How many calls used a model with no known price; reported so a total that is missing something says so.
              */
             unpriced: number;
             /** @description Who spent what. */
@@ -4327,10 +4323,7 @@ export interface components {
         };
         /** @description How the request that asked for these settings reached the server. */
         SettingsGetServerConnectionContract: {
-            /**
-             * @description The address the connection came from, as Culina sees it — the proxy's,
-             *     when there is one it does not trust yet.
-             */
+            /** @description The address the connection came from as Culina sees it: the proxy's, if not yet trusted. */
             remoteAddress?: string | null;
             /** @description Whether the request said it was forwarded for someone else. */
             forwarded: boolean;
@@ -4417,10 +4410,7 @@ export interface components {
              */
             requestsPerSessionPerMinute: number;
         };
-        /**
-         * @description The server settings an administrator can change from the app, as the
-         *     running process uses them.
-         */
+        /** @description The server settings an administrator can change from the app, as the running process uses them. */
         SettingsGetServerResponse: {
             cookies: components["schemas"]["SettingsGetServerCookiesContract"];
             forwardedHeaders: components["schemas"]["SettingsGetServerForwardedHeadersContract"];
@@ -4428,8 +4418,8 @@ export interface components {
             telemetry: components["schemas"]["SettingsGetServerTelemetryContract"];
             connection: components["schemas"]["SettingsGetServerConnectionContract"];
             /**
-             * @description The settings the deployment fixes, by the environment variable that sets
-             *     them — `Cookies__Secure`. Saving cannot change these.
+             * @description The settings the deployment fixes, by environment variable (`Cookies__Secure`); saving
+             *     cannot change them.
              */
             pinned: string[];
             /** @description Whether changes can be saved at all. */
@@ -4450,24 +4440,19 @@ export interface components {
             apiKeyConfigured: boolean;
             /** @description Where the provider is, or empty for its own address. */
             baseUrl: string;
-            /** @description Whether this connection has everything its provider needs. */
+            /** @description Whether this connection has everything its provider needs: a local model needs an address but no key. */
             usable: boolean;
         };
         /** @description One provider to connect, or to keep connected. */
         SettingsUpdateAssistanceConnectionRequest: {
             /** @description `gemini`, `openai` or `ollama`. */
             provider: string;
-            /**
-             * @description A new API key, or null to keep the one already stored — for the address
-             *     it was stored with only: null with a different `baseUrl` is refused
-             *     with `assistance.api_key_required`, because a stored key is only
-             *     ever sent to the address it was saved for.
-             */
+            /** @description A new API key, or null to keep the stored one. An empty string removes it. */
             apiKey?: string | null;
             /** @description Where the provider is, or empty for its own address. */
             baseUrl: string;
         };
-        /** @description The assistant configuration to apply. */
+        /** @description The assistant configuration to apply, all at once: one screen with one Save, so no half-applied state. */
         SettingsUpdateAssistanceRequest: {
             /** @description Whether the assistant is on at all. */
             enabled: boolean;
@@ -4486,7 +4471,7 @@ export interface components {
              */
             personalBudget?: number | null;
         };
-        /** @description The models this instance can talk to, and which of them does what. */
+        /** @description The models this instance can talk to, and which does what. An API key goes in and `apiKeyConfigured` comes out, never the value. */
         SettingsUpdateAssistanceResponse: {
             /** @description Whether the assistant is on at all. */
             enabled: boolean;
@@ -4515,7 +4500,7 @@ export interface components {
             provider: string;
             /** @description Which of its models, or empty for the current default. */
             model: string;
-            /** @description The model that will actually be used when none is chosen. */
+            /** @description The model used when none is chosen; the server decides, so the form can show it as a placeholder. */
             defaultModel: string;
         };
         /** @description What should do one job. */
@@ -4542,13 +4527,7 @@ export interface components {
             name: string;
             /** @description The role to connect as. Never a superuser. */
             username: string;
-            /**
-             * @description A new password, or null to keep the one already set. Write-only: no
-             *     response ever carries it back. Kept only for the same server: null
-             *     with a different host, port, name or username is refused with
-             *     `settings.database_password_required`, because the stored password
-             *     is only ever sent to the server it was saved for.
-             */
+            /** @description A new password, or null to keep the stored one. Write-only. Null with a different host, port, name or username is refused with `settings.database_password_required`: the password is only sent to the server it was saved for. */
             password?: string | null;
             /** @description Whether the connection must use TLS. */
             requireSsl: boolean;
@@ -4570,7 +4549,7 @@ export interface components {
              */
             maxUsers: number;
         };
-        /** @description Who may create an account on this instance. */
+        /** @description Who may create an account on this instance, as a contract type rather than the settings record serialised directly. */
         SettingsUpdateRegistrationResponse: {
             /** @description Whether anyone may create an account. */
             openRegistration: boolean;
@@ -4682,16 +4661,14 @@ export interface components {
         /** @description How far this instance has got in being set up. */
         SetupGetResponse: {
             /**
-             * @description `database` when there is none yet, `account` when there is and
-             *             nobody has an account in it, `complete` once somebody administers
-             *             the instance.
+             * @description `database` when there is none yet, `account` when nobody has an account,
+             *             `complete` once somebody administers it.
              */
             stage: string;
             /**
              * Format: date-time
-             * @description When the running host started. Changes whenever the server restarts to
-             *     apply a setting, which is how a client that asked for one knows it is
-             *     over.
+             * @description When the running host started; it changes when the server restarts to apply a setting, so a
+             *     client can tell the restart is over.
              */
             startedAt: string;
         };
@@ -4739,7 +4716,8 @@ export interface components {
             name: string;
             /**
              * Format: double
-             * @description How much, unrounded.
+             * @description How much, unrounded: summing rounded amounts compounds error, and display is the client's
+             *     business.
              */
             quantity?: number | null;
             /** @description In what, or null for a bare count. */
@@ -4805,7 +4783,10 @@ export interface components {
              */
             section?: "produce" | "dairy_eggs" | "meat_fish" | "bakery" | "dry_goods" | "canned_jars" | "frozen" | "spices_baking" | "drinks" | "household" | "other" | null;
         };
-        /** @description A failure that happened after the answer had already started. */
+        /**
+         * @description A failure after the response had already started (a 200 in flight), so it travels as an event on the stream.
+         *     Clients branch on string Problem.Code, never on string Problem.Detail, which is reworded.
+         */
         StreamingProblem: {
             /** @description The machine-readable code, formatted `module.reason`. */
             code: string;
@@ -4826,8 +4807,7 @@ export interface components {
             recipeId: string;
             /**
              * Format: uuid
-             * @description The household it belongs to. Another than the one asked about when that
-             *     one inherits it, which is what a card says "from" about.
+             * @description The household it belongs to; not the one asked about when that one inherits it.
              */
             householdId: string;
             /** @description What it is called. */
@@ -4849,7 +4829,10 @@ export interface components {
             yieldAmount: number;
             /** @description `servings` or `pieces`. */
             yieldKind: string;
-            /** @description The recipe's own word for what it makes — "Cake", "Gläser", "Blech". */
+            /**
+             * @description The recipe's own word for what it makes, such as "Cake". Null for most; when set it is shown
+             *     as written, otherwise the client words the yield from `yieldKind`.
+             */
             yieldLabel?: string | null;
             /** @description Its tags. */
             tags: string[];
@@ -4873,15 +4856,11 @@ export interface components {
         /** @description Why a recipe was suggested. */
         SuggestionsGetAllSuggestionReasonView: {
             /**
-             * @description One of `affinity`, `rediscovery`, `tag`,
-             *     `ingredient`, `season`, `slot`, `household`,
-             *     `fresh`, `similar`. Branch on it.
+             * @description One of `affinity`, `rediscovery`, `tag`, `ingredient`, `season`, `slot`,
+             *     `household`, `fresh`, `similar`.
              */
             code: string;
-            /**
-             * @description What the reason is about — a tag, an ingredient name, or a member's
-             *     display name — when it is about something nameable.
-             */
+            /** @description What the reason is about (a tag, ingredient or member name), when nameable. */
             subject?: string | null;
         };
         /** @description A new password, and the current one to prove it is you. */
@@ -4899,8 +4878,8 @@ export interface components {
         /** @description A new set of recovery codes. Any earlier set has stopped working. */
         UsersCreateRecoveryCodesResponse: {
             /**
-             * @description The codes, each good for one password reset. Shown exactly once — only
-             *     their digests are stored, so they cannot be shown again.
+             * @description The codes, each good for one password reset; shown exactly once, as only their digests are
+             *     stored.
              */
             codes: string[];
             /**
@@ -5013,15 +4992,9 @@ export interface components {
             displayName: string;
             /** @description Their chosen password, at least 12 characters. */
             password: string;
-            /**
-             * @description What to call the household created alongside the first account on an
-             *     instance. Ignored otherwise.
-             */
+            /** @description What to call the household created with the instance's first account; ignored otherwise. */
             householdName?: string | null;
-            /**
-             * @description An invitation code, which joins the new account to that household.
-             *     Required when the instance's registration policy says so.
-             */
+            /** @description An invitation code that joins the new account to its household; required when the registration policy says so. */
             invitationCode?: string | null;
         };
         /** @description The account that was created. */
@@ -5039,8 +5012,8 @@ export interface components {
             isAdmin: boolean;
             /**
              * Format: uuid
-             * @description The household created with the account, when one was. Null means the
-             *     client should offer to create one or redeem an invitation.
+             * @description The household created with the account; null means the client should offer to create one or
+             *     redeem an invitation.
              */
             householdId?: string | null;
         };
@@ -5064,7 +5037,7 @@ export interface components {
              */
             version: number;
         };
-        /** @description The preferences to store. */
+        /** @description The preferences to store, as a complete replacement rather than a patch. */
         UsersUpdatePreferencesRequest: {
             /** @description The language to read in: `en`, `de`, or `system` to follow the device. */
             locale: string;
@@ -6656,6 +6629,24 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

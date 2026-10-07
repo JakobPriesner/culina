@@ -23,9 +23,7 @@ internal sealed class GetAssistanceSettingsQueryHandler(
     {
         using var tracked = UseCaseActivity.Start("Settings.GetAssistance");
 
-        // Straight from the singleton, like the registration policy: it is the
-        // live value every other handler sees. The keys are the one thing that
-        // does not come back — only whether each connection has one.
+        // Straight from the live singleton; the keys never come back, only whether each connection has one.
         return Task.FromResult(tracked.Record(Result<Response>.Success(new Response
         {
             Enabled = settings.Enabled,
@@ -36,15 +34,7 @@ internal sealed class GetAssistanceSettingsQueryHandler(
         })));
     }
 
-    /// <summary>
-    /// Every provider this build knows, connected or not.
-    /// </summary>
-    /// <remarks>
-    /// The list the screen draws is the list of what could be connected rather
-    /// than what is, so an unconnected provider is a row with empty fields
-    /// instead of something to go and add. Adding one is then filling it in,
-    /// which is one gesture fewer and one screen fewer.
-    /// </remarks>
+    // Every provider this build knows, connected or not, so an unconnected one is an empty row to fill in.
     private IEnumerable<ConnectionContract> Every() =>
         AssistantKind.All.Select(kind =>
         {
@@ -59,14 +49,7 @@ internal sealed class GetAssistanceSettingsQueryHandler(
             };
         });
 
-    /// <summary>
-    /// Every job, chosen or not, with the model it would fall back to.
-    /// </summary>
-    /// <remarks>
-    /// The default comes from here rather than from the client, because the
-    /// server is what decides it. A form that hard-coded a model name would be
-    /// a form showing a placeholder the server had stopped agreeing with.
-    /// </remarks>
+    // Every job, chosen or not, with the model it would fall back to: the server decides the default, not the form.
     private IEnumerable<UseContract> Jobs() =>
         Capability.All.Select(capability =>
         {

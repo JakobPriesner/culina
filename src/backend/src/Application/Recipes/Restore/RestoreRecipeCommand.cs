@@ -27,9 +27,8 @@ internal sealed class RestoreRecipeCommandHandler(
             .HouseholdOfDeletedRecipeAsync(command.RecipeId, cancellationToken)
             .ConfigureAwait(false);
 
-        // The same people who could delete it — the household's own members,
-        // not those of a household inheriting from it. Anybody else is told
-        // there is nothing to restore, as they are told there is no recipe.
+        // The same people who could delete it (the household's own members, not heirs); anybody
+        // else gets "no such recipe".
         var permitted = householdId is { } id
             && await households.IsMemberAsync(id, command.UserId, cancellationToken).ConfigureAwait(false);
 

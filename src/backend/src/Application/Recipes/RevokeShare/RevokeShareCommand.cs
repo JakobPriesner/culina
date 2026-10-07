@@ -5,9 +5,7 @@ using Domain.Shared;
 
 namespace Application.Recipes.RevokeShare;
 
-/// <summary>
-/// Takes a recipe's link back. Nothing that was sent still works.
-/// </summary>
+/// <summary>Takes a recipe's link back; nothing that was sent still works.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
 public sealed record RevokeShareCommand(Guid RecipeId, Guid UserId);

@@ -2,16 +2,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Identity;
 
-/// <summary>
-/// The sliding session, proven through the pipeline rather than the store.
-/// </summary>
-/// <remarks>
-/// Culina issues no refresh token: the cookie is an opaque reference, so there
-/// is nothing to exchange and a revoked session dies on the next request. What
-/// takes its place is renewal on use — and it has to happen in the one place
-/// every authenticated request passes through, or a person who opens the app
-/// every day is still signed out a month after signing in.
-/// </remarks>
+/// <summary>Sliding session renewal, proven through the pipeline: there is no refresh token, so renewal happens on use.</summary>
 [Collection(RequiresDatabase.Name)]
 public class SessionRenewalTests(PostgresFixture postgres)
 {
@@ -23,8 +14,7 @@ public class SessionRenewalTests(PostgresFixture postgres)
     public async Task AnAuthenticatedRequest_ShouldReissueBothCookies_OnceTheSessionIsDueForRenewal()
     {
         // Arrange
-        // Zero hours: every request is due, which is what makes the behaviour
-        // observable without a clock that can be wound forward.
+        // Zero hours makes every request due, so renewal is observable without winding a clock.
         using var factory = await RenewingFactoryAsync("0");
         using var client = await SignedInClientAsync(factory);
 
@@ -36,8 +26,7 @@ public class SessionRenewalTests(PostgresFixture postgres)
         var session = Assert.Single(cookies, cookie => cookie.StartsWith($"{SessionCookie}=", StringComparison.Ordinal));
         var csrf = Assert.Single(cookies, cookie => cookie.StartsWith($"{CsrfCookie}=", StringComparison.Ordinal));
 
-        // Both, together: a browser holding a renewed session cookie and a
-        // lapsed CSRF cookie is signed in but unable to change anything.
+        // Both together: a renewed session with a lapsed CSRF cookie could sign in but change nothing.
         Assert.Contains("expires=", session, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("expires=", csrf, StringComparison.OrdinalIgnoreCase);
     }
@@ -57,8 +46,7 @@ public class SessionRenewalTests(PostgresFixture postgres)
         var createdAt = device.GetProperty("createdAt").GetDateTimeOffset();
         var lastSeenAt = device.GetProperty("lastSeenAt").GetDateTimeOffset();
 
-        // Without this the devices screen reports every session as last used
-        // at the moment it was created, however long it has been in use.
+        // Otherwise the devices screen shows every session as last used when created.
         Assert.True(
             lastSeenAt > createdAt,
             $"Expected the session to have been touched, but last seen at {lastSeenAt} against created at {createdAt}.");
@@ -68,15 +56,14 @@ public class SessionRenewalTests(PostgresFixture postgres)
     public async Task AnAuthenticatedRequest_ShouldTouchNothing_WhenTheSessionWasJustUsed()
     {
         // Arrange
-        // The default interval: a session seconds old is not due for renewal.
+        // Default interval: a session seconds old is not due.
         using var client = await SignedInClientAsync(postgres.Api);
 
         // Act
         var response = await client.GetAsync("/api/v1/sessions", Token);
 
         // Assert
-        // One indexed read is what an authenticated request costs. Renewing on
-        // every request would add a write to every page view for no gain.
+        // Renewing on every request would add a write to every page view.
         Assert.DoesNotContain(
             SetCookies(response),
             cookie => cookie.StartsWith($"{SessionCookie}=", StringComparison.Ordinal));
@@ -103,8 +90,7 @@ public class SessionRenewalTests(PostgresFixture postgres)
 
     private async Task<ApiClient> SignedInClientAsync(CulinaApiFactory factory)
     {
-        // The shared host is reset by RenewingFactoryAsync for the cases that
-        // need their own; this one resets it itself.
+        // Own-factory cases are reset by RenewingFactoryAsync; the shared host is reset here.
         if (ReferenceEquals(factory, postgres.Api))
         {
             await postgres.ResetAsync(Token);

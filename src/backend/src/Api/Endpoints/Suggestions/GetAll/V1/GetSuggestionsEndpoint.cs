@@ -19,11 +19,9 @@ internal sealed class GetSuggestionsEndpoint : IEndpoint
                 IQueryHandler<GetSuggestionsQuery, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                // The day, not the instant. Every decayed term is a function of
-                // it, so two requests on one day answer identically: the list is
-                // the same all evening, on both devices and after a refresh, and
-                // different tomorrow. That is why there is no refresh control —
-                // one would teach people the first answer was arbitrary.
+                // The day, not the instant: decayed terms depend on it, so the list is stable all
+                // day on every device and changes tomorrow. That is why there is no refresh
+                // control, which would imply the first answer was arbitrary.
                 var now = time.GetUtcNow();
                 var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
 

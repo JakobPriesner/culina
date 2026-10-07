@@ -1,14 +1,6 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// Argon2id parameters.
-/// </summary>
-/// <remarks>
-/// Raise <see cref="MemoryKib"/> as far as the host tolerates: it is what makes
-/// the hash expensive to attack in parallel. Existing hashes keep verifying
-/// because each stores the parameters it was created with, and they are
-/// transparently upgraded on the owner's next successful login.
-/// </remarks>
+/// <summary>Argon2id parameters. Existing hashes keep verifying (each stores its own parameters) and are upgraded on the owner's next login.</summary>
 public sealed record PasswordHashingSettings
 {
     /// <summary>The configuration section these values are read from.</summary>
@@ -26,9 +18,7 @@ public sealed record PasswordHashingSettings
     /// <summary>Throws when any value would make the process unable to serve.</summary>
     public void Validate()
     {
-        // The lower bounds are the OWASP minimums for Argon2id. Below them the
-        // hash is fast enough to attack, so an operator must not be able to
-        // weaken it by accident.
+        // The lower bounds are the OWASP minimums for Argon2id; below them an operator would weaken the hash.
         SettingsGuard.InRange(MemoryKib, 19456, 4 * 1024 * 1024, SectionName, nameof(MemoryKib));
         SettingsGuard.InRange(Iterations, 2, 64, SectionName, nameof(Iterations));
         SettingsGuard.InRange(Parallelism, 1, 16, SectionName, nameof(Parallelism));

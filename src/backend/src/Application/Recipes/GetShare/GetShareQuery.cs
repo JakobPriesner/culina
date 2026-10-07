@@ -25,9 +25,7 @@ internal sealed class GetShareQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.GetShare");
 
-        // Through the same gate as reading the recipe: the token is a key to
-        // it, so anyone who may not read the recipe may certainly not read the
-        // key — and gets told the recipe does not exist, as everywhere else.
+        // Through the recipe's own gate: the token is a key to it, so who may not read the recipe is told it does not exist.
         var editable = await RecipeAccess
             .EditableHouseholdAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
             .ConfigureAwait(false);

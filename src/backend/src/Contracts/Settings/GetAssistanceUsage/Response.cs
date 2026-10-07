@@ -1,11 +1,7 @@
 namespace Contracts.Settings.GetAssistanceUsage;
 
 /// <summary>What the assistant has cost this month.</summary>
-/// <remarks>
-/// A month rather than a configurable window, because the budget is a monthly
-/// one and a usage screen measuring a different period from the cap it is shown
-/// beside would be two numbers nobody can reconcile.
-/// </remarks>
+/// <remarks>A month, to match the monthly budget it is shown beside.</remarks>
 public sealed record Response
 {
     /// <summary>When the period being reported started.</summary>
@@ -26,13 +22,7 @@ public sealed record Response
     /// <summary>Everything drawn.</summary>
     public required long TotalPictures { get; init; }
 
-    /// <summary>
-    /// How many calls used a model this app has no price for.
-    /// </summary>
-    /// <remarks>
-    /// Reported rather than folded in, so a total that is missing something
-    /// says that it is. Zero on any instance using a model this knows about.
-    /// </remarks>
+    /// <summary>How many calls used a model with no known price; reported so a total that is missing something says so.</summary>
     public required int Unpriced { get; init; }
 
     /// <summary>Who spent what.</summary>

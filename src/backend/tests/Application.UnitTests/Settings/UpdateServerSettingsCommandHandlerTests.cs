@@ -7,8 +7,8 @@ using TestSupport;
 namespace Application.UnitTests.Settings;
 
 /// <summary>
-/// Saving server settings: validated as the startup validates, only the
-/// difference written, and a restart only when there is one.
+/// Saving server settings: validated as startup validates, only the difference written, a restart
+/// only when there is one.
 /// </summary>
 public class UpdateServerSettingsCommandHandlerTests
 {
@@ -17,13 +17,10 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDoNothing_WhenTheProposalIsWhatTheServerRunsWith()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var change = (await world.Handle(Command())).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.None, change);
         Assert.Null(world.Configuration.Saved);
         Assert.Equal(0, world.Restart.Scheduled);
@@ -32,14 +29,11 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldSaveOnlyTheDifference_AndRestart()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var change = (await world.Handle(Command(limits: new RateLimitSettings { ImportsPerHour = 45 })))
             .ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.Restarting, change);
         Assert.Equal(1, world.Restart.Scheduled);
         Assert.Equal(new Dictionary<string, string> { ["RateLimits:ImportsPerHour"] = "45" }, world.Configuration.Saved);
@@ -48,27 +42,21 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldWriteAClearedEndpointAsEmpty_SoItOverridesOneSetBelowTheFile()
     {
-        // Arrange
         var world = new World(new TelemetrySettings { Endpoint = new Uri("http://collector:4317") });
 
-        // Act
         await world.Handle(Command(endpoint: null));
 
-        // Assert
         Assert.Equal(string.Empty, world.Configuration.Saved![TelemetrySettings.EndpointKey]);
     }
 
     [Fact]
     public async Task Handle_ShouldNotRestart_WhenTheSettingsCannotBeSaved()
     {
-        // Arrange
         var world = new World();
         world.Configuration.Writable = false;
 
-        // Act
         var result = await world.Handle(Command(limits: new RateLimitSettings { ImportsPerHour = 45 }));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.NotWritable);
         Assert.Equal(0, world.Restart.Scheduled);
     }
@@ -76,15 +64,12 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseWhatTheStartupWouldRefuse()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var result = await world.Handle(Command(
             cookies: new CookieSettings { SessionDays = 0 },
             endpoint: "collector without a scheme"));
 
-        // Assert
         var failure = Assert.IsType<ValidationError>(result.ShouldBeFailure());
         Assert.Equal(2, failure.Errors.Count);
         Assert.Null(world.Configuration.Saved);
@@ -93,13 +78,10 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseInsecureCookies_WhenTheDeploymentDoesNotAllowThem()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var result = await world.Handle(Command(cookies: new CookieSettings { Secure = false }));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.InsecureCookies);
         Assert.Null(world.Configuration.Saved);
         Assert.Equal(0, world.Restart.Scheduled);
@@ -108,26 +90,20 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseInsecureCookies_EvenWhenTheProposalClaimsTheyAreAllowed()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var result = await world.Handle(Command(cookies: new CookieSettings { Secure = false, InsecureAllowed = true }));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.InsecureCookies);
     }
 
     [Fact]
     public async Task Handle_ShouldSaveInsecureCookies_WhenTheDeploymentAllowsThem()
     {
-        // Arrange
         var world = new World(cookies: new CookieSettings { InsecureAllowed = true });
 
-        // Act
         var change = (await world.Handle(Command(cookies: new CookieSettings { Secure = false }))).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.Restarting, change);
         Assert.Equal(new Dictionary<string, string> { ["Cookies:Secure"] = "false" }, world.Configuration.Saved);
     }
@@ -135,16 +111,12 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseAProxyNetworkTooWideToTrust_WithACodeOfItsOwn()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var result = await world.Handle(Command(
             proxies: new ForwardedHeadersSettings { KnownNetworks = ["0.0.0.0/0"] }));
 
-        // Assert
-        // Its own code, so the screen can say why rather than "not a value
-        // this setting accepts".
+        // Its own code, so the screen can say why.
         result.ShouldBeFailure(SettingsErrors.ProxyNetworkTooWide("0.0.0.0/0"));
         Assert.Null(world.Configuration.Saved);
         Assert.Equal(0, world.Restart.Scheduled);
@@ -153,17 +125,14 @@ public class UpdateServerSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldSaveAWideProxyNetwork_WhenTheDeploymentTrustsOneByName()
     {
-        // Arrange
-        // The screen never offers the override; a deployment that set it has
-        // its saves validated as its next startup will validate them.
+        // The screen never offers the override; a deployment that set it has saves validated as its
+        // next startup will.
         var world = new World(proxies: new ForwardedHeadersSettings { DangerouslyTrustWideNetworks = true });
 
-        // Act
         var change = (await world.Handle(Command(
                 proxies: new ForwardedHeadersSettings { KnownNetworks = ["0.0.0.0/0"] })))
             .ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.Restarting, change);
         Assert.Equal("0.0.0.0/0", world.Configuration.Saved!["ForwardedHeaders:KnownNetworks"]);
     }

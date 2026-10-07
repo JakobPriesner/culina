@@ -10,36 +10,16 @@ using Domain.Shared;
 namespace Application.Recipes.Sources;
 
 /// <summary>Asks for some of another app's recipes to be brought over.</summary>
-/// <param name="SourceId">Which connection.</param>
-/// <param name="UserId">Who is importing.</param>
-/// <param name="Draft">Which recipes.</param>
-/// <param name="DeviceLanguage">
-/// The language of the device that asked, for someone whose interface follows it.
-/// </param>
 public sealed record ImportFromSourceCommand(
     Guid SourceId,
     Guid UserId,
     ImportFromSourceRequest Draft,
     Language DeviceLanguage);
 
-/// <summary>
-/// Accepts an import, and hands it to the worker.
-/// </summary>
+/// <summary>Accepts an import and hands it to the worker.</summary>
 /// <remarks>
-/// <para>
-/// This does everything that can fail quickly and nothing that takes time: it
-/// checks the connection is this household's, that the app is one this can
-/// read, and makes the shelf the recipes will land on. Then it queues the run
-/// and answers. Fetching four hundred recipes from somebody else's server is
-/// not work a request should be holding a connection open for — that is what
-/// made the old client-driven batching necessary, and what the worker replaces.
-/// </para>
-/// <para>
-/// Nothing here is a promise that every recipe arrives. The promise is that the
-/// import exists, has a name, and can be watched — and that asking for the same
-/// selection again is safe, because a recipe that arrived has an origin row and
-/// comes back as <c>already_here</c> rather than a second copy.
-/// </para>
+/// Does only what can fail quickly (connection check, reader check, creating the shelf), then queues the
+/// run. Asking again for the same selection is safe: arrived recipes come back as <c>already_here</c>.
 /// </remarks>
 internal sealed class ImportFromSourceCommandHandler(
     IRecipeSourceRepository sources,
@@ -51,15 +31,7 @@ internal sealed class ImportFromSourceCommandHandler(
     TimeProvider time)
     : ICommandHandler<ImportFromSourceCommand, ImportStartedResponse>
 {
-    /// <summary>
-    /// How many recipes one import may carry.
-    /// </summary>
-    /// <remarks>
-    /// Not a batch size any more — the whole selection arrives in one request
-    /// and the work happens afterwards — so this is only a ceiling on how much
-    /// one person can queue at a time. A library of a thousand recipes is
-    /// already a big library; somebody with more imports twice.
-    /// </remarks>
+    // A ceiling on what one person can queue at once; a bigger library imports twice.
     internal const int MostInOneImport = 1000;
 
     public async Task<Result<ImportStartedResponse>> Handle(
@@ -96,14 +68,7 @@ internal sealed class ImportFromSourceCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Refuses what cannot be read, then makes the shelf and queues the run.
-    /// </summary>
-    /// <remarks>
-    /// The reader is resolved here as well as in the worker, so an app this
-    /// cannot read is a refusal the caller sees rather than four hundred failed
-    /// lines on a stream.
-    /// </remarks>
+    // The reader is resolved here as well as in the worker, so an unreadable app is a refusal the caller sees.
     private Task<Result<ImportStartedResponse>> StartAsync(
         RecipeSource source,
         ImportFromSourceCommand command,
@@ -147,23 +112,7 @@ internal sealed class ImportFromSourceCommandHandler(
         });
     }
 
-    /// <summary>
-    /// The shelf everything in this import lands on, made before it starts.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The single design decision that makes this feature feel like part of the
-    /// app rather than bolted to it. Four hundred recipes arriving into a
-    /// library of six hundred is invisible, unverifiable and irreversible.
-    /// Four hundred recipes on a cookbook called "From Tandoor, 17 September"
-    /// is something you can open, look through, show somebody, and throw away.
-    /// </para>
-    /// <para>
-    /// Made in the request rather than by the worker, so the answer that
-    /// accepts an import already says where to find it. That is what lets
-    /// somebody walk away from the screen thirty seconds in.
-    /// </para>
-    /// </remarks>
+    // The shelf is made in the request so the accepting answer already says where to find the import.
     private async Task<Result<Cookbook>> ShelfAsync(
         RecipeSource source,
         Guid userId,
@@ -190,14 +139,7 @@ internal sealed class ImportFromSourceCommandHandler(
             error => Task.FromResult(Result<Cookbook>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// The shelf of an earlier import, for the recipes it held back.
-    /// </summary>
-    /// <remarks>
-    /// Only a shelf somebody fills by hand, and only this household's: a
-    /// cookbook of another kitchen is one that does not exist, and a smart one
-    /// has no room for a recipe its rules did not choose.
-    /// </remarks>
+    // Only a manual shelf of this household: another kitchen's does not exist, and a smart one has no room for it.
     private async Task<Result<Cookbook>> EarlierShelfAsync(
         RecipeSource source,
         Guid cookbookId,
@@ -211,17 +153,8 @@ internal sealed class ImportFromSourceCommandHandler(
                 : CookbookErrors.NotFound(cookbookId));
     }
 
-    /// <summary>
-    /// What the shelf is called: where from, and when.
-    /// </summary>
-    /// <remarks>
-    /// The date is what tells two imports from the same instance apart, which
-    /// is the whole reason somebody imports twice. An invariant date rather
-    /// than a localised one: this is a name stored in a row, read by everybody
-    /// in the household whatever language they read the app in, and a name that
-    /// rendered differently per reader would be a different cookbook to each
-    /// of them.
-    /// </remarks>
+    // The date tells two imports apart. Invariant rather than localised: the name is stored and read by the
+    // whole household in any language.
     private static string ShelfName(RecipeSource source, DateTimeOffset now) =>
         Truncate(
             $"{source.Label} · {now.UtcDateTime.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}",

@@ -1,11 +1,7 @@
 namespace Contracts.Planning;
 
 /// <summary>A week of planned meals.</summary>
-/// <remarks>
-/// Seven days, always all seven, whether or not anything is planned in them: a
-/// week with holes in it is a week the client has to fill in itself, and the
-/// empty days are exactly where the screen offers to add something.
-/// </remarks>
+/// <remarks>Always all seven days, empty or not.</remarks>
 public sealed record MealPlanResponse
 {
     /// <summary>The Monday the week starts on.</summary>
@@ -43,9 +39,7 @@ public sealed record PlannedMeal
     /// <summary>Hands-on plus cooking, when both are known.</summary>
     public int? TotalMinutes { get; init; }
 
-    /// <summary>
-    /// How many it is planned for, or null for however many it was written for.
-    /// </summary>
+    /// <summary>How many it is planned for, or null for however many it was written for.</summary>
     public decimal? Servings { get; init; }
 
     /// <summary>The servings the recipe itself is written for.</summary>
@@ -54,9 +48,7 @@ public sealed record PlannedMeal
     /// <summary><c>breakfast</c>, <c>lunch</c> or <c>dinner</c>.</summary>
     public required string Slot { get; init; }
 
-    /// <summary>
-    /// Whether this meal's ingredients are on the household's shopping list.
-    /// </summary>
+    /// <summary>Whether this meal's ingredients are on the household's shopping list.</summary>
     public required bool IsOnShoppingList { get; init; }
 }
 
@@ -77,47 +69,18 @@ public sealed record PlanMealRequest
 }
 
 /// <summary>Moves a planned meal to another day.</summary>
-/// <remarks>
-/// A change to the entry, not an action on it: which day a meal is on is one
-/// of its own fields, so this is a PATCH of the entry rather than a route with
-/// a verb in it.
-/// </remarks>
+/// <remarks>A PATCH of the entry (its day is one of its fields), not a verb route.</remarks>
 public sealed record MoveMealRequest
 {
     /// <summary>Which day it moves to. The day it is already on is allowed.</summary>
     public required DateOnly Date { get; init; }
 
-    /// <summary>
-    /// <c>breakfast</c>, <c>lunch</c> or <c>dinner</c>. Omit to keep the slot
-    /// it already had.
-    /// </summary>
-    /// <remarks>
-    /// Omitting it is what dragging does: dragging a dinner onto Thursday
-    /// moves a dinner, and a drag that quietly turned it into a breakfast
-    /// would be a drag nobody could aim.
-    /// </remarks>
+    /// <summary><c>breakfast</c>, <c>lunch</c> or <c>dinner</c>. Omit to keep the current slot, as dragging does.</summary>
     public string? Slot { get; init; }
 
     /// <summary>
-    /// Which gap in the day it was dropped into, counted from zero. Omit to put
-    /// it last.
+    /// Which gap in the day it was dropped into, counted from zero on the day as shown (the moved meal still in it); omit to
+    /// put it last. Only a request: the day is read in slot order, and the whole week comes back.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The gaps of the day as it is on screen right now, with the meal being
-    /// moved still in it: <c>0</c> is above everything, and the number of meals
-    /// already there is below everything. Counting the gaps rather than the
-    /// final index is what makes moving a meal down the day mean the same as
-    /// moving one up — a final index has to be adjusted by whether the meal
-    /// started above or below its destination, and that adjustment is the
-    /// classic place a reorder goes one off.
-    /// </para>
-    /// <para>
-    /// A request rather than an instruction: a day is read in slot order first,
-    /// so a breakfast dropped below a dinner lands at the end of the breakfasts
-    /// rather than where the finger let go. The whole week comes back, so the
-    /// screen never keeps a position the server did not agree to.
-    /// </para>
-    /// </remarks>
     public int? Position { get; init; }
 }

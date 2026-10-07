@@ -25,15 +25,12 @@ public class SecurityHeadersTests(PostgresFixture postgres)
         string header,
         string expected)
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.True(response.Headers.TryGetValues(header, out var values), $"{header} was not set");
         Assert.Equal(expected, Assert.Single(values));
     }
@@ -41,15 +38,12 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     [Fact]
     public async Task ApiResponses_ShouldAllowNothingAtAll_WhenTheyAreJson()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/api/v1/nothing-here", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         var policy = Policy(response);
         Assert.Contains("default-src 'none'", policy, StringComparison.Ordinal);
         Assert.Contains("frame-ancestors 'none'", policy, StringComparison.Ordinal);
@@ -58,10 +52,8 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     [Fact]
     public async Task DocumentResponses_ShouldCarryAPerResponseNonce_WhenNotAnApiPath()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var first = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
@@ -69,7 +61,6 @@ public class SecurityHeadersTests(PostgresFixture postgres)
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         var firstPolicy = Policy(first);
         var secondPolicy = Policy(second);
         Assert.Contains("script-src 'self' 'nonce-", firstPolicy, StringComparison.Ordinal);
@@ -80,41 +71,32 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     [Fact]
     public async Task DocumentResponses_ShouldNameTheNonceForStylesToo_SoTheBootScreenIsStyled()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
-        // style-src 'self' on its own blocks the document's inline style block
-        // and every style attribute in it, which showed up as a boot screen
-        // rendering as unstyled text in production while looking correct under
-        // the dev server, which sets no policy.
+        // style-src 'self' alone blocks the inline style block and every style attribute (an
+        // unstyled boot screen in production).
         Assert.Contains("style-src 'self' 'nonce-", Policy(response), StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task DocumentResponses_ShouldRequireTrustedTypes_ForEveryScriptSink()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         var policy = Policy(response);
         Assert.Contains("require-trusted-types-for 'script'", policy, StringComparison.Ordinal);
         Assert.Contains(
             "trusted-types svelte-trusted-html sveltekit-trusted-url culina-worker-url",
             policy,
             StringComparison.Ordinal);
-        // Either would let any code mint its own policy.
         Assert.DoesNotContain("allow-duplicates", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("trusted-types *", policy, StringComparison.Ordinal);
     }
@@ -122,17 +104,14 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     [Fact]
     public async Task DocumentResponses_ShouldAllowOneStyleAttribute_TheRouteAnnouncers()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
-        // One hash and nothing else: a second source here would be a style
-        // attribute somebody added without deciding to.
+        // One hash and nothing else: a second source would be a style attribute added without a
+        // decision.
         var directive = Policy(response)
             .Split("; ")
             .Single(part => part.StartsWith("style-src-attr ", StringComparison.Ordinal));
@@ -144,11 +123,9 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     [Fact]
     public async Task NoPolicy_ShouldEverAllowInlineOrEval_OnAnyPath()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
         string[] paths = ["/health/live", "/api/v1/nothing-here"];
 
-        // Act & Assert
         foreach (var path in paths)
         {
             using var response = await client.GetAsync(
@@ -156,8 +133,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
                 TestContext.Current.CancellationToken);
 
             var policy = Policy(response);
-            // Either of these disables the protection the rest of the policy
-            // provides, so their absence is asserted rather than assumed.
+            // Either disables the rest of the policy, so their absence is asserted.
             Assert.DoesNotContain("unsafe-inline", policy, StringComparison.Ordinal);
             Assert.DoesNotContain("unsafe-eval", policy, StringComparison.Ordinal);
         }
@@ -166,35 +142,29 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     [Fact]
     public async Task NoResponse_ShouldCarryHsts_BecauseTheProxyOwnsIt()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.False(response.Headers.Contains("Strict-Transport-Security"));
     }
 
     [Fact]
     public async Task UnhandledException_ShouldStillCarryEverySecurityHeaderAndTheRequestId()
     {
-        // Arrange
         using var api = new CulinaApiFactory(postgres);
         using var defective = api.WithWebHostBuilder(builder =>
             builder.ConfigureTestServices(services => services.AddSingleton<IEndpoint, ThrowingEndpoint>()));
         using var client = defective.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri(ThrowingEndpoint.Path, UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
-        // The exception handler clears every header before it writes the
-        // problem document, which is how a 500 used to go out with none.
+        // The exception handler clears every header before writing the problem document; a 500 once
+        // went out with none.
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Equal("nosniff", Single(response, "X-Content-Type-Options"));
         Assert.Equal("DENY", Single(response, "X-Frame-Options"));
@@ -220,7 +190,6 @@ public class SecurityHeadersTests(PostgresFixture postgres)
         return Assert.Single(values);
     }
 
-    /// <summary>A defect, mapped only in the host this class builds for it.</summary>
     private sealed class ThrowingEndpoint : IEndpoint
     {
         internal const string Path = $"{ApiPaths.V1}/test-only/defect";

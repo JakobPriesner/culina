@@ -4,14 +4,9 @@ using TestSupport;
 namespace Domain.UnitTests.Recipes;
 
 /// <summary>
-/// The unit vocabulary is open, and what that costs.
+/// The unit vocabulary is open: an added unit must be a counting unit (scales, sums with itself,
+/// converts to nothing).
 /// </summary>
-/// <remarks>
-/// A household adds a unit by writing one. The whole safety of that rests on
-/// the added unit being a counting unit: it scales, it sums with itself, and it
-/// converts to nothing. Anything else would be the arithmetic guessing how much
-/// a Schuss weighs.
-/// </remarks>
 public class UnitTests
 {
     [Theory]
@@ -20,10 +15,8 @@ public class UnitTests
     [InlineData("pinch")]
     public void Create_ShouldReturnTheBuiltIn_WhenTheCodeIsOne(string code)
     {
-        // Arrange & Act
         var unit = Unit.Create(code).ShouldBeSuccess();
 
-        // Assert
         Assert.Contains(unit, Unit.BuiltIn);
     }
 
@@ -42,13 +35,9 @@ public class UnitTests
     [InlineData("Prise", "pinch")]
     public void Create_ShouldReadABuiltInWrittenOut_AsThatBuiltIn(string written, string code)
     {
-        // Arrange & Act
         var unit = Unit.Create(written).ShouldBeSuccess();
 
-        // Assert
-        // "500 Milliliter" kept as written would be a counting unit: it would
-        // never become cups for an imperial kitchen, never sum with "ml" on the
-        // shopping list, and read German in an English one.
+        // "500 Milliliter" as a counting unit would never become cups or sum with "ml".
         Assert.Same(Unit.BuiltIn.Single(one => one.Code == code), unit);
     }
 
@@ -59,12 +48,9 @@ public class UnitTests
     [InlineData("Becher")]
     public void Create_ShouldAcceptAUnitAHouseholdWrote(string code)
     {
-        // Arrange & Act
         var unit = Unit.Create(code).ShouldBeSuccess();
 
-        // Assert
-        // Kept as it was written: a German noun keeps its capital letter, and
-        // the unit is its own label — there is nothing to translate it to.
+        // Kept as written: a German noun keeps its capital and has nothing to translate to.
         Assert.Equal(code, unit.Code);
     }
 
@@ -76,69 +62,53 @@ public class UnitTests
     [InlineData("a unit far too long to be one")]
     public void Create_ShouldFail_WhenItIsNotAUnit(string code)
     {
-        // Arrange & Act
         var result = Unit.Create(code);
 
-        // Assert
-        // Open is not the same as anything at all. "200g" is an amount that
-        // lost its space, and accepting it makes a unit nothing can match.
+        // Open is not "anything": "200g" is an amount that lost its space.
         result.ShouldBeFailure(RecipeErrors.InvalidUnit);
     }
 
     [Fact]
     public void Create_ShouldTreatTheSameWordAsOneUnit_HoweverItWasCapitalised()
     {
-        // Arrange & Act
         var written = Unit.Create("Schuss").ShouldBeSuccess();
         var typedInAHurry = Unit.Create("schuss").ShouldBeSuccess();
 
-        // Assert
-        // Otherwise a shopping list grows two lines whose difference nobody
-        // can see.
+        // Otherwise a shopping list grows two lines whose difference nobody can see.
         Assert.Equal(written, typedInAHurry);
     }
 
     [Fact]
     public void Create_ShouldCollapseWhitespace_SoOneSpellingRemains()
     {
-        // Arrange & Act
         var unit = Unit.Create("  fl   oz ").ShouldBeSuccess();
 
-        // Assert
         Assert.Equal("fl oz", unit.Code);
     }
 
     [Fact]
     public void FamilyOf_ShouldCount_WhenTheUnitIsNotBuiltIn()
     {
-        // Arrange
         var unit = Unit.Create("Schuss").ShouldBeSuccess();
 
-        // Act & Assert
         Assert.Equal(UnitFamily.Count, Units.FamilyOf(unit));
     }
 
     [Fact]
     public void AUnitAHouseholdWrote_ShouldStillScaleWithThePortions()
     {
-        // Arrange
         var unit = Unit.Create("Schuss").ShouldBeSuccess();
 
-        // Act & Assert
-        // It is the point of adding one. Only a pinch refuses to scale.
         Assert.True(Units.Scales(unit));
     }
 
     [Fact]
     public void AUnitAHouseholdWrote_ShouldNeverConvertToABuiltInOne()
     {
-        // Arrange
         var ownUnit = Quantity.Create(1m, Unit.Create("Schuss").ShouldBeSuccess()).ShouldBeSuccess();
         var millilitres = Quantity.Create(20m, Unit.Millilitre).ShouldBeSuccess();
 
-        // Act & Assert
-        // Nobody knows how much a Schuss is, and a list that claimed to would
-        // be inventing the number.
+        // Nobody knows how much a Schuss is; claiming to would invent a number.
         Assert.False(ownUnit.CanCombineWith(millilitres));
         ownUnit.Add(millilitres).ShouldBeFailure(RecipeErrors.IncompatibleUnits);
     }
@@ -146,15 +116,12 @@ public class UnitTests
     [Fact]
     public void AUnitAHouseholdWrote_ShouldAddToItself()
     {
-        // Arrange
         var unit = Unit.Create("Schuss").ShouldBeSuccess();
         var one = Quantity.Create(1m, unit).ShouldBeSuccess();
         var two = Quantity.Create(2m, unit).ShouldBeSuccess();
 
-        // Act
         var total = one.Add(two).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(3m, total.Amount);
         Assert.Equal(unit, total.Unit);
     }
@@ -162,13 +129,10 @@ public class UnitTests
     [Fact]
     public void TwoUnitsAHouseholdWrote_ShouldNotAddToEachOther()
     {
-        // Arrange
         var schuss = Quantity.Create(1m, Unit.Create("Schuss").ShouldBeSuccess()).ShouldBeSuccess();
         var handful = Quantity.Create(1m, Unit.Create("Handvoll").ShouldBeSuccess()).ShouldBeSuccess();
 
-        // Act & Assert
-        // Counting units only ever add to the identical unit: a splash and a
-        // handful is not two of anything.
+        // Counting units only add to the identical unit.
         Assert.False(schuss.CanCombineWith(handful));
     }
 }

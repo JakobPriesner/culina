@@ -4,23 +4,11 @@ using Domain.Recipes;
 
 namespace Domain.Import;
 
-/// <summary>
-/// Reads a schema.org Recipe out of a page's JSON-LD.
-/// </summary>
+/// <summary>Reads a schema.org Recipe out of a page's JSON-LD.</summary>
 /// <remarks>
-/// <para>
-/// Almost every recipe site publishes this, because search engines read it.
-/// That makes it the honest way to import a recipe: it is the structured data
-/// the site chose to publish, rather than a guess at what its markup means.
-/// </para>
-/// <para>
-/// What comes out is a <em>draft</em>, and it is shown back for correction
-/// before anything is saved. A wrong reading you cannot see is worse than no
-/// reading at all, and this one has to tolerate a decade of half-correct
-/// implementations: the block may be an array, it may be a <c>@graph</c>, the
-/// type may be a string or a list of them, and an instruction may be a string,
-/// a <c>HowToStep</c>, or a <c>HowToSection</c> with steps inside it.
-/// </para>
+/// The structured data the site chose to publish, not a guess at its markup. The result is a draft
+/// shown back for correction, and tolerates a decade of half-correct output: arrays, <c>@graph</c>,
+/// a type as string or list, instructions as string, <c>HowToStep</c> or <c>HowToSection</c>.
 /// </remarks>
 public static class RecipeJsonLd
 {
@@ -38,7 +26,6 @@ public static class RecipeJsonLd
         int? TotalMinutes);
 
     /// <summary>The recipe a page publishes, or null when it publishes none.</summary>
-    /// <param name="json">One JSON-LD block's contents.</param>
     public static Draft? Read(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -56,20 +43,15 @@ public static class RecipeJsonLd
         }
         catch (JsonException)
         {
-            // A page with broken JSON-LD is a page with no JSON-LD. Nothing is
-            // lost: the caller falls back to reading the words.
+            // Broken JSON-LD is no JSON-LD: the caller falls back to reading the words.
             return null;
         }
     }
 
     /// <summary>
-    /// The first Recipe anywhere in the block.
+    /// The first Recipe anywhere in the block, depth-first through arrays and <c>@graph</c>
+    /// (plugins wrap it in a WebPage, Article or Organisation).
     /// </summary>
-    /// <remarks>
-    /// Depth-first through arrays and <c>@graph</c>, which is how the same
-    /// recipe arrives wrapped in a WebPage, an Article and an Organisation
-    /// depending on which plugin published it.
-    /// </remarks>
     private static JsonElement? FindRecipe(JsonElement element)
     {
         switch (element.ValueKind)
@@ -149,13 +131,9 @@ public static class RecipeJsonLd
         element.TryGetProperty(name, out var value) ? Flatten(value) : [];
 
     /// <summary>
-    /// Whatever this is, as the lines of text a person would read.
+    /// Whatever this is, as lines of text: a string, a list of them, or an object with <c>text</c>
+    /// or <c>name</c>.
     /// </summary>
-    /// <remarks>
-    /// A string, a list of them, or an object with a <c>text</c> or
-    /// <c>name</c> — the three shapes a decade of plugins settled on for the
-    /// same idea.
-    /// </remarks>
     private static IEnumerable<string> Flatten(JsonElement value)
     {
         switch (value.ValueKind)
@@ -182,9 +160,8 @@ public static class RecipeJsonLd
                 break;
 
             case JsonValueKind.Object:
-                // A HowToSection carries its steps; a HowToStep carries its
-                // words. Taking the section's own name as a step would put
-                // "For the sauce" in the method as an instruction.
+                // A HowToSection carries its steps, a HowToStep its words; taking the section's
+                // name as a step would put "For the sauce" in the method.
                 if (value.TryGetProperty("itemListElement", out var inner))
                 {
                     foreach (var line in Flatten(inner))
@@ -218,14 +195,9 @@ public static class RecipeJsonLd
         Strings(recipe, "recipeInstructions");
 
     /// <summary>
-    /// What it makes, when that is a number.
+    /// What it makes, when that is a number: "4", "4 servings" and "4-6" (lower bound) all appear;
+    /// anything with no number is left alone.
     /// </summary>
-    /// <remarks>
-    /// "4", "4 servings" and "4-6" all appear. The first number wins and a
-    /// range takes its lower bound, which is the same reading the paste import
-    /// gives — and anything with no number at all is left alone rather than
-    /// guessed at.
-    /// </remarks>
     private static decimal? Servings(JsonElement recipe)
     {
         var written = Strings(recipe, "recipeYield").FirstOrDefault()
@@ -236,9 +208,7 @@ public static class RecipeJsonLd
             return null;
         }
 
-        // Skipped to the first digit rather than read from the start: "Serves 4"
-        // and "Makes 12" are as ordinary as "4 servings", and taking only
-        // leading digits read them as no yield at all.
+        // Skipped to the first digit: "Serves 4" and "Makes 12" are as common as "4 servings".
         var digits = new string([
             .. written.SkipWhile(one => !char.IsDigit(one))
                 .TakeWhile(one => char.IsDigit(one) || one == '.')

@@ -7,15 +7,7 @@ using Domain.Shared;
 namespace Application.Recipes.GetSharedImage;
 
 /// <summary>Finds a published recipe's photograph.</summary>
-/// <remarks>
-/// Its own query rather than a flag on <see cref="GetRecipeImageQuery"/>,
-/// because that one's whole job is to check household membership on every
-/// single image read. A parameter that switched the check off is the one thing
-/// that comment warns against; resolving the token to a recipe here keeps the
-/// two paths separate and each of them unconditional.
-/// </remarks>
-/// <param name="Token">The secret out of the link.</param>
-/// <param name="Width">Which rendition.</param>
+/// <remarks>Separate from <see cref="GetRecipeImageQuery"/>, whose job is the membership check on every read; a switch-off flag there is what it warns against.</remarks>
 public sealed record GetSharedImageQuery(string Token, int Width);
 
 internal sealed class GetSharedImageQueryHandler(

@@ -7,17 +7,8 @@ using Response = Contracts.RecoveryCodes.Issue.Response;
 
 namespace Application.RecoveryCodes.Issue;
 
-/// <summary>
-/// Issues a one-time code for somebody who is locked out. The administrator's
-/// only.
-/// </summary>
-/// <remarks>
-/// The administrator is told whether the address is registered: they can see
-/// every account on the instance anyway, and a code made for nobody would be a
-/// dead end they could not tell from a working one.
-/// </remarks>
-/// <param name="AdministratorId">Who is issuing it.</param>
-/// <param name="Email">The address of the account it unlocks.</param>
+/// <summary>Issues a one-time code for somebody who is locked out; administrator only.</summary>
+/// <remarks>The administrator is told whether the address is registered: they can see every account anyway, and a code for nobody would look like a working one.</remarks>
 public sealed record IssueRecoveryCodeCommand(Guid AdministratorId, string Email);
 
 internal sealed class IssueRecoveryCodeCommandHandler(

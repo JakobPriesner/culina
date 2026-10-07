@@ -2,13 +2,9 @@ using Domain.Shared;
 
 namespace Domain.Import;
 
-/// <summary>
-/// What can go wrong fetching a recipe from somebody else's website.
-/// </summary>
+/// <summary>What can go wrong fetching a recipe from somebody else's website.</summary>
 /// <remarks>
-/// Every one of these is deliberately vague about <em>why</em> an address was
-/// refused. Telling a caller that 10.0.0.5 was blocked but 10.0.0.6 timed out
-/// turns this endpoint into a port scanner for the network the server sits in.
+/// Deliberately vague about <em>why</em> an address was refused, so the endpoint cannot be used as a port scanner.
 /// </remarks>
 public static class ImportErrors
 {
@@ -72,28 +68,13 @@ public static class ImportErrors
         "That app is already connected to this kitchen.",
         ErrorType.Conflict);
 
-    /// <summary>
-    /// The other app answered, and said no.
-    /// </summary>
-    /// <remarks>
-    /// Separate from <see cref="CouldNotFetch"/> on purpose, and the one import
-    /// failure that is specific: a wrong token is the single most likely thing
-    /// to go wrong when connecting, and "that did not work" would leave the
-    /// person re-checking the address they typed correctly.
-    /// </remarks>
+    /// <summary>The other app answered, and said no. Separate from <see cref="CouldNotFetch"/>: a wrong token is the likeliest connection failure.</summary>
     public static readonly Error SourceRefused = new(
         "import.source_refused",
         "That app refused the token. Check that it is current and has permission to read recipes.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// The connection's stored token can no longer be decrypted.
-    /// </summary>
-    /// <remarks>
-    /// What an instance restored without its key ring finds. Nothing is wrong
-    /// with the other app and nothing here can recover the token, so the one
-    /// useful answer is the one thing that fixes it: connect it again.
-    /// </remarks>
+    /// <summary>The connection's stored token can no longer be decrypted (e.g. restored without its key ring); the fix is to reconnect.</summary>
     public static readonly Error SourceNeedsReconnecting = new(
         "import.source_needs_reconnecting",
         "This connection's token can no longer be read. Disconnect it and connect it again.",
@@ -117,12 +98,7 @@ public static class ImportErrors
         "That recipe was written here.",
         ErrorType.NotFound);
 
-    /// <summary>The app will not trade a sign-in for a token.</summary>
-    /// <remarks>
-    /// Not always a misconfiguration: an instance whose accounts are all single
-    /// sign-on has no password to give, and the answer is to paste a token
-    /// rather than to fix anything.
-    /// </remarks>
+    /// <summary>The app will not trade a sign-in for a token (e.g. all accounts are single sign-on); paste a token instead.</summary>
     public static readonly Error SignInNotPossible = new(
         "import.sign_in_not_possible",
         "That app would not sign in with a name and password. Make an API token there and paste it instead.",
@@ -134,47 +110,19 @@ public static class ImportErrors
         "Give either a name and password or an API token, not both.",
         ErrorType.Validation);
 
-    /// <summary>What was fetched for a picture is not a picture.</summary>
-    /// <remarks>
-    /// Never reaches a person. A recipe whose photo could not be had is still
-    /// the recipe, so this is the reason a picture was skipped rather than a
-    /// reason an import failed.
-    /// </remarks>
+    /// <summary>What was fetched for a picture is not a picture. Never reaches a person: the picture is skipped, not the import.</summary>
     public static readonly Error NotAPicture = new(
         "import.not_a_picture",
         "That address did not answer with a picture.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// A recipe could not be brought over, and the reason is this app's fault.
-    /// </summary>
-    /// <remarks>
-    /// The catch-all an import reports when writing a recipe threw rather than
-    /// returned. It is one line in the result and nothing more: a defect in one
-    /// recipe must not end the run the other three hundred are part of.
-    /// </remarks>
+    /// <summary>A recipe could not be brought over through this app's fault. One result line, so it cannot end the run.</summary>
     public static readonly Error CouldNotImport = new(
         "import.could_not_import",
         "That recipe could not be brought over.",
         ErrorType.Failure);
 
-    /// <summary>
-    /// No such import to follow: unknown, finished long ago, or somebody
-    /// else's.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The three are one answer on purpose. An import is remembered for a while
-    /// after it ends and then forgotten, and a caller learns nothing from being
-    /// told which of those happened.
-    /// </para>
-    /// <para>
-    /// The sentence carries no id, unlike its neighbours, because this one is
-    /// read by a person: it is what a screen shows when the stream it was
-    /// following has gone. It says the two things worth acting on — the recipes
-    /// may already be on the shelf, and asking again is safe.
-    /// </para>
-    /// </remarks>
+    /// <summary>No such import to follow: unknown, expired or somebody else's, one answer so a caller learns nothing. The text is shown to a person, so it carries no id.</summary>
     public static readonly Error ImportNotFound = new(
         "import.import_not_found",
         "That import is no longer being followed. It may have finished a while ago, or this server may have restarted since — the recipes it had already brought over are on its cookbook, and asking for the rest again is safe.",

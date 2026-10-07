@@ -25,26 +25,18 @@ public enum ConceptKind
     Character
 }
 
-/// <summary>
-/// One entry of the culinary lexicon: the words that mean one thing.
-/// </summary>
+/// <summary>One entry of the culinary lexicon: the words that mean one thing.</summary>
 /// <param name="Key">Stable and never shown to anybody — "chicken".</param>
 /// <param name="Kind">What kind of thing it is.</param>
 /// <param name="De">
-/// The German surface forms, written as a person writes them. The first is the
-/// one a German reader is shown.
+/// The German surface forms as a person writes them; the first is shown to a German reader.
 /// </param>
 /// <param name="En">
-/// The English surface forms; the first is the one an English reader is shown.
-/// Lower case, as English writes a common noun mid-sentence, except where
-/// English writes a capital: a cuisine, a place, a holiday — "Also: Italian",
-/// "Bolognese", "Brussels sprouts". Matching folds case, so this is only ever
-/// about how a label reads.
+/// The English surface forms, lower case except for cuisines, places and the like; the first is
+/// shown. Matching folds case.
 /// </param>
 /// <param name="Parents">
-/// What it is a kind of, one level up. A recipe that uses chicken also counts
-/// as using poultry, and poultry as meat; the lexicon closes the chain once, at
-/// startup, rather than walking it while anybody waits.
+/// What it is a kind of, one level up; the lexicon closes the chain once at startup.
 /// </param>
 public sealed record Concept(
     string Key,

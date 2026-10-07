@@ -1,29 +1,15 @@
 namespace Contracts.Recipes.Drafts;
 
-/// <summary>Asks the assistant for a recipe.</summary>
-/// <remarks>
-/// One request with a <c>kind</c> rather than three endpoints, because the three
-/// are the same call underneath — words in, one recipe out — and three routes
-/// would be three places to remember the budget check.
-/// </remarks>
+/// <summary>Asks the assistant for a recipe. One request with a <c>kind</c> rather than three endpoints.</summary>
 public sealed record Request
 {
-    /// <summary>
-    /// What is being asked for: <c>idea</c>, <c>text</c>, <c>social</c> or <c>revision</c>.
-    /// </summary>
+    /// <summary>What is being asked for: <c>idea</c>, <c>text</c>, <c>social</c> or <c>revision</c>.</summary>
     public required string Kind { get; init; }
 
     /// <summary>Whose kitchen it is for.</summary>
     public required Guid HouseholdId { get; init; }
 
-    /// <summary>
-    /// The material, for <c>idea</c> and <c>text</c>.
-    /// </summary>
-    /// <remarks>
-    /// A sentence about dinner, or a whole recipe pasted out of a message. The
-    /// same field for both because it is the same thing from here: words the
-    /// person supplied, which the server never treats as an instruction.
-    /// </remarks>
+    /// <summary>The material for <c>idea</c> and <c>text</c>: words the person supplied, never treated as an instruction.</summary>
     public string? Material { get; init; }
 
     /// <summary>Spoken captions, kept apart from the measured written recipe.</summary>
@@ -32,47 +18,14 @@ public sealed record Request
     /// <summary>Which recipe to rewrite, for <c>revision</c>.</summary>
     public Guid? RecipeId { get; init; }
 
-    /// <summary>
-    /// The language to answer in: <c>en</c> or <c>de</c>.
-    /// </summary>
-    /// <remarks>
-    /// Sent rather than inferred from the material, because inferring it gets
-    /// the common case wrong: a German household pasting an English page wants
-    /// a German recipe, and a model reading the page would answer in English.
-    /// Ignored for a revision, which comes back in the language it is already
-    /// written in — tidying a recipe up is never translating it.
-    /// </remarks>
+    /// <summary>The language to answer in: <c>en</c> or <c>de</c>. Sent, not inferred; ignored for a revision, which keeps its language.</summary>
     public string? Language { get; init; }
 }
 
-/// <summary>
-/// A recipe the assistant wrote. Not saved, and not a recipe yet.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Nothing is created by asking. This comes back to be read beside whatever was
-/// there before and accepted a field at a time, which is the whole reason the
-/// capability is safe to offer: an assistant that silently rewrote somebody's
-/// recipe would be one nobody could trust with the one they cook from.
-/// </para>
-/// <para>
-/// Structured rather than lines of text, unlike the web import next door. That
-/// one returns what a page said and lets the client's parser have a go, because
-/// a page gives you a sentence; a model was asked for fields and answered in
-/// them, and pushing that back through a heuristic would lose what it knew.
-/// </para>
-/// </remarks>
+/// <summary>A recipe the assistant wrote. Not saved: it is read beside the original and accepted field by field.</summary>
 public sealed record Response
 {
-    /// <summary>
-    /// This draft's own id.
-    /// </summary>
-    /// <remarks>
-    /// Sent back when the draft is turned into a recipe, so the recipe can
-    /// record that it started as one. Every ask makes a new id, which is what
-    /// keeps the "once per household" rule on provenance meaningful: asking
-    /// twice makes two drafts and could make two recipes.
-    /// </remarks>
+    /// <summary>This draft's own id, sent back when the draft becomes a recipe so provenance can be recorded.</summary>
     public required Guid DraftId { get; init; }
 
     /// <summary>What the assistant called it.</summary>
@@ -119,15 +72,7 @@ public sealed record DraftIngredientContract
     /// <summary>How much, or null when the recipe does not say.</summary>
     public decimal? Quantity { get; init; }
 
-    /// <summary>
-    /// In what, or null.
-    /// </summary>
-    /// <remarks>
-    /// Already checked against what the app can store, so a client may use it
-    /// as it stands. A unit the assistant invented that could never be a unit —
-    /// one with a digit in it — is dropped here rather than being handed on to
-    /// fail later.
-    /// </remarks>
+    /// <summary>In what, or null. Already checked against what the app can store; impossible units are dropped.</summary>
     public string? Unit { get; init; }
 
     /// <summary>The shoppable noun.</summary>
@@ -138,11 +83,7 @@ public sealed record DraftIngredientContract
 }
 
 /// <summary>One instruction.</summary>
-/// <remarks>
-/// Plain text, not segments. Which words in a step name an ingredient is a
-/// question the client already answers when somebody types a step, and asking a
-/// model to mark them up too would be two sources of truth for one fact.
-/// </remarks>
+/// <remarks>Plain text, not segments: the client already marks up ingredient mentions.</remarks>
 public sealed record DraftStepContract
 {
     /// <summary>What this step is called, when it is called anything.</summary>
@@ -155,48 +96,19 @@ public sealed record DraftStepContract
     public int? DurationSeconds { get; init; }
 }
 
-/// <summary>
-/// One moment of a recipe being written.
-/// </summary>
+/// <summary>One moment of a recipe being written.</summary>
 /// <remarks>
-/// <para>
-/// The whole draft every time rather than what changed since the last one. A
-/// recipe is a few kilobytes and a client that had to apply deltas would be a
-/// client with a second, subtly different idea of what the draft currently
-/// says — the bug that costs an afternoon, to save bytes on a connection that
-/// is usually the same building.
-/// </para>
-/// <para>
-/// Every event of one ask carries the same <c>draftId</c>, because they are all
-/// the same draft arriving. Asking again makes a new one.
-/// </para>
+/// The whole draft every time, not a delta, so the client never holds a second idea of what the draft says.
+/// Every event of one ask carries the same <c>draftId</c>.
 /// </remarks>
 public sealed record Event
 {
-    /// <summary>The recipe as far as it has been written.</summary>
-    /// <remarks>
-    /// Thin at first and thin for good: a field the model has not finished
-    /// writing is absent rather than half-written, so nothing on screen ever
-    /// shows a value that was never said.
-    /// </remarks>
+    /// <summary>The recipe as far as it has been written. An unfinished field is absent, never half-written.</summary>
     public required Response Draft { get; init; }
 
-    /// <summary>
-    /// Whether this is the last one.
-    /// </summary>
-    /// <remarks>
-    /// Said out loud rather than inferred from the stream closing, because a
-    /// proxy dropping a connection closes it too and the two mean opposite
-    /// things: one is a finished recipe, the other is a recipe to ask for
-    /// again.
-    /// </remarks>
+    /// <summary>Whether this is the last one. Explicit because a proxy dropping the connection also closes the stream.</summary>
     public bool Finished { get; init; }
 
-    /// <summary>Why it stopped, when the last event is a failure.</summary>
-    /// <remarks>
-    /// Only ever on a finished event. The draft beside it is whatever had been
-    /// written before the provider gave up, which is worth offering: it was
-    /// paid for, and half a recipe is a starting point.
-    /// </remarks>
+    /// <summary>Why it stopped, when the last event is a failure. The draft beside it is what was written before.</summary>
     public Streaming.Problem? Problem { get; init; }
 }

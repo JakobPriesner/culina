@@ -11,10 +11,7 @@ namespace Application.Households.GetAll;
 
 /// <summary>Lists the households the caller belongs to, or the deleted ones they own.</summary>
 /// <param name="UserId">Who is asking.</param>
-/// <param name="Deleted">
-/// True for the households in the bin that the caller owns, and could restore,
-/// instead of the ones they are in.
-/// </param>
+/// <param name="Deleted">True for the caller's own households in the bin, which they could restore, instead of those they are in.</param>
 public sealed record GetHouseholdsQuery(Guid UserId, bool Deleted = false);
 
 internal sealed class GetHouseholdsQueryHandler(IHouseholdRepository households, ITrashRepository trash)
