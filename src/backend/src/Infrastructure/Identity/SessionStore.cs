@@ -16,13 +16,19 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
 
     public async Task<Result<Session>> FindActiveByTokenAsync(
         string token,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         // Lookup is by digest, so the raw token exists only in the request and
-        // never in an index, a log or a query plan.
+        // never in an index, a log or a query plan. "Active" is in the WHERE,
+        // so no caller can forget to ask: a revoked or lapsed session's CSRF
+        // token is as dead as its cookie.
         var row = await executor.QuerySingleOrDefaultAsync<SessionRow>(
-            $"select {Columns} from sessions where token_hash = @tokenHash;",
-            new { tokenHash = tokens.Digest(token).ToArray() },
+            $"""
+             select {Columns} from sessions
+             where token_hash = @tokenHash and revoked_at is null and expires_at > @now;
+             """,
+            new { tokenHash = tokens.Digest(token).ToArray(), now },
             cancellationToken).ConfigureAwait(false);
 
         return row is null ? SessionErrors.NotAuthenticated : row.ToDomain();
