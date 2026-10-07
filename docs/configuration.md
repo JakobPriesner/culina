@@ -53,7 +53,10 @@ to it, and the log says so as a warning. The screen asks for:
    run. A connection that fails is only named by its kind: the server's own
    message, with the address it tried, is in Culina's log as a warning
    (event 1960), because anybody may ask for this check during setup and the
-   exact message would tell them what listens on any address.
+   exact message would tell them what listens on any address. For the same
+   reason one address may try at most ten times a minute — a fixed limit, not
+   one of the `RateLimits__*` settings, which are part of what is being set up
+   — here and in Settings → Server alike (`429 request.rate_limited`).
    Then it restarts into the real app.
 2. **How people reach it**: secure cookies (defaulted from whether the browser
    is on `https://`) and which proxy to trust (it shows the address requests

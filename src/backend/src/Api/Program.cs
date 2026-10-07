@@ -141,8 +141,9 @@ static void LogStarting(WebApplication app)
 // The host for an instance nobody has configured a database for. The same
 // shell, headers and error format as the real one, and only what setting up
 // needs: where setup has got to, and the database settings. No forwarded
-// headers — no proxy has been named to trust — no sessions and so no CSRF, and
-// no rate limiter, whose settings are part of what is being set up.
+// headers — no proxy has been named to trust — and no sessions and so no CSRF.
+// Its rate limiter enforces only the fixed limit the database endpoint
+// carries, since the configurable limits are part of what is being set up.
 static WebApplication BuildSetup(WebApplicationBuilder builder)
 {
     builder.AddObservability();
@@ -164,6 +165,7 @@ static WebApplication BuildSetup(WebApplicationBuilder builder)
     app.UseProblemStatusPages();
     app.UseSinglePageApp();
     app.UseRouting();
+    app.UseRateLimiter();
     app.UseAuthorization();
 
     app.MapSetupHealthEndpoints();

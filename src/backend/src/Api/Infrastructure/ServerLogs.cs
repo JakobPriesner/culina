@@ -24,6 +24,16 @@ internal static partial class ServerLogs
     internal static partial void Restarting(this ILogger logger);
 
     /// <summary>
+    /// One address asked for more database checks than anybody setting up
+    /// needs. The address is on the request's scope.
+    /// </summary>
+    [LoggerMessage(
+        EventId = LogEvents.ServerBase + 4,
+        Level = LogLevel.Warning,
+        Message = "Refused a database check: more than {AttemptsPerMinute} a minute from one address")]
+    internal static partial void DatabaseChecksLimited(this ILogger logger, int attemptsPerMinute);
+
+    /// <summary>
     /// What this instance is and where it keeps things, first in the log: the
     /// questions behind most reports that something is wrong. No credentials,
     /// and only the collector's host, since an address can carry a token.

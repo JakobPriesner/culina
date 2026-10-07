@@ -40,13 +40,17 @@ internal sealed class UpdateDatabaseSettingsEndpoint : IEndpoint
             .WithDescription(
                 "Instance administrator, or anyone while nobody has an account. Connects first, and "
                 + "refuses a database Culina could not run in. `204` when nothing changed; `202` when "
-                + "the settings were saved and the server is restarting to use them.")
+                + "the settings were saved and the server is restarting to use them. At most ten "
+                + "attempts a minute from one address, on the setup host too: each one opens a "
+                + "connection to the address it names.")
             .Produces(StatusCodes.Status202Accepted)
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
-            .RequireAuthorization(AdminPolicy.OrSetupName);
+            .RequireAuthorization(AdminPolicy.OrSetupName)
+            .RequireRateLimiting(new DatabaseCheckLimit());
     }
 }

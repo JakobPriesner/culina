@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json.Nodes;
+using Api.Infrastructure;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Setup;
@@ -163,6 +164,40 @@ public class SetupHostTests(PostgresFixture postgres)
             $"GRANT CREATE ON DATABASE {foreign} TO {postgres.Settings.Username};",
             response.Body,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Database_ShouldBeRefusedWith429_OnceOneAddressHasTriedTenTimesInAMinute()
+    {
+        // Arrange
+        // Every attempt opens a connection to the address it names, and anybody
+        // may ask while the instance is unclaimed.
+        using var factory = new SetupApiFactory();
+        using var client = factory.NewApiClient();
+        var nowhere = new
+        {
+            host = "127.0.0.1",
+            port = ScriptedServer.ClosedPort(),
+            name = "culina",
+            username = "culina_app",
+            password = "a guess",
+            requireSsl = false,
+            maxPoolSize = 20
+        };
+
+        for (var attempt = 0; attempt < DatabaseCheckLimit.AttemptsPerMinute; attempt++)
+        {
+            var tried = await client.PutAsync("/api/v1/settings/database", nowhere, Token);
+            Assert.Equal(HttpStatusCode.BadRequest, tried.StatusCode);
+        }
+
+        // Act
+        var response = await client.PutAsync("/api/v1/settings/database", nowhere, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+        Assert.Equal("request.rate_limited", response.ProblemCode);
+        Assert.NotNull(response.Headers.RetryAfter);
     }
 
     private object DatabaseRequest(string name)
