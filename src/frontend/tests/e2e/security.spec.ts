@@ -102,6 +102,16 @@ test.describe('the way in', () => {
     const theirs = await context.newPage();
 
     await signInWithHousehold(theirs, await accountFor(browser, testInfo));
+
+    // Production names it __Host-culina.session; over plain HTTP, as these
+    // tests run locally, the prefix is dropped. Whichever it is, it has to
+    // exist now, or the check below proves nothing.
+    const sessionCookie = (await context.cookies()).find((cookie) =>
+      ['__Host-culina.session', 'culina.session'].includes(cookie.name)
+    );
+
+    expect(sessionCookie?.value).toBeTruthy();
+
     await theirs.goto('/me');
     await theirs.getByRole('button', { name: /sign out|abmelden/i }).click();
     await expect(theirs).toHaveURL(/\/login/);
@@ -109,7 +119,7 @@ test.describe('the way in', () => {
     // The cookie is gone, not merely ignored.
     const cookies = await context.cookies();
 
-    expect(cookies.find((cookie) => cookie.name === '__Host-culina.session')?.value ?? '').toBe('');
+    expect(cookies.find((cookie) => cookie.name === sessionCookie?.name)?.value ?? '').toBe('');
 
     // And the app does not let the back button show the previous person's data.
     await theirs.goto('/');
