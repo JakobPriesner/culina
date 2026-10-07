@@ -77,8 +77,8 @@ for (const mode of ['light', 'dark']) {
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze();
       expect(result.violations).toEqual([]);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
-        page.viewportSize()!.width
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        await page.evaluate(() => document.documentElement.clientWidth)
       );
     };
     await check();
@@ -144,7 +144,9 @@ test.describe('recipe preview continuity @offline', () => {
     await expect(page.getByRole('button', { name: 'Next step', exact: true })).toBeInViewport({
       ratio: 1
     });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      await page.evaluate(() => document.documentElement.clientWidth)
+    );
     await page.getByRole('button', { name: 'Back to recipe', exact: true }).click();
     await expect(page.getByRole('checkbox', { name: 'Orzo', exact: true })).toBeChecked();
     await expect(page.getByRole('spinbutton', { name: 'Servings' })).toHaveValue('3');

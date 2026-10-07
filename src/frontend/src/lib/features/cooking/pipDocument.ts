@@ -8,10 +8,22 @@ export function mirrorPipDocument(source: Document, target: Document): () => voi
     const to = target.documentElement;
     const names = new Set([...from.attributes, ...to.attributes].map((attr) => attr.name));
     for (const name of names) {
-      if (!['lang', 'dir', 'class', 'style'].includes(name) && !name.startsWith('data-')) continue;
+      if (!['lang', 'dir', 'class'].includes(name) && !name.startsWith('data-')) continue;
       const value = from.getAttribute(name);
       if (value === null) to.removeAttribute(name);
       else to.setAttribute(name, value);
+    }
+    // CSSOM writes remain compatible with the inherited CSP; copying a style
+    // attribute would turn runtime layout values into blocked inline markup.
+    for (const name of Array.from(to.style)) {
+      if (!from.style.getPropertyValue(name)) to.style.removeProperty(name);
+    }
+    for (const name of Array.from(from.style)) {
+      to.style.setProperty(
+        name,
+        from.style.getPropertyValue(name),
+        from.style.getPropertyPriority(name)
+      );
     }
   };
 

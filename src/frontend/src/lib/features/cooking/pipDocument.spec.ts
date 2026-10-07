@@ -8,6 +8,21 @@ afterEach(() => {
   added.forEach((node) => node.remove());
   added = [];
   document.documentElement.removeAttribute('data-kitchen-lighting');
+  document.documentElement.style.removeProperty('--pip-gap');
+});
+
+it('mirrors live root styles through CSSOM without writing a style attribute', async () => {
+  document.documentElement.style.setProperty('--pip-gap', '8px', 'important');
+  const target = document.implementation.createHTMLDocument();
+  const attributes = vi.spyOn(target.documentElement, 'setAttribute');
+  dispose = mirrorPipDocument(document, target);
+  expect(target.documentElement.style.getPropertyValue('--pip-gap')).toBe('8px');
+  expect(target.documentElement.style.getPropertyPriority('--pip-gap')).toBe('important');
+  document.documentElement.style.removeProperty('--pip-gap');
+  await vi.waitFor(() =>
+    expect(target.documentElement.style.getPropertyValue('--pip-gap')).toBe('')
+  );
+  expect(attributes).not.toHaveBeenCalledWith('style', expect.any(String));
 });
 
 it('carries inline CSS, linked font resources and live appearance into the child', async () => {
