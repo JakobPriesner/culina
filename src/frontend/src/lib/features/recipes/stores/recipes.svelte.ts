@@ -10,38 +10,24 @@ import { WriteQueue } from './writeQueue';
 export type { RecipeFilters };
 
 /**
- * The recipes a household has, and the one being looked at.
- *
- * Components read domain data from here and from nowhere else. A component
- * that fetches for itself is a component whose data nothing else can see, and
- * two of them on one screen are two requests and two answers.
- *
- * The list and its paging are `recipeList.svelte.ts`; this is the open recipe
- * and every write, which reach the list only to keep its rows in step.
+ * The open recipe and every write; the list and paging are `recipeList.svelte.ts`, touched only to
+ * keep its rows in step.
  */
 class RecipeStore {
   #list = new RecipeList();
   #detail = $state<Recipe | null>(null);
 
   /**
-   * How the open recipe's read went, apart from the list's.
-   *
-   * The library can still be reading when a recipe opens, and its answer is
-   * about the list: a late list failure must not put an error over a recipe
-   * that loaded, nor a late list success hide a recipe that is not there.
+   * Apart from the list's status: a late list failure must not put an error over a loaded recipe.
    */
   #detailStatus = $state<LoadStatus>('idle');
   #detailError = $state<AppError | null>(null);
 
-  /** Ids of rows whose change has been applied here but not yet confirmed. */
   #pending = $state<string[]>([]);
 
   #writes = new WriteQueue();
 
-  /**
-   * Which recipe read is allowed to write the open recipe — the same guard as
-   * the list's, for going from one recipe to the next before the first answers.
-   */
+  /** The same stale-read guard as the list's, for going from one recipe to the next. */
   #detailToken = 0;
 
   get items(): readonly RecipeSummary[] {
@@ -92,12 +78,10 @@ class RecipeStore {
     return this.#pending.includes(id);
   }
 
-  /** Replaces the list. Used when the filters change. */
   list(householdId: string, filters: RecipeFilters = {}): Promise<void> {
     return this.#list.list(householdId, filters);
   }
 
-  /** Appends the next page. The list already on screen is never disturbed. */
   loadMore(householdId: string, filters: RecipeFilters = {}): Promise<void> {
     return this.#list.loadMore(householdId, filters);
   }
@@ -142,8 +126,7 @@ class RecipeStore {
       return result.error;
     }
 
-    // Trusted rather than refetched: the server just told us what it made, and
-    // asking again would be a second round trip to learn the same thing.
+    // Trusted from the answer rather than refetched.
     const created = toRecipe(result.value);
 
     this.#detail = created;
@@ -152,10 +135,8 @@ class RecipeStore {
   }
 
   /**
-   * Makes a household its own copy of a recipe it can read — how a household
-   * changes a recipe it only inherits.
-   *
-   * The copy becomes the open recipe, trusted from the answer as a new one is.
+   * Makes the household its own copy of a recipe it only inherits; the copy becomes the open
+   * recipe.
    */
   async copy(recipeId: string, householdId: string): Promise<Recipe | AppError> {
     const result = await request(() =>
@@ -177,11 +158,8 @@ class RecipeStore {
   }
 
   /**
-   * Applies a change here first, then sends it.
-   *
-   * The whole recipe is snapshotted before the change and that exact snapshot
-   * is restored on failure — never an inverse operation. Inverses drift: undoing
-   * "set the title" by setting it back is only correct if nothing else moved.
+   * Applies the change first, then sends it; failure restores the snapshot, since an inverse drifts
+   * if anything else moved.
    */
   async update(next: Recipe): Promise<AppError | null> {
     const before = this.#detail;
@@ -210,8 +188,7 @@ class RecipeStore {
       return null;
     }
 
-    // Put back exactly what was there. A stale version is not a reason to
-    // retry: somebody else's change would be lost.
+    // Restore exactly what was there; retrying a stale version would lose someone else's change.
     this.#detail = before;
 
     return outcome.error;
@@ -232,9 +209,7 @@ class RecipeStore {
     if (outcome.ok) {
       this.#list.noteRemoved();
 
-      // Only once it is really gone: the recipe is still on screen behind the
-      // question while it is being asked. Afterwards, going back to its
-      // address asks the server rather than drawing a recipe that is not there.
+      // Only once really gone: the recipe stays on screen behind the question while it is asked.
       if (this.#detail?.id === recipeId) {
         this.#detail = null;
       }
@@ -248,7 +223,6 @@ class RecipeStore {
     return outcome.error;
   }
 
-  /** True when the failure means somebody else changed it first. */
   static changedElsewhere(error: AppError): boolean {
     return error.code === ErrorCodes.versionMismatch || error.status === 409;
   }
@@ -275,15 +249,11 @@ class RecipeStore {
 }
 
 /**
- * A list of recipes nobody else is sharing.
- *
- * More than one can be on screen at once: the cookbook page draws a shelf while
- * the picker above it searches everything, and a single shared store would mean
- * each kept replacing the other's contents.
+ * A list nobody else shares: the cookbook shelf and the picker above it must not replace each
+ * other's contents.
  */
 export const createRecipeStore = (): RecipeStore => new RecipeStore();
 
-/** The one the collection and the recipe pages read from. */
 export const recipes = createRecipeStore();
 
 export const changedElsewhere = RecipeStore.changedElsewhere;

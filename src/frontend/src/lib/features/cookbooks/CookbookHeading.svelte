@@ -4,10 +4,10 @@
   import type { CookbookDetail } from './types';
 
   interface Props {
-    /** The shelf, or null while it is still being asked for. */
+    /** Null while loading. */
     cookbook: CookbookDetail | null;
     loading: boolean;
-    /** A shelf that fills itself, whose rules are then worth saying. */
+    /** A self-filling shelf, whose rules are shown. */
     automatic: boolean;
   }
 
@@ -27,8 +27,6 @@
     {/if}
   {/if}
 
-  <!-- What it asks for, in the words somebody chose, so the shelf
-       explains itself rather than being a list you have to trust. -->
   {#if automatic && cookbook?.rules}
     <p class="rules">
       <span class="automatic">{m['cookbooks.kind.label']()}</span>

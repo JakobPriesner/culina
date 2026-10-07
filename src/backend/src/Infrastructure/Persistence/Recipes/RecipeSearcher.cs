@@ -78,17 +78,11 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     /// </remarks>
     internal const double FuzzyThreshold = 0.5d;
 
-    /// <summary>
-    /// The candidate projection, built once per shape rather than per request.
-    /// </summary>
+    /// <summary>The candidate projection and the filter, built once per shape rather than per request.</summary>
     private static readonly string ScoredCandidates = Candidates(scored: true);
 
     private static readonly string PlainCandidates = Candidates(scored: false);
 
-    /// <summary>
-    /// The filter, likewise: it depends only on whether the order is scored, so
-    /// it is not worth rebuilding a hundred lines of SQL for every request.
-    /// </summary>
     private static readonly string ScoredFilter = Filtered(scored: true);
 
     private static readonly string PlainFilter = Filtered(scored: false);
@@ -214,9 +208,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
           and (cardinality(@excludedConcepts::text[]) = 0
                or not coalesce(d.concepts && @excludedConcepts::text[], false))
           and unwanted.recipe_id is null
-          -- A recipe with no stated time is excluded by a time filter rather
-          -- than treated as taking zero minutes. "I have 25 minutes" asks for
-          -- recipes known to fit, and an unknown time is not an answer.
+          -- A recipe with no stated time is excluded, not counted as zero minutes.
           and (@maxMinutes is null or {{RecipeSql.FitsWithin("@maxMinutes")}})
         """;
 

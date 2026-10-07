@@ -5,7 +5,6 @@ import type { Completion, RecipeSummary, SearchChip } from '../types';
 import type { createCompletionStore } from './stores/completions.svelte';
 import { withoutChip } from './wording';
 
-/** One row of the listbox the arrow keys walk through. */
 export type SearchOption =
   | {
       readonly key: string;
@@ -24,19 +23,11 @@ interface Deps {
   readonly recipes: ReturnType<typeof createRecipeStore>;
   readonly completions: ReturnType<typeof createCompletionStore>;
   readonly householdId: () => string;
-  /** Hands the typing back to the field. */
   readonly focus: () => void;
-  /** Opens a recipe, in this tab or beside it. */
   readonly openRecipe: (recipeId: string, elsewhere: boolean) => void;
 }
 
-/**
- * What is in the search box, what was searched for, and what the keys do
- * with it.
- *
- * Everything the overlay reads from the field is a consequence of `typed`,
- * the tag filters and the server's answer; this is where they change together.
- */
+/** The search box's text, applied query, tag filters and listbox options, changed together. */
 export function createSearchSession({
   recipes,
   completions,
@@ -44,11 +35,9 @@ export function createSearchSession({
   focus,
   openRecipe
 }: Deps) {
-  /** What is in the box. */
   let typed = $state('');
   /** What was last searched for, which the chips' spans refer to. */
   let applied = $state('');
-  /** Tag filters picked from a completion or a refinement, by slug. */
   let tags = $state<{ slug: string; name: string }[]>([]);
   /** The query whose correction the reader turned down. */
   let asTypedFor = $state<string | null>(null);
@@ -59,7 +48,6 @@ export function createSearchSession({
 
   const asking = $derived(applied.trim().length > 0 || tags.length > 0);
 
-  /** Everything the arrow keys walk through, in the order it is drawn. */
   const options = $derived.by((): SearchOption[] => {
     const shown = typed.trim().length > 0 ? completions.items : [];
     const found = asking ? recipes.items : [];
@@ -85,11 +73,7 @@ export function createSearchSession({
     clearTimeout(searching);
   }
 
-  /**
-   * Two debounces, because the two answers cost different amounts: a
-   * completion is a prefix over a few small tables and can keep up with the
-   * word, the results are four lanes and arrive as a thought finishes.
-   */
+  /** Two debounces: completions are cheap and follow the word, results wait for a finished thought. */
   function type(value: string) {
     typed = value;
     highlighted = -1;
@@ -110,7 +94,7 @@ export function createSearchSession({
     }
   }
 
-  /** Puts something in the box and searches it now, as if it had been typed and waited for. */
+  /** Sets the box and searches immediately. */
   function set(value: string) {
     typed = value;
     highlighted = -1;
@@ -120,7 +104,6 @@ export function createSearchSession({
     focus();
   }
 
-  /** The word being typed, replaced by what it was completed to. */
   function completeWord(label: string): string {
     const words = typed.trimEnd().split(/\s+/);
 
@@ -201,16 +184,12 @@ export function createSearchSession({
       set(typed);
     },
 
-    /** The reader turned the correction down: search for what they typed. */
     searchAsTyped() {
       asTypedFor = applied;
       search(applied);
     },
 
-    /**
-     * A completion taken into the field without going anywhere: a recipe's
-     * name is typed out rather than opened, the rest do what choosing them does.
-     */
+    /** Takes a completion into the field: a recipe name is typed out, not opened. */
     accept(completion: Completion) {
       if (completion.kind === 'recipe') {
         set(completion.label);
@@ -219,7 +198,7 @@ export function createSearchSession({
       }
     },
 
-    /** Closed: nothing typed survives, and nothing in flight may land. */
+    /** Clears everything and cancels pending work. */
     reset() {
       cancelPending();
       typed = '';
@@ -229,7 +208,6 @@ export function createSearchSession({
       completions.clear();
     },
 
-    /** The component is going away. */
     dispose: cancelPending
   };
 }

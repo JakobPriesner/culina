@@ -106,10 +106,7 @@ internal sealed class RecipeRepository(
             return new Dictionary<Guid, Recipe>();
         }
 
-        // One round trip for the whole aggregate, and for however many of them
-        // are wanted. A recipe is never useful without its ingredients, so a
-        // query per collection would be four round trips to render one page —
-        // and a week of meals would be one set of them per recipe.
+        // One round trip for the whole aggregates, however many are wanted.
         return await executor.QueryMultipleAsync<IReadOnlyDictionary<Guid, Recipe>>(
             """
             select id, household_id, title, description, language as recipe_language,
@@ -148,9 +145,7 @@ internal sealed class RecipeRepository(
                 var uses = (await reader.ReadAsync<StepIngredientRefRow>().ConfigureAwait(false)).ToList();
                 var tagged = (await reader.ReadAsync<RecipeTagRow>().ConfigureAwait(false)).ToList();
 
-                // Each child row is filed under the recipe it belongs to; the
-                // ingredients and the references reach it through their group
-                // and their step.
+                // Ingredients and references reach their recipe through their group and step.
                 var groupsOf = groups.ToLookup(group => group.RecipeId);
                 var recipeOfGroup = groups.ToDictionary(group => group.Id, group => group.RecipeId);
                 var ingredientsOf = ingredients
@@ -453,10 +448,7 @@ internal sealed class RecipeRepository(
             new { recipeId = recipe.Id, stepIds = recipe.Steps.Select(step => step.Id).ToArray() },
             cancellationToken).ConfigureAwait(false);
 
-        // Groups and ingredients are one statement each, and the references one
-        // more, however big the recipe: a round trip per row made saving a
-        // recipe, and importing a thousand of them, a conversation with the
-        // database.
+        // One statement each for groups, ingredients and references, not a round trip per row.
         if (recipe.Groups.Count > 0)
         {
             await executor.ExecuteAsync(
@@ -508,9 +500,7 @@ internal sealed class RecipeRepository(
             await WriteStepAsync(recipe.Id, step, cancellationToken).ConfigureAwait(false);
         }
 
-        // Each step's own set, which Step.Create has already widened to
-        // include everything the sentence mentions — so this cannot
-        // disagree with the words, and it is what the read path reads back.
+        // Step.Create already widened each step's set to everything its sentence mentions.
         var references = recipe.Steps
             .SelectMany(step => step.Uses.Select(ingredientId => (stepId: step.Id, ingredientId)))
             .ToArray();

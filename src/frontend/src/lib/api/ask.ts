@@ -7,23 +7,8 @@ import { sessionExpired } from './session';
 const csrfHeader = 'X-Culina-CSRF';
 
 /**
- * Starts something on the server and reads it happening.
- *
- * `watch` follows work that is already running and can be picked back up;
- * this one *is* the work. A model writing a recipe cannot be resumed — asking
- * again is a second call and a second bill — so a dropped connection ends the
- * stream and says so rather than quietly reconnecting.
- *
- * A POST, because it starts something, which brings the two things `watch` does
- * not need: the CSRF token every unsafe request carries, and a body.
- *
- * The caller closes the stream when it is told the work finished. A body that
- * ends while the stream is still open is therefore a failure, and is reported
- * as one.
- *
- * @param path The path on this origin, e.g. `/api/v1/...`.
- * @param body What to send, already serialised. `FormData` sets its own type.
- * @param handlers What to do with each event, and with the end of the stream.
+ * POSTs to start server work and streams its events. Unlike `watch` it cannot resume (a second call is a second bill), so a dropped connection fails.
+ * The caller closes the stream on its finished event; a body ending first is reported as offline.
  */
 export function ask<TEvent>(
   path: string,
@@ -61,17 +46,12 @@ async function once<TEvent>(
 
   await drain(opened.body, handlers, control.signal, null);
 
-  // The body ended without the caller stopping it, which means it ended by
-  // itself — a tunnel that collapsed, or a server that died mid-recipe. A
-  // caller that was told the work finished closes the stream on that event, so
-  // reaching here is always the bad kind of ending and is reported as one.
-  // Without this, a dropped connection leaves a screen writing forever.
+  // Ended without the caller closing it: a dropped connection, or the screen would write forever.
   if (!control.signal.aborted) {
     handlers.failed(offline());
   }
 }
 
-/** Starts the work, and turns a refusal into the app's ordinary failure. */
 async function start(
   path: string,
   body: BodyInit | null,
@@ -83,20 +63,11 @@ async function start(
   try {
     response = await fetch(path, {
       method: 'POST',
-      // No deadline. The whole point is that this one is slow, and the app's
-      // usual timeout would cut a model off mid-sentence.
+      // No deadline: model output is slow and the usual timeout would cut it off.
       credentials: 'include',
       headers: {
         Accept: 'text/event-stream',
-        // A string body is this app's JSON, and it has to say so. Without
-        // this `fetch` labels it text/plain, the endpoint's JSON binding
-        // never matches the route, and the answer is a 404 about an endpoint
-        // that plainly exists — which reads on screen as a button that does
-        // nothing at all.
-        //
-        // FormData is left alone on purpose: the browser writes its own
-        // multipart type with the boundary in it, and a Content-Type set here
-        // would replace that with one the server cannot split.
+        // A string body is JSON (else fetch sends text/plain and the route 404s); FormData must keep the browser's multipart boundary.
         ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { [csrfHeader]: token } : {})
       },
@@ -104,7 +75,6 @@ async function start(
       signal
     });
   } catch {
-    // Never reached a server, or the caller went away.
     return { error: offline() };
   }
 
@@ -115,8 +85,7 @@ async function start(
   }
 
   if (response.status === 401) {
-    // The same thing the typed client does on a 401, because this bypasses it:
-    // a stream is opened with `fetch`, so its middleware never runs.
+    // Mirrors the typed client's 401 handling, whose middleware this plain `fetch` bypasses.
     sessionExpired();
   }
 

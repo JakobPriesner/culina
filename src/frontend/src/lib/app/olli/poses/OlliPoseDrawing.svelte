@@ -4,10 +4,7 @@
   import { brushGrip, rightHandlePath } from '../geometry';
   import type { Rig } from '../rig.svelte';
 
-  /**
-   * Drawing: a palette, an easel with the painting on it, and a brush. The
-   * right handle follows the brush, so it is drawn here, over the easel.
-   */
+  // The right handle follows the brush, so it is drawn here, over the easel.
   let { motion, rig }: { motion: boolean; rig: Rig } = $props();
 
   const rightHandle = $derived(

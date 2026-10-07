@@ -2,11 +2,10 @@
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
 
-  /** The controls pinned to the bottom while cooking: back a step, the ingredients, on. */
   interface Props {
     currentStep: number;
     stepCount: number;
-    /** How tall the dock is, shared with the steps so none scrolls in under it. */
+    /** Shared with the steps so none scrolls in under the dock. */
     height?: number;
     onprevious: () => void;
     onnext: () => void;

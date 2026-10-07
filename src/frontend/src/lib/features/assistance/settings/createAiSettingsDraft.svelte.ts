@@ -16,28 +16,17 @@ import {
 } from '../types';
 
 /**
- * The assistant's settings as they are being edited, and how they are kept.
- *
- * There is no Save button. A choice — a switch, a provider, a model — is saved
- * the moment it is made, and a typed field when focus leaves it: the page is a
- * handful of independent settings, and a button at the bottom of it was a step
- * that only existed to be forgotten on the way out.
- *
- * It makes no lifecycle calls of its own: the page calls `load` when it opens
- * and `dispose` when it closes.
+ * The assistant settings being edited; there is no Save button: a choice saves at once, a typed field on blur.
+ * The page calls `load` on open and `dispose` on close.
  */
 export function createAiSettingsDraft() {
   let draft = $state<Assistance | null>(null);
-  /**
-   * The providers whose key field is open. Opening one is not an edit: an
-   * empty key means "take the stored one away", so nothing is owed until a
-   * key has actually been typed.
-   */
+  /** Open key fields. Opening is not an edit: an empty key means "remove the stored one", so nothing is owed until one is typed. */
   let keyOpen = $state<Provider[]>([]);
-  /** Edits made, and how many of them the server has. Plain: nothing renders them. */
+  /** Edits made vs. edits the server has; plain, nothing renders them. */
   let edits = 0;
   let savedEdits = 0;
-  /** The last "Saved", replaced rather than stacked by the next one. */
+  /** The last "Saved", replaced rather than stacked. */
   let announced: string | null = null;
 
   const autosave = createAutosave(save);
@@ -45,11 +34,10 @@ export function createAiSettingsDraft() {
   const copyOfSaved = (): Assistance | null =>
     assistance.settings ? structuredClone($state.snapshot(assistance.settings)) : null;
 
-  /** Sends what changed, if anything did — on leaving a field, or on a choice made. */
+  /** Saves what changed, on leaving a field or making a choice. */
   function commit(): void {
     if (edits !== savedEdits) {
-      // Owed and sent at once: this page saves when a field is left, never in
-      // a pause, since a key typed halfway is not a key.
+      // Sent at once, never debounced: a half-typed key is not a key.
       autosave.touch();
       void autosave.flush();
     }
@@ -88,19 +76,13 @@ export function createAiSettingsDraft() {
     if (!failure) {
       savedEdits = at;
 
-      // Taken back from the server only when nothing was typed while it was
-      // away: adopting its answer then would wipe what was typed since, and
-      // the save that is owed for it sends the whole form again anyway.
+      // Adopt the server answer only if nothing was typed meanwhile; it would wipe newer input, and the owed save resends the whole form.
       if (edits === at && assistance.settings) {
         draft = copyOfSaved();
         keyOpen = keyOpen.filter((provider) => !keysSent.includes(provider));
       }
 
-      // What is set here is what decides whether the rest of the app shows an
-      // assistant's buttons at all: the four switches travel with the signed-in
-      // account, and that is read once when the app boots. Without this, giving
-      // "improve a recipe" a provider left the editor with no button to press
-      // until somebody reloaded the page — and nothing on screen said so.
+      // The app reads the assistant switches once at boot; refresh so a newly configured job shows its button without a reload.
       await session.refresh();
     }
 
@@ -128,7 +110,7 @@ export function createAiSettingsDraft() {
       return keyOpen;
     },
 
-    /** Whether any job is given to a provider that sends data off the machine. */
+    /** Any job uses a provider that sends data off the machine. */
     get anythingHosted() {
       return (draft?.uses ?? []).some(
         (use) => use.provider !== '' && providerFacts[use.provider].needsApiKey
@@ -141,7 +123,7 @@ export function createAiSettingsDraft() {
       draft = copyOfSaved();
     },
 
-    /** Sends what is owed on the way out, and stops the timer. */
+    /** Flushes what is owed and stops the timer. */
     dispose() {
       commit();
       autosave.dispose();
@@ -183,7 +165,7 @@ export function createAiSettingsDraft() {
       editConnection(provider, { apiKey: undefined });
     },
 
-    /** Its own action, because an emptied field is a key nobody has typed yet. */
+    /** Separate action: an emptied field is a key nobody has typed yet. */
     removeKey(provider: Provider) {
       editConnection(provider, { apiKey: '' });
       commit();

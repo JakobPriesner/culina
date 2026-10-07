@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import ActionMenuHarness from '../__fixtures__/ActionMenuHarness.svelte';
 
-/*
- * jsdom has no popover, so the panel never opens and `hidePopover` is
- * missing; it is stubbed onto the panel to see whether it was asked to close.
- */
+/* jsdom has no popover, so `hidePopover` is stubbed onto the panel to see whether it was asked to close. */
 function renderMenu() {
   const onchoose = vi.fn();
   const { container } = render(ActionMenuHarness, { onchoose });

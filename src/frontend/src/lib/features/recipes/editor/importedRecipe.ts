@@ -14,11 +14,8 @@ export interface ImportedPage {
 }
 
 /**
- * What a website published, in the shape a pasted block of text is read into.
- *
- * Ingredient lines still go through the one line parser, on the side where the
- * person correcting them is. Servings and time are left out unless the site
- * stated them: a guessed number would scale every amount in the recipe.
+ * A site's structured data as a pasted-text reading; servings and time are omitted unless stated,
+ * since a guess would scale every amount.
  */
 export function publishedRecipe(page: ImportedPage, ownUnits: readonly string[]): ParsedRecipe {
   return {
@@ -37,15 +34,8 @@ export type PageReading =
   | { sourceUrl: string; transcript: string; recipe: ParsedRecipe; outline: string };
 
 /**
- * Reads a recipe from a web page.
- *
- * The server does the fetching — it has to, because a browser cannot read
- * another site — which is why it refuses every address that is not an ordinary
- * public page. Null when it could not be read.
- *
- * A site that publishes nothing structured gives back its words, and those go
- * through the same parser a paste does — one set of heuristics, on the side
- * where the person correcting them is.
+ * Reads a recipe from a web page, fetched server-side (a browser cannot read another site); null when unreadable.
+ * A site with no structured data returns its words, parsed like a paste.
  */
 export async function readRecipePage(
   address: string,

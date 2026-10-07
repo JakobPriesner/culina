@@ -4,9 +4,9 @@
   import Olli from '$shell/olli/Olli.svelte';
 
   interface Props {
-    /** Whether a filter is on, which makes the shelf empty by mistake rather than by being new. */
+    /** A filter is on: empty by mistake rather than by being new. */
     filtered: boolean;
-    /** A shelf that fills itself has nothing to put on it by hand. */
+    /** Fills itself, so there is nothing to add by hand. */
     automatic: boolean;
     onclear: () => void;
     onadd: () => void;
@@ -28,9 +28,7 @@
     {/snippet}
   </EmptyState>
 {:else}
-  <!-- Empty because nothing matches is a rule to loosen; empty because it
-       is new is an invitation to add something. Different mistakes, so
-       different offers. -->
+  <!-- No match is a rule to loosen; new is an invitation to add: different offers. -->
   <EmptyState
     title={m['cookbooks.detail.empty.title']()}
     body={automatic ? m['cookbooks.detail.noMatch.body']() : m['cookbooks.detail.empty.body']()}

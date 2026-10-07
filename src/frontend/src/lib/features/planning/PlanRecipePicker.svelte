@@ -9,16 +9,8 @@
   interface Props {
     open: boolean;
     householdId: string;
-    /**
-     * What is already on this week.
-     *
-     * Passed on so nothing on the plan is offered again: a household that has
-     * already agreed to cook the lasagne on Tuesday does not want it suggested
-     * for Thursday as well. The picker also uses it to mark a recipe as taken
-     * when somebody searches for one by name.
-     */
+    /** Passed on so nothing already planned is offered again, and marked taken when searched by name. */
     taken: string[];
-    /** Which meal the pick is for. */
     slot: MealSlot;
     onpick: (recipe: RecipeSummary) => void;
     onclose: () => void;
@@ -26,11 +18,9 @@
 
   let { open, householdId, taken, slot = $bindable(), onpick, onclose }: Props = $props();
 
-  /** Which shelf the picker is searching, or null for everything. */
   let narrowedTo = $state<string | null>(null);
 
-  // The shelves, so the picker can offer to narrow to one. Only asked for once
-  // the picker is opened.
+  // Shelves are fetched only once the picker opens.
   $effect(() => {
     if (open) {
       void cookbooks.list(householdId);
@@ -48,13 +38,8 @@
   {onpick}
   {onclose}
 >
-  <!-- Which meal, and only here. A slot picker on the week view would put
-       three empty rows on every day for the household that only plans
-       dinner, which is most of them. -->
+  <!-- The slot picker lives only here: on the week view it would add three empty rows per day. -->
   {#snippet controls()}
-    <!-- Narrowing to a shelf, and only when the household has one. "What are
-         we cooking Thursday" is usually asked of a subset somebody has
-         already chosen, and this is that subset. -->
     {#if cookbooks.items.length > 0}
       <fieldset class="slots">
         <legend>{m['cookbooks.title']()}</legend>

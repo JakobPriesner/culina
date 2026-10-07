@@ -6,18 +6,10 @@
   import GenerationAura from '../feedback/GenerationAura.svelte';
   import GenerationStatus from '../feedback/GenerationStatus.svelte';
 
-  /**
-   * What an image field's frame shows while a picture is being drawn.
-   *
-   * Fills the (positioned) frame it is placed in. The fade-out is global
-   * because the field, not this component, decides when it goes.
-   */
+  /** The image frame's overlay while a picture is drawn. The fade-out is global because the field decides when it goes. */
   interface Props {
-    /** What the frame says while it draws. */
     label?: string | undefined;
-    /** Optional decoration shown beside the status. */
     art?: Snippet | undefined;
-    /** Whether the decorative background may move. */
     animate?: boolean;
   }
 
@@ -26,15 +18,7 @@
   const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)', false);
 </script>
 
-<!-- Over whatever is underneath, because a picture being drawn is about
-     to replace it. The frame does the waiting rather than a spinner in a
-     button: this is a minute of somebody else's machine working, and a
-     spinner that size says "a moment".
-
-     The assistant's four lights drift under the frame while their glow
-     runs round its edge. Nothing in it fills up or reaches an end: the
-     provider reports elapsed time, not percentage complete, and the
-     interface must not invent one. -->
+<!-- No progress bar: the provider reports elapsed time, not percentage, and none may be invented. -->
 <div
   class="generating-overlay"
   class:paused={!animate}
@@ -73,8 +57,6 @@
     background: var(--generating-ground);
   }
 
-  /* Light through frosted glass: four soft colours drifting at different
-     speeds, so the mix underneath never quite repeats. */
   .drawing {
     background: var(--generating-ground);
   }
@@ -127,13 +109,7 @@
     animation: float-four 10s ease-in-out infinite alternate;
   }
 
-  /*
-   * What it says, over the middle of it.
-   *
-   * Centred rather than along the bottom edge: the bottom edge is where this
-   * field keeps the things you can press, and a sentence there while they are
-   * unreachable reads as one of them.
-   */
+  /* Centred, not at the bottom edge, where the field keeps its pressable controls. */
   .caption {
     position: absolute;
     top: 50%;
@@ -200,8 +176,6 @@
     }
   }
 
-  /* The wait is still a wait, so the frame still shows the colour and still
-     says what it is doing. It simply stops moving. */
   @media (prefers-reduced-motion: reduce) {
     .wash {
       animation: none;

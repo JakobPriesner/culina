@@ -5,45 +5,27 @@ import type { RecipeDraft } from '$features/recipes/editor/createRecipeDraft.sve
 import { withoutIngredients } from '$features/recipes/editor/stepUsage';
 import type { Ingredient } from '$features/recipes/types';
 
-/**
- * Changing the recipe's ingredients from the editor.
- *
- * The recipe keeps them in its first group. Groups are the "for the dough" /
- * "for the sauce" headings, and they stay invisible until a recipe needs them,
- * so the editor only ever writes to the implicit first one. The rest are
- * carried through a save untouched — this editor cannot show them yet, and a
- * recipe that arrived from an import with real headings must not lose them to
- * a keystroke.
- */
+/** Ingredient edits write only to the implicit first group; other (imported) groups pass through a save untouched. */
 export function useIngredientEdits(editor: RecipeDraft) {
   const groups = $derived(editor.recipe?.groups);
   const firstGroup = $derived(groups?.[0]?.ingredients ?? []);
 
-  // Derived from the groups alone, so the steps are handed the same array until
-  // an ingredient changes rather than a new one on every keystroke.
+  // From the groups alone, so the steps get a stable array until an ingredient changes.
   const all = $derived(groups?.flatMap((group) => group.ingredients) ?? []);
 
   function set(ingredients: Ingredient[]) {
     const kept = new SvelteSet(ingredients.map((one) => one.id));
     const gone = new SvelteSet(firstGroup.filter((one) => !kept.has(one.id)).map((one) => one.id));
 
-    // A deleted line comes off the steps that needed it too. The server refuses
-    // a step needing an ingredient the recipe no longer has, and being told
-    // that on the next autosave is no way to find out you deleted something.
-    // `change` spreads its patch, so an absent key and one set to undefined are
-    // not the same thing — the steps are only named when they have changed.
+    // A deleted ingredient comes off its steps too (the server refuses dangling needs).
+    // `change` spreads the patch, so `steps` is only named when it changed.
     editor.change({
       groups: withIngredients(editor.recipe?.groups ?? [], ingredients),
       ...(gone.size > 0 ? { steps: withoutIngredients(editor.recipe?.steps ?? [], gone) } : {})
     });
   }
 
-  /**
-   * Adds an ingredient named from inside a step.
-   *
-   * With no amount: the author was writing the method, not measuring, and a
-   * made-up quantity would be worse than a blank one they can fill in.
-   */
+  /** Adds an ingredient named from inside a step, with no amount. */
   const add = (name: string) =>
     set([...firstGroup, { id: '', quantity: { value: null, unit: null }, name, note: null }]);
 

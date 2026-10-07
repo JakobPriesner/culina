@@ -2,13 +2,8 @@ import type { PreviewRecipe } from './recipes';
 
 export type PreviewFilter = 'all' | 'favourites' | 'quick';
 
-/** The most a recipe may take to count as quick. */
 export const quickMinutes = 30;
 
-/**
- * Which of the sample recipes the preview's library shows: the words typed,
- * the filter chosen, and the favourites that filter looks at.
- */
 export function createPreviewLibrary(recipes: readonly PreviewRecipe[]) {
   let search = $state('');
   let filter = $state<PreviewFilter>('all');
@@ -44,7 +39,6 @@ export function createPreviewLibrary(recipes: readonly PreviewRecipe[]) {
     get shown() {
       return shown;
     },
-    /** Whether anything narrows the library, so the featured recipe has room to show. */
     get narrowed() {
       return search !== '' || filter !== 'all';
     },

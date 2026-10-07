@@ -5,10 +5,7 @@
   import type { DraftPart } from './draftParts';
   import type { Accepted, Draft } from './draftToRecipe';
 
-  /**
-   * The rows of the review: each part with a box to tick, what is there now
-   * beside what the assistant says, and under them the steps it wrote.
-   */
+  /** The review rows: a tick box per part, before beside after, then the steps written. */
   interface Props {
     parts: readonly DraftPart[];
     accepted: Accepted;
@@ -66,9 +63,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  /* Two columns where there is room, stacked where there is not: reading a
-     before against an after side by side is the whole job of this dialog, and
-     on a phone the two lines one above the other say the same thing. */
+  /* Side by side where there is room (comparing is the job), stacked on a phone. */
   .compare {
     display: grid;
     gap: var(--space-2);

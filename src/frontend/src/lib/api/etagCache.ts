@@ -1,10 +1,4 @@
-/**
- * Remembers the last response for a URL, so a re-read costs a 304 instead of a
- * payload and so a write can carry the version it was based on.
- *
- * Memory only, never storage: this holds a household's recipes and a person's
- * notes, and private data must not outlive the session on a shared machine.
- */
+/** Last response per URL, for 304 re-reads and write versions. Memory only: private data must not outlive the session. */
 interface CachedResponse {
   readonly etag: string;
   readonly body: string;
@@ -42,13 +36,7 @@ export function cached(url: string): CachedResponse | undefined {
   return entry;
 }
 
-/**
- * Forgets what a write to this URL could have changed.
- *
- * A write to `/recipes/x` affects the recipe, the list it appears in, and
- * anything hanging off it, so the rule is "this URL and anything on its path".
- * Wider than strictly necessary and far cheaper than being wrong.
- */
+/** Forgets this URL and anything on its path (the recipe, its list, its children); deliberately wide. */
 export function invalidate(url: string): void {
   const target = pathOf(url);
 
@@ -59,7 +47,7 @@ export function invalidate(url: string): void {
   }
 }
 
-/** Called on sign-out: nothing read as one person may be served to the next. */
+/** On sign-out, so nothing read as one person is served to the next. */
 export function forgetEverything(): void {
   entries.clear();
 }

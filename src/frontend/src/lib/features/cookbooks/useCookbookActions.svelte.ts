@@ -10,25 +10,18 @@ import { addShelfToShoppingList } from './addShelfToShoppingList';
 import { cookbooks } from './stores/cookbooks.svelte';
 import type { CookbookDetail, CookbookRules } from './types';
 
-/** What the actions need to know about the page they are on. */
 interface Page {
   readonly cookbookId: () => string;
   readonly cookbook: () => CookbookDetail | null;
   readonly householdId: () => string | null;
-  /** Reads the shelf and its header again, after something changed what is on it. */
   readonly reload: () => void;
 }
 
 /**
- * What can be done to the cookbook on screen, and the surfaces that are open
- * while it is being done.
- *
- * Every action here ends in a toast, a reload or a navigation — the page itself
- * is left with markup and with the one question it owns, which shelf is being
- * read.
+ * Actions on the cookbook on screen and the surfaces open while they run; each ends in a toast,
+ * reload or navigation.
  */
 export function useCookbookActions(page: Page) {
-  /** Which surface is open, and what each is waiting for. */
   const ui = $state({
     renaming: false,
     saving: false,
@@ -119,7 +112,6 @@ export function useCookbookActions(page: Page) {
     page.reload();
   }
 
-  /** The same tick, undone: a picker row that is on can be turned off again. */
   async function takeOff(recipeId: string, title: string) {
     const cookbook = page.cookbook();
 
@@ -181,7 +173,6 @@ export function useCookbookActions(page: Page) {
     );
   }
 
-  /** Opens the question of whether to delete, with no old failure left on it. */
   function askToDelete() {
     ui.deleteFailure = null;
     ui.confirmingDelete = true;

@@ -3,17 +3,10 @@
 
   import { imageSrcset, imageUrl } from '../recipeImage';
 
-  /**
-   * The recipe's photograph, as a banner above the title.
-   *
-   * Shown while reading and gone while cooking: it is what makes you choose the
-   * recipe, and it is dead weight once you are standing at the hob with your
-   * hands full.
-   */
   interface Props {
     recipeId: string;
     imageId: string;
-    /** Where the photograph is, when it is not at the recipe's own address. */
+    /** Overrides the recipe's own image URLs. */
     photo?: { readonly src: string; readonly srcset: string };
   }
 
@@ -33,23 +26,17 @@
 </div>
 
 <style>
-  /* A 16:9 box, capped so that on a wide screen the photograph does not take
-     the whole first screenful. The cap shrinks the box rather than cutting the
-     picture off at the bottom: what is worth looking at in a photograph of
-     dinner is in the middle of it, so the crop has to come off both ends. */
+  /* 16:9, capped so a wide screen does not fill the first screenful; it shrinks the box rather than cropping the bottom, since the subject is central. */
   .hero {
     display: grid;
     aspect-ratio: 16 / 9;
     max-height: 24rem;
-    /* Stated, not left auto: a max-height transfers through an aspect ratio
-       into a max-width, and an auto width would obey it — the box would go
-       narrow instead of short. */
+    /* Explicit: max-height transfers through the aspect ratio into a max-width, so auto would make the box narrow instead of short. */
     width: 100%;
     overflow: hidden;
     border-radius: var(--radius-lg);
   }
 
-  /* Reading is the job on a phone, so the photograph becomes a wide banner. */
   @media (width < 52rem) {
     .hero {
       aspect-ratio: 4 / 1;
@@ -58,8 +45,6 @@
     }
   }
 
-  /* It is a page of ink once you have chosen the recipe, and the paper is
-     going on a worktop next to something wet, not on a wall. */
   @media print {
     .hero {
       display: none !important;

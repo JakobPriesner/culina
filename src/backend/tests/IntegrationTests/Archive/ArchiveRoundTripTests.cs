@@ -131,7 +131,6 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
             $$"""{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{{recipes}}] }""");
 
         // Assert
-        // Counted before anything is written: each recipe is a transaction.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("archive.too_many_recipes", response.Json!.Value.GetProperty("code").GetString());
     }

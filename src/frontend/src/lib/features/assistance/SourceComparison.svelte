@@ -6,7 +6,6 @@
   import DraftWriting from './DraftWriting.svelte';
   import type { Draft } from './draftToRecipe';
 
-  /** An intake's source — the text, the transcript, the photos — beside the draft written from it. */
   interface Props {
     source: { text: string; transcript: string; url: string; photos: string[] };
     draft: Draft | null;
@@ -22,8 +21,7 @@
   <section class="original" aria-label={m['import.review.source']()}>
     <h3>{m['import.review.source']()}</h3>
     {#if original}
-      <!-- An external web address, checked by sourceLink, not an application route. -->
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- External address vetted by sourceLink. -->
       <a href={original.href} target="_blank" rel="noopener noreferrer"
         >{m['import.review.openSource']()}</a
       >

@@ -6,16 +6,12 @@
   import { kitchenTimers as timers } from './kitchen.svelte';
   import StepTimer from './StepTimer.svelte';
 
-  /**
-   * What is under the cook's thumb: the step's timer, where they are in the
-   * recipe, and the moves between steps.
-   */
   interface Props {
     recipe: Recipe;
     currentStep: number;
     /** Whether there is a session to move within. */
     ready: boolean;
-    /** The recipe page, at the yield being cooked. */
+    /** The recipe page at the yield being cooked. */
     recipeHref: string;
     autoScrolling: boolean;
     height?: number;
@@ -46,13 +42,7 @@
   const stepTimer = $derived(timers.timers.find((timer) => timer.stepIndex === currentStep));
   const duration = $derived(recipe.steps[currentStep]?.durationSeconds ?? null);
 
-  /**
-   * What the timer is called once it has left the step behind.
-   *
-   * A timer outlives the screen it was started from — it shows in the bar with
-   * four others — so it takes the step's own name when there is one. "Proving"
-   * is findable among five running timers in a way "Step 3" is not.
-   */
+  /** Timers outlive this screen, so prefer the step's own title ("Proving") over "Step 3". */
   const stepName = $derived(
     recipe.steps[currentStep]?.title ?? m['recipe.step']({ number: currentStep + 1 })
   );
@@ -121,12 +111,7 @@
       </svg>
     </IconButton>
 
-    <!-- The largest control size, because these are pressed with a wet
-       thumb while looking at a pan rather than at the screen.
-       Measured at 320 px, "Previous step" used to be the *wider* of the
-       two simply because it is a longer phrase — the control that undoes
-       progress was an easier target than the one pressed at every step.
-       It is an icon now, and next takes the room that frees. -->
+    <!-- Large controls: pressed with a wet thumb. Previous is an icon so Next gets the width. -->
     <IconButton
       label={m['cooking.previous']()}
       size="lg"
@@ -139,10 +124,7 @@
       </svg>
     </IconButton>
 
-    <!-- One control that changes what it says, not two that replace each
-       other. Swapping the element loses focus at exactly the moment
-       somebody reaches the last step, which for a keyboard user means
-       tabbing back into the page to finish. -->
+    <!-- One button that changes its label: swapping elements would drop keyboard focus on the last step. -->
     <div class="advance">
       <Button size="lg" variant="primary" full disabled={!ready} onclick={onadvance}>
         <span class="advance-label">

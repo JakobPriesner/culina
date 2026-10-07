@@ -11,15 +11,7 @@
   import SettingsSection from '../SettingsSection.svelte';
   import ProviderAddress from './ProviderAddress.svelte';
 
-  /**
-   * The providers list shows every provider this build knows, connected or
-   * not, so adding one is filling a row in rather than finding a button.
-   *
-   * The API key is the one control that is not a plain field, and it has to be.
-   * No endpoint returns it, so there is nothing to put in a box — a box rendered
-   * empty would read as "no key", and saving would then look like it had wiped
-   * one.
-   */
+  // The API key is never returned by the API, so it isn't a plain field: an empty box would read as "no key".
   interface Props {
     settings: AiSettingsDraft;
   }
@@ -42,10 +34,8 @@
       </Badge>
 
       {#if !facts.needsApiKey}
-        <!-- The address is the connection here, not an override of one. -->
         <ProviderAddress {settings} {provider} label={m['ai.address']()} />
       {:else if !settings.keyOpen.includes(provider)}
-        <!-- No field, because there is nothing to show in one. -->
         <span class="state">
           {connection.apiKeyConfigured ? m['ai.apiKey.set']() : m['ai.apiKey.none']()}
         </span>
@@ -53,8 +43,7 @@
           {connection.apiKeyConfigured ? m['ai.apiKey.replace']() : m['ai.apiKey.add']()}
         </Button>
         {#if connection.apiKeyConfigured}
-          <!-- Its own button, because an emptied field is a key nobody has
-               typed yet, and leaving one must never take the stored key. -->
+          <!-- Explicit removal: an emptied field must never delete the stored key. -->
           <Button variant="ghost" size="sm" onclick={() => settings.removeKey(provider)}>
             {m['ai.apiKey.remove']()}
           </Button>

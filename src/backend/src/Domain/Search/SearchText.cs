@@ -50,7 +50,7 @@ public static class SearchText
                 _ => null
             };
 
-            // A character is appended as itself, not turned into a string first.
+            // Unmapped characters are appended as chars, not allocated as strings.
             if (replacement is null)
             {
                 expanded.Append(Translate(character));

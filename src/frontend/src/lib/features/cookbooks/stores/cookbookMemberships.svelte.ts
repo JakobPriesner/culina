@@ -3,34 +3,15 @@ import { http, request } from '$api';
 import { toMembership } from '../mappers';
 import type { CookbookMembership } from '../types';
 
-/**
- * Which recipes are on which shelves, from both sides.
- *
- * The shelves themselves are `cookbookShelves.svelte.ts`; this is only the ticks.
- */
+/** Which recipes are on which shelves, from both sides; the shelves are in `cookbookShelves.svelte.ts`. */
 export class Memberships {
-  /**
-   * Which cookbooks the recipe being looked at is on, by recipe id.
-   *
-   * Kept here rather than on the recipe, because it is a fact about the shelves
-   * and it has to change the moment one does — the tick in the sheet and the
-   * line under the title are the same answer and must never disagree.
-   */
+  // By recipe id; kept here so the sheet's tick and the line under the title can't disagree.
   #byRecipe = $state<Record<string, CookbookMembership[]>>({});
 
-  /**
-   * Every recipe on a shelf, by cookbook id — the same fact from the other
-   * side, for a picker that has to mark what is already on before anybody taps
-   * it. The shelf's own recipe list is paged, so it cannot answer that past
-   * the first screen.
-   */
+  // By cookbook id, for pickers: the shelf's own recipe list is paged and can't answer past page one.
   #byShelf = $state<Record<string, readonly string[]>>({});
 
-  /**
-   * Whose shelves the memberships were read from. Plain rather than $state: it
-   * is read before the first await of a method an effect calls, and a tracked
-   * read there would make the method's own writes call it again.
-   */
+  // Not $state: read before the first await of effect-called methods, where a tracked read would loop.
   #readFor: string | null = null;
 
   /** The cookbooks a recipe is on, or an empty list until it has been asked. */
@@ -47,12 +28,9 @@ export class Memberships {
     return this.of(recipeId).some((shelf) => shelf.id === cookbookId);
   }
 
-  /**
-   * Which cookbooks a recipe is on: the shelves of the household named, which
-   * an inherited recipe can be on too, or of the recipe's own household.
-   */
+  /** Loads a recipe's cookbooks in the named household (inherited recipes can be shelved there) or its own. */
   async load(recipeId: string, householdId: string | null): Promise<void> {
-    // The same recipe is on different shelves in different households.
+    // A recipe is on different shelves in different households.
     if (this.#readFor !== householdId) {
       this.#readFor = householdId;
       this.#byRecipe = {};

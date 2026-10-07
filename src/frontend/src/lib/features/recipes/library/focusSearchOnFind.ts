@@ -1,9 +1,6 @@
 import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
 
-/**
- * ⌘F / Ctrl-F focuses the recipe search field right on the page rather than
- * letting the browser open its own in-page search.
- */
+/** Makes ⌘F / Ctrl-F focus the page's search field instead of the browser's find bar. */
 export function focusSearchOnFind(event: KeyboardEvent, searchId: string) {
   if (event.defaultPrevented) {
     return;

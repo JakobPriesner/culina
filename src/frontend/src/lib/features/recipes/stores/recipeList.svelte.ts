@@ -7,12 +7,7 @@ import { fetchRecipePage, type RecipeFilters } from './recipeQuery';
 
 export type { RecipeFilters };
 
-/**
- * The paged, filtered list of recipes, with the answers that describe it.
- *
- * Only reads; the open recipe and every write live in `recipes.svelte.ts`,
- * which reaches the rows here through the few methods at the bottom.
- */
+/** The paged, filtered recipe list; reads only (writes live in `recipes.svelte.ts`). */
 export class RecipeList {
   #items = $state.raw<RecipeSummary[]>([]);
   #status = $state<LoadStatus>('idle');
@@ -24,25 +19,12 @@ export class RecipeList {
   #loadingMore = $state(false);
   #moreFailed = $state(false);
 
-  /**
-   * Whose items these are. Plain rather than $state: it is read before the
-   * first await of a method an effect calls, and a tracked read there would
-   * make the method's own writes call it again.
-   */
+  /** Plain, not $state: read before the first await of effect-called methods, where a tracked read would re-run on their own writes. */
   #householdId: string | null = null;
 
-  /**
-   * Which read is allowed to write to the store.
-   *
-   * Typing into the search box starts a request per pause, and they do not come
-   * back in the order they were sent — a short query matches more rows and
-   * takes longer, so the *earlier* search regularly answers last. Without this,
-   * a list settles on whatever the slowest request said, which is the wrong
-   * answer and looks like the filter is broken.
-   */
+  /** Which read may write: responses arrive out of order (a short query answers last), so only the newest is applied. */
   #readToken = 0;
 
-  /** The request a newer one has made pointless. */
   #reading: AbortController | null = null;
 
   get items(): readonly RecipeSummary[] {
@@ -61,43 +43,29 @@ export class RecipeList {
     return this.#total;
   }
 
-  /**
-   * What the server read the last query to mean, or null without one.
-   *
-   * Kept with the list it describes, and replaced with it, so the chips on
-   * screen are always the reading of the results on screen.
-   */
+  /** The server's reading of the last query, replaced together with the list it describes. */
   get interpretation(): Interpretation | null {
     return this.#interpretation;
   }
 
-  /** Refinements that split the current results, or null. */
   get facets(): Facets | null {
     return this.#facets;
   }
 
-  /** True while more pages exist. */
   get hasMore(): boolean {
     return this.#cursor !== null;
   }
 
-  /**
-   * True when the next page could not be fetched.
-   *
-   * A list that fetches by itself must stop by itself. Without this, a dead
-   * connection is a loop: the end of the list stays in view, asks again,
-   * fails again, and the browser spends the rest of the afternoon on it.
-   */
+  /** The next page failed; stops the end-of-list sentinel from retrying in a loop. */
   get moreFailed(): boolean {
     return this.#moreFailed;
   }
 
-  /** Replaces the list. Used when the filters change. */
+  /** Replaces the list when filters change. */
   async list(householdId: string, filters: RecipeFilters = {}): Promise<void> {
     const token = this.#beginRead();
 
-    // Another household's recipes are not a list to keep on screen while this
-    // one's arrive: for that moment they would be under the wrong name.
+    // Don't show another household's rows under this one's name while loading.
     if (this.#householdId !== householdId) {
       this.#householdId = householdId;
       this.#items = [];
@@ -133,14 +101,7 @@ export class RecipeList {
     this.#status = 'ready';
   }
 
-  /**
-   * Appends the next page. The list already on screen is never disturbed.
-   *
-   * Safe to call while it is already running: the end of the list scrolls into
-   * view once per placeholder row and the browser says so more than once, so
-   * the second ask has to be free rather than a second request for the same
-   * cursor.
-   */
+  /** Appends the next page; a repeat call while running is a no-op (the sentinel fires once per placeholder row). */
   async loadMore(householdId: string, filters: RecipeFilters = {}): Promise<void> {
     if (!this.#cursor || this.#loadingMore) {
       return;
@@ -154,15 +115,13 @@ export class RecipeList {
 
     this.#loadingMore = false;
 
-    // A filter changed while the next page was in flight: those rows belong to
-    // a list that is no longer on screen.
+    // Filters changed mid-flight: these rows belong to a stale list.
     if (token !== this.#readToken) {
       return;
     }
 
     if (!result.ok) {
-      // The page that is already there stays. A failed page is a reason to
-      // stop fetching and ask, not to empty the screen.
+      // Keep the page already shown; a failed page stops fetching but must not empty the list.
       this.#error = result.error;
       this.#moreFailed = true;
 
@@ -174,7 +133,7 @@ export class RecipeList {
     this.#total = result.value.total;
   }
 
-  /** Takes a row off the list and returns what puts it back exactly as it was. */
+  /** Removes a row and returns the undo. */
   withdraw(recipeId: string): () => void {
     const before = this.#items;
 
@@ -185,7 +144,6 @@ export class RecipeList {
     };
   }
 
-  /** The row is really gone, so the count of what matched is one fewer. */
   noteRemoved(): void {
     this.#total = Math.max(0, this.#total - 1);
   }
@@ -198,7 +156,6 @@ export class RecipeList {
     this.#error = null;
   }
 
-  /** Keeps the row in the list in step with the recipe that was just saved. */
   refreshSummary(recipe: Recipe): void {
     this.#items = this.#items.map((item) =>
       item.id === recipe.id
@@ -232,11 +189,7 @@ export class RecipeList {
     this.#readToken += 1;
   }
 
-  /**
-   * Claims the right to write the list, and gives up the previous request.
-   *
-   * Aborting is politeness — the token is what makes it correct.
-   */
+  /** Claims the right to write and aborts the previous request; the token, not the abort, guarantees correctness. */
   #beginRead(): number {
     this.#reading?.abort();
     this.#reading = new AbortController();

@@ -1,19 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * The floating frame the cooking controls — and their loading skeleton —
-   * sit in, so both stand over the page in exactly the same place.
-   *
-   * `.moves` and `.advance` are the rows inside it. They are styled from here
-   * as `:global` descendants of this frame, rather than twice, because the
-   * controls and their skeleton render them from different components.
-   */
+  // Shared frame for the controls and their skeleton. `.moves`/`.advance` are styled here as `:global`
+  // because both render them from different components.
   interface Props {
     children: Snippet;
-    /** How tall the bar is, so the surface can keep a step out from under it. */
+    /** Bar height, so the surface can keep a step clear of it. */
     height?: number;
-    /** The skeleton is there to hold the place, not to be read. */
+    /** For the skeleton: hides the bar from assistive tech. */
     decorative?: boolean;
   }
 
@@ -30,8 +24,7 @@
     bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-4));
     z-index: var(--z-sticky);
     display: grid;
-    /* Wrap whole groups according to their available space, including when
-       text is enlarged. Navigation must never become a sliver beside them. */
+    /* Wraps whole groups as space allows, including with enlarged text. */
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
     align-items: center;
     gap: var(--space-3);
@@ -51,9 +44,7 @@
     gap: var(--space-2);
   }
 
-  /* Next takes whatever is left. It is pressed once per step and Previous is
-     pressed when something went wrong, and a target's size should say which is
-     which. */
+  /* Next takes the remaining space: it is the primary action. */
   .controls :global(.advance) {
     min-width: 0;
   }

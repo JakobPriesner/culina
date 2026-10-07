@@ -22,24 +22,10 @@
   import PageHeader from '$shell/PageHeader.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
-  /**
-   * Starting a recipe asks for one thing.
-   *
-   * A recipe with just a title is valid and saveable — it is the placeholder
-   * for "I want to write this down later". The forty-field form is the reason
-   * most recipes never get written down at all.
-   *
-   * So the page has one rank and then another, and never three things of equal
-   * weight. The title field is the page: set in the editorial face at the size
-   * it will be read at, in the one panel on the screen, with the only accented
-   * button under it. Pasting a block of text and bringing a whole library over
-   * are the other two ways in, and they sit below as two quiet doors — a door
-   * being the honest shape for them, since both lead somewhere rather than
-   * happening here.
-   */
+  /** A recipe with just a title is valid, so starting asks for one thing; paste and library import are quiet secondary doors below it. */
   let title = $state('');
 
-  /** Whether the pasting box has been opened, which takes over the page. */
+  /** The paste box is open and takes over the page. */
   let pasting = $state(false);
   let describing = $state(false);
 
@@ -51,18 +37,12 @@
   const shareId = page.url.searchParams.get('share');
   let loadingShare = $state(!!shareId);
 
-  /**
-   * A recipe already started here, still nothing but its title.
-   *
-   * Set once, on mount: this page is about starting something, not about
-   * watching a draft change underneath the form while it is open.
-   */
+  /** A recipe already started here (title only); set once on mount so the form does not change under the user. */
   let continuing = $state<LastDraft | null>(null);
 
   const creating = useNewRecipe({ title: () => title, shareId });
   const { submission } = creating;
 
-  /** Something shared from another app and kept until this page could take it. */
   async function receiveShare(id: string) {
     try {
       const shared = await recallSharedRecipe(id);

@@ -4,18 +4,11 @@
 
   import { m } from '$shell/i18n';
 
-  /**
-   * What can be done with the recipe on screen, beside its title.
-   *
-   * Offered to whoever may do it and to nobody else: each action is there
-   * because the page handed in the callback for it. The surface decides which
-   * of them it has, and this only lays them out.
-   */
+  /** Actions beside the title; each is shown only if the page passed its callback. */
   interface Props {
     recipeId: string;
-    /** Nothing at all while cooking: hands are full. */
+    /** Nothing is shown while cooking. */
     cooking: boolean;
-    /** Whether to offer the way back into the editor. */
     editable: boolean;
     onaddtolist?: () => void;
     onaddtocookbook?: () => void;
@@ -37,29 +30,13 @@
     ondelete
   }: Props = $props();
 
-  /** The occasional actions, which go in the menu. */
   const inMenu = $derived(
     !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare || oncopy)
   );
   const hasActions = $derived(inMenu || Boolean(!cooking && (onaddtolist || ondelete)));
 </script>
 
-<!--
-  Everything except cooking, beside the title.
-
-  One rank in one place. What used to be here was a bare "Edit" link while
-  four unrelated actions floated at the bottom of the screen, which meant
-  the page answered "what can I do with this recipe" in two places and in
-  neither of them completely.
-
-  The shopping list keeps its own control because it is the weekly loop —
-  read a recipe, put it on the list — and a loop that runs twice a week
-  does not belong behind a menu. The other three are occasional, so they
-  go in one, the way a document's rarely-used actions do everywhere else.
-
-  Nothing at all while cooking: hands are full, and the only correct edit
-  then is the one made to the pan.
--->
+<!-- The shopping list is the frequent action and stays outside the menu; the occasional ones go in it. -->
 {#if hasActions}
   <div class="actions">
     {#if onaddtolist}
@@ -73,7 +50,6 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <!-- The same basket the shopping tab is marked with. -->
             <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
             <path d="M9 8 12 3l3 5" />
           </svg>
@@ -84,9 +60,6 @@
     {/if}
 
     {#if inMenu}
-      <!-- Opening towards the middle of the page: the group is at the
-           inline end of a full-width row, and a panel that preferred the
-           other side would be hanging off the edge of the screen. -->
       <ActionMenu>
         {#snippet trigger({ popovertarget })}
           <IconButton bordered label={m['recipe.moreActions']()} {popovertarget}>
@@ -129,7 +102,6 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <!-- A book, closed, spine to the left. -->
               <path
                 d="M6.5 3.5H17a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"
               />
@@ -151,9 +123,6 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <!-- Three nodes and the two threads between them: the shape
-                   every platform's share control has settled on, so
-                   nobody has to learn what this one means. -->
               <circle cx="18" cy="5" r="2.5" />
               <circle cx="6" cy="12" r="2.5" />
               <circle cx="18" cy="19" r="2.5" />
@@ -176,7 +145,6 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <!-- Two sheets, one over the other. -->
               <rect x="8.5" y="8.5" width="11" height="12" rx="2" />
               <path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2" />
             </svg>
@@ -185,9 +153,7 @@
           </button>
         {/if}
 
-        <!-- A link, not a button, and the other end of the editor's
-               "← Done": a recipe somebody is about to rewrite is one they
-               open in a second tab beside the one they are reading. -->
+        <!-- A link, so the editor can open in a second tab. -->
         {#if editable}
           <a class="item" href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId })}>
             <svg
@@ -209,10 +175,7 @@
       </ActionMenu>
     {/if}
 
-    <!-- On the page rather than in the menu, so nobody has to go looking
-         for it — but last in the row, outside the menu, so the hand
-         reaching for "Edit" never lands on it. The dialog it opens is
-         the question; this only offers. -->
+    <!-- Last and outside the menu so a reach for "Edit" never lands on it. -->
     {#if ondelete}
       <IconButton bordered label={m['recipe.delete.action']()} onclick={ondelete}>
         <svg
@@ -244,12 +207,7 @@
       gap: var(--space-1);
     }
 
-    /* The photo already owns this strip of the first screen. Putting the two
-       small controls on it keeps them immediately available and gives even a
-       long recipe name the whole line below. Recipes without a photo keep the
-       actions beside their title, where there is no image to carry them. The
-       surface marks a recipe with a photograph, and positions this against
-       itself. */
+    /* Overlay the photo so a long title keeps the whole line; the surface sets `.photographed` and the positioning context. */
     :global(.photographed) .actions {
       position: absolute;
       inset-block-start: var(--space-2);
@@ -257,8 +215,7 @@
       z-index: var(--z-sticky);
     }
 
-    /* The labelled supporting action becomes the same familiar basket icon
-       used by the shopping tab. Its aria-label remains the complete name. */
+    /* Collapse the labelled button to an icon; its aria-label stays the full name. */
     .actions :global(.button) {
       width: var(--control-md);
       padding-inline: 0;

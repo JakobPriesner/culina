@@ -17,26 +17,14 @@
   import { createTouch } from './touch';
 
   /**
-   * Olli, the pot from Culina's logo, with a face and a chef's hat.
-   *
-   * Silent on purpose. The page's own words say what happened; Olli only shows
-   * how it feels about it, which is why it is hidden from screen readers.
-   *
-   * Alive on arrival, then still. Arriving in a pose plays one small movement,
-   * a blink or two may follow, and by five seconds nothing moves until
-   * something happens — a new pose, or a poke. Every part sits on a spring, so
-   * a pose that changes halfway through a movement simply heads for its new
-   * place from wherever it was; the hat is on a softer spring than the pot, so
-   * it lands a beat late.
-   *
-   * Always visible. Settings and the system motion preference stop movement.
+   * Olli, the pot from Culina's logo. Silent and hidden from screen readers: the page's words say what happened.
+   * Plays one small movement on arrival, then is still until the pose changes or it is poked; settings and the system motion preference stop movement.
    */
   interface Props {
     pose: Pose;
     size?: 'sm' | 'md' | 'lg';
-    /** Never moves: for small, repeated places like a toast. */
     still?: boolean;
-    /** Repeat meaningful work while processing; motion is controlled in Settings. */
+    /** Repeats meaningful work while processing. */
     working?: boolean;
   }
 
@@ -45,7 +33,6 @@
   const motion = $derived(olliSetting.animated && !still && !prefersReducedMotion.current);
   const uid = $props.id();
   const spec = $derived(poses[pose]);
-  // The props a pose carries live in their own components, beside the pot or in its hands.
   const Trailing = $derived(trailingParts[pose]);
   const Held = $derived(heldParts[pose]);
   const rig = createRig(
@@ -53,7 +40,7 @@
     untrack(() => still)
   );
 
-  // Plain field, not state: bookkeeping that nothing renders.
+  // Plain field, not state: nothing renders it.
   let timers: ReturnType<typeof setTimeout>[] = [];
   let svg: SVGSVGElement | undefined = $state();
 
@@ -68,8 +55,7 @@
       return;
     }
 
-    // Shut fast, a moment closed, open slowly: the blink of somebody, not of
-    // a shutter.
+    // Shut fast, closed a moment, open slowly: a blink, not a shutter.
     void rig.lid.set(0.1, { duration: 80, easing: linear });
     later(120, () => void rig.lid.set(1, { duration: 200, easing: cubicOut }));
   }
@@ -159,9 +145,7 @@
 </svg>
 
 <style>
-  /* The drawing is split across components, so the rules every pose shares
-     reach them from the root through `:global`, scoped to this one svg. What
-     only one part uses is styled by that part. */
+  /* Shared rules reach the child parts through `:global`, scoped to this svg; part-specific rules live in the part. */
   .olli {
     display: block;
     flex: none;

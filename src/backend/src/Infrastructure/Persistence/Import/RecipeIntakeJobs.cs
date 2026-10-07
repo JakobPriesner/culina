@@ -11,7 +11,7 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, material::text as material, (select count(*) from recipe_intake_photos p where p.job_id=recipe_intake_jobs.id)::int as photo_count, error_code";
 
-    /// <summary>The material as stored: the photographs are rows of their own.</summary>
+    /// <summary>The material as stored; photographs live in their own table.</summary>
     private static string Stored(IntakeMaterial material) => JsonSerializer.Serialize(material with { Photos = [] }, Json);
 
     public async Task<Result<IntakeJob>> EnqueueAsync(Guid id, Guid userId, Guid householdId, IntakeMaterial material, CancellationToken token)

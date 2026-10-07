@@ -2,16 +2,7 @@ using Application.Abstractions;
 
 namespace Infrastructure.Persistence.Recipes;
 
-/// <summary>
-/// What a recipe card shows, as PostgreSQL returns it — the part the search, the
-/// suggestions and the related recipes all select, so they all read it the same
-/// way.
-/// </summary>
-/// <remarks>
-/// Each of those queries adds what it ranks by on top. Three copies of these
-/// fifteen fields and of the mapping into <see cref="RecipeSearchRow"/> were
-/// three places to forget a new field.
-/// </remarks>
+/// <summary>What a recipe card shows, shared by search, suggestions and related recipes; each query adds its ranking columns.</summary>
 internal record RecipeCardRow
 {
     public Guid RecipeId { get; init; }

@@ -6,11 +6,7 @@
   import type { Scaling } from './scaled.svelte';
   import type { RecipeReading } from '../types';
 
-  /**
-   * The strip under the title that says how many this is for.
-   *
-   * Same position in both weightings. Moving this breaks the transition.
-   */
+  /** Same position in both weightings; moving it breaks the transition. */
   interface Props {
     recipe: RecipeReading;
     servings: number;
@@ -32,16 +28,10 @@
     onchange={(value) => onservings?.(value)}
   />
 
-  <!-- The other end of the same machinery: a leftover 600 g of flour rather
-       than a number of portions. -->
   <Button onclick={onscaleto}>{m['scaleTo.open']()}</Button>
 
   {#if scaling.timesAreDoubtful}
-    <!--
-      A quiet line, never a modal. Baking time follows the thickness of what
-      is in the tin, not its mass, and oven temperature does not scale at
-      all — so Culina says so rather than inventing a formula.
-    -->
+    <!-- Baking time follows thickness and oven temperature does not scale, so warn rather than invent a formula. -->
     <p class="warning">
       {m['recipe.timesWarning']({ count: scaling.baseYieldLabel })}
     </p>

@@ -23,15 +23,8 @@ async function undoDelete(recipeId: string) {
   await goto(resolve('/(app)/recipes/[recipeId]', { recipeId }));
 }
 
-/** The question of whether to delete the recipe on screen, and what it is waiting for. */
 export function useRecipeDeletion() {
-  /**
-   * The recipe the delete question is about, taken when it is asked.
-   *
-   * Held rather than read off the store, because the store lets go of the
-   * recipe the moment it is deleted, and the question should not lose its
-   * title in the instant before it closes.
-   */
+  /** The recipe being asked about, held here because the store drops it on delete and the dialog still needs its title. */
   const ui = $state({
     doomed: null as Recipe | null,
     deleting: false,
@@ -58,15 +51,12 @@ export function useRecipeDeletion() {
     ui.failure = await recipes.remove(recipe.id, recipe.version);
     ui.deleting = false;
 
-    // The question stays open on a failure: the recipe is still there, and
-    // trying again is the likeliest next thing.
+    // Stay open on failure so the user can retry.
     if (ui.failure) {
       return;
     }
 
-    // What the server deleted along with it, taken out of the answers this
-    // browser keeps and would not ask for again. Everything else that showed
-    // the recipe reads afresh when it is next opened.
+    // Drop the cached answers that would not be re-fetched; everything else reloads on open.
     cooking.forget(recipe.id);
     suggestions.forget(recipe.id);
     related.forget(recipe.id);
@@ -74,8 +64,6 @@ export function useRecipeDeletion() {
     ui.doomed = null;
     toaster.show({
       message: () => m['recipe.delete.done']({ title: recipe.title }),
-      // The bin, from the toast: the moment somebody realises it was the
-      // wrong recipe is the moment this is on screen.
       action: { label: () => m['trash.undo'](), run: () => void undoDelete(recipe.id) }
     });
 

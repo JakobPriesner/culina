@@ -2,18 +2,15 @@
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
 
-  /** What can be done with what was pasted, and why something cannot. */
   interface Props {
     busy: boolean;
-    /** Nothing was understood, so there is nothing to preview. */
     nothingFound: boolean;
     reading: boolean;
-    /** The assistant can be offered at all, for this person and this page. */
     assistantAvailable: boolean;
     assisting: boolean;
-    /** There is nothing to hand the assistant, or too much. */
+    /** Nothing to hand the assistant, or too much. */
     assistantDisabled: boolean;
-    /** Photos are held but the assistant, which reads them, is not available. */
+    /** Photos held but no assistant to read them. */
     photosUnreadable: boolean;
     tooLong: boolean;
     onpreview: () => void;

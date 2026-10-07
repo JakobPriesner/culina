@@ -3,12 +3,7 @@
   import type { PoseSpec } from './poses';
   import type { Rig } from './rig.svelte';
 
-  /**
-   * A single pair of green handles in every pose. When holding a prop, the
-   * handle bends toward it; no second set of line-drawn limbs is added. The
-   * brush's right handle follows the brush to the easel, so the drawing pose
-   * draws that one itself.
-   */
+  /** One pair of handles in every pose, bending toward a held prop; the drawing pose draws the brush's right handle itself. */
   let { prop, rig }: { prop: PoseSpec['prop']; rig: Rig } = $props();
 
   const gripsLeft = $derived(prop === 'pencil' || prop === 'brush' || prop === 'card');

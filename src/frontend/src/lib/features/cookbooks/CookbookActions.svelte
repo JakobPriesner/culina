@@ -2,13 +2,7 @@
   import { ActionMenu, Button, IconButton } from '$ds';
   import { m } from '$shell/i18n';
 
-  /**
-   * What can be done to one cookbook, in the row beside its title.
-   *
-   * The two recurring loops stay visible: filling the shelf — by hand, or by
-   * its rules when it fills itself — and taking it to the shop. Editing and
-   * deletion are occasional management, so they share the menu beside them.
-   */
+  /** Filling the shelf and shopping stay visible; edit and delete live in the menu. */
   interface Props {
     /** A shelf that fills itself is edited by its rules, not by hand. */
     automatic: boolean;

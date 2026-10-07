@@ -8,23 +8,8 @@ export interface ShelfAddition {
 }
 
 /**
- * The whole shelf, onto the shopping list.
- *
- * The shelf is read from the server page by page, in a list of its own: the one
- * on screen is only its first page, narrowed by whatever is typed in the search
- * box, and neither is "the shelf". Reading it through the recipe list, with the
- * shelf as the only filter, is also what makes a shelf that fills itself come
- * out complete — its recipes are whatever its rules match, and only the server
- * can say which those are.
- *
- * One call per recipe, through the path a single recipe already takes. A
- * second endpoint that merged a shelf at once would be a second place for
- * merging to behave differently, and merging is the entire value of the list.
- * It is also why a partial failure is reported rather than rolled back: some
- * of it is genuinely on the list, and somebody may be reading it in a shop.
- *
- * A shelf that could not be read to its end is an error and adds nothing:
- * "added the shelf" over half of it is the lie this exists to avoid.
+ * Adds every recipe on the shelf, one call each through the single-recipe path so merging stays in one place.
+ * Reads the shelf in its own store (the on-screen list is one filtered page); a shelf not read to the end adds nothing, and a partial add is reported, not rolled back.
  */
 export async function addShelfToShoppingList(
   householdId: string,

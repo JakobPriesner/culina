@@ -1,14 +1,7 @@
 namespace Infrastructure.Persistence.Recipes;
 
-/// <summary>
-/// The SQL every query that reads a recipe's time says the same way.
-/// </summary>
-/// <remarks>
-/// A recipe with no stated time is unknown, not instant: it has no total, and a
-/// time ceiling excludes it rather than counting it as zero minutes. That rule
-/// was written out in ten places, so a change to it was ten edits and a miss
-/// was two screens disagreeing about whether a recipe fits.
-/// </remarks>
+/// <summary>The SQL for a recipe's time.</summary>
+/// <remarks>A recipe with no stated time is unknown, not instant: a time ceiling excludes it.</remarks>
 internal static class RecipeSql
 {
     /// <summary>Prep plus cook, or null when neither is stated.</summary>

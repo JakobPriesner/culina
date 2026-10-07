@@ -1,8 +1,6 @@
 /**
- * Whether anybody can see Olli: on screen, in a visible tab. While work goes
- * on, a change in either starts the movement over (or stops it) so the
- * blinks and beats are not spent on nobody. Call while the component is
- * initialising: it sets up its own effects.
+ * Tracks whether Olli is on screen in a visible tab and restarts or rests the movement on change.
+ * Call during component init, as it sets up effects.
  */
 export function createAudience({
   element,
@@ -11,15 +9,12 @@ export function createAudience({
   restart
 }: {
   element: () => Element | undefined;
-  /** Whether movement goes on for as long as the work does. */
   active: () => boolean;
-  /** Cancels every pending beat. */
   rest: () => void;
-  /** Starts the movement over; only called when somebody is watching. */
+  /** Only called while watched. */
   restart: () => void;
 }) {
-  // A plain field, not state: nothing renders it, and reading state from the
-  // effects below would make them wake themselves up.
+  // Not state: nothing renders it, and a tracked read would make the effects retrigger themselves.
   let visible = true;
   const watched = () => visible && !document.hidden;
   const refresh = () => {

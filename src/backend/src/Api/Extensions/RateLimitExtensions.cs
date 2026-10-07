@@ -88,8 +88,7 @@ internal static class RateLimitExtensions
     internal const string Assistance = "assistance";
 
     /// <summary>
-    /// Taking a household's archive, which streams every recipe with every
-    /// photograph inline: the heaviest read there is. Restoring one shares the
+    /// Taking a household's archive, the heaviest read. Restoring one shares the
     /// budget, being the heaviest write.
     /// </summary>
     internal const string Archive = "archive-export";

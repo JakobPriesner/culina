@@ -10,45 +10,25 @@ import { explain } from '$shell/explain';
 import { m } from '$shell/i18n';
 import { toaster } from '$shell/toaster.svelte';
 
-/** What the actions need to know about the recipe on screen. */
 interface Recipe {
   readonly recipeId: () => string;
-  /** The yield on screen. */
   readonly servings: () => number;
   readonly householdId: () => string | null;
 }
 
 /** What can be done with the recipe on screen at the yield it is shown at. */
 export function useRecipeActions(on: Recipe) {
-  /**
-   * Replaced, not pushed: scaling is a view of the recipe, and every tap of the
-   * stepper becoming a back-button step would bury the page you came from.
-   *
-   * `goto`, not `replaceState`. `replaceState` is for shallow routing — state
-   * the page carries without the URL meaning anything different — so it changes
-   * the address bar and tells nothing on screen that anything happened. The
-   * yield is not shallow: it is what every amount on the page is derived from,
-   * and a stepper that silently moved the address bar and left the amounts
-   * alone is exactly the quiet wrongness this app exists to avoid.
-   */
+  /** Replaces history so stepper taps do not bury the previous page. `goto`, not shallow `replaceState`, because the yield drives every amount on screen. */
   function scale(value: number) {
     // eslint-disable-next-line svelte/no-navigation-without-resolve -- The page's own URL, with only its yield changed.
     void goto(urlAtYield(page.url, value, recipes.detail), {
       replaceState: true,
-      // The thumb is still on the stepper and the eye is on the ingredient
-      // list; neither should be moved by a number changing.
       keepFocus: true,
       noScroll: true
     });
   }
 
-  /**
-   * Puts the ingredients on the list at the scaling on screen.
-   *
-   * The scaling matters: adding a recipe you have scaled to six and getting the
-   * amounts for four is the kind of quiet wrongness nobody notices until they
-   * are short of butter.
-   */
+  /** Adds the ingredients at the scaling on screen, not the recipe's own yield. */
   async function addToShoppingList() {
     const householdId = on.householdId();
 
@@ -64,10 +44,7 @@ export function useRecipeActions(on: Recipe) {
     });
   }
 
-  /**
-   * Makes the household on screen its own copy of an inherited recipe, and
-   * opens it where it can be changed — the reason anybody asks for a copy.
-   */
+  /** Copies an inherited recipe into this household and opens the copy in the editor. */
   async function copy() {
     const householdId = on.householdId();
 
@@ -88,7 +65,6 @@ export function useRecipeActions(on: Recipe) {
     await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId: copied.id }));
   }
 
-  /** The yield travels with you, so cooking opens at the number you chose. */
   function startCooking() {
     const target = new SvelteURL(
       resolve('/(app)/recipes/[recipeId]/cook', { recipeId: on.recipeId() }),

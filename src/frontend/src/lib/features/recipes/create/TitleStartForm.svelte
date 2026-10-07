@@ -7,7 +7,6 @@
   interface Props {
     title: string;
     failure: AppError | null;
-    /** Whether a slow create has gone on long enough to show progress. */
     loading: boolean;
     onsubmit: () => void;
   }
@@ -42,13 +41,7 @@
 </form>
 
 <style>
-  /*
-   * The one panel on the page, so the eye has somewhere to land.
-   *
-   * A card is not the default wrapper for a block of content, and this is not
-   * decoration: it is the difference between "here is a form" and "start
-   * here". Everything below it is deliberately outside.
-   */
+  /* The page's one panel, so the eye has somewhere to land: "start here", not "here is a form". */
   .start {
     display: flex;
     flex-direction: column;
@@ -65,9 +58,9 @@
     width: 100%;
   }
 
-  /* The page's one action, across the thumb's reach. Wide enough and it sizes
-     to its own words again, where a button the width of a column would be a
-     banner. */
+  /*
+   * On phones the lone action spans the width; wider, a column-wide button would read as a banner.
+   */
   @media (max-width: 30rem) {
     .start :global(.button) {
       width: 100%;

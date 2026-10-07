@@ -7,14 +7,7 @@ const bouncy = { stiffness: 0.25, damping: 0.45 };
 
 export type DrawingPhase = 'inspecting' | 'painting' | 'choosing-colour' | 'still';
 
-/**
- * Everything about Olli that moves, each on its own spring or tween.
- *
- * A pose is only a set of targets for these, which is why any pose can follow
- * any other: whatever is in flight simply heads for its new place from
- * wherever it is. The hat is on a softer spring than the pot, so it lands a
- * beat late.
- */
+/** Everything about Olli that moves, each on its own spring or tween; a pose is only a set of targets, so any pose can follow any other. */
 export function createRig(start: PoseSpec, still: boolean) {
   const tilt = new Spring(start.tilt, firm);
   const lean = new Spring(0, firm);
@@ -28,7 +21,6 @@ export function createRig(start: PoseSpec, still: boolean) {
   const lookY = new Spring(start.look[1], firm);
   const lid = new Tween(1);
   const shown = new Tween(still ? 1 : 0);
-  /** How far the steam of this arrival has risen, from 0 to 1. */
   const steam = new Tween(0);
   const pencil = new Tween(0);
   const pencilX = new Tween(-15);
