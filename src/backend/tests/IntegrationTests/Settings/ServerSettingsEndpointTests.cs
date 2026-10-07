@@ -117,6 +117,27 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Update_ShouldRefuseAProxyNetworkThatWouldTrustEveryClient_AndSaveNothing()
+    {
+        // Arrange
+        using var factory = new CulinaApiFactory(postgres);
+        using var admin = await AdminAsync(factory);
+        var proposal = await ProposalAsync(admin);
+        proposal["forwardedHeaders"]!["knownNetworks"] = new JsonArray("0.0.0.0/0");
+
+        // Act
+        var response = await admin.PutAsync("/api/v1/settings/server", proposal, Token);
+
+        // Assert
+        // "Make it work" from the screen would let every client forge its
+        // address, which the per-address limits and the security log trust.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("settings.proxy_network_too_wide", response.ProblemCode);
+        Assert.Equal(0, factory.Restarts.Scheduled);
+        Assert.False(File.Exists(factory.ServerSettingsFile));
+    }
+
+    [Fact]
     public async Task Settings_ShouldBeOpen_WhileNobodyHasAnAccount()
     {
         // Arrange

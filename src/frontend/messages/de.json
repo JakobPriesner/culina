@@ -1514,5 +1514,6 @@
   "intake.resume": "Animation abspielen",
   "problem.settings.insecure_cookies": "Sichere Cookies lassen sich nur ausschalten, wenn die Installation dieses Servers es erlaubt. Öffne Culina stattdessen über https://.",
   "server.maxSessionDays": "Tage, die eine Sitzung höchstens hält",
-  "server.maxSessionDays.hint": "Ab der Anmeldung gezählt, egal wie oft sie genutzt wird. Danach ist eine neue Anmeldung nötig."
+  "server.maxSessionDays.hint": "Ab der Anmeldung gezählt, egal wie oft sie genutzt wird. Danach ist eine neue Anmeldung nötig.",
+  "problem.settings.proxy_network_too_wide": "Dieses Proxy-Netz ist zu groß, um ihm zu vertrauen: Jeder Client darin könnte sich als beliebige Adresse ausgeben. Gib das Netz deines Proxys an, höchstens ein /8 für IPv4 oder ein /32 für IPv6, etwa 172.16.0.0/12."
 }
