@@ -1,20 +1,20 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { untrack } from 'svelte';
 
   import { FilterChip, SearchField } from '$ds';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
   import { m } from '$shell/i18n';
 
   import { effectiveSort, type RecipeQuery, type SortContext } from '../stores/libraryView.svelte';
-  import { savedSearches, type SavedSearch } from '../stores/savedSearches.svelte';
+  import type { SavedSearch } from '../stores/savedSearches.svelte';
   import SearchChips from '../search/SearchChips.svelte';
   import SearchNotice from '../search/SearchNotice.svelte';
-  import { withoutChip } from '../search/wording';
-  import type { Interpretation, SearchChip } from '../types';
+  import type { Interpretation } from '../types';
+  import AppliedFilters from './AppliedFilters.svelte';
   import FilterSheet from './FilterSheet.svelte';
+  import { createQueryBox } from './queryBox.svelte';
+  import SavedSearchChips from './SavedSearchChips.svelte';
   import SavedSearchSheet from './SavedSearchSheet.svelte';
-  import { sortLabel, timeLabel } from './labels';
 
   /**
    * One toolbar, for every list of recipes.
@@ -24,8 +24,7 @@
    * component now, so a shelf can be sorted and narrowed exactly as the library
    * can, and neither can gain a filter the other quietly lacks.
    *
-   * The debounce lives here rather than in each page for the same reason: two
-   * boxes that waited different lengths would feel like two different apps.
+   * The debounce is shared for the same reason: see `createQueryBox`.
    */
   interface Props {
     id: string;
@@ -75,32 +74,7 @@
     onpromote
   }: Props = $props();
 
-  /** A reading removed is its characters removed from the query, applied at once. */
-  function removeChip(chip: SearchChip) {
-    const next = withoutChip(view.query, chip);
-
-    clearTimeout(debounce);
-    typed = next;
-    pushed = next;
-    view.query = next;
-  }
-
-  /** What is in the box, which runs ahead of what has been applied. */
-  let typed = $state(untrack(() => view.query));
-
-  /**
-   * The last thing this box put into the query.
-   *
-   * What tells a change made here from one made anywhere else, and the whole of
-   * why the effect below can leave typing alone. Without it that effect read
-   * `typed`, which made every keystroke one of its own dependencies: the box
-   * was set to "o", the effect woke, found the applied query still empty, and
-   * put the box back — clearing the debounce on its way. Searching the library
-   * did nothing at all.
-   */
-  let pushed = $state(untrack(() => view.query));
-
-  let debounce: ReturnType<typeof setTimeout> | undefined;
+  const box = createQueryBox(() => view);
 
   let filtering = $state(false);
   let saving = $state(false);
@@ -110,56 +84,8 @@
   /** The tag's own word, so a chip reads "Vegetarisch" rather than its slug. */
   const named = $derived(new Map(tags.items.map((tag) => [tag.slug, tag.name] as const)));
 
-  $effect(() => {
-    if (savable && householdId) {
-      void savedSearches.load(householdId);
-    }
-  });
-
-  // The box follows the query when something else sets it — applying a saved
-  // search, or clearing everything — without fighting what is being typed.
-  // `pushed`, not `typed`: see above.
-  $effect(() => {
-    if (view.query !== pushed) {
-      clearTimeout(debounce);
-      pushed = view.query;
-      typed = view.query;
-    }
-  });
-
-  $effect(() => () => clearTimeout(debounce));
-
-  function type(value: string) {
-    typed = value;
-    clearTimeout(debounce);
-
-    // Long enough that a word is finished, short enough that it feels live.
-    debounce = setTimeout(() => {
-      pushed = value;
-      view.query = value;
-    }, 250);
-  }
-
-  function clearSearch() {
-    typed = '';
-    pushed = '';
-    clearTimeout(debounce);
-    view.query = '';
-  }
-
   function apply(search: SavedSearch) {
     view.assign(search);
-  }
-
-  /** Whether the toolbar is showing exactly what this saved search asks for. */
-  function showing(search: SavedSearch): boolean {
-    return (
-      search.query === view.query &&
-      search.maxMinutes === view.maxMinutes &&
-      search.sort === view.sort &&
-      search.tags.length === view.tags.length &&
-      search.tags.every((slug) => view.tags.includes(slug))
-    );
   }
 </script>
 
@@ -168,13 +94,13 @@
     <div class="search">
       <SearchField
         {id}
-        value={typed}
+        value={box.typed}
         label={searchLabel}
         placeholder={searchPlaceholder}
         clearLabel={m['recipes.list.clearSearch']()}
         {keyShortcuts}
-        oninput={type}
-        onclear={clearSearch}
+        oninput={box.type}
+        onclear={box.clear}
       />
     </div>
 
@@ -204,75 +130,22 @@
   </div>
 
   {#if interpretation}
-    <SearchChips chips={interpretation.chips} {scope} onremove={removeChip} />
+    <SearchChips chips={interpretation.chips} {scope} onremove={box.removeChip} />
     <SearchNotice
       {interpretation}
       {total}
       query={view.query}
       offer={false}
       onastyped={() => onastyped?.()}
-      onremove={removeChip}
+      onremove={box.removeChip}
     />
   {/if}
 
-  {#if savable && savedSearches.items.length > 0}
-    <div class="saved" role="group" aria-label={m['saved.title']()}>
-      {#each savedSearches.items as search (search.id)}
-        <FilterChip selected={showing(search)} onclick={() => apply(search)}>
-          {search.name}
-        </FilterChip>
-      {/each}
-    </div>
+  {#if savable}
+    <SavedSearchChips {householdId} {view} onapply={apply} />
   {/if}
 
-  <!-- What is applied, each removable where it stands. Chips rather than a
-       sentence, and the same vocabulary the search overlay will use, so the
-       two arrive as one idea rather than two. -->
-  {#if view.tags.length > 0 || view.maxMinutes !== null || view.sort !== null}
-    <ul class="applied" aria-label={m['filters.applied']()}>
-      {#each view.tags as slug (slug)}
-        <li>
-          <button
-            type="button"
-            class="chip"
-            aria-label={m['filters.chip.remove']({ name: named.get(slug) ?? slug })}
-            onclick={() => view.toggleTag(slug)}
-          >
-            {named.get(slug) ?? slug}
-            <span aria-hidden="true">×</span>
-          </button>
-        </li>
-      {/each}
-
-      {#if view.maxMinutes !== null}
-        <li>
-          <button
-            type="button"
-            class="chip"
-            aria-label={m['filters.chip.remove']({ name: timeLabel(view.maxMinutes) })}
-            onclick={() => (view.maxMinutes = null)}
-          >
-            {timeLabel(view.maxMinutes)}
-            <span aria-hidden="true">×</span>
-          </button>
-        </li>
-      {/if}
-
-      {#if view.sort !== null}
-        <li>
-          <button
-            type="button"
-            class="chip"
-            aria-label={m['filters.chip.remove']({ name: sortLabel(order) })}
-            onclick={() => (view.sort = null)}
-          >
-            {m['filters.chip.sort']({ name: sortLabel(order) })}
-            <span aria-hidden="true">×</span>
-          </button>
-        </li>
-      {/if}
-    </ul>
-  {/if}
+  <AppliedFilters {view} {named} {order} />
 </div>
 
 <FilterSheet
@@ -342,48 +215,6 @@
 
   .summary {
     margin-inline-start: auto;
-  }
-
-  /* One line that scrolls rather than wraps: saved searches that wrapped would
-     push the results below the fold on a phone, which is the one screen where
-     the point of them is not having to set the filters again. */
-  .saved {
-    display: flex;
-    gap: var(--space-2);
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .saved::-webkit-scrollbar {
-    display: none;
-  }
-
-  .applied {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    min-height: var(--control-sm);
-    padding: 0 var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    background: var(--surface-sunken);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-
-  .chip:hover {
-    border-color: var(--border-strong);
   }
 
   @media (max-width: 40rem) {

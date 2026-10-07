@@ -18,6 +18,8 @@ const dialog = () => screen.getByRole('dialog');
  * stubbed to the observable parts: the open state and the close event.
  */
 beforeEach(() => {
+  // jsdom has no animations; a test that wants an exit to wait for gives it one.
+  Reflect.deleteProperty(HTMLDialogElement.prototype, 'getAnimations');
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.open = true;
   };
@@ -107,5 +109,51 @@ describe('a modal dialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+});
+
+/*
+ * A page mounts every sheet it might offer, so a dialog that built its content
+ * at mount would build all of it for nothing.
+ */
+describe("a dialog's content", () => {
+  const field = () => screen.queryByRole('textbox', { hidden: true });
+
+  it('is not built until the dialog is opened', async () => {
+    renderWithProviders(DialogHarness, {});
+
+    expect(field()).not.toBeInTheDocument();
+
+    await userEvent.click(open());
+
+    expect(field()).toBeInTheDocument();
+  });
+
+  it('is dropped once the dialog has closed, so reopening starts clean', async () => {
+    renderWithProviders(DialogHarness, {});
+
+    await userEvent.click(open());
+    await userEvent.type(field()!, 'Soup');
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => expect(field()).not.toBeInTheDocument());
+  });
+
+  it('stays while the exit is still being painted', async () => {
+    let finishExit!: () => void;
+    const exit = new Promise<void>((resolve) => (finishExit = resolve));
+
+    HTMLDialogElement.prototype.getAnimations = () => [{ finished: exit } as unknown as Animation];
+
+    renderWithProviders(DialogHarness, {});
+
+    await userEvent.click(open());
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(field()).toBeInTheDocument();
+
+    finishExit();
+
+    await waitFor(() => expect(field()).not.toBeInTheDocument());
   });
 });

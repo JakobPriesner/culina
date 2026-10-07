@@ -1,26 +1,10 @@
 import { ErrorCodes, http, request, type AppError } from '$api';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
-import { toCookbook, toDetail, toMembership } from '../mappers';
 import type { Cookbook, CookbookDetail, CookbookMembership, CookbookRules } from '../types';
 
-const pageSize = 24;
-
-/**
- * Rules as the API takes them, or nothing at all.
- *
- * Undefined rather than an empty object for a manual cookbook: sending blank
- * rules would be claiming it has some, and the server rightly refuses to give a
- * shelf somebody fills by hand a set of conditions as well.
- */
-const toWireRules = (rules?: CookbookRules | null) =>
-  rules
-    ? {
-        tags: [...rules.tags],
-        ingredients: [...rules.ingredients],
-        maxMinutes: rules.maxMinutes ?? undefined
-      }
-    : undefined;
+import { Memberships } from './cookbookMemberships.svelte';
+import { Shelves } from './cookbookShelves.svelte';
 
 /**
  * A household's shelves.
@@ -29,325 +13,91 @@ const toWireRules = (rules?: CookbookRules | null) =>
  * what a recipe is: the recipes on a cookbook are the recipe store's, read with
  * a `cookbookId` filter, so a cookbook page gets search, filters and paging
  * without a second implementation of any of them.
+ *
+ * The shelves are `cookbookShelves.svelte.ts`, what is on them
+ * `cookbookMemberships.svelte.ts`; ticking a recipe on or off is the one thing
+ * that touches both, so it lives here.
  */
 class CookbookStore {
-  #items = $state<Cookbook[]>([]);
-  #open = $state<CookbookDetail | null>(null);
-  #status = $state<LoadStatus>('idle');
-  #error = $state<AppError | null>(null);
-  #cursor = $state<string | null>(null);
-  #loadingMore = $state(false);
-  #moreFailed = $state(false);
-
-  /**
-   * Which cookbooks the recipe being looked at is on, by recipe id.
-   *
-   * Kept here rather than on the recipe, because it is a fact about the shelves
-   * and it has to change the moment one does — the tick in the sheet and the
-   * line under the title are the same answer and must never disagree.
-   */
-  #memberships = $state<Record<string, CookbookMembership[]>>({});
-
-  /**
-   * Every recipe on a shelf, by cookbook id — the same fact from the other
-   * side, for a picker that has to mark what is already on before anybody taps
-   * it. The shelf's own recipe list is paged, so it cannot answer that past
-   * the first screen.
-   */
-  #members = $state<Record<string, readonly string[]>>({});
-
-  /**
-   * Whether a first answer has ever arrived.
-   *
-   * Deliberately **not** `$state`. `list` is called from an `$effect`, and an
-   * effect tracks every reactive value read while it runs — so a `list` that
-   * read `#items` to decide whether to show a skeleton would depend on the
-   * thing it is about to write, and re-run itself forever. The same trap
-   * `units.svelte.ts` documents.
-   */
-  #loaded = false;
-
-  /**
-   * Whose items these are. Plain rather than $state: it is read before the
-   * first await of a method an effect calls, and a tracked read there would
-   * make the method's own writes call it again.
-   */
-  #householdId: string | null = null;
-
-  /** Whose shelves the memberships were read from. Plain, for the same reason. */
-  #membershipsFor: string | null = null;
+  #shelves = new Shelves();
+  #memberships = new Memberships();
 
   get items(): readonly Cookbook[] {
-    return this.#items;
+    return this.#shelves.items;
   }
 
   get open(): CookbookDetail | null {
-    return this.#open;
+    return this.#shelves.open;
   }
 
   get status(): LoadStatus {
-    return this.#status;
+    return this.#shelves.status;
   }
 
   get error(): AppError | null {
-    return this.#error;
+    return this.#shelves.error;
   }
 
   get hasMore(): boolean {
-    return this.#cursor !== null;
+    return this.#shelves.hasMore;
   }
 
   get moreFailed(): boolean {
-    return this.#moreFailed;
+    return this.#shelves.moreFailed;
   }
 
-  /** The cookbooks a recipe is on, or an empty list until it has been asked. */
   membershipsOf(recipeId: string): readonly CookbookMembership[] {
-    return this.#memberships[recipeId] ?? [];
+    return this.#memberships.of(recipeId);
   }
 
-  /** The recipes on a shelf, or an empty list until it has been asked. */
   membersOf(cookbookId: string): readonly string[] {
-    return this.#members[cookbookId] ?? [];
+    return this.#memberships.membersOf(cookbookId);
   }
 
   contains(recipeId: string, cookbookId: string): boolean {
-    return this.membershipsOf(recipeId).some((shelf) => shelf.id === cookbookId);
+    return this.#memberships.contains(recipeId, cookbookId);
   }
 
-  async list(householdId: string): Promise<void> {
-    // Another household's shelves are not the ones to keep while this one's
-    // arrive, so a change of household gets the skeleton a first read gets.
-    if (this.#householdId !== householdId) {
-      this.#householdId = householdId;
-      this.#items = [];
-      this.#cursor = null;
-      this.#loaded = false;
-    }
-
-    // The shelves already on screen stay while the next answer arrives:
-    // replacing them with a skeleton to show the same shelves again loses your
-    // place for nothing. Only the very first read shows one.
-    if (!this.#loaded) {
-      this.#status = 'loading';
-    }
-
-    this.#error = null;
-    this.#moreFailed = false;
-
-    const result = await request(() =>
-      http.GET('/api/v1/cookbooks', {
-        params: { query: { householdId, limit: pageSize } }
-      })
-    );
-
-    this.#loaded = true;
-
-    if (result.ok) {
-      this.#items = result.value.items.map(toCookbook);
-      this.#cursor = result.value.nextCursor ?? null;
-      this.#status = 'ready';
-
-      return;
-    }
-
-    this.#error = result.error;
-    this.#status = 'failed';
+  list(householdId: string): Promise<void> {
+    return this.#shelves.list(householdId);
   }
 
-  /** Appends the next page. What is already on screen is never disturbed. */
-  async loadMore(householdId: string): Promise<void> {
-    if (!this.#cursor || this.#loadingMore) {
-      return;
-    }
-
-    this.#loadingMore = true;
-    this.#moreFailed = false;
-
-    const result = await request(() =>
-      http.GET('/api/v1/cookbooks', {
-        params: { query: { householdId, limit: pageSize, cursor: this.#cursor ?? undefined } }
-      })
-    );
-
-    this.#loadingMore = false;
-
-    if (result.ok) {
-      this.#items = [...this.#items, ...result.value.items.map(toCookbook)];
-      this.#cursor = result.value.nextCursor ?? null;
-
-      return;
-    }
-
-    // The page that is there stays. A failed page is a reason to stop fetching
-    // and ask, not to empty the screen.
-    this.#error = result.error;
-    this.#moreFailed = true;
+  loadMore(householdId: string): Promise<void> {
+    return this.#shelves.loadMore(householdId);
   }
 
-  async load(cookbookId: string): Promise<void> {
-    this.#status = 'loading';
-    this.#error = null;
-
-    const result = await request(() =>
-      http.GET('/api/v1/cookbooks/{cookbookId}', { params: { path: { cookbookId } } })
-    );
-
-    if (result.ok) {
-      this.#open = toDetail(result.value);
-      this.#status = 'ready';
-
-      return;
-    }
-
-    this.#error = result.error;
-    this.#status = 'failed';
+  load(cookbookId: string): Promise<void> {
+    return this.#shelves.load(cookbookId);
   }
 
-  /**
-   * Starts a cookbook.
-   *
-   * Rules are what makes one that fills itself; there is no separate flag that
-   * could disagree with them.
-   */
-  async create(
+  create(
     householdId: string,
     name: string,
     description?: string,
     rules?: CookbookRules | null
   ): Promise<CookbookDetail | null> {
-    const result = await request(() =>
-      http.POST('/api/v1/cookbooks', {
-        body: { householdId, name, description, rules: toWireRules(rules) }
-      })
-    );
-
-    if (!result.ok) {
-      this.#error = result.error;
-
-      return null;
-    }
-
-    const created = toDetail(result.value);
-
-    // Straight to the front, where the list orders it anyway: a shelf somebody
-    // just made should be the one they can see.
-    this.#items = [created, ...this.#items];
-    this.#error = null;
-
-    return created;
+    return this.#shelves.create(householdId, name, description, rules);
   }
 
-  async rename(
+  rename(
     cookbookId: string,
     name: string,
     description: string | null,
     rules?: CookbookRules | null
   ): Promise<boolean> {
-    const current = this.#open;
-
-    if (!current || current.id !== cookbookId) {
-      return false;
-    }
-
-    const result = await request(() =>
-      http.PATCH('/api/v1/cookbooks/{cookbookId}', {
-        params: { path: { cookbookId } },
-        body: { name, description: description ?? undefined, rules: toWireRules(rules) },
-        headers: { 'If-Match': `"v${current.version}"` }
-      })
-    );
-
-    if (!result.ok) {
-      this.#error = result.error;
-
-      return false;
-    }
-
-    const renamed = toDetail(result.value);
-
-    this.#open = renamed;
-    this.#items = this.#items.map((shelf) =>
-      shelf.id === cookbookId
-        ? { ...shelf, name: renamed.name, description: renamed.description }
-        : shelf
-    );
-    this.#error = null;
-
-    return true;
+    return this.#shelves.rename(cookbookId, name, description, rules);
   }
 
-  /**
-   * Deletes the open cookbook, quoting the version it was opened at: somebody
-   * who renamed it or changed its rules in the meantime gets a 412 here, not a
-   * shelf that vanished under them.
-   */
-  async remove(cookbookId: string): Promise<boolean> {
-    const current = this.#open;
-
-    if (!current || current.id !== cookbookId) {
-      return false;
-    }
-
-    const removed = this.#items;
-
-    // Gone from the screen before the server has agreed, and put back exactly
-    // as it was if it does not.
-    this.#items = this.#items.filter((shelf) => shelf.id !== cookbookId);
-
-    const result = await request(() =>
-      http.DELETE('/api/v1/cookbooks/{cookbookId}', {
-        params: { path: { cookbookId } },
-        headers: { 'If-Match': `"v${current.version}"` }
-      })
-    );
-
-    if (result.ok) {
-      this.#error = null;
-
-      return true;
-    }
-
-    this.#items = removed;
-    this.#error = result.error;
-
-    return false;
+  remove(cookbookId: string): Promise<boolean> {
+    return this.#shelves.remove(cookbookId);
   }
 
-  /**
-   * Which cookbooks a recipe is on: the shelves of the household named, which
-   * an inherited recipe can be on too, or of the recipe's own household.
-   */
-  async loadMemberships(recipeId: string, householdId: string | null = null): Promise<void> {
-    // The same recipe is on different shelves in different households.
-    if (this.#membershipsFor !== householdId) {
-      this.#membershipsFor = householdId;
-      this.#memberships = {};
-    }
-
-    const result = await request(() =>
-      http.GET('/api/v1/recipes/{recipeId}/cookbooks', {
-        params: { path: { recipeId }, query: householdId ? { householdId } : {} }
-      })
-    );
-
-    if (result.ok) {
-      this.#memberships = {
-        ...this.#memberships,
-        [recipeId]: result.value.items.map(toMembership)
-      };
-    }
+  loadMemberships(recipeId: string, householdId: string | null = null): Promise<void> {
+    return this.#memberships.load(recipeId, householdId);
   }
 
-  /** Which recipes are on a shelf, all of them. */
-  async loadMembers(cookbookId: string): Promise<void> {
-    const result = await request(() =>
-      http.GET('/api/v1/cookbooks/{cookbookId}/recipes', { params: { path: { cookbookId } } })
-    );
-
-    if (result.ok) {
-      this.#members = { ...this.#members, [cookbookId]: result.value.recipeIds };
-    }
+  loadMembers(cookbookId: string): Promise<void> {
+    return this.#memberships.loadMembers(cookbookId);
   }
 
   /**
@@ -358,23 +108,8 @@ class CookbookStore {
    * bookkeeping to drift.
    */
   async setOn(recipeId: string, cookbook: CookbookMembership, on: boolean): Promise<boolean> {
-    const before = this.membershipsOf(recipeId);
-    const counted = this.#items;
-    const members = this.membersOf(cookbook.id);
-
-    this.#remember(
-      recipeId,
-      on ? [...before, cookbook] : before.filter((shelf) => shelf.id !== cookbook.id)
-    );
-    this.#members = {
-      ...this.#members,
-      [cookbook.id]: on ? [...members, recipeId] : members.filter((id) => id !== recipeId)
-    };
-    this.#items = this.#items.map((shelf) =>
-      shelf.id === cookbook.id
-        ? { ...shelf, recipeCount: shelf.recipeCount + (on ? 1 : -1) }
-        : shelf
-    );
+    const undoTick = this.#memberships.set(recipeId, cookbook, on);
+    const undoCount = this.#shelves.countRecipe(cookbook.id, on ? 1 : -1);
 
     const path = { path: { cookbookId: cookbook.id, recipeId } };
 
@@ -387,15 +122,14 @@ class CookbookStore {
         );
 
     if (result.ok) {
-      this.#error = null;
+      this.#shelves.clearError();
 
       return true;
     }
 
-    this.#remember(recipeId, [...before]);
-    this.#members = { ...this.#members, [cookbook.id]: members };
-    this.#items = counted;
-    this.#error = result.error;
+    undoTick();
+    undoCount();
+    this.#shelves.fail(result.error);
 
     return false;
   }
@@ -406,26 +140,12 @@ class CookbookStore {
   }
 
   clearError(): void {
-    this.#error = null;
+    this.#shelves.clearError();
   }
 
   reset(): void {
-    this.#items = [];
-    this.#open = null;
-    this.#status = 'idle';
-    this.#error = null;
-    this.#cursor = null;
-    this.#loadingMore = false;
-    this.#moreFailed = false;
-    this.#memberships = {};
-    this.#members = {};
-    this.#loaded = false;
-    this.#householdId = null;
-    this.#membershipsFor = null;
-  }
-
-  #remember(recipeId: string, shelves: CookbookMembership[]): void {
-    this.#memberships = { ...this.#memberships, [recipeId]: shelves };
+    this.#shelves.reset();
+    this.#memberships.reset();
   }
 }
 

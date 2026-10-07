@@ -1,26 +1,19 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  import { goto } from '$app/navigation';
-  import { navigating, page } from '$app/state';
-  import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import { Toaster } from '$ds';
 
-  import type { Component } from 'svelte';
-
-  import HouseholdSwitcher from '$features/auth/HouseholdSwitcher.svelte';
   import { session } from '$features/auth/session.svelte';
-  import IntakeRuntime from '$features/import/IntakeRuntime.svelte';
   import KitchenRuntime from '$features/cooking/KitchenRuntime.svelte';
-  import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
-  import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
 
-  import Brand from './Brand.svelte';
-  import { connection } from './connection.svelte';
   import { m } from './i18n';
-  import { offersNewRecipe, offersSearch } from './navigation';
-  import Navigation from './Navigation.svelte';
-  import NewRecipeLink from './NewRecipeLink.svelte';
+  import { offersSearch } from './navigation';
+  import AppHeader from './shell/AppHeader.svelte';
+  import BottomBar from './shell/BottomBar.svelte';
+  import SearchHost from './shell/SearchHost.svelte';
+  import ShellDock from './shell/ShellDock.svelte';
+  import SkipLink from './shell/SkipLink.svelte';
 
   /**
    * The frame every signed-in page sits in.
@@ -69,65 +62,9 @@
 
   const focusedCooking = $derived(page.route.id === '/(app)/recipes/[recipeId]/cook');
 
-  /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
-  const creating = $derived(offersNewRecipe(page.url.pathname));
   const searchable = $derived(
     offersSearch(page.url.pathname) && session.activeHouseholdId !== null
   );
-
-  /**
-   * The search overlay, fetched the first time it is opened.
-   *
-   * Nobody pays for it on first load: it is a few kilobytes that only matter
-   * once somebody reaches for search, and by then a moment's import is
-   * hidden behind the sheet rising.
-   */
-  let Overlay = $state<Component<{
-    open: boolean;
-    householdId: string;
-    userId: string;
-    onclose: () => void;
-  }> | null>(null);
-
-  $effect(() => {
-    if (searchOverlay.open && Overlay === null) {
-      void import('$features/recipes/search/SearchOverlay.svelte').then((loaded) => {
-        Overlay = loaded.default;
-      });
-    }
-  });
-
-  /**
-   * ⌘K / Ctrl-K anywhere, and "/" wherever nothing is being typed — the habit
-   * people already have from every other app with a search.
-   */
-  function shortcut(event: KeyboardEvent) {
-    if (!searchable || searchOverlay.open) {
-      return;
-    }
-
-    const target = event.target as HTMLElement | null;
-    const typing = target?.closest('input, textarea, select, [contenteditable]') !== null;
-
-    if ((event.key === 'k' && (event.metaKey || event.ctrlKey)) || (event.key === '/' && !typing)) {
-      event.preventDefault();
-      searchOverlay.show();
-    }
-  }
-  /**
-   * Where a change of household leaves the page.
-   *
-   * A list — the library, the plan, the shopping — stays put and shows the
-   * other household's. A page about one thing, whose route names it, goes back
-   * to the library instead: that recipe or that cookbook belongs to the
-   * household just left, and staying on it would be showing one kitchen's
-   * thing under another kitchen's name.
-   */
-  function switched() {
-    if (page.route.id?.includes('[')) {
-      void goto(resolve('/(app)'));
-    }
-  }
 
   /**
    * How tall the window is, so the shell can tell when it is mostly furniture.
@@ -151,7 +88,7 @@
 
 <KitchenRuntime />
 
-<svelte:window bind:innerHeight={viewportHeight} onkeydown={shortcut} />
+<svelte:window bind:innerHeight={viewportHeight} />
 
 <div
   class="shell"
@@ -161,87 +98,21 @@
   style:--bottom-inset="{dockHeight + barHeight}px"
   style:--header-inset={headerHeight === undefined ? null : `${headerHeight}px`}
 >
-  <!-- First in the tab order and invisible until focused: without it, reaching
-       the page content by keyboard means tabbing through the navigation on
-       every single page. -->
-  <a class="skip" href="#content">{m['nav.skip']()}</a>
+  <SkipLink />
 
-  <header class="header" bind:clientHeight={headerHeight}>
-    {#if navigating.to}
-      <span class="progress" role="progressbar" aria-label={m['app.navigating']()}></span>
-    {/if}
-
-    <div class="header-inner">
-      <a class="brand" href={resolve('/(app)')} aria-label={m['app.name']()}><Brand /></a>
-
-      <div class="wide-only"><Navigation placement="top" /></div>
-
-      <!-- Takes pointer events back from the header for the household menu's
-           sake: its panel opens inside this, and would otherwise inherit the
-           header's "none" and pass every click through to the page beneath. -->
-      <div class="actions">
-        {#if session.activeHousehold}
-          <div class="tools">
-            {#if searchable}
-              <button
-                type="button"
-                class="search"
-                aria-label={m['search.open']()}
-                title="{m['search.open']()} (⌘K)"
-                aria-keyshortcuts="Meta+K Control+K /"
-                onclick={() => searchOverlay.show()}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  aria-hidden="true"
-                >
-                  <circle cx="10.5" cy="10.5" r="6.5" />
-                  <path d="m15.5 15.5 4 4" stroke-linecap="round" />
-                </svg>
-              </button>
-            {/if}
-            <HouseholdSwitcher onswitch={switched} />
-          </div>
-        {/if}
-        {#if creating}
-          <NewRecipeLink />
-        {/if}
-      </div>
-      {#if !connection.online}
-        <div class="status"><p class="offline">{m['connection.offline']()}</p></div>
-      {/if}
-    </div>
-  </header>
+  <AppHeader {searchable} bind:height={headerHeight} />
 
   <main class="content" id="content" tabindex="-1">
     {@render children()}
   </main>
 
-  <!-- The slot is reserved whether or not anything is in it, so the bar
-       appearing never pushes the page. -->
-  <div class="dock" bind:clientHeight={dockHeight}>
-    <IntakeRuntime />
-    <NowCookingBar />
-    {@render dock?.()}
-  </div>
+  <ShellDock bind:height={dockHeight}>{@render dock?.()}</ShellDock>
 
-  <div class="bar narrow-only" bind:clientHeight={barHeight}>
-    <Navigation placement="bottom" />
-  </div>
+  <BottomBar bind:height={barHeight} />
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
 
-  {#if Overlay && session.user && session.activeHouseholdId}
-    <Overlay
-      open={searchOverlay.open}
-      householdId={session.activeHouseholdId}
-      userId={session.user.userId}
-      onclose={() => searchOverlay.hide()}
-    />
-  {/if}
+  <SearchHost {searchable} />
 </div>
 
 <style>
@@ -258,378 +129,24 @@
   }
 
   .content {
-    view-transition-name: page-content;
-  }
-
-  .header {
-    grid-area: header;
-    position: sticky;
-    top: 0;
-    z-index: var(--z-sticky);
-    pointer-events: none;
-  }
-
-  /* The page fading out under the pills instead of being cut in half at the
-     top edge. A gradient and not a blur: what passes under here is a centred
-     column on a flat background, so a full-width backdrop-filter would spend
-     every scroll frame blurring the gutters on either side of it. */
-  .header::before {
-    content: '';
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline: 0;
-    height: calc(100% + var(--space-8));
-    background: linear-gradient(to bottom, var(--surface) 35%, transparent);
-  }
-
-  /* Three floating groups share one row: the brand, the destinations, and
-     the header's tools — the household and search in one capsule, and on the
-     library the way to write a new recipe beside it. The tools are there on
-     every page, so the destinations stay centred rather than sliding across as
-     the page changes. */
-  .header-inner {
-    /* Positioned, so the pills paint above the scrim rather than under it. */
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-4);
-    max-width: var(--layout-wide);
-    margin-inline: auto;
-    min-height: 4.5rem;
-    padding-block: var(--space-3);
-    padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
-  }
-
-  .actions {
-    grid-column: 2;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    min-width: 0;
-    pointer-events: auto;
-  }
-
-  /*
-   * One pane of glass with two controls in it, after the grouped toolbar
-   * buttons of Apple's Liquid Glass.
-   *
-   * Search and the household are both about what is on screen — find
-   * something in this kitchen, or look at another one — and two lone circles
-   * at opposite ends of the header said they had nothing to do with each
-   * other. The capsule is the glass; the buttons inside are only a lit circle
-   * under the pointer, so the pair reads as one thing with two parts.
-   */
-  .tools {
-    display: flex;
-    align-items: center;
-    padding: var(--space-1);
-    border-radius: var(--radius-full);
-    background: var(--surface-nav-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: var(--shadow-glass);
-  }
-
-  /* Connection feedback gets its own small badge without moving the controls. */
-  .status {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-    min-width: 0;
-  }
-
-  .offline {
-    pointer-events: auto;
-    margin: 0;
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-full);
-    background: var(--warning-subtle);
-    color: var(--text);
-    font-size: var(--text-xs);
-    text-align: end;
-  }
-
-  /*
-   * Stays, and stays on every page.
-   *
-   * It is the way home and it is the only thing on screen that says which app
-   * this is — which matters more here than in most places, because Culina is
-   * self-hosted and lives at whatever address somebody gave it. The slot could
-   * carry the page's own title once the title has scrolled away instead, and
-   * that is worth building one day; it is not worth replacing the only fixed
-   * point in the app with.
-   *
-   * What it did not have was the behaviour of the link it is: no hover, no
-   * pressed state, nothing to tell a pointer that this is a control rather than
-   * a logo printed in the corner. It borrows the navigation's own, because it
-   * sits in the same row of pills and does the same kind of thing.
-   */
-  .brand {
-    grid-column: 1;
-    justify-self: start;
-    /* A flex box, not a line of text: a line box would add its strut to the
-       mark's height and leave this pill taller than the ones beside it. */
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    text-decoration: none;
-    padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
-    border-radius: var(--radius-full);
-    background: var(--surface-nav-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: var(--shadow-glass);
-    pointer-events: auto;
-    transition: background-color var(--duration-fast) var(--ease-out);
-  }
-
-  .brand:hover {
-    background: var(--surface-selected);
-  }
-
-  .brand:active {
-    background: var(--surface-hover);
-  }
-
-  /* Concentric with the pill around it, the way nested glass is drawn: a
-     rounded square inside a capsule is two shapes that disagree. */
-  .brand :global(svg) {
-    border-radius: var(--radius-full);
-  }
-
-  /* The household's button beside it is drawn the same way, in its own file. */
-  .search {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    min-width: var(--control-sm);
-    min-height: var(--control-sm);
-    padding: var(--space-2);
-    border: 0;
-    border-radius: var(--radius-full);
-    background: transparent;
-    color: var(--text);
-    cursor: pointer;
-    transition: background-color var(--duration-fast) var(--ease-out);
-  }
-
-  .search:hover {
-    background: var(--surface-selected);
-  }
-
-  .search:active {
-    background: var(--surface-hover);
-  }
-
-  .search svg {
-    width: calc(var(--space-4) + var(--space-1));
-    height: calc(var(--space-4) + var(--space-1));
-  }
-
-  .content {
     grid-area: content;
     min-width: 0;
+    view-transition-name: page-content;
     /* Focusable as a skip-link target, but never with a ring of its own. */
     outline: none;
     scroll-margin-top: var(--space-24);
   }
 
-  .dock {
-    min-width: 0;
-    grid-area: dock;
-    position: sticky;
-    bottom: var(--bar-inset);
-    z-index: var(--z-sticky);
-  }
-
-  .bar {
-    grid-area: bar;
-    position: sticky;
-    bottom: 0;
-    z-index: var(--z-sticky);
-    border-top: 1px solid var(--border);
-    background: var(--surface-raised);
-    /* Clear of the home indicator. */
-    padding-bottom: env(safe-area-inset-bottom, 0);
-    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
-  }
-
-  /* A thin line across the top while a route resolves. Not a spinner: this is
-     usually over before it is noticed, and a spinner that flashes is worse than
-     nothing. */
-  .progress {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline: 0;
-    height: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 0.5rem var(--accent);
-    transform-origin: left center;
-    /* Held back for the first 150 ms so a quick navigation shows nothing, then
-       a trickle that slows the further it gets: fast enough to read as
-       progress, never claiming to be finished before the page is. */
-    animation:
-      reveal var(--duration-base) var(--ease-out) 150ms both,
-      advance 8s cubic-bezier(0.1, 0.7, 0.2, 1) 150ms both;
-  }
-
-  @keyframes reveal {
-    from {
-      opacity: 0;
-    }
-  }
-
-  @keyframes advance {
-    0% {
-      transform: scaleX(0);
-    }
-    10% {
-      transform: scaleX(0.35);
-    }
-    40% {
-      transform: scaleX(0.7);
-    }
-    100% {
-      transform: scaleX(0.94);
-    }
-  }
-
-  .skip {
-    position: absolute;
-    inset-block-start: var(--space-2);
-    inset-inline-start: var(--space-2);
-    z-index: var(--z-overlay);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-md);
-    background: var(--surface-overlay);
-    color: var(--text);
-    box-shadow: var(--shadow-overlay);
-    transform: translateY(-200%);
-  }
-
-  .skip:focus {
-    transform: none;
-  }
-
-  /* The narrow header keeps the brand and recipe creation. Expanded navigation
-     takes the middle slot between them on desktop. */
-  .wide-only {
-    pointer-events: auto;
-    grid-column: 2;
-    display: none;
-  }
-
-  @media (width < 40rem) {
-    .header-inner {
-      gap: var(--space-2);
-    }
-  }
-
-  /* Guided cooking has its own way back to the recipe. On compact screens
-     the instructions need the space used by the app's header and navigation. */
+  /* Guided cooking has its own way back to the recipe, and on compact screens
+     the instructions need the space the header and bar would take. */
   @media (width < 64rem) {
-    .focused-cooking .header,
-    .focused-cooking .bar {
-      display: none;
-    }
-
     .focused-cooking .content {
       padding-top: env(safe-area-inset-top, 0px);
     }
   }
 
-  /*
-   * The narrowest phones keep the mark and let the word go.
-   *
-   * The wordmark needs about 155 of the 288 pixels a 320px screen leaves
-   * between its gutters, and the tools beside it take 164 — so something has
-   * to give, and squeezing the word only clips it. The mark alone in a circle
-   * is still the brand, still the way home, and drawn the same as every other
-   * pill in the row; the name is in its label for anyone who cannot see it.
-   */
-  @media (width < 22rem) {
-    .brand {
-      padding: var(--space-1);
-    }
-
-    .brand :global(.wordmark) {
-      display: none;
-    }
-  }
-
-  /* Expanded navigation needs room for the brand, labels and recipe creation.
-     The first column is never narrower than the brand: just past 64rem the
-     labelled destinations leave each side about 9rem, less than the brand
-     pill, which squeezed the wordmark's dot onto a line of its own. Wider than
-     the brand, both sides are equal and the destinations sit centred; at the
-     narrowest they give way by the few pixels the brand needs. */
-  @media (min-width: 64rem) {
-    .header-inner {
-      grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
-    }
-
-    .actions {
-      grid-column: 3;
-    }
-
-    .wide-only {
-      display: block;
-    }
-
-    .narrow-only {
-      display: none;
-    }
-  }
-
-  /* In landscape or with a keyboard open, give the content its height back. */
-  @media screen and (max-height: 32rem) {
-    .header {
-      position: relative;
-      top: auto;
-    }
-
-    /* Not sticky here, so nothing ever passes under it. */
-    .header::before {
-      display: none;
-    }
-  }
-
-  /* And the same answer when it is text rather than the window that has taken
-     the room: the header scrolls away with the page instead of floating over
-     what is left of it. The bars at the bottom stay — they are how somebody
-     gets anywhere — and giving back the header's share is enough to read and
-     type in what remains. */
-  .shell.crowded .header {
-    position: relative;
-    top: auto;
-  }
-
-  .shell.crowded .header::before {
-    display: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .progress {
-      animation: none;
-      transform: scaleX(0.5);
-    }
-  }
-
-  /*
-   * On paper there is no app: no bar to skip to, no navigation to use, no
-   * connection to have lost. Only what is in the middle of the screen.
-   */
+  /* On paper there is no app: only what is in the middle of the screen. */
   @media print {
-    .skip,
-    .header,
-    .dock,
-    .bar {
-      display: none !important;
-    }
-
     .shell,
     .content {
       display: block;

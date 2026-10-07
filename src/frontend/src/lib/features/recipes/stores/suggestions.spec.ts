@@ -105,6 +105,63 @@ describe('asking', () => {
   });
 });
 
+describe('remembering', () => {
+  // Every change to the week plan names what is planned, so each one is a new
+  // question; without a cap the store keeps all of them for the whole session.
+  const week = (planned: number) => ({ limit: 1, exclude: [`recipe-${planned}`] });
+
+  it('forgets the question used least recently once too many are kept', async () => {
+    serverAnswers(() => answer([suggestion('a')]));
+
+    for (let planned = 0; planned < 21; planned += 1) {
+      await suggestions.ask(household, week(planned));
+    }
+
+    expect(suggestions.statusOf(household, week(0))).toBe('idle');
+    expect(suggestions.for(household, week(0))).toEqual([]);
+    expect(suggestions.statusOf(household, week(1))).toBe('ready');
+    expect(suggestions.statusOf(household, week(20))).toBe('ready');
+  });
+
+  it('asks a forgotten question again when it comes back', async () => {
+    const fetched = serverAnswers(() => answer([suggestion('a')]));
+
+    for (let planned = 0; planned < 21; planned += 1) {
+      await suggestions.ask(household, week(planned));
+    }
+
+    await suggestions.ask(household, week(0));
+
+    expect(fetched).toHaveBeenCalledTimes(22);
+    expect(suggestions.statusOf(household, week(0))).toBe('ready');
+  });
+
+  it('keeps the question being looked at however many others come after it', async () => {
+    serverAnswers(() => answer([suggestion('a')]));
+
+    await suggestions.ask(household, week(0));
+
+    for (let planned = 1; planned < 30; planned += 1) {
+      suggestions.for(household, week(0));
+      await suggestions.ask(household, week(planned));
+    }
+
+    expect(suggestions.statusOf(household, week(0))).toBe('ready');
+  });
+
+  it('does not ask a question that is still remembered twice', async () => {
+    const fetched = serverAnswers(() => answer([suggestion('a')]));
+
+    for (let planned = 0; planned < 20; planned += 1) {
+      await suggestions.ask(household, week(planned));
+    }
+
+    await suggestions.ask(household, week(0));
+
+    expect(fetched).toHaveBeenCalledTimes(20);
+  });
+});
+
 describe('dismissing', () => {
   it('removes the card from every answer at once, not just the one on screen', async () => {
     // The same recipe is regularly in two answers. Watching it vanish from one

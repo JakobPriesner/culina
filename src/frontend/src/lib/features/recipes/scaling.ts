@@ -1,5 +1,11 @@
-import { fromGrams, fromMillilitres, toMeasure, type MeasurementSystem } from './measurement';
-import { canonicalOf, familyOf, largerUnit, scales, toCanonical, type Unit } from './units';
+import { type MeasurementSystem } from './measurement';
+import type { Quantity, ScaledQuantity } from './quantityMath';
+import { counted } from './roundCounted';
+import { customary, measured } from './roundMeasured';
+import { spooned } from './roundSpoons';
+import { familyOf, scales, toCanonical } from './units';
+
+export type { Quantity, ScaledQuantity };
 
 /**
  * Every rule in `docs/scaling-rules.md`, and nothing else.
@@ -13,45 +19,16 @@ import { canonicalOf, familyOf, largerUnit, scales, toCanonical, type Unit } fro
  * base amount and the factor.** Scaling a value that was already scaled — and
  * therefore already rounded — drifts, and drifts differently depending on how
  * many times someone tapped the stepper.
+ *
+ * This file chooses the rule for an amount; the rules are `roundMeasured.ts`
+ * (mass and volume), `roundSpoons.ts` and `roundCounted.ts`.
  */
-export interface Quantity {
-  /** Null when the recipe does not say how much. */
-  readonly value: number | null;
-  readonly unit: Unit | null;
-}
-
-export interface ScaledQuantity {
-  /** The rounded amount, or the lower bound of a range. */
-  readonly value: number | null;
-  /** The upper bound, when the honest answer is a range. */
-  readonly upper: number | null;
-  readonly unit: Unit | null;
-  /** True when rounding moved the value by more than 2%. */
-  readonly isApproximate: boolean;
-  readonly isRange: boolean;
-  /**
-   * The arithmetic, before any of it was made readable — in the unit of
-   * `value`, so the two can be compared directly.
-   *
-   * Kept so that an approximation can say what it approximated, and so that
-   * nothing downstream has to re-derive it from a number that was already
-   * rounded. Scaling an already-scaled amount drifts, and drifts differently
-   * depending on how many times somebody tapped the stepper.
-   */
-  readonly exact: number | null;
-}
 
 /** Beyond these, times and tins stop being right and the app says so. */
 export const trustedFactorRange = { lowest: 0.6, highest: 1.75 } as const;
 
 /** A yield of zero is not a recipe, and a thousand portions is a typo. */
 const yieldLimits = { lowest: 0.0001, highest: 1000 } as const;
-
-/** Rounding that moves an amount by more than this is an approximation. */
-const approximationThreshold = 0.02;
-
-/** How close to a whole number a count has to be before it is simply that number. */
-const countSnap = 0.15;
 
 /**
  * How much of the recipe is being made.
@@ -130,206 +107,6 @@ export function scaleQuantity(
 }
 
 /**
- * Mass and volume snap to a step a kitchen scale can show, then re-express
- * upward when the number gets unwieldy.
- */
-function measured(exact: number, unit: Unit): ScaledQuantity {
-  const canonical = canonicalOf(unit)!;
-  const inCanonical = exact * toCanonical(unit);
-  const rounded = orExact(toStep(inCanonical, stepFor(inCanonical)), inCanonical);
-
-  const bigger = largerUnit(canonical);
-
-  // Upward only, and only when the bigger unit reads better. `1.5 kg` is how a
-  // recipe writes 1500 g; `1.35 kg` is not how anyone writes 1350 g, and
-  // `0.5 kg` is not how anyone writes 500 g — a scale shows grams.
-  if (bigger && readsBetterAs(rounded)) {
-    return {
-      value: trim(rounded / 1000),
-      upper: null,
-      unit: bigger,
-      isApproximate: drifted(inCanonical, rounded),
-      isRange: false,
-      exact: inCanonical / 1000
-    };
-  }
-
-  return {
-    value: trim(rounded),
-    upper: null,
-    unit: canonical,
-    isApproximate: drifted(inCanonical, rounded),
-    isRange: false,
-    exact: inCanonical
-  };
-}
-
-/**
- * Mass and volume, in the units a US kitchen owns.
- *
- * Converted from the exact amount and rounded once, onto a measure that is
- * actually in the drawer. Mass becomes ounces and pounds and never cups: a cup
- * of flour is between 120 g and 150 g depending on how it was packed, and
- * turning 250 g into "2 cups" is a confidently wrong recipe.
- */
-function customary(exact: number, unit: Unit, isMass: boolean): ScaledQuantity {
-  const inCanonical = exact * toCanonical(unit);
-  const converted = isMass ? fromGrams(inCanonical) : fromMillilitres(inCanonical);
-  const rounded = orExact(toMeasure(converted.value, converted.steps), converted.value);
-
-  return {
-    value: trim(rounded),
-    upper: null,
-    unit: converted.unit,
-    isApproximate: drifted(converted.value, rounded),
-    isRange: false,
-    exact: converted.value
-  };
-}
-
-/**
- * Whether an amount is better said in the larger unit.
- *
- * At least one of it, and no more than one decimal place: 1500 becomes 1.5 kg,
- * 1350 stays 1350 g.
- */
-const readsBetterAs = (canonicalAmount: number): boolean =>
-  canonicalAmount >= 1000 && Number(((canonicalAmount / 1000) * 10).toFixed(6)) % 1 === 0;
-
-/** The step a number of this magnitude should land on. */
-function stepFor(amount: number): number {
-  const magnitude = Math.abs(amount);
-
-  if (magnitude < 10) {
-    return 0.5;
-  }
-
-  if (magnitude < 100) {
-    return 5;
-  }
-
-  return magnitude < 1000 ? 10 : 50;
-}
-
-/**
- * Rounding never makes an amount disappear.
- *
- * Below the smallest step — 0.2 g of saffron, 2 g of yeast in ounces — the
- * grid has nothing between zero and an amount several times too much, and
- * either would change what is cooked. The arithmetic is the honest answer.
- */
-const orExact = (rounded: number, exact: number): number => (rounded === 0 ? exact : rounded);
-
-/**
- * Spoons round to halves, and to thirds, because measuring spoons exist in
- * those sizes and in no others — and below a half, to the quarter and eighth
- * spoons, so a small amount stays a small amount instead of becoming none.
- */
-function spooned(exact: number, unit: Unit): ScaledQuantity {
-  // Halves are the grid. Thirds are not an alternative grid to round onto —
-  // they exist so that a recipe scaled by a third lands on the spoon that is
-  // actually in the drawer, rather than being marked approximate for no
-  // reason. So a third is used only when the arithmetic genuinely produced
-  // one: 1.7 tbsp is a half and a half, not five thirds.
-  const nearestThird = Math.round(exact * 3) / 3;
-
-  const rounded =
-    nearestThird > 0 && Math.abs(nearestThird - exact) <= thirdTolerance
-      ? nearestThird
-      : closest(exact, exact < 0.5 ? smallSpoons : multiples(exact, 0.5));
-
-  return {
-    value: trim(rounded),
-    upper: null,
-    unit,
-    isApproximate: drifted(exact, rounded),
-    isRange: false,
-    exact
-  };
-}
-
-/** How near a third an amount has to be before it is treated as one. */
-const thirdTolerance = 0.02;
-
-/** The spoons below a half. An eighth is the floor: nothing rounds to no spoon. */
-const smallSpoons = [0.125, 0.25, 0.5];
-
-/**
- * The pieces of one thing a kitchen has words for.
- *
- * A quarter is the floor: below that the honest answer for a countable
- * ingredient stops existing, and a quarter of an onion is the smallest piece
- * anybody is going to cut.
- */
-const kitchenFractions = [0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1];
-
-/** The two multiples of `step` either side of `exact`, never below zero. */
-const multiples = (exact: number, step: number): number[] => [
-  Math.max(0, Math.floor(exact / step) * step),
-  Math.max(0, Math.ceil(exact / step) * step)
-];
-
-const closest = (exact: number, candidates: number[]): number =>
-  candidates.reduce((best, candidate) =>
-    Math.abs(candidate - exact) < Math.abs(best - exact) ? candidate : best
-  );
-
-/**
- * Countable things become an honest range rather than a fraction.
- *
- * Half of three cloves is not one and a half cloves; it is one or two, and the
- * cook decides.
- */
-function counted(exact: number, unit: Unit | null): ScaledQuantity {
-  // Below one, the fraction is the answer. Half a recipe wants half an onion,
-  // and saying "1 onion" instead is not a rounding — it is two and a half
-  // times the onion, silently, in the one direction nobody checks. It is
-  // written as a fraction a kitchen recognises rather than as `0.4`, and never
-  // as nothing: a quarter is the smallest piece of a thing worth asking for.
-  if (exact < 1) {
-    const fraction = closest(exact, kitchenFractions);
-
-    return {
-      value: fraction,
-      upper: null,
-      unit,
-      isApproximate: drifted(exact, fraction),
-      isRange: false,
-      exact
-    };
-  }
-
-  const nearest = Math.round(exact);
-
-  if (Math.abs(exact - nearest) <= countSnap) {
-    const value = Math.max(1, nearest);
-
-    return {
-      value,
-      upper: null,
-      unit,
-      isApproximate: drifted(exact, value),
-      isRange: false,
-      exact
-    };
-  }
-
-  const lower = Math.max(1, Math.floor(exact));
-  const upper = Math.max(lower + 1, Math.ceil(exact));
-
-  return {
-    value: lower,
-    upper,
-    unit,
-    // A range is not an approximation: it states the truth, which is that
-    // either amount will do.
-    isApproximate: false,
-    isRange: true,
-    exact
-  };
-}
-
-/**
  * Chooses the yield at which this ingredient comes out at the amount you have.
  *
  * The leftover 600 g of flour, the odd package size. The same machinery, driven
@@ -374,15 +151,3 @@ export function targetYieldForAmount(
  */
 export const yieldLabel = (value: number): number =>
   Number.isFinite(value) ? Math.round(value * 2) / 2 : 0;
-
-/** True when rounding moved the amount by more than the threshold. */
-const drifted = (exact: number, rounded: number): boolean =>
-  exact !== 0 && Math.abs(rounded - exact) / Math.abs(exact) > approximationThreshold;
-
-const toStep = (amount: number, step: number): number =>
-  // Half away from zero, so 2.5 g at a 0.5 step is 2.5 and 7.25 is 7.5 — the
-  // direction a cook rounds when they are already pouring.
-  Math.sign(amount) * Math.round((Math.abs(amount) / step) * (1 + Number.EPSILON)) * step;
-
-/** Kills the floating-point tail that multiplication leaves behind. */
-const trim = (value: number): number => Number(value.toFixed(4));

@@ -1,25 +1,19 @@
 import type { components } from '$api/generated/schema';
 
 import type {
-  ChipKind,
-  Completion,
-  Facet,
-  Facets,
-  Ingredient,
-  IngredientGroup,
-  Interpretation,
-  MatchReason,
   Recipe,
   RecipeReading,
   RecipeSummary,
   RelatedRecipe,
-  SearchChip,
-  Step,
-  StepSegment,
   Suggestion,
   SuggestionReasonCode,
   YieldKind
 } from './types';
+import { toGroup, toStep } from './contentMappers';
+import { toReason } from './searchMappers';
+
+export { toWireGroups, toWireRecipe, toWireSteps } from './contentMappers';
+export { toCompletion, toFacets, toInterpretation } from './searchMappers';
 
 /**
  * Wire shapes to the app's own, at the store boundary and nowhere else.
@@ -31,19 +25,9 @@ import type {
  */
 type WireSummary = components['schemas']['RecipesGetAllRecipeSummary'];
 type WireRecipe = components['schemas']['RecipesRecipeDetail'];
-type WireGroup = components['schemas']['RecipesIngredientGroupContract'];
-type WireIngredient = components['schemas']['RecipesIngredientContract'];
-type WireStep = components['schemas']['RecipesStepContract'];
-type WireSegment = components['schemas']['RecipesStepSegmentContract'];
 type WireSuggestion = components['schemas']['SuggestionsGetAllSuggestion'];
 type WireRelated = components['schemas']['RecipesGetRelatedRelatedRecipe'];
 type WireShared = components['schemas']['RecipesGetSharedResponse'];
-type WireInterpretation = components['schemas']['RecipesGetAllInterpretation'];
-type WireChip = components['schemas']['RecipesGetAllAppliedInference'];
-type WireFacets = components['schemas']['RecipesGetAllFacets'];
-type WireFacet = components['schemas']['RecipesGetAllFacet'];
-type WireReason = components['schemas']['RecipesGetAllMatchReason'];
-type WireCompletion = components['schemas']['RecipesGetCompletionsCompletion'];
 
 export const toSummary = (wire: WireSummary): RecipeSummary => ({
   id: wire.recipeId,
@@ -69,89 +53,6 @@ export const toSummary = (wire: WireSummary): RecipeSummary => ({
   presumedDiet:
     wire.presumedDiet === 'vegetarian' || wire.presumedDiet === 'vegan' ? wire.presumedDiet : null
 });
-
-const reasonKinds = new Set<MatchReason['kind']>(['ingredient', 'tag', 'text', 'concept']);
-
-/** A reason this client does not know how to word is no reason at all. */
-const toReason = (wire: WireReason): MatchReason | null =>
-  reasonKinds.has(wire.kind as MatchReason['kind'])
-    ? { kind: wire.kind as MatchReason['kind'], term: wire.term ?? null }
-    : null;
-
-const chipKinds = new Set<ChipKind>([
-  'time',
-  'quick',
-  'diet',
-  'meal',
-  'cuisine',
-  'ingredient',
-  'exclusion'
-]);
-
-const toChips = (wire: readonly WireChip[] | null | undefined): SearchChip[] =>
-  (wire ?? [])
-    .filter((chip) => chipKinds.has(chip.kind as ChipKind))
-    .map((chip) => ({
-      kind: chip.kind as ChipKind,
-      value: chip.value,
-      text: chip.text,
-      start: chip.start,
-      end: chip.end,
-      word: chip.word ?? null
-    }));
-
-export const toInterpretation = (wire: WireInterpretation): Interpretation => ({
-  freeText: wire.freeText,
-  chips: toChips(wire.applied),
-  correctedFrom: wire.correctedFrom ?? null,
-  relaxed: toChips(wire.relaxed),
-  conflict: toChips(wire.conflict)
-});
-
-const toFacet = (wire: WireFacet): Facet => ({
-  value: wire.value,
-  label: wire.label ?? null,
-  count: wire.count
-});
-
-export const toFacets = (wire: WireFacets): Facets => ({
-  tags: wire.tags.map(toFacet),
-  times: wire.times.map(toFacet),
-  cuisines: wire.cuisines.map(toFacet)
-});
-
-/** Null for a kind this client does not know, which it then does not offer. */
-export const toCompletion = (wire: WireCompletion): Completion | null => {
-  switch (wire.kind) {
-    case 'recipe':
-      return wire.recipeId
-        ? {
-            kind: 'recipe',
-            label: wire.label,
-            recipeId: wire.recipeId,
-            imageId: wire.imageId ?? null,
-            totalMinutes: wire.totalMinutes ?? null
-          }
-        : null;
-    case 'ingredient':
-      return { kind: 'ingredient', label: wire.label, recipeCount: wire.recipeCount ?? 0 };
-    case 'tag':
-      return wire.slug
-        ? { kind: 'tag', label: wire.label, slug: wire.slug, recipeCount: wire.recipeCount ?? 0 }
-        : null;
-    case 'refinement':
-      return wire.maxMinutes
-        ? {
-            kind: 'refinement',
-            label: wire.label,
-            recipeCount: wire.recipeCount ?? 0,
-            maxMinutes: wire.maxMinutes
-          }
-        : null;
-    default:
-      return null;
-  }
-};
 
 export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
   id: wire.recipeId,
@@ -248,80 +149,3 @@ export const toSharedRecipe = (token: string, wire: WireShared): RecipeReading =
   // it — but the type asks, so it is the one thing here that is a placeholder.
   updatedAt: ''
 });
-
-const toGroup = (wire: WireGroup): IngredientGroup => ({
-  id: wire.groupId ?? null,
-  name: wire.name ?? null,
-  ingredients: wire.ingredients.map(toIngredient)
-});
-
-const toIngredient = (wire: WireIngredient): Ingredient => ({
-  // The wire allows an absent id because a *write* creates lines without one.
-  // On a read the server has always assigned one.
-  id: wire.ingredientId ?? '',
-  quantity: { value: wire.quantity ?? null, unit: wire.unit ?? null },
-  name: wire.name,
-  note: wire.note ?? null
-});
-
-const toStep = (wire: WireStep): Step => ({
-  id: wire.stepId ?? null,
-  title: wire.title ?? null,
-  segments: wire.segments.map(toSegment),
-  uses: wire.uses ?? [],
-  durationSeconds: wire.durationSeconds ?? null
-});
-
-/**
- * Narrows the flattened union the contract carries.
- *
- * The wire keeps it flat on purpose, so a generated client does not have to
- * narrow one; the narrowing happens here, once, and components get a real
- * discriminated union.
- */
-const toSegment = (wire: WireSegment): StepSegment =>
-  wire.type === 'ingredient'
-    ? {
-        kind: 'ingredient',
-        ingredientId: wire.recipeIngredientId ?? '',
-        name: wire.name ?? '',
-        quantity: { value: wire.quantity ?? null, unit: wire.unit ?? null }
-      }
-    : { kind: 'text', text: wire.value ?? '' };
-
-/** The app's shape back onto the wire, for a write. */
-export const toWireGroups = (groups: readonly IngredientGroup[]): WireGroup[] =>
-  groups.map((group) => ({
-    groupId: group.id ?? undefined,
-    name: group.name ?? undefined,
-    ingredients: group.ingredients.map((one) => ({
-      ingredientId: one.id || undefined,
-      quantity: one.quantity.value ?? undefined,
-      unit: one.quantity.unit ?? undefined,
-      name: one.name,
-      note: one.note ?? undefined
-    }))
-  }));
-
-/**
- * Whether a step has anything in it to store.
- *
- * "Add a step" puts an empty one on screen for the author to write in, and the
- * autosave can fire before they have. The server refuses a step with no text,
- * so until there is some it stays on screen and out of the save.
- */
-const saysAnything = (step: Step): boolean =>
-  step.segments.some((segment) => segment.kind === 'ingredient' || segment.text !== '');
-
-export const toWireSteps = (steps: readonly Step[]): WireStep[] =>
-  steps.filter(saysAnything).map((step) => ({
-    stepId: step.id ?? undefined,
-    title: step.title ?? undefined,
-    durationSeconds: step.durationSeconds ?? undefined,
-    uses: [...step.uses],
-    segments: step.segments.map((segment) =>
-      segment.kind === 'ingredient'
-        ? { type: 'ingredient' as const, recipeIngredientId: segment.ingredientId }
-        : { type: 'text' as const, value: segment.text }
-    )
-  }));
