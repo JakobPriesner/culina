@@ -1527,5 +1527,6 @@
   "problem.assistance.api_key_required": "Gib den Schlüssel erneut ein. Die Adresse hat sich geändert, und Culina schickt einen gespeicherten Schlüssel nur an die Adresse, für die er gespeichert wurde.",
   "server.database.password.again": "Gib das Passwort erneut ein: Culina schickt das gespeicherte nur an den Server, für den es gespeichert wurde.",
   "ai.address.keyAgain": "Wer die Adresse ändert, muss den Schlüssel erneut eingeben: Culina schickt einen gespeicherten Schlüssel nur an die Adresse, für die er gespeichert wurde.",
-  "problem.import.source_needs_reconnecting": "Der Token dieser Verbindung kann nicht mehr gelesen werden. Trenne die Verbindung und verbinde sie neu."
+  "problem.import.source_needs_reconnecting": "Der Token dieser Verbindung kann nicht mehr gelesen werden. Trenne die Verbindung und verbinde sie neu.",
+  "import.url.waiting": "Dieser Link wurde noch nicht geöffnet. Tippe auf „{action}“, um ihn zu lesen."
 }
