@@ -3,20 +3,12 @@ import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { m } from '$shell/i18n';
 import { toaster } from '$shell/toaster.svelte';
 
-/**
- * The diet a search only presumed this recipe keeps, and answering for it.
- *
- * Only when this household can answer: an inherited recipe is its own
- * household's to tag, so `inherited` switches the question off.
- */
+/** The diet a search only presumed for this recipe, and answering it; an inherited recipe is its own household's to tag, so it is off. */
 export function useDietAnswer(page: { recipeId: () => string; inherited: () => boolean }) {
   const presumed = $derived(page.inherited() ? null : presumedDiets.of(page.recipeId()));
   let answering = $state(false);
 
-  /**
-   * Writes the answer as a tag — the diet's own name, or its negation, which
-   * the search reads as ruling the diet out — so it is never presumed again.
-   */
+  /** Writes the answer as a tag (the diet's name or its negation, which search reads as ruling it out) so it is never presumed again. */
   async function answer(keeps: boolean) {
     const recipe = recipes.detail;
 

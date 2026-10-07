@@ -17,44 +17,26 @@ import {
 export type { SuggestionQuery };
 
 /**
- * What this person might want to cook, for one occasion.
- *
- * A bounded set with a reason for each, never a feed. Ranking the whole
- * collection is the recipe store's job with `sort: 'suggested'` — a cookbook is
- * a view of the library rather than a second one, and so is a suggestion.
+ * A bounded, reasoned set of what to cook for one occasion, never a feed; ranking the whole
+ * collection is the recipe store's job.
  */
 class SuggestionStore {
   /**
-   * One entry per question, the least recently used forgotten past
-   * {@link AnswersKept}.
-   *
-   * Status is per question rather than one flag for the store, because two
-   * occasions are regularly in flight at once — the panel at the top of the
-   * library and the plan's picker — and a shared flag would have each of them
-   * reporting the other's progress.
-   *
-   * A forgotten question is also forgotten as asked, so coming back to it
-   * asks again rather than showing nothing for good.
+   * One entry per question (LRU past {@link AnswersKept}); status is per question since two occasions are in flight at once.
+   * An evicted question is also un-asked, so coming back asks again.
    */
   #answers = new LruCache<Answer>(AnswersKept, (key) => this.#asked.delete(key));
   #error = $state<AppError | null>(null);
 
   /**
-   * Which questions have already been asked.
-   *
-   * Deliberately **not** `$state`, and this is the trap the whole file exists to
-   * avoid. `ask` is called from an `$effect`; an effect tracks every reactive
-   * value read while it runs, so a guard that lived in `$state` would make `ask`
-   * depend on the very thing it is about to write and re-trigger itself. It does
-   * not present as a hang — it presents as a flood of identical requests and
-   * then a 429, because the session rate limiter starts refusing them.
-   *
-   * A plain field means "asked at most once per question, full stop". Retrying
-   * is a separate, deliberate call, so a failure can never silently re-arm it.
+   * Not `$state` on purpose: `ask` runs in an `$effect`, so a reactive guard would re-trigger itself
+   * and flood identical requests until a 429. Retrying is a separate, deliberate call.
    */
   #asked = new Set<string>();
 
-  /** Which questions have their next page on its way. Plain for the same reason as {@link #asked}. */
+  /**
+   * Which questions have their next page on its way. Plain for the same reason as {@link #asked}.
+   */
   #fetchingMore = new Set<string>();
 
   get error(): AppError | null {
@@ -71,12 +53,8 @@ class SuggestionStore {
   }
 
   /**
-   * Whether this question has come back at all, successfully or not.
-   *
-   * A caller that changes what it shows depending on the answer needs to know
-   * when there is going to be one. Deciding on an empty answer and again on the
-   * real one means rearranging the page under somebody who has already started
-   * reading it.
+   * Whether the question has come back (ready or failed), so callers do not rearrange the page on
+   * an empty answer and again on the real one.
    */
   answered(householdId: string | null, query: SuggestionQuery = {}): boolean {
     const status = this.statusOf(householdId, query);
@@ -84,20 +62,13 @@ class SuggestionStore {
     return status === 'ready' || status === 'failed';
   }
 
-  /** Whether the answer goes on past what is shown. */
   hasMore(householdId: string | null, query: SuggestionQuery = {}): boolean {
     return householdId ? (this.#answers.get(keyOf(householdId, query))?.more ?? false) : false;
   }
 
   /**
-   * The next few, after the ones already shown.
-   *
-   * Not a cursor: the suggestions are not paged, but they answer by the day,
-   * so the same question with everything already shown excluded is exactly
-   * the rest of today's list. Free to call while a page is on its way.
-   *
-   * A failure ends the list rather than being reported. What is already
-   * shown is still right, and the shortlist was complete without the rest.
+   * The next few: the same question excluding what is shown. A failure ends the list; what is shown
+   * is still right.
    */
   async more(householdId: string, query: SuggestionQuery = {}): Promise<void> {
     const key = keyOf(householdId, query);
@@ -156,12 +127,8 @@ class SuggestionStore {
   }
 
   /**
-   * Stops suggesting a recipe, everywhere at once.
-   *
-   * Optimistic: the card goes as the thumb lifts, and comes back if the write
-   * fails. Every cached answer is filtered, not just the one on screen — the
-   * same recipe is very often in two of them, and watching it vanish from one
-   * list and stay in another is worse than not having dismissed it.
+   * Stops suggesting a recipe everywhere, optimistically; every cached answer is filtered, as the
+   * recipe is often in two.
    */
   async dismiss(recipeId: string): Promise<AppError | null> {
     const before = this.#answers.snapshot();
@@ -183,7 +150,6 @@ class SuggestionStore {
     return null;
   }
 
-  /** Takes a dismissal back. The undo behind the toast. */
   async restore(recipeId: string): Promise<AppError | null> {
     const result = await request(() =>
       http.DELETE('/api/v1/recipes/{recipeId}/suggestion-dismissal', {
@@ -195,25 +161,17 @@ class SuggestionStore {
       return result.error;
     }
 
-    // Nothing is patched back into place. A restored recipe reappears the next
-    // time a question is asked, which is honest: where it lands is the ranking's
-    // answer, and putting it back where it was would be inventing one.
+    // Not patched back: a restored recipe reappears on the next ask, wherever the ranking puts it.
     this.#asked.clear();
 
     return null;
   }
 
-  /**
-   * Stops suggesting a recipe that has been deleted.
-   *
-   * Each question is asked once, so without this the library would go on
-   * offering a recipe that opens onto nothing until the next reload.
-   */
+  /** Drops a deleted recipe: each question is asked once, so it would linger until reload. */
   forget(recipeId: string): void {
     this.#without(recipeId);
   }
 
-  /** Takes one recipe out of every answer. */
   #without(recipeId: string): void {
     this.#answers.update((answer) => ({
       ...answer,

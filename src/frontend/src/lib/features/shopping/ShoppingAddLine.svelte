@@ -19,26 +19,16 @@
 
   let typed = $state<IngredientDraft>(emptyDraft);
 
-  /**
-   * One line in, written the way an ingredient is written into a recipe.
-   *
-   * The same three fields as the editor, and the same component: an amount, a
-   * unit and a name are three things, and a single box that has to be taken
-   * apart afterwards guesses at where each one ends. It also means the unit
-   * this household invented and the names already in its recipes are offered
-   * here too — a shopping list is mostly words it has seen before.
-   */
+  /** Adds one line using the recipe editor's ingredient fields, so household units and known names are offered too. */
   async function add() {
     const line = toIngredient(typed, '');
 
-    // The name is the item. An amount with nothing to measure is not a
-    // half-finished line worth keeping, it is a line that says nothing.
+    // The name is the item; an amount alone is dropped.
     if (!line.name || !householdId) {
       return;
     }
 
-    // Kept on settling rather than per keystroke, so writing "Schuss" does not
-    // leave S, Sc and Sch behind as units this kitchen measures in.
+    // Remembered on submit, not per keystroke, so partial typing ("S", "Sc") doesn't become a unit.
     const unit = unitFor(typed.unit);
 
     if (unit) {
@@ -57,17 +47,8 @@
   }
 </script>
 
-<!--
-  A panel, not a band between two rules.
-
-  Three fields and a button with a hairline above and below them is the shape
-  of a form somebody has been sent to fill in. The same material the
-  ingredient list is drawn on says the other thing: this belongs to the list
-  under it, and it is where lines come from.
--->
 <div class="adding">
-  <!-- Enter adds the line and puts the cursor back on the amount, so a whole
-       list can be written without ever reaching for the mouse. -->
+  <!-- Enter adds the line and refocuses the amount, so a list can be typed without the mouse. -->
   <div class="add">
     <IngredientFields
       id="shopping-add"
@@ -113,8 +94,7 @@
     font-size: var(--text-xs);
   }
 
-  /* On a phone the fields already stack, and a button beside them would have
-     nothing but a sliver left. It goes underneath instead. */
+  /* Fields already stack on a phone; the button goes underneath. */
   @container shopping-entry (width < 40rem) {
     .add {
       grid-template-columns: 1fr;

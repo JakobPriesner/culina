@@ -4,7 +4,6 @@ import { m } from '$shell/i18n';
 
 import type { SaveTone } from './SaveState.svelte';
 
-/** A failure that means the server was not reached, rather than refused. */
 const unreachable = (failure: AppError) =>
   failure.code === ErrorCodes.offline || failure.code === ErrorCodes.timeout;
 
@@ -19,16 +18,8 @@ export interface SaveFacts {
 }
 
 /**
- * What the small word beside the title says.
- *
- * In the order that matters. A conflict is never masked by anything
- * reassuring; work that has not reached the server never reads as "Saved";
- * and a lost connection reads as where the work is rather than as a failure,
- * because the work is not lost — it is on this device, and saying "Could not
- * save" about it is both alarming and untrue.
- *
- * At rest it says that the recipe saves itself, which is the one question an
- * editor with no Save button owes an answer to before anything has happened.
+ * The status word beside the title, in priority order: a conflict is never masked, unsent work never reads
+ * "Saved", and an unreachable server reads as "kept here" rather than a failure.
  */
 export function describeSave(facts: SaveFacts): { tone: SaveTone; text: string } {
   const { failure } = facts;

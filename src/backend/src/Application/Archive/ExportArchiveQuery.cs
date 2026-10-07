@@ -113,8 +113,7 @@ internal sealed class ExportArchiveQueryHandler(
                         cancellationToken)
                     .ConfigureAwait(false);
 
-                // The page's recipes and everything read about them, one round
-                // trip each rather than four per recipe.
+                // One query per kind for the whole page, not four per recipe.
                 var ids = page.Items.Select(summary => summary.RecipeId).ToArray();
                 var found = await recipes.FindManyAsync(ids, cancellationToken).ConfigureAwait(false);
                 var personalNotes = await notes.ForRecipesAsync(ids, query.UserId, cancellationToken).ConfigureAwait(false);
@@ -190,9 +189,7 @@ internal sealed class ExportArchiveQueryHandler(
             Groups = [.. recipe.Groups.Select(ToArchived)],
             Steps = [.. recipe.Steps.Select(step => ToArchived(step, positions))],
             Image = await ToArchivedImageAsync(imageHash, cancellationToken).ConfigureAwait(false),
-            // The overall note, which is the one on the recipe rather than on a
-            // step: a step note restored against a step that moved is a note
-            // attached to the wrong instruction.
+            // Only the recipe-level note: a step note could land on the wrong step after a restore.
             Note = written.FirstOrDefault(note => note.StepId is null)?.Body,
             Cooked = [.. cooked.Select(entry => entry.MadeAt)]
         };
@@ -208,14 +205,7 @@ internal sealed class ExportArchiveQueryHandler(
                 one.Note))
         ]);
 
-    /// <summary>
-    /// A step, with its ingredient references turned into positions.
-    /// </summary>
-    /// <remarks>
-    /// The position is in the recipe's ingredients read in order, group by
-    /// group — the same order they are written back in — so a step that said
-    /// "melt the butter" still says it after a restore.
-    /// </remarks>
+    /// <summary>A step, with ingredient references turned into positions (see <see cref="PositionsOf"/>).</summary>
     private static ArchivedStep ToArchived(Step step, Dictionary<Guid, int> order) =>
         new(
             [
@@ -225,8 +215,7 @@ internal sealed class ExportArchiveQueryHandler(
                     IngredientSegment reference when order.TryGetValue(
                         reference.RecipeIngredientId, out var at) =>
                         new ArchivedSegment(null, at),
-                    // A reference to an ingredient the recipe no longer has.
-                    // Dropped rather than written as a hole.
+                    // Reference to a vanished ingredient: dropped, not written as a hole.
                     _ => new ArchivedSegment(string.Empty, null)
                 })
             ],
@@ -234,7 +223,7 @@ internal sealed class ExportArchiveQueryHandler(
             [.. step.Uses.Where(order.ContainsKey).Select(id => order[id]).Order()],
             step.Title);
 
-    /// <summary>Where each of the recipe's ingredients sits, worked out once per recipe.</summary>
+    /// <summary>Each ingredient's position, groups read in order: the order a restore writes them back.</summary>
     private static Dictionary<Guid, int> PositionsOf(Recipe recipe) => recipe.Groups
         .SelectMany(group => group.Ingredients)
         .Select((ingredient, index) => (ingredient.Id, index))
@@ -259,8 +248,7 @@ internal sealed class ExportArchiveQueryHandler(
 
             return copied.Match<ArchivedImage?>(
                 () => new ArchivedImage("image/webp", Convert.ToBase64String(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))),
-                // A row whose file is gone exports without a picture
-                // rather than failing the whole archive.
+                // A row whose file is gone exports without a picture.
                 _ => null);
         }
     }

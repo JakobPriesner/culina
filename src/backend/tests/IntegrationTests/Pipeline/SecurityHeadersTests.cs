@@ -114,7 +114,7 @@ public class SecurityHeadersTests(PostgresFixture postgres)
             "trusted-types svelte-trusted-html sveltekit-trusted-url culina-worker-url",
             policy,
             StringComparison.Ordinal);
-        // 'allow-duplicates' and a catch-all would each let any code mint its own policy.
+        // Either would let any code mint its own policy.
         Assert.DoesNotContain("allow-duplicates", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("trusted-types *", policy, StringComparison.Ordinal);
     }

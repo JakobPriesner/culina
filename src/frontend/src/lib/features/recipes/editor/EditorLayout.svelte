@@ -3,11 +3,8 @@
   import type { HTMLAttributes } from 'svelte/elements';
 
   /**
-   * A rail and a column, which is the shape every other second-level screen in
-   * this app has: the settings categories sit exactly here.
-   *
-   * Shared by the editor and its skeleton, so what is coming and what arrives
-   * have the same shape and nothing moves when it lands.
+   * A rail and a column, the second-level screen shape; shared with the skeleton so nothing moves
+   * when it lands.
    */
   interface Props extends HTMLAttributes<HTMLDivElement> {
     rail: Snippet;
@@ -38,11 +35,7 @@
     flex-direction: column;
     gap: var(--layout-section-gap);
     min-width: 0;
-    /*
-     * Capped well short of the page. A recipe step is a sentence and an
-     * ingredient is three words; set across a 1400px monitor they are unreadable
-     * and the fields are absurd. The rail takes the width the form gives up.
-     */
+    /* Capped short of the page: steps and ingredients are unreadable across a wide monitor. */
     max-width: 48rem;
   }
 

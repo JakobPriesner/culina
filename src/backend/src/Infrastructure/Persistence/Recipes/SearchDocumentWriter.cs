@@ -80,9 +80,7 @@ internal sealed class SearchDocumentWriter(DbExecutor executor)
             new { recipeIds = recipeIds.ToArray() },
             cancellationToken).ConfigureAwait(false);
 
-        // One statement for the whole batch, whose documents travel as JSON:
-        // each has a list of its own, and an array of arrays is not something
-        // unnest will take apart.
+        // One statement per batch; JSON because unnest cannot split an array of arrays.
         var documents = sources.Select(source => new
         {
             id = source.RecipeId,

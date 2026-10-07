@@ -11,10 +11,7 @@ public interface IRecipeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Loads several recipes in one round trip. A recipe that does not exist is
-    /// left out of the answer rather than failing it.
-    /// </summary>
+    /// <summary>Loads several recipes in one round trip; missing ones are left out.</summary>
     /// <param name="recipeIds">Which recipes.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyDictionary<Guid, Recipe>> FindManyAsync(
@@ -24,11 +21,7 @@ public interface IRecipeRepository
     /// <summary>The household a recipe belongs to, without loading the recipe.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    /// <remarks>
-    /// For the operations that only need to know whose it is, to decide whether
-    /// the caller may touch it: loading the whole aggregate to read one column
-    /// is six result sets spent on a question one row answers.
-    /// </remarks>
+    /// <remarks>For access checks: loading the whole aggregate costs six result sets to read one column.</remarks>
     Task<Result<Guid>> HouseholdOfAsync(Guid recipeId, CancellationToken cancellationToken);
 
     /// <summary>Finds matching recipes, one page at a time.</summary>

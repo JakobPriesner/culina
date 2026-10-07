@@ -4,7 +4,6 @@
   import { m } from '$shell/i18n';
 
   interface Props {
-    /** How many lines are still to find. */
     remaining: number;
     onaddrecipe: () => void;
   }
@@ -24,9 +23,6 @@
     </p>
   </div>
 
-  <!-- Beside the title rather than among the fields below it: both fill the
-       list, but one line and twelve are different enough acts that putting
-       their controls together makes the wrong one easy to hit. -->
   <Button onclick={onaddrecipe}>
     {#snippet icon()}
       <svg
@@ -38,8 +34,6 @@
         stroke-linejoin="round"
         aria-hidden="true"
       >
-        <!-- The same closed book the cookbooks tab is marked with, with the
-             plus that means "one of these, onto the list". -->
         <path d="M6.5 3.5H17a1 1 0 0 1 1 1v7.2" />
         <path d="M18 17.5v3" />
         <path d="M4.5 6.5v11a2 2 0 0 0 2 2H14" />

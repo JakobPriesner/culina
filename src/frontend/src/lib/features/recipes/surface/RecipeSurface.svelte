@@ -11,77 +11,30 @@
   import type { RecipeReading } from '../types';
 
   /**
-   * The one surface the product is built around.
-   *
-   * Reading and cooking are the same component at two weightings, not two
-   * pages that happen to show the same data. That is the whole point: the
-   * positions below were chosen so that **nothing has to move** when the
-   * emphasis changes.
-   *
-   * ┌──────────────────────────────────────────────┐
-   * │ title + meta            (recedes when cooking)│
-   * │ servings control        ← SAME PLACE in both  │
-   * │ ingredients             ← SAME PLACE; contracts to what the current
-   * │                           step needs when cooking
-   * │ steps                   ← current step grows in place
-   * └──────────────────────────────────────────────┘
-   *
-   * A later change that moves the servings control or the ingredient region
-   * between the two weightings breaks the product's defining interaction. If
-   * you need to move one, move it in both.
-   *
-   * The ingredient region and its two arrangements are described in
-   * `ingredientPanel.svelte.ts`.
+   * Reading and cooking are one surface at two weightings: the servings control and ingredient region
+   * must stay in the same place in both. If one moves, move it in both. See `ingredientPanel.svelte.ts`.
    */
   interface Props {
     recipe: RecipeReading;
-    /** `read` is the whole recipe; `cook` weights it towards the current step. */
     emphasis?: 'read' | 'cook';
-    /** Which step is being cooked, when cooking. */
     currentStep?: number;
-    /** How many it is being made for. Owned by the page, which keeps it in the URL. */
+    /** Owned by the page, which keeps it in the URL. */
     servings: number;
     onservings?: (value: number) => void;
     onstartcooking?: () => void;
-    /** Puts the ingredients on the shopping list, at the scaling on screen. */
     onaddtolist?: () => void;
-    /** Opens the sheet that says which cookbooks this recipe is on. */
     onaddtocookbook?: () => void;
-    /** Opens the week at the servings currently shown on this recipe. */
     onaddtoplan?: () => void;
-    /** Opens the sheet that hands out, and takes back, the link to this recipe. */
     onshare?: () => void;
-    /**
-     * Makes this household its own copy, for a recipe it can read but not
-     * change: what "Edit" becomes when editing is somebody else's.
-     */
+    /** Copies a read-only recipe into this household; replaces "Edit" there. */
     oncopy?: () => void;
-    /** Asks whether to delete it. The page asks; the surface only offers. */
+    /** The page confirms; the surface only offers. */
     ondelete?: () => void;
-    /**
-     * Where the photograph is, when it is not at the recipe's own address.
-     *
-     * The one thing the surface cannot work out for itself. Whoever follows a
-     * share link holds a token and no recipe id, so their copy of this page
-     * fetches the picture from somewhere else entirely — and that is the whole
-     * of the difference between their page and the household's.
-     */
+    /** Photo location when it isn't at the recipe's own address (share links hold a token, not a recipe id). */
     photo?: { readonly src: string; readonly srcset: string };
-    /**
-     * Whether to offer the way back into the editor.
-     *
-     * The address is built here, from the recipe, like the cookbook links
-     * above it — what the page decides is whether writing this recipe down is
-     * one of the things it is for. The cook route says nothing and gets
-     * nothing.
-     */
+    /** Offers the way back into the editor; the cook route leaves it off. */
     editable?: boolean;
-    /**
-     * The cookbooks it is already on.
-     *
-     * Read here and written by the dock: the line under the title is the
-     * answer, and the control is the question, so they must never disagree.
-     */
+    /** Cookbooks it is on; shown here, edited by the dock. */
     cookbooks?: readonly { readonly id: string; readonly name: string }[];
     onstopcooking?: () => void;
     onstep?: (index: number) => void;
@@ -134,15 +87,7 @@
     currentStep: () => currentStep
   });
 
-  /**
-   * Whether there is anything to cook.
-   *
-   * A recipe with no steps offered the button like any other, and cook mode
-   * then opened on "Step 1 of 0" with nothing under it. An empty recipe is an
-   * ordinary state — one saved from an import, or half written — so the page
-   * says so where the steps would be, rather than letting somebody walk into a
-   * screen that looks broken.
-   */
+  // A recipe with no steps (e.g. from an import) must not open cook mode on "Step 1 of 0".
   const canCook = $derived(Boolean(onstartcooking) && recipe.steps.length > 0);
 </script>
 
@@ -219,12 +164,7 @@
     gap: var(--space-8);
   }
 
-  /*
-   * Two columns: the ingredients, and the method. Their width and the card's
-   * inset are `--side-column` and `--card-padding` in the token scale, because
-   * the heading rows and the steps in the components below have to agree on
-   * them.
-   */
+  /* Two columns; widths come from `--side-column`/`--card-padding` so heading rows and steps agree. */
   .body {
     display: grid;
     grid-template-columns: minmax(0, var(--side-column)) minmax(0, 1fr);
@@ -239,8 +179,6 @@
     }
   }
 
-  /* Reading is the job here, so the phone keeps the recipe's identity without
-     spending its whole first screenful on it. */
   @media (width < 52rem) {
     .surface {
       position: relative;
@@ -248,14 +186,7 @@
     }
   }
 
-  /*
-   * One page: the title, what it makes at the servings on screen, the
-   * ingredients and the steps.
-   *
-   * The amounts printed are the scaled ones, because they are the ones on
-   * screen. Scaling a recipe to six and printing it for four is exactly the
-   * kind of quiet lie this app is built to avoid.
-   */
+  /* Print uses the scaled amounts shown on screen. */
   @media print {
     .surface {
       display: block;
@@ -263,9 +194,7 @@
       padding: 0;
     }
 
-    /* Two columns on paper, which a screen cannot afford and a page can: the
-       ingredients sit beside the first steps instead of on a page of their
-       own, and most recipes come out as one sheet. */
+    /* Two columns on paper so most recipes fit one sheet. */
     .body {
       display: grid;
       grid-template-columns: 32% 1fr;

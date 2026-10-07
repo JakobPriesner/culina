@@ -13,12 +13,7 @@
   import { yieldNoun } from '$features/recipes/yieldWords';
   import { m } from '$shell/i18n';
 
-  /**
-   * What a recipe is called, what it makes and how long it takes.
-   *
-   * The numbers show what was typed until it parses, and the recipe is only
-   * written to when it does — see `numbers.ts`.
-   */
+  /** Numbers show what was typed until it parses (see `numbers.ts`). */
   interface Props {
     recipe: Recipe;
     typed: TypedNumbers;
@@ -34,12 +29,6 @@
   const cookText = $derived(minutesShown(typed, 'cookMinutes', recipe.cookMinutes));
   const total = $derived(totalMinutes(recipe.prepMinutes, recipe.cookMinutes));
 
-  /**
-   * The two languages a recipe can be written in, named in their own.
-   *
-   * A list of two, so a select rather than anything cleverer — the same
-   * control, and the same two words, as the language choice in the settings.
-   */
   const languages = $derived([
     { value: 'en', label: m['locale.en']() },
     { value: 'de', label: m['locale.de']() }
@@ -72,13 +61,7 @@
     {/snippet}
   </Field>
 
-  <!--
-    Asked here rather than guessed from the words, and asked at all
-    because it is not decoration: the search index picks its stemmer
-    from it, and the ingredient suggestions their language. It starts
-    as the language of whoever wrote the recipe down, which is right
-    often enough that most people will never open this.
-  -->
+  <!-- Not guessed: the search index picks its stemmer from this, and ingredient suggestions their language. -->
   <Field label={m['editor.language']()} hint={m['editor.languageHint']()}>
     {#snippet children({ id, describedBy, invalid })}
       <Select
@@ -93,12 +76,6 @@
     {/snippet}
   </Field>
 
-  <!--
-    Two questions, four fields. "Makes / of what" is one thought and
-    "hands-on / cooking" is another, and a single row of four
-    equal-width boxes said neither — it said "here are four numbers,
-    work it out".
-  -->
   <div class="meta">
     <fieldset class="group">
       <legend class="legend">{m['editor.yieldGroup']()}</legend>
@@ -120,10 +97,6 @@
           {/snippet}
         </Field>
 
-        <!-- Placeholdered with the word the recipe would use anyway,
-             which is the whole explanation of what this field is for:
-             it is already showing the answer, and typing over it is
-             how you change it. -->
         <Field label={m['editor.yieldLabel']()} optionalText={m['editor.optional']()}>
           {#snippet children({ id, describedBy, invalid })}
             <TextInput
@@ -179,8 +152,6 @@
         </Field>
       </div>
 
-      <!-- The number the library and the recipe's own header show,
-           forming as the two halves are typed. -->
       <p class="note total" class:said={total !== null}>
         {total === null ? m['editor.minutesOptional']() : m['editor.totalTime']({ count: total })}
       </p>
@@ -214,9 +185,7 @@
     border: none;
   }
 
-  /* The caption for a pair of fields, and the level between a section heading
-     and a field label — so the three ranks of this form are three sizes rather
-     than three shades of the same one. */
+  /* Caption for a pair of fields; the size between section heading and field label. */
   .legend {
     padding: 0;
     color: var(--text-subtle);
@@ -234,14 +203,12 @@
     min-width: 0;
   }
 
-  /* A count is one to three characters and a noun is a word: giving them equal
-     columns was the reason "4" sat in a field as wide as "Portionen". */
+  /* A count is short and a noun a word: equal columns made "4" as wide as "Portionen". */
   .yield {
     grid-template-columns: 6rem minmax(0, 1fr);
   }
 
-  /* Keep both fields usable when enlarged text leaves too little room for a
-     pair. The threshold follows the text size and each group's own width. */
+  /* Keeps both fields usable when enlarged text leaves little room; the threshold follows text size. */
   @container (max-width: 16rem) {
     .pair {
       grid-template-columns: minmax(0, 1fr);
@@ -254,8 +221,6 @@
     line-height: var(--leading-normal);
   }
 
-  /* The total steps forward once there is one, rather than appearing out of
-     nowhere where a hint was. */
   .total {
     transition: color var(--duration-base) var(--ease-out);
   }

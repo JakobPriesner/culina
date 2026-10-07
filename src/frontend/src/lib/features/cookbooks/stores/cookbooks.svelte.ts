@@ -7,16 +7,8 @@ import { Memberships } from './cookbookMemberships.svelte';
 import { Shelves } from './cookbookShelves.svelte';
 
 /**
- * A household's shelves.
- *
- * This store knows what shelves exist and what is on them. It does not know
- * what a recipe is: the recipes on a cookbook are the recipe store's, read with
- * a `cookbookId` filter, so a cookbook page gets search, filters and paging
- * without a second implementation of any of them.
- *
- * The shelves are `cookbookShelves.svelte.ts`, what is on them
- * `cookbookMemberships.svelte.ts`; ticking a recipe on or off is the one thing
- * that touches both, so it lives here.
+ * A household's cookbooks: shelves (`cookbookShelves.svelte.ts`) plus memberships (`cookbookMemberships.svelte.ts`).
+ * A cookbook's recipes come from the recipe store via a `cookbookId` filter; only ticking touches both, so it lives here.
  */
 class CookbookStore {
   #shelves = new Shelves();
@@ -100,13 +92,7 @@ class CookbookStore {
     return this.#memberships.loadMembers(cookbookId);
   }
 
-  /**
-   * Puts a recipe on a shelf, or takes it off.
-   *
-   * One method because it is one control: a tick that changes what it means is
-   * still a tick, and two methods would be two places for the optimistic
-   * bookkeeping to drift.
-   */
+  /** Puts a recipe on or off a shelf optimistically; one method so the rollback logic lives once. */
   async setOn(recipeId: string, cookbook: CookbookMembership, on: boolean): Promise<boolean> {
     const undoTick = this.#memberships.set(recipeId, cookbook, on);
     const undoCount = this.#shelves.countRecipe(cookbook.id, on ? 1 : -1);

@@ -50,25 +50,18 @@
   let element = $state<HTMLDialogElement>();
 
   /**
-   * Whether the dialog has been shown since it last finished closing.
-   *
-   * Not reactive: it only decides, when `open` turns false, whether there is an
-   * exit to wait for.
+   * Shown since it last finished closing. Not reactive: only decides whether there is an exit to
+   * wait for.
    */
   let shown = false;
 
-  /** Closed, but still painting its exit, so its content has to stay. */
   let closing = $state(false);
 
   const id = $props.id();
   const titleId = `${id}-title`;
 
-  /*
-   * The body is only built while the dialog is up or leaving. A page mounts
-   * every sheet it might offer, and building each one's content at mount costs
-   * what the page then never shows. Before the DOM is updated, so that content
-   * is still there for the first frame of the exit rather than gone from it.
-   */
+  // Body is built only while up or leaving, so mounted-but-unused sheets cost nothing; `.pre` keeps
+  // it for the exit's first frame.
   $effect.pre(() => {
     if (open) {
       shown = true;
@@ -102,11 +95,7 @@
     return undefined;
   });
 
-  /**
-   * Waits for the exit transition, so the content is not pulled out from under
-   * it. A browser without transitions on the closing dialog has none to wait
-   * for, and neither does one that does not animate at all.
-   */
+  /** Waits for the exit animation so the content is not pulled out from under it. */
   async function finishExit(dialog: HTMLDialogElement) {
     await Promise.allSettled(dialog.getAnimations?.().map((animation) => animation.finished) ?? []);
 

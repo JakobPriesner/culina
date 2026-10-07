@@ -3,59 +3,42 @@ import { suggestions } from './stores/suggestions.svelte';
 import { withoutChip } from './search/wording';
 import type { SearchChip } from './types';
 
-/** What the picker's search needs to know, read afresh each time so it stays reactive. */
+/** Read afresh each time so the search stays reactive. */
 interface Source {
   readonly open: () => boolean;
   readonly householdId: () => string;
   readonly cookbookId: () => string | undefined;
   readonly suggestFor: () => 'breakfast' | 'lunch' | 'dinner' | undefined;
-  /** Recipes the caller has already taken, which are not suggested again. */
+  /** Already taken; not suggested again. */
   readonly taken: () => readonly string[];
 }
 
-/**
- * The search behind the picker: what is typed, what has been asked, and what
- * is shown for it.
- *
- * Its own list, not the app's. The shared store is what the page behind the
- * sheet is drawing from, and a picker that searched into it would replace that
- * page's contents with whatever was typed here — the cookbook page would empty
- * out behind an open sheet, and the collection would still be filtered after
- * the sheet closed.
- */
+/** The picker's own search list, not the shared store: searching into that would change the page behind the sheet. */
 export function createPickerSearch(source: Source) {
   const recipes = createRecipeStore();
 
-  /** What is in the box, which is not yet what has been searched for. */
   let typed = $state('');
   let query = $state('');
-  /** The query whose correction the reader turned down. */
+  /** The query whose server correction the reader declined. */
   let asTypedFor = $state<string | null>(null);
 
   let debounce: ReturnType<typeof setTimeout> | undefined;
 
-  /**
-   * Whether the sheet is answering rather than searching.
-   *
-   * Only before anything is typed, and only inside the whole collection: a
-   * suggestion ranks the library, and a cookbook is somebody's curation of it
-   * whose own order is the one they built.
-   */
+  /** Suggesting, not searching: only before typing and across the whole collection, since a cookbook keeps its own order. */
   const suggesting = $derived(
     source.suggestFor() !== undefined &&
       query.trim().length === 0 &&
       source.cookbookId() === undefined
   );
 
-  /** What is already on this week, so nothing is offered twice. */
+  /** Excludes recipes already on this week. */
   const occasion = $derived({ slot: source.suggestFor(), exclude: source.taken(), limit: 5 });
 
   const shown = $derived(
     suggesting ? suggestions.for(source.householdId(), occasion) : recipes.items
   );
 
-  // Only while it is open: a closed sheet that keeps a search warm is a request
-  // nobody asked for, on every page that happens to mount one.
+  // Only while open: a closed sheet must not keep a search warm.
   $effect(() => {
     if (source.open() && !suggesting) {
       void recipes.list(source.householdId(), {
@@ -72,8 +55,7 @@ export function createPickerSearch(source: Source) {
     }
   });
 
-  // Forgotten on the way out, so it opens on everything next time rather than
-  // on whatever somebody was looking for last week.
+  // Reset on close so it reopens on everything.
   $effect(() => {
     if (!source.open()) {
       clearTimeout(debounce);
@@ -85,26 +67,14 @@ export function createPickerSearch(source: Source) {
 
   $effect(() => () => clearTimeout(debounce));
 
-  /**
-   * What the server read the words to mean, and what it had to change to
-   * find anything — the same chips and notices as every other search, so
-   * "vegetarisch Donnerstag" reads the same way in the planner as in the
-   * library.
-   */
+  /** The server's reading of the words and its corrections, shown as the same chips and notices as every other search. */
   const interpretation = $derived(
     !suggesting && query.trim().length > 0 && recipes.status === 'ready'
       ? recipes.interpretation
       : null
   );
 
-  /**
-   * Whether to say that nothing matched.
-   *
-   * Only once an answer has arrived. While a search is in flight the previous
-   * results are still on screen — the store keeps them deliberately — and
-   * flashing "nothing matched" between two keystrokes says the opposite of
-   * what is true.
-   */
+  /** "Nothing matched" only once an answer has arrived; the store keeps old results during a search, so earlier it would flash falsely. */
   const nothing = $derived(
     suggesting
       ? suggestions.statusOf(source.householdId(), occasion) === 'ready' && shown.length === 0
@@ -135,18 +105,17 @@ export function createPickerSearch(source: Source) {
       typed = value;
       clearTimeout(debounce);
 
-      // Long enough that a word is finished, short enough that it feels live.
+      // Long enough that a word is finished, short enough to feel live.
       debounce = setTimeout(() => (query = value), 250);
     },
 
-    /** A reading removed is its characters removed from the query, at once. */
+    /** Removing a reading removes its characters from the query at once. */
     remove(chip: SearchChip) {
       clearTimeout(debounce);
       typed = withoutChip(query, chip);
       query = typed;
     },
 
-    /** Turns down the correction offered for the query on screen. */
     keepAsTyped() {
       asTypedFor = query;
     }

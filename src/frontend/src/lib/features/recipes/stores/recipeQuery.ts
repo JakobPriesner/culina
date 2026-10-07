@@ -8,42 +8,20 @@ import { presumedDiets } from './presumedDiets.svelte';
 export interface RecipeFilters {
   readonly query?: string;
   readonly tags?: readonly string[];
-  /** Ask what can be cooked from these. Ranked by fit, not filtered. */
+  /** Ranked by fit, not filtered. */
   readonly ingredients?: readonly string[];
   readonly maxMinutes?: number;
-  /**
-   * Read inside one cookbook.
-   *
-   * A cookbook is a view of the collection rather than a second one, so it is
-   * a filter here like any other — which is what lets the cookbook page render
-   * the same grid, with the same search and the same paging, and own none of
-   * it.
-   */
+  /** A cookbook is a filter like any other, so its page reuses the grid, search and paging. */
   readonly cookbookId?: string;
-  /**
-   * How to order the page.
-   *
-   * The app's own words; `toWireSort` is the one place they meet the query
-   * string's. 'suggested' ranks the whole collection for whoever is asking — a
-   * sort over the one collection rather than a second collection, which is what
-   * lets it compose with every filter above it.
-   */
+  /** `toWireSort` maps these to the query string; 'suggested' ranks the whole collection, so it composes with every filter. */
   readonly sort?: RecipeSort;
-  /**
-   * Search the words exactly as typed: the reader turned the server's
-   * correction of them down.
-   */
+  /** Search the words as typed: the reader declined the server's correction. */
   readonly asTyped?: boolean;
 }
 
 const pageSize = 24;
 
-/**
- * One page of the recipe list, in the app's own shapes.
- *
- * `cursor` is null for the first page. The answer is either the page or the
- * request's failure, so the list decides what each means for what is on screen.
- */
+/** One page of the recipe list; `cursor` is null for the first. Returns the page or the request's failure. */
 export async function fetchRecipePage(
   householdId: string,
   filters: RecipeFilters,

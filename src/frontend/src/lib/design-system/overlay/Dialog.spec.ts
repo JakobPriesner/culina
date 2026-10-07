@@ -5,18 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DialogHarness from '../__fixtures__/DialogHarness.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The browser does the focus trap and the inert background, which is precisely
- * why these assertions exist: they prove the native dialog is actually being
- * opened as modal, rather than rendered as an ordinary box that looks right.
- */
+// These prove the native dialog is opened as modal, since the browser provides the focus trap and inert background.
 const open = () => screen.getByRole('button', { name: 'Open' });
 const dialog = () => screen.getByRole('dialog');
 
-/*
- * jsdom implements <dialog> but not the top layer, so showModal/close are
- * stubbed to the observable parts: the open state and the close event.
- */
+// jsdom has no top layer, so showModal/close are stubbed to the open state and close event.
 beforeEach(() => {
   // jsdom has no animations; a test that wants an exit to wait for gives it one.
   Reflect.deleteProperty(HTMLDialogElement.prototype, 'getAnimations');
@@ -77,20 +70,14 @@ describe('a modal dialog', () => {
 
     await userEvent.click(open());
 
-    // What Escape does natively: the browser closes the element and fires
-    // `close`, and the component has to notice rather than being told.
+    // Native Escape: the browser closes the element and fires `close`.
     (screen.getByRole('dialog') as HTMLDialogElement).close();
 
     await waitFor(() => expect(onclose).toHaveBeenCalledOnce());
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  /*
-   * Every way out reports, not only the native one. A caller that passes
-   * `open` as an expression rather than a binding — `open={chosen !== null}` —
-   * hears about a dismissal through this and nothing else, so a Close button
-   * that stayed quiet would leave it believing the dialog was still up.
-   */
+  // Every way out must report: a caller passing `open` as an expression hears of dismissal only via onclose.
   it('tells the caller when it is closed from the visible button', async () => {
     const onclose = vi.fn();
 
@@ -112,10 +99,7 @@ describe('a modal dialog', () => {
   });
 });
 
-/*
- * A page mounts every sheet it might offer, so a dialog that built its content
- * at mount would build all of it for nothing.
- */
+// Pages mount every sheet they might offer, so content must not be built until opened.
 describe("a dialog's content", () => {
   const field = () => screen.queryByRole('textbox', { hidden: true });
 

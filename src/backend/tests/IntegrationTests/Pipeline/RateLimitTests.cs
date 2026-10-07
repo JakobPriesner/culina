@@ -195,7 +195,6 @@ public class RateLimitTests(PostgresFixture postgres)
         var restored = await RestoreAsync(client, householdId);
 
         // Assert
-        // Restoring is the heavier of the two, and it had no limit at all.
         Assert.Equal(HttpStatusCode.OK, exported.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, restored.StatusCode);
     }

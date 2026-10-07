@@ -16,14 +16,6 @@
   import ProviderAddress from './ProviderAddress.svelte';
   import ProviderConnections from './ProviderConnections.svelte';
 
-  /**
-   * Which models this instance can talk to, and which of them does what.
-   *
-   * Two lists rather than one form, because they answer different questions and
-   * change at different rates: providers are connected once, jobs are
-   * reassigned whenever a new model is better at one. What is edited, and how
-   * it is kept, is `createAiSettingsDraft`; this page only lays it out.
-   */
   const settings = createAiSettingsDraft();
 
   onMount(() => settings.load());
@@ -32,15 +24,12 @@
 
 <svelte:head><title>{m['me.ai']()}</title></svelte:head>
 
-<!-- Focus leaving any field is the moment a typed value is done. Heard on the
-     document rather than on a wrapper: commit() does nothing when nothing is
-     owed, so hearing the rest of the page costs nothing. -->
+<!-- Focus leaving any field commits it; on the document because commit() is a no-op when nothing is owed. -->
 <svelte:document onfocusout={settings.commit} />
 
 {#if settings.draft}
   <ProviderConnections {settings} />
 
-  <!-- Said plainly, before anybody turns anything on. -->
   <p class="privacy">
     {settings.anythingHosted ? m['ai.privacy.mixed']() : m['ai.privacy.local']()}
   </p>
@@ -76,8 +65,7 @@
 {/if}
 
 <style>
-  /* Outside the enclosures, because it is a statement about the whole screen
-     rather than a setting on it. */
+  /* Outside the sections: a statement about the whole screen, not a setting. */
   .privacy {
     max-width: var(--measure);
     color: var(--text-muted);

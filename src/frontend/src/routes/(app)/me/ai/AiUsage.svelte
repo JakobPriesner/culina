@@ -11,14 +11,7 @@
 
   let { usage }: Props = $props();
 
-  /**
-   * A sum of money, with its unit on it.
-   *
-   * Dollars, stated rather than implied: it is what the hosted providers bill
-   * in, so it is what the prices these figures are built from are quoted in.
-   * The alternative is a bare number beside another bare number, and nobody
-   * can be sure those are the same kind of thing.
-   */
+  // Dollars, stated: hosted providers bill and quote prices in USD.
   const money = (value: number): string =>
     formatNumber(value, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
 </script>
@@ -46,8 +39,6 @@
 {#if usage.byPerson.length === 0}
   <p class="note">{m['ai.usage.none']()}</p>
 {:else}
-  <!-- A table, not a chart. Six rows of numbers on a family instance are
-       six rows of numbers; a dashboard would be decoration. -->
   <table>
     <thead>
       <tr>

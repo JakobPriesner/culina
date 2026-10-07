@@ -18,8 +18,7 @@ internal sealed class TagWriter(DbExecutor executor)
     {
         ArgumentNullException.ThrowIfNull(recipe);
 
-        // One tag per slug: "Veggie" and "veggie" are the same tag, and a
-        // statement that names one twice cannot upsert it twice.
+        // One tag per slug: an upsert cannot name the same row twice.
         var named = recipe.Tags
             .Select(name => (name: name.Trim(), slug: Slugify(name)))
             .Where(tag => tag.slug.Length > 0)

@@ -32,14 +32,12 @@
 </ol>
 
 <style>
-  /* A long press is this list's own gesture, so the callout menu iOS would
-     otherwise raise over a link is not wanted anywhere in it. */
+  /* A long press is this list's own gesture: no iOS callout menu. */
   .week {
     -webkit-touch-callout: none;
   }
 
-  /* Dragging across text selects it, on every desktop browser, and a week of
-     highlighted recipe titles is the visible result of a drag that worked. */
+  /* No text selection while dragging across the week. */
   .dragging {
     -webkit-user-select: none;
     user-select: none;
