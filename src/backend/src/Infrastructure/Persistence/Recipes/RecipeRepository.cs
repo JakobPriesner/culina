@@ -193,7 +193,7 @@ internal sealed class RecipeRepository(
         string contentHash,
         CancellationToken cancellationToken) =>
         await executor.ExecuteScalarAsync<bool>(
-            "select exists (select 1 from recipe_images where content_hash = @contentHash);",
+            $"select {ImageReferences.StillUsed("@contentHash")};",
             new { contentHash },
             cancellationToken).ConfigureAwait(false);
 

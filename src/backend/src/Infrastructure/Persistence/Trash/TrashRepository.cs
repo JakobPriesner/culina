@@ -174,11 +174,10 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
         // Storage is content-addressed, so another recipe — or a recipe still
         // in the bin — may share a file. Only the ones nobody points at go.
         var released = await executor.QueryAsync<string>(
-            """
-            select hash from unnest(@candidates::text[]) as hash
-            where not exists (select 1 from recipe_images where content_hash = hash)
-              and not exists (select 1 from cook_log_entries where image_hash = hash);
-            """,
+            $"""
+             select hash from unnest(@candidates::text[]) as hash
+             where not {ImageReferences.StillUsed("hash")};
+             """,
             new { candidates = candidates.ToArray() },
             cancellationToken).ConfigureAwait(false);
 

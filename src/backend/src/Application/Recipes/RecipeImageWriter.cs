@@ -5,7 +5,7 @@ using Domain.Shared;
 namespace Application.Recipes;
 
 /// <summary>
-/// Puts an image on a recipe, whoever produced it.
+/// Puts an image on a recipe, whoever produced it, or takes it off.
 /// </summary>
 /// <remarks>
 /// Extracted when a second caller appeared. An uploaded photograph and one the
@@ -13,6 +13,8 @@ namespace Application.Recipes;
 /// unknown provenance that have to be decoded, re-encoded, addressed by their
 /// hash and attached without orphaning whatever they displaced — and writing
 /// that twice would be two places for the displaced-file rule to drift.
+/// Removing a picture displaces one too, so it lives here as well; when it
+/// lived in its own handler, that copy of the rule did drift.
 /// </remarks>
 /// <param name="recipes">The recipe rows.</param>
 /// <param name="images">The image store.</param>
@@ -45,54 +47,74 @@ public sealed class RecipeImageWriter(
             error => Task.FromResult(Result<RecipeDetail>.Failure(error))).ConfigureAwait(false);
     }
 
+    /// <summary>Takes the image off a recipe.</summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <remarks>
+    /// Here rather than in its handler, so that removing and replacing a
+    /// picture share the one rule about the file left behind.
+    /// </remarks>
+    public async Task<Result> RemoveAsync(Guid recipeId, CancellationToken cancellationToken)
+    {
+        var removed = await unitOfWork.InTransactionAsync(
+            token => recipes.RemoveImageAsync(recipeId, time.GetUtcNow(), token),
+            cancellationToken).ConfigureAwait(false);
+
+        return await removed.Match(
+            async displaced =>
+            {
+                await ReleaseAsync(displaced, currentHash: null, cancellationToken).ConfigureAwait(false);
+
+                return Result.Success();
+            },
+            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+    }
+
     private async Task<Result<RecipeDetail>> WriteAsync(
         Guid recipeId,
         StoredImage image,
-        CancellationToken cancellationToken) =>
-        await unitOfWork.InTransactionAsync(
-            async token =>
-            {
-                var now = time.GetUtcNow();
-
-                var replaced = await recipes
-                    .SetImageAsync(recipeId, image, WebpContentType, now, token)
-                    .ConfigureAwait(false);
-
-                return await replaced.Match(
-                    async displaced =>
-                    {
-                        await DeleteDisplacedAsync(displaced, image.ContentHash, token)
-                            .ConfigureAwait(false);
-
-                        var reloaded = await recipes.FindAsync(recipeId, token).ConfigureAwait(false);
-
-                        return reloaded.Map(recipe => recipe.Describe());
-                    },
-                    error => Task.FromResult(Result<RecipeDetail>.Failure(error)))
-                    .ConfigureAwait(false);
-            },
+        CancellationToken cancellationToken)
+    {
+        var replaced = await unitOfWork.InTransactionAsync(
+            token => recipes.SetImageAsync(recipeId, image, WebpContentType, time.GetUtcNow(), token),
             cancellationToken).ConfigureAwait(false);
 
+        return await replaced.Match(
+            async displaced =>
+            {
+                await ReleaseAsync(displaced, image.ContentHash, cancellationToken).ConfigureAwait(false);
+
+                var reloaded = await recipes.FindAsync(recipeId, cancellationToken).ConfigureAwait(false);
+
+                return reloaded.Map(recipe => recipe.Describe());
+            },
+            error => Task.FromResult(Result<RecipeDetail>.Failure(error))).ConfigureAwait(false);
+    }
+
     /// <summary>
-    /// Removes the file the new image displaced, unless somebody still wants it.
+    /// Deletes the file a committed change displaced, unless something still
+    /// wants it.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Two ways it can still be wanted. It may be the file that was just
-    /// attached — storage is content-addressed, so re-uploading the same photo
-    /// produces the same hash, and deleting it would delete the new image.
+    /// After the commit, never inside it: a file deleted for a transaction that
+    /// then rolled back is a broken picture, while a file left behind by a
+    /// failure here is only storage a later sweep can reclaim.
     /// </para>
     /// <para>
-    /// Or another recipe may point at it, which the same content addressing
-    /// makes possible and importing a library makes ordinary: fifty recipes
-    /// carrying one placeholder are fifty rows and one file. Deleting it there
-    /// would not break the recipe being edited — it would break the other
-    /// forty-nine, with nothing to connect the two events.
+    /// Three ways it can still be wanted. It may be the file that was just
+    /// attached — storage is content-addressed, so re-uploading the same photo
+    /// produces the same hash, and deleting it would delete the new image.
+    /// Another recipe may point at it, which importing a library makes
+    /// ordinary: fifty recipes carrying one placeholder are fifty rows and one
+    /// file. Or it may be a cook photo, anybody's, taken from the same bytes.
+    /// Deleting it there would not break the recipe being edited — it would
+    /// break the other one, with nothing to connect the two events.
     /// </para>
     /// </remarks>
-    private async Task DeleteDisplacedAsync(
+    private async Task ReleaseAsync(
         ImageReplacement displaced,
-        string currentHash,
+        string? currentHash,
         CancellationToken cancellationToken)
     {
         if (displaced.PreviousContentHash is not { Length: > 0 } previous || previous == currentHash)
@@ -100,8 +122,6 @@ public sealed class RecipeImageWriter(
             return;
         }
 
-        // Asked inside the caller's transaction, after the row that pointed at
-        // it is gone — so the answer is about who is left.
         var wanted = await recipes
             .IsImageStillUsedAsync(previous, cancellationToken)
             .ConfigureAwait(false);
