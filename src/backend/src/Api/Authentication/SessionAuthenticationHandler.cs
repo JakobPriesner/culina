@@ -36,19 +36,19 @@ internal sealed class SessionAuthenticationHandler(
             return AuthenticateResult.NoResult();
         }
 
-        var found = await sessions.FindActiveByTokenAsync(token, Context.RequestAborted)
+        var now = time.GetUtcNow();
+
+        var found = await sessions.FindActiveByTokenAsync(token, now, Context.RequestAborted)
             .ConfigureAwait(false);
 
         return await found.Match(
-            AdmitAsync,
+            session => AdmitAsync(session, now),
             _ => Task.FromResult(AuthenticateResult.NoResult())).ConfigureAwait(false);
     }
 
     /// <summary>Admits the session, and keeps it from lapsing while it is used.</summary>
-    private async Task<AuthenticateResult> AdmitAsync(Session session)
+    private async Task<AuthenticateResult> AdmitAsync(Session session, DateTimeOffset now)
     {
-        var now = time.GetUtcNow();
-
         if (!session.IsActive(now))
         {
             return AuthenticateResult.NoResult();

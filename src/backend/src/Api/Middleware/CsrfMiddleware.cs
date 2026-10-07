@@ -29,11 +29,13 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
         HttpContext context,
         ISessionStore sessions,
         ISecretTokens tokens,
+        TimeProvider time,
         ILogger<CsrfMiddleware> logger)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(sessions);
         ArgumentNullException.ThrowIfNull(tokens);
+        ArgumentNullException.ThrowIfNull(time);
         ArgumentNullException.ThrowIfNull(logger);
 
         if (SafeMethods.Includes(context.Request.Method)
@@ -45,7 +47,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
             return;
         }
 
-        if (await IsValidAsync(context, sessions, tokens).ConfigureAwait(false))
+        if (await IsValidAsync(context, sessions, tokens, time.GetUtcNow()).ConfigureAwait(false))
         {
             await next(context).ConfigureAwait(false);
 
@@ -61,7 +63,8 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
     private static async Task<bool> IsValidAsync(
         HttpContext context,
         ISessionStore sessions,
-        ISecretTokens tokens)
+        ISecretTokens tokens,
+        DateTimeOffset now)
     {
         if (context.Request.Headers[CulinaHeaders.Csrf] is not [{ Length: > 0 } presented])
         {
@@ -76,7 +79,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
             return false;
         }
 
-        var found = await sessions.FindActiveByTokenAsync(sessionToken, context.RequestAborted)
+        var found = await sessions.FindActiveByTokenAsync(sessionToken, now, context.RequestAborted)
             .ConfigureAwait(false);
 
         // Constant-time comparison, in the token service, so a timing signal
