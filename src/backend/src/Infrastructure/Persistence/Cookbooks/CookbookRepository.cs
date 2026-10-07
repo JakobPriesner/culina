@@ -91,38 +91,49 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             end)
         """;
 
+    private const string ShelfColumns = """
+        c.id, c.household_id, c.name, c.description, c.created_by,
+        c.created_at, c.updated_at, c.version,
+        c.kind, c.rule_tags, c.rule_ingredients, c.rule_max_minutes
+        """;
+
     /// <summary>
     /// The count and the cover, read with the shelf rather than after it.
     /// </summary>
     /// <remarks>
-    /// Correlated subqueries and not a join with a group by: a shelf with
-    /// nothing on it must still come back, and the count and the pictures are
-    /// two different slices of the same set. Oldest first, so a cover stops
-    /// moving once four photographed recipes are on it — a face that changed
-    /// every time something was added is not one anybody would learn. A smart
-    /// shelf has no added_at, so its cover falls back to the recipe id, which
-    /// is time-ordered anyway.
+    /// <para>
+    /// A lateral join and not a join with a group by: a shelf with nothing on
+    /// it must still come back, and the count and the pictures are two
+    /// different slices of the same set. The set is worked out once per shelf —
+    /// for a smart one that is a scan of the library, so reading it three times
+    /// for a count and two pictures lists was three scans per card.
+    /// </para>
+    /// <para>
+    /// Oldest first, so a cover stops moving once four photographed recipes
+    /// are on it — a face that changed every time something was added is not
+    /// one anybody would learn. A smart shelf has no added_at, so its cover
+    /// falls back to the recipe id, which is time-ordered anyway.
+    /// </para>
     /// </remarks>
-    private static readonly string Shelf = $$"""
-        select c.id, c.household_id, c.name, c.description, c.created_by,
-               c.created_at, c.updated_at, c.version,
-               c.kind, c.rule_tags, c.rule_ingredients, c.rule_max_minutes,
-               (select count(*) from ({{OnTheShelf}}) as counted) as recipe_count,
-               coalesce(
-                   array(
-                       select pictured.id from ({{OnTheShelf}}) as pictured
-                       where pictured.image_id is not null
-                       order by pictured.added_at nulls last, pictured.id
-                       limit @coverPictures),
-                   '{}') as cover_recipe_ids,
-               coalesce(
-                   array(
-                       select pictured.image_id from ({{OnTheShelf}}) as pictured
-                       where pictured.image_id is not null
-                       order by pictured.added_at nulls last, pictured.id
-                       limit @coverPictures),
-                   '{}') as cover_image_ids
+    private static readonly string ShelfContents = $$"""
+        cross join lateral (
+            select count(*) as recipe_count,
+                   coalesce(
+                       (array_agg(on_shelf.id order by on_shelf.added_at nulls last, on_shelf.id)
+                            filter (where on_shelf.image_id is not null))[1:@coverPictures],
+                       '{}') as cover_recipe_ids,
+                   coalesce(
+                       (array_agg(on_shelf.image_id order by on_shelf.added_at nulls last, on_shelf.id)
+                            filter (where on_shelf.image_id is not null))[1:@coverPictures],
+                       '{}') as cover_image_ids
+            from ({{OnTheShelf}}) as on_shelf
+        ) as shelf
+        """;
+
+    private static readonly string Shelf = $"""
+        select {ShelfColumns}, shelf.recipe_count, shelf.cover_recipe_ids, shelf.cover_image_ids
         from cookbooks c
+        {ShelfContents}
         """;
 
     public async Task<Result<Cookbook>> FindAsync(Guid cookbookId, CancellationToken cancellationToken)
@@ -166,13 +177,20 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         // can never disagree.
         var rows = await executor.QueryAsync<CookbookRow>(
             $"""
-            with shelves as (
-                {Shelf} where c.household_id = @householdId),
-            counted as (select *, count(*) over () as total_count from shelves)
-            select * from counted
-            {(resume is null ? string.Empty : "where (updated_at, id) < (@cursorUpdatedAt, @cursorId)")}
-            order by updated_at desc, id desc
-            limit {size + 1};
+            with counted as (
+                select c.*, count(*) over () as total_count
+                from cookbooks c
+                where c.household_id = @householdId),
+            page as (
+                select * from counted
+                {(resume is null ? string.Empty : "where (updated_at, id) < (@cursorUpdatedAt, @cursorId)")}
+                order by updated_at desc, id desc
+                limit {size + 1})
+            select {ShelfColumns}, c.total_count,
+                   shelf.recipe_count, shelf.cover_recipe_ids, shelf.cover_image_ids
+            from page c
+            {ShelfContents}
+            order by c.updated_at desc, c.id desc;
             """,
             new
             {
