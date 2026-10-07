@@ -16,34 +16,27 @@ import {
 
 export type { SuggestionQuery };
 
-/**
- * A bounded, reasoned set of what to cook for one occasion, never a feed; ranking the whole
- * collection is the recipe store's job.
- */
+/** A bounded, reasoned set of what to cook for one occasion, never a feed. */
 class SuggestionStore {
   /**
-   * One entry per question (LRU past {@link AnswersKept}); status is per question since two occasions are in flight at once.
-   * An evicted question is also un-asked, so coming back asks again.
+   * One entry per question (LRU past {@link AnswersKept}); evicting also un-asks, so coming back
+   * asks again.
    */
   #answers = new LruCache<Answer>(AnswersKept, (key) => this.#asked.delete(key));
   #error = $state<AppError | null>(null);
 
   /**
-   * Not `$state` on purpose: `ask` runs in an `$effect`, so a reactive guard would re-trigger itself
-   * and flood identical requests until a 429. Retrying is a separate, deliberate call.
+   * Not `$state` on purpose: `ask` runs in an `$effect`, so a reactive guard would re-trigger
+   * itself and flood requests until a 429.
    */
   #asked = new Set<string>();
 
-  /**
-   * Which questions have their next page on its way. Plain for the same reason as {@link #asked}.
-   */
   #fetchingMore = new Set<string>();
 
   get error(): AppError | null {
     return this.#error;
   }
 
-  /** The answer to one question, or nothing until it has been asked. */
   for(householdId: string | null, query: SuggestionQuery = {}): readonly Suggestion[] {
     return householdId ? (this.#answers.get(keyOf(householdId, query))?.items ?? []) : [];
   }
@@ -52,10 +45,7 @@ class SuggestionStore {
     return householdId ? (this.#answers.get(keyOf(householdId, query))?.status ?? 'idle') : 'idle';
   }
 
-  /**
-   * Whether the question has come back (ready or failed), so callers do not rearrange the page on
-   * an empty answer and again on the real one.
-   */
+  /** Whether the question has come back (ready or failed), so the page isn't rearranged twice. */
   answered(householdId: string | null, query: SuggestionQuery = {}): boolean {
     const status = this.statusOf(householdId, query);
 
@@ -66,10 +56,7 @@ class SuggestionStore {
     return householdId ? (this.#answers.get(keyOf(householdId, query))?.more ?? false) : false;
   }
 
-  /**
-   * The next few: the same question excluding what is shown. A failure ends the list; what is shown
-   * is still right.
-   */
+  /** The next few: the same question excluding what is shown. */
   async more(householdId: string, query: SuggestionQuery = {}): Promise<void> {
     const key = keyOf(householdId, query);
     const shown = this.#answers.peek(key);
@@ -108,7 +95,6 @@ class SuggestionStore {
     });
   }
 
-  /** Asks a question once. Calling it again with the same one does nothing. */
   async ask(householdId: string, query: SuggestionQuery = {}): Promise<void> {
     const key = keyOf(householdId, query);
 
@@ -121,15 +107,11 @@ class SuggestionStore {
     await this.#fetch(householdId, query, key);
   }
 
-  /** Asks again after a failure. Separate from {@link ask} so a retry is a decision. */
   async retry(householdId: string, query: SuggestionQuery = {}): Promise<void> {
     await this.#fetch(householdId, query, keyOf(householdId, query));
   }
 
-  /**
-   * Stops suggesting a recipe everywhere, optimistically; every cached answer is filtered, as the
-   * recipe is often in two.
-   */
+  /** Stops suggesting a recipe everywhere, optimistically; every cached answer is filtered. */
   async dismiss(recipeId: string): Promise<AppError | null> {
     const before = this.#answers.snapshot();
 
@@ -167,7 +149,6 @@ class SuggestionStore {
     return null;
   }
 
-  /** Drops a deleted recipe: each question is asked once, so it would linger until reload. */
   forget(recipeId: string): void {
     this.#without(recipeId);
   }

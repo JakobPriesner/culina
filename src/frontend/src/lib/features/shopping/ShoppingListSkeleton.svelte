@@ -3,11 +3,8 @@
   import { m } from '$shell/i18n';
 
   /**
-   * The list, before it has arrived.
-   *
-   * The same rhythm as the real thing — a sticky section label with its count,
-   * then rows of a checkbox, a name and an amount — so nothing moves when the
-   * answer lands.
+   * The list before it arrives, with the real rhythm (sticky section label and count, then
+   * checkbox/name/amount rows) so nothing moves on landing.
    */
   const sections = [
     [

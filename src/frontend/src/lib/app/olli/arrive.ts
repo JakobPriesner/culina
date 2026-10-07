@@ -7,7 +7,6 @@ import type { Rig } from './rig.svelte';
 interface Arrival {
   rig: Rig;
   later: (ms: number, run: () => void) => unknown;
-  /** Cancels every pending beat. */
   rest: () => void;
   blink: () => void;
   watched: () => boolean;

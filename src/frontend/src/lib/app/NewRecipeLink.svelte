@@ -50,15 +50,8 @@
   span {
     display: none;
   }
-  /*
-   * The label appears once there is room for it; the shape does not change
-   * with it.
-   *
-   * It used to square off to `--radius-md` as it grew, which made it the one
-   * thing in a header of pills — the brand's card and the navigation's — drawn
-   * from a different kit, and only on wide screens, where all three are visible
-   * at once and the difference is impossible to miss.
-   */
+  /* The label appears once there is room; the shape doesn't change (squaring off to `--radius-md` made it
+     the odd one out among pills on wide screens). */
   @media (min-width: 80rem) {
     .new-recipe {
       padding-inline: var(--space-4);

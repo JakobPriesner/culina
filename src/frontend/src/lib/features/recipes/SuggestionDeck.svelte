@@ -10,49 +10,15 @@
   import type { Suggestion } from './types';
 
   /**
-   * The shortlist, one on screen, walked with a finger.
-   *
-   * The panel used to hold the single best answer and offer two verbs: open it,
-   * or stop suggesting it. The second is a permanent, written-down decision —
-   * so there was no way to say the ordinary thing, "not tonight, what else is
-   * there?". This is that way, and it writes nothing.
-   *
-   * Which is the whole point, and the reason this is a scroller rather than a
-   * deck of cards thrown over the shoulder. The ranking has no non-click signal
-   * on purpose: with two to eight people in a household, a recipe somebody
-   * scrolled past means nothing at all. A swipe that quietly meant "never
-   * again" would be inventing the one signal the backend refused to invent, and
-   * would say the same thing as the Dismiss control two centimetres away — one
-   * of them silently, which is the worse of the two.
-   *
-   * So it is a shortlist and not a deck: five ranked answers that stay put, walk
-   * in both directions, and are the same five all evening — the server answers
-   * by the day rather than the instant for exactly that reason. Swiping back to
-   * the one you passed is the behaviour that makes this a list rather than a
-   * feed.
-   *
-   * No carousel was written. `SimilarRecipes` already settled that question for
-   * this app: a scroll-snap track is swipe, momentum, rubber-banding,
-   * back-swipe, trackpads, keyboards and reduced motion, all of them native and
-   * none of them ours to get wrong.
+   * Ranked shortlist walked by scrolling, one on screen. Walking writes nothing: a swipe must never mean "never again".
+   * A native scroll-snap track (as SimilarRecipes), not a hand-built carousel.
    */
   interface Props {
-    /** Best first. One of them renders the page exactly as it was before. */
     items: readonly Suggestion[];
-    /** Stops suggesting one. The only thing here that writes anything down. */
     ondismiss?: (recipeId: string) => void;
-    /**
-     * The households this one inherits recipes from, by id, with their names.
-     * A recipe from one of them says so.
-     */
+    /** Households this one inherits recipes from, by id, with names. */
     inherited?: Readonly<Record<string, string>>;
-    /**
-     * Asks for the next few, once the last one is on screen.
-     *
-     * Given only while there are more to ask for, and free to call while its
-     * own request is still running. Coming to the end of a shortlist and
-     * wanting another idea is the same "what else?" that walking it was.
-     */
+    /** Asks for the next few; given only while more exist, safe to call while a request runs. */
     onmore?: () => void;
   }
 
@@ -63,38 +29,22 @@
 
   const reasons = $derived(reasonLinesFor(items));
 
-  /** Below two there is nothing to walk, and a control row would be furniture. */
   const walkable = $derived(items.length > 1);
 
   /**
-   * Which one is on screen.
-   *
-   * Clamped rather than corrected. Dismissing the last of five leaves the track
-   * scrolled past the end of four; the browser puts that right itself and says
-   * so with a scroll event, and until it does this reads one short instead of
-   * off the end. An effect that scrolled it back would be a second thing moving
-   * the track, racing the browser to move it the same way.
+   * The index on screen, clamped rather than corrected: after dismissing the last one the browser fixes the scroll itself,
+   * and an effect would race it.
    */
   const at = $derived(Math.max(0, Math.min(items.length - 1, scrolled)));
 
-  // Only once somebody has walked there: a single answer is already its own
-  // last one, and asking for more before anyone has looked past it is a
-  // request for a list nobody asked to see.
+  // Only after walking there; a single answer is already its own last one.
   $effect(() => {
     if (onmore && walkable && at === items.length - 1) {
       untrack(onmore);
     }
   });
 
-  /**
-   * Where the track has come to rest.
-   *
-   * Measured off the scroll position rather than remembered from the last
-   * button press, because the finger, the trackpad, Tab and the buttons all
-   * move it and only one of those is ours. A remembered index is a second
-   * opinion about where the track is, and it is wrong the first time somebody
-   * uses the gesture this whole component exists for.
-   */
+  /** Where the track rests, measured from scroll position: finger, trackpad, Tab and buttons all move it. */
   function follow() {
     if (!track || track.clientWidth === 0) {
       return;
@@ -108,9 +58,7 @@
       return;
     }
 
-    // No `behavior`, deliberately: the track asks for smooth in CSS, and the
-    // app-wide reduced-motion rule turns that into an instant jump. Passing
-    // 'smooth' here would scroll smoothly past somebody who asked it not to.
+    // No `behavior`: CSS asks for smooth and reduced motion makes it instant; 'smooth' here would override that.
     track.scrollTo({ left: Math.max(0, Math.min(items.length - 1, to)) * track.clientWidth });
   }
 </script>
@@ -131,11 +79,7 @@
   </ul>
 
   {#if walkable}
-    <!--
-      Prev, next, and which of how many. Not dots: the set is ranked, so the
-      position is a fact about the answer rather than decoration, and "2 of 5"
-      says it where five circles only say "there are more".
-    -->
+    <!-- Prev/next and "2 of 5", not dots: the set is ranked, so position is information. -->
     <div class="walk">
       <IconButton
         label={m['suggestions.deck.previous']()}
@@ -179,9 +123,7 @@
     scroll-behavior: smooth;
   }
 
-  /* Only once there is somewhere to go. A single panel in a scroll container
-     is a scrollbar's worth of nothing, and on a phone it is a rubber band that
-     moves the one thing on the page for no reason. */
+  /* Only with somewhere to go: a lone panel would be a pointless scrollbar and rubber band. */
   .track.walkable {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
@@ -193,9 +135,7 @@
     display: none;
   }
 
-  /* Snapping fights a keyboard walking the track: each Tab would be undone by
-     the browser settling the scroll somewhere else. The same trade the
-     cookbook shelf makes. */
+  /* Snapping fights keyboard walking: each Tab would be undone by the browser re-settling. */
   .track:focus-within {
     scroll-snap-type: none;
   }
@@ -219,8 +159,7 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Paper has nothing to swipe, and printing five heroes to read one is five
-     sheets of somebody's paper. */
+  /* Paper has nothing to swipe. */
   @media print {
     .track {
       grid-auto-flow: row;

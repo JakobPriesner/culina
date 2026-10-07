@@ -8,14 +8,7 @@ import {
   unique
 } from './support/culina';
 
-/**
- * The properties the whole auth design rests on, asserted against the built app
- * rather than against the middleware in isolation.
- *
- * A unit test of a guard proves the guard works. These prove it is wired into
- * the pipeline it ships in, in the order the pipeline promises — which is the
- * part that a refactor can quietly undo.
- */
+/** Auth-design properties asserted against the built app, proving the guards are wired into the shipped pipeline in the promised order. */
 test.describe.configure({ mode: 'serial' });
 
 test.describe('the way in', () => {
@@ -42,9 +35,7 @@ test.describe('the way in', () => {
     const household = (await (await page.request.get('/api/v1/users/me')).json()).households[0]
       .householdId;
 
-    // The session cookie goes along — `page.request` shares the jar — so this
-    // is a request that is authenticated and still must not be honoured. That
-    // is the whole point: a cookie proves who you are, never that you asked.
+    // `page.request` shares the cookie jar: authenticated, and still must not be honoured, since a cookie proves who you are, not that you asked.
     const forged = await page.request.post('/api/v1/recipes', {
       headers: { Origin: origin },
       data: { householdId: household, title: unique('Forged') }
@@ -61,10 +52,7 @@ test.describe('the way in', () => {
     const household = (await (await page.request.get('/api/v1/users/me')).json()).households[0]
       .householdId;
 
-    // Token and cookie both correct, and the request still does not come from
-    // us. Per-IP rate limiting and the token are not enough on their own; the
-    // origin check is what makes a stolen token unusable from a page an
-    // attacker controls.
+    // Token and cookie correct but the request is not from us: the origin check makes a stolen token unusable from an attacker's page.
     const elsewhere = await page.request.post('/api/v1/recipes', {
       headers: { Origin: 'https://not-culina.example', 'X-Culina-CSRF': csrf ?? '' },
       data: { householdId: household, title: unique('Elsewhere') }
@@ -82,15 +70,12 @@ test.describe('the way in', () => {
 
     await strangersPage.goto('/shopping');
 
-    // Not a bare redirect to the front page: somebody who followed a link to a
-    // recipe should land on that recipe, not be made to find it again.
     await expect(strangersPage).toHaveURL(/\/login\?next=%2Fshopping/);
 
     await strangersPage.getByLabel(/email|e-mail/i).fill(who.email);
     await strangersPage.getByRole('textbox', { name: /password|passwort/i }).fill(who.password);
     await strangersPage.getByRole('button', { name: /(^|\s)(sign (me )?in|anmelden)$/i }).click();
 
-    // And the whole way back, not to the front page.
     await expect(strangersPage).toHaveURL(/\/shopping$/);
     await expect(strangersPage.getByRole('heading', { level: 1 })).toBeVisible();
 
@@ -103,9 +88,7 @@ test.describe('the way in', () => {
 
     await signInWithHousehold(theirs, await accountFor(browser, testInfo));
 
-    // Production names it __Host-culina.session; over plain HTTP, as these
-    // tests run locally, the prefix is dropped. Whichever it is, it has to
-    // exist now, or the check below proves nothing.
+    // Production names it __Host-culina.session; over plain HTTP, as locally, the prefix is dropped. It must exist now or the check below proves nothing.
     const sessionCookie = (await context.cookies()).find((cookie) =>
       ['__Host-culina.session', 'culina.session'].includes(cookie.name)
     );
@@ -116,12 +99,11 @@ test.describe('the way in', () => {
     await theirs.getByRole('button', { name: /sign out|abmelden/i }).click();
     await expect(theirs).toHaveURL(/\/login/);
 
-    // The cookie is gone, not merely ignored.
     const cookies = await context.cookies();
 
     expect(cookies.find((cookie) => cookie.name === sessionCookie?.name)?.value ?? '').toBe('');
 
-    // And the app does not let the back button show the previous person's data.
+    // The back button must not show the previous person's data.
     await theirs.goto('/');
     await expect(theirs).toHaveURL(/\/login/);
 

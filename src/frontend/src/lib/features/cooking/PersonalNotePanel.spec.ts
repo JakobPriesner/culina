@@ -6,10 +6,7 @@ import PersonalNotePanel from './PersonalNotePanel.svelte';
 import { notes } from './stores/notes.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * Typing into a note that has not arrived yet loses the typing: the answer
- * replaces it, and the next save sends the emptiness back as the note.
- */
+/* Typing into a note that has not arrived loses the typing: the answer replaces it and the next save sends the emptiness back. */
 afterEach(() => {
   notes.reset();
   vi.unstubAllGlobals();
@@ -41,10 +38,7 @@ describe('your note on a recipe', () => {
     expect(note).toHaveValue('Use the heavy pan');
   });
 
-  /*
-   * An empty note invites typing, and the save would replace the note the
-   * server still holds without it ever having been shown.
-   */
+  /* An empty note invites typing, and saving would replace the server's note without it ever being shown. */
   it('does not pass off a failed read as no note', async () => {
     const answers = [
       () => new Response(null, { status: 503 }),
@@ -72,11 +66,7 @@ describe('your note on a recipe', () => {
   });
 });
 
-/*
- * Leaving the page sends what was typed. What was not typed is not sent: the
- * note on screen may be one that was never read, and the save would replace
- * the real one with it.
- */
+/* Leaving sends what was typed, not what was not: the note on screen may never have been read, and saving would replace the real one. */
 describe('leaving a note nobody typed in', () => {
   /** Answers every request alike, and returns the methods it was sent. */
   const answered = (response: () => Response) => {

@@ -7,25 +7,11 @@ import { quantityLabels } from './quantityLabels';
 import { scaleQuantity } from './scaling';
 
 /*
- * A metric recipe, shown in the units a US kitchen owns.
- *
- * The danger is not arithmetic — it is confidence. A conversion that turns 250
- * grams of flour into "2 cups" produces a recipe that is wrong in a way nobody
- * can see, and an unfamiliar recipe beats a confidently wrong one.
- *
- * The tilde in several of these is the app saying "I rounded this". It is not
- * noise to be designed away: a cook who can see that an amount was moved knows
- * which amounts to trust to the gram.
+ * A metric recipe in US units. The danger is confidence, not arithmetic: "2 cups" for 250 g of flour is wrong invisibly.
+ * The tilde means "I rounded this", so cooks know which amounts to trust to the gram.
  */
 
-/**
- * What is rendered, with its non-breaking space made visible.
- *
- * An amount and its unit are joined by one so that `250` never wraps away from
- * `g`. Swapping it for an ordinary space here keeps the expectations below
- * readable — an invisible character in an assertion is a character nobody can
- * see in a diff.
- */
+/** Rendered text with its non-breaking space made visible, so assertions stay readable in a diff. */
 const shown = (value: number, unit: string, factor = 1) =>
   formatQuantity(
     scaleQuantity({ value, unit }, factor, 'imperial'),
@@ -42,39 +28,31 @@ const metric = (value: number, unit: string, factor = 1) =>
 
 describe('mass, which is the same measurement said differently', () => {
   it('becomes ounces', () => {
-    // 227 g is a hair over eight ounces, and eight is what a recipe says.
     expect(shown(227, 'g')).toBe('8 oz');
   });
 
   it('becomes pounds once there are enough of them', () => {
-    // Nobody writes "24 oz of beef".
     expect(shown(680, 'g')).toBe('1½ lb');
-    // A kilo is 2.2 lb, and the nearest quarter is 2¼ — a two per cent move,
-    // which the tilde says out loud rather than hides.
     expect(shown(1, 'kg')).toBe('~2¼ lb');
   });
 
   it('never becomes cups', () => {
-    // The whole point. A cup of flour is between 120 g and 150 g depending on
-    // how it was packed, so 250 g "in cups" is a number nobody can act on.
+    // A cup of flour is 120-150 g depending on packing, so no cup conversion.
     expect(shown(250, 'g')).not.toContain('cup');
     expect(shown(1, 'kg')).not.toContain('cup');
   });
 
   it('lands on a fraction a scale can show', () => {
-    // Quarters, not decimals: "4¼ oz", never "4.23 oz".
     expect(shown(120, 'g')).toBe('4¼ oz');
   });
 
   it('keeps halves right up to a pound', () => {
-    // 300 g is 10.58 oz. "10½ oz" is what a recipe says; rounding it to 11 is
-    // a four per cent lie for no gain at all.
+    // 10.58 oz reads as 10½, not 11 (a four per cent lie).
     expect(shown(300, 'g')).toBe('10½ oz');
   });
 
   it('says how little rather than nothing', () => {
-    // 2 g of yeast is 0.07 oz. A quarter-ounce would be three times it, and
-    // "0 oz" would leave it out.
+    // 0.07 oz: a quarter-ounce would be 3x, and "0 oz" would drop it.
     expect(shown(2, 'g')).toBe('0.07 oz');
     expect(shown(3, 'ml')).toBe('0.1 fl oz');
   });
@@ -87,22 +65,16 @@ describe('volume, which converts honestly', () => {
 
   it('becomes cups above one', () => {
     expect(shown(240, 'ml')).toBe('1 cup');
-    // Half a litre is 2.11 cups, and 2⅛ is no measure anybody owns. "About two
-    // cups" is the honest answer, and the tilde is how it says so.
     expect(shown(500, 'ml')).toBe('~2 cups');
   });
 
   it('lands on a measure that is in the drawer', () => {
-    // A third-cup measure is in every set, which is exactly why a cup amount
-    // must not be rounded onto quarters alone.
     expect(shown(320, 'ml')).toBe('1⅓ cups');
   });
 });
 
 describe('what it deliberately leaves alone', () => {
   it('keeps a spoon a spoon', () => {
-    // A teaspoon is a teaspoon in both systems, which is why the app refuses to
-    // turn one into millilitres either.
     expect(shown(2, 'tbsp')).toBe(metric(2, 'tbsp'));
   });
 
@@ -120,7 +92,6 @@ describe('what it deliberately leaves alone', () => {
   });
 
   it('leaves an ingredient with no amount alone', () => {
-    // "Salt" has no amount, and there is nothing to convert.
     expect(
       formatQuantity(
         scaleQuantity({ value: null, unit: null }, 2, 'imperial'),
@@ -133,16 +104,11 @@ describe('what it deliberately leaves alone', () => {
 
 describe('converting and scaling together', () => {
   it('converts the exact amount rather than a rounded one', () => {
-    // 200 g at 1.4 is 280 g, which is 9.88 oz. Rounding to grams first would
-    // reach the same answer here — the point is that it does so by luck, and
-    // rounding twice drifts differently on every amount in a recipe. The move
-    // to ten is one per cent, which is inside the threshold and unmarked.
+    // Converted from the raw value, not rounded grams (rounding twice drifts); the one per cent move is under the threshold and unmarked.
     expect(shown(200, 'g', 1.4)).toBe('10 oz');
   });
 
   it('scales into the larger unit when the amount asks for it', () => {
-    // Doubling 300 g is 600 g, which is 21 oz — past a pound, so a recipe
-    // stops counting in ounces and starts counting in pounds.
     expect(shown(300, 'g', 2)).toMatch(/lb$/);
   });
 });

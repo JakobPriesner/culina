@@ -7,11 +7,7 @@ import { sources } from './stores/sources.svelte';
 import type { ConnectedSource } from './types';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The screen where somebody decides what to keep. What it has to get right is
- * the difference between "I already have this" and "this did not come through",
- * because that is the question on every visit after the first.
- */
+/* Where somebody decides what to keep: it must separate "I already have this" from "this did not come through". */
 const source: ConnectedSource = {
   sourceId: 's1',
   kind: 'tandoor',
@@ -79,8 +75,7 @@ describe('looking through somebody else’s library', () => {
 
     renderWithProviders(SourceLibrary, { props: { source, onimport: () => {} } });
 
-    // Shown rather than hidden: dropping it would leave somebody unable to tell
-    // "I have it" from "it did not come through".
+    // Shown, not hidden: dropping it would blur "I have it" and "it did not come through".
     expect(screen.getByRole('checkbox', { name: 'Zwiebelkuchen' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'Linsensuppe' })).not.toBeInTheDocument();
     expect(screen.getByText('Linsensuppe')).toBeInTheDocument();
@@ -131,11 +126,9 @@ describe('looking through somebody else’s library', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'All' }));
     await userEvent.click(screen.getByRole('button', { name: 'Import selected recipes' }));
 
-    // Three reads: the first page, then the two it went and got. "All" that
-    // meant "the page you can see" is the lie this control exists to avoid.
+    // Three reads: the first page and the two it fetched; "All" meaning "the page you can see" is the lie this control avoids.
     expect(fetched).toHaveBeenCalledTimes(3);
 
-    // Everything except the one already here.
     expect(chosen).toHaveBeenCalledWith(['1', '2', '3', '5']);
   });
 
@@ -148,7 +141,6 @@ describe('looking through somebody else’s library', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Zwiebelkuchen' }));
 
-    // Every loaded recipe is ticked, and the box still must not say "all".
     expect(screen.getByRole('checkbox', { name: 'All' })).not.toBeChecked();
   });
 
@@ -186,12 +178,9 @@ describe('looking through somebody else’s library', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'All' }));
 
-    // Exactly two: the page that worked and the one that did not. A failure
-    // leaves the page token where it was, so without the guard this would ask
-    // the identical question until the ceiling stopped it.
+    // Exactly two: a failure leaves the page token, so without the guard it would repeat the question until the ceiling.
     expect(asked).toBe(2);
 
-    // A half-read library is better than none, and the failure is on screen.
     await userEvent.click(screen.getByRole('button', { name: 'Import selected recipes' }));
 
     expect(chosen).toHaveBeenCalledWith(['1']);
@@ -206,8 +195,7 @@ describe('looking through somebody else’s library', () => {
 
     await userEvent.type(screen.getByRole('searchbox'), 'pas');
 
-    // Each search is a read of somebody else's server. One per keystroke was
-    // three of them for a word nobody had finished.
+    // Each search reads somebody else's server; one per keystroke was three for an unfinished word.
     await vi.waitFor(() => expect(fetched).toHaveBeenCalledTimes(2));
     await new Promise((resolve) => setTimeout(resolve, 300));
 

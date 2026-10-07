@@ -10,13 +10,8 @@
   import { session } from './session.svelte';
 
   /**
-   * The households this person deleted, as an owner, and can still bring back.
-   *
-   * Shown in two places: the household settings, and the welcome screen —
-   * because somebody who deleted their only household lands there, and a way
-   * back that lives only behind a household they no longer have is no way
-   * back. The server lists only households the caller owns; nobody else's
-   * deleted kitchen can appear here.
+   * Households this person deleted as an owner and can still restore; also on the welcome screen, since
+   * someone who deleted their only household lands there. The server lists only the caller's own.
    */
   interface Props {
     items: readonly DeletedHousehold[];

@@ -5,15 +5,10 @@ import { forgetEverything } from './etagCache';
 import { ErrorCodes } from './problem';
 import { handleSessionExpiry } from './session';
 
-/*
- * The client is the one place that knows about CSRF, conditional requests and
- * the shape of a failure. Every one of those is invisible at the call site, so
- * each is asserted here rather than trusted.
- */
+/* The client alone knows CSRF, conditional requests and failure shape, all invisible at call sites, so each is asserted here. */
 
 const me = '/api/v1/users/me';
 
-/** The last request the client actually sent. */
 let sent: Request[] = [];
 
 /** A reply, or a function making one when the request arrives, for a side effect in between. */
@@ -45,15 +40,10 @@ const json = (body: unknown, init: ResponseInit = {}) =>
     headers: { 'Content-Type': 'application/json', ...init.headers }
   });
 
-/*
- * Captured once, at module scope. Re-reading it inside the helper would bind
- * whatever spy the previous test left behind, and each test would wrap the last
- * one.
- */
+/* Captured once at module scope: re-reading in the helper would bind the previous test's spy. */
 const realTimeout = AbortSignal.timeout.bind(AbortSignal);
 
 describe('deadlines', () => {
-  /** What `AbortSignal.timeout` was asked for, which is the deadline. */
   function watchDeadlines() {
     const asked: number[] = [];
 
@@ -90,9 +80,7 @@ describe('deadlines', () => {
       })
     );
 
-    // One request here is several round trips to somebody else's server plus
-    // the work of re-encoding what comes back. Fifteen seconds aborted whole
-    // batches and reported every recipe in them as unreadable.
+    // One request is several round trips plus re-encoding; fifteen seconds aborted whole batches.
     expect(asked).toEqual([60_000]);
   });
 
@@ -127,11 +115,7 @@ describe('deadlines', () => {
       })
     );
 
-    // The same address a drawing is asked for at, and nothing like the same
-    // wait — which is why drawing is not sent through here at all. Sending
-    // bytes that are already on this machine is an ordinary upload; asking a
-    // model to make some is a stream, read by `ask` in `./events`, where no
-    // deadline applies.
+    // Drawing is not sent through here: asking a model to make bytes is a stream read by `ask` in `./events`, with no deadline.
     expect(asked).toEqual([15_000]);
   });
 
@@ -417,7 +401,6 @@ describe('an expired session', () => {
 describe('a rejected CSRF token', () => {
   const refused = () => problem(403, { code: ErrorCodes.csrfInvalid, detail: 'Could not verify.' });
 
-  /** The refusal, after another tab signed in while this request was on its way. */
   const refusedAfterSignInElsewhere = () => {
     document.cookie = 'culina.csrf=after; path=/';
 

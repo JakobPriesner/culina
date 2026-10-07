@@ -10,27 +10,13 @@
   import Olli from './olli/Olli.svelte';
 
   /**
-   * Nothing at this address, written as a recipe for it.
-   *
-   * A dead end is the one screen nobody chose to be on, so it gets the app's
-   * own vocabulary and a small joke: servings that scale (404 kcal a head),
-   * ingredients that light up when a step mentions them. The joke is the
-   * heading; the line under it says plainly what happened, and every step is a
-   * real way out.
-   *
-   * Drawn where the visitor already is rather than redirected to a `/404`: the
-   * address in the bar is what lets somebody spot the typo, which is why it is
-   * the first ingredient.
-   *
-   * It never says that something exists. A recipe that was deleted, one that
-   * never existed and one in somebody else's household all reach here alike —
-   * the API answers 404 for each, so nobody can find out which addresses are
-   * taken by trying them, and this page keeps that promise.
+   * Nothing at this address, written as a recipe with real ways out; shown in place so the address
+   * bar stays for spotting the typo.
+   * It never says whether something exists: deleted, never existed and another household's all look
+   * alike (the API answers 404 for each).
    */
   interface Props {
-    /** What was asked for. A recipe or a cookbook can be brought back. */
     kind?: 'page' | 'recipe' | 'cookbook';
-    /** One when nothing else on the page is a heading. */
     level?: 1 | 2;
   }
 
@@ -55,15 +41,13 @@
   };
 
   const inside = $derived(session.status === 'authenticated' && session.activeHouseholdId !== null);
-  // Only where the shell would open it: with a household to search in, and
-  // not on the cooking screen, which keeps search away on purpose.
+  // Only where the shell would open it: with a household, and not on the cooking screen.
   const searchable = $derived(inside && offersSearch(page.url.pathname));
 
   let servings = $state(1);
 
   type Ingredient = 'missing' | 'link' | 'patience';
 
-  /** The ingredient the step being pointed at mentions. */
   let mentioned = $state<Ingredient | null>(null);
 
   const mentions = (ingredient: Ingredient) => ({
@@ -242,7 +226,6 @@
     transition: background var(--duration-base) var(--ease-out);
   }
 
-  /* The same light an ingredient gets when a step of a real recipe names it. */
   .ingredients li.lit {
     background: var(--surface-highlight-band);
   }

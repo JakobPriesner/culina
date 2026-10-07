@@ -5,28 +5,14 @@
   import RuleEditor from './RuleEditor.svelte';
   import type { CookbookDetail, CookbookRules } from './types';
 
-  /**
-   * Naming a cookbook, whether it is new or already exists.
-   *
-   * One sheet and one form for both, because they are the same two questions —
-   * a second component for renaming would be a second place for the length
-   * limits and the empty-name rule to drift apart.
-   */
+  /** Naming a cookbook, new or existing: one sheet and form so the length limits and empty-name rule cannot drift. */
   interface Props {
     open: boolean;
-    /** Whose tags the rule editor offers. */
     householdId: string;
     /** The cookbook being edited, or null when making a new one. */
     cookbook?: CookbookDetail | null;
-    /**
-     * What a new cookbook should start out asking for.
-     *
-     * Set when something else proposed the shelf — a saved search being turned
-     * into one. It only ever fills a new cookbook: an existing one's own rules
-     * always win, because they are what is on the screen being edited.
-     */
+    /** Starting rules for a new cookbook (e.g. from a saved search); an existing cookbook's own rules always win. */
     preset?: { readonly name: string; readonly rules: CookbookRules } | null;
-    /** True while the write is in flight. */
     saving?: boolean;
     onsave: (name: string, description: string | null, rules: CookbookRules | null) => void;
     onclose: () => void;
@@ -49,15 +35,12 @@
   let smart = $state(false);
   let rules = $state<CookbookRules>(noRules);
 
-  // Filled from whatever is being edited each time it opens, and emptied on the
-  // way out, so a sheet reopened later never shows the last thing typed into
-  // a different cookbook.
+  // Reset on every open and on the way out, so a reopened sheet never shows another cookbook's text.
   $effect(() => {
     if (open) {
       name = cookbook?.name ?? preset?.name ?? '';
       description = cookbook?.description ?? '';
-      // A preset only ever describes a shelf that fills itself: it exists
-      // because a saved search asked for one.
+      // A preset exists because a saved search asked for a self-filling shelf.
       smart = cookbook !== null ? cookbook.kind === 'smart' : preset !== null;
       rules = cookbook?.rules ?? preset?.rules ?? noRules;
     }
@@ -69,9 +52,7 @@
     rules.tags.length > 0 || rules.ingredients.length > 0 || rules.maxMinutes !== null
   );
 
-  // A shelf that asks for nothing is every recipe you have, which is the screen
-  // it would be reached from — so the button stays out of reach until it asks
-  // for something.
+  // A shelf asking for nothing is every recipe, so the button stays disabled until it asks for something.
   const ready = $derived(name.trim().length > 0 && (!smart || statesARule));
 
   function save() {
@@ -116,9 +97,7 @@
       {/snippet}
     </Field>
 
-    <!-- Asked once, when the cookbook is made. The two kinds answer "why is
-         this recipe here?" differently, so a shelf that changed its mind would
-         have two answers for the recipes already on it. -->
+    <!-- Asked once at creation: the two kinds answer "why is this recipe here?" differently, so changing kind would leave two answers. -->
     {#if !editing}
       <Field label={m['cookbooks.kind.question']()} group>
         {#snippet children({ describedBy })}
@@ -144,8 +123,7 @@
       {/if}
     {/if}
 
-    <!-- Inside the form so Enter submits it, which is what a two-field form
-         with one obvious answer should do. -->
+    <!-- Inside the form so Enter submits it. -->
     <Button type="submit" variant="primary" disabled={!ready} loading={saving}>
       {editing ? m['cookbooks.edit.save']() : m['cookbooks.new.save']()}
     </Button>

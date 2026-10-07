@@ -1,9 +1,4 @@
-/**
- * Synthesizes a warm, pleasant kitchen timer bell using the Web Audio API.
- *
- * Avoids extra network payloads and large audio asset bundles.
- * Pre-unlocks during user gestures (timer start) to adhere to browser autoplay policies.
- */
+/** Synthesizes a kitchen timer bell with Web Audio, avoiding audio assets; unlocked during a user gesture for autoplay policies. */
 let audioContext: AudioContext | null = null;
 
 function getContext(): AudioContext | null {

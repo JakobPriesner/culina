@@ -92,11 +92,6 @@ describe('a recipe in the list', () => {
   });
 });
 
-/*
- * A search result says why it is there, and the words that found it are
- * marked where they appear — a result for "tomate" whose title never says
- * tomato is only trustworthy once the ingredient that matched can be seen.
- */
 describe('a recipe found by a search', () => {
   const marks = () => [...document.querySelectorAll('mark')].map((mark) => mark.textContent);
 

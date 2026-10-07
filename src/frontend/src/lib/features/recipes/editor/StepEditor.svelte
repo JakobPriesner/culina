@@ -7,27 +7,8 @@
   import type { Ingredient, Step } from '../types';
 
   /**
-   * The steps, as sentences.
-   *
-   * An author writes "Melt @butter in the pan" — the `@` is the whole of the
-   * ceremony, and what it buys is a step whose amounts follow the portions.
-   * Naming an ingredient the recipe does not have yet adds it to the list from
-   * inside the sentence, so the method can be written first and measured after.
-   *
-   * Under each sentence is what the step needs, which is the larger question:
-   * "combine everything and knead" names nothing and needs everything, and a
-   * cook standing at the counter is asking what to get out, not what the words
-   * happen to mention.
-   *
-   * Reordering is buttons, not drag. Drag alone cannot be done with a keyboard,
-   * and a recipe is rearranged rarely enough that two arrows are no hardship.
-   *
-   * The number above each step is a field, and it is set exactly as the recipe
-   * will read it back: the small accented line the reading surface puts over
-   * every step. A step in a short recipe is "step 3" and the placeholder says
-   * so; a step in a layered one is "prepare the base", and typing that over the
-   * number is the whole of naming it. Empty is not a name, so clearing the
-   * field gives the number back.
+   * Steps as sentences ("Melt @butter in the pan"); an unknown name is added to the list from the sentence.
+   * Reordering is buttons, not drag, for keyboard use; the number above a step is its editable name.
    */
   interface Props {
     steps: readonly Step[];
@@ -39,14 +20,7 @@
 
   let { steps, ingredients, onchange, onaddingredient }: Props = $props();
 
-  /**
-   * Adds a step and puts the cursor in it.
-   *
-   * The reason anybody presses this button is to write the next sentence, and a
-   * new empty box that then has to be aimed at is the app making them ask
-   * twice. After a tick, because the field does not exist until the longer list
-   * has rendered.
-   */
+  /** Adds a step and focuses it, after a tick because the field doesn't exist until the list renders. */
   async function add() {
     const at = steps.length;
 
@@ -82,9 +56,6 @@
       <p class="none">{m['editor.stepsEmpty']()}</p>
     {/if}
 
-    <!-- The last row of the list rather than a button beside it: adding a step
-         is what you do at the bottom of the method, and a control that sits
-         where the next step will appear needs no explaining. -->
     <button type="button" class="add" onclick={() => void add()}>
       <span class="plus" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -101,9 +72,7 @@
     min-width: 0;
   }
 
-  /* The same enclosure the ingredients have, for the same reason: the steps and
-     the row that adds one are a single thing, and a border is what says so
-     without lifting the method off the page. */
+  /* Same enclosure as the ingredients: steps and the add row are one thing. */
   .panel {
     min-width: 0;
     border: 1px solid var(--border);
@@ -137,8 +106,7 @@
     min-height: var(--control-md);
     padding: var(--space-3) var(--space-4);
     border: none;
-    /* Only the bottom corners, so the row sits inside the enclosure rather than
-       on top of it. */
+    /* Only the bottom corners, so the row sits inside the enclosure. */
     border-end-start-radius: var(--radius-lg);
     border-end-end-radius: var(--radius-lg);
     background: none;

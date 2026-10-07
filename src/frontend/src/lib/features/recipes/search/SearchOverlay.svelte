@@ -21,17 +21,8 @@
   import { createCompletionStore } from './stores/completions.svelte';
 
   /**
-   * Search, over whatever page is on screen.
-   *
-   * One field, and everything else a consequence of what is in it: what the
-   * server understood (chips, each removable), what it had to change to find
-   * anything (said, with the way back), what the half-typed word could become,
-   * and the results — in one list the arrow keys walk through, so the field
-   * never loses focus and a screen reader keeps typing.
-   *
-   * Its own recipe store, like the picker's: searching from the plan page must
-   * not empty the plan page, and closing this must leave the page exactly as
-   * it was.
+   * Search over whatever page is on screen: one field, everything else a consequence of it, in one list the arrow keys walk so focus stays in the field.
+   * Its own recipe store, like the picker's: searching must not empty or leave filtered the page behind.
    */
   interface Props {
     open: boolean;
@@ -60,14 +51,10 @@
 
   const interpretation = $derived(session.asking ? recipes.interpretation : null);
 
-  /**
-   * This search, as the cookbook that would ask the same question — offered
-   * only when a shelf could ask any of it, and with what it could not named.
-   */
+  /** This search as the cookbook that would ask the same question; offered only when a shelf could ask any of it, naming what it could not. */
   const shelf = $derived(shelfFrom(interpretation, session.tags));
 
-  // Opened afresh each time: the recent list may have grown, and the field is
-  // where the typing goes, not the close button the dialog would focus first.
+  // Opened afresh each time: the recent list may have grown, and typing goes to the field, not the close button.
   $effect(() => {
     if (open) {
       recent = recentSearches(userId);
@@ -177,8 +164,7 @@
     </p>
 
     {#if session.asking && recipes.status === 'ready' && recipes.total > 0 && shelvable(shelf)}
-      <!-- The one door from a search to a shelf. What a shelf cannot ask is
-           said beside it rather than discovered on the cookbook later. -->
+      <!-- The one door from a search to a shelf; what a shelf cannot ask is said here. -->
       <div class="shelf">
         <Button
           size="sm"
@@ -285,9 +271,7 @@
     font-size: var(--text-xs);
   }
 
-  /* One row that scrolls rather than wraps, so chips never push the results
-     below the fold on a phone. A scroll container in a column shrinks to
-     nothing unless told not to. */
+  /* One scrolling row so chips never push results below the fold; a scroll container in a column shrinks to nothing unless told not to. */
   .understood {
     display: flex;
     flex-shrink: 0;

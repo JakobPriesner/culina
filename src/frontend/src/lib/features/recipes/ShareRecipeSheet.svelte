@@ -7,29 +7,19 @@
   import { sharing } from './stores/sharing.svelte';
 
   /**
-   * Handing one recipe to somebody who does not have Culina.
-   *
-   * Opening the sheet is the decision to share: the link is made as it opens,
-   * so the address is on screen without a second tap, beside the sentence that
-   * says anyone holding it can read the recipe. The sheet is also where the
-   * link is read back and where it is taken away again — the one place that
-   * answers "is this recipe out there?".
-   *
-   * The link is deliberately re-readable, unlike a household invitation, which
-   * is shown once. See the sharing store for why.
+   * Sharing one recipe: the link is made as the sheet opens, and the sheet is where it is read back and revoked.
+   * Re-readable, unlike a household invitation (see the sharing store).
    */
   interface Props {
     open: boolean;
     recipeId: string;
-    /** For the sentence the native share sheet shows beside the address. */
     title: string;
     onclose: () => void;
   }
 
   let { open, recipeId, title, onclose }: Props = $props();
 
-  // Only while it is open: a closed sheet that keeps its answer warm is one
-  // more request on every recipe page nobody asked for.
+  // Only while open: a closed sheet keeping its answer warm is an extra request per recipe page.
   $effect(() => {
     if (open) {
       void share();
@@ -38,13 +28,7 @@
 
   const token = $derived(sharing.tokenFor(recipeId));
 
-  /**
-   * Built here and not by the server.
-   *
-   * Which origin Culina is reached at is a fact the browser holds — an instance
-   * behind a proxy or on a second hostname would otherwise hand out links to
-   * the wrong one.
-   */
+  /** Built client-side: the browser knows which origin Culina is reached at (proxy, second hostname). */
   const link = $derived(token ? `${location.origin}/shared/${token}` : null);
 
   async function share() {
@@ -64,14 +48,7 @@
     });
   }
 
-  /**
-   * The phone's own share sheet when there is one, the clipboard otherwise.
-   *
-   * `navigator.share` is what "send this to someone" means on a phone: it opens
-   * the list of people and apps the reader already uses, which no button here
-   * could reproduce. On a desktop it usually does not exist, and there copying
-   * is what sharing is.
-   */
+  /** The native share sheet where there is one, the clipboard otherwise. */
   async function send() {
     if (!link) {
       return;
@@ -83,9 +60,7 @@
 
         return;
       } catch {
-        // Dismissing the system sheet throws, and that is not a failure —
-        // somebody changed their mind. Fall through to the clipboard, which
-        // also covers a browser that has the method but refuses the call.
+        // Dismissing the system sheet throws, which is not a failure; also covers a browser that refuses the call.
       }
     }
 
@@ -93,8 +68,7 @@
       await navigator.clipboard.writeText(link);
       toaster.show({ message: () => m['recipe.share.copied'](), tone: 'success' });
     } catch {
-      // A browser that refuses the clipboard is not worth a message: the link
-      // is on screen and can be selected.
+      // A refused clipboard is not worth a message: the link is on screen.
     }
   }
 </script>
@@ -104,8 +78,7 @@
     {#if link}
       <p class="lead">{m['recipe.share.on']()}</p>
 
-      <!-- Readable and selectable, not a field: there is nothing to type here,
-           and an input invites somebody to edit an address. -->
+      <!-- Selectable text, not an input, which would invite editing the address. -->
       <p class="link" data-testid="share-link">{link}</p>
 
       <div class="actions">
@@ -117,12 +90,10 @@
 
       <p class="note">{m['recipe.share.revokeHint']()}</p>
     {:else if sharing.status === 'loading'}
-      <!-- The shape of the shared state, so the link lands where it is drawn. -->
       <Skeleton width="100%" height="1rem" />
       <Skeleton width="100%" height="2.5rem" />
       <Skeleton width="10rem" height="2.5rem" />
     {:else}
-      <!-- Only after the link was taken back, or could not be made. -->
       <p class="lead">{m['recipe.share.off']()}</p>
 
       <Button variant="primary" onclick={share} loading={sharing.working}>
@@ -147,8 +118,7 @@
     color: var(--text-muted);
   }
 
-  /* Monospaced and sunken: an address somebody may want to check character by
-     character before sending it to the wrong chat. */
+  /* Monospaced and sunken so the address can be checked character by character. */
   .link {
     width: 100%;
     padding: var(--space-2) var(--space-3);

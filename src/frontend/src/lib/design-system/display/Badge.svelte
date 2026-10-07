@@ -1,13 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * A short, factual label: a tag, a diet, a count.
-   *
-   * Not a decoration and not a button. If pressing it would do something, it is
-   * a `Button`; a badge that responds to clicks without looking like it can is
-   * a control nobody finds.
-   */
+  /** A short factual label (tag, diet, count); not a button: if pressing it would do something, use `Button`. */
   interface Props {
     children: Snippet;
     tone?: 'neutral' | 'accent' | 'success' | 'warning' | 'danger';

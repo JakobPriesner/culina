@@ -11,15 +11,11 @@
   import { notes } from './stores/notes.svelte';
 
   /**
-   * Your own margin, beside somebody else's recipe.
-   *
-   * The two things that belong here are the same kind of fact: what you thought
-   * and what you did. Neither changes the recipe, which is what lets a
-   * household share one and still disagree about the sugar.
+   * Your own margin beside somebody else's recipe: what you thought and did, without changing the
+   * recipe.
    */
   interface Props {
     recipeId: string;
-    /** Cook mode keeps the note but leaves attempt history on the detail page. */
     variant?: 'detail' | 'cook';
   }
 
@@ -57,8 +53,7 @@
 
   <p class="hint">{m['notes.hint']()}</p>
 
-  <!-- Paper only. The note lives in a text area, and a text area prints as an
-       empty box; this is the same words in a form paper can carry. -->
+  <!-- Paper only: a text area prints as an empty box, so the same words are written out. -->
   {#if notes.overall}<p class="written">{notes.overall}</p>{/if}
 
   {#if variant === 'detail'}
@@ -72,10 +67,8 @@
     {/if}
   {/if}
 
-  <!-- Not to be typed into before the note has been read: the answer would
-       replace what was typed, and the save after it would send that emptiness
-       back as the note, under "Saved". A read that failed offers no text area
-       at all, since an empty one says there is no note. -->
+  <!-- Not typeable before the note is read, or the answer would replace typing and the save would
+       send emptiness as the note; a failed read offers no text area. -->
   {#if notes.failed}
     <div class="unread" role="alert">
       <p>{m['notes.unreadable']()}</p>
@@ -151,9 +144,8 @@
   }
 
   /*
-   * Notes print when there are any — they are the most useful thing on the
-   * sheet, being what went wrong last time. An empty one is a heading and an
-   * invitation to type, and paper cannot be typed into.
+   * Notes print when there are any (the most useful thing on the sheet); an empty one can't be
+   * typed into on paper.
    */
   @media print {
     .notes {

@@ -1,17 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * Content that is being refreshed, without taking it away.
-   *
-   * The rule this exists to enforce: a refetch of something already on screen
-   * keeps showing it. Replacing a list you are reading with a skeleton loses
-   * your place, loses your scroll position, and tells you less than the stale
-   * list did — the old data is almost always still the right answer.
-   *
-   * So the content stays, and a hairline at the top of the region says work is
-   * happening. `aria-busy` is the announcement; the bar is the glance.
-   */
+  /** Content being refreshed without taking it away: a refetch of what is on screen keeps showing it (a skeleton loses place and scroll) under a hairline that says work is happening. `aria-busy` announces; the bar is the glance. */
   interface Props {
     children: Snippet;
     busy: boolean;
@@ -56,8 +46,7 @@
     animation: sweep 1.4s var(--ease-spatial) infinite;
   }
 
-  /* On the content itself, not only on .busy, so the region also eases back
-     when the refresh lands instead of snapping to full strength. */
+  /* On the content itself so it also eases back when the refresh lands. */
   .content {
     transition: opacity var(--duration-base) var(--ease-out);
   }

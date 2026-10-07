@@ -7,12 +7,7 @@ import { ingredients as known } from '../stores/ingredients.svelte';
 import { units } from '../stores/units.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * An ingredient is written as the three things it is made of, so these are
- * about the three things: that an amount, a unit and a name entered apart stay
- * apart, and that neither list can stop somebody writing a word it has never
- * heard of.
- */
+/* Amount, unit and name entered apart stay apart, and neither list can stop somebody writing a word it has never heard of. */
 
 const amount = () => screen.getByLabelText('Amount');
 const unit = () => screen.getByRole('combobox', { name: 'Unit' });
@@ -21,7 +16,6 @@ const note = () => screen.getByLabelText('Note (e.g. diced)');
 const unitList = () => screen.queryByRole('listbox', { name: 'Unit suggestions' });
 const nameList = () => screen.queryByRole('listbox', { name: 'Ingredient suggestions' });
 
-/** The suggestions endpoint, answering with whatever this kitchen is told. */
 function serverSuggests(items: { name: string; section: string; own: boolean }[]) {
   vi.stubGlobal(
     'fetch',
@@ -188,7 +182,6 @@ describe('the unit list', () => {
     expect(onchange).toHaveBeenLastCalledWith([
       { id: '', quantity: { value: 1, unit: 'Schuss' }, name: 'Milch', note: null }
     ]);
-    // And it is a unit this kitchen measures in from now on.
     expect(units.all).toContain('Schuss');
   });
 
@@ -343,7 +336,7 @@ describe('where an ingredient ends up', () => {
   });
 
   it('says quietly that it is in none of them', () => {
-    // Salt to taste belongs to no step. Worth knowing, never an error.
+    // Salt to taste belongs to no step; never an error.
     renderWithProviders(IngredientHarness, {
       props: { ingredients: [flour], steps: [step([])] }
     });
@@ -352,8 +345,7 @@ describe('where an ingredient ends up', () => {
   });
 
   it('says nothing about a line the server has not seen yet', () => {
-    // No id means no step could point at it, so "not in a step" would be
-    // telling somebody off for not having saved.
+    // No id means no step could point at it; "not in a step" would scold for not having saved.
     renderWithProviders(IngredientHarness, {
       props: { ingredients: [{ ...flour, id: '' }], steps: [step([])] }
     });

@@ -18,19 +18,7 @@
   import { preferences } from '$shell/preferences.svelte';
   import type { Ingredient } from '../types';
 
-  /**
-   * A step, written the way a step is written, with `@` to point at an
-   * ingredient.
-   *
-   * The picker opens on `@` and closes on its own as soon as what has been
-   * typed names nothing — which is how "@olive oil in the pan" stops suggesting
-   * after "oil" without needing a rule about where a name ends.
-   *
-   * Its last row offers to add the name that was typed, and that is the point
-   * of the whole thing: someone writing the method can put an ingredient on the
-   * list without leaving the sentence, and say how much later. Writing the
-   * recipe builds the list instead of repeating it.
-   */
+  /** A step textarea where `@` opens an ingredient picker; its last row adds the typed name to the list. */
   interface Props {
     id: string;
     label: string;
@@ -46,13 +34,7 @@
   let field = $state<HTMLTextAreaElement>();
   let pending = $state<PendingMention | null>(null);
   let highlighted = $state(0);
-  /**
-   * Where a mention the author has already settled begins.
-   *
-   * Choosing a name or pressing Escape ends that mention. Without this the
-   * cursor would still be sitting just after an `@`, and the picker would
-   * reopen behind the very next keystroke — having just been told to go away.
-   */
+  /** Start of a mention already settled (chosen or Escaped), so the picker doesn't reopen behind the next keystroke. */
   let settled = $state<number | null>(null);
 
   const listId = $derived(`${id}-mentions`);
@@ -63,16 +45,7 @@
   const matches = $derived(pending ? suggest(pending.query, ingredients) : []);
   const segments = $derived(toSegments(value, ingredients));
 
-  /**
-   * A name offered for the list, when there is one worth offering.
-   *
-   * Two words at most. A query may contain spaces, because "olive oil" is one
-   * name — but "@olive oil into the pan" is a sentence the author kept writing,
-   * and offering to add all of it as an ingredient would be absurd. Matching
-   * names keep the picker open on their own for as long as they match; this is
-   * only about what to do when nothing does. Nor is a name already on the list
-   * followed by more words a new name: it is a mention that was finished.
-   */
+  /** A name to offer for the list: at most two words ("@olive oil into the pan" is a sentence), and not one already present. */
   const newName = $derived.by(() => {
     if (!query || query.split(/\s+/).length > 2 || writesOn(query, ingredients)) {
       return null;
@@ -81,7 +54,6 @@
     return ingredients.some((one) => one.name.toLowerCase() === query.toLowerCase()) ? null : query;
   });
 
-  /** What the picker shows: the recipe's own lines, then the row that adds one. */
   const options = $derived<readonly Suggestion[]>([
     ...matches.map((match) => ({
       value: match.id,
@@ -102,9 +74,7 @@
   function reconsider() {
     const next = field ? pendingMention(field.value, field.selectionStart) : null;
 
-    // Only a different mention starts the highlight over. Arrowing down the
-    // list moves the cursor nowhere, and a list that jumped back to its first
-    // row on every key release could never be walked.
+    // Only a different mention resets the highlight; arrowing moves no cursor and must stay walkable.
     if (next?.at !== pending?.at || next?.query !== pending?.query) {
       highlighted = 0;
     }
@@ -116,7 +86,6 @@
     pending = next;
   }
 
-  /** Writes the name in, then hands the cursor back to the sentence. */
   async function choose(name: string) {
     if (!field || !pending) {
       return;
@@ -128,8 +97,7 @@
     pending = null;
     oninput(written.text);
 
-    // The parent owns the value, so the cursor can only be placed once the new
-    // text has actually reached the element.
+    // The parent owns the value: place the cursor only after the new text reaches the element.
     await tick();
     field.focus();
     field.setSelectionRange(written.caret, written.caret);
@@ -137,9 +105,7 @@
 
   function pick(index: number) {
     const match = matches[index];
-    // Past the end of the matches is the row that adds what was typed. Read
-    // before anything else: putting the name on the list is what stops it from
-    // being a new name, and `newName` is derived from that list.
+    // Past the matches is the add row. Read first: adding the name makes `newName` (derived from the list) null.
     const name = match?.name ?? newName;
 
     if (!name) {
@@ -173,8 +139,7 @@
         pick(highlighted);
         break;
       case 'Escape':
-        // Stopped here, so the surrounding form or dialog does not also act on
-        // it: dismissing the picker is the whole of what this Escape means.
+        // Stopped so the surrounding form or dialog does not also act on it.
         event.preventDefault();
         event.stopPropagation();
         settled = pending?.at ?? null;
@@ -183,14 +148,7 @@
     }
   }
 
-  /**
-   * Listened for rather than passed down as four more props.
-   *
-   * Whether a mention is being typed depends on where the cursor is, and the
-   * cursor moves for reasons a value-changed callback never hears about —
-   * clicking into the middle of a word, arrowing back over one. The textarea
-   * knows; the design-system component it lives in has no reason to.
-   */
+  /** Listened for directly: the cursor moves (clicks, arrowing) without any value callback. */
   $effect(() => {
     const element = field;
 
@@ -245,8 +203,6 @@
     />
   </div>
 
-  <!-- On the field, not floating above the form as an instruction nobody
-       connects to anything. -->
   <p id={hintId} class="hint">{m['editor.mentionHint']()}</p>
 
   {#if open}
@@ -271,20 +227,14 @@
     width: 100%;
   }
 
-  /*
-   * Keep the native textarea transparent so the backdrop behind it shows through.
-   * Native caret, text selection, and typography remain completely unhindered.
-   */
+  /* Native textarea transparent so the backdrop shows through. */
   .editor-wrap :global(.ds-control) {
     position: relative;
     z-index: 1;
     background: transparent;
   }
 
-  /*
-   * Synchronized Apple-style subtle mention backdrop.
-   * Matches .ds-control box sizing, font, padding, and line height 1:1.
-   */
+  /* Mirrors .ds-control box, font, padding and line height 1:1 so text lines up. */
   .backdrop {
     position: absolute;
     inset: 0;
@@ -306,10 +256,6 @@
     user-select: none;
   }
 
-  /*
-   * The subtle ("dezent") Apple tint pill behind recognized mentions.
-   * A whisper of color and a soft corner curve that quietly says: "recognized".
-   */
   .mention-pill {
     color: transparent;
     background: var(--surface-accent-subtle);

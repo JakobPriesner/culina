@@ -2,18 +2,11 @@
   import { m } from '$shell/i18n';
 
   /**
-   * The list a field offers while somebody is typing into it.
-   *
-   * Presentation and pointer handling only. The keyboard belongs to the field,
-   * because the cursor never leaves it: the options are not focusable, the
-   * field keeps focus, and which row is highlighted travels as
-   * `aria-activedescendant`. That is the combobox pattern, and it is the only
-   * arrangement in which someone can keep typing while a list is open.
+   * The list a field offers while typing: presentation and pointer handling only. The keyboard belongs to the field, which keeps focus,
+   * with the highlighted row as `aria-activedescendant` (the combobox pattern).
    */
   export interface Suggestion {
-    /** Distinguishes rows, and what choosing it returns. */
     readonly value: string;
-    /** What is read out and shown. */
     readonly label: string;
     /** Shown quietly on the right: an amount, a shop section. */
     readonly detail?: string;
@@ -21,7 +14,6 @@
 
   interface Props {
     id: string;
-    /** Names the list for a screen reader reaching it on its own. */
     label: string;
     items: readonly Suggestion[];
     highlighted: number;
@@ -35,8 +27,7 @@
 <ul {id} class="picker" role="listbox" aria-label={label}>
   {#each items as item, index (item.value)}
     {@const isAdd = item.value.startsWith('add:')}
-    <!-- The keyboard is handled on the field, which is where the keyboard is,
-         so these ignores are about the pattern rather than a gap in it. -->
+    <!-- Keyboard is handled on the field, so these ignores follow the pattern rather than a gap. -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <li
       id="{id}-{index}"
@@ -84,9 +75,6 @@
 </ul>
 
 <style>
-  /*
-   * Apple-style floating suggestion palette with frosted glass material.
-   */
   .picker {
     position: absolute;
     z-index: var(--z-overlay, 100);

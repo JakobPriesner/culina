@@ -8,18 +8,7 @@
   import { cooking } from './stores/cooking.svelte';
   import CookingRemoteToggle from './CookingRemoteToggle.svelte';
 
-  /**
-   * The way back into what you were cooking.
-   *
-   * It appears wherever you wandered off to — the shopping list, another
-   * recipe, the settings — because the thing on the hob does not stop being on
-   * the hob. It is deliberately one line and two actions: go back to it, or
-   * say it is over. Anything more would be a second app competing with the one
-   * you are looking at.
-   *
-   * It hides itself on the cooking screen, where it would be pointing at the
-   * page you are already on.
-   */
+  /** The way back into what you are cooking, from any page: one line, two actions (resume or end). Hidden on the cooking screen itself. */
   const session = $derived(cooking.session);
 
   const onTheCookingScreen = $derived(
@@ -50,9 +39,7 @@
 
     <CookingRemoteToggle />
 
-    <!-- Ending it, not hiding it. A bar that vanished while the session stayed
-         open would come back on the next page load, and the cook would have no
-         way to understand why. -->
+    <!-- Ends the session rather than hiding it: a hidden bar would return on the next page load, unexplained. -->
     <IconButton label={m['cooking.abandon']()} size="sm" onclick={() => void cooking.end(false)}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
@@ -73,8 +60,7 @@
     color: var(--text);
   }
 
-  /* A small steady mark rather than a pulsing one: something is on the hob, and
-     a blinking light in the corner of the eye for twenty minutes is a nuisance. */
+  /* A steady mark, not a pulse: a blinking light in the corner of the eye for twenty minutes is a nuisance. */
   .dot {
     flex: none;
     width: var(--space-2);
@@ -90,8 +76,7 @@
     box-shadow: 0 0 0 var(--space-1) var(--success-subtle);
   }
 
-  /* The link is everything except the dismiss control, so the easy target is
-     still the one that leads back to the pan. */
+  /* The link is everything but the dismiss control, so the easy target leads back to the pan. */
   .what {
     display: flex;
     flex: 1;
@@ -112,10 +97,7 @@
     font-size: var(--text-sm);
   }
 
-  /* Weight, not colour. The accent on an accent-tinted surface is 3.7:1 in
-     light and 2.9:1 in dark — two colours a few degrees apart, which is what
-     makes the tint work as a background and what makes it unreadable as text
-     on top of itself. */
+  /* Weight, not colour: accent text on an accent tint is 3.7:1 in light and 2.9:1 in dark. */
   .resume {
     flex: none;
     font-size: var(--text-sm);

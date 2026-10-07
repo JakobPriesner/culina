@@ -6,12 +6,7 @@ export function csrfToken(): string | null {
   return readCookie(csrfCookie);
 }
 
-/**
- * Reads a cookie the browser is willing to show us.
- *
- * Only the CSRF cookie is readable — the session cookie is `HttpOnly` by
- * design — so this exists for exactly one caller and stays deliberately small.
- */
+/** Reads a cookie the browser shows us: only the CSRF one is readable (the session cookie is `HttpOnly`), so this has one caller. */
 function readCookie(name: string): string | null {
   if (typeof document === 'undefined') {
     return null;

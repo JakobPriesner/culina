@@ -10,11 +10,7 @@ import { registerStore, resetAllStores } from '$shell/stores';
 
 import { session } from './session.svelte';
 
-/*
- * Two things matter here and both are security properties rather than
- * conveniences: the app must know whether anyone is signed in before it renders
- * anything, and signing out must leave nothing behind.
- */
+/* Two security properties: the app knows whether anyone is signed in before rendering, and signing out leaves nothing behind. */
 const me = {
   userId: 'u1',
   email: 'jakob@example.com',
@@ -77,9 +73,7 @@ describe('resolving the session', () => {
   });
 
   it('says so when it could not ask, rather than reporting nobody is signed in', async () => {
-    // A backend restarting, a proxy answering 502, a request that timed out.
-    // None of them is the server saying there is no session, and treating them
-    // as one is what puts a sign-in form in front of a valid cookie.
+    // Unavailability is not "no session": treating it as one would put a sign-in form in front of a valid cookie.
     serverAnswers(() => json({ code: 'server.unavailable', detail: 'Later.' }, 503));
 
     await session.resolve();
@@ -123,16 +117,12 @@ describe('resolving the session', () => {
     serverAnswers(() => json({ code: 'server.unavailable', detail: 'Later.' }, 503));
     await session.refresh();
 
-    // Guessing "signed out" from a failure would have this device open on a
-    // sign-in skeleton for a session that is perfectly good.
     expect(localStorage.getItem('culina.boot')).toBe('app');
   });
 
   it('asks once, however many callers want the answer', async () => {
     await Promise.all([session.resolve(), session.resolve(), session.resolve()]);
 
-    // Two requests, because the user and the settings are fetched in parallel;
-    // what must not happen is three boots asking six times.
     expect(send).toHaveBeenCalledTimes(2);
   });
 
@@ -140,9 +130,7 @@ describe('resolving the session', () => {
     await session.resolve();
     send.mockClear();
 
-    // Every navigation resolves the session, and a hover preloads one. Asking
-    // the server who is signed in on each of them is two requests for an answer
-    // that cannot have changed.
+    // Navigations and hover preloads each resolve the session; the server must not be asked on each.
     await session.resolve();
 
     expect(send).not.toHaveBeenCalled();
@@ -222,8 +210,6 @@ describe('signing out', () => {
 
     await session.signOut();
 
-    // A failed sign-out that leaves the previous person's data on screen is
-    // worse than one that ends the session locally.
     expect(session.user).toBeNull();
     expect(session.status).toBe('anonymous');
   });
@@ -245,7 +231,6 @@ describe('unsent recipes', () => {
 
   it('are kept when the session expires mid-edit, for whoever signs back in', async () => {
     await session.resolve();
-    // What the app shell registers, without the router.
     handleSessionExpiry(() => session.end());
     remember('u1', 'r1', draft);
 
@@ -411,8 +396,6 @@ describe('households that inherit recipes', () => {
     session.selectHousehold('h2');
 
     expect(session.inheritedFrom).toEqual({ h1: 'Home', p1: 'Grandma' });
-    // Grandma's kitchen is not one this person is in, and is still named:
-    // their library is full of its recipes.
     expect(session.householdName('p1')).toBe('Grandma');
     expect(session.householdName('elsewhere')).toBeNull();
 
@@ -423,8 +406,7 @@ describe('households that inherit recipes', () => {
   });
 
   it('treats an answer from before households could inherit as inheriting nothing', async () => {
-    // The offline copy of /users/me outlives a deploy, so one without the
-    // chain can still be what a device boots from.
+    // The offline copy of /users/me outlives a deploy, so one without the chain can still be what a device boots from.
     await session.refresh();
 
     expect(session.inheritedFrom).toEqual({});

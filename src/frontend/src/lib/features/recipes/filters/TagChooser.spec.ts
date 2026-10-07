@@ -4,11 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import TagChooser from './TagChooser.svelte';
 
-/*
- * Fifty tags is an ordinary kitchen after an import. What has to hold is that
- * the other questions on the same sheet stay reachable — the chooser opens to
- * a handful — and that nothing chosen can scroll out of sight.
- */
+/* Fifty tags is an ordinary kitchen after an import: the other questions on the sheet must stay reachable (the chooser opens to a handful) and nothing chosen may scroll out of sight. */
 const kitchen = Array.from({ length: 50 }, (_, index) => ({
   slug: `tag-${index}`,
   name: index === 42 ? 'Crème brûlée' : `Tag ${String(index).padStart(2, '0')}`,

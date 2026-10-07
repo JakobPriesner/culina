@@ -24,15 +24,8 @@
   } from '$ds';
 
   /*
-   * The design-system gallery.
-   *
-   * Not part of the product, and not in a release build either: the route
-   * imports this file dynamically behind a condition the bundler folds to
-   * false, so the chunk is never emitted. See ./+page.svelte.
-   *
-   * This is the one file exempt from "no hard-coded user-visible text" — the
-   * strings here are specimens, not product copy, and translating them would
-   * make the gallery harder to read for the person changing a component.
+   * The design-system gallery: dev only (the route imports it behind a condition folded to false,
+   * see ./+page.svelte). Exempt from "no hard-coded text": the strings are specimens.
    */
   let title = $state('Tomato soup');
   let notes = $state('');
@@ -43,21 +36,10 @@
   let vegetarian = $state(true);
   let openRegistration = $state(false);
 
-  /*
-   * Both states of the picture field, side by side: the point of it is that the
-   * empty one is the same box as the full one, and that is only reviewable if
-   * you can see them together. Nothing is uploaded here — the specimen keeps
-   * the chosen file in the page as an object URL.
-   */
+  /* Both picture-field states side by side; nothing is uploaded, the file stays in the page as an object URL. */
   let chosen = $state<string | undefined>();
 
-  /**
-   * A stand-in photograph, drawn rather than fetched.
-   *
-   * The gallery must render with nothing behind it, so the filled state cannot
-   * borrow a real recipe's picture. This is enough of one to show what the
-   * actions look like lying on top of it.
-   */
+  /** A drawn stand-in photograph: the gallery must render with nothing behind it. */
   const specimenPhoto =
     'data:image/svg+xml;utf8,' +
     encodeURIComponent(
@@ -198,8 +180,7 @@
         onremove={() => (chosen = undefined)}
       />
 
-      <!-- The filled state, where what you can do to the picture lies on the
-           picture. Point at it, or tab into it. -->
+      <!-- Filled state: the actions lie on the picture. -->
       <ImageField
         label="Photo, with one in it"
         hint="Unused here."
@@ -217,8 +198,7 @@
         <Button {variant} size="sm">Draw one</Button>
       {/snippet}
 
-      <!-- A picture being made. No progress, because a provider reports none
-           until it has finished. -->
+      <!-- A picture being made: no progress, since a provider reports none until finished. -->
       <ImageField
         label="Photo, being drawn"
         hint="One picture of the finished dish."
@@ -278,8 +258,7 @@
       <FourStates state="error" />
       <FourStates state="loaded" refreshing />
 
-      <!-- Something the assistant is writing: the glow round the place the
-           work lands, and the status line inside it. -->
+      <!-- Something the assistant is writing: glow round where the work lands, status line inside. -->
       <div class="generated">
         <GenerationAura active={drawing} />
         <GenerationStatus label={drawing ? 'Writing…' : 'Written'} />

@@ -2,20 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sources } from './sources.svelte';
 
-/*
- * The store no longer does the importing — the server does — so what it can get
- * wrong is what it makes of the stream: a count that does not add up, a
- * dropped connection reported as a finished import, and a refusal to start
- * shown as a run that never moves.
- */
+/* The store only interprets the stream: a count that adds up, a dropped connection is not a finished import,
+ * and a refused start is not a run that never moves. */
 
-/**
- * Stands in for the streamed response, so a test can be the server.
- *
- * A real `ReadableStream` behind a real `Response`, because that is what the
- * reader in `$api/events` consumes — a hand-written double of the parser would
- * only prove that the double agrees with itself.
- */
+/** Stands in for the streamed response: a real ReadableStream behind a real Response, as `$api/events` consumes it. */
 class FakeStream {
   static last: FakeStream | null = null;
 
@@ -39,20 +29,17 @@ class FakeStream {
     FakeStream.last = this;
   }
 
-  /** One event, framed the way the server frames it. */
   send(event: { recipe?: unknown; done: number; total: number; finished?: boolean }) {
     const data = JSON.stringify({ finished: false, ...event });
 
     this.#push.enqueue(this.#encoder.encode(`data: ${data}\nid: ${event.done}\n\n`));
   }
 
-  /** What the caller asked to resume from, if anything. */
   get resumedFrom(): string | null {
     return this.headers.get('Last-Event-ID');
   }
 }
 
-/** Lets the reader's promises run before a test looks at what they did. */
 const settle = () => vi.waitFor(() => expect(FakeStream.last).not.toBeNull());
 
 const source = {
@@ -89,13 +76,7 @@ const imported = (externalId: string) => ({
   reason: null
 });
 
-/**
- * Answers the POST that starts an import, and the GET that follows it.
- *
- * `streamed` decides what the follow gets: a stream to push events into, or a
- * refusal — which is the case that matters most, because a stream that is
- * refused is the difference between "still going" and "gone".
- */
+/** Answers the POST that starts an import and the GET that follows: a stream to push into, or a refusal. */
 function importServer(options: { start?: Response; streamed?: () => Response } = {}) {
   vi.stubGlobal(
     'fetch',
@@ -125,7 +106,6 @@ const started = (total: number) => ({
   total
 });
 
-/** Every import request this test saw, in order, and how many reads there were. */
 let asked: {
   url: string;
   body: { externalIds: string[]; allowLookalikes?: boolean; cookbookId?: string };
@@ -170,9 +150,7 @@ describe('listing what is connected', () => {
     await sources.list('h1');
     await sources.list('h1');
 
-    // The guard that keeps the page's `$effect` from re-triggering itself.
-    // Its absence is not a slow page: it is a request per answer until the
-    // rate limiter starts refusing them.
+    // Guards the page's `$effect` from re-triggering itself: otherwise a request per answer until rate-limited.
     expect(asked.gets).toBe(1);
   });
 
@@ -191,8 +169,6 @@ describe('listing what is connected', () => {
     await sources.list('h1');
     await sources.list('h1');
 
-    // The second call is the effect, and it must change nothing. Only an
-    // explicit retry may ask again.
     expect(asked.gets).toBe(1);
 
     await sources.relist('h1');
@@ -221,8 +197,7 @@ describe('reading more of a library', () => {
     await sources.browse(library);
     await sources.more();
 
-    // The end of the list is what asks for the next page, and it stays on
-    // screen after a failure. Without a latch this is a loop: ask, fail, ask.
+    // A latch: without it, ask-fail-ask loops while the end of the list stays on screen.
     await sources.more();
     await sources.more();
 
@@ -249,8 +224,7 @@ describe('reading more of a library', () => {
     await sources.browse(library);
     await sources.more();
 
-    // Replacing a screen of recipes somebody is reading with an error, because
-    // the page below it could not be read, loses more than it explains.
+    // A failed next page must not replace the screen of recipes being read with an error.
     expect(sources.browseStatus).toBe('ready');
     expect(sources.recipes).toHaveLength(1);
   });
@@ -283,7 +257,6 @@ describe('reading more of a library', () => {
 });
 
 describe('searching a library', () => {
-  /** A server whose answers arrive when the test says so, not in the order asked. */
   function slowServer() {
     const waiting = new Map<string, (response: Response) => void>();
 
@@ -321,8 +294,7 @@ describe('searching a library', () => {
     });
     await first;
 
-    // Both in one list was a recipe in both drawn twice, and a keyed list that
-    // throws on the duplicate.
+    // Both in one list drew a recipe twice and threw in the keyed list.
     expect(sources.recipes.map((recipe) => recipe.externalId)).toEqual(['2', '3']);
     expect(sources.total).toBe(2);
   });
@@ -369,9 +341,7 @@ describe('importing', () => {
     await sources.import(source.sourceId, chosen);
     await settle();
 
-    // One request that names the work, rather than twelve that do it: the
-    // pacing is the server's business now, and nothing is lost by closing the
-    // tab a second later.
+    // One request that names the work; pacing is the server's business.
     expect(asked).toHaveLength(1);
     expect(asked[0]!.body.externalIds).toEqual(chosen);
   });
@@ -381,8 +351,6 @@ describe('importing', () => {
 
     await sources.import(source.sourceId, ['1', '2', '3']);
 
-    // The whole reason somebody may walk away from this screen: the way back
-    // exists from the beginning.
     expect(sources.run?.cookbookId).toBe('cb1');
     expect(sources.run?.total).toBe(3);
     expect(sources.run?.done).toBe(0);
@@ -419,8 +387,7 @@ describe('importing', () => {
       total: 2
     });
 
-    // Re-running an import is the ordinary way to catch up on what is new, and
-    // reporting that as a failure would make it look broken.
+    // Re-running to catch up is ordinary, not a failure.
     await vi.waitFor(() => expect(sources.run?.done).toBe(2));
     expect(sources.run?.imported).toBe(1);
     expect(sources.run?.skipped).toBe(1);
@@ -489,9 +456,6 @@ describe('importing', () => {
 
     await sources.importAnyway(['2']);
 
-    // Said out loud, and onto the same cookbook: a second shelf with the same
-    // name for the three recipes somebody chose would be two imports where
-    // they asked for one.
     expect(asked).toHaveLength(2);
     expect(asked[1]!.url).toContain('/recipe-sources/s1/imports');
     expect(asked[1]!.body).toEqual({
@@ -522,9 +486,7 @@ describe('importing', () => {
 
     await sources.import(source.sourceId, ['1', '2']);
 
-    // A refusal is an answer: it is reported at once rather than retried, and
-    // it carries the reason, because "the connection went" and "that import is
-    // gone" are two situations and only one is worth waiting through.
+    // A refusal is an answer: reported at once, not retried, with its reason.
     await vi.waitFor(() => expect(sources.run?.lost?.code).toBe('import.import_not_found'));
     expect(sources.run?.finished).toBe(false);
     expect(sources.importing).toBe(false);
@@ -547,9 +509,7 @@ describe('importing', () => {
 
     await vi.waitFor(() => expect(FakeStream.last).not.toBe(first));
 
-    // The server numbers every event with how many outcomes it has sent, so
-    // this asks for what is missing and nothing else — the two already counted
-    // are neither repeated nor forgotten.
+    // Resumes from the server's event count: missing outcomes only, none repeated.
     expect(FakeStream.last!.resumedFrom).toBe('2');
     expect(sources.run?.imported).toBe(2);
     expect(sources.run?.lost).toBeNull();
@@ -560,8 +520,6 @@ describe('importing', () => {
 
     await sources.import(source.sourceId, ['1', '2']);
 
-    // Nothing was started, so there is nothing to watch — and the selection is
-    // still on screen to be asked for again.
     expect(sources.run).toBeNull();
     expect(sources.importError?.code).toBe('import.too_many_at_once');
     expect(FakeStream.last).toBeNull();
@@ -575,8 +533,7 @@ describe('importing', () => {
 
     await Promise.all([first, second]);
 
-    // Two runs at once would race over one shelf and report two progress bars
-    // for one intention.
+    // Two runs at once would race over one shelf.
     expect(asked).toHaveLength(1);
   });
 });

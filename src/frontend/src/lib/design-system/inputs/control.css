@@ -1,12 +1,5 @@
-/*
- * The one description of what a typed-into or chosen-from control looks like.
- *
- * Deliberately global rather than repeated in each component's scoped styles:
- * a text input, a select and a search field that each own a copy of this are
- * three things that drift, and the drift is only visible when two of them sit
- * next to each other in a form. This is the exception to "no global classes",
- * and it exists for exactly these components.
- */
+/* The one description of a typed/chosen control, global so text input, select and search field cannot drift.
+   The exception to "no global classes". */
 
 .ds-control {
   width: 100%;
@@ -37,25 +30,13 @@
   cursor: not-allowed;
 }
 
-/* Colour is never the only signal: the message under the field says what is
-   wrong, and aria-invalid says it to a screen reader. */
+/* Colour is never the only signal: the message and aria-invalid say what is wrong. */
 .ds-control[aria-invalid='true'] {
   border-color: var(--danger);
 }
 
-/*
- * The ring sits on the field's own edge, not three pixels outside it.
- *
- * The app's default focus treatment is a detached ring, which is right for the
- * things that have no edge of their own — a card, a link, a tile. A field has
- * one, and a second ring floating outside it reads as two outlines that failed
- * to line up rather than as one control with focus. Here the outline continues
- * the border it shares a colour with, and the two are one edge.
- *
- * The radius is restated because the app's default focus rule rounds to
- * `--radius-sm`, and without this a field would change shape as it was tabbed
- * into.
- */
+/* Ring on the field's own edge, unlike the detached default: two outlines read as misaligned.
+   Radius restated because the default focus rule rounds to --radius-sm and the field would change shape. */
 .ds-control:focus-visible {
   border-color: var(--border-focus);
   outline: 2px solid var(--border-focus);
@@ -63,18 +44,7 @@
   border-radius: var(--radius-md);
 }
 
-/*
- * A control the size of the thing it holds.
- *
- * A recipe's title is not a form field with a title in it — it is the title,
- * and on the page that reads the recipe back it is set in the editorial face at
- * display size. Typing it into a 16px box the same shape as "Cooking minutes"
- * is what makes an editor feel like an admin screen: everything the same size
- * means nothing is more important than anything else.
- *
- * The height is left to the content so a long title wraps instead of scrolling
- * sideways inside its own box.
- */
+/* A control sized to what it holds (a recipe title at display size); height follows content so long titles wrap. */
 .ds-control.display {
   height: auto;
   min-height: var(--control-lg);
@@ -85,15 +55,7 @@
   letter-spacing: -0.025em;
 }
 
-/*
- * A field that only looks like one once you go near it.
- *
- * For the places where the control sits inside something it is not the point
- * of — a step's name, which is empty on nearly every step and reads as the
- * step's heading when it is not. Drawn as text at rest, as a field on hover,
- * and always as a field while it has focus, so nothing that can be typed into
- * is ever invisible to somebody using the keyboard.
- */
+/* Text at rest, a field on hover, always a field on focus, so keyboard users never face an invisible input. */
 .ds-control.quiet {
   border-color: transparent;
   background: transparent;

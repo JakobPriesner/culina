@@ -12,13 +12,7 @@
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
-  /**
-   * Every shelf the household has.
-   *
-   * No search box. A household has a handful of cookbooks and they are all on
-   * this screen — searching six things is a control that exists to look
-   * complete. Searching happens inside one, where there are recipes.
-   */
+  /** Every shelf the household has; no search box, since a handful of cookbooks are all on screen and searching happens inside one. */
   const householdId = $derived(session.activeHouseholdId);
 
   let making = $state(false);
@@ -89,8 +83,7 @@
       {/snippet}
     </ErrorState>
   {:else if cookbooks.status === 'ready' && cookbooks.items.length === 0}
-    <!-- There is no filtered-empty case here, because there is no filter. One
-         empty state, and it is an invitation rather than a mistake to undo. -->
+    <!-- No filter means no filtered-empty case: one empty state, an invitation. -->
     <EmptyState
       title={m['cookbooks.empty.title']()}
       body={m['cookbooks.empty.body']()}

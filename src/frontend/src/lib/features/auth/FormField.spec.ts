@@ -13,11 +13,6 @@ const problem = (field: string, detail: string) => ({
   fields: [{ field, code: 'required', detail }]
 });
 
-/*
- * The label and the control have to carry the same id, and the field has to
- * tell the submission where it is. Both are invisible when wrong — the form
- * looks perfect and nothing can be found by name — so both are asserted.
- */
 describe('a form field', () => {
   it('is labelled, so it can be found and clicked into by its label', () => {
     renderWithProviders(FormFieldHarness, {});

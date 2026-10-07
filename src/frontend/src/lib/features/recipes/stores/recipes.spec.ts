@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { recipes } from './recipes.svelte';
 
-/*
- * The store is the only thing components read recipes from, so the things it
- * can get wrong are the things the whole feature gets wrong.
- */
+/* The store is the only thing components read recipes from. */
 const household = 'h1';
 
 const summary = (id: string, title: string) => ({
@@ -53,7 +50,6 @@ const page = (
     headers: { 'Content-Type': 'application/json' }
   });
 
-/** Answers each request by URL, optionally after a delay. */
 function serverAnswers(reply: (url: string) => Response | Promise<Response>) {
   vi.stubGlobal(
     'fetch',
@@ -98,11 +94,8 @@ describe('listing', () => {
 
 describe('two searches in flight at once', () => {
   it('keeps the newer answer, however late the older one arrives', async () => {
-    /*
-     * The bug this exists to prevent: a short query matches more rows and takes
-     * longer, so the *earlier* search regularly answers last. The list then
-     * settles on the wrong results and the filter looks broken.
-     */
+    // A short query matches more rows and takes longer, so the earlier search answers last; the
+    // list must not settle on it.
     const slow = Promise.withResolvers<Response>();
 
     serverAnswers((url) =>
@@ -114,7 +107,6 @@ describe('two searches in flight at once', () => {
 
     await second;
 
-    // The stale one answers now, with two matches, and must be ignored.
     slow.resolve(page([summary('r1', 'Orzo'), summary('r2', 'Zitronensuppe')]));
     await first;
 
@@ -164,7 +156,6 @@ describe('the next page', () => {
 
     vi.stubGlobal('fetch', server);
 
-    // Three placeholder rows come into view together, and each one asks.
     const asks = [
       recipes.loadMore(household),
       recipes.loadMore(household),
@@ -188,7 +179,6 @@ describe('the next page', () => {
     expect(recipes.moreFailed).toBe(true);
     expect(recipes.items).toHaveLength(1);
 
-    // The row is still there to ask for again — by hand, this time.
     serverAnswers(() => page([summary('r2', 'Soup')], 9, null));
     await recipes.loadMore(household);
 
@@ -226,7 +216,6 @@ describe('the next page', () => {
     slow.resolve(page([summary('r2', 'Soup')], 9, null));
     await more;
 
-    // Those rows belong to a list that is no longer on screen.
     expect(recipes.items.map((item) => item.title)).toEqual(['Other']);
   });
 });
@@ -297,7 +286,6 @@ describe('opening a recipe', () => {
 });
 
 describe('deleting', () => {
-  /** A listed and opened recipe, and a server that answers a DELETE with `deleted`. */
   async function openOrzo(deleted: () => Response) {
     vi.stubGlobal(
       'fetch',
@@ -358,7 +346,6 @@ describe('switching households', () => {
 
     const reading = recipes.list('h-ours');
 
-    // Nothing of the household just left is on screen while this one loads.
     expect(recipes.items).toEqual([]);
     expect(recipes.status).toBe('loading');
 

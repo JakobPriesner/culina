@@ -64,7 +64,6 @@ class SourceStore {
     return this.#library.moreFailed;
   }
 
-  /** How many the other app has, when it says. */
   get total(): number | null {
     return this.#library.total;
   }
@@ -93,7 +92,6 @@ class SourceStore {
     return this.#connections.connect(draft);
   }
 
-  /** Also closes its library if that is the one open. */
   disconnect(sourceId: string): Promise<void> {
     if (this.#library.open?.sourceId === sourceId) {
       this.#library.close();

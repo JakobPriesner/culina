@@ -1,13 +1,7 @@
 <script lang="ts">
   import { m } from '$shell/i18n';
 
-  /**
-   * A recipe card under a rubber stamp, for somebody who followed a link in.
-   *
-   * The card is made up — a wash of colour and grey lines — and has to stay
-   * that way: the visitor is not signed in, so nothing about what is really
-   * behind the link may show, not a title and not a photo.
-   */
+  /** A recipe card under a rubber stamp for link visitors; the card is made up since nothing behind the link (title, photo) may show to a signed-out visitor. */
 </script>
 
 <div class="card" aria-hidden="true">

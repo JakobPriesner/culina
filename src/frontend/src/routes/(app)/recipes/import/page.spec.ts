@@ -7,13 +7,8 @@ import { sources } from '$features/import/stores/sources.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
 /*
- * The page is tested rather than the store, because the bug this is here to
- * stop only exists once a real `$effect` is running: a `list` that read the
- * state it writes re-triggered the effect that called it, and the page asked
- * for the same thing until the server started answering 429.
- *
- * A store test cannot see that. Nothing about `list` in isolation is wrong —
- * it is the pairing with the effect that is, so the effect has to be real.
+ * Tests the page, not the store: the bug (a `list` that read the state it writes and re-triggered
+ * its own `$effect` until a 429) only exists with a real effect running.
  */
 const household = 'h1';
 
@@ -31,7 +26,6 @@ const noSources = () =>
     headers: { 'Content-Type': 'application/json' }
   });
 
-/** Lets every queued effect and the request it made settle. */
 const settle = async () => {
   for (let turn = 0; turn < 5; turn += 1) {
     await new Promise((resume) => setTimeout(resume, 0));
@@ -41,7 +35,6 @@ const settle = async () => {
 beforeEach(() => {
   sources.reset();
 
-  // The page reads the active household from the session and nothing else.
   vi.spyOn(session, 'activeHouseholdId', 'get').mockReturnValue(household);
 });
 
@@ -53,8 +46,7 @@ describe('opening the import page', () => {
 
     await settle();
 
-    // One. Not "a reasonable number": every extra call here is an effect that
-    // re-triggered itself, and the next one after that is the rate limiter.
+    // One: every extra call is an effect that re-triggered itself.
     expect(fetched).toHaveBeenCalledTimes(1);
   });
 
@@ -71,8 +63,6 @@ describe('opening the import page', () => {
 
     await settle();
 
-    // Without this the page is a heading and a footer link: no list, no connect
-    // form, and nothing to press.
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
@@ -89,8 +79,8 @@ describe('opening the import page', () => {
 
     await settle();
 
-    // Releasing the guard on failure must let the *button* ask again, never
-    // the effect — otherwise a server that is down is a request loop.
+    // Releasing the guard on failure must let the button ask again, never the effect, or a down
+    // server is a request loop.
     expect(fetched).toHaveBeenCalledTimes(1);
   });
 });

@@ -7,16 +7,8 @@
   import { toaster } from '$shell/toaster.svelte';
 
   /**
-   * How a household stops being one person's.
-   *
-   * The code is a bearer token: whoever holds the link can join and then see
-   * every recipe here. So it is said plainly, the code is shown once where it
-   * can be copied, and every invitation that has not been used yet can be taken
-   * back — which is the only remedy for a link sent to the wrong chat.
-   *
-   * The heading and the sentence warning what the link is belong to the page
-   * that places this, so that every section of settings is titled the same way
-   * by one component rather than three ways by three.
+   * Household invitations; the code is a bearer token, so it is shown once and unused invitations
+   * can be revoked. The heading belongs to the page.
    */
   interface Props {
     householdId: string;
@@ -52,8 +44,7 @@
       await navigator.clipboard.writeText(linkFor(code));
       toaster.show({ message: () => m['me.invite.copied'](), tone: 'success' });
     } catch {
-      // A browser that refuses the clipboard is not a failure worth a message:
-      // the link is on screen and can be selected.
+      // A refused clipboard isn't worth a message: the link is on screen.
     }
   }
 
@@ -73,8 +64,7 @@
   {#if invitations.freshCode}
     <div class="fresh">
       <p class="label">{m['me.invite.link']()}</p>
-      <!-- Readable and selectable, not a field: there is nothing to type here,
-           and an input invites somebody to edit a token. -->
+      <!-- Readable and selectable, not an input, which would invite editing a token. -->
       <p class="code" data-testid="invitation-link">{linkFor(invitations.freshCode)}</p>
       <p class="once">{m['me.invite.once']()}</p>
       <Button onclick={() => copy(invitations.freshCode!)}>{m['me.invite.copy']()}</Button>
@@ -109,9 +99,6 @@
     align-items: flex-start;
   }
 
-  /* The caption over the list, not a section of its own: smaller than the body
-     it introduces, which is what tells the eye it is a label rather than the
-     start of something new. */
   h3 {
     margin-top: var(--space-2);
     font-size: var(--text-xs);
@@ -121,8 +108,6 @@
     letter-spacing: 0.08em;
   }
 
-  /* Raised, so the one thing on the page that cannot be read again is also the
-     one thing that is impossible to scroll past. */
   .fresh {
     display: flex;
     flex-direction: column;
@@ -140,8 +125,6 @@
     font-weight: var(--weight-semibold);
   }
 
-  /* Monospaced and on its own sunken line: a link somebody has to check
-     character by character before sending it to the wrong person. */
   .code {
     width: 100%;
     padding: var(--space-2) var(--space-3);
@@ -162,8 +145,6 @@
     font-size: var(--text-sm);
   }
 
-  /* Hairlines between rows rather than around each: one list, not a stack of
-     little boxes. */
   .list {
     display: flex;
     flex-direction: column;

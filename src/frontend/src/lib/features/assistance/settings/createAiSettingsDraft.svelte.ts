@@ -110,7 +110,6 @@ export function createAiSettingsDraft() {
       return keyOpen;
     },
 
-    /** Any job uses a provider that sends data off the machine. */
     get anythingHosted() {
       return (draft?.uses ?? []).some(
         (use) => use.provider !== '' && providerFacts[use.provider].needsApiKey
@@ -123,7 +122,6 @@ export function createAiSettingsDraft() {
       draft = copyOfSaved();
     },
 
-    /** Flushes what is owed and stops the timer. */
     dispose() {
       commit();
       autosave.dispose();

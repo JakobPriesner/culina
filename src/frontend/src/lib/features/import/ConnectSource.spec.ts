@@ -6,11 +6,7 @@ import ConnectSource from './ConnectSource.svelte';
 import { sources } from './stores/sources.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The form that decides whether somebody gets as far as their recipes at all.
- * Everything here is about the step that used to stop them: being asked for an
- * API token before anything had offered to help them get one.
- */
+/* The form that decides whether somebody reaches their recipes: it must not ask for an API token before offering help to get one. */
 let sent: Record<string, unknown>[] = [];
 
 function serverAccepts() {
@@ -53,8 +49,7 @@ describe('connecting another app', () => {
   it('asks only where it is, until there is somewhere to send anything', () => {
     render();
 
-    // A form that asked for all four at once would be asking for a token
-    // before it could offer any help getting one.
+    // All four at once would ask for a token before any help getting one.
     expect(address()).toBeInTheDocument();
     expect(screen.queryByLabelText('Username in the app')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
@@ -89,8 +84,7 @@ describe('connecting another app', () => {
     await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
     await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-    // The server refuses a request carrying both, so an empty token must not
-    // be padded in alongside the sign-in.
+    // The server refuses a request carrying both, so an empty token must not be sent beside the sign-in.
     expect(sent[0]).toMatchObject({ username: 'ada', password: 'hunter2' });
     expect(sent[0]).not.toHaveProperty('token');
   });
@@ -114,7 +108,6 @@ describe('connecting another app', () => {
     await userEvent.type(address(), 'recipes.example.com');
     await userEvent.click(screen.getByRole('radio', { name: /Use an API token/ }));
 
-    // Most of the work of "paste a token here" is knowing where to get one.
     expect(
       screen.getByRole('link', { name: /Open https:\/\/recipes\.example\.com/ })
     ).toHaveAttribute('href', 'https://recipes.example.com/settings');
@@ -140,8 +133,7 @@ describe('connecting another app', () => {
     await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
     await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-    // "Used once and not stored" has to be true of this screen too, which on a
-    // kitchen tablet other people walk past.
+    // "Used once and not stored" must hold here too, on a kitchen tablet others walk past.
     expect(address()).toHaveValue('');
   });
 });

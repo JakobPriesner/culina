@@ -1,10 +1,5 @@
 <script lang="ts">
-  /**
-   * Several lines of text, which grows with what is typed into it.
-   *
-   * A fixed-height box for a recipe step means writing into a letterbox, and a
-   * scrollbar inside a form field hides the beginning of what you just wrote.
-   */
+  /** Several lines that grow with the text: a fixed-height box is a letterbox, and an inner scrollbar hides the start. */
   interface Props {
     id: string;
     value: string;
@@ -12,40 +7,20 @@
     describedBy?: string | undefined;
     invalid?: boolean;
     disabled?: boolean;
-    /**
-     * Readable, focusable, and not yet typed into.
-     *
-     * For text that is still being read: `disabled` would grey the box out for
-     * the moment a read takes, on every visit, and letting it be typed into
-     * means a late answer overwrites what was typed.
-     */
+    /** Readable and focusable but not typeable: `disabled` would grey it out on every visit, and typing would let a late answer overwrite it. */
     readonly?: boolean;
     /** How tall it starts. It never gets shorter than this. */
     rows?: number;
     maxlength?: number;
-    /**
-     * The element itself, for the rare caller that has to drive the cursor.
-     *
-     * Writing a mention into a step means replacing the half-typed name the
-     * cursor sits in, and only the textarea knows where that is.
-     */
+    /** The element itself, for callers that drive the cursor (writing a mention replaces the half-typed name). */
     element?: HTMLTextAreaElement;
-    /**
-     * The accessible name, for the places where there is no visible label.
-     *
-     * A step in the editor is one of them: the number beside it is the label a
-     * sighted person reads, and a `<label>` repeating it would be a second copy
-     * of the same word on screen.
-     */
+    /** Accessible name where no visible label exists (a step's number is the visible label). */
     label?: string;
     oninput?: (value: string) => void;
     /** Set when this field is the text half of a combobox. */
     combobox?: {
-      /** Whether the list of suggestions is showing. */
       readonly expanded: boolean;
-      /** The id of that list. */
       readonly controls: string;
-      /** The id of the suggestion arrow keys have landed on. */
       readonly active?: string | undefined;
     };
   }
@@ -66,8 +41,7 @@
     element = $bindable()
   }: Props = $props();
 
-  // Measured rather than guessed from the character count: a pasted paragraph
-  // and a list of short lines take different amounts of room.
+  // Measured, not guessed from character count: a pasted paragraph and short lines need different room.
   function grow() {
     if (!element) {
       return;
@@ -77,9 +51,7 @@
     element.style.height = `${element.scrollHeight}px`;
   }
 
-  // Also on a value set from outside, such as a note that arrives after the
-  // box is shown: typing is not the only way text gets in, and with overflow
-  // hidden the rest would be out of reach.
+  // Also for values set from outside (a note arriving late): with overflow hidden the rest would be unreachable.
   $effect(() => {
     void value;
     grow();

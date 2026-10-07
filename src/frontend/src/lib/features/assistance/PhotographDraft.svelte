@@ -10,21 +10,8 @@
   import type { Draft } from './draftToRecipe';
 
   /**
-   * A photograph of a cookbook page, typed out.
-   *
-   * Through the shared draft store like the other three. It used not to be,
-   * because a photograph goes up as multipart where the others send JSON and
-   * one generated client method could not bind both — but the answer is a
-   * stream either way now, and "what to do while a draft arrives in pieces" is
-   * worth having exactly one copy of.
-   *
-   * The recipe is shown as it is read, which matters more here than anywhere
-   * else in the feature: this is the one capability where the answer can be
-   * checked against something. A line that does not match the page is visible
-   * the moment it is written rather than at the end of the wait.
-   *
-   * The size is checked here as well as on the server, so an obviously hopeless
-   * upload fails instantly rather than after the photo has gone up the wire.
+   * A cookbook-page photograph typed out, through the shared draft store (the answer is a stream either way); shown as it is read so mismatches with the page are visible at once.
+   * Size is checked here too, so a hopeless upload fails before going up the wire.
    */
   interface Props {
     householdId: string;
@@ -61,8 +48,7 @@
 <div class="photo">
   <p class="note">{m['assist.photo.note']()}</p>
 
-  <!-- Only while it is being written, or once something has been: a request
-       that failed before a word arrived leaves the reason, not an empty box. -->
+  <!-- Only while writing or once something arrived: a failure before the first word shows the reason, not an empty box. -->
   {#if drafts.asking || saysAnything(drafts.draft)}
     <DraftWriting draft={drafts.draft} writing={drafts.asking} />
   {/if}

@@ -2,14 +2,7 @@
   import type { Snippet } from 'svelte';
   import { selectionIndicator } from './selectionIndicator';
 
-  /**
-   * Two or three views of the same thing.
-   *
-   * Follows the tab pattern properly: arrows move between tabs, Home and End
-   * jump to the ends, and only the selected tab is in the tab order — so
-   * tabbing out of the strip lands in the panel rather than walking through
-   * every tab. A row of buttons looks the same and behaves nothing like this.
-   */
+  /** Two or three views of one thing, following the tab pattern: arrows move, Home/End jump, only the selected tab is in the tab order. */
   export interface Tab {
     readonly id: string;
     readonly label: string;
@@ -46,8 +39,7 @@
     let target: number | undefined;
 
     if (event.key in offsets) {
-      // Wraps, because reaching the end of three tabs and stopping is a
-      // dead end nobody expects.
+      // Wraps: stopping at the end of three tabs is a dead end.
       target = (index + offsets[event.key]! + tabs.length) % tabs.length;
     } else if (event.key === 'Home') {
       target = 0;

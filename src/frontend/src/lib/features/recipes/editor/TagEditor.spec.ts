@@ -7,13 +7,7 @@ import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
 /*
- * A recipe's tags, edited.
- *
- * What can go wrong here is the seam between the two spellings a tag has: a
- * recipe carries slugs, a person types names, and the server turns a name into
- * a slug the first time it is saved. A tag that shows twice, or a suggestion
- * that adds a second spelling of a tag the kitchen already has, is that seam
- * showing.
+ * A recipe's tags: the seam between slugs (stored) and names (typed), where duplicates would show.
  */
 const household = [
   { slug: 'italienisch', name: 'italienisch', recipeCount: 7 },
@@ -89,7 +83,6 @@ describe('the tags it could carry', () => {
       ]
     );
 
-    // A suggestion is offered, never applied — and never offered twice.
     expect(screen.queryByRole('button', { name: /^\+ / })).not.toBeInTheDocument();
   });
 });

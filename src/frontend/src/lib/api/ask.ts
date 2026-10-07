@@ -3,7 +3,6 @@ import { drain, type Stream, type StreamHandlers } from './eventStream';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
 import { sessionExpired } from './session';
 
-/** The header the backend checks on every unsafe cookie-authenticated request. */
 const csrfHeader = 'X-Culina-CSRF';
 
 /**

@@ -6,11 +6,7 @@ import SetupPage from './+page.svelte';
 import { server } from '$features/server/stores/server.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The steps a fresh instance walks its first visitor through, and the one
- * thing the browser knows that the server cannot: whether this page came
- * over HTTPS.
- */
+/* The steps a fresh instance walks its first visitor through, and the one fact only the browser knows: whether the page came over HTTPS. */
 const emptyDatabase = {
   host: '',
   port: 5432,
@@ -147,9 +143,7 @@ describe('setting up a fresh instance', () => {
       await screen.findByRole('heading', { name: 'How people reach Culina' }, { timeout: 3000 })
     ).toBeInTheDocument();
 
-    // Plain HTTP to another machine, where the browser would drop a Secure
-    // cookie and lock this visitor out: the step starts with them off,
-    // whatever the server's default.
+    // Plain HTTP to another machine: the browser would drop a Secure cookie and lock the visitor out, so the step starts with them off.
     expect(await screen.findByRole('switch', { name: 'Secure cookies' })).toHaveAttribute(
       'aria-checked',
       'false'
@@ -163,8 +157,7 @@ describe('setting up a fresh instance', () => {
     renderWithProviders(SetupPage, atStage('account'));
     await settle();
 
-    // A secure context: https://, or localhost over plain HTTP. Proposing
-    // "off" here would be a save the server refuses outside Development.
+    // A secure context (https, or localhost over HTTP): proposing "off" would be a save the server refuses outside Development.
     expect(await screen.findByRole('switch', { name: 'Secure cookies' })).toHaveAttribute(
       'aria-checked',
       'true'

@@ -3,12 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { reasonLineFor, reasonLinesFor } from './suggestionReason';
 import type { Suggestion, SuggestionReason } from './types';
 
-/*
- * A reason is a fact about the ranking, rendered in the reader's language. The
- * server sends a code and at most a subject and never prose, so this is where
- * the sentence is decided — and where "say nothing" has to stay a first-class
- * answer rather than a gap somebody fills later.
- */
+/* A reason is rendered from a code and at most a subject, never prose, so the sentence is decided here; "say nothing" must stay a first-class answer. */
 const suggestion = (reason: SuggestionReason | null): Suggestion => ({
   id: 'r1',
   title: 'Linsensuppe',
@@ -27,8 +22,7 @@ const suggestion = (reason: SuggestionReason | null): Suggestion => ({
 
 describe('reasonLineFor', () => {
   it('says nothing when no single signal decided the ranking', () => {
-    // Not a gap. A good suggestion with no explanation is fine; an invented one
-    // is a lie, and catching it once discredits every reason that was true.
+    // Not a gap: a good suggestion with no explanation is fine, an invented one discredits every true reason.
     expect(reasonLineFor(suggestion(null))).toBeNull();
   });
 
@@ -46,9 +40,7 @@ describe('reasonLineFor', () => {
   });
 
   it('says nothing when a reason that needs a subject has none', () => {
-    // The server already refuses to send these, and the guard is here anyway:
-    // "You often cook ___" with a hole in it is worse than no line at all, and
-    // a contract is a thing that can change.
+    // The server already refuses to send these; the guard stays since "You often cook ___" with a hole is worse than no line and contracts change.
     for (const code of ['tag', 'ingredient', 'household'] as const) {
       expect(reasonLineFor(suggestion({ code, subject: null }))).toBeNull();
     }
@@ -72,8 +64,7 @@ describe('reasonLinesFor', () => {
   const affinity = suggestion({ code: 'affinity', subject: null });
 
   it('says a run of the same reason once, at the start of the run', () => {
-    // Five true copies of one fact read as boilerplate. The first says why;
-    // the rest fall back to the panel's fixed line.
+    // Five copies of one fact read as boilerplate: the first says why, the rest fall back to the panel's fixed line.
     const lines = reasonLinesFor([affinity, affinity, affinity]);
 
     expect(lines[0]).toBe(reasonLineFor(affinity));

@@ -10,23 +10,8 @@
   import type { Draft } from './draftToRecipe';
 
   /**
-   * A sentence about dinner, turned into a first draft.
-   *
-   * Inline on the page that starts a recipe rather than in a dialog, beside the
-   * paste box that works the same way — because it is the same act. Somebody
-   * arrives wanting to write a recipe down and has three ways to begin, and a
-   * modal would make this one feel like a different part of the app.
-   *
-   * It stops at the draft. What comes back is handed up as a normal recipe to
-   * create, which means it travels the same road as a pasted one: create with
-   * a title, then update with the contents. A create-with-everything endpoint
-   * would be a second way to write a recipe, and the second way is the one
-   * that drifts.
-   *
-   * The draft is shown here as it is written rather than only when it is done.
-   * Somebody watching the recipe appear has usually decided whether they want
-   * it before the last step lands, and the one who does not want it can say so
-   * without having waited out the whole call.
+   * A sentence about dinner turned into a first draft, inline beside the paste box (same act, so no dialog); shown as it is written so it can be rejected early.
+   * It stops at the draft and goes the same create-then-update road as a pasted recipe; a create-with-everything endpoint would be a second way that drifts.
    */
   interface Props {
     householdId: string;
@@ -73,8 +58,7 @@
     {/snippet}
   </Field>
 
-  <!-- Only while it is being written, or once something has been: a request
-       that failed before a word arrived leaves the reason, not an empty box. -->
+  <!-- Only while being written or once something has arrived: a failure before a word leaves the reason, not an empty box. -->
   {#if drafts.asking || saysAnything(drafts.draft)}
     <DraftWriting draft={drafts.draft} writing={drafts.asking} />
   {/if}

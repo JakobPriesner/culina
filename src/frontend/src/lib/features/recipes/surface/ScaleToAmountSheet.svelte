@@ -11,16 +11,7 @@
   import { parseIngredientLine } from '../editor/parseIngredientLine';
   import type { Quantity, RecipeReading } from '../types';
 
-  /**
-   * "I have 600 g of flour" — the whole recipe reshapes around it.
-   *
-   * The real human moment: a leftover bag, an odd package size. It is the same
-   * scaling machinery driven from the other end, so it introduces no new
-   * concept and cannot disagree with the stepper.
-   *
-   * The amount is typed as one line for the same reason the editor is: "600 g"
-   * is how a person says it, and two fields would be two decisions.
-   */
+  /** "I have 600 g of flour": the same scaling machinery driven from the other end, typed as one line ("600 g") like the editor. */
   interface Props {
     open: boolean;
     recipe: RecipeReading;
@@ -52,15 +43,7 @@
   /** The ingredient's own amount, as the example of what to type. */
   const example = $derived(ingredient ? written(ingredient.quantity) : '');
 
-  /**
-   * What was typed, as an amount of the chosen ingredient.
-   *
-   * A bare number is in the ingredient's own unit: somebody looking at "600 g
-   * tomatoes" who types 300 means 300 g, and saying so beside the field makes
-   * that a reading they can see rather than a guess. A unit that was written is
-   * taken as written — kilos for grams is arithmetic, millilitres for grams is
-   * a guess about density, and that is refused out loud rather than silently.
-   */
+  /** What was typed as an amount of the chosen ingredient: a bare number takes its unit (said beside the field), a written unit is taken as written, and one needing density (ml for g) is refused out loud. */
   const available = $derived.by((): Quantity | null => {
     const trimmed = typed.trim();
 
@@ -100,9 +83,7 @@
     target === null
       ? null
       : m['scaleTo.result']({
-          // The label, not the exact yield: the amounts are computed from
-          // 7.4 so the flour comes out at the 370 g somebody said they had,
-          // and "7.4 servings" is not a sentence.
+          // The label, not the exact yield: amounts come from 7.4 so the flour is the 370 g said, and "7.4 servings" is not a sentence.
           yield: wordYield(yieldLabel(target), recipe)
         })
   );
@@ -125,8 +106,7 @@
     </Field>
   </div>
 
-  <!-- The answer before the commitment: nobody should have to apply a change
-       to find out what it does. -->
+  <!-- Shows the answer before any commitment. -->
   {#if resultText}
     <p class="result" role="status">{resultText}</p>
   {/if}

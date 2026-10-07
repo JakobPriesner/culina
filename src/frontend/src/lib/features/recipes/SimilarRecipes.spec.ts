@@ -5,14 +5,7 @@ import SimilarRecipes from './SimilarRecipes.svelte';
 import { related } from './stores/related.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The shelf of recipes like the one being read.
- *
- * Rendered rather than tested through the store, because the thing most
- * likely to go wrong is the pairing of the two: a store that guarded itself
- * with `$state` would make the effect that calls it ask forever, and nothing
- * about the store on its own would be wrong.
- */
+/* The shelf of recipes like the one being read, rendered because the store paired with its effect is what can fail (a `$state` guard would make the effect ask forever). */
 const item = (id: string, title: string, kind: 'kinds' | 'ingredients', shared: string[]) => ({
   recipeId: id,
   title,
@@ -63,7 +56,6 @@ describe('recipes like this one', () => {
     renderWithProviders(SimilarRecipes, { props: { recipeId: 'r1' } });
     await settle();
 
-    // A suggestion whose reason is shown is one somebody can disagree with.
     expect(screen.getByText('Also: Bolognese')).toBeInTheDocument();
     expect(screen.getByText('Also: Italian and baked')).toBeInTheDocument();
     expect(screen.getByText('Shares mince, tomato, and onion')).toBeInTheDocument();
@@ -75,8 +67,7 @@ describe('recipes like this one', () => {
     renderWithProviders(SimilarRecipes, { props: { recipeId: 'r1' } });
     await settle();
 
-    // One, not "a reasonable number": a second is an effect that re-triggered
-    // itself, and the next one after that is the rate limiter.
+    // Exactly one: a second is an effect re-triggering itself, and the next is the rate limiter.
     expect(fetched).toHaveBeenCalledTimes(1);
     expect((fetched.mock.calls[0] as unknown as [Request])[0].url).toContain('/recipes/r1/related');
   });
@@ -90,8 +81,7 @@ describe('recipes like this one', () => {
     renderWithProviders(SimilarRecipes, { props: { recipeId: 'r1' } });
     await settle();
 
-    // The page is complete without the shelf, so two weak matches would have
-    // to earn a place that its absence costs nothing.
+    // The page is complete without the shelf, so two weak matches must earn a place.
     expect(screen.queryByRole('heading', { name: 'Similar recipes' })).not.toBeInTheDocument();
   });
 });

@@ -5,12 +5,7 @@ import { contrastRatio, parseColour, type Rgb } from './themes/colour';
 import { declaredProperties, readBlocks, type CssBlock } from './themes/css';
 import { themes } from './themes';
 
-/*
- * The promise of a three-layer token system is that adding a theme is one new
- * file. This suite is what makes that true: it derives the contract from
- * `semantic.css` rather than restating it, so a token added tomorrow is
- * required of every theme without anyone remembering to update a test.
- */
+/* A theme is one new file: this derives the contract from `semantic.css` instead of restating it, so a new token is required of every theme automatically. */
 
 const root = 'src/lib/design-system';
 const themeDirectory = `${root}/themes`;
@@ -19,12 +14,7 @@ const themeDirectory = `${root}/themes`;
 const forText = 4.5;
 const forNonText = 3;
 
-/**
- * The pairs a theme is actually allowed to get wrong.
- *
- * Only combinations the UI really stacks are listed. A table claiming every
- * possible pair would be false confidence and would block reasonable palettes.
- */
+/** The pairs a theme may get wrong: only combinations the UI really stacks, since a table of every pair would block reasonable palettes. */
 const requiredContrast = [
   { foreground: '--text-on-feature', background: '--surface-feature', minimum: forText },
   { foreground: '--text', background: '--surface', minimum: forText },
@@ -47,11 +37,9 @@ const requiredContrast = [
   { foreground: '--text-on-accent', background: '--accent', minimum: forText },
   { foreground: '--text-on-accent', background: '--accent-hover', minimum: forText },
   { foreground: '--accent-contrast', background: '--accent', minimum: forText },
-  // Non-text: the border that identifies an input, the focus ring, and the
-  // status colours — which always accompany a word or an icon rather than
-  // carrying the meaning alone.
+  // Non-text: input border, focus ring and status colours, which always accompany a word or icon.
   { foreground: '--accent', background: '--surface', minimum: forNonText },
-  // The dot after the name: decoration, but a dot nobody can see is a typo.
+  // The dot after the name: decoration, but an invisible one is a typo.
   { foreground: '--brand-accent', background: '--surface', minimum: forNonText },
   { foreground: '--border-strong', background: '--surface', minimum: forNonText },
   { foreground: '--border-focus', background: '--surface', minimum: forNonText },

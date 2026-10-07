@@ -13,7 +13,6 @@
   import { yieldNoun } from '$features/recipes/yieldWords';
   import { m } from '$shell/i18n';
 
-  /** Numbers show what was typed until it parses (see `numbers.ts`). */
   interface Props {
     recipe: Recipe;
     typed: TypedNumbers;

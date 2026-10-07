@@ -1,23 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * End-to-end tests run against the built SPA, not the dev server: the dev
- * server transforms modules on demand and hides exactly the problems — a broken
- * import, a missing asset, a service worker that never registers — these tests
- * exist to catch.
- *
- * `CULINA_API` overrides the /api proxy target (localhost:5000 by default).
- * Signed-in suites need a running backend and CULINA_E2E_* credentials; they
- * skip without credentials. Suites tagged @offline only need the built app.
- * Suites tagged @image open a running image at `CULINA_IMAGE_URL` directly, so
- * its document is loaded under the policy the host really sends.
+ * E2E runs against the built SPA, not the dev server, which hides what these tests catch (broken imports, missing assets, a service worker that never registers).
+ * `CULINA_API` overrides the /api proxy target (localhost:5000). Signed-in suites need a backend and CULINA_E2E_* credentials and skip without them;
+ * @offline needs only the built app; @image opens a running image at `CULINA_IMAGE_URL` under the policy the host really sends.
  */
 const port = 4173;
 
 export default defineConfig({
   testDir: 'tests/e2e',
-  // Opens registration once, so the per-flow accounts can be created without
-  // every worker asking the administrator the same question.
+  // Opens registration once, so per-flow accounts can be created without every worker asking the administrator.
   globalSetup: './tests/e2e/support/globalSetup.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
@@ -27,24 +19,19 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${port}`,
     trace: 'on-first-retry',
-    // A real timezone and locale, so a date rendered in a test is the date a
-    // person in Germany would see.
+    // A real timezone and locale, so dates render as a person in Germany sees them.
     locale: 'de-DE',
     timezoneId: 'Europe/Berlin'
   },
 
   projects: [
     { name: 'desktop', use: devices['Desktop Chrome'] },
-    // Culina is used one-handed on a counter with wet fingers. The mobile
-    // project is not optional coverage.
+    // Used one-handed with wet fingers: the mobile project is not optional coverage.
     { name: 'mobile', use: devices['Pixel 7'] }
   ],
 
   webServer: {
-    // The gallery is built in for these tests only: focus trapping, the top
-    // layer and light dismiss are browser behaviour, and the components that
-    // rely on them have nowhere else to be exercised until the features that
-    // use them exist.
+    // The gallery is built in for these tests only: focus trapping, top layer and light dismiss are browser behaviour with nowhere else to be exercised yet.
     command: `VITE_GALLERY=1 pnpm build && pnpm preview --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,

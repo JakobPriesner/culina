@@ -4,19 +4,8 @@
   import { m } from '$shell/i18n';
 
   /**
-   * Choosing some of a kitchen's tags.
-   *
-   * One control wherever tags are chosen — the library's filters and the rules
-   * of a cookbook that fills itself — because they are the same question and a
-   * shelf built from one list and a search from another would be two answers
-   * to it.
-   *
-   * Fifty tags as a column of checkboxes was screens of scrolling on a phone,
-   * with the time limit and the ingredients somewhere below it. So: what is
-   * chosen comes first and always stays in view, then the tags most recipes
-   * carry, and only a handful of those until somebody asks for the rest or
-   * types a few letters of the one they want. The order is the same every time
-   * the control opens, which is what lets a hand learn where a tag is.
+   * Choosing some of a kitchen's tags: one control for the library filters and cookbook rules, so both answer the same question.
+   * Chosen tags come first and stay in view, then the most-used few until someone asks for the rest or types; the stable order lets a hand learn where a tag is.
    */
   interface Props {
     tags: readonly TagInUse[];
@@ -28,7 +17,6 @@
 
   let { tags, selected, ontoggle, empty }: Props = $props();
 
-  /** How many unchosen tags show before somebody asks for all of them. */
   const collapsedCount = 8;
 
   const id = $props.id();

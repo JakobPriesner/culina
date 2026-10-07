@@ -2,10 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { HTMLAttributes } from 'svelte/elements';
 
-  /**
-   * A rail and a column, the second-level screen shape; shared with the skeleton so nothing moves
-   * when it lands.
-   */
+  /** A rail and a column, the second-level screen shape; shared with the skeleton so nothing moves when it lands. */
   interface Props extends HTMLAttributes<HTMLDivElement> {
     rail: Snippet;
     children: Snippet;

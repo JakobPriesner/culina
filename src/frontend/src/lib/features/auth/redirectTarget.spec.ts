@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loginUrlFor, safeRedirect } from './redirectTarget';
 
-/*
- * This value arrives in a URL that anyone can write, so every case here is a
- * link somebody could send to a person who trusts Culina.
- */
+/* The value arrives in a URL anyone can write, so each case is a link somebody could send to a person who trusts Culina. */
 describe('where to go after signing in', () => {
   it('accepts a path inside the app', () => {
     expect(safeRedirect('/recipes/123')).toBe('/recipes/123');
@@ -34,8 +31,7 @@ describe('where to go after signing in', () => {
     expect(safeRedirect(next)).toBe('/');
   });
 
-  // How the tab arrives in practice: percent-encoded in the link, and decoded
-  // by the time the page reads `next` from its own URL.
+  // In practice the tab is percent-encoded in the link and decoded by the time the page reads `next`.
   it('refuses a tab sent percent-encoded in the link', () => {
     const link = new URL('http://culina.test/login?next=/%09/evil.example');
 

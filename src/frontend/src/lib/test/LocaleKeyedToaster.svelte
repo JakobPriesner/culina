@@ -3,11 +3,7 @@
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
 
-  /**
-   * The toaster as the shell draws it: labelled from the catalogue, and
-   * re-created whenever the language changes — the same `{#key}` the root
-   * layout wraps the app in.
-   */
+  /** The toaster as the shell draws it: labelled from the catalogue and re-created on language change via the same `{#key}` as the root layout. */
 </script>
 
 {#key preferences.locale}

@@ -10,12 +10,8 @@ import {
 } from './support/culina';
 
 /**
- * A week of what this household means to cook.
- *
- * Seven days and deliberately not a calendar: a week is the unit people plan
- * in, because they shop at the weekend for the week that follows. Its whole
- * payoff is the last step — the plan writes the shopping list, through exactly
- * the same merge a single recipe goes through, and never twice for one meal.
+ * Plan a week; the payoff is that the plan writes the shopping list through the usual merge, never
+ * twice for one meal.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -39,8 +35,6 @@ test.describe('planning a week', () => {
     await signInWithHousehold(page, who);
 
     title = unique('Planned');
-    // Named uniquely, because these suites share one instance: asserting on
-    // "200 g" would be asserting on whatever the browser next door is doing.
     ingredient = unique('Butter');
 
     await seedRecipe(page, {
@@ -56,16 +50,11 @@ test.describe('planning a week', () => {
   });
 
   test('puts a recipe on a day, and the week writes the shopping list', async () => {
-    // Through the navigation, which is where the week lives now. The library
-    // used to carry a link of its own and does not since the shortlist took
-    // the top of that page.
     await page.goto('/');
     await page.getByRole('link', { name: /^(week|woche)$/i }).click();
 
     await expect(page).toHaveURL(/\/plan$/);
 
-    // Seven days, planned or not: a week with holes in it is a week the screen
-    // has to fill in itself.
     await expect(
       page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 2 }) })
     ).toHaveCount(7);
@@ -84,9 +73,6 @@ test.describe('planning a week', () => {
     await expect(sheet).toBeHidden();
     await expect(page.getByRole('link', { name: title })).toBeVisible();
 
-    // The payoff. The button says what it will do, and afterwards the week
-    // says what it did: every card that is on the list is marked, and there is
-    // nothing left to press.
     await page.getByRole('button', { name: weekToList }).click();
     await expect(page.getByRole('link', { name: title })).toContainText(onTheList);
     await expect(page.getByText(everythingOnTheList)).toBeVisible();
@@ -105,12 +91,10 @@ test.describe('planning a week', () => {
       ingredients: [{ quantity: 250, unit: 'g', name: flour }]
     });
 
-    // From the recipe first, the way somebody browsing for the weekend does.
     await page.goto(`/recipes/${recipeId}`);
     await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
     await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
 
-    // Then onto the week, and the week onto the list.
     await page.goto('/plan');
     await page
       .getByRole('button', { name: /^\+ (add|hinzufügen)$/i })
@@ -126,8 +110,7 @@ test.describe('planning a week', () => {
     await page.getByRole('button', { name: weekToList }).click();
     await expect(page.getByRole('link', { name: waffles })).toContainText(onTheList);
 
-    // One Saturday's worth of flour. Doubling here was silent, and only found
-    // out at the till.
+    // Doubling here used to be silent.
     await page.goto('/shopping');
     await expect(page.getByRole('listitem').filter({ hasText: flour })).toContainText(/250\s*g/);
   });
@@ -174,11 +157,8 @@ test.describe('planning a week', () => {
 
     await dragCardOnto(page, title, onto);
 
-    // The card itself, on the day it was let go over. Asserting on a toast
-    // would be asserting that something was said, not that anything moved.
     await expect.poll(() => dayHolding(page, title)).toBe(onto);
 
-    // And it survives the round trip, rather than only the optimistic draw.
     await page.reload();
     await expect.poll(() => dayHolding(page, title)).toBe(onto);
   });
@@ -194,8 +174,8 @@ test.describe('planning a week', () => {
     await dragCardOnto(page, title, onto);
     await expect.poll(() => dayHolding(page, title)).toBe(onto);
 
-    // The undo is drawn before it is saved, so the reload below has to wait for
-    // the save or it cancels it.
+    // The undo is drawn before it is saved, so the reload has to wait for the save or it cancels
+    // it.
     await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -204,8 +184,6 @@ test.describe('planning a week', () => {
       page.getByRole('button', { name: /^(undo|rückgängig)$/i }).click()
     ]);
 
-    // All the way back, including after a reload: an undo that only redraws is
-    // an undo that lies.
     await expect.poll(() => dayHolding(page, title)).toBe(from);
 
     await page.reload();
@@ -220,9 +198,6 @@ test.describe('planning a week', () => {
     const onto = await dayOtherThan(page, await dayHolding(page, title));
     const which = await indexOfDay(page, onto);
 
-    // The grip is a real button, so a keyboard reaches it and a screen reader
-    // announces it. It is the only path either of them has, and it is the same
-    // move the drag makes.
     await page
       .getByRole('button', { name: new RegExp(`${title}.*(another day|anderen Tag)`, 'i') })
       .click();
@@ -239,11 +214,8 @@ test.describe('planning a week', () => {
   });
 
   test('waits for a held finger before it carries anything', async ({ browser }) => {
-    // The gesture the whole design turns on, and the only one `page.mouse`
-    // cannot tell you about. A phone has no hover and no spare button: the same
-    // finger that drags a meal is the one that scrolls the week, so the drag
-    // has to wait to be sure, and a finger that sets off straight away has to
-    // keep scrolling.
+    // A phone has no hover: the same finger drags a meal and scrolls the week, so the drag has to
+    // wait to be sure.
     const phone = await browser.newContext({ ...devices['Pixel 7'] });
     const screen = await phone.newPage();
 
@@ -254,11 +226,9 @@ test.describe('planning a week', () => {
 
       const from = await dayHolding(screen, title);
 
-      // A finger that sets off immediately is scrolling, not dragging.
       await touchDragOnto(screen, title, await dayOtherThan(screen, from), { holdMs: 0 });
       await expect.poll(() => dayHolding(screen, title)).toBe(from);
 
-      // The same finger, held first, carries it.
       const onto = await dayOtherThan(screen, from);
 
       await touchDragOnto(screen, title, onto, { holdMs: 500 });
@@ -273,18 +243,13 @@ test.describe('planning a week', () => {
 
     await expect(page.getByRole('link', { name: title })).toBeVisible();
 
-    // Named for what it does, not just for the meal: a card carries two
-    // controls that mention the title, and the other one moves it.
+    // The card carries two controls that mention the title; the other one moves it.
     await page
       .getByRole('button', { name: new RegExp(`(take ${title} off|${title} vom plan)`, 'i') })
       .click();
 
-    // That this meal is gone, not that the week is. These suites share one
-    // instance, so an earlier run's Thursday is still somebody's Thursday.
     await expect(page.getByRole('link', { name: title })).toBeHidden();
 
-    // Its shopping is still on the list, and the way to take it off is offered
-    // rather than done behind anybody's back.
     await page.getByRole('button', { name: /^(remove them|entfernen)$/i }).click();
     await expect(
       page.getByText(/off the shopping list|von der einkaufsliste entfernt/i)
@@ -301,7 +266,6 @@ const onTheList = /on the shopping list|auf der einkaufsliste/i;
 const everythingOnTheList =
   /everything planned this week is on|alles, was diese woche geplant ist/i;
 
-/** Which day of the week a meal is on, as the date the planner marks it with. */
 async function dayHolding(page: Page, title: string): Promise<string> {
   const days = page.locator('[data-plan-day]');
 
@@ -316,7 +280,6 @@ async function dayHolding(page: Page, title: string): Promise<string> {
   return '';
 }
 
-/** Where a day sits in the week, which is also its place in the move sheet. */
 async function indexOfDay(page: Page, date: string): Promise<number> {
   const days = page.locator('[data-plan-day]');
 
@@ -329,7 +292,6 @@ async function indexOfDay(page: Page, date: string): Promise<number> {
   throw new Error(`${date} is not a day of the week on screen.`);
 }
 
-/** Any day but the one a meal is already on. */
 async function dayOtherThan(page: Page, date: string): Promise<string> {
   const dates = await page
     .locator('[data-plan-day]')
@@ -339,13 +301,8 @@ async function dayOtherThan(page: Page, date: string): Promise<string> {
 }
 
 /**
- * Picks a card up and puts it down on another day.
- *
- * Moved in steps rather than in one jump, because that is what a hand does and
- * what the drag reads: a single move past the threshold would test that the
- * drop works and not that anything was ever followed. Both ends are brought on
- * screen first — the page moves the pointer in viewport coordinates, and the
- * planner starts below the fold.
+ * Picks a card up and puts it down on another day, in steps like a hand; both ends are scrolled
+ * into view first.
  */
 async function dragCardOnto(page: Page, title: string, date: string): Promise<void> {
   const card = page.getByRole('link', { name: title });
@@ -364,18 +321,14 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
 
   const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
 
-  // The middle of the day, kept clear of the edges of the screen, where a real
-  // drag would start scrolling the week rather than hovering a day.
+  // Kept clear of the screen edges, where a real drag would start scrolling.
   const to = {
     x: onto.x + onto.width / 2,
     y: Math.max(96, Math.min(onto.y + onto.height / 2, viewport.height - 96))
   };
 
-  // Watched from before the button comes up, because the move is sent the
-  // moment it does. The screen redraws optimistically, so a test that only
-  // looked at the screen would be told the move happened and could reload
-  // before the server had been asked — which is how "it survives the round
-  // trip" came to fail against a move that was still in flight.
+  // Watched before the button comes up: the move is sent immediately and the optimistic redraw
+  // would let a reload beat the request.
   const moved = page.waitForResponse(
     (response) => response.url().includes('/meal-plan/') && response.request().method() === 'PATCH'
   );
@@ -395,12 +348,7 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
 }
 
 /**
- * A finger, which is not a mouse.
- *
- * Dispatched through the browser's own touch input rather than Playwright's
- * pointer helpers, because the thing under test is what the drag does with a
- * real `pointerType` of `touch` — and that is exactly what a synthesised mouse
- * gesture cannot tell you.
+ * A finger, not a mouse: dispatched through the browser's touch input so `pointerType` is `touch`.
  */
 async function touchDragOnto(
   page: Page,

@@ -4,9 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { locales, m } from './i18n';
 
 /*
- * A message that exists in one language and not the other is not a compile
- * error — Paraglide falls back to the base locale — so the reader simply gets
- * English in the middle of a German page. That is what this catches.
+ * A message missing in one language isn't a compile error (Paraglide falls back to the base locale),
+ * so a German page would show English; this catches it.
  */
 type Message =
   string | { declarations: string[]; selectors: string[]; match: Record<string, string> }[];

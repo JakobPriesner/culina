@@ -10,28 +10,13 @@
   import { reasonLine } from './search/wording';
   import type { RecipeSummary } from './types';
 
-  /**
-   * One recipe in a list.
-   *
-   * Not a box. A hairline, a title set in the editorial face, and the two or
-   * three facts that decide whether you cook it tonight — because a page of
-   * bordered rectangles is slower to read than the same content separated by
-   * space and type, and when everything is a card nothing stands out.
-   *
-   * The whole row is the link, so the target is the recipe rather than the four
-   * words of its title.
-   */
+  /** One recipe row: a hairline, editorial title and the few facts that decide tonight, not a bordered box. The whole row is the link. */
   interface Props {
     recipe: RecipeSummary;
-    /** Marked while a change to it is in flight. */
     pending?: boolean;
     /** What was searched for, so the words that found it can be seen. */
     query?: string;
-    /**
-     * The household it comes from, when it is inherited rather than this
-     * household's own — said on the card, so nobody opens it expecting to
-     * change it.
-     */
+    /** The household it comes from when inherited, said on the card so nobody opens it expecting to change it. */
     from?: string | null;
   }
 
@@ -40,17 +25,12 @@
   const meta = $derived(metaLineFor(recipe));
   const match = $derived(matchLineFor(recipe));
   const eyebrow = $derived(recipe.tags[0] ?? null);
-  /**
-   * Why a search found it, when its title does not say — the question somebody
-   * asks silently about every result they did not expect.
-   */
+  /** Why a search found it, when its title does not say. */
   const reason = $derived(recipe.matchReason ? reasonLine(recipe.matchReason) : null);
 </script>
 
 <article class="recipe" class:pending aria-busy={pending || undefined}>
-  <!-- Every recipe leads with the same box, photographed or not: an unphotographed
-       one gets the placeholder rather than a card of its own shape, so a grid of
-       both reads as one grid. -->
+  <!-- Same box photographed or not (placeholder), so a mixed grid reads as one. -->
   <div class="photo">
     <Image
       src={recipe.imageId ? imageUrl(recipe.id, 400, recipe.imageId) : undefined}
@@ -167,8 +147,6 @@
     text-decoration: none;
   }
 
-  /* The link covers the whole row, so the target is the recipe and not the
-     four words of its title. */
   .link::after {
     content: '';
     position: absolute;

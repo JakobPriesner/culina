@@ -10,61 +10,28 @@ import type { LocaleChoice } from '$shell/i18n';
 
 import type { components } from '$api/generated/schema';
 
-/**
- * Who is signed in, and where they can cook.
- *
- * Resolved once on boot from `GET /users/me`, which also returns the household
- * memberships — so the app knows everything it needs to render a shell after a
- * single round trip rather than two.
- */
 type CurrentUser = components['schemas']['UsersGetCurrentResponse'];
 type Membership = components['schemas']['UsersGetCurrentHouseholdMembership'];
 
 /**
- * `unknown` is the state the app boots in, and the only one where the boot
- * skeleton is the right answer: there is genuinely nothing to show until we
- * know whether this is a signed-in person or a stranger.
- *
- * `unavailable` is the difference between "you are not signed in" and "we could
- * not ask". Only a 401 means the first. A timeout, a dropped connection or a
- * backend that is still starting up means the second, and treating it as the
- * first is what puts a sign-in form in front of somebody whose cookie is
- * perfectly valid — the single most common way an app looks like it forgets
- * who you are.
+ * `unavailable` means we could not ask (timeout, dropped connection, backend starting),
+ * not "signed out"; only a 401 is the latter.
  */
 export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous' | 'unavailable';
 
-/** Which household is being looked at. A preference, not private data. */
+/** Remembered on the device; a preference, not private data. */
 const activeHouseholdKey = 'culina.household';
 
-/**
- * Which of the two boot skeletons this device should paint next time.
- *
- * Read by the inline script in `app.html`, before any of this code exists. The
- * document cannot know whether a session is live until the server answers, and
- * the last answer is right almost every time.
- */
+/** Which boot skeleton to paint next time; read by the inline script in `app.html` before this code exists. */
 const bootHintKey = 'culina.boot';
 
 /**
- * How long boot waits to find out who is signed in.
- *
- * Shorter than the 15 seconds every other request gets, because this one is
- * different in kind: the app layout's guard awaits it before anything renders,
- * so until it answers the screen holds the static boot logo and nothing else.
- * Fifteen seconds of that is indistinguishable from a broken app, and it is
- * what a backend that hangs rather than refuses actually produced.
- *
- * Giving up costs nothing: the status becomes "unavailable" rather than
- * "signed out", which is the screen that says so and offers to try again, and
- * the cookie is still in the jar when they do.
+ * Boot waits 4s, not the usual 15s: the layout guard blocks rendering on it.
+ * Giving up yields "unavailable", not "signed out".
  */
 const bootDeadlineMs = 4_000;
 
-/**
- * What this device keeps per account — unsent recipes, the last one started,
- * recent searches — for everybody but `keep`.
- */
+/** Drops per-account device data (drafts, recent searches) for everybody but `keep`. */
 function forgetAccounts(keep?: string): void {
   forgetEveryDraft(keep);
   forgetEveryLastDraft(keep);
@@ -76,7 +43,6 @@ class SessionStore {
   #user = $state<CurrentUser | null>(null);
   #activeHouseholdId = $state<string | null>(null);
 
-  /** Shared by concurrent callers, so a boot never asks twice. */
   #resolving: Promise<void> | null = null;
 
   get status(): SessionStatus {
@@ -99,21 +65,14 @@ class SessionStore {
     return this.activeHousehold?.householdId ?? null;
   }
 
-  /**
-   * The households the one being looked at inherits recipes from, by id, with
-   * their names: what a recipe card needs to say where it comes from.
-   */
+  /** Inherited households by id with their names, for labelling a recipe card's origin. */
   get inheritedFrom(): Readonly<Record<string, string>> {
     return Object.fromEntries(
       (this.activeHousehold?.inheritsFrom ?? []).map((h) => [h.householdId, h.name])
     );
   }
 
-  /**
-   * What a household is called, as far as this person can know: one they are
-   * in, or one the household they are looking at inherits recipes from. Null
-   * for anything else, which a recipe from somewhere unexpected can be.
-   */
+  /** A household's name if the user is in it or the active one inherits from it, else null. */
   householdName(householdId: string): string | null {
     return (
       this.households.find((h) => h.householdId === householdId)?.name ??
@@ -122,23 +81,14 @@ class SessionStore {
     );
   }
 
-  /**
-   * Reads the session again.
-   *
-   * For the cases where the server now knows something the store does not — a
-   * household just created or joined — rather than patching the store with
-   * values invented on the client.
-   */
+  /** Re-reads the session once the server knows something new (household created or joined). */
   refresh(): Promise<void> {
     return this.#load();
   }
 
   /** Resolves the session, at most once per boot. */
   resolve(): Promise<void> {
-    // Already answered. The guard in the app layout runs on every navigation —
-    // including the ones a hover speculatively preloads — and asking the server
-    // who is signed in again each time is two requests for an answer that has
-    // not changed since boot. `refresh()` is how a caller says it has.
+    // Skip when answered: the guard runs on every navigation, hover preloads included.
     if (this.#status === 'authenticated' || this.#status === 'anonymous') {
       return Promise.resolve();
     }
@@ -159,17 +109,13 @@ class SessionStore {
       return result.error;
     }
 
-    // Whatever this device read for the last person is not this person's to
-    // see. On the way in as well as on the way out, because a browser closed
-    // without signing out never reached the way out.
+    // Drop the previous person's reads on the way in too: a closed browser never signed out.
     forgetCachedReads();
 
-    // A fresh read rather than trusting the sign-in response: it carries who
-    // signed in, but not the households, and the shell needs both.
+    // Re-read: the sign-in response lacks the households.
     await this.#load();
 
-    // Their own unsent recipes are what an expired session left for them to
-    // come back to. Anybody else's are not theirs to inherit.
+    // Keep only this person's unsent recipes (what an expired session left).
     if (this.#user) {
       forgetAccounts(this.#user.userId);
     }
@@ -182,16 +128,12 @@ class SessionStore {
     await importPush.disable().catch(() => {});
     await request(() => http.DELETE('/api/v1/sessions/current'));
 
-    // Cleared whatever the server said. A failed sign-out that leaves the
-    // previous person's data on screen is worse than one that ends the session
-    // locally and lets the cookie expire.
+    // Cleared even if the request failed, so the previous person's data never stays on screen.
     this.end();
-    // An unsent recipe belongs to whoever wrote it. Scoping the key by account
-    // stops it being shown to the next person; only this stops it being kept.
+    // Account-scoped keys hide drafts; only this deletes them.
     forgetAccounts();
   }
 
-  /** Chooses which household the app is looking at. */
   selectHousehold(householdId: string): void {
     if (!this.households.some((h) => h.householdId === householdId)) {
       return;
@@ -202,11 +144,8 @@ class SessionStore {
   }
 
   /**
-   * Everything goes: the session, every store, and the cached responses.
-   *
-   * Except the unsent recipes. This is also what a session that expired
-   * mid-sentence runs, and those drafts are kept for whoever signs back in;
-   * signing out, or somebody else signing in, is what removes them.
+   * Clears session, stores and cached responses, but keeps unsent drafts:
+   * this also runs when a session expires mid-sentence.
    */
   end(): void {
     resetAllStores();
@@ -223,9 +162,7 @@ class SessionStore {
   }
 
   async #load(signal?: AbortSignal): Promise<void> {
-    // In parallel: both need the same cookie, and waiting for the first to
-    // decide whether to ask for the second would cost a round trip on the one
-    // request path that is always on the critical path.
+    // Parallel: both need the same cookie and this is always on the critical path.
     const [me, settings] = await Promise.all([
       request(() => http.GET('/api/v1/users/me', { signal })),
       request(() => http.GET('/api/v1/users/me/settings', { signal }))
@@ -233,9 +170,7 @@ class SessionStore {
 
     if (!me.ok) {
       this.#user = null;
-      // 401 is the server saying there is no session. Anything else is us
-      // failing to ask, which is not the same answer and must not sign anyone
-      // out; the app offers to try again instead.
+      // Only a 401 means signed out; anything else is a failed ask and must not sign anyone out.
       this.#status = me.error.status === 401 ? 'anonymous' : 'unavailable';
 
       if (this.#status === 'anonymous') {
@@ -245,9 +180,7 @@ class SessionStore {
       return;
     }
 
-    // The offline copy of this answer outlives a deploy on purpose, so a device
-    // that last read it before households could inherit may be handed one
-    // without the chain. Such a household simply inherits nothing.
+    // The offline copy outlives deploys and may lack `inheritsFrom`; such a household inherits nothing.
     this.#user = {
       ...me.value,
       households: me.value.households.map((h) => ({ ...h, inheritsFrom: h.inheritsFrom ?? [] }))
@@ -256,8 +189,7 @@ class SessionStore {
     writeDevice(bootHintKey, 'app');
     this.#activeHouseholdId = this.#chooseHousehold(me.value.households);
 
-    // The server is the source of truth: a device that has been offline for a
-    // week should not push a week-old choice over a newer one made elsewhere.
+    // Server wins: a long-offline device must not overwrite a newer choice made elsewhere.
     if (settings.ok) {
       preferences.adopt(
         {
@@ -271,10 +203,7 @@ class SessionStore {
     }
   }
 
-  /**
-   * The one they were last looking at, if they are still in it. Otherwise the
-   * first, because a household picker on boot is a question nobody wants.
-   */
+  /** The last-viewed household if still a member, else the first. */
   #chooseHousehold(households: readonly Membership[]): string | null {
     const remembered = readDevice(activeHouseholdKey);
 

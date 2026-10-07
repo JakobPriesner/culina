@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Focus trapping, focus restoration and Escape are the browser's own behaviour
- * for a modal `<dialog>`. That is the reason to use it — and the reason these
- * assertions belong in a real browser, because jsdom implements the element
- * without the top layer that gives it those properties.
+ * Focus trap, restoration and Escape are the browser's own `<dialog>` behaviour, hence tested in a
+ * real browser (jsdom has no top layer).
  */
 test.describe('overlays @offline', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,12 +14,7 @@ test.describe('overlays @offline', () => {
 
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    /*
-     * Tabbing round a modal dialog wraps through the document root, so focus
-     * does briefly sit on <body> — that is the browser doing the right thing.
-     * What must never happen is focus landing on something behind the dialog,
-     * which is what a hand-rolled trap gets wrong.
-     */
+    /* Focus briefly sits on <body> when tabbing wraps; it must never land behind the dialog. */
     const focused = async () =>
       page.evaluate(() => {
         const element = document.activeElement;
@@ -67,7 +60,6 @@ test.describe('overlays @offline', () => {
     const dialog = page.getByRole('dialog');
 
     await expect(dialog).toBeVisible();
-    // The far corner of the viewport is backdrop, never panel.
     await page.mouse.click(5, 5);
 
     await expect(dialog).toBeHidden();
@@ -78,7 +70,6 @@ test.describe('overlays @offline', () => {
     await expect(page.getByTestId('undo-state')).toHaveText('deleted');
 
     await page.getByRole('button', { name: 'Delete with undo' }).click();
-    // Exact, because "Delete with undo" is also a button whose name contains it.
     const undo = page.getByRole('button', { name: 'Undo', exact: true });
 
     await undo.click();

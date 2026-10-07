@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseIngredientLine as parse } from './parseIngredientLine';
 
-/*
- * The parser is only trustworthy because its result is shown back in separate
- * parts, so a wrong read is visible. These are the reads it must not get wrong.
- */
+/* Reads the parser must not get wrong: a wrong read is only visible because the result is shown back in parts. */
 describe('the ordinary case', () => {
   it.each([
     ['200 g Mehl', 200, 'g', 'Mehl'],
@@ -73,11 +70,7 @@ describe('what it cannot read', () => {
 });
 
 describe('German as it is actually typed', () => {
-  /*
-   * A phone keyboard and a laptop keyboard produce different spellings of the
-   * same word, and German plurals are not a suffix rule. "2 Packungen Feta"
-   * once landed on the shopping list as an ingredient called "Packungen Feta".
-   */
+  /* Phone and laptop keyboards spell the same word differently, and German plurals are no suffix rule ("2 Packungen Feta" once became an ingredient). */
   it('reads a unit written with an umlaut', () => {
     expect(parse('2 Stück Zwiebeln').quantity).toEqual({
       value: 2,
@@ -97,7 +90,6 @@ describe('German as it is actually typed', () => {
   });
 
   it('still refuses to read a name as a unit', () => {
-    // "Zitronen" is a plural ingredient, not a plural unit.
     expect(parse('3 Zitronen')).toMatchObject({
       quantity: { value: 3, unit: null },
       name: 'Zitronen'
@@ -107,8 +99,6 @@ describe('German as it is actually typed', () => {
 
 describe('a unit this kitchen added itself', () => {
   it('does not read a word it has never seen as a unit', () => {
-    // Otherwise "2 Zwiebeln" becomes two Zwiebeln of nothing, and the
-    // ingredient loses its name to a unit nobody asked for.
     expect(parse('1 Schuss Milch')).toEqual({
       quantity: { value: 1, unit: null },
       name: 'Schuss Milch',
@@ -117,8 +107,6 @@ describe('a unit this kitchen added itself', () => {
   });
 
   it('reads a unit this kitchen has written before', () => {
-    // Which is the whole of what adding a unit means: write it once, and every
-    // line after that reads back the way it was meant.
     expect(parse('1 Schuss Milch', ['Schuss'])).toEqual({
       quantity: { value: 1, unit: 'Schuss' },
       name: 'Milch',

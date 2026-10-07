@@ -1,13 +1,6 @@
 import type { Step, StepSegment } from '../types';
 
-/**
- * Which steps each ingredient belongs to, and which of them name it outright.
- *
- * The editor needs the relationship from both ends. Under a step you say what
- * it needs; beside an ingredient you want to know where it ends up, and whether
- * you forgot to put it anywhere. Both are readings of the same one field, so
- * neither can drift from the other.
- */
+/** Which steps each ingredient belongs to, and which name it outright; both read the same field so they can't drift. */
 
 /** The ingredients a step's own words name, as opposed to merely needs. */
 export function namedIn(step: Step): Set<string> {
@@ -19,15 +12,8 @@ export function namedIn(step: Step): Set<string> {
 }
 
 /**
- * Ingredient id to the step numbers that need it, counting from one.
- *
- * Numbered rather than indexed because these are shown to a person, and the
- * step above the text already says "Step 1".
- *
- * A step needs what it lists and everything its words name, as `Step.Create`
- * reads it on the server. Counting `uses` alone said "in no step" beside an
- * ingredient a sentence had just mentioned, until a reload brought the
- * server's union back.
+ * Ingredient id to the 1-based step numbers that need it: `uses` plus everything the words name, as
+ * `Step.Create` reads it on the server (`uses` alone said "in no step" beside a just-mentioned ingredient).
  */
 export function usageOf(steps: readonly Step[]): Map<string, number[]> {
   const usage = new Map<string, number[]>();
@@ -48,19 +34,9 @@ export function usageOf(steps: readonly Step[]): Map<string, number[]> {
 }
 
 /**
- * Drops an ingredient from every step, for when the line itself is deleted.
- *
- * Both halves of the relationship, because the server rebuilds one from the
- * other. `Step.Create` unions what a step lists with everything its sentence
- * names — "the words win, always" — so pruning `uses` while leaving the mention
- * in the prose achieved nothing: the mention put the id straight back, and the
- * next autosave failed with recipes.ingredient_in_use, naming a step the person
- * had not touched.
- *
- * The mention becomes the word it was displaying. "Melt @butter in the pan"
- * reads as "Melt butter in the pan" — the sentence somebody wrote survives, it
- * simply stops pointing at a line that is gone. Refusing the delete instead
- * would mean explaining a reference they may not remember making.
+ * Drops an ingredient from every step. Both halves, because the server unions `uses` with the words
+ * ("the words win"): pruning `uses` alone got the id put back. A mention becomes plain text
+ * ("Melt @butter" reads "Melt butter"); refusing the delete would mean explaining a forgotten reference.
  */
 export function withoutIngredients(steps: readonly Step[], removed: ReadonlySet<string>): Step[] {
   return steps.map((step) => {
@@ -80,12 +56,7 @@ export function withoutIngredients(steps: readonly Step[], removed: ReadonlySet<
   });
 }
 
-/**
- * Turns the mentions of removed ingredients back into plain words.
- *
- * Neighbouring text is joined as it goes, so a sentence does not accumulate a
- * run of fragments every time a line is deleted.
- */
+/** Turns mentions of removed ingredients back into plain words, joining neighbouring text. */
 function asWords(segments: readonly StepSegment[], removed: ReadonlySet<string>): StepSegment[] {
   const written: StepSegment[] = [];
 

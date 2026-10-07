@@ -74,10 +74,7 @@ function stepFor(amount: number): number {
   return magnitude < 1000 ? 10 : 50;
 }
 
-/**
- * Rounding never turns a small amount (0.2 g of saffron) into zero, which would change what is
- * cooked.
- */
+/** Rounding never turns a small amount (0.2 g of saffron) into zero. */
 const orExact = (rounded: number, exact: number): number => (rounded === 0 ? exact : rounded);
 
 const toStep = (amount: number, step: number): number =>

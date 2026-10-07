@@ -21,30 +21,8 @@
   import type { Recipe } from '$features/recipes/types';
 
   /**
-   * What the assistant suggested, beside what is there now.
-   *
-   * The whole reason this capability is safe to offer. An assistant that
-   * rewrote somebody's recipe and saved it would be one nobody could trust with
-   * the recipe they actually cook from — and the editor has no Save button, so
-   * anything that reached `change()` would be on its way to the server 800 ms
-   * later. Nothing here touches the draft until a person has ticked something
-   * and pressed the button.
-   *
-   * Six rows rather than one per ingredient, which looks like less control and
-   * is more. Steps that came from the assistant over an ingredient list that
-   * did not are steps naming things the recipe no longer has; the list is the
-   * smallest piece that still makes sense on its own. Correcting one line
-   * afterwards is what the editor underneath is for.
-   *
-   * Everything starts unticked. A dialog that opens with its work already
-   * accepted is a dialog people dismiss without reading.
-   *
-   * It opens on the first thing the assistant says rather than on the last, so
-   * the suggestion is read as it is written. Nothing can be accepted until it
-   * is finished: ticking a box against half an ingredient list and pressing the
-   * button would apply a list the assistant had not finished writing — and this
-   * editor has no Save button, so that would be on its way to the server 800 ms
-   * later.
+   * What the assistant suggested beside what is there now; nothing touches the draft until a person ticks something and presses the button (the editor autosaves ~800 ms after any change).
+   * Six rows, not one per ingredient (steps naming vanished ingredients make no sense), all unticked, opening on the first thing said; nothing is acceptable until the draft is finished.
    */
   interface Props {
     open: boolean;
@@ -54,13 +32,7 @@
     writing?: boolean;
     saving?: boolean;
     saveError?: AppError | null;
-    /**
-     * Why the assistant stopped, when it stopped part-way.
-     *
-     * What it wrote before then is still offered — it was paid for — but the
-     * reason is said here, where the reader is, rather than only beside a
-     * button the dialog is covering.
-     */
+    /** Why the assistant stopped part-way; what it wrote is still offered, and the reason is said here where the reader is. */
     error?: AppError | null;
     /** Source comparison for an intake draft; no recipe exists yet. */
     source?: { text: string; transcript: string; url: string; photos: string[]; assisted: boolean };
@@ -137,8 +109,7 @@
     <AssistFailure {error} />
   {/if}
 
-  <!-- Said here rather than only on the button, because this is the moment
-       somebody decides whether to trust it. -->
+  <!-- Said here, not only on the button: this is when somebody decides whether to trust it. -->
   {#if draft && (!source || source.assisted)}
     <p class="warning">{m['assist.warning']()}</p>
   {/if}

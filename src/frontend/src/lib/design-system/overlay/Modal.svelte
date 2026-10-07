@@ -4,11 +4,8 @@
   import Dialog from './Dialog.svelte';
 
   /**
-   * A focused task that interrupts what the person was doing.
-   *
-   * Reserve it for that. Culina prefers an undoable action with a toast over a
-   * confirmation dialog: a modal to confirm something reversible costs everyone
-   * a decision to protect against a mistake that was already cheap to fix.
+   * A focused task that interrupts; prefer an undoable action with a toast over a confirmation
+   * modal.
    */
   interface Props {
     open: boolean;

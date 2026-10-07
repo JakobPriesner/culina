@@ -1,21 +1,8 @@
 import { glob, readFile } from 'node:fs/promises';
 
 /**
- * The design system's two build-time rules.
- *
- * The point of three layers is that re-theming the app means editing one
- * directory. A single `#fff` in a component quietly breaks that promise and is
- * invisible in review, so `themes.spec.ts` turns it into a failing test.
- *
- * A colour written outside the token system quietly breaks the promise that
- * re-theming means editing one directory, and a `var(--space-5)` that nobody
- * declared renders as nothing at all — a 200-pixel icon where a 20-pixel one
- * was meant. Both are invisible in review, so `lint.spec.ts` turns them into
- * failing tests.
- *
- * Only CSS is examined: stylesheets, `<style>` blocks and inline `style`
- * attributes. Scanning TypeScript would flag the word "black" in a comment and
- * teach everyone to ignore the rule.
+ * The design system's two build-time rules: no raw colours outside the token layers, and no
+ * `var(--x)` nobody declared (it renders as nothing). Only CSS is scanned: TypeScript would flag "black" in a comment.
  */
 
 /** Colours and layer-1 primitives may only be written here. */
@@ -57,7 +44,6 @@ const withoutComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 const isAllowed = (path: string) =>
   allowedDirectories.some((directory) => path.startsWith(directory));
 
-/** Every raw colour written outside the token system, as readable messages. */
 export async function findRawColours(root: string): Promise<string[]> {
   const violations: string[] = [];
 
@@ -80,33 +66,18 @@ export async function findRawColours(root: string): Promise<string[]> {
   return violations.sort();
 }
 
-/** Explains the rule once, under the list of what broke it. */
 export const rawColourRemedy =
   'Colours belong to the token system: add or reuse a semantic token in ' +
   'src/lib/design-system/tokens/semantic.css and give every theme a value for it.';
 
-/** A custom property being given a value in CSS, rather than being read. */
 const declaration = /(^|[;{])\s*(--[\w-]+)\s*:/g;
 
-/**
- * Svelte's `style:--name={...}` directive, which sets a custom property on the
- * element without ever appearing in a stylesheet. It is a declaration; a
- * scanner that only reads CSS would call every use of it undeclared.
- */
+/** Svelte's `style:--name` sets a custom property without appearing in a stylesheet, so it counts as a declaration. */
 const styleDirective = /\bstyle:(--[\w-]+)/g;
 
-/** Where the vocabulary of tokens is defined. */
 const tokenDirectories = ['src/lib/design-system/tokens/', 'src/lib/design-system/themes/'];
 
-/**
- * Finds `var(--token)` references to a token nothing declares.
- *
- * A custom property that does not exist is not an error in CSS: the declaration
- * is simply dropped, and the element falls back to whatever the initial value
- * is. The scale is deliberately sparse — there is no `--space-5` — so reaching
- * for a step that sounds plausible is an easy mistake with a loud result and no
- * warning.
- */
+/** Finds `var(--token)` references to an undeclared token: CSS silently drops them, and the scale is sparse (no `--space-5`). */
 export async function findUnknownTokens(root: string): Promise<string[]> {
   const declared = new Set<string>();
   const files: { path: string; css: string }[] = [];
@@ -133,8 +104,7 @@ export async function findUnknownTokens(root: string): Promise<string[]> {
   const violations: string[] = [];
 
   for (const { path, css } of files) {
-    // A component may declare a property of its own and use it in the same
-    // file; that is local plumbing, not a missing token.
+    // A property a component declares and uses itself is local plumbing.
     const local = new Set([
       ...[...css.matchAll(declaration)].map(([, , name]) => name!),
       ...(markup.get(path) ?? [])

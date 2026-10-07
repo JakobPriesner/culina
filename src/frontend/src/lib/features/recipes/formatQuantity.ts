@@ -2,12 +2,7 @@ import type { ScaledQuantity } from './scaling';
 import { isCustomary, type CustomaryUnit } from './measurement';
 import { familyOf, isBuiltIn, type BuiltInUnit, type Unit } from './units';
 
-/**
- * Turns a scaled amount into the text a recipe would print.
- *
- * Separate from the scaling itself because it is the only part that knows about
- * language: `1,5 kg` in German and `1.5 kg` in English are the same quantity.
- */
+/** A scaled amount as printed text; separate from scaling because only this knows language (`1,5 kg` vs `1.5 kg`). */
 export interface QuantityText {
   /** The number, already localised. Empty when the recipe gives no amount. */
   readonly amount: string;
@@ -17,13 +12,7 @@ export interface QuantityText {
   readonly text: string;
 }
 
-/**
- * Fractions as glyphs, where the amount makes them natural.
- *
- * Spoons are measured in halves and thirds because the spoons exist: `0.5 tsp`
- * is a number, `½ tsp` is the thing in the drawer. Part of one countable thing
- * is the same: nobody writes `0.5 onion`, they write half an onion.
- */
+/** Fractions as glyphs where natural: `½ tsp` is the thing in the drawer, and nobody writes `0.5 onion`. */
 const glyphs = new Map<number, string>([
   [0.125, '⅛'],
   [0.25, '¼'],
@@ -39,12 +28,10 @@ const short: Record<BuiltInUnit, string> = {
   kg: 'kg',
   ml: 'ml',
   l: 'l',
-  // Spoons are absent, not empty-by-accident: their abbreviation is a word in
-  // the reader's language (EL, not tbsp), so it comes from the labels.
+  // Spoons are empty: their abbreviation is a word in the reader's language (EL, not tbsp), from the labels.
   tsp: '',
   tbsp: '',
-  // Count units are named by the ingredient itself — "3 cloves garlic" reads
-  // worse than "3 garlic cloves", so the recipe's own words carry it.
+  // Count units are named by the ingredient ("3 garlic cloves" beats "3 cloves garlic").
   piece: '',
   clove: '',
   bunch: '',
@@ -54,11 +41,7 @@ const short: Record<BuiltInUnit, string> = {
   pinch: ''
 };
 
-/**
- * The same for the units an imperial conversion produces. Ounces and pounds are
- * abbreviations in every language; a cup is a word, and gets its plural from
- * the labels.
- */
+/** Same for imperial units: oz and lb are abbreviations everywhere; a cup is a word, pluralised by the labels. */
 const customaryShort: Record<CustomaryUnit, string> = {
   oz: 'oz',
   lb: 'lb',
@@ -66,13 +49,7 @@ const customaryShort: Record<CustomaryUnit, string> = {
   cup: ''
 };
 
-/**
- * The short form for any unit, built in or not.
- *
- * A unit a household wrote is its own label — "1 Schuss Milch" — because there
- * is nothing to translate it to and nothing to abbreviate it from. Shown
- * exactly as it was typed, which is also how it was meant.
- */
+/** A household's own unit is its own label ("1 Schuss Milch"): nothing to translate or abbreviate. */
 const shortOf = (unit: Unit): string => {
   if (isBuiltIn(unit)) {
     return short[unit];
@@ -88,12 +65,7 @@ export interface QuantityLabels {
   readonly approximately: (amount: string) => string;
 }
 
-/**
- * A non-breaking space, so `250` never wraps away from `g`.
- *
- * Escaped rather than typed literally: an invisible character in source is a
- * character nobody can see in a diff.
- */
+/** Non-breaking, so `250` never wraps from `g`; escaped because an invisible character is unreadable in a diff. */
 const nbsp = '\u00a0';
 
 export function formatQuantity(
@@ -124,12 +96,7 @@ function unitTextFor(quantity: ScaledQuantity, count: number, labels: QuantityLa
   return shortOf(quantity.unit) || labels.unitName(quantity.unit, count);
 }
 
-/**
- * Whether this is a piece of a single countable thing.
- *
- * `½ onion`, yes. `2½ onions` is not something a recipe says — that is where a
- * range belongs, and scaling produces one.
- */
+/** A piece of one countable thing (`½ onion`); `2½ onions` is a range, which scaling produces. */
 const isPartOfOne = (whole: number, unit: Unit | null): boolean =>
   whole === 0 && familyOf(unit) === 'count';
 
@@ -137,10 +104,8 @@ function number(value: number, locale: string, unit: Unit | null): string {
   const whole = Math.floor(value);
   const fraction = Number((value - whole).toFixed(4));
 
-  // Only where the amount is spoken as a fraction in the first place. `½ g` is
-  // not a thing anyone writes — a scale shows 0.5 g — but half an onion is.
-  // Customary units are written as fractions with a whole part too: "1½ cups"
-  // is how a US recipe says it, and "1.5 cup" is how nothing says it.
+  // Only where the amount is spoken as a fraction: `½ g` never, half an onion yes;
+  // customary units take a whole part too ("1½ cups").
   if (
     fraction > 0 &&
     (familyOf(unit) === 'spoon' || isCustomary(unit) || isPartOfOne(whole, unit))

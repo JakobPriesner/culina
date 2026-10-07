@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { sharing } from './sharing.svelte';
 
 /*
- * The link is a credential handed to people outside the household, so the
- * things worth pinning are the ones that are invisible from the screen: that a
- * link belongs to one recipe only, and that taking one back leaves the screen
- * honest whichever way the request goes.
+ * A share link is a credential for outsiders: pins that a link belongs to one recipe and that
+ * taking one back leaves the screen honest.
  */
 const recipeId = 'r1';
 
@@ -40,7 +38,6 @@ describe('sharing', () => {
 
     const failure = await sharing.share(recipeId);
 
-    // The sheet falls back to its off state, with the button to try again.
     expect(failure).not.toBeNull();
     expect(sharing.status).toBe('failed');
     expect(sharing.tokenFor(recipeId)).toBeNull();
@@ -52,8 +49,7 @@ describe('sharing', () => {
     await sharing.share(recipeId);
 
     expect(sharing.tokenFor(recipeId)).toBe('abc');
-    // One recipe at a time, so another recipe's page must not read this one's
-    // token off a store that happens to be warm.
+    // One recipe at a time: another recipe's page must not read this one's token from a warm store.
     expect(sharing.tokenFor('r2')).toBeNull();
   });
 
@@ -67,8 +63,7 @@ describe('sharing', () => {
     await sharing.share(recipeId);
     const failure = await sharing.revoke(recipeId);
 
-    // The optimistic removal has to roll back exactly: telling somebody a link
-    // is dead when it is still live is the one wrong answer here.
+    // Telling somebody a link is dead while it is live is the one wrong answer.
     expect(failure).not.toBeNull();
     expect(sharing.tokenFor(recipeId)).toBe('abc');
   });

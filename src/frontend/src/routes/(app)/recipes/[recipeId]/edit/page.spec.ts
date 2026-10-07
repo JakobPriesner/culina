@@ -11,11 +11,7 @@ import { units } from '$features/recipes/stores/units.svelte';
 import type { Recipe } from '$features/recipes/types';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The page is tested rather than the mention parser, because the bug this is
- * here to stop lives between the two: a name added from inside a step has no
- * id when it is mentioned, and only the save that follows gives it one.
- */
+/* Tested at the page, not the mention parser: a name added from inside a step has no id when mentioned, and only the following save gives it one. */
 vi.mock('$app/state', () => ({ page: { params: { recipeId: 'recipe-1' } } }));
 
 const butter = { id: 'i-butter', name: 'butter', note: null, quantity: { value: 200, unit: 'g' } };
@@ -99,8 +95,7 @@ describe('adding an ingredient from inside a step', () => {
     await userEvent.type(await screen.findByRole('combobox', { name: 'Step 1' }), 'Add @saffron');
     await userEvent.click(screen.getByRole('option', { name: 'Add “saffron” to the ingredients' }));
 
-    // Nobody types again: the save that gave saffron its id has to be followed
-    // by one that says the step means that saffron.
+    // Nobody types again: the save that gave saffron its id must be followed by one saying the step means it.
     await waitFor(() => expect(sent).toHaveLength(2), { timeout: 3000 });
 
     expect(sent[1]!.steps[0]!.segments).toContainEqual(

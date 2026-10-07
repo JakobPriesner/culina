@@ -7,11 +7,7 @@ import AppIconChoice from './AppIconChoice.svelte';
 import { appIcon } from './appIcon.svelte';
 import { appIconLinks, appIconStorageKey, defaultAppIcon, parseAppIcon } from './appIcons';
 
-/*
- * The choice has to reach the links a browser reads when Culina is installed,
- * and survive a reload — and a stored value we did not write must not point
- * those links at files that do not exist.
- */
+/* The choice must reach the links a browser reads on install and survive a reload; a stored value we did not write must not point them at missing files. */
 const href = (selector: string) => document.head.querySelector(selector)?.getAttribute('href');
 
 beforeEach(() => {

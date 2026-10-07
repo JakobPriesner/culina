@@ -3,34 +3,14 @@ import { glob, readFile, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 
 /**
- * Writes a Brotli and a gzip copy beside every text file in a build.
- *
- * Culina's host compresses no response, and that is deliberate: compressing a
- * cookie-authenticated response invites BREACH. But the rule was wider than its
- * reason. BREACH needs a secret and attacker-controlled input in the same
- * response, and a content-hashed JavaScript file is the same bytes for every
- * visitor, carries no secret and reflects nothing. So these files were sent at
- * three times their size — 211 kB for a first load the budget measures at 70 —
- * to defend something that was never at risk.
- *
- * Compressing at build time rather than per request keeps the original rule
- * exactly as strong as it was: nothing the server generates is ever
- * compressed, because the server compresses nothing. It picks between files
- * that already exist, and the host's static file handling does the choosing.
+ * Writes Brotli and gzip copies beside every text file in a build. The host compresses no response (BREACH), but hashed static files
+ * carry no secret and reflect nothing, so build-time copies keep that rule intact: the server only picks between files that exist.
  */
 
-/**
- * Text. Images and fonts are compressed formats already, and would only grow.
- *
- * No size floor. There was one, at a kilobyte, on the theory that a file that
- * small fits in one packet either way — and measured, it cost 14 kB across the
- * build, which the service worker downloads whole on a first visit. Whether a
- * copy is worth having is decided by whether it came out smaller, below.
- */
+/** Text only (images and fonts are compressed already). No size floor: a 1 kB one cost 14 kB in the service worker's first download. */
 const compressible = /\.(?:js|mjs|css|svg|json|webmanifest|txt|xml)$/;
 
 export interface Compressed {
-  /** The file, relative to the build directory. */
   readonly file: string;
   readonly bytes: number;
   /** Null when Brotli did not make it smaller, and no copy was written. */
@@ -39,13 +19,7 @@ export interface Compressed {
   readonly gzip: number | null;
 }
 
-/**
- * Compresses every eligible file under `buildDir`, in place.
- *
- * A copy is only written when it is actually smaller. The host serves a
- * variant whenever one exists, so a copy that came out larger would make the
- * response worse for exactly the clients that asked for it to be better.
- */
+/** Compresses every eligible file under `buildDir` in place, writing a copy only when smaller, since the host serves any variant that exists. */
 export async function precompress(buildDir: string): Promise<Compressed[]> {
   const written: Compressed[] = [];
 

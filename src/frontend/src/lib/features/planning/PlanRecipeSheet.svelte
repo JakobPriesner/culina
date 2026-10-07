@@ -10,12 +10,8 @@
   import { mealSlots, slotLabel } from './slots';
 
   /**
-   * The short path from deciding on a recipe to putting it in the week.
-   *
-   * This uses the same week, day descriptions and meal slots as the plan page,
-   * rather than growing a second, smaller planning model inside recipe detail.
-   * The servings are supplied by the detail page, where scaling already lives,
-   * so the amount somebody chose is the amount the plan remembers.
+   * Short path from choosing a recipe to the week, reusing the plan page's week and slots;
+   * servings come from the detail page's scaling.
    */
   interface Props {
     open: boolean;

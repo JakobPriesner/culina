@@ -34,15 +34,13 @@ describe('which steps an ingredient ends up in', () => {
   });
 
   it('says nothing about an ingredient no step needs', () => {
-    // Salt to taste belongs to no step, and never will.
     expect(usageOf([step(['butter'])]).get('salt')).toBeUndefined();
   });
 });
 
 describe('which of them the words name', () => {
   it('separates a mention from a need', () => {
-    // Both are needed; only one is said out loud, and only the said one is
-    // beyond the chip row's power to remove.
+    // Both are needed; only the spoken one can't be removed via the chip row.
     const one = step(['butter', 'salt'], [{ kind: 'text', text: 'Melt ' }, mention('butter')]);
 
     expect(namedIn(one)).toEqual(new Set(['butter']));
@@ -57,8 +55,7 @@ describe('deleting an ingredient', () => {
   });
 
   it('turns a mention of it back into the word it was showing', () => {
-    // The server rebuilds `uses` from the sentence, so a mention left behind
-    // put the deleted id straight back and failed the next autosave.
+    // The server rebuilds `uses` from the sentence, so a leftover mention put the deleted id back.
     const sentence = step(
       ['butter'],
       [{ kind: 'text', text: 'Melt ' }, mention('butter'), { kind: 'text', text: ' in the pan.' }]

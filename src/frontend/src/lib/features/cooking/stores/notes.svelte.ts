@@ -1,32 +1,15 @@
 import { http, request, type AppError } from '$api';
 import { registerStore } from '$shell/stores';
 
-/**
- * What one person has learned about a recipe.
- *
- * Person-owned, never household-owned: "less sugar next time" is an opinion,
- * and two people in one household can hold different ones without either of
- * them editing the recipe. That separation is the whole reason notes exist as
- * their own thing rather than as an extra field on the recipe.
- */
+/** One person's notes on a recipe; person-owned, so two household members can differ without editing the recipe. */
 class NotesStore {
   #overall = $state('');
   #loaded = $state(false);
-  /**
-   * The read did not come back. Kept apart from "no note", because an empty
-   * note can be typed into and the save would replace whatever the server
-   * still holds — a note the person was never shown.
-   */
+  /** The read failed; kept apart from "no note", or saving would overwrite a note never shown. */
   #failed = $state(false);
-  /**
-   * The step notes the read returned. Nothing here shows or edits them, but a
-   * save replaces the whole of a note, so they go back exactly as they came.
-   */
+  /** Step notes from the read; not shown, but a save replaces the whole note so they go back as they came. */
   #steps: { stepId: string; body: string }[] = [];
-  /**
-   * The save still on its way. Plain rather than `$state`, because `load()`
-   * reads it before its first await, from inside an effect.
-   */
+  /** The save in flight; not `$state` because `load()` reads it before its first await, inside an effect. */
   #saving: Promise<unknown> | null = null;
 
   get overall(): string {
@@ -42,16 +25,13 @@ class NotesStore {
   }
 
   async load(recipeId: string): Promise<void> {
-    // Emptied before the read, not after: the note on screen until it arrives
-    // is the previous recipe's, and must not be saved as this one's.
+    // Emptied before the read: until it arrives the screen holds the previous recipe's note.
     this.#overall = '';
     this.#steps = [];
     this.#loaded = false;
     this.#failed = false;
 
-    // Leaving the recipe for cook mode sends what was typed last as the page
-    // closes, and cook mode reads the note straight back. A read that overtook
-    // that write would show the note as it was before.
+    // A write sent as the page closes for cook mode must land before this read, or the note shows stale.
     await this.#saving;
 
     const result = await request(() =>
@@ -68,7 +48,6 @@ class NotesStore {
     this.#loaded = true;
   }
 
-  /** Held locally as it is typed; the page decides when to send it. */
   set(text: string): void {
     this.#overall = text;
   }
@@ -79,11 +58,8 @@ class NotesStore {
       return null;
     }
 
-    // Taken now, not when the request is built: a retry builds it again, after
-    // the next recipe's read may have emptied the note.
-    //
-    // Blank means "no note" rather than an empty one: a note nobody wrote
-    // should not take up space on the page.
+    // Taken now, not at request build (a retry builds again after a next-recipe read may have emptied it).
+    // Blank means no note.
     const body = { overall: this.#overall.trim() || null, steps: this.#steps };
 
     const saving = request(() =>

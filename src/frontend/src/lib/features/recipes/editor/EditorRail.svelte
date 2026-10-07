@@ -4,32 +4,16 @@
   import { createSectionWatch } from './sectionWatch.svelte';
 
   /**
-   * Where you are in the recipe, and whether the work is safe.
-   *
-   * One component and two shapes, which is deliberate. On a wide screen it is a
-   * column beside the form — the way out, what is being edited, whether it is
-   * saved, and the parts of the recipe with their counts — and it follows the
-   * page down, because a recipe with twelve steps is long and a way out you
-   * have to scroll back up for is not one. On a phone the same four facts
-   * become a bar across the top; the section links go, because five pills above
-   * a form on a 360px screen cost more room than the scrolling they save.
-   *
-   * The bar is glass and rounded for the same reason the brand and the
-   * navigation are: this app's fixed furniture floats over the page rather than
-   * cutting a band out of it, and an editor that invented its own toolbar would
-   * read as a different application's screen.
+   * Where you are in the recipe and whether the work is safe: a sticky column on wide screens, a
+   * glass bar on a phone (section links dropped).
    */
   interface Props {
-    /** Where "done" goes. Leaving the editor is never a save; it is a link. */
     backHref: string;
     backLabel: string;
-    /** What is being edited. Empty until the recipe has a name. */
     title: string;
-    /** Stands in for the title before there is one. */
     untitled: string;
     tone: SaveTone;
     status: string;
-    /** Names the section nav, which is a list of links without a heading. */
     sectionsLabel: string;
     sections: readonly { id: string; label: string; count?: number }[];
   }
@@ -41,8 +25,7 @@
 </script>
 
 <aside class="rail">
-  <!-- Already resolved by the page, which is the only place that knows what it
-       is linking to. The rule cannot follow a route through a prop. -->
+  <!-- Already resolved by the page; the lint rule cannot follow a route through a prop. -->
   <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
   <a class="back" href={backHref}>
     <span class="arrow" aria-hidden="true">←</span>
@@ -59,14 +42,8 @@
 </aside>
 
 <style>
-  /*
-   * A floating bar on a phone, on the same glass and the same radius as the
-   * navigation above it.
-   */
   .rail {
     position: sticky;
-    /* Clear of the app's own floating header, which is the offset every sticky
-       thing in this app uses. */
     top: var(--space-24);
     z-index: var(--z-sticky);
     display: flex;
@@ -97,8 +74,6 @@
     color: var(--text);
   }
 
-  /* Travels the way the link goes, which is the only thing an arrow on a back
-     link is for. */
   .arrow {
     transition: transform var(--duration-fast) var(--ease-out);
   }
@@ -107,15 +82,9 @@
     transform: translateX(calc(var(--space-1) * -1));
   }
 
-  /* On the bar this is context, not a heading: the form below it opens on the
-     title field, and setting this at title size would print the name twice. */
   /*
-   * Takes what is left and nothing more.
-   *
-   * A zero basis rather than `auto`: the way out and the save state are the two
-   * things on this bar that must always be legible, so the name occupies the
-   * room they leave and ellipsises inside it — rather than all three competing
-   * and a 360px phone showing two ellipses and no information.
+   * Takes what is left: a zero basis so the way out and save state stay legible and the name
+   * ellipsises.
    */
   .title {
     display: none;
@@ -129,14 +98,10 @@
     white-space: nowrap;
   }
 
-  /* Three things in a 360px bar is two ellipses and no information. The name
-     takes its place once the field holding it has gone. */
   .title.away {
     display: block;
   }
 
-  /* Held to the bar's far end whether or not the name is between them, so the
-     one thing that changes on its own does not move when it changes. */
   .state {
     min-width: 0;
     margin-inline-start: auto;
@@ -146,8 +111,6 @@
     color: var(--text-subtle);
   }
 
-  /* Wide enough for a column of its own: the bar unrolls into the rail the
-     settings screens already use. */
   @media (min-width: 64rem) {
     .rail {
       display: flex;
@@ -167,8 +130,7 @@
       white-space: normal;
       font-size: var(--text-xl);
       line-height: var(--leading-tight);
-      /* Two lines of a long name, then an ellipsis. A rail is a fixed column
-         and a recipe called after its grandmother can be very long. */
+      /* Two lines of a long name, then an ellipsis. */
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;

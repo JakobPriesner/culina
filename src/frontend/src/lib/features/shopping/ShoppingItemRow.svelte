@@ -14,16 +14,8 @@
   import type { ShoppingItem } from './stores/shopping.svelte';
 
   /**
-   * One line, in a shop, held one-handed.
-   *
-   * The whole row is the tick: a checkbox alone is a 16px target, and this is
-   * read while walking. The amount is rounded here, at the last possible
-   * moment — the server stores the exact sum so that adding three recipes does
-   * not compound rounding error.
-   *
-   * The section is a guess, and the one place to correct it is where it shows
-   * up wrong: on the line, in the aisle. There is no settings screen for it —
-   * the household's list remembers the choice for that name from then on.
+   * One line, read while walking: the whole row is the tick, and the amount is rounded here, last (the server keeps the exact sum so added recipes do not compound error).
+   * The section is a guess, corrected on the line itself and remembered for that name.
    */
   interface Props {
     item: ShoppingItem;
@@ -79,10 +71,7 @@
     }}
   />
 
-  <!-- Beside the name rather than flushed to the far edge. Ranged right across
-       a column this wide, "Zucchini" and "3" end up an inch apart with nothing
-       between them, and the eye has to travel the gap for every line. Read as
-       a phrase — "cherry tomatoes, 250 g" — it is one glance. -->
+  <!-- Beside the name, not at the far edge: ranged right across a wide column the amount sits an inch from its name; read as a phrase ("cherry tomatoes, 250 g") it is one glance. -->
   {#if amount}
     <span class="amount">{amount}</span>
   {/if}
@@ -104,8 +93,7 @@
   {/if}
 
   <span class="actions">
-    <!-- Only while it is still to find: a bought line is not in any aisle any
-         more, and the list does not show one under a section. -->
+    <!-- Only while still to find: a bought line is in no aisle. -->
     {#if !item.isChecked}
       <ActionMenu wrap>
         {#snippet trigger({ popovertarget })}
@@ -188,16 +176,9 @@
     grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--space-3);
-    /* The floor for something a thumb has to hit while a trolley is moving.
-       The tick inside the row is already that tall; this is what stops two
-       lines of short words from landing closer together than that. */
+    /* Floor for a thumb target on a moving trolley; stops two short lines landing closer together. */
     min-height: var(--control-sm);
-    /* Bled out to the gutter and back so the hover lands on the whole line
-       rather than on the words: the line is the target, not the text.
-       Fixed pixels, not a spacing step: the step is in rem, so at 200% text
-       this bleeds 24px each side into a gutter that did not grow with it, and
-       the row reaches past the edge of a 320px screen. How far a hover target
-       extends past its text is not a question about how big the text is. */
+    /* Bled to the gutter and back so hover lands on the line, not the words. Fixed pixels, not a rem step: at 200% text a rem bleed pushes the row past a 320px screen. */
     margin-inline: -12px;
     padding-inline: 12px;
     border-radius: var(--radius-md);
@@ -208,8 +189,7 @@
     background: var(--surface-hover);
   }
 
-  /* Struck through and dimmed rather than removed: seeing what is already in
-     the trolley is how you know you have not missed anything. */
+  /* Struck through and dimmed, not removed: seeing what is in the trolley shows nothing was missed. */
   .bought {
     color: var(--text-subtle);
     text-decoration: line-through;
@@ -291,10 +271,7 @@
     color: var(--text-subtle);
   }
 
-  /* Held back until the line is reached. A column of crosses down the edge of
-     a list reads as the thing to press, and removing is the one action here
-     that cannot be undone. Moving waits with it: both are corrections, not
-     what a line is for. */
+  /* Held back until the line is reached: a column of crosses reads as the thing to press, and removing cannot be undone; moving waits too. */
   .actions {
     display: inline-flex;
     align-items: center;

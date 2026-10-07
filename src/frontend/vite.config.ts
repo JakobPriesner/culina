@@ -7,12 +7,9 @@ import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 
-// Under Vitest, Svelte must resolve to its client build: without this the
-// component entry points resolve to the server build and every render fails
-// with "mount(...) is not available on the server".
+// Under Vitest Svelte must resolve to its client build, or every render fails with "mount(...) is not available on the server".
 const underTest = Boolean(process.env['VITEST']);
 
-// The gallery is built in only when the end-to-end runner asks for it.
 const galleryWanted = process.env['VITE_GALLERY'] === '1';
 
 const apiProxy = {
@@ -30,30 +27,17 @@ function messages(outputStructure: 'message-modules' | 'locale-modules') {
 }
 
 export default defineConfig({
-  // A literal, always. The gallery has to disappear from a release build, and
-  // it can only disappear if the condition guarding it is a constant the
-  // bundler can fold — which `import.meta.env.VITE_GALLERY` is not when the
-  // variable is unset. See src/lib/app/gallery.ts.
+  // A literal so the bundler can fold it: the gallery must vanish from release builds (see src/lib/app/gallery.ts).
   define: {
     __CULINA_GALLERY__: JSON.stringify(galleryWanted)
   },
 
   plugins: [
-    // Before everything: it replaces the gallery's components with empty ones
-    // in a release build, so no specimen markup is ever compiled.
+    // First: replaces the gallery's components with empty ones in release builds.
     galleryOnly(galleryWanted),
 
-    // Messages compile to tree-shakeable functions, so there is no runtime
-    // dictionary to ship and a key that does not exist is a compile error
-    // rather than an empty string in production.
-    //
-    // One module per message is what makes them tree-shakeable, and it is also
-    // what made the dev server slow: Vite serves modules unbundled, so every
-    // page load fetched hundreds of message files and took about 850ms where
-    // the build takes 50. The dev server gets one module per locale instead,
-    // which is what Paraglide itself recommends. Both expose the same `m`.
-    // `pnpm messages` writes the dev layout too, so running the checks or the
-    // unit tests beside a dev server does not put the slow layout back.
+    // Tree-shakeable message functions. The dev server gets one module per locale because per-message modules made page loads ~850ms.
+    // `pnpm messages` writes the dev layout too, so checks beside a dev server do not restore the slow one.
     { ...messages('message-modules'), apply: 'build' },
     { ...messages('locale-modules'), apply: 'serve' },
 
@@ -64,24 +48,14 @@ export default defineConfig({
           filename.split(/[/\\]/).includes('node_modules') ? undefined : true
       },
 
-      // Culina ships as a static SPA served by the .NET host from the same
-      // origin as the API. `fallback` makes the host serve index.html for
-      // every client route.
+      // A static SPA served by the .NET host from the API's origin; `fallback` serves index.html for client routes.
       adapter: adapter({ fallback: 'index.html', strict: false }),
 
-      // Absolute asset URLs, not relative ones.
-      //
-      // Culina is always served from the root of its own origin, so relative
-      // paths buy nothing — and they cost: a document generated for `/` and
-      // served for `/recipes/<id>` resolves `./_app/…` against `/recipes/`,
-      // and the app boots to a blank page. That is exactly what the service
-      // worker does with the shell, and it is what the host does for a deep
-      // link. Absolute paths make every document interchangeable.
+      // Absolute asset URLs: a document built for `/` but served for `/recipes/<id>` (service worker shell, host deep links)
+      // would resolve `./_app/…` against `/recipes/` and boot blank.
       paths: { relative: false },
 
-      // Registered by the app, not by the framework: Culina asks before it
-      // swaps a running build out from under someone mid-recipe, and that
-      // conversation needs the registration object. See lib/app/updates.
+      // Registered by the app so it can ask before swapping a build mid-recipe (see lib/app/updates).
       serviceWorker: { register: false },
 
       alias: {
@@ -92,28 +66,20 @@ export default defineConfig({
       }
     }),
 
-    // robots.txt and sitemap.xml, written from the one list of public routes
-    // so they cannot disagree with each other. Last, so it writes into the
-    // directory the adapter has finished producing. security.txt is the
-    // server's: see SecurityTxtEndpoint.
+    // robots.txt and sitemap.xml from the one public-route list; last, so it writes into the finished adapter output.
     siteFiles()
   ],
 
   resolve: underTest ? { conditions: ['browser'] } : {},
 
-  // Development is same-origin on purpose. Proxying /api means cookies,
-  // SameSite and CSRF behave exactly as they do in production, which is why
-  // Culina has no CORS policy anywhere and no dev-only auth path.
+  // Same-origin dev (proxied /api) so cookies, SameSite and CSRF behave as in production; hence no CORS or dev-only auth.
   server: { host: '0.0.0.0', port: 5173, proxy: apiProxy },
 
-  // The same proxy for `vite preview`, so the end-to-end suite exercises the
-  // built app against a real backend rather than a different arrangement.
+  // Same proxy for `vite preview`, which the e2e suite runs against a real backend.
   preview: { proxy: apiProxy },
 
   test: {
-    // jsdom, not a real browser: these suites cover tokens, stores and
-    // component behaviour. Anything that needs a real layout or a real service
-    // worker is a Playwright test instead.
+    // jsdom: anything needing real layout or a service worker is a Playwright test.
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/lib/test/setup.ts'],

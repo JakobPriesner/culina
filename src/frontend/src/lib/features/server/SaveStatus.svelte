@@ -6,18 +6,8 @@
   import type { SaveOutcome, SavePhase } from './stores/server.svelte';
 
   /**
-   * What saving a server setting did, said under the button that did it.
-   *
-   * A restart takes the server away for a moment, and a screen that says
-   * nothing while it is gone looks broken. So each phase has its sentence, and
-   * a restart that does not come back says where to look and how to undo it,
-   * rather than spinning forever.
-   *
-   * For a database Culina cannot run in, the server's own words follow the
-   * translated headline: they carry the part only the server knows — the
-   * extension that is missing and the statement that adds it. A connection
-   * that failed has no such words to add: the server says only which kind of
-   * failure it was, and keeps the rest for its log.
+   * What saving a server setting did, said under its button; each restart phase has a sentence, and one that never comes back says where to look and how to undo it.
+   * The server's own words follow the headline for an unsupported database (the missing extension and statement); a failed connection carries only its kind.
    */
   interface Props {
     phase: SavePhase;

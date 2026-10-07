@@ -23,19 +23,8 @@
   import Page from '$shell/Page.svelte';
 
   /**
-   * Writing a recipe down.
-   *
-   * No Save button and no wizard: a recipe is added to for years, so there is
-   * no moment at which someone is "done" and should have to say so. The work is
-   * kept as it is typed and a small word says it was.
-   *
-   * The screen is the reading surface's other half, and is built to say so. The
-   * same editorial headings name the same four parts of a recipe; the rail
-   * beside them is the settings screens' rail; the amounts line up in one grid
-   * the way they line up when the recipe is read back. An editor that invented
-   * its own typography would be a second application bolted to the first, and
-   * the seam is exactly where somebody stops trusting that what they type is
-   * what will be cooked.
+   * Writing a recipe down: no Save button, the work is kept as typed and a small word says so. Mirrors
+   * the reading surface (headings, rail, amount grid) so there is no seam between typing and cooking.
    */
   const recipeId = $derived(page.params.recipeId ?? '');
 
@@ -61,17 +50,14 @@
 
   const draft = $derived(editor.recipe);
 
-  // The units this kitchen uses, so a line that says "1 Schuss Milch" reads
-  // back as a Schuss of milk rather than as an ingredient called "Schuss Milch".
+  // The units this kitchen uses, so "1 Schuss Milch" reads as a Schuss of milk, not an ingredient "Schuss Milch".
   $effect(() => {
     if (draft) {
       void units.load(draft.householdId);
     }
   });
 
-  // The kitchen's tags, for the tag field, and what the recipe as last saved
-  // could be tagged with — asked again after every save, since a new title is
-  // a new answer once the server has it.
+  // The kitchen's tags and what the saved recipe could be tagged with; re-asked after each save since a new title is a new answer.
   $effect(() => {
     if (draft) {
       void tags.load(draft.householdId);

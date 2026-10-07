@@ -9,32 +9,14 @@ import {
   unique
 } from './support/culina';
 
-/**
- * Cooking, which is the one screen used with wet hands and no attention to
- * spare.
- *
- * The transition into it matters more than the screen does: the same surface
- * with a different emphasis, so nothing a person was looking at jumps somewhere
- * else. And leaving it must not lose the place — a phone that locked itself
- * between step two and step three is the normal case, not an edge one.
- */
+/** Cooking is the wet-hands screen: the transition must not make anything jump, and leaving must not lose the place (a locked phone is the normal case). */
 // One browser for the file, so the tests share a session and a cook session.
 test.describe.configure({ mode: 'serial' });
 
 test.describe('cooking a recipe', () => {
   test.skip(needsBackend, skipReason);
 
-  /*
-   * Its own account, per project, signed into once for the whole file.
-   *
-   * Its own, because only one recipe can be being cooked at a time — the
-   * database says so, and it is the right rule — so a desktop and a mobile
-   * browser sharing one account are two browsers taking the cook session away
-   * from each other.
-   *
-   * Once, because signing in is rate limited per account, as it should be. A
-   * suite that signs in for every test is a suite that locks itself out.
-   */
+  /* One account per project, signed in once for the file: only one recipe can be cooked at a time per account, and sign-in is rate limited. */
   let page: Page;
 
   test.beforeAll(async ({ browser }, testInfo) => {
@@ -67,22 +49,14 @@ test.describe('cooking a recipe', () => {
 
     const next = page.getByRole('button', { name: /^(next step|nächster schritt)$/i });
 
-    // Arrow keys belong to the servings control while it has focus. The page
-    // must not treat changing a field as a request to leave the current step.
+    // Arrow keys belong to the focused servings control; changing a field must not leave the step.
     await page.getByRole('spinbutton', { name: /servings|portionen/i }).focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByText(/step 1 of 3|schritt 1 von 3/i)).toBeVisible();
 
-    // The step lands on screen at once and reaches the server behind it. Both
-    // are waited for here: the first is what the cook sees, the second is what
-    // survives the page going away a moment later. A phone that locks keeps the
-    // page alive and the request with it; a hard navigation this fast does not,
-    // and that is the test's impatience rather than the app's problem.
+    // Wait for both the screen and the server request: a hard navigation this fast would drop the request (a locked phone would not).
     await Promise.all([
-      // Any answer, not only a successful one: waiting for `ok` here means
-      // waiting forever when the answer is something else, and hiding what it
-      // was behind a timeout. Whether the move stuck is asserted below, on the
-      // screen, which is where it matters.
+      // Any answer, not only `ok`: waiting for ok hangs on anything else; the move is asserted on screen below.
       page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/cook-sessions/') &&
@@ -94,27 +68,22 @@ test.describe('cooking a recipe', () => {
     await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
     await expect(page.locator('[aria-current="step"]')).toBeFocused();
 
-    // The phone goes away — a different screen, a lock, a call.
     await page.goto('/shopping');
 
-    // And the bar says what is still going on, from anywhere in the app.
     const bar = page.getByText(new RegExp(`cooking ${title}|Gerade am Kochen: ${title}`, 'i'));
 
     await expect(bar).toBeVisible();
 
     await page.getByRole('link', { name: /keep cooking|weiterkochen/i }).click();
 
-    // Back at step two, not back at the beginning.
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
     await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
 
-    // Through the last step, where the primary action becomes finishing.
     await next.click();
     await expect(page.getByText(/step 3 of 3|schritt 3 von 3/i)).toBeVisible();
 
     await page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i }).click();
 
-    // And the bar is gone, because nothing is being cooked any more.
     await expect(bar).toHaveCount(0);
   });
 
@@ -126,7 +95,7 @@ test.describe('cooking a recipe', () => {
       steps: ['Melt {0}.']
     });
 
-    // Straight into cooking at a different yield, the way a shared link would.
+    // Straight into cooking at a different yield, like a shared link.
     await page.goto(`/recipes/${recipeId}/cook?yield=4`);
 
     await expect(page.getByRole('main')).toContainText('400');
@@ -207,13 +176,9 @@ test.describe('cooking a recipe', () => {
       .getByRole('button', { name: /^(previous step|vorheriger schritt)$/i })
       .boundingBox();
 
-    // Measured, because it was measurably wrong: "Previous step" is a longer
-    // phrase than "Next step", and the control that undoes progress used to be
-    // the wider of the two. Next is pressed once per step with a wet thumb and
-    // an eye on a pan; previous is pressed when something went wrong.
+    // Measured: "Previous step" is a longer phrase than "Next step" and used to make the undo control the wider one.
     expect(next!.width).toBeGreaterThan(previous!.width * 2);
 
-    // And neither is ever below the size a thumb can find.
     expect(Math.min(next!.height, previous!.height)).toBeGreaterThanOrEqual(44);
     expect(Math.min(next!.width, previous!.width)).toBeGreaterThanOrEqual(44);
   });

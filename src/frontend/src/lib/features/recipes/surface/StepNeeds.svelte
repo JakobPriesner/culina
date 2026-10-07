@@ -4,26 +4,11 @@
   import type { Ingredient } from '../types';
 
   /**
-   * What to get out for one step.
-   *
-   * The sentence below it says what to *do*; this says what to have in front of
-   * you before doing it, which is a different question and the one you ask
-   * while the pan is still cold. Above the sentence rather than after it for
-   * exactly that reason: it is read first, in the order the step is actually
-   * carried out. It is more than the sentence names on purpose: "combine
-   * everything and knead" needs five things and says none of them.
-   *
-   * Plain text, not controls. One button per ingredient per step would put
-   * forty tab stops between the reader and the end of the method, to say
-   * something the line already says by existing.
-   *
-   * It is absent while cooking — there the ingredient panel has contracted to
-   * exactly this list, and saying it twice on a screen you are reading across
-   * the kitchen is worse than saying it once.
+   * What to get out for one step, above the sentence since it is read first; more than the sentence names, on purpose.
+   * Plain text, not controls (forty tab stops otherwise), and absent while cooking, where the ingredient panel already shows it.
    */
   interface Props {
     ingredients: readonly Ingredient[];
-    /** The one source of every amount on the surface. */
     scaling: Scaling;
   }
 
@@ -61,8 +46,7 @@
     text-transform: uppercase;
   }
 
-  /* The separator belongs between the items, so it cannot be left stranded at
-     the end of a wrapped line or after the last one. */
+  /* Separator between items only, never stranded at a wrapped line end. */
   .one + .one::before {
     content: '·';
     margin-inline-end: var(--space-2);
@@ -76,12 +60,7 @@
     white-space: nowrap;
   }
 
-  /*
-   * Paper keeps this. A printed sheet has no panel to light up and no step to
-   * tap, so the line under each step is the only thing on it that answers
-   * "what do I get out for this one" — which makes it worth more here than
-   * anywhere else.
-   */
+  /* Paper keeps this: with no panel to light up or tap, it is the only "what do I get out" on the sheet. */
   @media print {
     .needs {
       color: inherit;

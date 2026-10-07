@@ -2,19 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDraftStore } from './drafts.svelte';
 
-/*
- * What the store can get wrong is what it makes of the stream: a draft that
- * stops growing, an ask that never stops looking busy, and — the one that
- * costs money — a second call started while the first is still running.
- */
+/* What the store can get wrong is what it makes of the stream: a stalled draft, an ask that always looks busy, and a second paid call while one runs. */
 
-/**
- * Stands in for the streamed response, so a test can be the assistant.
- *
- * A real `ReadableStream` behind a real `Response`, because that is what the
- * reader in `$api/events` consumes. A hand-written double of the parser would
- * only prove that the double agrees with itself.
- */
+/** Stands in for the streamed response: a real `ReadableStream` in a real `Response`, since that is what `$api/events` reads. */
 class FakeStream {
   static last: FakeStream | null = null;
 
@@ -38,7 +28,6 @@ class FakeStream {
     FakeStream.last = this;
   }
 
-  /** One event, framed the way the server frames it. */
   send(event: {
     draft: Partial<Draft>;
     finished?: boolean;
@@ -53,7 +42,7 @@ class FakeStream {
     this.#push.enqueue(this.#encoder.encode(`data: ${data}\n\n`));
   }
 
-  /** The connection dying, which is not the same as the recipe finishing. */
+  /** The connection dying, which is not the recipe finishing. */
   cut() {
     this.#push.close();
   }
@@ -93,7 +82,6 @@ const problem = (code: string, status: number) =>
     headers: { 'Content-Type': 'application/problem+json' }
   });
 
-/** Lets the reader's promises run before a test looks at what they did. */
 const opened = () => vi.waitFor(() => expect(FakeStream.last).not.toBeNull());
 
 const anIdea = { kind: 'idea' as const, householdId: 'h1', material: 'aubergines', language: 'en' };
@@ -118,8 +106,6 @@ describe('the draft store', () => {
 
     FakeStream.last!.send({ draft: { title: 'Auberginenauflauf' } });
 
-    // The title lands seconds before the steps do, and that is the point: a
-    // person reads it and decides, rather than watching a spinner.
     await vi.waitFor(() => expect(drafts.draft?.title).toBe('Auberginenauflauf'));
     expect(drafts.asking).toBe(true);
 
@@ -166,8 +152,7 @@ describe('the draft store', () => {
     expect(failure?.code).toBe('assistance.unavailable');
     expect(drafts.error?.detail).toBe('Not just now.');
 
-    // What was written before it stopped is kept. It was paid for, and half a
-    // recipe is a starting point.
+    // What was written before it stopped is kept (it was paid for).
     expect(drafts.draft?.title).toBe('Auberginen');
   });
 
@@ -182,8 +167,7 @@ describe('the draft store', () => {
     FakeStream.last!.send({ draft: { title: 'Auberginen' } });
     FakeStream.last!.cut();
 
-    // A body that ends without saying it finished is a tunnel that collapsed.
-    // Without this the screen writes forever.
+    // A body that ends without saying it finished is a collapsed tunnel; without this the screen writes forever.
     const failure = await finished;
 
     expect(failure?.code).toBe('client.offline');
@@ -197,8 +181,7 @@ describe('the draft store', () => {
 
     const failure = await drafts.ask(anIdea);
 
-    // Everything that can refuse the ask is decided before the stream opens,
-    // so the budget still answers with a status code somebody can act on.
+    // Everything that can refuse the ask is decided before the stream opens, so the budget answers with a status code.
     expect(failure?.code).toBe('assistance.budget_exhausted');
     expect(failure?.status).toBe(429);
     expect(drafts.asking).toBe(false);
@@ -229,10 +212,7 @@ describe('the draft store', () => {
 
     await opened();
 
-    // Without this `fetch` labels the body text/plain, the endpoint's JSON
-    // binding stops matching the route, and the answer is a 404 about an
-    // endpoint that plainly exists — which on screen is a button that spends
-    // a few seconds looking busy and then does nothing.
+    // Without this `fetch` labels the body text/plain, the JSON binding stops matching the route, and the answer is a 404.
     expect(asked[0]?.type).toBe('application/json');
     expect(JSON.parse(String(asked[0]?.body))).toMatchObject({
       kind: 'revision',
@@ -259,9 +239,7 @@ describe('the draft store', () => {
     expect(asked[0]?.method).toBe('POST');
     expect(asked[0]?.url).toContain('/api/v1/recipe-drafts/photographs?householdId=h1&language=de');
 
-    // Nothing set here on purpose: the browser writes its own multipart type
-    // with the boundary in it, and a Content-Type of ours would replace that
-    // with one the server cannot split.
+    // Nothing set on purpose: the browser writes the multipart type with its boundary, and ours would replace it.
     expect(asked[0]?.type).toBeNull();
 
     FakeStream.last!.send({ draft: { title: 'Linsensuppe' }, finished: true });

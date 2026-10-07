@@ -1,15 +1,8 @@
 import type { components } from '$api/generated/schema';
 
 /**
- * What a report says about the browser and the device it ran on.
- *
- * An error that only happens on one phone, one browser version or one slow
- * connection is invisible from the message alone, and nobody can ask the person
- * who saw it. So every report carries everything the page can find out about
- * where it ran — but never who: no address, no referrer, nothing typed.
- *
- * Every reading is optional, because no browser offers all of them, and none of
- * them may throw: this runs while something is already going wrong.
+ * What a report says about the browser and device, never who (no address, referrer or typed text).
+ * Every reading is optional and none may throw: this runs while something is already going wrong.
  */
 export type ClientContext = components['schemas']['LogRecordsCreateClient'];
 
@@ -58,11 +51,7 @@ const sessionId = randomId();
 /** What the browser only tells after being asked, and then only asynchronously. */
 let highEntropy: Pick<ClientContext, 'architecture' | 'model' | 'platformVersion' | 'brands'> = {};
 
-/**
- * Asks once for the details a browser keeps behind a promise, so they are at
- * hand by the time something goes wrong. A browser without client hints, or one
- * that refuses, simply leaves them out.
- */
+/** Asks once for the promise-gated details so they are ready when something goes wrong; refusals are left out. */
 export function learnClientHints(): void {
   read(() =>
     browser()
@@ -84,7 +73,6 @@ export function learnClientHints(): void {
   );
 }
 
-/** The browser and device, as they are now. */
 export function describeClient(): ClientContext {
   const navigator = browser();
   const hints = navigator.userAgentData;
@@ -120,7 +108,6 @@ export function describeClient(): ClientContext {
   };
 }
 
-/** The page at the moment something went wrong. */
 export function describeMoment(): MomentContext {
   const memory = read(() => (performance as BrowserPerformance).memory);
 
@@ -138,10 +125,7 @@ function browser(): BrowserNavigator {
   return navigator as BrowserNavigator;
 }
 
-/**
- * `Chromium 140`, without the made-up brands Chromium mixes in so that sites
- * cannot match the list exactly.
- */
+/** `Chromium 140`, without the made-up brands Chromium mixes in. */
 function brandsOf(brands: readonly Brand[]): string[] {
   return brands
     .filter(({ brand }) => !/not.?a.?brand/i.test(brand))

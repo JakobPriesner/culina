@@ -7,17 +7,7 @@
   import { cookbooks } from './stores/cookbooks.svelte';
   import type { CookbookRules } from './types';
 
-  /**
-   * Which shelves a recipe is on.
-   *
-   * A list of ticks rather than a list of buttons, because "which cookbooks is
-   * this in" and "put it in one" are the same question asked once — and a tick
-   * already on is how you take it off again, so there is nothing else to find.
-   *
-   * Every tick is optimistic and rolls back exactly if the write fails; the
-   * sheet stays open across several, because somebody sorting a recipe onto
-   * three shelves should not have to reopen it twice.
-   */
+  /** Which shelves a recipe is on, as optimistic ticks (rolled back if the write fails); the sheet stays open across several. */
   interface Props {
     open: boolean;
     householdId: string;
@@ -30,8 +20,7 @@
   let making = $state(false);
   let saving = $state(false);
 
-  // Only while it is open: a closed sheet that keeps its list warm is two
-  // requests on every recipe page nobody asked for.
+  // Only while open: a closed sheet keeping its list warm costs two requests on every recipe page.
   $effect(() => {
     if (open) {
       void cookbooks.list(householdId);
@@ -62,10 +51,7 @@
 
     making = false;
 
-    // Straight onto the shelf somebody just made for it, unless the shelf fills
-    // itself — then the rules decide, and this recipe is either already on it
-    // or was never meant to be. Making a cookbook from here is never the goal;
-    // putting this recipe somewhere is.
+    // Onto the shelf just made, unless it fills itself (then the rules decide): making a cookbook from here is never the goal.
     if (created.kind === 'manual') {
       await toggle(created.id, created.name, true);
     }
@@ -80,10 +66,8 @@
       <ul class="shelves">
         {#each cookbooks.items as cookbook (cookbook.id)}
           <li>
-            <!-- A shelf that fills itself is shown and not offered: hiding it
-                 would leave somebody hunting for a cookbook they know they
-                 have, and the disabled tick still says whether the recipe is
-                 on it. -->
+            <!-- A self-filling shelf is shown but not offered: hiding it would leave people hunting,
+                 and the disabled tick says whether the recipe is on it. -->
             <Checkbox
               label={cookbook.name}
               checked={cookbook.kind === 'smart'
@@ -139,8 +123,7 @@
 
   .automatic {
     margin-top: var(--space-1);
-    /* Muted rather than dimmed with opacity: opacity blends text toward
-       whatever is behind it by an amount no contrast test can reach. */
+    /* Muted, not dimmed with opacity, which blends text toward the background beyond what a contrast test sees. */
     color: var(--text-muted);
     font-size: var(--text-sm);
   }

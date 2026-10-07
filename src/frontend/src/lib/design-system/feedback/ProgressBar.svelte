@@ -1,17 +1,10 @@
 <script lang="ts">
-  /**
-   * How far along something is.
-   *
-   * Only for work with a known end — an upload, a step counter. Anything else
-   * should use `BusyRegion`, because a bar that fills to an arbitrary point and
-   * waits is a lie about progress.
-   */
+  /** How far along something is; only for work with a known end, otherwise use `BusyRegion`. */
   interface Props {
     value: number;
     max?: number;
     /** Names the bar. Required: "63%" of what is not a question a reader can answer. */
     label: string;
-    /** Spoken in place of the raw number, e.g. "Step 3 of 8". */
     valueText?: string;
   }
 
@@ -45,8 +38,7 @@
     height: 100%;
     border-radius: inherit;
     background: var(--accent);
-    /* Scaled rather than resized: a transform does not cause layout, so a bar
-       updating many times a second stays cheap. */
+    /* Scaled, not resized: a transform causes no layout, so frequent updates stay cheap. */
     transform-origin: left center;
     transition: transform var(--duration-base) var(--ease-out);
   }

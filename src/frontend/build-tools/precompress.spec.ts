@@ -7,11 +7,7 @@ import { brotliDecompressSync, gunzipSync } from 'node:zlib';
 
 import { precompress } from './precompress';
 
-/*
- * The host serves a compressed copy whenever one exists beside a file, so a
- * wrong copy is served to everybody whose browser can read it. What matters is
- * that the copies are the file, and that nothing is written that should not be.
- */
+/* The host serves a compressed copy whenever one exists, so the copies must be the file and nothing extra may be written. */
 let build: string;
 
 // Repetitive text, so compression has something to find — a real chunk does.
@@ -63,7 +59,7 @@ describe('precompress', () => {
   });
 
   it('still compresses a small file when compressing it helps', async () => {
-    // Under the kilobyte the old floor would have skipped, and worth having.
+    // Small, but worth having: there is no size floor.
     await writeFile(join(build, 'small.js'), 'export const label = "Rezept";\n'.repeat(20));
 
     const [written] = await precompress(build);

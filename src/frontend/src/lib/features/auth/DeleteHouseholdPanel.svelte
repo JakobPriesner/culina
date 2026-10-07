@@ -12,16 +12,8 @@
   import { session } from './session.svelte';
 
   /**
-   * Deleting the household being looked at. Owners only.
-   *
-   * Absent rather than disabled for a plain member, like everything else here
-   * somebody cannot do. That is a courtesy, not the guard: the server refuses
-   * a member whatever the page shows, and a refusal that arrives anyway — an
-   * owner demoted on another device a minute ago — is said in the dialog and
-   * the session read again, so the button goes too.
-   *
-   * Afterwards the app goes to the start, which lands in the next household
-   * or, if this was the last one, on the screen that offers a way back.
+   * Deleting the household being looked at; owners only. Hidden, not disabled, for members as a courtesy: the server is the guard,
+   * and a refusal that arrives anyway (owner demoted elsewhere) is said in the dialog and the session re-read.
    */
   interface Props {
     householdId: string;
@@ -39,9 +31,7 @@
       return;
     }
 
-    // Taken now, not read later: once the session is read again the page hands
-    // this panel the next household, and an Undo that restored that one — or
-    // a message naming it — would be about the wrong kitchen.
+    // Captured now: after the session re-read the page hands over the next household, and Undo or a message would name the wrong kitchen.
     const id = householdId;
     const deletedName = name;
 

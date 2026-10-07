@@ -6,10 +6,6 @@ import LoginPage from './+page.svelte';
 import { resetAllStores } from '$shell/stores';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The sign-in page says why somebody is on it when it was not their idea: a
- * session that ended under them, or a link followed while signed out.
- */
 const location = vi.hoisted(() => ({ search: '' }));
 
 vi.mock('$app/state', () => ({

@@ -13,7 +13,6 @@
   interface Props {
     ingredient: Ingredient;
     index: number;
-    /** When open, `draft` is what is being written. */
     open: boolean;
     draft: IngredientDraft;
     usedIn: readonly number[];
@@ -70,7 +69,6 @@
       {#if ingredient.id}
         <span class="where">
           {#if usedIn.length > 0}
-            <!-- A preposition, so the line reads right for one number or four. -->
             {m['editor.usedInSteps']()}
             {#each usedIn as number, at (number)}
               {#if at > 0},

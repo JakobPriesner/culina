@@ -2,13 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/svelte';
 import { afterEach } from 'vitest';
 
-/*
- * A browser resolves `new Request('/api/v1/…')` against the document. The test
- * environment borrows Node's Request, which demands an absolute URL and throws
- * on the relative paths the generated client is built from. Resolving against
- * the jsdom document's origin is what a browser does, so this restores the
- * environment rather than changing the client to suit it.
- */
+/* jsdom needs Request URLs resolved against the document origin like a browser; Node's Request throws on the generated client's relative paths. */
 const AbsoluteRequest = globalThis.Request;
 
 globalThis.Request = class extends AbsoluteRequest {
@@ -17,16 +11,7 @@ globalThis.Request = class extends AbsoluteRequest {
   }
 } as typeof Request;
 
-/*
- * jsdom has no `matchMedia` at all — not a stub, not a throwing one, nothing.
- * A component that asks the browser how wide it is therefore fails on import
- * rather than answering "narrow", which is not a distinction any component
- * should have to know about.
- *
- * The stub answers no to every query and never changes, so a layout that adapts
- * renders the arrangement it would use on the widest screen. A test about the
- * other arrangement sets the answer itself.
- */
+/* jsdom has no matchMedia; the stub answers no to every query (widest layout), so tests of other layouts set the answer themselves. */
 if (typeof globalThis.matchMedia !== 'function') {
   globalThis.matchMedia = ((query: string) => ({
     matches: false,
@@ -50,12 +35,7 @@ if (typeof globalThis.ResizeObserver !== 'function') {
   };
 }
 
-/*
- * Nor does jsdom have the Web Animations API, which every Svelte transition
- * runs on. A component that fades something out therefore throws the moment
- * the thing leaves, rather than simply removing it — so the stub finishes
- * every animation at once, the way a browser with motion turned off would.
- */
+/* jsdom has no Web Animations API (Svelte transitions need it); the stub finishes every animation at once. */
 if (typeof Element.prototype.animate !== 'function') {
   Element.prototype.animate = function animate() {
     const animation = {
@@ -73,9 +53,7 @@ if (typeof Element.prototype.animate !== 'function') {
   Element.prototype.getAnimations = () => [];
 }
 
-// Components are unmounted between tests, so one test's dialog cannot be found
-// by the next one's query. A store that holds state exposes its own `reset`,
-// which its suite calls — explicit, and visible in the test that needs it.
+// Components unmount between tests; stores expose their own `reset`, called by the suites that need it.
 afterEach(() => {
   cleanup();
   document.documentElement.removeAttribute('data-theme');

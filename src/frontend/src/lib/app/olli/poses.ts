@@ -1,12 +1,4 @@
-/**
- * Olli's poses, as data.
- *
- * The pot itself never changes; a pose is only where the parts sit — the
- * handles, the hat, the eyes and mouth — plus one prop and what Olli does once
- * on arriving in it. Keeping that here, apart from the drawing, is what lets
- * one component move smoothly from any pose to any other: every pose is a set
- * of targets for the same springs.
- */
+/** Olli's poses as data: where the parts sit plus one prop and a one-off arrival action, so one component can spring between any two. */
 export type Pose =
   | 'hello'
   | 'peeking'
@@ -29,27 +21,18 @@ export interface PoseSpec {
   readonly eyes: Eyes;
   readonly mouth: Mouth;
   readonly brows?: 'puzzled' | 'worried';
-  /**
-   * Handle angles in degrees; positive raises the handle like an arm. Past
-   * about 60 a handle disappears behind the rim.
-   */
+  /** Handle angles in degrees; positive raises like an arm, past about 60 it hides behind the rim. */
   readonly arms: readonly [left: number, right: number];
-  /** The whole pot leaning, in degrees, about its base. */
   readonly tilt: number;
   readonly hatTilt: number;
-  /** Where the pupils rest, in drawing units. */
   readonly look: readonly [x: number, y: number];
   /** Where the eyes glance once, after arriving: towards the page's action. */
   readonly glance?: readonly [x: number, y: number];
-  /** How far the pot sits lower than usual. */
   readonly sag: number;
   readonly prop?: 'card' | 'plug' | 'ticket' | 'phone' | 'pencil' | 'brush';
-  /** What rises from the pot on arrival. Nothing at all when unplugged. */
+  /** What rises from the pot on arrival; nothing when unplugged. */
   readonly steam: 'wisp' | 'question' | 'sleep' | 'sparks' | 'none' | 'bulb';
-  /**
-   * Somebody is stuck or refused. Mailchimp's rule: no playfulness there, so
-   * Olli does not react to being poked.
-   */
+  /** Stuck or refused: no playfulness (Mailchimp's rule), so Olli ignores being poked. */
   readonly sombre: boolean;
 }
 
@@ -210,17 +193,11 @@ export const poses: Record<Pose, PoseSpec> = {
   }
 };
 
-/**
- * When the idle blinks fall: one look around between 1.5 and 4 s after
- * arriving, sometimes a second before 5 s, and nothing after that. A blink on
- * a fixed timer reads as a machine, and motion that runs past five seconds is
- * what WCAG 2.2.2 asks a page to let people stop.
- */
+/** When the idle blinks fall: 1.5-4 s after arriving, sometimes a second before 5 s, none after (WCAG 2.2.2); random so it does not read as a machine. */
 export function idleBlinks(random: () => number = Math.random): number[] {
   const first = 1500 + random() * 2500;
 
   return random() < 0.6 ? [first, Math.max(first + 600, 4000 + random() * 800)] : [first];
 }
 
-/** Every ambient motion is over by then. */
 export const restAfter = 5000;

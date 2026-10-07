@@ -5,29 +5,15 @@ import type { Plugin } from 'vite';
 import { privateRoutePrefixes, publicRoutes } from '../src/lib/app/publicRoutes.js';
 
 /**
- * Writes the two small public files that are easy to forget and awkward to get
- * wrong by hand.
- *
- * Generated rather than committed because each one repeats something that lives
- * elsewhere — the list of public routes, and the site's own address — and a
- * copy that has to be updated by hand is a copy that will be stale.
- *
- * `PUBLIC_SITE_URL` is the deployment's own address. Without it the files that
- * need an absolute URL are skipped: a self-hosted instance on a private network
- * has no public address and should not invent one.
- *
- * security.txt is not here. It names the operator's own contact, which a
- * published image cannot know, so the server writes it from its configuration
- * (`Site__SecurityContact`) for every request.
+ * Writes robots.txt and sitemap.xml, generated because they repeat the public-route list and the site address.
+ * `PUBLIC_SITE_URL` is the deployment's address; without it the absolute-URL files are skipped. security.txt is the server's (`Site__SecurityContact`).
  */
 export function siteFiles(): Plugin {
   return {
     name: 'culina:site-files',
     apply: 'build',
 
-    // After the adapter, which creates `build/` as its last act: writing into
-    // that directory any earlier means writing into something that is about to
-    // be replaced.
+    // After the adapter, which creates `build/` as its last act; earlier would write into a directory about to be replaced.
     closeBundle: {
       sequential: true,
       order: 'post',
@@ -48,13 +34,7 @@ export function siteFiles(): Plugin {
 
 const trimSlash = (value: string) => value.replace(/\/+$/, '');
 
-/**
- * Asks crawlers to stay out of everything behind a sign-in.
- *
- * Not a security measure — every one of these returns 401 to a stranger — but
- * an indexed URL to a household's recipe list is a leak of the fact that it
- * exists, and of nothing being served there but a sign-in page.
- */
+/** Asks crawlers to stay out of everything behind a sign-in; not a security measure, but an indexed URL would leak that the household exists. */
 export function robots(site: string): string {
   const lines = [
     'User-agent: *',

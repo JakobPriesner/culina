@@ -4,39 +4,25 @@ import { registerStore, type LoadStatus } from '$shell/stores';
 import { toRelated } from '../mappers';
 import type { RelatedRecipe } from '../types';
 
-/** One recipe's answer, and how far along it is. */
 interface Answer {
   readonly items: readonly RelatedRecipe[];
   readonly status: LoadStatus;
-  /** Where the shelf goes on, or null once nothing else is alike enough. */
+  /** Next-page cursor; null once nothing else is alike enough. */
   readonly cursor: string | null;
   /** Whether asking for the next page failed; from then on it is not asked for by itself. */
   readonly moreFailed: boolean;
 }
 
-/**
- * The recipes like each recipe that has been read.
- *
- * Kept per recipe, because going from one recipe to a related one and back is
- * the whole point of showing them, and asking again on the way back would
- * draw the shelf twice.
- */
+/** Related recipes per recipe, so going to one and back does not ask again and draw the shelf twice. */
 class RelatedStore {
   #answers = $state<Record<string, Answer>>({});
 
-  /**
-   * Which recipes have been asked about.
-   *
-   * A plain field, not `$state`: `load` is called from an `$effect`, and a
-   * guard the effect could read would make it depend on what `load` is about
-   * to write, and ask forever.
-   */
+  /** Plain field, not `$state`: `load` runs in an `$effect`, and a readable guard would make it depend on what it writes and loop. */
   #asked = new Set<string>();
 
-  /** Which shelves have a next page on its way. Plain for the same reason as {@link #asked}. */
+  /** Shelves with a next page in flight; plain like {@link #asked}. */
   #fetchingMore = new Set<string>();
 
-  /** The recipes like this one, or none until they are in. */
   of(recipeId: string): readonly RelatedRecipe[] {
     return this.#answers[recipeId]?.items ?? [];
   }
@@ -45,14 +31,13 @@ class RelatedStore {
     return this.#answers[recipeId]?.status ?? 'idle';
   }
 
-  /** Whether the shelf goes on, and may be asked for its next page by itself. */
   hasMore(recipeId: string): boolean {
     const answer = this.#answers[recipeId];
 
     return answer?.cursor != null && !answer.moreFailed;
   }
 
-  /** Asks once per recipe. Calling it again for the same one does nothing. */
+  /** Idempotent per recipe. */
   async load(recipeId: string): Promise<void> {
     if (this.#asked.has(recipeId)) {
       return;
@@ -79,12 +64,7 @@ class RelatedStore {
     };
   }
 
-  /**
-   * The next page of one shelf, added to the end of it.
-   *
-   * Free to call while a page is already on its way — the end of the shelf
-   * coming into view calls it, and may do so more than once.
-   */
+  /** Appends the next page; safe to call repeatedly while one is in flight. */
   async more(recipeId: string): Promise<void> {
     const cursor = this.#answers[recipeId]?.cursor;
 
@@ -100,8 +80,7 @@ class RelatedStore {
 
     const answer = this.#answers[recipeId];
 
-    // Forgotten or reset while the page was on its way: there is nothing
-    // left to add it to.
+    // Forgotten or reset meanwhile: nothing to add it to.
     if (!answer) {
       return;
     }
@@ -111,8 +90,7 @@ class RelatedStore {
       [recipeId]: result.ok
         ? {
             ...answer,
-            // A recipe the kitchen changed under the shelf can come round
-            // twice; the one already showing stays where it is.
+            // A recipe changed under the shelf can come round twice; keep the one already showing.
             items: [
               ...answer.items,
               ...result.value.items
@@ -133,12 +111,7 @@ class RelatedStore {
     );
   }
 
-  /**
-   * Takes a deleted recipe off every shelf it was on.
-   *
-   * Each recipe's shelf is asked for once, so without this the recipe next
-   * door would go on showing one that opens onto nothing.
-   */
+  /** Drops a deleted recipe from every shelf, since each is asked for only once. */
   forget(recipeId: string): void {
     this.#answers = Object.fromEntries(
       Object.entries(this.#answers)

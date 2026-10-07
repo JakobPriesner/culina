@@ -3,30 +3,11 @@ import { registerStore } from '$shell/stores';
 
 import { builtInUnits, type Unit } from '../units';
 
-/**
- * The units this kitchen measures in.
- *
- * The thirteen built-in ones, which convert, and whatever else the household's
- * recipes have used. There is no catalogue to maintain: a unit exists because
- * something is measured in it, so the list offered and the recipes written can
- * never disagree.
- *
- * Loaded once per household and kept. It changes only when somebody writes a
- * unit nobody has written before, and the editor adds that one here itself
- * rather than asking the server again.
- */
+/** The units this kitchen measures in: the thirteen built-ins plus whatever the household's recipes used, so there is no catalogue to maintain. Loaded once per household; the editor adds new ones itself. */
 class UnitStore {
   #own = $state<Unit[]>([]);
 
-  /**
-   * Which household has been asked for, deliberately not reactive.
-   *
-   * Nothing renders it — it exists only so two components mounting together
-   * ask once. As `$state` it was a trap: `load` reads it and then writes it,
-   * so an `$effect` that called `load` took a dependency on it and re-ran
-   * itself, and a failed request — which puts it back to null — turned that
-   * into a request per frame until the tab ran out of sockets.
-   */
+  /** Which household was asked for; deliberately not `$state`: `load` reads then writes it, so an effect calling it re-ran itself, and a failure (which resets it) became a request per frame. */
   #loadedFor: string | null = null;
 
   /** Everything a picker should offer, built-in first. */
@@ -59,18 +40,11 @@ class UnitStore {
       return;
     }
 
-    // Nothing is shown about this failing. The built-in units are still there,
-    // so the worst case is that a unit this household invented has to be typed
-    // out once more — which is not worth a message.
+    // Silent: the built-in units remain, and a household's own unit is merely typed once more.
     this.#loadedFor = null;
   }
 
-  /**
-   * Remembers a unit somebody just wrote.
-   *
-   * So the next line they type reads it back as a unit rather than as the first
-   * word of an ingredient, without waiting for a save and a reload.
-   */
+  /** Remembers a unit somebody just wrote so the next line reads it as a unit without a reload. */
   remember(unit: Unit): void {
     const known = this.all.some((one) => one.toLowerCase() === unit.toLowerCase());
 

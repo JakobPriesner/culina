@@ -78,7 +78,6 @@ export function createRecipeDraft(recipeId: () => string) {
     draft = { ...draft, ...patch };
     recovered = false;
 
-    // Journal synchronously before anything is sent.
     if (session.user) {
       remember(session.user.userId, recipeId(), draft);
       unsent = true;

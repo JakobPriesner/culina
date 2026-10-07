@@ -1,18 +1,8 @@
 import { glob, readFile } from 'node:fs/promises';
 
 /**
- * Fails if a release build contains the design-system gallery.
- *
- * This has gone wrong twice, both times silently. First the flag was read with
- * a bracket lookup, which Vite does not substitute, so the condition stayed a
- * runtime read and the entire gallery shipped. Then the flag became a real
- * constant and the gallery *still* shipped, because a Svelte component's
- * templates are hoisted to module scope and a bundler will not delete them for
- * an `{#if}` it can prove is false.
- *
- * Neither was visible in review, and the end-to-end suite cannot notice: it
- * builds with the gallery deliberately switched on. So the build is searched
- * for text that exists nowhere else.
+ * Fails if a release build contains the design-system gallery. It shipped twice silently: a bracket-lookup flag Vite does not substitute, then a constant flag whose `{#if}` a bundler cannot delete because Svelte hoists templates to module scope.
+ * Neither shows in review and e2e builds with the gallery on, so the build is searched for text that exists nowhere else.
  */
 
 /** Specimen text, each of it inside the gallery and nowhere near the product. */

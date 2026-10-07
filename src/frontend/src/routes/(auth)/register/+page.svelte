@@ -13,14 +13,7 @@
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
 
-  /**
-   * Create an account.
-   *
-   * The form asks only what this instance will actually use: the household name
-   * appears for the very first account, which is the only time it is read, and
-   * the invitation field appears when the policy demands one. A field that is
-   * silently ignored is worse than a missing one.
-   */
+  /** Create an account; asks only what this instance will use (household name for the very first account, the invitation field when policy demands one). */
   let { data } = $props();
 
   let displayName = $state('');
@@ -60,8 +53,7 @@
 
       landedIn = outcome.householdId;
 
-      // Registering signs you in; asking for the same password again on the
-      // next screen would be a pointless second step.
+      // Registering signs you in; no second password prompt.
       return session.signIn(email, password);
     });
 
@@ -69,8 +61,7 @@
       return;
     }
 
-    // An account with no household is not a dead end — it goes to the screen
-    // that offers the two ways out of it.
+    // No household yet: the welcome screen offers the two ways out.
     await goto(landedIn ? destination : resolve('/(app)/welcome'), { replaceState: true });
   }
 </script>

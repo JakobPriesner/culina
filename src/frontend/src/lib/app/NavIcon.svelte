@@ -1,13 +1,5 @@
 <script lang="ts">
-  /**
-   * The navigation icons, in one place.
-   *
-   * Always outlined. These are open shapes — a book, a basket — and filling
-   * one solid at 24px makes a blob rather than an emphasis. The current
-   * destination is carried by the pill behind it, by colour, and by
-   * `aria-current`, so there are three signals without a fourth that looks
-   * worse.
-   */
+  /** Navigation icons, always outlined: filled open shapes (book, basket) blob at 24px; the current destination is shown by the pill, colour and `aria-current`. */
   import type { DestinationIcon } from './navigation';
 
   interface Props {

@@ -1,33 +1,19 @@
 #!/usr/bin/env bash
 #
-# What CI holds main to, run here first.
-#
-# The Backend, Frontend, Contract and End to end jobs of
-# .github/workflows/ci.yml, step for step, against one commit. The pre-push hook
-# (.beads/hooks/pre-push) runs it for anything on its way to main, because a red
-# main is found out by everybody and a red push only by whoever made it.
+# Runs the CI jobs (Backend, Frontend, Contract, End to end) locally against one commit; the pre-push hook runs it for pushes to main.
 #
 #   scripts/ci-local.sh [commit]        # HEAD when left out; also `make ci`
 #
-# The commit is checked out into a worktree of its own, so what is tested is
-# what is pushed and not whatever is lying uncommitted beside it, and nothing
-# in this checkout is touched. The worktree, the databases and the stack are
-# torn down at the end whether it passed or failed; the logs of a failure stay.
-#
-# Needs Docker: the contract export, the integration tests and the end-to-end
-# stack each start a PostgreSQL of their own. CodeQL and the security scans are
-# left to CI.
+# The commit is checked out into its own worktree, so uncommitted files are not tested; it is torn down at the end (logs of a failure stay).
+# Needs Docker for the contract export, integration tests and e2e stack. CodeQL and security scans are left to CI.
 
 set -euo pipefail
 
 command -v docker >/dev/null && docker info >/dev/null 2>&1 ||
   { echo "ci-local: Docker is not running, and every database here is a container." >&2; exit 1; }
 
-# One run at a time. Two runs share the compose project and port 4173, and each
-# clears the project as it starts and as it ends, so a second push while one
-# is being tested took the first one's API away mid-suite and failed both. The
-# second waits instead. The lock names its holder, so one left by a run that
-# was killed is taken over rather than waited on for ever.
+# One run at a time: runs share the compose project and port 4173 and clear it at start and end.
+# The lock names its holder, so a killed run's lock is taken over.
 LOCK="${TMPDIR:-/tmp}/culina-ci.lock"
 until mkdir "$LOCK" 2>/dev/null; do
   holder="$(cat "$LOCK/pid" 2>/dev/null || true)"
@@ -44,8 +30,7 @@ done
 echo $$ >"$LOCK/pid"
 trap 'rm -rf "$LOCK"' EXIT
 
-# Run as CI, Playwright starts its own preview on this port rather than trusting
-# one that is already there, which may be serving an older build.
+# Playwright starts its own preview on this port rather than trusting one already there (maybe an older build).
 if lsof -nP -iTCP:4173 -sTCP:LISTEN >/dev/null 2>&1; then
   echo "ci-local: port 4173 is taken, most likely by a vite preview left running. Stop it and try again." >&2
   exit 1
@@ -63,18 +48,14 @@ PROJECT="culina-ci-local"
 CONTRACT_DB="culina-ci-local-contract"
 PORT="$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
 BASE="http://localhost:${PORT}"
-# The account CI signs the suites in with, on an instance that exists for it.
+# The account CI signs the suites in with.
 EMAIL="ci@culina.test"
 PASSWORD="a sentence nobody else would pick"
-# The app role's. A quote and a space, so every run proves scripts/db-init.sh
-# passes it to SQL as a value and not as SQL.
+# The app role's; a quote and a space prove scripts/db-init.sh passes it to SQL as a value.
 DB_PASSWORD="the app's own password"
 LANES=""
 
-# The stack's settings go to compose alone. Exported, the raised rate limits
-# would reach the integration tests, and those assert the real ones. Published
-# to this machine only, because those limits, a known account and a trusted
-# container network are nothing to offer the rest of the network.
+# Stack settings go to compose alone: exported, the raised rate limits would reach the integration tests, which assert the real ones. Published to this machine only.
 compose() {
   CULINA_IMAGE="culina:ci-local" \
     CULINA_PORT="127.0.0.1:${PORT}" \
@@ -87,10 +68,7 @@ compose() {
     docker compose -p "$PROJECT" -f "$TREE/compose.yaml" -f "$TREE/compose.prod.yaml" "$@"
 }
 
-# A lane is a subshell running a subshell running dotnet or docker, and without
-# job control none of them hears Ctrl+C. Stopping only the first would leave
-# the rest building into a deleted worktree, or starting the stack after it was
-# torn down.
+# Without job control Ctrl+C reaches none of a lane's nested subshells; stopping only the first would leave the rest running into a deleted worktree.
 stop() {
   local child
 
@@ -124,7 +102,7 @@ cleanup() {
   fi
 }
 
-# One line per step. The output goes to a log, which is shown only on failure.
+# One line per step; output goes to a log, shown only on failure.
 step() {
   local name="$1" dir="$2"
   shift 2
@@ -138,9 +116,7 @@ step() {
   fi
 }
 
-# The export needs a started host, and so a database; CI gives it a bare one.
-# Written beside the tree rather than into it, so the frontend steps running
-# at the same time never read a client halfway through being rewritten.
+# The export needs a started host and so a database. Written beside the tree so frontend steps never read a half-written client.
 contract() {
   docker run -d --rm --name "$CONTRACT_DB" -p 127.0.0.1::5432 \
     -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=culina \
@@ -180,15 +156,14 @@ trap cleanup EXIT
 
 printf '\033[1mci-local: %s %s\033[0m\n' "$SHORT" "$(git -C "$ROOT" log -1 --format=%s "$COMMIT")"
 git -C "$ROOT" worktree add --detach --quiet "$TREE" "$COMMIT"
-# Not the leftovers of an earlier run that was killed before it could clean up.
+# Clear leftovers of an earlier run that was killed.
 compose down -v --remove-orphans >/dev/null 2>&1 || true
 docker rm -f "$CONTRACT_DB" >/dev/null 2>&1 || true
 
 step "dotnet restore" "$BACKEND" dotnet restore --locked-mode
 step "pnpm install" "$FRONTEND" pnpm install --frozen-lockfile
 
-# Three lanes at once, each stopping at its first failure. A failure is printed
-# the moment it happens; the other lanes finish before the run gives up.
+# Three lanes at once, each stopping at its first failure; a failure prints at once, the others finish first.
 {
   step "dotnet format" "$BACKEND" dotnet format --verify-no-changes &&
     step "dotnet build" "$BACKEND" dotnet build --no-restore &&
@@ -226,8 +201,7 @@ done
 LANES=""
 [ "$failed" -eq 0 ] || exit 1
 
-# After the frontend lane, not beside it: the suite builds the app into the
-# same directories, and compiles the same messages.
+# After the frontend lane: the suite builds into the same directories and compiles the same messages.
 step "playwright browser" "$FRONTEND" pnpm exec playwright install chromium
 step "end to end" "$FRONTEND" env CI=true \
   CULINA_API="$BASE" CULINA_IMAGE_URL="$BASE" \

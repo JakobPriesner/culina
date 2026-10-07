@@ -2,9 +2,8 @@ import { applyTimerAction, editTimerState } from './lib/features/cooking/timerSt
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 /*
- * A stalled connection never rejects a fetch, it just never answers. These
- * tests pin that the worker stops waiting for it when it has a copy, before
- * the app stops waiting for the worker.
+ * A stalled fetch never rejects, so the worker must stop waiting when it holds a copy,
+ * before the app stops waiting for the worker.
  */
 vi.mock('$service-worker', () => ({
   base: '',
@@ -30,8 +29,8 @@ let onPush: Listener;
 beforeAll(async () => {
   const addEventListener = vi.spyOn(self, 'addEventListener');
 
-  // Not a literal: tsconfig.worker.json checks the worker as a worker, and a
-  // literal import would pull its webworker lib into the app's program.
+  // Not a literal: tsconfig.worker.json checks the worker as a worker; a literal import would
+  // pull its webworker lib into the app's program.
   const worker = './service-worker';
 
   await import(/* @vite-ignore */ worker);
@@ -46,13 +45,12 @@ beforeAll(async () => {
   addEventListener.mockRestore();
 });
 
-/** A copy as the worker keeps it: the body, and whose it is. */
 const keptFor = (owner: string | null, body: string) =>
   new Response(body, { status: 200, headers: owner ? { 'X-Culina-Owner': owner } : {} });
 
 const stored = keptFor('u1', '{"title":"as last seen"}');
 
-/** A private cache holding these copies by path. Returns what gets put into it. */
+/** A private cache holding these copies by path; returns what gets put into it. */
 function privateCache(copies: Record<string, Response>) {
   const put = new Map<string, Response>();
   const pathOf = (key: Request | string) =>
@@ -85,7 +83,6 @@ beforeEach(() => {
   };
 });
 
-/** Sends a read through the worker and records what it answers, and when it is done. */
 function read(path: string) {
   const answer: { response?: Response; failed?: boolean; settled: Promise<unknown> } = {
     settled: Promise.resolve()
@@ -129,9 +126,8 @@ it('still answers from the network when it answers in time', async () => {
 });
 
 /*
- * The cache is emptied on every sign-in and sign-out, but only if the message
- * saying so arrives. Each copy also names the user it was read for, and the
- * worker answers nobody else with it.
+ * The cache is emptied on sign-in/out only if the message arrives, so each copy names its user
+ * and the worker answers nobody else with it.
  */
 
 const offline = () => Promise.reject(new TypeError('Failed to fetch'));

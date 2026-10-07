@@ -5,21 +5,11 @@
   import type { PresumableDiet } from './types';
 
   /**
-   * "Ist das vegetarisch?", asked once, of a recipe a search only presumed to
-   * be.
-   *
-   * Culina has no nutrition table, so a diet is certain in one direction only:
-   * Hackfleisch means meat, but nothing in "Gemüsebrühe" or "Parmesan" says
-   * whether it is. The search knows which of its answers are guesses, and this
-   * turns one guess into a fact with a single tap — either answer is written
-   * as a tag, so the next search is right without asking.
-   *
-   * Quiet on purpose: a question nobody has to answer, beside the recipe
-   * rather than in front of it.
+   * "Ist das vegetarisch?", asked once of a recipe a search only presumed to be: a diet is certain in one direction only (no nutrition table),
+   * so one tap turns a guess into a tag. Quiet on purpose, beside the recipe rather than in front.
    */
   interface Props {
     diet: PresumableDiet;
-    /** While the answer is being written. */
     busy?: boolean;
     onanswer: (keeps: boolean) => void;
   }

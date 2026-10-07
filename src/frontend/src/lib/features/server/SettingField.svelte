@@ -3,18 +3,12 @@
   import { m } from '$shell/i18n';
 
   /**
-   * One text setting, and what the deployment says about it.
-   *
-   * A setting the environment pins is shown and not editable, with the
-   * variable that pins it named where the hint would be. Editing it would do
-   * nothing — the environment wins on the next start — and a field that
-   * accepts an edit and then ignores it is worse than one that says why it
-   * cannot.
+   * One text setting; one pinned by the environment is shown read-only with the variable named, as
+   * the environment wins on restart.
    */
   interface Props {
     label: string;
     value: string;
-    /** The environment variable that sets this, e.g. `Database__Host`. */
     variable: string;
     pinned?: boolean;
     hint?: string;

@@ -3,14 +3,7 @@
 
   import { m } from '$shell/i18n';
 
-  /**
-   * Why a recipe has no Edit and no Delete.
-   *
-   * A recipe this household inherits can be cooked, planned and shopped for
-   * here and changed only where it belongs. Taking the controls away without a
-   * word would read as a bug; this says whose it is instead — and, for somebody
-   * who is in that household too, offers the one step that makes it editable.
-   */
+  /** Why a recipe has no Edit or Delete: an inherited recipe is cooked, planned and shopped for here but changed where it belongs. Says whose it is and, for members of that household, offers the step that makes it editable. */
   interface Props {
     /** The household it belongs to, when this person can know its name. */
     household: string | null;

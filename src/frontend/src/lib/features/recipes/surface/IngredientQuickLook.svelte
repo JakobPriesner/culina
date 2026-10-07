@@ -44,9 +44,7 @@
     let top = placeAbove ? from.top - gap - self.height : from.bottom + gap;
     let left = from.left + from.width / 2 - self.width / 2;
 
-    // Clamp horizontally
     left = Math.max(margin, Math.min(left, window.innerWidth - margin - self.width));
-    // Clamp vertically
     top = Math.max(margin, Math.min(top, window.innerHeight - margin - self.height));
 
     coords = { top, left };
@@ -111,8 +109,7 @@
     <p class="amount">{stepAmount}</p>
   {/if}
 
-  <!-- Only when the step takes part of it. Saying "all of it" otherwise would
-       be a claim the card cannot back: another step may well use it too. -->
+  <!-- Only when the step takes part of it: "all of it" would be a claim the card can't back. -->
   {#if hasDifferentTotal && totalAmount}
     <p class="total">{m['recipe.quickLookTotal']({ amount: totalAmount })}</p>
   {/if}
@@ -141,11 +138,8 @@
 
 <style>
   /*
-   * The card is written inside the step's paragraph, next to the reference it
-   * belongs to, so it inherits everything that paragraph says about text —
-   * the significant whitespace above all, which would turn every line break in
-   * this markup into a blank line inside the card, and the bold or italic of a
-   * reference written inside emphasis. It resets all of that to its own.
+   * The card sits inside the step's paragraph, so it resets what it inherits (significant whitespace,
+   * emphasis from the reference).
    */
   .quick-look {
     position: fixed;
@@ -230,8 +224,7 @@
     height: 0.875rem;
   }
 
-  /* What the step asks for, as the one thing on the card worth reading from
-     across the counter. */
+  /* What the step asks for: the one thing readable across the counter. */
   .amount {
     margin: 0;
     font-size: var(--text-xl);

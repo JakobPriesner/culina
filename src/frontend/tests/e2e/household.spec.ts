@@ -14,11 +14,7 @@ import {
   writeHeaders
 } from './support/culina';
 
-/**
- * A household is the kitchen you share. What it means is that recipes belong to
- * it and personal notes do not — and that boundary is worth proving with two
- * real browsers rather than two assertions about one.
- */
+/** Recipes belong to the household, personal notes do not; proven with two real browsers. */
 test.describe.configure({ mode: 'serial' });
 
 test.describe('sharing a kitchen', () => {
@@ -38,9 +34,7 @@ test.describe('sharing a kitchen', () => {
 
     guest = await ensureAccount(browser, `guest-${testInfo.project.name}`);
 
-    // The guest is shown out before the run, not after it: the tests that
-    // follow the invitation need them inside, and starting from empty is what
-    // makes the invitation acceptable again.
+    // Shown out before the run: the invitation must be acceptable again.
     await showOthersOut();
   });
 
@@ -59,7 +53,6 @@ test.describe('sharing a kitchen', () => {
       ingredients: [{ quantity: 200, unit: 'g', name: 'Butter' }]
     });
 
-    // Made from the app, not the API: the point is that a person can do this.
     await owner.goto('/me/household');
     await owner.getByRole('button', { name: /create invitation|einladung erstellen/i }).click();
 
@@ -69,20 +62,14 @@ test.describe('sharing a kitchen', () => {
 
     const url = new URL((await link.innerText()).trim());
 
-    // Somebody else, in their own browser, who has an account of their own and
-    // no household.
     const theirContext = await browser.newContext();
     const them = await theirContext.newPage();
 
     await signIn(them, guest);
 
-    // Already signed in, so the link does not ask them to sign in again and
-    // does not send them to a screen about not having a household. It asks
-    // whether to join, and one press lets them in.
     await them.goto(url.pathname);
     await them.getByRole('button', { name: /join household|haushalt beitreten/i }).click();
 
-    // Landed in the household, and the recipe is simply there, in the library.
     await expect(them).toHaveURL(/\/$/);
     await expect(them.getByRole('link', { name: opens(title) })).toBeVisible();
 
@@ -102,7 +89,6 @@ test.describe('sharing a kitchen', () => {
     await owner.goto(`/recipes/${recipeId}`);
     await owner.locator('#overall-note').fill(secret);
 
-    // Saved on its own, the way a note is: nobody presses Save on a note.
     await expect(owner.getByText(/saved|gespeichert/i)).toBeVisible();
 
     const theirContext = await browser.newContext();
@@ -111,20 +97,13 @@ test.describe('sharing a kitchen', () => {
     await signIn(them, guest);
     await them.goto(`/recipes/${recipeId}`);
 
-    // The recipe is shared. What one person wrote about it is not.
     await expect(them.getByRole('heading', { level: 1 })).toHaveText(title);
     await expect(them.getByText(secret)).toHaveCount(0);
 
     await theirContext.close();
   });
 
-  /**
-   * Empties the household of everyone but its owner, so the flow can run again.
-   *
-   * An invitation can only be accepted by somebody not already in the
-   * household, and a fresh account per run is an instance slowly filling with
-   * accounts — which is a limit the instance is right to have.
-   */
+  /** Empties the household of all but its owner, so the invitation can be accepted again (a fresh account per run would fill the instance). */
   async function showOthersOut() {
     const headers = await writeHeaders(owner);
     const household = await householdId(owner.request);
@@ -146,19 +125,14 @@ test.describe('sharing a kitchen', () => {
     await owner.goto('/me/household');
     await owner.getByRole('button', { name: /create invitation|einladung erstellen/i }).click();
 
-    // The ones that can be taken back, which is not every row on this screen:
-    // the members are a list too, and a loop over all of them waits forever for
-    // a button that a person is never going to have.
+    // Only the revocable invitations: looping over members too would wait forever for a button they lack.
     const outstanding = owner.getByRole('listitem').filter({
       has: owner.getByRole('button', { name: /revoke invitation|einladung zurückziehen/i })
     });
 
     await expect(outstanding.first()).toBeVisible();
 
-    // A link sent to the wrong chat has exactly one remedy, and this is it.
-    // Every one of them goes, including whatever earlier runs left behind —
-    // the empty state is the only count this can assert without racing the
-    // list's own loading.
+    // Every invitation goes, including leftovers; the empty state is the only count assertable without racing the list's loading.
     while ((await outstanding.count()) > 0) {
       await outstanding
         .first()

@@ -2,21 +2,11 @@ import type { AppError } from '$api';
 import { explain } from '$shell/explain';
 import { createLoadingState } from '$shell/loadingState.svelte';
 
-/**
- * The dance every form does, written once.
- *
- * Submitting, holding the failure, mapping the server's field errors onto the
- * fields by name, moving focus to the first one, and counting down a rate
- * limit. Three auth pages doing this independently would be three pages that
- * disagree about it.
- */
+/** The shared form dance: submit, hold the failure, map field errors onto fields, focus the first, count down rate limits. */
 export interface Submission {
   /** True from the moment of submit. The button disables on this, instantly. */
   readonly inFlight: boolean;
-  /**
-   * True only once the delay has passed. The spinner shows on this, so a fast
-   * response never flashes one.
-   */
+  /** True only once the delay has passed, so a fast response never flashes the spinner. */
   readonly showingProgress: boolean;
   /** What went wrong overall, when it was not about one field. */
   readonly failure: AppError | null;
@@ -91,8 +81,7 @@ export function createSubmission(): Submission {
     },
 
     errorFor(field) {
-      // A linear scan over at most a handful of causes, rather than a map that
-      // would have to be kept in step with the failure it came from.
+      // A scan over a handful of causes beats a map kept in step with the failure.
       const cause = failure?.fields.find((candidate) => candidate.field === field);
 
       return cause && explain(cause);

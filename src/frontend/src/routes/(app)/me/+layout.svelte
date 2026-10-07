@@ -11,21 +11,8 @@
   import NotAllowed from './NotAllowed.svelte';
 
   /**
-   * Settings, split into categories.
-   *
-   * One screen holding appearance, the household, invitations, the archive and
-   * the way out was a scroll with no shape: nothing on it belonged next to
-   * anything else, and finding the one control you came for meant reading past
-   * four you did not. Each category is its own route instead, listed down the
-   * side on a wide screen and across the top on a phone.
-   *
-   * Routes rather than tabs, because a settings page someone is talked through
-   * on the phone has to be linkable, and because the back button out of the
-   * archive should land on the list of categories rather than on the recipes.
-   *
-   * The heading belongs to this file rather than to the three pages, because
-   * the category's name is the same word the rail is already showing: three
-   * pages each writing their own is three places for it to stop matching.
+   * Settings categories as routes, not tabs, so each is linkable and Back from the archive lands on the category list.
+   * The heading lives here so it always matches the rail.
    */
   interface Props {
     children: Snippet;
@@ -33,10 +20,7 @@
 
   let { children }: Props = $props();
 
-  // The assistant and the server configure the instance rather than the person
-  // looking at it — one key, one bill, one database — so they are in the rail
-  // only for the one account that may change them. Absent rather than disabled, like every other thing in this
-  // app somebody cannot do.
+  // Assistant and server configure the instance, so only the administrator gets them in the rail (absent, not disabled).
   const categories = $derived([
     { href: resolve('/(app)/me'), label: m['me.account'], lead: m['me.account.lead'] },
     {
@@ -62,19 +46,13 @@
       : [])
   ]);
 
-  // Exact, not a prefix: no category has children of its own, and a prefix
-  // would light Account up on every one of them.
+  // Exact match: a prefix would light Account up on every sub-route.
   const current = $derived(page.url.pathname);
   const active = $derived(categories.find((category) => category.href === current));
 
   /**
-   * Somebody who is not an administrator, at one of the two pages that are.
-   *
-   * Only reachable by typing the address or following a link, since the rail
-   * does not offer them — so the reader already knows the page exists, and
-   * saying "not yours" leaks nothing. Answered here rather than by letting the
-   * page ask the server for settings it would only refuse: the refusal would
-   * read as "could not load", and its retry button could never help.
+   * A non-administrator on an admin page: say "not yours" here rather than load settings the server refuses,
+   * whose refusal would read as a failed load with a useless retry.
    */
   const refused = $derived(
     session.user?.isAdmin
@@ -93,8 +71,7 @@
 <Page>
   <div class="settings">
     <nav class="rail" aria-label={m['me.title']()}>
-      <!-- Not a heading: it names the rail, and a heading here would land
-           between the page's own and the sections inside it. -->
+      <!-- Not a heading: it would land between the page's own heading and its sections. -->
       <p class="legend">{m['me.title']()}</p>
 
       <div class="categories">
@@ -141,22 +118,17 @@
   }
 
   .legend {
-    /* Only worth the line on the desktop rail, where it captions a column.
-       Above a wrapping row of pills it would caption nothing. */
+    /* Only on the desktop rail, where it captions a column. */
     display: none;
   }
 
-  /* On a phone: a row across the top, wrapping rather than scrolling sideways,
-     because a category hidden past the edge of the screen is a category nobody
-     knows exists. */
+  /* Phone: wraps instead of scrolling sideways, so no category hides past the edge. */
   .categories {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-1);
   }
 
-  /* The same pill as the navbar above it. An inner navigation that invented its
-     own selected state would read as a different app's furniture. */
   .category {
     min-height: var(--control-sm);
     display: flex;
@@ -182,10 +154,7 @@
     color: var(--accent);
   }
 
-  /* Capped well short of the page, because a settings row is a label on the
-     left and a control on the right, and across a 1400px monitor that is a
-     centimetre of eye travel per setting with nothing in between. The rail
-     takes the width the panel gives up. */
+  /* Capped: on a wide monitor a label-left, control-right row is a long eye trip. */
   .panel {
     view-transition-name: settings-content;
     display: flex;
@@ -214,14 +183,8 @@
   }
 
   /*
-   * On a phone: pinned under the header.
-   *
-   * Sticky for the same reason as on every wider screen: the categories are
-   * how you leave a long archive. On an opaque band the colour of the page
-   * rather than a floating bar: the row wraps to two lines here, and a glass
-   * box that tall is a second header. Bled out to the gutter so the page
-   * disappears at the edge of the screen rather than at the edge of the pills.
-   * Above the header's layer, so its scrim fades the page and not the pills.
+   * Phone: sticky under the header on an opaque band bled to the gutter (the row wraps to two lines),
+   * above the header's layer so its scrim fades the page, not the pills.
    */
   @media (max-width: 47.999rem) {
     .rail {
@@ -236,24 +199,8 @@
   }
 
   /*
-   * On a tablet: up into the header, on the brand's line.
-   *
-   * The shell's header carries the brand and nothing else at this width — the
-   * destinations are down on the bottom bar — so the whole right half of that
-   * row is empty, and the categories were spending a line of their own
-   * directly underneath it. They move into the empty half instead, which buys
-   * the panel a line and, more to the point, puts the way between categories
-   * in the same place on every one of them.
-   *
-   * Sticky for the same reason the desktop rail is: the categories are how you
-   * leave a long archive, and a way out you have to scroll back up for is not
-   * one.
-   *
-   * Out of the flow — `height: 0`, centred on that zero — so the panel keeps
-   * the top of the page rather than being pushed down by a row that is no
-   * longer there. The offset is the middle of the header the shell measures,
-   * because the brand's line is set by the wordmark's font metrics; the token
-   * behind it is only the figure that holds the place until that lands.
+   * Tablet: pills move up into the empty right half of the header, out of flow (height: 0) so the panel keeps the page top.
+   * The offset is the measured header middle (the wordmark's font metrics set the line); the token is a placeholder until then.
    */
   @media (min-width: 48rem) and (max-width: 63.999rem) {
     .settings {
@@ -265,7 +212,6 @@
       /* The header's scrim is opaque where these pills land. */
       z-index: var(--z-sticky);
       top: calc(var(--header-inset) / 2);
-      /* From the top of the page back up to the middle of the header. */
       margin-block-start: calc(-1 * (var(--layout-page-space) + var(--header-inset) / 2));
       height: 0;
       display: flex;
@@ -273,10 +219,7 @@
       justify-content: flex-end;
     }
 
-    /* The navbar's own container, because this is now the navbar's row: the
-       pills need something to sit on once the page is scrolling underneath
-       them, and inventing a second kind of floating bar for one breakpoint is
-       how a header ends up looking assembled from parts. */
+    /* The navbar's own container: the pills need a surface once the page scrolls under them. */
     .categories {
       flex-wrap: nowrap;
       padding: var(--space-1);
@@ -294,10 +237,7 @@
       gap: var(--space-12);
     }
 
-    /* Follows a long archive or invitation list down the page: the categories
-       are how you leave, and a way out you have to scroll back up for is not
-       one. Clear of the app's own floating header, which is the offset every
-       sticky thing in this app uses. */
+    /* Follows a long archive down the page, clear of the floating header. */
     .rail {
       position: sticky;
       top: var(--space-24);
@@ -320,8 +260,7 @@
       gap: var(--space-1);
     }
 
-    /* Stretched to the column, so the pill marks a row of the list rather than
-       floating at whatever width its label happens to be. */
+    /* Stretched so the pill marks a list row rather than floating at label width. */
     .category {
       justify-content: flex-start;
       padding-inline: var(--space-4);

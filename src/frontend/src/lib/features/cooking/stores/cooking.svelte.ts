@@ -3,20 +3,14 @@ import { registerStore } from '$shell/stores';
 
 import type { components } from '$api/generated/schema';
 
-/**
- * What this person is cooking, right now.
- *
- * One session at a time, because the phone against the mixing bowl and the
- * laptop on the counter are the same cook — the database enforces it, and this
- * store simply holds the one answer.
- */
+/** What this person is cooking now; one session at a time (the database enforces it), shared by phone and laptop. */
 export type CookSession = components['schemas']['CookSessionsResponse'];
 
 class CookingStore {
   #session = $state<CookSession | null>(null);
   #resolved = $state(false);
 
-  /** Coalesces the step advances a fast cook produces. */
+  /** Coalesces fast step advances. */
   #pendingStep: number | null = null;
   #sending = false;
   #scaleRevision = 0;
@@ -25,12 +19,11 @@ class CookingStore {
     return this.#session;
   }
 
-  /** True once we know whether anything is cooking, so the bar can decide. */
+  /** Known whether anything is cooking, so the bar can decide. */
   get resolved(): boolean {
     return this.#resolved;
   }
 
-  /** Reads the one active session, if there is one. Called on boot. */
   async resume(): Promise<void> {
     const result = await request(() => http.GET('/api/v1/cook-sessions/current'));
 
@@ -38,15 +31,7 @@ class CookingStore {
     this.#resolved = true;
   }
 
-  /**
-   * Begins cooking, once.
-   *
-   * Shared by concurrent callers rather than started twice. The cook screen
-   * asks in an effect, and an effect can run again before the first answer
-   * arrives — a second POST abandons the session the first one made and comes
-   * back at step one, which lands on somebody who had already tapped Next.
-   */
-  /** In flight, so a second ask joins the first rather than starting again. */
+  /** In flight, so concurrent starts share one request: a second POST would abandon the session and restart at step one. */
   #starting: Promise<AppError | null> | null = null;
 
   async start(
@@ -83,15 +68,7 @@ class CookingStore {
     return null;
   }
 
-  /**
-   * Moves to a step.
-   *
-   * Applied here first and sent after: tapping "next" must feel instant, and
-   * the server's answer changes nothing the cook can see. Rapid taps collapse
-   * into one request for the step they landed on — sending four requests for
-   * four taps would deliver them out of order and land the cook somewhere they
-   * were not.
-   */
+  /** Moves to a step: applied locally first so Next feels instant, and rapid taps collapse into one request (separate ones could land out of order). */
   moveTo(recipeId: string, index: number): void {
     if (this.#session?.recipeId !== recipeId) {
       return;
@@ -128,8 +105,7 @@ class CookingStore {
       })
     );
 
-    // Steps can advance in either kitchen view while scaling is in flight.
-    // Adopt only the yield, and only for the latest ask in the same session.
+    // Steps can advance in either view during scaling; adopt only the yield, and only for the latest ask in this session.
     if (this.#session?.sessionId !== session.sessionId || revision !== this.#scaleRevision) return;
     this.#session = {
       ...this.#session,
@@ -137,16 +113,7 @@ class CookingStore {
     };
   }
 
-  /** Finishing and giving up are both "over", but only one means it worked. */
-  /**
-   * Closes the session, and says whether the server agreed.
-   *
-   * The local session is dropped either way — whoever pressed "I made it" is
-   * finished cooking whatever the network thinks. The answer is returned
-   * because the page reports an outcome to the person, and reporting one
-   * without looking at this is how "Added to your cooking history" appeared
-   * over a request that had failed.
-   */
+  /** Closes the session and says whether the server agreed; local state is dropped either way, so check the answer before reporting success. */
   async end(completed: boolean): Promise<boolean> {
     const session = this.#session;
 
@@ -165,13 +132,7 @@ class CookingStore {
     return result.ok;
   }
 
-  /**
-   * Lets go of the session for a recipe that has been deleted.
-   *
-   * The server ended it along with the recipe, so there is nothing to send;
-   * the bar offering to resume it is all that is left, and it would resume
-   * onto nothing.
-   */
+  /** Drops the session of a deleted recipe; the server ended it already, so nothing is sent. */
   forget(recipeId: string): void {
     if (this.#session?.recipeId === recipeId) {
       this.#session = null;

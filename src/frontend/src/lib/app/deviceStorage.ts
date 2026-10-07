@@ -1,10 +1,4 @@
-/**
- * What this device remembers between visits.
- *
- * Storage throws in a private window and in a browser set to block site data,
- * and nothing kept here is worth failing over: every caller has a sensible
- * answer for "nothing remembered".
- */
+/** What this device remembers between visits. Storage throws in private windows or with site data blocked; every caller has an answer for "nothing remembered". */
 export function readDevice(key: string): string | null {
   try {
     return globalThis.localStorage?.getItem(key) ?? null;
@@ -21,12 +15,7 @@ export function writeDevice(key: string, value: string): void {
   }
 }
 
-/**
- * Removes every `<prefix><userId>…` key on this device, except `keep`'s.
- *
- * For what is remembered per account — unsent drafts, the last recipe started,
- * recent searches — on a device more than one person uses.
- */
+/** Removes every `<prefix><userId>…` key except `keep`'s: per-account memories (drafts, last recipe, recent searches) on a shared device. */
 export function forgetAccountKeys(prefix: string, keep?: string): void {
   try {
     for (const key of Object.keys(globalThis.localStorage ?? {})) {

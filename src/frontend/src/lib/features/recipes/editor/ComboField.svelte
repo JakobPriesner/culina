@@ -2,17 +2,8 @@
   import SuggestionList, { type Suggestion } from './SuggestionList.svelte';
 
   /**
-   * A labelled text field that offers a list, without ever insisting on it.
-   *
-   * Two of the ingredient fields need this and they need it for the same
-   * reason: the vocabulary is open. A unit nobody has written before is added
-   * by writing it, and an ingredient is whatever somebody types — so the list
-   * is help, never a gate. Everything here follows from that.
-   *
-   * The keyboard stays on the field. Options are not focusable and which one
-   * is highlighted travels as `aria-activedescendant`, which is the combobox
-   * pattern and the only arrangement in which someone can keep typing while a
-   * list is open.
+   * A labelled text field offering a list without insisting on it: the unit/ingredient vocabulary is open.
+   * Focus stays on the field; the highlighted option travels as `aria-activedescendant` so typing continues while the list is open.
    */
   interface Props {
     id: string;
@@ -24,14 +15,7 @@
     oninput: (value: string) => void;
     /** Enter, when the author has not picked a row. Adds the ingredient. */
     onsubmit?: () => void;
-    /**
-     * Whether the cursor is here, readable by the parent.
-     *
-     * The ingredient suggestions come from one shared store, so only the field
-     * somebody is actually typing in may ask it a question. Without this, two
-     * of these on screen at once would take turns overwriting each other's
-     * answers.
-     */
+    /** Whether the cursor is here; only the focused field may query the shared suggestion store, or two would overwrite each other's answers. */
     focused?: boolean;
     inputmode?: 'text' | 'decimal';
     placeholder?: string;
@@ -51,15 +35,7 @@
   }: Props = $props();
 
   let element = $state<HTMLInputElement>();
-  /**
-   * Which row is highlighted, or -1 for none — and -1 is the one that matters.
-   *
-   * Nothing is highlighted until somebody arrows into the list on purpose, so
-   * Enter means "this is what I typed" by default and only means "the row I
-   * chose" once a row has been chosen. A list that pre-selected its first row
-   * would quietly replace invented words with near-misses, which is exactly
-   * what an open vocabulary must not do.
-   */
+  /** Highlighted row, -1 for none: Enter means "what I typed" until a row is arrowed to, so an open vocabulary is not replaced by near-misses. */
   let highlighted = $state(-1);
   /** The text the list was dismissed at, so Escape holds until the next key. */
   let dismissed = $state<string | null>(null);
@@ -107,25 +83,21 @@
         highlighted = highlighted <= 0 ? options.length - 1 : highlighted - 1;
         break;
       case 'Escape':
-        // Stopped here so the surrounding form or sheet does not also act on
-        // it: dismissing the list is the whole of what this Escape means.
+        // Stop the surrounding form or sheet also acting on this Escape.
         event.preventDefault();
         event.stopPropagation();
         dismissed = value;
         highlighted = -1;
         break;
     }
-    // Tab is left alone. It moves to the next field, which is what Tab does —
-    // and in a row of four fields, a list quietly stealing it would be worse
-    // than no list at all.
+    // Tab is left alone: a list stealing it in a row of four fields would be worse than no list.
   }
 </script>
 
 <label class="field">
   <span class="label">{label}</span>
 
-  <!-- The list is positioned against this, not the row, so it opens under the
-       field it belongs to. -->
+  <!-- The list is positioned against this, so it opens under its own field. -->
   <span class="anchor">
     <input
       bind:this={element}

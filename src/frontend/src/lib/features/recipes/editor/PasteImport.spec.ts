@@ -5,12 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import PasteImport from './PasteImport.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * A link that arrives from outside — the share sheet, or any page linking to
- * /recipes/new?url=… — is filled in and left alone. Reading it makes the
- * server fetch the address, so only a person tapping the button may start
- * that, never the arrival itself.
- */
+/* An external link (share sheet, /recipes/new?url=…) is filled in and left alone: reading makes the server fetch it, so only a button tap may start that. */
 const imports = '/api/v1/recipe-imports';
 
 const urlOf = (input: unknown) =>

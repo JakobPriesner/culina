@@ -3,12 +3,8 @@ import { render } from '@testing-library/svelte';
 import { defaultTheme } from '$ds/themes';
 
 /**
- * Renders a component the way the app renders it.
- *
- * A component that reads a semantic token is unreadable without a theme on the
- * document, and a test that rendered it bare would pass while the real screen
- * was black on black. Everything a page gets from the shell is applied here
- * instead of being re-applied in every test.
+ * Renders a component with the shell's theme applied: a semantic-token component is unreadable bare,
+ * and a bare test would pass on a black-on-black screen.
  */
 type Rendered = ReturnType<typeof render>;
 type Component = Parameters<typeof render>[0];

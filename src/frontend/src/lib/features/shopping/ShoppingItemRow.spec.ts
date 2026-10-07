@@ -31,8 +31,7 @@ describe('a line on the shopping list', () => {
   });
 
   it('says it in cups for an imperial kitchen, as the recipe beside it does', () => {
-    // The recipe it came from reads "~2 cups" under this setting; the list the
-    // same milk lands on must not switch back to millilitres.
+    // The recipe reads "~2 cups" under this setting; the list must not switch back to millilitres.
     preferences.adopt({ measurementSystem: 'imperial' }, { signedIn: false });
 
     row(milk);
@@ -84,9 +83,7 @@ describe('a line on the shopping list', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Move Milch to another section' }));
 
-    // Where it is now is ticked, so choosing it again is a no-op, not a move.
-    // jsdom has no popover, so the panel never opens; its contents are still
-    // there to be pressed.
+    // jsdom has no popover, so the panel never opens; its contents are still pressable.
     const current = screen.getByRole('button', { name: 'Dairy & eggs', hidden: true });
 
     expect(current).toHaveAttribute('aria-current', 'true');

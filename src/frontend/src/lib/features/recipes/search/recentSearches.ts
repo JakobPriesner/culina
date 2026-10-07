@@ -1,16 +1,8 @@
 import { forgetAccountKeys } from '$shell/deviceStorage';
 
 /**
- * The last few searches, on this device only.
- *
- * In `localStorage` and nowhere else, never sent to the server: what somebody
- * searched for is theirs, and a recently-searched list that followed an
- * account onto a shared tablet would be telling the household. It is a
- * convenience, so every read and write survives storage being unavailable —
- * a private window, a full disk — by simply remembering nothing.
- *
- * Scoped by account, so it is not shown to the next person, and removed for
- * everybody else when somebody signs in or out, so it is not kept for them.
+ * The last few searches, in `localStorage` only and never sent to the server (they must not follow an account onto a shared tablet).
+ * Every read and write survives unavailable storage by remembering nothing; scoped by account, and removed for everybody else on sign-in or out.
  */
 const prefix = 'culina.search.';
 const keyFor = (userId: string) => `${prefix}${userId}`;
@@ -47,10 +39,7 @@ export function rememberSearch(userId: string, query: string): string[] {
   return next;
 }
 
-/**
- * Forgets the recent searches of everybody but `keep`, including the one list
- * from before it was scoped by account (`culina.search.recent`).
- */
+/** Forgets everybody's recent searches but `keep`'s, including the unscoped legacy list (`culina.search.recent`). */
 export function forgetEveryRecentSearch(keep?: string): void {
   forgetAccountKeys(prefix, keep);
 }

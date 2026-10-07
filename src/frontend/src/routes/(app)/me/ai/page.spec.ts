@@ -6,12 +6,7 @@ import AiPage from './+page.svelte';
 import { assistance } from '$features/assistance/stores/assistance.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The page rather than the store, because what is worth proving is all about
- * what is on screen: that no API key is ever in a field somebody could read it
- * out of, that every provider can be connected at once, and that a job can only
- * be given to a provider that could actually do it.
- */
+/* Tests the page, not the store: no API key in a readable field, all providers connectable, jobs only to capable ones. */
 const connection = (provider: string, overrides: object = {}) => ({
   provider,
   apiKeyConfigured: false,
@@ -79,11 +74,7 @@ const emptyUsage = {
   byCapability: []
 };
 
-/*
- * Saving re-reads the session, because the four switches travel with the
- * account. Answering that with the assistant's settings gave the session store
- * a user with no households and crashed it a turn after the test had passed.
- */
+/* Saving re-reads the session; answering with assistant settings crashed the session store (no households). */
 const me = {
   userId: 'u1',
   email: 'jakob@example.com',
@@ -125,30 +116,17 @@ function serverAnswers(settings: object = configured, models: object = offered) 
   return fetched;
 }
 
-/** Lets every queued effect and the requests it made settle. */
 const settle = async () => {
   for (let turn = 0; turn < 5; turn += 1) {
     await new Promise((resume) => setTimeout(resume, 0));
   }
 };
 
-/**
- * One settings row, found by its label.
- *
- * Scoped to the label element rather than to any text: "Gemini" is also the
- * text of a select option and part of a field label under Advanced, so a bare
- * text query finds three things and fails on all of them.
- */
+/** One settings row by its label element; plain text also matches a select option and an Advanced field label. */
 const rowFor = (label: string) =>
   screen.getByText(label, { selector: '.label' }).closest('.row') as HTMLElement;
 
-/**
- * The nth select in a row, or a failed test.
- *
- * A job row has two: the provider first, then the model. Indexing is never
- * merely assumed, because an off-by-one here would silently assert about the
- * wrong control.
- */
+/** The nth select in a row (provider first, then model); fails rather than assuming an index. */
 function picker(row: HTMLElement, nth: number): HTMLElement {
   const found = within(row).getAllByRole('combobox')[nth];
 
@@ -159,7 +137,6 @@ function picker(row: HTMLElement, nth: number): HTMLElement {
   return found;
 }
 
-/** The bodies of every save the page sent, oldest first. */
 async function writes(fetched: ReturnType<typeof serverAnswers>) {
   const sent = fetched.mock.calls
     .map(([input]) => input)
@@ -168,7 +145,6 @@ async function writes(fetched: ReturnType<typeof serverAnswers>) {
   return Promise.all(sent.map(async (request) => JSON.parse(await request.clone().text())));
 }
 
-/** A choice made, which saves the form: the assistant switch, flipped. */
 const flipTheSwitch = () =>
   userEvent.click(screen.getByRole('switch', { name: 'Use the assistant' }));
 
@@ -183,8 +159,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // All three, none connected. The alternative — a list of what is connected
-    // plus an Add button — makes the empty state a dead end.
     expect(rowFor('Gemini')).toBeInTheDocument();
     expect(rowFor('OpenAI')).toBeInTheDocument();
     expect(rowFor('Ollama')).toBeInTheDocument();
@@ -192,8 +166,6 @@ describe('the assistant settings page', () => {
   });
 
   it('shows the form before the providers have said what they offer', async () => {
-    // The listing is one connection per provider to a company somewhere else.
-    // Holding the screen blank for it is the delay this guards against.
     let answerModels = (_: Response) => {};
     const listed = new Promise<Response>((resume) => {
       answerModels = resume;
@@ -220,7 +192,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // Everything but the model pickers is already usable.
     expect(rowFor('Gemini')).toBeInTheDocument();
     expect(screen.getAllByText('Loading models…').length).toBeGreaterThan(0);
 
@@ -239,8 +210,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // The whole point of the change: they are not interchangeable, so a
-    // household wants each for what it is good at.
     expect(screen.getAllByText('Ready')).toHaveLength(3);
   });
 
@@ -271,14 +240,12 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // The first combobox in the row is the provider; the second is the model.
     const drawing = picker(rowFor('Create recipe image'), 0);
     const offered = within(drawing)
       .getAllByRole('option')
       .map((option) => option.textContent?.trim());
 
-    // Ollama serves language and vision models and makes no pictures, so it is
-    // absent here rather than selectable and then refused.
+    // Ollama makes no pictures, so it is absent rather than selectable and refused.
     expect(offered).toContain('Gemini');
     expect(offered).toContain('OpenAI');
     expect(offered).not.toContain('Ollama');
@@ -318,8 +285,7 @@ describe('the assistant settings page', () => {
     await flipTheSwitch();
     await settle();
 
-    // Omitted, not empty: an empty string would take a stored key away, and
-    // this is somebody saving the form for an unrelated reason.
+    // Omitted, not empty: an empty string would delete a stored key.
     const [body] = await writes(fetched);
     expect(body.connections.every((one: { apiKey?: string }) => one.apiKey === undefined)).toBe(
       true
@@ -372,7 +338,6 @@ describe('the assistant settings page', () => {
     await flipTheSwitch();
     await settle();
 
-    // An empty key takes the stored one away, so an empty field must send none.
     const sent = await writes(fetched);
     const gemini = sent
       .at(-1)
@@ -418,8 +383,7 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // "Read a photograph" is given to Gemini, which listed one text model and
-    // one image model. Only the text one can do this job.
+    // The text-only listing cannot do "Read a photograph".
     const reading = picker(rowFor('Import recipe from photo'), 1);
     const labels = within(reading)
       .getAllByRole('option')
@@ -475,7 +439,6 @@ describe('the assistant settings page', () => {
     const body = (await writes(fetched)).at(-1);
     const read = body.uses.find((one: { capability: string }) => one.capability === 'read');
 
-    // Carrying it over would name a Gemini model at OpenAI.
     expect(read.provider).toBe('openai');
     expect(read.model).toBe('');
   });
@@ -486,9 +449,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // Ollama did not answer, and "Improve a recipe" is given to it. One combobox
-    // — the provider — and a text box for the model, which is how this worked
-    // before lists existed.
     const row = rowFor('Improve a recipe');
     expect(within(row).getAllByRole('combobox')).toHaveLength(1);
     expect(within(row).getByRole('textbox')).toBeInTheDocument();
@@ -496,8 +456,6 @@ describe('the assistant settings page', () => {
   });
 
   it('says a provider has no list once, beside the provider, however many jobs it has', async () => {
-    // Ollama answered but listed nothing, and three jobs are given to it. The
-    // reason belongs to the connection; each job only points back to it.
     serverAnswers(
       {
         ...configured,
@@ -530,8 +488,6 @@ describe('the assistant settings page', () => {
   });
 
   it('asks the providers again after a key is saved, so the lists are not stale', async () => {
-    // The moment somebody most wants a list is the moment after they paste the
-    // key. Nothing could be listed before it existed.
     const fetched = serverAnswers();
 
     renderWithProviders(AiPage);
@@ -546,7 +502,6 @@ describe('the assistant settings page', () => {
       .map(([input]) => String(input instanceof Request ? input.url : input))
       .filter((url) => url.includes('/models'));
 
-    // Once on opening the screen, once after the save.
     expect(listings).toHaveLength(2);
   });
 
@@ -572,8 +527,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // Text boxes everywhere is the old behaviour and still usable. Text boxes
-    // everywhere with nothing saying why is what this guards against.
     expect(screen.getByText(/model list could not be loaded/)).toBeInTheDocument();
   });
 
@@ -606,8 +559,6 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // A spend read next to a budget somebody typed: two bare numbers leave it
-    // to the reader to assume they are the same kind of thing.
     expect(screen.getAllByText(/\$/).length).toBeGreaterThan(0);
     expect(screen.queryByText('3.5')).not.toBeInTheDocument();
   });
@@ -623,18 +574,13 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // The two have different answers: a key is replaced, a provider is waited
-    // for. Telling somebody to check a key that signs every other call in this
-    // app is sending them after the wrong thing.
+    // A key is replaced, a provider is waited for: different messages.
     expect(screen.getByText(/OpenAI rejected the API key/)).toBeInTheDocument();
     expect(screen.getByText(/models from Ollama could not be loaded/i)).toBeInTheDocument();
   });
 
   it('offers the whole catalogue when nothing in it looks like what the job needs', async () => {
-    // Whether a model draws is read from its name, so the filter is a guess.
-    // When the guess empties a job's list, the models are offered unfiltered:
-    // choosing a wrong one costs a call that fails with a clear message, and
-    // hiding the model somebody is paying for costs them the feature.
+    // Image-capable is guessed from the name; if that empties a job's list, models are offered unfiltered (a wrong pick fails clearly, hiding the paid model loses the feature).
     serverAnswers(configured, {
       providers: [
         {
@@ -649,15 +595,10 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // Twice: once in the writing job Gemini also has, where the model belongs
-    // by the filter's own reading, and once in the drawing job, where it is
-    // offered only because the alternative was an empty picker.
     expect(screen.getAllByRole('option', { name: 'A model' })).toHaveLength(2);
   });
 
   it('tells an empty catalogue apart from one that holds nothing for this job', async () => {
-    // The two look identical from a picker with nothing in it and need
-    // different things done about them: one is the key, the other is ordinary.
     serverAnswers(configured, {
       providers: [
         { provider: 'openai', reachable: true, problem: null, models: [] },
@@ -673,19 +614,14 @@ describe('the assistant settings page', () => {
     renderWithProviders(AiPage);
     await settle();
 
-    // OpenAI listed nothing at all, so its job falls back to the box.
     const empty = screen.getByPlaceholderText('draft-default');
 
     const hintOf = (field: HTMLElement) =>
       field.closest('.field')?.querySelector('.hint')?.textContent ?? '';
 
-    // What it says is product copy and is not what this asserts. That it says
-    // anything is: a box with no explanation beside it is a dead end nobody
-    // can act on, and the usual cause — a key that may make requests but not
-    // read the catalogue — is not one anybody guesses.
+    // Only that some explanation exists is asserted, not its copy: a box with no explanation is a dead end.
     expect(hintOf(empty)).not.toBe('');
 
-    // Gemini listed a model, so its job gets a picker rather than a box.
     expect(screen.queryByPlaceholderText('draw-default')).not.toBeInTheDocument();
   });
 

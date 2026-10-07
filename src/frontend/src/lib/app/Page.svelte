@@ -1,13 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * The container every page inside the shell sits in.
-   *
-   * One rule, so the heading on a page lines up with the brand in the navbar
-   * above it. Two pages that each choose their own width are two pages that
-   * shift sideways as you move between them.
-   */
+  /** The container every shell page sits in: one width rule so a page heading lines up with the navbar brand. */
   interface Props {
     children: Snippet;
     /** `reading` narrows to a comfortable measure for prose and lists. */

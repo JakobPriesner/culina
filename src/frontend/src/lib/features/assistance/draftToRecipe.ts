@@ -6,13 +6,8 @@ type DraftWire = components['schemas']['RecipesDraftsResponse'];
 export type Draft = DraftWire;
 
 /**
- * Which parts of a draft somebody has accepted.
- *
- * Six switches rather than one per ingredient and one per step, and that is a
- * decision rather than a shortcut. A recipe whose steps came from the assistant
- * and whose ingredients did not is a recipe whose steps name things that are no
- * longer in it — so the list is the smallest unit that stays coherent. Within a
- * list, correcting one line is what the editor underneath is for.
+ * Which parts of a draft are accepted. Six switches, not per line: steps from the assistant
+ * over ingredients that weren't would name things no longer in the recipe.
  */
 export interface Accepted {
   title: boolean;
@@ -23,7 +18,6 @@ export interface Accepted {
   steps: boolean;
 }
 
-/** Nothing accepted. The state the review opens in. */
 export const acceptNothing = (): Accepted => ({
   title: false,
   description: false,
@@ -33,7 +27,6 @@ export const acceptNothing = (): Accepted => ({
   steps: false
 });
 
-/** Everything the draft actually offers. */
 export const acceptEverything = (draft: Draft): Accepted => ({
   title: offers(draft).title,
   description: offers(draft).description,
@@ -43,12 +36,7 @@ export const acceptEverything = (draft: Draft): Accepted => ({
   steps: offers(draft).steps
 });
 
-/**
- * Which parts the draft has anything to say about.
- *
- * A draft that did not mention the cooking time must not offer to replace the
- * time with nothing — an accepted blank is a deletion nobody asked for.
- */
+/** Which parts the draft says anything about; an accepted blank would delete a value nobody asked to. */
 export function offers(draft: Draft): Accepted {
   return {
     title: Boolean(draft.title),
@@ -60,25 +48,13 @@ export function offers(draft: Draft): Accepted {
   };
 }
 
-/** Whether anything at all has been accepted. */
 export const anyAccepted = (accepted: Accepted): boolean => Object.values(accepted).some(Boolean);
 
-/**
- * Whether a draft has anything in it worth showing.
- *
- * A request that failed still ends on a draft — an empty one, when the
- * provider stopped before writing a word — and showing that is an empty box
- * where the reason should be.
- */
+/** An empty draft (provider stopped before writing) would show an empty box instead of the reason. */
 export const saysAnything = (draft: Draft | null): boolean =>
   draft !== null && anyAccepted(offers(draft));
 
-/**
- * Turns the accepted parts into the patch the editor applies.
- *
- * One patch, so accepting six things is one autosave and one version bump
- * rather than six of each.
- */
+/** One patch, so accepting six things is one autosave and one version bump. */
 export function toPatch(draft: Draft, accepted: Accepted, current: Recipe): Partial<Recipe> {
   return {
     ...(accepted.title && draft.title ? { title: draft.title } : {}),
@@ -106,18 +82,11 @@ export function toPatch(draft: Draft, accepted: Accepted, current: Recipe): Part
   };
 }
 
-/**
- * The draft's lines, flattened into the one group the editor shows.
- *
- * Groups are dropped rather than created: the editor edits a single list, and a
- * heading the person cannot see or move is a heading they cannot delete either.
- * What the model split into "for the sauce" and "for the topping" arrives in
- * that order, which is most of what the split was saying.
- */
+/** Flattened into the editor's single list; a group heading it can't show or move couldn't be deleted either. */
 function toIngredients(draft: Draft): Ingredient[] {
   return draft.groups.flatMap((group) =>
     group.ingredients.map((line) => ({
-      // No id: these are new lines, and the server allocates them on save.
+      // No id: new lines; the server allocates on save.
       id: '',
       quantity: { value: line.quantity ?? null, unit: line.unit ?? null },
       name: line.name,
@@ -127,19 +96,8 @@ function toIngredients(draft: Draft): Ingredient[] {
 }
 
 /**
- * The draft's steps, as words.
- *
- * Not linked to the ingredients they name, although it is tempting and
- * although the names are right there. The paste-import path next door says why
- * it does not do this either: "guessing which ones were meant is the silent
- * linking this editor deliberately stopped doing." A link that is wrong shows a
- * scaled amount inside a sentence that was never about that ingredient, which
- * is worse than no link at all — and the person is about to read every one of
- * these steps anyway, where an `@` costs them one keystroke.
- *
- * The cost is real: a recipe whose steps are replaced loses the links its old
- * steps had. That is the same trade a pasted recipe makes, and it is the
- * editor's rule rather than this feature's to change.
+ * Steps as plain words, not linked to the ingredients they name: a wrong link shows a scaled
+ * amount in an unrelated sentence, and an `@` costs one keystroke. Same trade as paste-import.
  */
 function toSteps(draft: Draft): Step[] {
   return draft.steps.map((step) => ({

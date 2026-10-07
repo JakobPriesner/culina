@@ -1,11 +1,5 @@
 <script lang="ts">
-  /**
-   * A choice from a short, known list.
-   *
-   * The native element on purpose: it is the control every person already
-   * knows, it works on a phone without a single line of code, and a custom
-   * replacement buys nothing but keyboard bugs.
-   */
+  /** A choice from a short, known list; the native element on purpose (familiar, works on phones, no keyboard bugs). */
   export interface SelectOption {
     readonly value: string;
     readonly label: string;
@@ -19,13 +13,7 @@
     describedBy?: string | undefined;
     invalid?: boolean;
     disabled?: boolean;
-    /**
-     * Sized to its longest option rather than to its container.
-     *
-     * For a select that is the whole control — a language, a unit system —
-     * sitting beside its own label in a row, where stretching to the full width
-     * would make a two-word choice look like a text field.
-     */
+    /** Sized to its longest option, for a select that is the whole control beside its label (a two-word choice should not look like a text field). */
     inline?: boolean;
     onchange?: (value: string) => void;
   }

@@ -1,12 +1,6 @@
 /*
- * Layer 3 — the warm-paper theme.
- *
- * Assigns layer 1 to layer 2, once per mode. Both blocks define the complete
- * token set rather than one overriding a few values of the other: a partial
- * dark mode is how a single forgotten token ends up as black text on black.
- *
- * Adding a second theme is a copy of this file with different assignments, one
- * line in `themes/index.ts`, and nothing else. The contract test proves it.
+ * Layer 3: the warm-paper theme. Both modes define the complete token set, since a partial dark
+ * mode ends up as black text on black.
  */
 
 [data-theme='warm-paper'] {
@@ -88,10 +82,7 @@
   --mascot-steam: var(--c-sand-400);
 }
 
-/*
- * Dark mode is warm charcoal, never blue-black: a cold ground makes food
- * photography look grey, which is the one thing this app cannot afford.
- */
+/* Dark mode is warm charcoal, never blue-black: a cold ground makes food photography look grey. */
 [data-theme='warm-paper'][data-mode='dark'] {
   --surface: var(--c-sand-950);
   --surface-raised: var(--c-sand-900);
@@ -118,12 +109,10 @@
   --border: var(--c-sand-800);
   --border-strong: var(--c-sand-500);
   --border-focus: var(--c-olive-300);
-  /* Darker rather than lighter here: the capsule it edges is olive-800, and a
-     pale hairline around a dark fill is a cut-out, not an edge. */
+  /* Darker, not lighter: a pale hairline around a dark fill is a cut-out, not an edge. */
   --border-accent: var(--c-olive-600);
 
-  /* Lighter than the light-mode accent: the same hue on a dark ground reads as
-     muddy, and contrast has to be earned in both directions. */
+  /* Lighter than the light-mode accent: the same hue on a dark ground reads as muddy. */
   --accent: var(--c-olive-300);
   --accent-hover: var(--c-olive-100);
   --accent-active: var(--c-olive-100);
@@ -138,8 +127,6 @@
   --warning: #e3bd6c;
   --warning-subtle: #4a3a18;
 
-  /* The same four lights as on paper: they are bright enough to glow on
-     charcoal and soft enough, once blurred, not to shout on sand. */
   --generating-ground: var(--c-sand-900);
   --generating-1: rgb(255 153 82);
   --generating-2: rgb(255 92 138);

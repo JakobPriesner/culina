@@ -6,12 +6,7 @@ import RecipePicker from './RecipePicker.svelte';
 import { recipes } from './stores/recipes.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * Two pages now ask the same question through this, so what has to be right is
- * the asking: it searches only while it is up, it does not search per
- * keystroke, and it hands back the recipe rather than an id — the caller needs
- * the yield to know how much to buy.
- */
+/* Tests the asking: it searches only while open, not per keystroke, and returns the recipe (its yield tells how much to buy), not an id. */
 const summary = (id: string, title: string) => ({
   recipeId: id,
   title,
@@ -25,7 +20,6 @@ const summary = (id: string, title: string) => ({
   ingredientMatch: null
 });
 
-/** Every list request the picker made, by the URL it asked for. */
 let asked: string[] = [];
 
 function serverHas(...items: ReturnType<typeof summary>[]) {
@@ -82,7 +76,6 @@ describe('the recipe picker', () => {
   it('asks for nothing while it is closed', async () => {
     renderWithProviders(RecipePicker, { props: props({ open: false }) });
 
-    // Long enough for a request to have been made had one been going to be.
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(asked).toEqual([]);
   });
@@ -110,8 +103,6 @@ describe('the recipe picker', () => {
 
       await user.type(screen.getByRole('searchbox'), 'soup');
 
-      // Still the one request the opening made: four keystrokes are not four
-      // searches.
       expect(asked).toHaveLength(1);
 
       await vi.advanceTimersByTimeAsync(250);
@@ -131,25 +122,16 @@ describe('the recipe picker', () => {
     expect(await screen.findByText('No recipe matches that search.')).toBeInTheDocument();
   });
 
-  /*
-   * A caller that keeps the sheet open across several picks — the shopping
-   * list does — has no other way of saying which recipes already went on, and
-   * after four searches the rows are the only place that can be read.
-   */
+  /* The shopping list keeps the sheet open across picks, so rows are the only place to show what is already taken. */
   it('marks the recipes the caller says it has already taken', async () => {
     renderWithProviders(RecipePicker, { props: props({ taken: ['r1'] }) });
 
     expect(await screen.findByRole('button', { name: /Orzo.*Added/ })).toBeInTheDocument();
 
-    // And only those: the other row still says what it is.
     expect(screen.getByRole('button', { name: /Lentil soup/ })).not.toHaveTextContent('Added');
   });
 
-  /*
-   * A cookbook is the other kind of caller: a recipe is on the shelf or it is
-   * not, and a row that looked like an ordinary add for one that is already on
-   * made curating a hundred recipes a matter of tapping and reading toasts.
-   */
+  /* A cookbook caller needs to see which recipes are already on the shelf. */
   describe('for a caller that can take a recipe back', () => {
     it('says which rows are already on before any of them is touched', async () => {
       renderWithProviders(RecipePicker, { props: props({ taken: ['r1'], onremove: vi.fn() }) });
@@ -189,7 +171,6 @@ describe('the recipe picker', () => {
   });
 
   it('leaves every row an ordinary pick for a caller that cannot take one back', async () => {
-    // The week plan: cooking the same thing twice is planning it twice.
     renderWithProviders(RecipePicker, { props: props({ taken: ['r1'] }) });
 
     const orzo = await screen.findByRole('button', { name: /Orzo/ });
@@ -197,11 +178,7 @@ describe('the recipe picker', () => {
     expect(orzo).not.toHaveAttribute('aria-pressed');
   });
 
-  /*
-   * The plan passes `open` as an expression rather than a binding, so the only
-   * way it hears about a dismissal is this callback. Without it the page goes
-   * on believing the sheet is up and will not open it again.
-   */
+  /* The plan passes `open` as an expression, so this callback is the only way it hears about a dismissal. */
   it('tells the caller when it is closed from the visible button', async () => {
     const onclose = vi.fn();
 
@@ -212,12 +189,7 @@ describe('the recipe picker', () => {
     expect(onclose).toHaveBeenCalledOnce();
   });
 
-  /*
-   * The sheet opens over a page that is itself showing a list — a cookbook, or
-   * the collection — and that page reads the shared store. A picker searching
-   * into it would empty the page behind the open sheet and leave the collection
-   * filtered after it closed.
-   */
+  /* The page behind the sheet reads the shared store; searching into it would empty that page and leave it filtered after close. */
   it('searches into its own list rather than the one the page behind it is reading', async () => {
     renderWithProviders(RecipePicker, { props: props() });
 
@@ -227,7 +199,6 @@ describe('the recipe picker', () => {
     expect(recipes.status).toBe('idle');
   });
 
-  /* A caller looking inside one cookbook searches only inside it. */
   it('narrows to a cookbook when the caller is in one', async () => {
     renderWithProviders(RecipePicker, { props: props({ cookbookId: 'c1' }) });
 
@@ -236,11 +207,6 @@ describe('the recipe picker', () => {
     expect(asked.some((url) => url.includes('cookbookId=c1'))).toBe(true);
   });
 
-  /*
-   * "vegetarisch Abendessen" in the planner reads the same as in the library:
-   * each reading a removable chip, and a reading the search had to set aside
-   * said out loud rather than dropped quietly.
-   */
   it('shows what it read the words to mean, and what it had to set aside', async () => {
     vi.stubGlobal(
       'fetch',
@@ -275,7 +241,6 @@ describe('the recipe picker', () => {
     const chips = await screen.findByRole('list', { name: 'Understood as' });
     expect(await screen.findByText(/Nothing matched all of it/)).toBeInTheDocument();
 
-    // Removing a chip is removing its characters, and asking again at once.
     await user.click(within(chips).getByRole('button', { name: 'Remove “Dinner”' }));
 
     await waitFor(() =>

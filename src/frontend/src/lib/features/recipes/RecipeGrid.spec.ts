@@ -5,11 +5,7 @@ import RecipeGrid from './RecipeGrid.svelte';
 import type { RecipeSummary } from './types';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The list is the only thing that asks for the next page, so the thing to
- * prove here is that reaching the end asks — and that nothing asks when there
- * is nothing left to read.
- */
+/* Only the list asks for the next page: reaching the end must ask, and nothing asks when nothing is left. */
 const recipe = (id: string): RecipeSummary => ({
   id,
   title: `Recipe ${id}`,

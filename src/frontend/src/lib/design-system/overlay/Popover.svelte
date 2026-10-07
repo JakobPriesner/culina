@@ -2,33 +2,14 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * A small panel attached to the control that opened it.
-   *
-   * Not modal: the page stays usable, and clicking anywhere else closes it.
-   * That behaviour — light dismiss, top layer, Escape, and the pairing between
-   * trigger and panel — is the browser's `popover`, so none of it is
-   * reimplemented here.
-   *
-   * Where it lands is not the browser's. That was CSS anchor positioning, which
-   * today means Chromium and Safari 26 — and the stylesheet's own fallback for
-   * everybody else put the panel in the middle of the screen, which is the one
-   * place a menu must never be: it reads as a dialog, it covers what it was
-   * opened from, and nothing on it says which control it belongs to. Nobody
-   * developing in Chrome would ever see it.
-   *
-   * So the arithmetic is done here, once, for every browser. It is less code
-   * than it replaced: `@position-try`, the `position-area` pairs, the
-   * `@supports` fallback and the observer that existed to notice the anchor had
-   * scrolled out from under an anchored panel are all gone.
-   *
-   * For a decision that must be answered, use `Sheet` or `Modal` instead. A
-   * popover that must not be dismissed is a modal wearing the wrong clothes.
+   * A non-modal panel on the browser's `popover` (light dismiss, top layer, Escape), placed in JS because CSS anchor positioning is not universal.
+   * Not for decisions that must be answered; use `Sheet` or `Modal`.
    */
   interface Props {
-    /** The control that opens it. Receives the attributes that pair the two. */
+    /** The control that opens it; receives the attributes that pair the two. */
     trigger: Snippet<[{ popovertarget: string }]>;
     children: Snippet;
-    /** Which edge of the trigger it lines up with. Flips if there is no room. */
+    /** Which edge of the trigger it lines up with; flips when there is no room. */
     placement?: 'bottom-start' | 'bottom-end';
   }
 
@@ -39,23 +20,17 @@
   let panel = $state<HTMLDivElement>();
   let open = $state(false);
 
-  /** The breath between a trigger and its panel. `--space-1`, as a number. */
+  /** Gap between trigger and panel (`--space-1`, as a number). */
   const gap = 4;
 
-  /** The least the panel leaves between itself and the edge of the screen. */
+  /** Minimum distance to the screen edge. */
   const edge = 16;
 
-  /** Inside the range, and pinned to its start when the range has no room. */
+  /** Clamps into the range, pinned to its start when the range has no room. */
   const within = (value: number, least: number, most: number) =>
     Math.max(least, Math.min(value, Math.max(least, most)));
 
-  /**
-   * Puts the panel under its trigger.
-   *
-   * Two reads, in this order, because the second depends on the first: the
-   * height it is allowed decides where its top edge goes, and the height it
-   * wants decides which side of the trigger it is allowed that height on.
-   */
+  /** Puts the panel under its trigger; the allowed height is read first because it decides the top edge, then the wanted one picks the side. */
   function place() {
     const from = anchor?.getBoundingClientRect();
 
@@ -65,22 +40,17 @@
 
     const view = { width: window.innerWidth, height: window.innerHeight };
 
-    // Cleared first, or the cap left behind by the last run decides this one —
-    // and a panel that has been squeezed once stays squeezed for the rest of
-    // its life.
+    // Cleared first, or the cap left by the last run squeezes this one for good.
     panel.style.maxHeight = '';
 
     const wanted = panel.getBoundingClientRect().height;
     const under = view.height - edge - (from.bottom + gap);
     const over = from.top - gap - edge;
 
-    // Under the trigger, unless it will not fit there and fits better over it.
-    // On a short landscape screen with the trigger low down, that is the
-    // difference between a list and a sliver of one.
+    // Under the trigger unless it fits better above (short landscape screens).
     const above = wanted > under && over > under;
 
-    // What is left of the screen on the chosen side. The panel scrolls inside
-    // this rather than running off the bottom of it.
+    // Screen left on the chosen side; the panel scrolls inside it.
     panel.style.maxHeight = `${Math.max(0, above ? over : under)}px`;
 
     const { width, height } = panel.getBoundingClientRect();
@@ -97,19 +67,8 @@
     }
 
     /**
-     * Placed again whenever the trigger or the window has moved, checked once a
-     * frame for as long as the panel is open.
-     *
-     * Scroll and resize events were not enough. Most of what moves a trigger
-     * fires neither: ticking an ingredient in this very panel adds a chip to
-     * the row the trigger sits in and pushes it along, and the shell lets its
-     * header stop floating once enlarged text has made it tall. Each time, the
-     * panel stayed where the trigger had been and covered what it belonged to.
-     *
-     * Only the trigger is compared, never the panel. A panel taller than its
-     * room scrolls inside itself, and re-placing clears the height cap to
-     * measure it — which for one frame makes it full height, and the browser
-     * clamps its scroll position back to the top.
+     * Re-placed every frame while open: scroll and resize miss most trigger moves (chips added in this panel, a header that stops floating).
+     * Only the trigger is compared; re-placing clears the height cap, and one full-height frame resets the panel's scroll.
      */
     let last = '';
     let frame = 0;
@@ -154,12 +113,7 @@
   }
 
   .panel {
-    /*
-     * Placed in viewport coordinates by `place()`. `inset: auto` because the
-     * browser's own rule for a popover is `inset: 0` with `margin: auto`, which
-     * is what centres one — and an `inset` still set on the other two edges
-     * would fight the two being written here.
-     */
+    /* Viewport coordinates from `place()`; `inset: auto` overrides the browser's centring `inset: 0`. */
     position: fixed;
     inset: auto;
     margin: 0;
@@ -169,23 +123,16 @@
     background: var(--surface-overlay);
     color: var(--text);
     box-shadow: var(--shadow-overlay);
-    /* Against the screen rather than against where it ends up, so that moving
-       the panel can never change its size and one measurement stays true. */
+    /* Against the screen, so moving the panel never changes its size. */
     max-width: calc(100dvw - 2 * var(--space-4));
-    /*
-     * Only the axis `place()` actually manages. The height is capped there, in
-     * viewport pixels; the width is capped above, in CSS. `overflow: auto` on
-     * both axes meant content wider than the cap grew a horizontal bar under
-     * the panel instead of wrapping.
-     */
+    /* Only the axis `place()` manages; `overflow: auto` on both made over-wide content grow a horizontal bar instead of wrapping. */
     overflow-x: clip;
     overflow-y: auto;
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
   }
 
-  /* Opacity only: placement measures this box while opening, so animating its
-     geometry would feed transient dimensions back into the positioning. */
+  /* Opacity only: placement measures this box while opening, so geometry animation would skew it. */
   @supports (overlay: auto) and (transition-behavior: allow-discrete) {
     .panel {
       opacity: 0;

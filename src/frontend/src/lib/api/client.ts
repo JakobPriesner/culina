@@ -6,59 +6,29 @@ import { conditionalRequests, csrf, expiredSessions } from './middleware';
 import { ErrorCodes, offline, timedOut, toAppError } from './problem';
 import { err, ok, type Result } from './result';
 
-/**
- * The one place that talks to the backend.
- *
- * Everything cross-cutting — credentials, CSRF, conditional requests, session
- * expiry, timeouts, failure shape — lives here rather than being remembered at
- * each call site. Components import `request` and the typed `http`; nothing
- * else in the app calls `fetch`.
- */
+/** The one place that talks to the backend; nothing else in the app calls `fetch`. */
 
 /** Long enough for a slow phone on a train, short enough to not look frozen. */
 const defaultTimeoutMs = 15_000;
 
 /**
- * The deadline for calls that make the server talk to somebody else's.
- *
- * Everything else here is this server answering from its own database, which is
- * fast or broken. Reading a connected recipe library is neither: one request
- * becomes a handful of round trips to an instance that may be on the other side
- * of a domestic upload. Fifteen seconds is right for a database read and simply
- * wrong for that — it aborted whole pages of somebody's library and reported
- * every recipe in them as unreadable.
- *
- * Bringing the recipes over is no longer one of these calls: that request only
- * starts an import and the recipes arrive over a stream, which has no deadline
- * because it is not a request that is waiting for an answer.
+ * Deadline for calls that make the server talk to somebody else's (connected recipe libraries):
+ * 15s aborted whole pages there. Imports stream, so they need none.
  */
 const patientTimeoutMs = 60_000;
 
 /**
- * Where those calls live.
- *
- * Matched by path rather than passed per call, because this is a fact about the
- * API and the API layer is the one place allowed to know the API's shape. A
- * caller choosing its own deadline is a caller that will forget to.
- *
- * Asking the assistant for a recipe, and asking it to draw one, used to be on
- * this list and are not any more: both stream now, and a stream is read through
- * `ask` in `./events` rather than sent through here. A deadline is the wrong
- * tool for a response that is meant to stay open — which was the whole trouble
- * with drawing, where the browser gave up first and the server, knowing nothing
- * of that, finished the picture, paid for it and stored it against a screen
- * that had already said it failed.
+ * Matched by path so callers can't forget. Streaming calls (assistant recipes, drawing) go through
+ * `ask` in `./events`: a deadline would abort a response meant to stay open.
  */
 const patientPaths = [
   '/api/v1/recipe-sources',
-  // Asking every connected provider what it offers, one after another.
+  // Queries every connected provider in turn.
   '/api/v1/settings/assistance/models'
 ];
 
 const http = createClient<paths>({
-  // No base URL: the generated paths already carry /api/v1, and Culina is
-  // always served from the same origin as its API — which is also why there is
-  // no CORS policy anywhere and no Authorization header ever.
+  // No base URL: paths carry /api/v1 and the API is same-origin (hence no CORS, no Authorization header).
   credentials: 'include',
   fetch: withTimeout
 });
@@ -67,14 +37,7 @@ http.use(csrf, conditionalRequests, expiredSessions);
 
 export { http };
 
-/**
- * What a generated call hands back.
- *
- * Structural rather than the library's own `FetchResponse`, whose three type
- * parameters describe the operation and cannot be inferred from a thunk. The
- * caller's data type still flows through; the error is read as a problem
- * document, which is what every failure is.
- */
+/** Structural stand-in for openapi-fetch's `FetchResponse`, whose type parameters can't be inferred from a thunk. */
 interface Call<TData> {
   readonly data?: TData;
   readonly error?: unknown;
@@ -82,11 +45,8 @@ interface Call<TData> {
 }
 
 /**
- * Runs one call and turns it into a result.
- *
- * A CSRF rejection is retried exactly once, and only when the cookie has
- * actually changed in the meantime — another tab signing in is the real cause,
- * and resending the same token would only earn the same refusal.
+ * Runs one call into a result. A CSRF rejection is retried once, only if the cookie changed
+ * meanwhile (another tab signed in); resending the same token would fail again.
  */
 export async function request<TData>(call: () => Promise<Call<TData>>): Promise<Result<TData>> {
   const tokenSent = csrfToken();
@@ -103,13 +63,11 @@ async function attempt<TData>(call: () => Promise<Call<TData>>): Promise<Result<
   try {
     const { data, error, response } = await call();
 
-    // openapi-fetch reports a failure with an empty body as `error: undefined`,
-    // so an empty 403 from a proxy would otherwise pass for a success.
+    // openapi-fetch gives `error: undefined` for an empty body, so an empty proxy 403 would pass as success.
     if (error !== undefined || !response.ok) {
       return err(toAppError(response, error));
     }
 
-    // A 204 has no body, and the caller's type says so.
     return ok(data as TData);
   } catch (thrown) {
     return err(describe(thrown));
@@ -125,12 +83,7 @@ function describe(thrown: unknown) {
   return offline();
 }
 
-/**
- * Gives every request a deadline.
- *
- * Combined with the caller's own signal rather than replacing it, so a request
- * is still cancelled when the component that started it goes away.
- */
+/** Gives every request a deadline, combined with the caller's signal so unmounting still cancels. */
 function withTimeout(input: Request): Promise<Response> {
   const deadline = AbortSignal.timeout(deadlineFor(input.url));
 
@@ -147,7 +100,7 @@ function deadlineFor(url: string): number {
       ? patientTimeoutMs
       : defaultTimeoutMs;
   } catch {
-    // Not a URL this can read, which is not a reason to have no deadline.
+    // Unreadable URL still gets a deadline.
     return defaultTimeoutMs;
   }
 }

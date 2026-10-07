@@ -9,34 +9,23 @@
   import { session } from './session.svelte';
   import { createSubmission } from './submission.svelte';
 
-  /**
-   * Starting another household while already in one.
-   *
-   * Two questions, and the second is the reason this is more than the welcome
-   * screen's form: a new kitchen can start out seeing every recipe of one you
-   * already cook in — the flat share that should have the family's recipes, the
-   * test kitchen that should not clutter the real one. It is asked here because
-   * the moment a household is made is the moment somebody knows what it is for.
-   */
+  /** Starting another household while in one; a new kitchen can inherit another's recipes, which is asked here because this is when its purpose is known. */
   interface Props {
     open: boolean;
     onclose: () => void;
-    /** Once it exists and is the household being looked at. */
     oncreated: (householdId: string) => void;
   }
 
   let { open, onclose, oncreated }: Props = $props();
 
   let name = $state('');
-  /** The household to inherit from, or '' for none. */
   let inheritsFrom = $state('');
 
   const submission = createSubmission();
 
   onDestroy(() => submission.dispose());
 
-  // Emptied each time it opens, so a second household never starts with the
-  // first one's name in it.
+  // Emptied on open, so a second household never starts with the first one's name.
   $effect(() => {
     if (open) {
       name = '';
@@ -66,9 +55,7 @@
         return outcome;
       }
 
-      // Read again rather than patched in: the new household arrives with a
-      // role, and with the chain of households it now inherits from, and both
-      // are the server's to say.
+      // Re-read, not patched in: the role and inheritance chain are the server's to say.
       await session.refresh();
       session.selectHousehold(outcome);
       created = outcome;

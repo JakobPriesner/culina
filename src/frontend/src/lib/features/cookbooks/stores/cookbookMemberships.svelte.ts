@@ -14,12 +14,10 @@ export class Memberships {
   // Not $state: read before the first await of effect-called methods, where a tracked read would loop.
   #readFor: string | null = null;
 
-  /** The cookbooks a recipe is on, or an empty list until it has been asked. */
   of(recipeId: string): readonly CookbookMembership[] {
     return this.#byRecipe[recipeId] ?? [];
   }
 
-  /** The recipes on a shelf, or an empty list until it has been asked. */
   membersOf(cookbookId: string): readonly string[] {
     return this.#byShelf[cookbookId] ?? [];
   }
@@ -47,7 +45,6 @@ export class Memberships {
     }
   }
 
-  /** Which recipes are on a shelf, all of them. */
   async loadMembers(cookbookId: string): Promise<void> {
     const result = await request(() =>
       http.GET('/api/v1/cookbooks/{cookbookId}/recipes', { params: { path: { cookbookId } } })

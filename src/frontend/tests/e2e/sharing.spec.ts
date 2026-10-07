@@ -10,11 +10,8 @@ import {
 } from './support/culina';
 
 /**
- * Handing a recipe to somebody without Culina.
- *
- * Opening the share sheet is the decision to share, so the link is on screen
- * without a second tap — and reading it back later is the same link, not a new
- * one that breaks the message it was sent in.
+ * Sharing with somebody without Culina: opening the sheet is the decision to share, and reading the
+ * link back gives the same one.
  */
 test.describe.configure({ mode: 'serial' });
 

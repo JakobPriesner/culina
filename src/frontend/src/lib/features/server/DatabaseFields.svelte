@@ -11,16 +11,7 @@
     type DatabaseFacts
   } from './types';
 
-  /**
-   * How to reach PostgreSQL.
-   *
-   * The password is write-only, like an API key: no response carries it, so
-   * the box starts empty and empty means "keep the one that is set". Rendered
-   * as a box that looks unset, it would read as "no password" — and saving
-   * would look like it had cleared one. Kept only for the same server, though:
-   * once the address, database or user changes, the box says to type it again,
-   * because the server will not send the stored one anywhere new.
-   */
+  /** How to reach PostgreSQL. The password is write-only (no response carries it): the box starts empty and empty keeps the stored one. It is only kept for the same server; changing address, database or user asks again. */
   interface Props {
     draft: DatabaseDraft;
     facts: DatabaseFacts;

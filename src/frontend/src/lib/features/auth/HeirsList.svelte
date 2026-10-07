@@ -8,13 +8,8 @@
   import { heirsOf, removeHeir, type Heir } from './households.svelte';
 
   /**
-   * Who reads this household's recipes from somewhere else.
-   *
-   * Inheriting is set up from the heir's side, by somebody in both kitchens, so
-   * without this the kitchen being read would never find out. Everybody here
-   * is told; an owner can cut a household that inherits directly, which takes
-   * anything inheriting through it along. One further down is its own
-   * parent's to cut, and says which household it reads through.
+   * Who reads this household's recipes from elsewhere. Set up from the heir's side, so everyone here is told;
+   * an owner can cut a direct heir (its own heirs go too), a deeper one says which household it reads through.
    */
   interface Props {
     householdId: string;

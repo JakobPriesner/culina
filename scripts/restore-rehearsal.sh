@@ -1,21 +1,12 @@
 #!/usr/bin/env bash
 #
-# Proves the backup is a backup.
-#
-# Stands up a clean instance, puts real data in it, takes the four backups the
-# runbook names (without the encryption it puts on the secrets, which is the
-# operator's tool and key), destroys everything a failed disk would destroy,
-# restores, and then checks that what came back is what went in — counts, and a
-# photograph that the person who uploaded it can still fetch and a stranger
-# still cannot.
-#
-# An untested backup is a hope. This is the test, written down so it can be run
-# again before a release rather than remembered as having gone well once.
+# Proves the backup is a backup: stands up a clean instance, loads real data, takes the four backups the runbook names (without the secrets
+# encryption, the operator's tool), destroys what a failed disk would, restores, and checks counts and that a photo stays fetchable by its
+# uploader and not by a stranger. Run it before a release.
 #
 #   scripts/restore-rehearsal.sh [image]
 #
-# Leaves nothing behind: its own compose project, its own volumes, torn down at
-# the end whether it passed or failed.
+# Leaves nothing behind: its own compose project and volumes, torn down at the end pass or fail.
 
 set -euo pipefail
 
@@ -26,8 +17,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$(mktemp -d)"
 BASE="http://localhost:${PORT}"
 PASSWORD="a sentence nobody else would pick"
-# What packs and unpacks the volumes, the key ring among them. Pinned to a
-# digest like every other image this repository runs.
+# Packs and unpacks the volumes, key ring included; pinned to a digest like every image here.
 TAR_IMAGE="alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6"
 
 export CULINA_IMAGE="$IMAGE"
@@ -35,13 +25,10 @@ export CULINA_IMAGE="$IMAGE"
 # headers from every container network.
 export CULINA_PORT="127.0.0.1:${PORT}"
 export ForwardedHeaders__KnownNetworks="172.16.0.0/12"
-# A quote and a space, so the rehearsal also proves scripts/db-init.sh takes
-# the password as a value and not as SQL.
+# A quote and a space, so the rehearsal proves scripts/db-init.sh takes the password as a value, not SQL.
 export Database__Password="the rehearsal's password"
 export POSTGRES_SUPERUSER_PASSWORD="rehearsal_superuser_password"
-# Production's cookies, whatever a development .env beside the compose files
-# says: an insecure one would stop the app at boot. curl, like a browser, sends
-# a Secure cookie to localhost.
+# Production's cookies whatever a dev .env says (insecure ones stop the app at boot); curl sends a Secure cookie to localhost like a browser.
 export Cookies__Secure=true
 
 compose() {
@@ -108,11 +95,8 @@ MEMBERS_BEFORE="$(api "${BASE}/api/v1/households/${HOUSEHOLD}/members" | python3
 echo "  ${RECIPES_BEFORE} recipes, ${MEMBERS_BEFORE} member(s), one photograph"
 
 # ── The backup the runbook names ─────────────────────────────────────────────
-# Side by side, unencrypted, only because $WORK is a scratch directory that
-# lives for this run and holds a throwaway instance. A real backup must never
-# do this: the key ring decrypts the secrets in the dump, and culina.json names
-# the database password, so docs/operations.md encrypts those two with a key of
-# their own and keeps them apart from the dump and the photographs.
+# Unencrypted, side by side, only because $WORK is a throwaway scratch dir; a real backup never does this:
+# docs/operations.md encrypts the key ring and culina.json with a key of their own.
 say "Backing up"
 compose exec -T db pg_dump -U postgres --format=custom culina > "$WORK/culina.dump"
 docker run --rm -v "${PROJECT}_culina-images:/data" -v "$WORK:/backup" "$TAR_IMAGE" \
@@ -163,8 +147,7 @@ RECIPES_AFTER="$(api "${BASE}/api/v1/recipes?householdId=${HOUSEHOLD}" | python3
 MEMBERS_AFTER="$(api "${BASE}/api/v1/households/${HOUSEHOLD}/members" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)["items"]))')"
 IMAGE_STATUS="$(api -o /dev/null -w '%{http_code}' "${BASE}/api/v1/recipes/${RECIPE}/image?w=800")"
 STRANGER_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' "${BASE}/api/v1/recipes/${RECIPE}/image?w=800")"
-# /health/ready answers on the setup screen too, so only this says the restored
-# culina.json was read: the database it names is what the app started with.
+# /health/ready also answers on the setup screen; only this proves the restored culina.json was read.
 SETUP_STAGE="$(curl -sS "${BASE}/api/v1/setup" | python3 -c 'import sys,json; print(json.load(sys.stdin)["stage"])')"
 
 failed=0

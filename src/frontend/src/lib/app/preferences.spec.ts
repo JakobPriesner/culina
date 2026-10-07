@@ -4,10 +4,7 @@ import { m } from './i18n';
 import { preferences } from './preferences.svelte';
 import { storageKey } from './appearance';
 
-/*
- * The store's job is to make a choice survive three things that can each fail
- * independently: the paint, the reload, and the network.
- */
+/* A choice must survive three independent failures: the paint, the reload and the network. */
 const stored = () => JSON.parse(localStorage.getItem(storageKey) ?? '{}') as Record<string, string>;
 
 /** The network, stood in for — assertions read this rather than the global. */
@@ -50,7 +47,6 @@ describe('choosing an appearance', () => {
 });
 
 describe('choosing a language', () => {
-  /** What the device says it reads, in order of preference. */
   const deviceReads = (...languages: string[]) =>
     vi.spyOn(navigator, 'languages', 'get').mockReturnValue(languages);
 

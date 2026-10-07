@@ -2,13 +2,7 @@ import { m } from '$shell/i18n';
 
 import type { RecipeSort } from '../stores/libraryView.svelte';
 
-/**
- * The words an order is called by.
- *
- * A lookup rather than a message key built from the value, because a key
- * assembled at runtime is one the message extractor cannot see and the compiler
- * cannot check.
- */
+/** Order names as a lookup: a runtime-built message key is invisible to the extractor and the compiler. */
 export function sortLabel(sort: RecipeSort): string {
   switch (sort) {
     case 'relevance':
@@ -28,16 +22,10 @@ export function sortLabel(sort: RecipeSort): string {
   }
 }
 
-/** "Up to 30 min", or the words for no ceiling at all. */
 export const timeLabel = (minutes: number | null): string =>
   minutes === null ? m['filters.time.any']() : m['filters.time.upTo']({ count: minutes });
 
-/**
- * What a saved search remembers, in one line.
- *
- * Shown before saving and beside each saved search, so that "Quick dinners"
- * never has to be opened to find out what it actually asks for.
- */
+/** A saved search in one line, shown before saving and beside each saved search. */
 export function summarise(criteria: {
   query: string;
   tags: readonly string[];
@@ -45,8 +33,7 @@ export function summarise(criteria: {
   sort: RecipeSort | null;
 }): string {
   const parts = [
-    // The words as typed, unquoted: a quotation mark is punctuation, and
-    // punctuation differs by language the same way words do.
+    // The words as typed, unquoted: quotation marks are language-specific punctuation.
     ...(criteria.query.trim().length > 0 ? [criteria.query.trim()] : []),
     ...criteria.tags,
     ...(criteria.maxMinutes === null ? [] : [timeLabel(criteria.maxMinutes)]),

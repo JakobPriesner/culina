@@ -6,23 +6,8 @@ import SuggestionDeck from './SuggestionDeck.svelte';
 import type { Suggestion } from './types';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The shortlist, walked.
- *
- * Two things are worth pinning here and the rest is the browser's business.
- *
- * The first is that every suggestion is really in the document. The whole
- * reason this is a scroll-snap track and not a deck of cards is that the swipe,
- * the trackpad, the keyboard and the screen reader all get the content for
- * free — but only if the content is there. A component that rendered one panel
- * and swapped it on a gesture would pass every test about buttons and still be
- * unswipeable on a phone and unreadable by a reader.
- *
- * The second is where the position comes from. It is read off the scroll, not
- * remembered from the last press, because four different things move this track
- * and only one of them is a button. A remembered index passes a test that
- * clicks Next and lies the moment a thumb is used instead.
- */
+/* Pins two things: every suggestion is really in the document (a scroll-snap track, so swipe, keyboard and readers get the content free),
+ * and the position is read off the scroll rather than remembered from a button press. */
 const suggestion = (id: string, title: string): Suggestion => ({
   id,
   title,
@@ -45,13 +30,7 @@ const shortlist = [
   suggestion('r3', 'Ratatouille')
 ];
 
-/**
- * A track with a width, which jsdom does not lay out.
- *
- * `scrollTo` is stubbed to move `scrollLeft` and fire the scroll the browser
- * would fire, which is exactly the path a finger takes: the component never
- * learns where it is from the thing that asked it to move.
- */
+/** A track with a width (jsdom lays nothing out); `scrollTo` moves `scrollLeft` and fires scroll as a finger would. */
 function layOut(width = 800) {
   const track = document.querySelector('ul');
 
@@ -93,9 +72,7 @@ describe('walking the shortlist', () => {
     renderWithProviders(SuggestionDeck, { props: { items: shortlist } });
     const track = layOut();
 
-    // A thumb, rather than the control. Nothing pressed anything, and the deck
-    // still knows where it is — which is the only version of this that works on
-    // the device the feature was asked for.
+    // A thumb rather than the control: the deck must still know where it is.
     track.scrollLeft = 1600;
     track.dispatchEvent(new Event('scroll'));
     await Promise.resolve();
@@ -104,11 +81,7 @@ describe('walking the shortlist', () => {
   });
 
   it('writes nothing down when it moves', async () => {
-    // The load-bearing one. Moving on is not feedback: the ranking has no
-    // non-click signal on purpose, because with two to eight people a recipe
-    // somebody scrolled past means nothing. A gesture that quietly meant "never
-    // again" would invent the one signal the backend refused to, and would
-    // collide with the Dismiss control two centimetres away.
+    // Moving on is not feedback: the ranking deliberately has no non-click signal, and a swipe meaning "never again" would collide with Dismiss.
     const ondismiss = vi.fn();
     const fetched = vi.fn();
 
@@ -150,9 +123,7 @@ describe('walking the shortlist', () => {
   });
 
   it('does not print the same reason on two panels in a row', () => {
-    // A library with a lot of cook-log history can honestly answer "one you
-    // keep coming back to" five times over. Walked one panel at a time, that is
-    // one fact and four copies of it, so the copies wear the fixed line.
+    // Five identical "keep coming back to" reasons are one fact, so the copies wear the fixed line.
     const favourites = shortlist.map((one) => ({
       ...one,
       reason: { code: 'affinity' as const, subject: null }
@@ -168,9 +139,7 @@ describe('walking the shortlist', () => {
   });
 
   it('is the page it always was when there is only one answer', () => {
-    // A kitchen with one suggestion, or with none and the old photograph in its
-    // place, gets no controls and nothing that scrolls. The new thing has to
-    // degrade into the old thing exactly, or it is a second design.
+    // One suggestion, or none with the old photograph, gets no controls and nothing that scrolls.
     renderWithProviders(SuggestionDeck, { props: { items: [shortlist[0]] } });
 
     expect(screen.queryByRole('button', { name: 'Next suggestion' })).not.toBeInTheDocument();

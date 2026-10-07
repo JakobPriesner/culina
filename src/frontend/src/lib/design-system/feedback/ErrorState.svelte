@@ -2,15 +2,8 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * Something failed, said in plain language.
-   *
-   * The page frame stays: replacing a whole screen with an error throws away
-   * the person's sense of where they are, and there is usually nothing wrong
-   * with the navigation they were using.
-   *
-   * The request id is shown in small print because it is the only thing that
-   * connects "it did not work" to a line in a log. Nobody reads it until it
-   * matters, and then it is the whole conversation.
+   * Something failed, in plain language, inside the page frame (replacing the screen loses the person's
+   * place). The request id is small print: the only thing connecting "it did not work" to a log line.
    */
   interface Props {
     title: string;
@@ -23,14 +16,7 @@
     /** Labelled, so the id is not a bare string nobody can interpret. */
     requestIdLabel?: string;
     requestId?: string | null;
-    /**
-     * Which heading this title is.
-     *
-     * Two of these replace the whole screen rather than sitting inside a page —
-     * the session-unreachable gate and the root error boundary — and there is
-     * no other heading on the document when they do. A page with no level-one
-     * heading is a page a screen reader cannot summarise, so those two say so.
-     */
+    /** Heading level; the session gate and root error boundary replace the whole screen and need a level-one heading. */
     level?: 1 | 2;
   }
 

@@ -16,17 +16,12 @@
 
   let { children }: Props = $props();
 
-  /**
-   * The session could not be read, which the guard deliberately does not treat
-   * as being signed out. Nothing behind here can render without it, so this is
-   * the one screen that replaces the whole shell rather than sitting inside it.
-   */
+  /** The session could not be read, which the guard does not treat as signed out; nothing renders without it, so this replaces the whole shell. */
   const unreachable = $derived(session.status === 'unavailable');
 
   let retrying = $state(false);
 
-  // Asked once, on boot: the answer drives the bar that leads back to whatever
-  // is on the hob, and it is needed on every page rather than one.
+  // Asked once on boot: the bar leading back to what is on the hob is needed on every page.
   onMount(() => {
     if (!unreachable) {
       void cooking.resume();

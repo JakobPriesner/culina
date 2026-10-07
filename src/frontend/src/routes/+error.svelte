@@ -12,17 +12,9 @@
   import ThemeToggle from '$shell/ThemeToggle.svelte';
 
   /**
-   * What the router shows when a route cannot: an address the app has no page
-   * for, or a load that threw.
-   *
-   * Inside the shell for somebody who is signed in, so a mistyped link costs
-   * them nothing but a tap on the navigation they already know. Anybody else
-   * gets the brand and a way to sign in — nothing about what is behind it.
-   *
-   * No route above this asked who is signed in (an unknown address matches no
-   * group, so no guard ran), hence the session is resolved here, and nothing
-   * is drawn until it is: a frame that swaps to the shell a moment later is
-   * worse than a blank one.
+   * What the router shows when a route cannot: inside the shell when signed in, else brand and sign-in.
+   * No guard ran for an unknown address, so the session is resolved here and nothing is drawn until it is
+   * (a late swap to the shell is worse than a blank frame).
    */
   const resolved = session.resolve();
 
@@ -31,8 +23,7 @@
 </script>
 
 <svelte:head>
-  <!-- The server answers every address with the app and a 200, so this is the
-       only place a crawler can learn there is nothing here. -->
+  <!-- The server answers every address with a 200, so this is the only place a crawler learns there is nothing here. -->
   <meta name="robots" content="noindex" />
   <title>{missing ? m['notFound.tab']() : m['error.unexpected.title']()}</title>
 </svelte:head>

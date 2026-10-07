@@ -6,11 +6,7 @@ import ServerPage from './+page.svelte';
 import { server } from '$features/server/stores/server.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The page, because what matters is what an administrator can and cannot do
- * from it: see what the deployment has fixed, and save a change knowing the
- * server restarts to apply it.
- */
+/* The page: what an administrator can see the deployment has fixed, and saving a change knowing the server restarts. */
 const serverSettings = {
   cookies: { secure: true, sessionDays: 30, renewAfterHours: 24, maxSessionDays: 90 },
   forwardedHeaders: { knownProxies: [], knownNetworks: [] },

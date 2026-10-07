@@ -1,17 +1,10 @@
 import { defaultTheme, isKnownTheme } from '$ds/themes';
 
-/**
- * What "how the app looks" means, and how it is stored.
- *
- * Kept separate from the store so the same rules can be read by a test and by
- * the inline boot script's reference implementation, without dragging in
- * anything that needs a browser.
- */
+/** What "how the app looks" means and how it is stored; browser-free so tests and the inline boot script's reference can read it. */
 
 /** What a person chose. `system` is a choice, not the absence of one. */
 export type Mode = 'light' | 'dark' | 'system';
 
-/** What the document is actually painted in. */
 export type ResolvedMode = 'light' | 'dark';
 
 export interface Appearance {
@@ -28,12 +21,7 @@ const modes: readonly Mode[] = ['light', 'dark', 'system'];
 
 const isMode = (value: unknown): value is Mode => modes.includes(value as Mode);
 
-/**
- * Reads a stored value without trusting it.
- *
- * The store is editable by hand and survives a release that removed a theme, so
- * an unknown value falls back rather than rendering an unthemed page.
- */
+/** Reads a stored value without trusting it: hand edits and removed themes fall back rather than render unthemed. */
 export function parseAppearance(raw: string | null): Appearance {
   if (!raw) {
     return defaultAppearance;
@@ -57,7 +45,6 @@ export function parseAppearance(raw: string | null): Appearance {
   }
 }
 
-/** The next value of a toggle that cycles light → dark → follow the device. */
 export function nextMode(mode: Mode): Mode {
   return modes[(modes.indexOf(mode) + 1) % modes.length]!;
 }

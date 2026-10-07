@@ -7,16 +7,8 @@
   import type { CookbookRules } from './types';
 
   /**
-   * What a shelf that fills itself asks for.
-   *
-   * Three questions, all of which must hold. There is no "any of these" and no
-   * nesting: the shelves worth having are the narrow ones, and a rule builder
-   * with brackets in it is a query language somebody has to learn.
-   *
-   * Tags are picked rather than typed, because a rule naming a slug nobody uses
-   * would quietly match nothing and look broken. Ingredients are typed, because
-   * there is no ingredient table to pick from — an ingredient is whatever
-   * somebody wrote in a recipe.
+   * What a self-filling shelf asks for: three conditions that all must hold, no "any of" or nesting (that is a query language).
+   * Tags are picked, since a typed slug nobody uses would match nothing; ingredients are typed, as there is no ingredient table.
    */
   interface Props {
     householdId: string;
@@ -44,8 +36,7 @@
   function addIngredient() {
     const name = typedIngredient.trim();
 
-    // Already asked for is not a second condition, and adding it twice would
-    // make the shelf look like it wants two of something.
+    // Already asked for is not a second condition.
     if (
       name.length === 0 ||
       rules.ingredients.some((one) => one.toLowerCase() === name.toLowerCase())
@@ -163,8 +154,7 @@
     min-width: 0;
   }
 
-  /* The button keeps its label. Without this the text input takes the row and
-     squeezes "Add" onto two lines of one letter each. */
+  /* The button keeps its label; otherwise the text input takes the row and squeezes "Add" onto two lines. */
   .entry :global(> :last-child) {
     flex: 0 0 auto;
   }

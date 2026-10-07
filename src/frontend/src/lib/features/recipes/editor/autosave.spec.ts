@@ -4,10 +4,7 @@ import { clientError, ErrorCodes } from '$api';
 
 import { createAutosave } from './autosave.svelte';
 
-/*
- * There is no Save button, so these are the guarantees that replace one: work
- * is not lost, and two saves cannot overtake each other.
- */
+/* No Save button, so these guarantees replace one: work is not lost and saves cannot overtake each other. */
 const offline = clientError(ErrorCodes.offline, 'No connection.');
 
 beforeEach(() => vi.useFakeTimers());
@@ -57,7 +54,6 @@ describe('a change made while a save is running', () => {
     autosave.touch();
     await vi.advanceTimersByTimeAsync(1000);
 
-    // Typing continues while the first save is still in the air.
     autosave.touch();
     await vi.advanceTimersByTimeAsync(1000);
 
@@ -66,8 +62,7 @@ describe('a change made while a save is running', () => {
     resolve(null);
     await vi.advanceTimersByTimeAsync(0);
 
-    // The second save runs after the first, never alongside it, so the version
-    // it sends is the one the first produced.
+    // The second save runs after the first, so it sends the version the first produced.
     expect(save).toHaveBeenCalledTimes(2);
   });
 });

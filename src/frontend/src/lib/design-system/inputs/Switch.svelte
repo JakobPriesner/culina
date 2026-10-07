@@ -1,15 +1,8 @@
 <script lang="ts">
-  /**
-   * A setting that takes effect immediately.
-   *
-   * A switch, not a checkbox, because there is no Save: flipping it *is* the
-   * action. A checkbox that applied itself would be a lie about what happens
-   * next.
-   */
+  /** A setting that takes effect immediately: a switch, not a checkbox, as there is no Save. */
   interface Props {
     checked: boolean;
     label: string;
-    /** One line under the label, for what the setting actually does. */
     description?: string;
     disabled?: boolean;
     onchange?: (checked: boolean) => void;
@@ -24,10 +17,8 @@
 
 <div class="row" class:disabled>
   <span class="text">
-    <!--
-      Not a <label for>: only form controls are labelable, and a role="switch"
-      button is not one, so the association has to be made explicitly.
-    -->
+    <!-- Not a <label for>: a role="switch" button is not labelable, so the association is explicit.
+         -->
     <span class="label" id={labelId}>{label}</span>
     {#if description}
       <span class="description" id={descriptionId}>{description}</span>
@@ -110,8 +101,7 @@
     height: var(--space-6);
     border-radius: var(--radius-full);
     background: var(--surface-raised);
-    /* The knob slides rather than jumping, because the movement is what says
-       which side is on. */
+    /* The knob slides because the movement says which side is on. */
     transition: transform var(--duration-base) var(--ease-spatial);
   }
 

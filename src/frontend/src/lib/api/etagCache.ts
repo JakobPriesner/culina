@@ -2,14 +2,11 @@
 interface CachedResponse {
   readonly etag: string;
   readonly body: string;
-  /** Parsed once when remembered, so `invalidate` does not parse every key. */
   readonly path: string;
 }
 
-/** Enough for the pages in one sitting; the oldest-read entry goes first. */
 const capacity = 100;
 
-/** Insertion order is read order: a hit moves its entry to the end. */
 const entries = new Map<string, CachedResponse>();
 
 export function remember(url: string, etag: string, body: string): void {

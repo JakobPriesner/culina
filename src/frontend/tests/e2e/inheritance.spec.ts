@@ -11,11 +11,7 @@ import {
   writeHeaders
 } from './support/culina';
 
-/**
- * A second household that inherits the first one's recipes: made from the
- * header, switched to at once, and showing those recipes as readable and not
- * changeable.
- */
+/** A second household inheriting the first's recipes: made from the header, switched to at once, showing them readable but not changeable. */
 test.describe('a household that inherits another', () => {
   test.skip(needsBackend, skipReason);
 
@@ -25,8 +21,7 @@ test.describe('a household that inherits another', () => {
   }, testInfo) => {
     await signInWithHousehold(page, await accountFor(browser, testInfo));
 
-    // Households this spec made on an earlier run that did not get to tidy
-    // up, so the account is back to the one kitchen the recipe is seeded in.
+    // Households a previous run left untidied, so the account is back to the one seeded kitchen.
     await removeFlats(page);
 
     const title = unique('Inherited');
@@ -52,14 +47,12 @@ test.describe('a household that inherits another', () => {
         .getByRole('button', { name: /^(create a household|haushalt erstellen)$/i })
         .click();
 
-      // Made, and switched to: the header names it.
       await expect(
         page.getByRole('button', {
           name: new RegExp(`^${flat}, (switch household|haushalt wechseln)`, 'i')
         })
       ).toBeVisible();
 
-      // The kitchen's recipe is in the new household's library, and says whose.
       await page.getByRole('searchbox').first().fill(title);
       const card = page
         .getByRole('listitem')
@@ -71,7 +64,6 @@ test.describe('a household that inherits another', () => {
 
       await expect(page.getByText(/can change it|ändern kann es aber nur/i)).toBeVisible();
 
-      // Planning is still there; changing is not.
       await page.getByRole('button', { name: /^(more actions|weitere aktionen)$/i }).click();
       await expect(page.getByRole('button', { name: /^(add to plan|einplanen)$/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /^(edit|bearbeiten)$/i })).toHaveCount(0);
@@ -81,7 +73,6 @@ test.describe('a household that inherits another', () => {
       await expect(page.getByRole('button', { name: /^(share|teilen)$/i })).toHaveCount(0);
       await page.keyboard.press('Escape');
 
-      // A copy is the flat's own, and opens where it can be changed.
       await page
         .getByRole('complementary')
         .getByRole('button', { name: /^(make my own copy|eigene kopie anlegen)$/i })
@@ -89,7 +80,6 @@ test.describe('a household that inherits another', () => {
       await expect(page).toHaveURL(/\/recipes\/[^/]+\/edit$/);
       await expect(page.getByRole('textbox', { name: /^(title|titel)/i })).toHaveValue(title);
 
-      // And the kitchen being read is told who reads it.
       await page.getByRole('button', { name: /switch household|haushalt wechseln/i }).click();
       await page.getByRole('button', { name: kitchen, exact: true }).click();
       await page.goto('/me/household');

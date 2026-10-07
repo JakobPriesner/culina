@@ -3,12 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { parseRecipeText } from './parseRecipeText';
 
 /*
- * Recipes as people actually paste them.
- *
- * The parse is only worth having because it is shown back in parts and can be
- * corrected, so these are not about perfection — they are about the readings
- * that would be actively misleading if they were wrong, and about never losing
- * a line to a heuristic.
+ * Recipes as people paste them: readings that would mislead if wrong, and never losing a line to a
+ * heuristic.
  */
 
 const names = (text: string) => parseRecipeText(text).ingredients.map((one) => one.name);
@@ -38,8 +34,6 @@ Zubereitung
       { quantity: { value: 200, unit: 'g' }, name: 'Orzo', note: null },
       { quantity: { value: 2, unit: null }, name: 'Zucchini', note: 'in Scheiben' },
       { quantity: { value: 2, unit: 'tbsp' }, name: 'Olivenöl', note: null },
-      // A bare word under "Zutaten" is an ingredient with no amount, which the
-      // shape of the line alone could never tell you.
       { quantity: { value: null, unit: null }, name: 'Salz', note: null }
     ]);
   });
@@ -116,8 +110,7 @@ describe('the readings that would be misleading if they were wrong', () => {
   });
 
   it('takes no title from something that is plainly an ingredient', () => {
-    // Somebody pasting only a list has not given it a name, and inventing one
-    // out of their first ingredient would be worse than leaving it blank.
+    // A list pasted alone has no name; inventing one from the first ingredient would be worse.
     expect(parseRecipeText('200 g Mehl\n1 Ei').title).toBe('');
   });
 
@@ -136,8 +129,8 @@ describe('what it refuses to invent', () => {
   });
 
   it('does not turn a stray word into a step', () => {
-    // A copied page brings "Foto", "Drucken", "4 Portionen" with it. A step
-    // called "Drucken" is worse than a step missing.
+    // A copied page brings "Foto", "Drucken", "4 Portionen"; a step called "Drucken" is worse than
+    // a missing one.
     const read = parseRecipeText('Kuchen\nZubereitung\nFoto\nRühre alles gut durch.');
 
     expect(read.steps).toEqual(['Rühre alles gut durch']);

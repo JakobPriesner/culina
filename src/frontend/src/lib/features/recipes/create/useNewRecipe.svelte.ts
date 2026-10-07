@@ -52,7 +52,6 @@ export function useNewRecipe(page: Page) {
     await goto(resolve('/(app)/recipes/[recipeId]/edit', { recipeId }));
   }
 
-  /** A title, and perhaps a pasted block of recipe text. */
   async function start(named: string, pasted: ParsedRecipe | null) {
     const householdId = session.activeHouseholdId;
 

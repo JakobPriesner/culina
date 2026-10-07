@@ -1,14 +1,8 @@
 import { expect, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 
-/**
- * What every flow needs before it can be about anything.
- *
- * Each spec seeds its own data through the API rather than through the screens
- * it is testing: a create test that fails should say the create screen is
- * broken, not that eleven other tests are.
- */
+/** Shared e2e helpers: specs seed their data through the API, not the screens under test. */
 
-/** The account the suite signs in as. An administrator, so it can open registration. */
+/** The account the suite signs in as; an administrator, so it can open registration. */
 export const credentials = {
   email: process.env['CULINA_E2E_EMAIL'],
   password: process.env['CULINA_E2E_PASSWORD']
@@ -16,61 +10,34 @@ export const credentials = {
 
 export const needsBackend = !credentials.email || !credentials.password;
 
-/** Where the built app is served. Playwright's baseURL, for request contexts. */
 const origin = 'http://localhost:4173';
 
 export const skipReason =
   'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD to an administrator account, with a backend running.';
 
-/**
- * A name no other run, project or worker can be holding.
- *
- * These suites share one instance and one household. A test that asserts on
- * "Butter" is asserting on whatever the browser next to it is doing.
- */
+/** A name unique per run, project and worker; the suites share one instance and household. */
 export const unique = (word: string): string =>
   `${word} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /**
- * The name of a library card's link, in either language.
- *
- * The startpage lists every recipe, the ones it features above the list
- * included, so a title can be on the page twice. Only the card's link is
- * called "Open {title}".
+ * The name of a library card's link, in either language; the title can appear on the page twice.
  */
 export const opens = (title: string): RegExp => new RegExp(`^(Open ${title}|${title} öffnen)$`);
 
 /**
- * An account of this suite's own, made once and reused after that.
- *
- * Some state belongs to a person and cannot be shared: only one recipe can be
- * being cooked at a time, so two browsers driving one account are two browsers
- * fighting over the same cook session. A flow that needs to own that state asks
- * for an account named after itself.
- *
- * Reused rather than made fresh each run because registration is rate limited
- * per address — as it should be — and a suite that burns five registrations an
- * hour would lock itself out. Remembered within a worker for the same reason:
- * signing in is rate limited per account, and checking whether an account
- * exists costs a sign-in.
- *
- * The instance was told to accept new accounts once, in globalSetup.
+ * An account of this suite's own, made once and reused: registration and sign-in are rate limited,
+ * and
+ * only one recipe can be cooked per account at a time.
  */
 const known = new Map<string, { email: string; password: string }>();
 
 /**
- * The account this spec file owns, on this viewport.
- *
- * One per flow rather than one for the suite, and it is not tidiness: signing
- * in is rate limited per account, so every spec sharing one account is every
- * spec queueing behind the same limit. Separate accounts also mean separate
- * households, so two flows cannot see each other's recipes or each other's
- * shopping list.
+ * The account this spec file owns, on this viewport; one per flow so sign-in rate limits and
+ * households stay separate.
  */
 export function accountFor(browser: Browser, test: { file: string; project: { name: string } }) {
-  // Named for the file, not the test: one account per flow. `title` inside a
-  // `beforeAll` is the hook's, which would make an account per test and a
-  // registration per test with it.
+  // Named for the file, not the test: `title` inside a `beforeAll` is the hook's, which would make
+  // one account per test.
   const spec = test.file
     .split(/[/\\]/)
     .pop()!
@@ -109,9 +76,8 @@ export async function ensureAccount(
       data: { email: who.email, displayName: name, password: who.password }
     });
 
-    // `known` is per worker, so on a fresh stack two workers can both miss the
-    // sign-in and both create the account. The one that loses gets a 409 for an
-    // account that now exists with exactly these credentials.
+    // `known` is per worker, so two workers can both create the account; the loser gets a 409 for
+    // credentials that now exist.
     const madeElsewhere = created.status() === 409;
 
     expect(created.ok() || madeElsewhere, await created.text()).toBe(true);
@@ -129,8 +95,7 @@ export async function signIn(page: Page, who = credentials): Promise<void> {
   await page.getByRole('textbox', { name: /password|passwort/i }).fill(who.password!);
   await page.getByRole('button', { name: /(^|\s)(sign (me )?in|anmelden)$/i }).click();
 
-  // A fresh account has no household yet, and the app says so rather than
-  // pretending. Either landing place is a successful sign-in.
+  // A fresh account has no household yet; either landing place is a successful sign-in.
   await expect(page).toHaveURL(/\/(welcome)?$/);
 }
 
@@ -146,10 +111,8 @@ export async function signInWithHousehold(page: Page, who = credentials): Promis
 }
 
 /**
- * The headers an unsafe request needs, borrowed from the browser's own session.
- *
- * `page.request` shares the page's cookie jar, which the test runner's
- * top-level `request` fixture does not.
+ * The headers an unsafe request needs, borrowed from the page's session (`page.request` shares its
+ * cookie jar).
  */
 export async function writeHeaders(page: Page): Promise<Record<string, string>> {
   const cookies = await page.context().cookies();
@@ -168,13 +131,7 @@ export async function householdId(api: APIRequestContext): Promise<string> {
   return (await me.json()).households[0].householdId;
 }
 
-/**
- * Makes a cookbook and puts a recipe on it, returning its id.
- *
- * Two calls because they are two things — a shelf exists before anything is on
- * it, and that is the state a household is in for the minute after they make
- * one.
- */
+/** Makes a cookbook and puts a recipe on it, returning its id. */
 export async function seedCookbook(page: Page, name: string, recipeId?: string): Promise<string> {
   const headers = await writeHeaders(page);
   const household = await householdId(page.request);
@@ -209,19 +166,13 @@ export interface SeedRecipe {
   readonly title: string;
   readonly yieldAmount?: number;
   readonly ingredients?: readonly SeedIngredient[];
-  /** Step text. `{0}` in it is replaced by a reference to ingredient 0. */
   readonly steps?: readonly string[];
-  /** Tags as somebody would type them; the server slugs them. */
   readonly tags?: readonly string[];
 }
 
 /**
- * Writes a whole recipe in one call and returns its id.
- *
- * Steps carry references to ingredients rather than repeating their amounts —
- * that is the whole reason scaling a recipe cannot make the list and the steps
- * disagree — so a step written as "Melt {0}" becomes a text segment and an
- * ingredient segment.
+ * Writes a whole recipe in one call and returns its id; steps reference ingredients, so "Melt {0}"
+ * becomes text plus an ingredient segment.
  */
 export async function seedRecipe(page: Page, recipe: SeedRecipe): Promise<string> {
   const headers = await writeHeaders(page);
@@ -257,11 +208,8 @@ export async function seedRecipe(page: Page, recipe: SeedRecipe): Promise<string
     return recipeId;
   }
 
-  // A second write, because a step can only reference an ingredient that
-  // already has an id — which it gets from the first one. The stored
-  // ingredients go back as they came, ids included: sending them without would
-  // read as "these are new and the old ones are gone", and the server rightly
-  // refuses to remove an ingredient a step still mentions.
+  // A second write: a step can only reference an ingredient that has an id. Stored ingredients are
+  // sent back with ids, or the server refuses to remove one a step mentions.
   const withIds = await page.request.get(`/api/v1/recipes/${recipeId}`);
   const stored = await withIds.json();
   const kept = stored.groups[0].ingredients as { ingredientId: string }[];
@@ -290,7 +238,6 @@ export async function seedRecipe(page: Page, recipe: SeedRecipe): Promise<string
   return recipeId;
 }
 
-/** Turns "Melt {0} in a pan" into text and ingredient segments. */
 function toSegments(text: string, ingredientIds: readonly string[]) {
   return text
     .split(/(\{\d+\})/)

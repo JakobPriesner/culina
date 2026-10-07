@@ -45,13 +45,8 @@ describe('a cookbook on the shelf', () => {
       }
     });
 
-    // Decoration beside a title that already names the thing: every tile is
-    // presentational, so a screen reader reads the cookbook's name once rather
-    // than the name and two empty images.
     expect(screen.getAllByRole('presentation', { hidden: true })).toHaveLength(2);
 
-    // And nothing of it reaches a screen reader, which reads the cookbook's
-    // name once rather than the name and two empty pictures.
     expect(screen.queryAllByRole('presentation')).toHaveLength(0);
   });
 
@@ -81,8 +76,6 @@ describe('a cookbook on the shelf', () => {
       }
     });
 
-    // A word rather than a gear: there is no icon vocabulary here that somebody
-    // would already know, and a symbol nobody can read is a decoration.
     expect(screen.getByText('Automatic')).toBeInTheDocument();
   });
 

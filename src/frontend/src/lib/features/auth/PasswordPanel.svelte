@@ -12,15 +12,7 @@
   import { session } from './session.svelte';
   import { createSubmission } from './submission.svelte';
 
-  /**
-   * A new password, for somebody who still knows the old one.
-   *
-   * The old one is asked for even though they are signed in: a session left
-   * open on somebody else's laptop must not be enough to lock the owner out.
-   * Every other device is signed out afterwards — which is usually the reason
-   * for changing it — and this one stays, so nobody has to sign in again to
-   * see that it worked.
-   */
+  /** A new password for somebody who still knows the old one, asked for even when signed in so a session left open on another laptop cannot lock the owner out. Other devices are signed out afterwards; this one stays. */
   let currentPassword = $state('');
   let newPassword = $state('');
 

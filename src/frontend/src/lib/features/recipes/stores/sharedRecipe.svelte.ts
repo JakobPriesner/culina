@@ -4,25 +4,10 @@ import { toSharedRecipe } from '../mappers';
 import type { RecipeReading } from '../types';
 import { type LoadStatus } from '$shell/stores';
 
-/**
- * The one recipe a visitor was sent a link to.
- *
- * Its own store rather than a second mode of the recipe store, which holds a
- * household's library and is emptied when anyone signs out. Nobody signs out of
- * this page: whoever is reading it has no account, and a store registered for
- * that clear-down would be answering a question that is never asked here.
- */
+/** The one recipe a visitor was sent a link to; its own store because the library store is cleared on sign-out and nobody signs out of this page. */
 class SharedRecipe {
-  /**
-   * Which token was last asked for.
-   *
-   * A plain field and emphatically not `$state`. The page starts this load from
-   * an effect, and anything the store *reads* before its first `await` becomes
-   * a dependency of that effect — so a store that checked its own status here
-   * would be woken by the write it is about to make, and ask again, forever.
-   * Reading it back after the await is safe: that is no longer inside the
-   * effect.
-   */
+  /** Last token asked for. Plain, not `$state`: the page calls this from an effect, and anything read before the first `await` becomes
+   * a dependency, so the store's own write would re-trigger it forever. */
   #requested: string | null = null;
 
   #recipe = $state<RecipeReading | null>(null);

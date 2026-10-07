@@ -4,13 +4,7 @@
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
-  /**
-   * The question before a household goes in the bin.
-   *
-   * It says who else is affected, because that is the part an owner deleting
-   * "their" kitchen forgets: everyone in it is shut out the moment it goes.
-   * The ordinary answer comes first, as everywhere else a delete is asked.
-   */
+  /** The question before a household is deleted; it names who else is affected (everyone is shut out), ordinary answer first. */
   interface Props {
     open: boolean;
     name: string;

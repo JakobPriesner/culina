@@ -8,11 +8,6 @@
 @import './lib/design-system/inputs/control.css';
 @import './lib/design-system/display/clipped.css';
 
-/*
- * Base element styles. Everything else is a component; there is no utility
- * layer and no global class vocabulary to learn.
- */
-
 *,
 *::before,
 *::after {
@@ -20,8 +15,7 @@
 }
 
 html {
-  /* The viewer's chrome — scrollbars, form controls, the caret — follows the
-     chosen mode rather than the operating system's. */
+  /* Chrome (scrollbars, controls, caret) follows the chosen mode, not the OS. */
   color-scheme: light;
   -webkit-tap-highlight-color: transparent;
   /* Keep the reading column and chrome fixed across page and overlay changes. */
@@ -50,13 +44,7 @@ body {
   overflow-wrap: anywhere;
 }
 
-/*
- * Native touch ergonomics on mobile.
- *
- * Removes the 300ms double-tap zoom delay on interactive controls and avoids
- * accidental text selection on chrome elements (buttons, navigation) when
- * tapping with wet or floury fingers.
- */
+/* Touch ergonomics: no double-tap delay, no accidental selection on chrome. */
 button,
 a,
 input,
@@ -112,9 +100,7 @@ img {
   display: block;
 }
 
-/* One focus treatment for the whole app, so focus is never invisible and never
-   surprising. :focus-visible rather than :focus, so a mouse click does not
-   leave a ring behind. */
+/* One focus ring app-wide; :focus-visible so a mouse click leaves none. */
 :focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
@@ -122,22 +108,9 @@ img {
 }
 
 /*
- * One scrollbar for the whole app, in the app's own colours.
- *
- * The platform default is a grey rail with a blue-grey thumb, which on a cream
- * surface is the loudest thing on the page and belongs to some other
- * application. `color-scheme` above only picks light or dark; it cannot make
- * the bar warm.
- *
- * Two branches, because no engine implements both: `scrollbar-width` and
- * `scrollbar-color` are the standard (Firefox, Chrome 121+), and
- * `::-webkit-scrollbar` covers Safari and older Chrome. Where both are
- * understood the standard properties win, so the pair never doubles up.
- *
- * The universal selector is deliberate: a scroll container can appear anywhere,
- * and a bar that is themed in most places and raw in one is worse than one
- * that is raw everywhere. The two rows that hide their bar on purpose set
- * `scrollbar-width: none` on a class, which outranks this.
+ * One app-coloured scrollbar. The standard properties (Firefox, Chrome 121+) win where
+ * supported; `::-webkit-scrollbar` covers Safari and older Chrome. Universal on purpose;
+ * the two rows that hide theirs set `scrollbar-width: none` on a class, which outranks this.
  */
 * {
   scrollbar-width: thin;
@@ -154,8 +127,7 @@ img {
   background: transparent;
 }
 
-/* Drawn through a transparent border so the thumb is a floating lozenge with
-   air around it rather than a bar wedged against the content. */
+/* Transparent border makes the thumb a floating lozenge. */
 *::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: var(--radius-full);
@@ -168,8 +140,7 @@ img {
   background-clip: padding-box;
 }
 
-/* Screen content dissolves while the header, navigation and cooking dock
-   remain steady. No delayed entrance or blank interval between snapshots. */
+/* Content dissolves; header, navigation and cooking dock stay steady. */
 @keyframes vt-fade-in {
   from {
     opacity: 0;
@@ -218,8 +189,7 @@ img {
   mix-blend-mode: normal;
 }
 
-/* Anyone who asks for less motion gets none, rather than a slower version of
-   the same thing. */
+/* Reduced motion gets none, not a slower version. */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
@@ -232,26 +202,14 @@ img {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    /* `none`, not a tiny duration. A duration alone leaves every element's
-       `transition-property` at its initial `all`, so everything — insets,
-       `top`, sizes — transitioned, and anything measuring the page read where
-       it had been rather than where it was going. */
+    /* `none`, not a tiny duration: otherwise `transition-property` stays `all` and anything
+       measuring the page reads stale positions. */
     transition: none !important;
     scroll-behavior: auto !important;
   }
 }
 
-/*
- * Print.
- *
- * A recipe on paper is the oldest way to use one, and it is the thing almost
- * every recipe app gets wrong: four pages, a navigation bar, an advertisement,
- * and the amounts from before you scaled it.
- *
- * What comes out here is one page of black on white — the title, what it makes
- * at the servings on screen, the ingredients and the steps. Everything else is
- * the app, and the app is not the recipe.
- */
+/* Print: one page of black on white: title, servings on screen, ingredients, steps. */
 @media print {
   html,
   body {
@@ -259,8 +217,6 @@ img {
     color: var(--text);
   }
 
-  /* Serif, and a size meant for paper rather than for a screen at arm's
-     length. Points, not pixels: a printer knows what a point is. */
   body {
     font-family: var(--font-editorial), Georgia, serif;
     font-size: 11pt;
@@ -268,14 +224,8 @@ img {
   }
 
   /*
-   * Things that are never content: a field to fill in, a dialog that is not
-   * open, a live region announcing something that already happened.
-   *
-   * Deliberately *not* every button. A step's ingredient reference is a button
-   * so that pointing at it lights up the ingredient list, and hiding every
-   * button took the amounts out of the printed steps — which is the one thing
-   * this app exists to put in them. Chrome is hidden by the component that owns
-   * it, where it is obvious what is being hidden and why.
+   * Never content. Not every button: step ingredient references are buttons and hiding them
+   * dropped the amounts from printed steps; components hide their own chrome.
    */
   input,
   select,
@@ -293,8 +243,7 @@ img {
     text-decoration: none;
   }
 
-  /* A heading alone at the foot of a page, or a step split across two, is the
-     one thing that makes a printed recipe hard to cook from. */
+  /* Avoid a heading stranded at a page foot or a step split across pages. */
   h1,
   h2,
   h3 {
@@ -312,7 +261,7 @@ img {
   margin: 18mm 16mm;
 }
 
-/* Shared selection decoration: the control's labels remain stationary. */
+/* Shared sliding indicator behind a control's labels. */
 .selection-indicator {
   position: absolute;
   z-index: 0;

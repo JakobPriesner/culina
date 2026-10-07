@@ -8,16 +8,8 @@
   import ThemeToggle from '$shell/ThemeToggle.svelte';
 
   /**
-   * The shell for pages that work without an account.
-   *
-   * Neither of the other two fits. `(app)` guards on a session and would send
-   * a visitor to the sign-in page; `(auth)` is built around the story panel and
-   * a form the width of a phone, which is not a recipe.
-   *
-   * What is here is what a stranger needs and nothing else: who is showing them
-   * this, a way to read it in their own language and their own brightness, and
-   * one honest line at the bottom saying where they are. No navigation — there
-   * is nowhere else they may go.
+   * The shell for pages that work without an account: who is showing this, language and brightness,
+   * one line saying where they are, no navigation.
    */
   interface Props {
     children: Snippet;
@@ -73,8 +65,10 @@
     min-width: 0;
   }
 
-  /* The one place the visitor is told what Culina is, and it is a line rather
-     than a banner: they came for a recipe, and the recipe is the page. */
+  /*
+   * The one place a visitor is told what Culina is; a line, not a banner, since the recipe is the
+   * page.
+   */
   .footer {
     display: flex;
     flex-wrap: wrap;
@@ -91,7 +85,6 @@
     color: var(--text);
   }
 
-  /* Paper is not a place you can navigate away from. */
   @media print {
     .header,
     .footer {

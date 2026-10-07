@@ -5,7 +5,6 @@ type ServerRequest = components['schemas']['SettingsUpdateServerRequest'];
 type DatabaseWire = components['schemas']['SettingsGetDatabaseResponse'];
 type DatabaseRequest = components['schemas']['SettingsUpdateDatabaseRequest'];
 
-/** How far a fresh instance has got in being set up. */
 export type SetupStage = 'database' | 'account' | 'complete';
 
 export interface Setup {
@@ -33,12 +32,8 @@ export const rateLimits: readonly RateLimit[] = [
 ];
 
 /**
- * The server settings as a form holds them while somebody edits them.
- *
- * Text where a person types, not the numbers and lists the server takes: a
- * field that re-parsed every keystroke would eat the comma somebody just typed
- * between two addresses, and turn an emptied number box into a zero under
- * their cursor. The conversion happens once, on save.
+ * The settings as a form holds them: text, not numbers and lists, so re-parsing never eats a typed comma
+ * or turns an emptied box into 0. Converted on save.
  */
 export interface ServerDraft {
   secure: boolean;
@@ -112,7 +107,6 @@ const entries = (text: string): string[] =>
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 
-/** A whole number as typed, or null when it is not one. */
 export const wholeNumber = (text: string): number | null =>
   /^\s*\d+\s*$/.test(text) ? Number(text) : null;
 
@@ -140,10 +134,7 @@ export function toServerFacts(wire: ServerWire): ServerFacts {
   };
 }
 
-/**
- * The fields of a draft that are not whole numbers, by name — checked before
- * sending, because the request cannot carry "12a" as a number at all.
- */
+/** Draft fields that are not whole numbers, by name; checked before sending since the request cannot carry "12a". */
 export function unreadableNumbers(draft: ServerDraft): string[] {
   const numbers: Record<string, string> = {
     sessionDays: draft.sessionDays,
@@ -157,7 +148,6 @@ export function unreadableNumbers(draft: ServerDraft): string[] {
     .map(([field]) => field);
 }
 
-/** Only called once `unreadableNumbers` is empty. */
 export function toServerRequest(draft: ServerDraft): ServerRequest {
   const number = (text: string) => wholeNumber(text) ?? 0;
 
@@ -203,12 +193,7 @@ export function toDatabaseFacts(wire: DatabaseWire): DatabaseFacts {
   };
 }
 
-/**
- * Whether saving would need the password typed again: one is set, none is
- * typed, and the draft points at a different server. The server only ever
- * sends a stored password to the server it was saved for, so "keep it" stops
- * meaning anything once the host, port, database or user changes.
- */
+/** Whether saving needs the password again: the server only returns a stored password to the server it was saved for. */
 export const needsPasswordAgain = (draft: DatabaseDraft, facts: DatabaseFacts): boolean =>
   facts.passwordConfigured &&
   draft.password.length === 0 &&
@@ -217,7 +202,6 @@ export const needsPasswordAgain = (draft: DatabaseDraft, facts: DatabaseFacts): 
     draft.name.trim() !== facts.server.name ||
     draft.username.trim() !== facts.server.username);
 
-/** The fields of a database draft that are not whole numbers. */
 export const unreadableDatabaseNumbers = (draft: DatabaseDraft): string[] =>
   (['port', 'maxPoolSize'] as const).filter((field) => wholeNumber(draft[field]) === null);
 

@@ -3,9 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { describeClient, describeMoment, learnClientHints } from './clientContext';
 
 /*
- * This runs while something is already going wrong, on browsers that offer
- * different halves of what it reads. What has to hold is that it takes what is
- * there and never makes things worse.
+ * Runs while something is already going wrong, on browsers offering different halves of what it
+ * reads: take what is there, never make it worse.
  */
 
 afterEach(() => {

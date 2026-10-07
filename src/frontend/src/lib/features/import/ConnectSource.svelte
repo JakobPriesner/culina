@@ -9,23 +9,9 @@
   import type { ConnectedSource } from './types';
 
   /**
-   * Pointing this app at another one.
-   *
-   * The address comes first and alone, because both of the things that follow
-   * need it: the link to that server's own token page is built from it, and
-   * signing in has somewhere to send the name and password only once it is
-   * known. A form that asked for all four at once would be asking for a token
-   * before it could offer any help getting one.
-   *
-   * Signing in is the default. "Make an API token first" is a task somebody has
-   * to go away and learn before they can begin, and it is where most attempts
-   * to move a recipe library stop — so the way in that uses what people already
-   * know is the one that is offered.
-   *
-   * The token stays, and is not hidden away as an advanced option: an instance
-   * where everyone signs in through single sign-on has no password to give, and
-   * some people would simply rather not hand one over. Both are good reasons
-   * and neither is unusual.
+   * Connects another app. The address comes first and alone: the token-page link and the sign-in
+   * both need it. Signing in is the default (a token is a task people give up on), but the token
+   * stays for SSO-only instances and anyone who won't hand over a password.
    */
   interface Props {
     householdId: string;
@@ -80,9 +66,7 @@
     });
 
     if (connected) {
-      // Cleared whatever happens next: the password has done its one job, and
-      // leaving it sitting in a form on a kitchen tablet is the opposite of
-      // what "used once and not stored" means.
+      // Cleared whatever happens next: the password has done its one job and must not linger on a shared tablet.
       address = '';
       username = '';
       password = '';
@@ -110,8 +94,7 @@
     {/snippet}
   </Field>
 
-  <!-- Nothing below appears until there is somewhere to send it. Asking how to
-       sign in to a server nobody has named yet is a question with no answer. -->
+  <!-- Hidden until an address exists: how to sign in to an unnamed server has no answer. -->
   {#if originOf(address)}
     <Field label={m['import.source.wayLabel']()} group>
       {#snippet children({ id, describedBy })}
@@ -161,9 +144,7 @@
       </Field>
 
       {#if tokenPage}
-        <!-- Built from what they typed, so it goes to *their* server. Opened in
-             a new tab, because coming back to a half-filled form having lost
-             the address is worse than the extra tab. -->
+        <!-- Built from what they typed, so it goes to *their* server; a new tab keeps the half-filled form. -->
         <p class="helper">
           <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
           <a href={tokenPage} rel="noreferrer" target="_blank">

@@ -7,23 +7,10 @@
   import { session } from './session.svelte';
 
   /**
-   * Which kitchen is on screen, and the way to another one.
-   *
-   * In the header's glass capsule beside search, because both are about what
-   * is on screen: find something in this kitchen, or look at another one. It
-   * is there with a single
-   * household too, because "New household" has to live somewhere a person
-   * would look for it.
-   *
-   * A house rather than the name: the header has no room for a name, and one
-   * cut down to "Cl's…" says less than an icon does. The name is in its label
-   * and tooltip, and ticked at the top of the menu it opens.
-   *
-   * Switching only changes which household is being looked at. Where that
-   * leaves the page is the shell's business, not this menu's.
+   * Which kitchen is on screen and the way to another; an icon since the header has no room for a
+   * name (it is in the label and tooltip), shown even with one household for "New household".
    */
   interface Props {
-    /** After the household on screen changed, by switching or by creating one. */
     onswitch: () => void;
   }
 
@@ -138,8 +125,7 @@
 {/if}
 
 <style>
-  /* Drawn like the search button it shares the header's capsule with: the
-     capsule is the glass, and this is only a lit circle under the pointer. */
+  /* A lit circle under the pointer; the header capsule supplies the glass. */
   .current {
     display: inline-flex;
     flex-shrink: 0;

@@ -4,17 +4,8 @@
   import { preferences } from './preferences.svelte';
 
   /**
-   * Light, dark, or whatever the device says — all three visible at once.
-   *
-   * The cycling `ThemeToggle` is the right control in the header, where there is
-   * room for one icon and the choice is a passing one. It is the wrong control
-   * here: on a settings screen the question is "which of these three is it", and
-   * an icon that has to be pressed twice to find out is an answer nobody asked
-   * for.
-   *
-   * Native radios under the segments, so arrow keys move between them and the
-   * chosen one is announced against the row's legend. The segments are the
-   * labels; nothing here is a styled `div` pretending to be a control.
+   * Light, dark or device, all three visible at once: on settings the question is "which is it", which the header's cycling `ThemeToggle` answers only after two presses.
+   * Native radios under the segments, so arrow keys move between them and the choice is announced against the legend.
    */
   const options: readonly { value: Mode; label: () => string }[] = [
     { value: 'light', label: m['appearance.light'] },
@@ -28,8 +19,7 @@
 <div class="track">
   {#each options as option (option.value)}
     <label class="segment" class:chosen={current === option.value}>
-      <!-- Clipped rather than `display: none`, which would take the radio out
-           of the tab order and out of the arrow-key group with it. -->
+      <!-- Clipped rather than `display: none`, which would drop the radio from the tab order and arrow-key group. -->
       <input
         class="ds-clipped"
         type="radio"
@@ -57,8 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 44px of its own, not 44px for the three together: each segment is a
-       separate thing to hit. */
+    /* 44px each, not for all three: each segment is its own target. */
     min-height: var(--control-sm);
     padding-inline: var(--space-4);
     border-radius: var(--radius-full);
@@ -76,8 +65,7 @@
     color: var(--text);
   }
 
-  /* The chosen segment is raised out of the track, which says "this one" even
-     where the accent is hard to tell apart — colour is never the only signal. */
+  /* The chosen segment is raised, so colour is never the only signal. */
   .chosen {
     background: var(--surface-raised);
     box-shadow: var(--shadow-card);

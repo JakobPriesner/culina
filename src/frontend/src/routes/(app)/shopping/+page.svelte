@@ -17,36 +17,17 @@
   import Olli from '$shell/olli/Olli.svelte';
   import Page from '$shell/Page.svelte';
 
-  /**
-   * The list, as it is actually used: standing in a shop, one hand free.
-   *
-   * Sections in the order a shop is walked, what is already in the trolley kept
-   * visible at the bottom, and one bulk action — clearing what is bought —
-   * because after a shop removing a dozen lines one at a time is the tedium
-   * this exists to avoid.
-   */
+  /** The shopping list as used in a shop: sections in walking order, bought items at the bottom, one bulk clear. */
   const householdId = $derived(session.activeHouseholdId);
 
-  /** Whether the recipe picker is up. */
   let picking = $state(false);
 
-  /**
-   * How many lines are still to find, which is the number a shopper wants.
-   *
-   * Said in the subtitle only while it is a number worth having. "0 still to
-   * buy" is a count of nothing, and the finished list says so in words
-   * further down, where the list itself would have been.
-   */
+  /** Lines still to find; the subtitle only says it while it is a number worth having. */
   const remaining = $derived(shopping.items.length - shopping.bought.length);
 
   const shop = trackShopFinished();
 
-  /**
-   * Whether the page is far enough along to say how far along it is.
-   *
-   * A bar over an empty list is a bar at nought per cent, which is a graphic
-   * of nothing. It appears with the first line and goes with the last.
-   */
+  /** A progress bar needs at least one line: over an empty list it would show nought per cent. */
   const started = $derived(shopping.status === 'ready' && shopping.items.length > 0);
 
   $effect(() => {
@@ -56,13 +37,7 @@
     }
   });
 
-  /**
-   * A line into the part of the shop it is actually in.
-   *
-   * Said out loud once it has gone through, because the line has just left
-   * the screen for another heading — and because the list will put the same
-   * name there next time, which nothing else on the page would tell anybody.
-   */
+  /** Moves a line to its shop section, announced once done since the line leaves for another heading. */
   async function move(item: ShoppingItem, section: Section) {
     if (!householdId) {
       return;
@@ -97,15 +72,7 @@
 <Page width="reading">
   <ShoppingHeader {remaining} onaddrecipe={() => (picking = true)} />
 
-  <!--
-    How much of the shop is done, as a shape rather than as a sentence.
-
-    The sentence above is the number a shopper wants — what is left — and it is
-    the one worth reading. This is the one worth glancing at: halfway down a
-    long aisle, "am I nearly finished" is answered by a bar in the corner of the
-    eye without anybody having to count what is struck through at the bottom of
-    the page.
-  -->
+  <!-- A glanceable bar for how much of the shop is done; the sentence above gives what is left. -->
   {#if started}
     <div class="progress">
       <ProgressBar
@@ -134,15 +101,10 @@
       {/snippet}
     </ErrorState>
   {:else if shopping.status === 'loading' && shopping.items.length === 0}
-    <!-- The shape of a list rather than a spinner, so the page does not sit
-         blank and then jump. -->
     <ShoppingListSkeleton />
   {:else if shopping.status === 'ready' && shopping.items.length === 0}
     <EmptyState title={m['shopping.empty.title']()} body={m['shopping.empty.body']()} art={peeking}>
       {#snippet action()}
-        <!-- The invitation is the thing that fills a list fastest, and it is
-             the same one the button above offers. Sending somebody off to the
-             recipe list to find it themselves was a longer way round. -->
         <Button variant="primary" onclick={() => (picking = true)}>
           {m['shopping.addRecipe']()}
         </Button>
@@ -174,8 +136,7 @@
         onmove={(item, section) => void move(item, section)}
       >
         {#snippet action()}
-          <!-- Next to what it clears. At the top of the page it was an action
-               with nothing near it to explain what it would take away. -->
+          <!-- Next to what it clears, not at the page top. -->
           <Button size="sm" onclick={() => householdId && shopping.clearBought(householdId)}>
             {m['shopping.clearBought']()}
           </Button>

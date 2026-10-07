@@ -1,16 +1,11 @@
 #!/bin/sh
-# Runs once, on first container start, before PostgreSQL accepts connections.
+# Runs once on first container start, before PostgreSQL accepts connections: creates the application role.
+# The app never connects as a superuser, so SQL injection can't install extensions, read other databases
+# or write files.
 #
-# Creates the application role. The app never connects as a superuser: a SQL
-# injection that reached the database should not also be able to install
-# untrusted extensions, read other databases, or write to the filesystem.
-#
-# The names and the password arrive as psql variables and are quoted by psql
-# (:"name" as an identifier, :'name' as a literal), never pasted into the SQL by
-# the shell — a password with a quote in it is a password, not a statement run
-# as the superuser. Variables are not expanded inside a DO block's dollar
-# quotes, so the role is created by a query that writes the statement and
-# \gexec, which runs it.
+# Names and password arrive as psql variables, quoted by psql (:"name" identifier, :'name' literal), never
+# pasted by the shell. Variables aren't expanded inside a DO block's dollar quotes, so a query writes the
+# statement and \gexec runs it.
 set -eu
 
 psql --username "$POSTGRES_USER" --dbname "$CULINA_DB" --no-psqlrc --set ON_ERROR_STOP=1 \

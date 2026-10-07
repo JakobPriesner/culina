@@ -6,23 +6,14 @@
   import { m } from '$shell/i18n';
 
   /**
-   * The one question Culina asks before doing something.
-   *
-   * Everywhere else it does the thing and offers Undo. Deleting a recipe has no
-   * undo to offer: the server removes it outright, and its cooking history,
-   * notes, photos, planned meals and shelf places go with it. Putting a recipe
-   * back would be writing a new one that has none of that. So this is the rare
-   * case the modal exists for, and it says plainly what goes.
+   * The one confirmation Culina asks: delete has no undo (history, notes, photos, planned meals and shelf
+   * places go too), so the modal says what goes.
    */
   interface Props {
     open: boolean;
     title: string;
-    /** The delete is in flight. */
     deleting: boolean;
-    /**
-     * Why the last try failed. Said in here, not in a toast: while the dialog
-     * is open everything outside it is inert, a toast included.
-     */
+    /** Why the last try failed; said in here, not a toast, since everything outside an open dialog is inert. */
     error: AppError | null;
     onconfirm: () => void;
     onclose: () => void;
@@ -48,8 +39,7 @@
   {/if}
 
   {#snippet footer()}
-    <!-- The safe answer is the ordinary button, so a reflexive press of the
-         familiar one keeps the recipe. -->
+    <!-- The safe answer is the ordinary button, so a reflexive press keeps the recipe. -->
     <Button onclick={onclose}>{m['recipe.delete.cancel']()}</Button>
     <Button variant="danger" loading={deleting} onclick={onconfirm}>
       {m['recipe.delete.confirm']()}

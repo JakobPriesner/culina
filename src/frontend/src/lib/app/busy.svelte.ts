@@ -1,14 +1,6 @@
 /**
- * Whether now is a bad moment to interrupt.
- *
- * Two things in Culina must not be interrupted: cooking, because somebody is
- * standing at a hob with their hands full, and editing, because there is
- * unsaved text on screen. Anything that wants to offer a reload waits for both
- * to be over.
- *
- * Deliberately a count rather than a flag: two components can hold it at once —
- * the cook screen and an editor open in another tab of the same app — and the
- * moment is only safe again when the last of them lets go.
+ * Whether now is a bad moment to interrupt: while cooking or with unsaved edits, anything offering a reload waits.
+ * A count, not a flag: holders can overlap (cook screen, editor in another tab) and the last must let go.
  */
 class Busy {
   #holders = $state(0);

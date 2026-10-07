@@ -2,29 +2,15 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * One titled part of a settings category.
-   *
-   * The title and the sentence under it sit *outside* the enclosure, because
-   * type is what structures a page here and a border only encloses. What the
-   * border encloses is the set of controls: a run of rows that belong to each
-   * other, which is the one thing on a settings screen whitespace alone cannot
-   * say — two settings a gap apart and two settings a gap apart from a third
-   * look identical.
-   *
-   * Local to the settings routes on purpose. It is a page's furniture rather
-   * than a primitive, and moving it into `$ds` would invite every other screen
-   * to become a list of boxes.
+   * One titled part of a settings category; title and text sit outside the enclosure (type structures, a border only encloses).
+   * Local to the settings routes: page furniture, not a `$ds` primitive.
    */
   interface Props {
     children: Snippet;
     /** Omitted when the section is the only one and the page header says it. */
     title?: string;
-    /** One sentence. Why the setting exists, or what it does not do. */
     description?: string;
-    /**
-     * Drops the enclosure, for a section whose content is already a composed
-     * block rather than a run of rows.
-     */
+    /** Drops the enclosure for already-composed content. */
     bare?: boolean;
   }
 
@@ -73,22 +59,16 @@
     line-height: var(--leading-normal);
   }
 
-  /* A hairline enclosure rather than a card: a shadow would lift settings off
-     the page as if each group were a separate thing to open, and there are
-     three of them stacked. */
+  /* A hairline, not a card: a shadow would make each group look like a separate thing to open. */
   .body {
     min-width: 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface-raised);
-    /* The rows are the container query's subject, so they can stack on a
-       narrow panel on a wide monitor. */
     container-type: inline-size;
   }
 
-  /* The line between two rows lives with the enclosure rather than with the
-     row, because whether a row has a neighbour is the enclosure's knowledge and
-     a sibling selector cannot cross a component boundary. */
+  /* The divider lives with the enclosure: a row cannot know its neighbours across a component boundary. */
   .body:not(.bare) > :global(* + *) {
     border-top: 1px solid var(--border);
   }

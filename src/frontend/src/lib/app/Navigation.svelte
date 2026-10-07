@@ -66,7 +66,6 @@
     height: var(--space-6);
   }
 
-  /* The navbar: icon and label side by side, with room to breathe. */
   .top {
     padding: var(--space-1);
     border-radius: var(--radius-full);
@@ -101,7 +100,6 @@
     box-shadow: var(--shadow-card);
   }
 
-  /* Share spare width while allowing translated labels their natural width. */
   .bottom {
     padding-block: var(--space-1);
   }
@@ -117,8 +115,7 @@
     padding: var(--space-2) var(--space-1);
   }
 
-  /* A raised pill behind the icon marks the current destination without
-     relying on colour alone or enclosing the full stacked item. */
+  /* A raised pill behind the icon marks the current destination without relying on colour. */
   .bottom .icon {
     box-sizing: border-box;
     width: calc(var(--space-6) + 2 * var(--space-3));
@@ -151,15 +148,8 @@
   }
 
   /*
-   * On the narrowest phones the five labels need every pixel of the row.
-   *
-   * German asks for about 325 of the 320 there are — "Einstellungen" alone is
-   * 85px where the icon above it is 48 — and a label with nowhere to go wraps
-   * onto a second line, which moves the bar up and the page under it. The four
-   * pixels either side of each destination are the difference, and they are
-   * not doing any visible work: the raised pill around the icon is what gives
-   * the row its inset, and the destinations divide the width between them
-   * whether or not they are padded.
+   * Narrowest phones: German labels need about 325 of 320px ("Einstellungen" alone is 85px), and a wrapped label moves the bar and the page.
+   * The 4px per side is dropped; the icon pill gives the inset anyway.
    */
   @media (width < 24rem) {
     .bottom .destination {

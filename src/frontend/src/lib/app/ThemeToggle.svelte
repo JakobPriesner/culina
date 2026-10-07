@@ -4,11 +4,8 @@
   import { preferences } from './preferences.svelte';
 
   /**
-   * Cycles light → dark → follow the device.
-   *
-   * The accessible name states the current value and what pressing it does,
-   * because an icon alone cannot say which of three states you are in — and
-   * "follow the device" is a state, not the absence of a choice.
+   * Cycles light, dark, follow the device; the accessible name states the current value and what
+   * pressing does.
    */
   const names: Record<Mode, () => string> = {
     light: m['appearance.light'],
@@ -55,7 +52,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    /* 3rem: a target a thumb can hit while holding a phone in a kitchen. */
     width: var(--space-12);
     height: var(--space-12);
     padding: 0;

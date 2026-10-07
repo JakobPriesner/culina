@@ -1,13 +1,7 @@
 <script lang="ts">
   import { highlightMatches } from './highlight';
 
-  /**
-   * Text with what a search matched in it marked by weight.
-   *
-   * Weight, not a background: a result list with yellow boxes in every line
-   * shouts, and a colour alone says nothing to somebody who cannot see it. A
-   * heavier word reads as emphasis in any theme and prints.
-   */
+  /** Marks search matches by weight, not background: yellow boxes shout, colour alone says nothing to some, and weight prints. */
   interface Props {
     text: string;
     /** The words searched for; nothing is marked without them. */

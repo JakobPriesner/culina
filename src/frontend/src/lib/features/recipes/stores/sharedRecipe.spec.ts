@@ -2,12 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { sharedRecipe } from './sharedRecipe.svelte';
 
-/*
- * The page a stranger lands on. What matters is that it asks under the token
- * and renders the same thing the household's own page does — a recipe whose
- * steps still carry their ingredient references, which is what makes the
- * amounts scale for somebody with no account.
- */
+/* The stranger's page: asks under the token and renders what the household page does, steps keeping ingredient references so amounts scale. */
 const token = 'a-token';
 
 const body = {
@@ -77,8 +72,7 @@ describe('sharedRecipe', () => {
   it('points the photograph at the token, because there is no recipe id here', async () => {
     await sharedRecipe.load(token);
 
-    // The surface only asks whether there is a picture; the page hands it the
-    // address. Standing in the id's place is what makes that work.
+    // The surface only asks whether there is a picture; the token stands in for the id so the page can hand it the address.
     expect(sharedRecipe.recipe!.imageId).toBe(token);
   });
 });

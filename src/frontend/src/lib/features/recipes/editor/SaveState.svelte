@@ -1,27 +1,12 @@
 <script lang="ts" module>
-  /**
-   * Where the work is, in the order that matters.
-   *
-   * `local` is not a failure and is never drawn as one: the text is on this
-   * device and will be sent, which is a sentence about where something is, not
-   * about something going wrong.
-   */
+  /** Where the work is; `local` is not a failure and is never drawn as one. */
   export type SaveTone = 'idle' | 'saving' | 'saved' | 'local' | 'failed' | 'conflict';
 </script>
 
 <script lang="ts">
   /**
-   * The only thing on this screen that says whether the work is safe.
-   *
-   * An editor with no Save button owes the reader this, and owes it
-   * continuously — so the row is always here, at one size, in one place, and
-   * changes only its dot and its word. The version that appeared and
-   * disappeared moved everything under it by a line every time somebody stopped
-   * typing, and was invisible exactly when it mattered.
-   *
-   * Colour is never the only carrier: the word beside the dot says the same
-   * thing, and `role="status"` says it to a screen reader once the typing has
-   * paused.
+   * Whether the work is safe, for an editor with no Save button: always present at one size so nothing shifts when typing stops.
+   * Colour is never the only carrier: the word says it too, and `role="status"` says it to a screen reader once typing pauses.
    */
   interface Props {
     tone: SaveTone;
@@ -85,8 +70,7 @@
     color: var(--text-danger);
   }
 
-  /* The one place the whole line has to be readable at a glance rather than
-     scanned: somebody else's change is the only state that needs a decision. */
+  /* Somebody else's change is the only state that needs a decision, so it must read at a glance. */
   .conflict .text,
   .failed .text {
     white-space: normal;
@@ -98,9 +82,7 @@
     }
   }
 
-  /* A steady dot rather than a slower pulse: "saving" is carried by the word,
-     and the animation is only there to make it legible out of the corner of
-     an eye. */
+  /* A steady dot instead of a slower pulse; "saving" is carried by the word. */
   @media (prefers-reduced-motion: reduce) {
     .saving .dot {
       animation: none;

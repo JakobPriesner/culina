@@ -11,14 +11,12 @@
   import { reasonLine } from './wording';
 
   /**
-   * The listbox the arrow keys walk; the field keeps focus, so options are only `aria-selected`,
-   * never focused.
+   * The listbox the arrow keys walk; the field keeps focus, so options are only `aria-selected`.
    */
   interface Props {
     id: string;
     options: readonly SearchOption[];
     highlighted: number;
-    /** The searched text, marked in matches. */
     applied: string;
     onactivate: (option: SearchOption) => void;
     onopen: (recipeId: string) => void;

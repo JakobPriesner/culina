@@ -40,8 +40,7 @@ const recipe: components['schemas']['RecipesRecipeDetail'] = {
   ],
   steps: Array.from({ length: 4 }, (_, i) => ({
     stepId: `step-${i}`,
-    // Needed but never named — the longest ingredient name in the kitchen, on
-    // the line under a step, is what the narrow layouts have to survive.
+    // Needed but never named: the longest ingredient name on a step's line is what narrow layouts must survive.
     uses: i % 2 === 0 ? ['ingredient-1', 'ingredient-2'] : ['ingredient-2'],
     segments: [
       {
@@ -133,10 +132,7 @@ export async function responsiveData(
         createdAt: stamp,
         version: 1,
         households: [{ householdId, name: 'Unsere gemeinsame Küche', role: 'owner' }],
-        // Off, but present. The editor reads these to decide whether to offer
-        // the assistant's buttons, and an account without them is not a
-        // household with the assistant switched off — it is a crash, which is
-        // what leaving this out turned every editor layout into.
+        // Present but off: without them the editor crashes instead of hiding the assistant's buttons.
         assistance: { improve: false, draft: false, read: false, draw: false }
       });
     if (path === '/users/me/settings')
@@ -149,8 +145,7 @@ export async function responsiveData(
       });
     if (path === '/registration/policy')
       return reply({ openRegistration: true, requireInvitation: false, hasAccounts: true });
-    // Asked in front of signing in and registering, which send everybody to
-    // the setup screen until an instance has an administrator.
+    // Asked before sign-in and register, which redirect to setup until an admin exists.
     if (path === '/setup') return reply({ stage: 'complete', startedAt: stamp });
     if (path === '/cookbooks')
       return reply({
@@ -201,23 +196,13 @@ export async function responsiveData(
         total: 6,
         nextCursor: null
       });
-    // What the filter panel offers to narrow by. None: a household's tags are
-    // its own words, and a list of them here would be a list of invented ones.
     if (path === '/tags' || path.endsWith('/tags')) return reply({ items: [] });
-    // Nothing to suggest. The library waits for this answer before it asks for
-    // a list — it decides the order — so an unanswered one leaves the page on
-    // its skeleton forever, which is exactly what these fixtures must not do.
+    // The library waits for this answer before listing; unanswered, it stays on its skeleton forever.
     if (path === '/suggestions') return reply({ items: [] });
-    // Nothing alike enough, so the shelf under a recipe stays away and the
-    // page ends where the recipe does.
     if (path.endsWith('/related')) return reply({ items: [] });
-    // Nothing to suggest, so the editor's tag section is the same height on
-    // every run.
+    // Empty keeps the editor's tag section the same height every run.
     if (path.endsWith('/tag-suggestions')) return reply({ items: [] });
-    // The library toolbar asks for these on every page that carries it. An
-    // empty list is the fixture worth having: a household with saved searches
-    // renders a row of chips that changes the height of everything below it,
-    // which is not what any of these tests are measuring.
+    // Empty: saved-search chips would change the height of everything below.
     if (path === '/searches') return reply({ items: [] });
     if (path.endsWith('/members'))
       return reply({
@@ -230,8 +215,7 @@ export async function responsiveData(
           }
         ]
       });
-    // One household reading this one's recipes, with a long name, so the list
-    // and the owner's button beside it are measured at every width.
+    // A long-named heir household, so the list and the owner's button are measured at every width.
     if (path.endsWith('/heirs'))
       return reply({
         items: [
@@ -298,8 +282,7 @@ export async function expectReflow(page: Page) {
         const box = el.getBoundingClientRect();
         const style = getComputedStyle(el);
         if (box.width <= 1 || box.height <= 1 || style.visibility === 'hidden') return false;
-        // A shelf may intentionally scroll within the page. Only real scroll
-        // containers qualify; overflow:hidden must never conceal a regression.
+        // A shelf may scroll within the page; only real scroll containers qualify, so overflow:hidden cannot hide a regression.
         let left = box.left;
         let right = box.right;
         const popover = el.closest(':popover-open');

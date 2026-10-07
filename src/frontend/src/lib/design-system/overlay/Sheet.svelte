@@ -4,11 +4,8 @@
   import Dialog from './Dialog.svelte';
 
   /**
-   * The same content as a modal, placed where the hand is.
-   *
-   * Rises from the bottom edge on a phone and becomes a centred dialog on a
-   * larger screen — one component and one API, because two components would
-   * drift and a feature would end up picking the wrong one for the viewport.
+   * The modal's content placed where the hand is: bottom sheet on a phone, centred dialog on larger
+   * screens, with one API so features can't pick the wrong one.
    */
   interface Props {
     open: boolean;

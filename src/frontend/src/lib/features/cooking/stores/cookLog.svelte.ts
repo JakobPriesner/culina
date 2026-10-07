@@ -4,12 +4,7 @@ import { registerStore } from '$shell/stores';
 import type { components } from '$api/generated/schema';
 
 /**
- * How often this person has made a recipe.
- *
- * Personal, like notes: two people in one household keep separate histories,
- * because what *you* cooked is the useful fact. It is also why Culina has no
- * star ratings — what someone actually cooked is a better signal than what they
- * once claimed to like.
+ * How often this person has made a recipe; personal like notes, and why Culina has no star ratings.
  */
 type CookLog = components['schemas']['RecipesGetCookLogResponse'];
 
@@ -18,7 +13,6 @@ export interface Recorded {
   readonly count: number;
 }
 
-/** One time it was made, as the strip of attempts shows it. */
 export type CookLogItem = CookLog['items'][number];
 
 class CookLogStore {
@@ -32,7 +26,6 @@ class CookLogStore {
     return this.#log?.lastMadeAt ?? null;
   }
 
-  /** Every attempt, newest first. */
   get items(): readonly CookLogItem[] {
     return this.#log?.items ?? [];
   }
@@ -46,10 +39,8 @@ class CookLogStore {
   }
 
   /**
-   * One tap. The response carries the new count, so nothing has to be refetched.
-   *
-   * Written into the household it was cooked in, which for an inherited recipe
-   * is not the one it belongs to: the history is this kitchen's.
+   * One tap; the response carries the new count. Written into the household it was cooked in, which
+   * for an inherited recipe is this kitchen's.
    */
   async record(
     recipeId: string,
@@ -72,7 +63,6 @@ class CookLogStore {
     return { entryId: result.value.entryId, count: result.value.count };
   }
 
-  /** The undo behind the toast, which is why there is no "are you sure?". */
   async undo(recipeId: string, entryId: string): Promise<void> {
     await request(() =>
       http.DELETE('/api/v1/recipes/{recipeId}/cook-log/{entryId}', {
@@ -84,11 +74,7 @@ class CookLogStore {
   }
 
   /**
-   * Hangs a photograph on one attempt.
-   *
-   * The whole log comes back rather than the one entry, because the strip shows
-   * all of them and a single entry would leave the client refetching the rest
-   * to draw anything.
+   * Hangs a photograph on one attempt; the whole log comes back since the strip shows every entry.
    */
   async setPhoto(recipeId: string, entryId: string, file: File): Promise<boolean> {
     const body = new FormData();
@@ -99,8 +85,8 @@ class CookLogStore {
       http.PUT('/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo', {
         params: { path: { recipeId, entryId } },
         body: body as unknown as { file: string },
-        // FormData sets its own multipart boundary; serialising it as JSON
-        // would send the string "[object FormData]".
+        // FormData sets its own multipart boundary; JSON-serialising it would send "[object
+        // FormData]".
         bodySerializer: (value: unknown) => value as FormData
       })
     );

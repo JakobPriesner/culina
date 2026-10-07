@@ -2,12 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { cookbooks } from './cookbooks.svelte';
 
-/*
- * The store is the only thing components read shelves from, so what it gets
- * wrong the whole feature gets wrong. The parts worth testing are the ones that
- * change the screen before the server has agreed: a tick that stays ticked
- * after a failed write is a lie about where somebody's recipe is.
- */
+/* The store is the only source components read shelves from; what changes the screen before the server agrees (a tick surviving a failed write) is what to test. */
 const household = 'h1';
 
 const shelf = (id: string, name: string, recipeCount = 0) => ({
@@ -28,7 +23,6 @@ const json = (body: unknown, status = 200) =>
 
 const noContent = (status = 204) => new Response(null, { status });
 
-/** Answers each request by method and URL. */
 function serverAnswers(reply: (method: string, url: string) => Response) {
   vi.stubGlobal(
     'fetch',
@@ -62,8 +56,7 @@ describe('a household’s shelves', () => {
     serverAnswers(() => json({ code: 'server.error' }, 500));
     await cookbooks.list(household);
 
-    // Replacing what somebody is reading with an error page loses more than it
-    // tells them: the shelves were right a second ago and still are.
+    // A failed refresh must not replace what is being read with an error page.
     expect(cookbooks.items).toHaveLength(1);
   });
 });
@@ -91,8 +84,7 @@ describe('putting a recipe on a shelf', () => {
 
     const done = await cookbooks.setOn('r1', { id: 'c1', name: 'Christmas' }, true);
 
-    // Both halves, not just the tick: a count left one too high is the kind of
-    // small wrongness nobody can explain later.
+    // Both halves: a count left one too high is wrongness nobody can explain later.
     expect(done).toBe(false);
     expect(cookbooks.contains('r1', 'c1')).toBe(false);
     expect(cookbooks.items[0]?.recipeCount).toBe(2);
@@ -145,7 +137,6 @@ describe('deleting a shelf', () => {
     serverAnswers(() => listOf(shelf('c1', 'Christmas'), shelf('c2', 'Weeknights')));
     await cookbooks.list(household);
 
-    // A shelf is deleted from its own page, so it is open when it goes.
     serverAnswers(() =>
       json({ ...shelf('c1', 'Christmas'), householdId: household, kind: 'manual', version: 3 })
     );

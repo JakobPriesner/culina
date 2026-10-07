@@ -2,10 +2,8 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * Text for a screen reader that the design does not show.
-   *
-   * The clipping itself lives in `display/clipped.css`, so this and the
-   * elements that cannot be wrapped in it share one definition.
+   * Text for a screen reader that the design does not show; the clipping is shared via
+   * `display/clipped.css`.
    */
   interface Props {
     children: Snippet;

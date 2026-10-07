@@ -75,8 +75,7 @@ describe('accepting parts of a draft', () => {
   });
 
   it('keeps the current value for a field the draft left blank', () => {
-    // Half a suggestion must not be read as "and delete the rest": the draft
-    // said a prep time and said nothing about cooking.
+    // Half a suggestion must not read as "and delete the rest": the draft gave a prep time and said nothing of cooking.
     const patch = toPatch(
       draft({ prepMinutes: 5, cookMinutes: null }),
       accepting({ times: true }),
@@ -90,10 +89,7 @@ describe('accepting parts of a draft', () => {
   it('leaves accepted steps as words, linking nothing by itself', () => {
     const patch = toPatch(draft(), accepting({ ingredients: true, steps: true }), recipe());
 
-    // Both ingredient names are in the sentence, and neither becomes a link.
-    // The editor stopped guessing which mention was meant on the paste path,
-    // and this is the same guess — a wrong link shows a scaled amount inside a
-    // sentence that was never about that ingredient.
+    // Both ingredient names are in the sentence and neither becomes a link: a wrong link shows a scaled amount in a sentence not about it.
     const step = first(patch.steps);
     expect(step.segments.map((segment) => segment.kind)).toEqual(['text']);
     expect(step.segments[0]).toEqual({

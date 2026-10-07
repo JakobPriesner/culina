@@ -5,17 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { appIconFolder, appIcons } from './appIcons';
 
-/*
- * The icon a browser prefers over every other one, and the only file in the app
- * that nothing else would ever have opened.
- *
- * It shipped unparseable: the comment at the top of it named the design tokens
- * its colours came from, and every token name begins with two hyphens, which is
- * the one sequence XML forbids inside a comment. Nothing warned. The build
- * copied it, the dev server served it with the right media type, and the file
- * was 2.3 KB of perfectly reasonable markup — the browser simply drew no icon,
- * for months, in the one place nobody screenshots.
- */
+/* The icon browsers prefer, in a file nothing else opens: it once shipped unparseable because a comment named design tokens, and `--` is forbidden in an XML comment. The browser silently drew no icon for months. */
 const staticDir = join(process.cwd(), 'static');
 const read = (path: string) => readFileSync(join(staticDir, path), 'utf8');
 
@@ -34,9 +24,7 @@ describe.each(appIcons)('the %s SVG icon', (icon) => {
   });
 
   it('keeps its comments free of the sequence that broke it', () => {
-    // Belt and braces: a parser reports the first failure, and this says which
-    // one to look for. A hyphen pair is legal in an attribute — `stroke-width`
-    // is not one — so only comment bodies are searched.
+    // A parser reports only the first failure; this says which to look for. Only comment bodies are searched (`stroke-width` is legal).
     const comments = svg().match(/<!--[\s\S]*?-->/g) ?? [];
 
     for (const comment of comments) {
@@ -45,16 +33,12 @@ describe.each(appIcons)('the %s SVG icon', (icon) => {
   });
 
   it('is drawn in ink rather than in tokens, having no stylesheet to read', () => {
-    // An icon is fetched as an image: no CSS custom property resolves in it,
-    // and `var(--accent)` there is a shape with no colour at all.
+    // An icon is fetched as an image: no CSS custom property resolves, so `var(--accent)` has no colour.
     expect(svg()).not.toMatch(/var\(--/);
   });
 });
 
-/*
- * Each icon has a manifest of its own, written by `pnpm icons`, and a manifest
- * naming a file that is not there installs an app with no icon at all.
- */
+/* Each icon has its own manifest from `pnpm icons`; one naming a missing file installs an app with no icon. */
 describe.each(appIcons)('the %s manifest', (icon) => {
   const manifest = () =>
     JSON.parse(read(`${appIconFolder(icon)}/manifest.webmanifest`)) as {

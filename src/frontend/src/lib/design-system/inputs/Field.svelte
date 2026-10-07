@@ -1,14 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * Label, hint, error, and the wiring between them.
-   *
-   * Every control is wrapped in this rather than each one repeating
-   * `aria-describedby` and `aria-invalid`. Getting it right by construction is
-   * the only way it stays right: the version that is written by hand per form
-   * is the version that is wrong on the third form.
-   */
+  /** Label, hint, error and the aria wiring between them, so no form repeats `aria-describedby`/`aria-invalid` by hand. */
   interface Props {
     /** Receives the ids the control must carry. */
     children: Snippet<[{ id: string; describedBy: string | undefined; invalid: boolean }]>;
@@ -22,10 +15,7 @@
     optionalText?: string;
     /** Turns the label into a group caption, for radios and checkbox sets. */
     group?: boolean;
-    /**
-     * Supplied when the caller needs to know the control's id before it is
-     * rendered — to move focus to it, for instance. Generated otherwise.
-     */
+    /** Set when the caller needs the id before render (e.g. to move focus); generated otherwise. */
     id?: string;
   }
 
@@ -40,8 +30,7 @@
     id: suppliedId
   }: Props = $props();
 
-  // `$props.id()` may only initialise a top-level variable, so the fallback is
-  // made here rather than as a destructuring default.
+  // `$props.id()` may only initialise a top-level variable, so no destructuring default.
   const generatedId = $props.id();
   const id = $derived(suppliedId ?? generatedId);
 

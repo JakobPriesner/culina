@@ -2,46 +2,20 @@ import { drain, type Stream, type StreamHandlers } from './eventStream';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
 
 /**
- * The two places that read a stream from the backend.
- *
- * Here beside the typed client for the same reason `fetch` is: a caller that
- * opened its own stream would also have to remember that the cookie is what
- * authenticates it, what a failure looks like, and how to pick the stream back
- * up. The generated client cannot do this — OpenAPI describes requests that
- * end — so this is small, typed by the caller, and deliberate.
- *
- * `fetch` rather than `EventSource`, which is the obvious tool and the wrong
- * one. `EventSource` reports every failure as one bare `error` event: a session
- * that expired, a run the server has forgotten and a tunnel that collapsed are
- * indistinguishable, which leaves the only honest thing to say on screen
- * "something stopped". It also cannot send a header, so it cannot ask to resume
- * from where it left off. Reading the body by hand costs the parser in `eventStream.ts` and
- * buys a real status code, the app's ordinary failure shape, and a reconnect
- * that does not repeat itself.
+ * Reads streams from the backend by hand: OpenAPI can't describe them, and `EventSource` reports every
+ * failure as one bare `error` and can't send `Last-Event-ID`, so no real status, app error shape or resume.
  */
 
 export { ask } from './ask';
 export type { Stream, StreamHandlers };
 
-/**
- * How many times a dropped connection is picked back up before giving up.
- *
- * A stream that is minutes long will meet a sleeping laptop, a switched
- * network, or a proxy with opinions. Each retry resumes from the last event
- * that arrived, so retrying costs nothing and repeats nothing.
- */
+/** Reconnect attempts before giving up; each resumes from the last event, so retrying repeats nothing. */
 const attemptsAllowed = 5;
 
 /** Long enough to be past a blip, short enough that nobody reads it as broken. */
 const backoffMs = [500, 1000, 2000, 4000, 8000];
 
-/**
- * Reads a server-sent event stream.
- *
- * @param path The path on this origin, e.g. `/api/v1/...`.
- * @param handlers What to do with each event, and with the end of the stream.
- * @param from The last event id this caller already has, to resume from.
- */
+/** Reads a server-sent event stream from `path`, resuming after event id `from` if given. */
 export function watch<TEvent>(
   path: string,
   handlers: StreamHandlers<TEvent>,
@@ -99,7 +73,6 @@ async function follow<TEvent>(
   }
 }
 
-/** Asks for the stream, from where this caller left off. */
 async function open(
   path: string,
   from: string | null,
@@ -109,8 +82,7 @@ async function open(
 
   try {
     response = await fetch(path, {
-      // No deadline: a stream is meant to stay open, and the app's usual
-      // timeout would cut it off every fifteen seconds.
+      // No deadline: a stream stays open; the usual timeout would cut it every 15s.
       credentials: 'include',
       headers: {
         Accept: 'text/event-stream',
