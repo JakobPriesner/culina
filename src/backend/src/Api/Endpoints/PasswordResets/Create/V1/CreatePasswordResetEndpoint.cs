@@ -45,7 +45,8 @@ internal sealed class CreatePasswordResetEndpoint : IEndpoint
             .AllowAnonymous()
             // Like signing in, this is a way back for somebody with no working
             // session, so a stale CSRF token must not stand in the way. The
-            // code is the credential; the same-origin guard still applies.
+            // code is the credential, and the endpoint reads only a JSON body,
+            // which a cross-site form cannot send; see CsrfExempt.
             .WithMetadata(new CsrfExempt())
             .RequireRateLimiting(RateLimitExtensions.Login);
     }

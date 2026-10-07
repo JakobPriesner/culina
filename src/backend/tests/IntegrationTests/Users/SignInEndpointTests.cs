@@ -133,6 +133,38 @@ public class SignInEndpointTests(PostgresFixture postgres)
         Assert.InRange(ratio, 0.2, 5.0);
     }
 
+    [Theory]
+    [InlineData("application/x-www-form-urlencoded", "email=ada%40example.com&password=correct+horse+battery+staple")]
+    [InlineData("text/plain", """{"email":"ada@example.com","password":"correct horse battery staple"}""")]
+    [InlineData("multipart/form-data; boundary=x", "--x\r\nContent-Disposition: form-data; name=\"email\"\r\n\r\nada@example.com\r\n--x--\r\n")]
+    public async Task SignIn_ShouldRefuseEveryBodyACrossSiteFormCanSend(string contentType, string body)
+    {
+        // Arrange
+        using var client = await RegisteredClientAsync("ada@example.com");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/sessions")
+        {
+            Content = new StringContent(body)
+        };
+        request.Content.Headers.Remove("Content-Type");
+        request.Content.Headers.TryAddWithoutValidation("Content-Type", contentType);
+        request.Headers.TryAddWithoutValidation("Origin", "https://attacker.example");
+
+        // Act
+        var response = await client.SendAsync(request, Token);
+
+        // Assert
+        // This, not the same-origin guard, is what stops login CSRF: that
+        // guard only looks at requests that already carry a session cookie,
+        // and a page elsewhere signing this browser in to the attacker's
+        // account carries none. A form can only send these three types; the
+        // endpoint reads nothing but application/json, so routing never
+        // reaches it. (The app shell's catch-all route is what answers then,
+        // with a 404 rather than a 415.)
+        Assert.True(response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.UnsupportedMediaType, $"Expected a refusal, got {response.StatusCode}.");
+        Assert.False(response.Headers.Contains("Set-Cookie"));
+        Assert.Equal(0L, await postgres.QuerySingleAsync<long>("select count(*) from sessions;", Token));
+    }
+
     [Fact]
     public async Task SignedInRequest_ShouldBeRejected_WhenItOmitsTheCsrfToken()
     {
