@@ -69,6 +69,28 @@ internal sealed class PersonalNoteRepository(DbExecutor executor) : IPersonalNot
             row.Id, row.RecipeId, row.UserId, row.StepId, row.Body, row.UpdatedAt))];
     }
 
+    public async Task<ILookup<Guid, PersonalNote>> ForRecipesAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(recipeIds);
+
+        var rows = await executor.QueryAsync<PersonalNoteRow>(
+            """
+            select id, recipe_id, user_id, step_id, body, updated_at
+            from personal_notes
+            where recipe_id = any(@recipeIds) and user_id = @userId
+            order by step_id nulls first;
+            """,
+            new { recipeIds = recipeIds.ToArray(), userId },
+            cancellationToken).ConfigureAwait(false);
+
+        return rows.ToLookup(
+            row => row.RecipeId,
+            row => PersonalNote.Restore(row.Id, row.RecipeId, row.UserId, row.StepId, row.Body, row.UpdatedAt));
+    }
+
     public async Task<Result> ReplaceAsync(
         Guid recipeId,
         Guid userId,
@@ -126,6 +148,27 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
             cancellationToken).ConfigureAwait(false);
 
         return [.. rows.Select(ToEntry)];
+    }
+
+    public async Task<ILookup<Guid, CookLogEntry>> ForRecipesAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(recipeIds);
+
+        var rows = await executor.QueryAsync<CookLogRow>(
+            """
+            select id, recipe_id, user_id, household_id, made_at, servings, note,
+                   image_hash, image_width, image_height
+            from cook_log_entries
+            where recipe_id = any(@recipeIds) and user_id = @userId
+            order by made_at desc;
+            """,
+            new { recipeIds = recipeIds.ToArray(), userId },
+            cancellationToken).ConfigureAwait(false);
+
+        return rows.ToLookup(row => row.RecipeId, ToEntry);
     }
 
     /// <summary>The photo a row carries, or null when it carries none.</summary>

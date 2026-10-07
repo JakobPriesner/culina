@@ -11,6 +11,16 @@ public interface IRecipeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Loads several recipes in one round trip. A recipe that does not exist is
+    /// left out of the answer rather than failing it.
+    /// </summary>
+    /// <param name="recipeIds">Which recipes.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<IReadOnlyDictionary<Guid, Recipe>> FindManyAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        CancellationToken cancellationToken);
+
     /// <summary>The household a recipe belongs to, without loading the recipe.</summary>
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
@@ -147,6 +157,13 @@ public interface IRecipeRepository
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<string>> ImageHashAsync(Guid recipeId, CancellationToken cancellationToken);
+
+    /// <summary>The content hashes of several recipes' images, by recipe; recipes without one are left out.</summary>
+    /// <param name="recipeIds">Which recipes.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<IReadOnlyDictionary<Guid, string>> ImageHashesAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        CancellationToken cancellationToken);
 
     /// <summary>Puts a recipe, and everything under it, in the bin.</summary>
     /// <param name="recipeId">Which recipe.</param>
