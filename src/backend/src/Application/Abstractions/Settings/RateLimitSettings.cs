@@ -23,7 +23,10 @@ public sealed record RateLimitSettings
     /// <summary>Registrations allowed per hour from one address.</summary>
     public int RegisterPerIpPerHour { get; init; } = 5;
 
-    /// <summary>Invitation redemptions allowed per hour from one address.</summary>
+    /// <summary>
+    /// Invitation redemptions allowed per hour from one address — and, counted
+    /// separately, as many reads of which household a code is for.
+    /// </summary>
     public int InvitationPerIpPerHour { get; init; } = 10;
 
     /// <summary>

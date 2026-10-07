@@ -21,16 +21,31 @@ vi.mock('$app/navigation', () => ({ goto }));
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-/** Answers the redemption; every other request is the session re-reading itself. */
-function redemptionAnswers(reply: () => Response) {
-  const fetched = vi.fn((input: Request) =>
-    Promise.resolve(input.url.includes('/redemptions') ? reply() : json({}, 200))
-  );
+const named = () => json({ householdName: 'Graces Küche' }, 200);
+
+/**
+ * Answers the redemption and the read of the invitation; every other request
+ * is the session re-reading itself.
+ */
+function redemptionAnswers(
+  reply: () => Response,
+  read: () => Promise<Response> | Response = named
+) {
+  const fetched = vi.fn((input: Request) => {
+    if (input.url.includes('/redemptions')) {
+      return Promise.resolve(reply());
+    }
+
+    return Promise.resolve(input.url.endsWith('/invitations/abc123') ? read() : json({}, 200));
+  });
 
   vi.stubGlobal('fetch', fetched);
 
   return fetched;
 }
+
+const redemptions = (fetched: ReturnType<typeof redemptionAnswers>) =>
+  fetched.mock.calls.filter(([input]) => input.url.includes('/redemptions'));
 
 function signedIn(status: SessionStatus) {
   vi.spyOn(session, 'status', 'get').mockReturnValue(status);
@@ -68,7 +83,7 @@ describe('opening an invitation', () => {
     expect(fetched).not.toHaveBeenCalled();
   });
 
-  it('asks somebody signed in before joining, and does not join on opening', async () => {
+  it('asks somebody signed in before joining, naming the household, and does not join on opening', async () => {
     signedIn('authenticated');
     const fetched = redemptionAnswers(() =>
       json({ householdId: 'h2', name: 'Graces Küche', alreadyMember: false }, 201)
@@ -76,12 +91,64 @@ describe('opening an invitation', () => {
 
     renderWithProviders(JoinPage);
 
-    expect(await screen.findByRole('button', { name: 'Join household' })).toBeVisible();
+    expect(await screen.findByText("You're invited to join Graces Küche.")).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Join household' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Back to your kitchen' })).toHaveAttribute('href', '/');
     await new Promise((settled) => setTimeout(settled, 50));
 
-    expect(fetched).not.toHaveBeenCalled();
+    expect(redemptions(fetched)).toHaveLength(0);
     expect(goto).not.toHaveBeenCalled();
+  });
+
+  it('shows a placeholder where the name will be while the invitation is read', async () => {
+    signedIn('authenticated');
+    redemptionAnswers(
+      () => json({}, 500),
+      () => new Promise<Response>(() => {})
+    );
+
+    const { container } = renderWithProviders(JoinPage);
+
+    await vi.waitFor(() => expect(container.querySelector('.skeleton')).not.toBeNull());
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Join household' })).toBeVisible();
+  });
+
+  it('says a code that no longer works is invalid before anybody presses Join', async () => {
+    signedIn('authenticated');
+    const fetched = redemptionAnswers(
+      () => json({}, 500),
+      () =>
+        json(
+          { code: 'households.invitation_invalid', detail: 'That invitation is not valid.' },
+          404
+        )
+    );
+
+    renderWithProviders(JoinPage);
+
+    expect(
+      await screen.findByRole('heading', { name: 'That invitation is not valid' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join household' })).not.toBeInTheDocument();
+    expect(redemptions(fetched)).toHaveLength(0);
+  });
+
+  it('still asks, without a name, when the invitation cannot be read', async () => {
+    signedIn('authenticated');
+    const select = vi.spyOn(session, 'selectHousehold').mockImplementation(() => {});
+    const fetched = redemptionAnswers(
+      () => json({ householdId: 'h2', name: 'Graces Küche', alreadyMember: false }, 201),
+      () => json({ code: 'server.unexpected', detail: 'Oops.' }, 500)
+    );
+
+    renderWithProviders(JoinPage);
+    await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
+    await new Promise((settled) => setTimeout(settled, 50));
+
+    expect(screen.queryByText(/invited to join/)).not.toBeInTheDocument();
+    await joinIt();
+    await vi.waitFor(() => expect(select).toHaveBeenCalledWith('h2'));
   });
 
   it('takes somebody who joins into the household it is for', async () => {
