@@ -133,13 +133,19 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     public async Task Export_ShouldBeRefused_ForAKitchenTheCallerIsNotIn()
     {
         // Arrange
-        using var client = await SignedInAsync();
+        // Ada's real kitchen, not an invented id: a check that only ever met
+        // a household that does not exist proves nothing about one that does.
+        using var ada = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(ada);
+        await WriteLemonOrzoAsync(ada, householdId);
+        using var stranger = await Kitchen.StrangerAsync(postgres);
 
         // Act
-        var response = await client.GetAsync($"/api/v1/households/{Guid.NewGuid()}/archive", Token);
+        var response = await stranger.GetAsync($"/api/v1/households/{householdId}/archive", Token);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.DoesNotContain("Lemon orzo", response.Body, StringComparison.Ordinal);
     }
 
     private static async Task WriteLemonOrzoAsync(ApiClient client, Guid householdId)

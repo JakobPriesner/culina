@@ -1,4 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
 using Application.Abstractions.Settings;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,8 +36,7 @@ public class BoundaryTests(PostgresFixture postgres)
         using var ownerClient = owner;
         using var strangerClient = stranger;
 
-        var householdId = await FirstHouseholdIdAsync(owner);
-        var recipeId = await RecipeAsync(owner, householdId);
+        var (householdId, recipeId, entryId) = await PhotographedRecipeAsync(owner);
 
         // Act
         var reads = new[]
@@ -43,8 +45,14 @@ public class BoundaryTests(PostgresFixture postgres)
             await stranger.GetAsync($"/api/v1/households/{householdId}/members", Token),
             await stranger.GetAsync($"/api/v1/households/{householdId}/invitations", Token),
             await stranger.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token),
+            await stranger.GetAsync($"/api/v1/households/{householdId}/ingredients?q=bol", Token),
+            await stranger.GetAsync($"/api/v1/households/{householdId}/units", Token),
+            await stranger.GetAsync($"/api/v1/households/{householdId}/completions?query=bol", Token),
             await stranger.GetAsync($"/api/v1/recipes/{recipeId}", Token),
             await stranger.GetAsync($"/api/v1/recipes/{recipeId}/image", Token),
+            await stranger.GetAsync($"/api/v1/recipes/{recipeId}/notes", Token),
+            await stranger.GetAsync($"/api/v1/recipes/{recipeId}/cook-log", Token),
+            await stranger.GetAsync(CookPhoto(recipeId, entryId), Token),
             await stranger.GetAsync($"/api/v1/recipes?householdId={householdId}", Token)
         };
 
@@ -97,6 +105,53 @@ public class BoundaryTests(PostgresFixture postgres)
         var stillThere = await owner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
         Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
+    }
+
+    [Fact]
+    public async Task Stranger_ShouldChangeNothingInAnotherHouseholdsRecipes_EvenWithTheirExactIdsAndVersion()
+    {
+        // Arrange
+        // The owner's own ETag, entry and photo, and an archive that would
+        // restore cleanly anywhere the stranger is allowed: nothing is refused
+        // for a malformed request, only for being somebody else's.
+        var (owner, stranger) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var strangerClient = stranger;
+
+        var (householdId, recipeId, entryId) = await PhotographedRecipeAsync(owner);
+        var before = await owner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var strangersKitchen = await FirstHouseholdIdAsync(stranger);
+        await RecipeAsync(stranger, strangersKitchen);
+        var archive = (await stranger.GetAsync($"/api/v1/households/{strangersKitchen}/archive", Token)).Body;
+
+        // Act
+        var writes = new[]
+        {
+            await PutRecipeAsync(stranger, recipeId, before.ETag!),
+            await stranger.PutAsync(
+                $"/api/v1/recipes/{recipeId}/notes",
+                new { overall = "Mine now.", steps = Array.Empty<object>() },
+                Token),
+            await stranger.PostAsync($"/api/v1/recipes/{recipeId}/cook-log", new { }, Token),
+            await stranger.SendAsync(PhotoUpload(recipeId, entryId), Token),
+            await stranger.DeleteAsync(CookPhoto(recipeId, entryId), Token),
+            await stranger.SendAsync(ArchiveUpload(householdId, archive), Token)
+        };
+
+        // Assert
+        Assert.All(writes, write => Assert.Equal(HttpStatusCode.NotFound, write.StatusCode));
+
+        // And nothing changed, which is the part that matters.
+        var after = await owner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var library = await owner.GetAsync($"/api/v1/recipes?householdId={householdId}", Token);
+        var photo = await owner.GetAsync(CookPhoto(recipeId, entryId), Token);
+
+        Assert.Equal(before.ETag, after.ETag);
+        Assert.Equal("Bolognese", after.Json!.Value.GetProperty("title").GetString());
+        Assert.Equal(1, library.Json!.Value.GetProperty("items").GetArrayLength());
+        Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
+        Assert.Equal(1, await CountAsync($"select count(*) from cook_log_entries where recipe_id = '{recipeId}';"));
+        Assert.Equal(0, await CountAsync($"select count(*) from personal_notes where recipe_id = '{recipeId}';"));
     }
 
     [Fact]
@@ -269,6 +324,72 @@ public class BoundaryTests(PostgresFixture postgres)
             "/api/v1/recipes",
             new { householdId, title = "Bolognese" },
             Token)).Json!.Value.GetProperty("recipeId").GetGuid();
+
+    /// <summary>
+    /// The owner's recipe with a picture, and one time they cooked it with a
+    /// photo of that: every id a stranger could aim at, all of them real.
+    /// </summary>
+    private static async Task<(Guid HouseholdId, Guid RecipeId, Guid EntryId)> PhotographedRecipeAsync(ApiClient owner)
+    {
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var recipeId = await RecipeAsync(owner, householdId);
+        await new Kitchen(owner, householdId).PictureAsync(recipeId, TestImages.Png(2, 2));
+
+        var entryId = (await owner.PostAsync($"/api/v1/recipes/{recipeId}/cook-log", new { }, Token))
+            .Json!.Value.GetProperty("entryId").GetGuid();
+        var photographed = await owner.SendAsync(PhotoUpload(recipeId, entryId), Token);
+
+        Assert.Equal(HttpStatusCode.OK, photographed.StatusCode);
+
+        return (householdId, recipeId, entryId);
+    }
+
+    private static string CookPhoto(Guid recipeId, Guid entryId) =>
+        $"/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo";
+
+    private static HttpRequestMessage PhotoUpload(Guid recipeId, Guid entryId) =>
+        Upload(HttpMethod.Put, CookPhoto(recipeId, entryId), TestImages.Png(3, 3), "image/png", "attempt.png");
+
+    private static HttpRequestMessage ArchiveUpload(Guid householdId, string archive) =>
+        Upload(
+            HttpMethod.Post,
+            $"/api/v1/households/{householdId}/archive",
+            Encoding.UTF8.GetBytes(archive),
+            "application/json",
+            "culina.json");
+
+    private static HttpRequestMessage Upload(HttpMethod method, string path, byte[] bytes, string type, string name)
+    {
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue(type);
+
+        return new HttpRequestMessage(method, path) { Content = new MultipartFormDataContent { { file, "file", name } } };
+    }
+
+    /// <summary>Saves the whole recipe under a new title, as the editor would, with the version given.</summary>
+    private static Task<ApiResponse> PutRecipeAsync(ApiClient client, Guid recipeId, string etag)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                title = "Somebody else's now",
+                language = "en",
+                yieldAmount = 4,
+                yieldKind = "servings",
+                groups = Array.Empty<object>(),
+                steps = Array.Empty<object>(),
+                tags = Array.Empty<string>()
+            })
+        };
+
+        request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(etag));
+
+        return client.SendAsync(request, Token);
+    }
+
+    private async Task<int> CountAsync(string sql) =>
+        (int)await postgres.QuerySingleAsync<long>(sql, Token);
 
     private async Task<ApiClient> SignedInAsync(string email)
     {
