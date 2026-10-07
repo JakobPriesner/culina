@@ -12,7 +12,7 @@ import { renderWithProviders } from '$lib/test/render';
  * server restarts to apply it.
  */
 const serverSettings = {
-  cookies: { secure: true, sessionDays: 30, renewAfterHours: 24 },
+  cookies: { secure: true, sessionDays: 30, renewAfterHours: 24, maxSessionDays: 90 },
   forwardedHeaders: { knownProxies: [], knownNetworks: [] },
   rateLimits: {
     loginPerIpPerMinute: 10,

@@ -24,7 +24,8 @@ internal static class ServerSettingsFile
     {
         [Key(CookieSettings.SectionName, nameof(CookieSettings.Secure))] = Text(cookies.Secure),
         [Key(CookieSettings.SectionName, nameof(CookieSettings.SessionDays))] = Text(cookies.SessionDays),
-        [Key(CookieSettings.SectionName, nameof(CookieSettings.RenewAfterHours))] = Text(cookies.RenewAfterHours)
+        [Key(CookieSettings.SectionName, nameof(CookieSettings.RenewAfterHours))] = Text(cookies.RenewAfterHours),
+        [Key(CookieSettings.SectionName, nameof(CookieSettings.MaxSessionDays))] = Text(cookies.MaxSessionDays)
     };
 
     /// <summary>The proxy group, by key.</summary>

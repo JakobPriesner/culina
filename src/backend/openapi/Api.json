@@ -12564,7 +12564,8 @@
         "required": [
           "secure",
           "sessionDays",
-          "renewAfterHours"
+          "renewAfterHours",
+          "maxSessionDays"
         ],
         "type": "object",
         "properties": {
@@ -12580,6 +12581,11 @@
           "renewAfterHours": {
             "type": "integer",
             "description": "How many hours a session may go unused before a request extends it.",
+            "format": "int32"
+          },
+          "maxSessionDays": {
+            "type": "integer",
+            "description": "How many days a session may last at all, however much it is used.",
             "format": "int32"
           }
         },
@@ -13021,7 +13027,8 @@
         "required": [
           "secure",
           "sessionDays",
-          "renewAfterHours"
+          "renewAfterHours",
+          "maxSessionDays"
         ],
         "type": "object",
         "properties": {
@@ -13037,6 +13044,11 @@
           "renewAfterHours": {
             "type": "integer",
             "description": "How many hours a session may go unused before a request extends it.",
+            "format": "int32"
+          },
+          "maxSessionDays": {
+            "type": "integer",
+            "description": "How many days a session may last at all, however much it is used.",
             "format": "int32"
           }
         },
