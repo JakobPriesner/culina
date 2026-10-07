@@ -76,14 +76,21 @@ internal sealed class UpdateRecipeCommandHandler(
     /// calls — details, then contents — because only the aggregate can tell
     /// whether a step's references resolve.
     /// </summary>
+    /// <remarks>
+    /// The child ids are settled before anything is parsed, while the recipe
+    /// still says which ones are its own — see <see cref="OwnIds"/>.
+    /// </remarks>
     private Result Apply(Recipe recipe, UpdateRecipeCommand command)
     {
         var now = time.GetUtcNow();
+        var ids = new OwnIds(recipe);
+        var sentGroups = ids.Of(command.Groups);
+        var sentSteps = ids.Of(command.Steps);
 
         return RecipeParsing.ToDetails(command.Details)
             .Bind(details => recipe.Describe(details, now))
-            .Bind(() => RecipeParsing.ToGroups(command.Groups))
-            .Bind(groups => RecipeParsing.ToSteps(command.Steps)
+            .Bind(() => RecipeParsing.ToGroups(sentGroups))
+            .Bind(groups => RecipeParsing.ToSteps(sentSteps)
                 .Bind(steps => recipe.SetContents(groups, steps, now)));
     }
 

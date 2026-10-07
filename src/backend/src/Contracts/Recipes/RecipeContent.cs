@@ -3,7 +3,11 @@ namespace Contracts.Recipes;
 /// <summary>An ingredient group and its lines.</summary>
 public sealed record IngredientGroupContract
 {
-    /// <summary>The group's id. Omit to create a new one.</summary>
+    /// <summary>
+    /// The group's id, as the recipe gave it. Omit to create a new one; an id
+    /// the recipe does not have creates a new one too, with an id of the
+    /// server's choosing.
+    /// </summary>
     public Guid? GroupId { get; init; }
 
     /// <summary>
@@ -19,7 +23,13 @@ public sealed record IngredientGroupContract
 /// <summary>One line of the ingredient list.</summary>
 public sealed record IngredientContract
 {
-    /// <summary>The line's id. Omit to create a new one; steps refer to it.</summary>
+    /// <summary>
+    /// The line's id, as the recipe gave it; steps refer to it. Omit to create
+    /// a new line. An id the recipe does not have creates one too, with an id
+    /// of the server's choosing, and a step in the same request that refers to
+    /// the id sent is pointed at that new line — so read the ids back from the
+    /// response rather than keeping the ones sent.
+    /// </summary>
     public Guid? IngredientId { get; init; }
 
     /// <summary>How much, or null when the recipe does not say.</summary>
@@ -38,7 +48,11 @@ public sealed record IngredientContract
 /// <summary>One instruction.</summary>
 public sealed record StepContract
 {
-    /// <summary>The step's id. Omit to create a new one.</summary>
+    /// <summary>
+    /// The step's id, as the recipe gave it. Omit to create a new one; an id
+    /// the recipe does not have creates a new one too, with an id of the
+    /// server's choosing.
+    /// </summary>
     public Guid? StepId { get; init; }
 
     /// <summary>

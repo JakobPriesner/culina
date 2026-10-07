@@ -131,6 +131,29 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         Assert.Equal("recipes.not_found", response.ProblemCode);
     }
 
+    [Fact]
+    public async Task Related_ShouldAnswer_WhenACursorsTimeCarriesAnOffset()
+    {
+        // Arrange
+        // Every cursor is written in UTC, and the driver refuses a timestamptz
+        // that is not; a hand-made one in +02:00 is the same instant.
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var recipeId = await kitchen.SaveAsync(
+            "Spaghetti Bolognese", "de", 15, 45, [("Hackfleisch", "g")], ["pasta"], "Anbraten.");
+        await kitchen.SaveAsync(
+            "Lasagne", "de", 30, 60, [("Hackfleisch", "g")], ["pasta"], "Schichten.");
+        var cursor = System.Buffers.Text.Base64Url.EncodeToString(Encoding.UTF8.GetBytes(
+            $$"""{"Score":1,"UpdatedAt":"2999-01-01T00:00:00+02:00","Id":"{{Guid.Empty}}"}"""));
+
+        // Act
+        var response = await kitchen.Client.GetAsync(
+            $"/api/v1/recipes/{recipeId}/related?cursor={cursor}",
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     private static async Task<List<JsonElement>> RelatedAsync(ApiClient client, Guid recipeId) =>
         [.. (await PageAsync(client, $"/api/v1/recipes/{recipeId}/related")).GetProperty("items").EnumerateArray()];
 

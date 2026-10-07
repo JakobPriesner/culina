@@ -31,16 +31,82 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
     /// different sort order.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A cursor that does not match the current sort is ignored rather than
     /// rejected: the caller changed the ordering, which means they want the
     /// first page of the new order, not an error.
+    /// </para>
+    /// <para>
+    /// So is one whose keys are not what its sort writes. A cursor is opaque
+    /// but not sealed — anybody can base64 some JSON — and the keys are cast
+    /// in SQL, so a word where a count belongs, a key too few or a null would
+    /// otherwise fail inside PostgreSQL and come back as a 500. Each key is
+    /// read as its type and written back through the same <c>Key</c> overload
+    /// a real cursor was written with, so the SQL only ever sees text this
+    /// class produced.
+    /// </para>
     /// </remarks>
     internal static RecipeCursor? Decode(string? encoded, RecipeSort sort)
     {
         var cursor = PageCursor.TryDecode<RecipeCursor>(encoded);
 
-        return cursor?.Sort == sort ? cursor : null;
+        if (cursor?.Sort != sort || cursor.Keys is null)
+        {
+            return null;
+        }
+
+        var readers = KeyReaders(sort);
+
+        if (cursor.Keys.Count != readers.Length)
+        {
+            return null;
+        }
+
+        var keys = cursor.Keys.Zip(readers, (key, read) => key is null ? null : read(key)).ToList();
+
+        return keys.Contains(null) ? null : cursor with { Keys = keys! };
     }
+
+    /// <summary>
+    /// How each key of a sort is read back, in the order
+    /// <see cref="RecipeSearchSql.KeysOf"/> writes them. A reader answers null
+    /// for a key that is not its type.
+    /// </summary>
+    /// <remarks>
+    /// The counts — a tier, minutes, times cooked — are never negative, so a
+    /// sign is refused along with everything else that is not a digit. That
+    /// also keeps the tier clear of the one int PostgreSQL cannot negate.
+    /// </remarks>
+    private static Func<string, string?>[] KeyReaders(RecipeSort sort) => sort switch
+    {
+        RecipeSort.Title => [title => title],
+        RecipeSort.ShortestFirst => [minutes => minutes.Length == 0 ? minutes : Count(minutes)],
+        RecipeSort.MostCooked => [Count],
+        RecipeSort.Relevance => [Count, Score, Time],
+        RecipeSort.Suggested => [SuggestionScore],
+        _ => [Time]
+    };
+
+    private static string? Count(string key) =>
+        int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var value)
+            ? Key(value)
+            : null;
+
+    private static string? Score(string key) =>
+        double.TryParse(key, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+        && double.IsFinite(value)
+            ? Key(value)
+            : null;
+
+    private static string? SuggestionScore(string key) =>
+        decimal.TryParse(key, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+            ? Key(value)
+            : null;
+
+    private static string? Time(string key) =>
+        DateTimeOffset.TryParse(key, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value)
+            ? Key(value)
+            : null;
 
     internal static string Key(DateTimeOffset value) =>
         value.UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
