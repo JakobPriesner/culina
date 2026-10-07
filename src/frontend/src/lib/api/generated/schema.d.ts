@@ -668,7 +668,7 @@ export interface paths {
         get: operations["getDatabaseSettingsV1"];
         /**
          * Change the database settings
-         * @description Instance administrator, or anyone while nobody has an account. Connects first, and refuses a database Culina could not run in. `204` when nothing changed; `202` when the settings were saved and the server is restarting to use them.
+         * @description Instance administrator, or anyone while nobody has an account. Connects first, and refuses a database Culina could not run in. `204` when nothing changed; `202` when the settings were saved and the server is restarting to use them. At most ten attempts a minute from one address, on the setup host too: each one opens a connection to the address it names.
          */
         put: operations["updateDatabaseSettingsV1"];
         post?: never;
@@ -7161,6 +7161,15 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

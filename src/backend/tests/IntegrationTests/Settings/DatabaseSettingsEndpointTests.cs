@@ -1,4 +1,5 @@
 using System.Net;
+using Api.Infrastructure;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Settings;
@@ -54,6 +55,41 @@ public class DatabaseSettingsEndpointTests(PostgresFixture postgres)
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(0, factory.Restarts.Scheduled);
+    }
+
+    [Fact]
+    public async Task Update_ShouldBeRefusedWith429_OnceOneAddressHasTriedTenTimesInAMinute()
+    {
+        // Arrange
+        // Nobody has an account yet, so anybody may ask — and the limit does not
+        // come from the rate limit settings, which are themselves editable here.
+        await postgres.ResetAsync(Token);
+        using var factory = new CulinaApiFactory(postgres);
+        using var stranger = factory.NewApiClient();
+        var settings = postgres.Settings;
+        var same = new
+        {
+            host = settings.Host,
+            port = settings.Port,
+            name = settings.Name,
+            username = settings.Username,
+            password = (string?)null,
+            requireSsl = false,
+            maxPoolSize = 20
+        };
+
+        for (var attempt = 0; attempt < DatabaseCheckLimit.AttemptsPerMinute; attempt++)
+        {
+            var tried = await stranger.PutAsync("/api/v1/settings/database", same, Token);
+            Assert.Equal(HttpStatusCode.NoContent, tried.StatusCode);
+        }
+
+        // Act
+        var response = await stranger.PutAsync("/api/v1/settings/database", same, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+        Assert.Equal("request.rate_limited", response.ProblemCode);
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
