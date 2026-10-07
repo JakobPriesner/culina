@@ -19,7 +19,10 @@ public static class ForwardedHeadersSettingsExtensions
         var settings = new ForwardedHeadersSettings
         {
             KnownProxies = section.CommaSeparated(nameof(ForwardedHeadersSettings.KnownProxies)),
-            KnownNetworks = section.CommaSeparated(nameof(ForwardedHeadersSettings.KnownNetworks))
+            KnownNetworks = section.CommaSeparated(nameof(ForwardedHeadersSettings.KnownNetworks)),
+            DangerouslyTrustWideNetworks = section.Bool(
+                nameof(ForwardedHeadersSettings.DangerouslyTrustWideNetworks),
+                false)
         };
 
         settings.Validate();

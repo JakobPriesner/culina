@@ -132,13 +132,58 @@ public class UpdateServerSettingsCommandHandlerTests
         Assert.Equal(new Dictionary<string, string> { ["Cookies:Secure"] = "false" }, world.Configuration.Saved);
     }
 
+    [Fact]
+    public async Task Handle_ShouldRefuseAProxyNetworkTooWideToTrust_WithACodeOfItsOwn()
+    {
+        // Arrange
+        var world = new World();
+
+        // Act
+        var result = await world.Handle(Command(
+            proxies: new ForwardedHeadersSettings { KnownNetworks = ["0.0.0.0/0"] }));
+
+        // Assert
+        // Its own code, so the screen can say why rather than "not a value
+        // this setting accepts".
+        result.ShouldBeFailure(SettingsErrors.ProxyNetworkTooWide("0.0.0.0/0"));
+        Assert.Null(world.Configuration.Saved);
+        Assert.Equal(0, world.Restart.Scheduled);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldSaveAWideProxyNetwork_WhenTheDeploymentTrustsOneByName()
+    {
+        // Arrange
+        // The screen never offers the override; a deployment that set it has
+        // its saves validated as its next startup will validate them.
+        var world = new World(proxies: new ForwardedHeadersSettings { DangerouslyTrustWideNetworks = true });
+
+        // Act
+        var change = (await world.Handle(Command(
+                proxies: new ForwardedHeadersSettings { KnownNetworks = ["0.0.0.0/0"] })))
+            .ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal(ServerChange.Restarting, change);
+        Assert.Equal("0.0.0.0/0", world.Configuration.Saved!["ForwardedHeaders:KnownNetworks"]);
+    }
+
     private static UpdateServerSettingsCommand Command(
         CookieSettings? cookies = null,
         RateLimitSettings? limits = null,
-        string? endpoint = null) =>
-        new(cookies ?? new CookieSettings(), new ForwardedHeadersSettings(), limits ?? new RateLimitSettings(), endpoint, "grpc");
+        string? endpoint = null,
+        ForwardedHeadersSettings? proxies = null) =>
+        new(
+            cookies ?? new CookieSettings(),
+            proxies ?? new ForwardedHeadersSettings(),
+            limits ?? new RateLimitSettings(),
+            endpoint,
+            "grpc");
 
-    private sealed class World(TelemetrySettings? telemetry = null, CookieSettings? cookies = null)
+    private sealed class World(
+        TelemetrySettings? telemetry = null,
+        CookieSettings? cookies = null,
+        ForwardedHeadersSettings? proxies = null)
     {
         public FakeServerConfiguration Configuration { get; } = new();
 
@@ -147,7 +192,7 @@ public class UpdateServerSettingsCommandHandlerTests
         public Task<Result<ServerChange>> Handle(UpdateServerSettingsCommand command) =>
             new UpdateServerSettingsCommandHandler(
                     cookies ?? new CookieSettings(),
-                    new ForwardedHeadersSettings(),
+                    proxies ?? new ForwardedHeadersSettings(),
                     new RateLimitSettings(),
                     telemetry ?? new TelemetrySettings(),
                     Configuration,
