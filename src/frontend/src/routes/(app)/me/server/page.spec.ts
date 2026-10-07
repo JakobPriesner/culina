@@ -181,6 +181,26 @@ describe('the server settings page', () => {
     ).toBeInTheDocument();
   });
 
+  it('asks for the database password again once the server it belongs to changes', async () => {
+    serverAnswers();
+
+    renderWithProviders(ServerPage);
+    await settle();
+
+    expect(screen.getByText('Leave empty to keep the current password.')).toBeInTheDocument();
+
+    const host = screen.getByRole('textbox', { name: 'Host' });
+    await userEvent.clear(host);
+    await userEvent.type(host, 'elsewhere');
+
+    // The server only sends the stored password to the server it was saved for.
+    expect(
+      screen.getByText(
+        'Enter the password again: Culina only sends the stored one to the server it was saved for.'
+      )
+    ).toBeInTheDocument();
+  });
+
   it('does not send a number it cannot read', async () => {
     const fetched = serverAnswers();
 

@@ -23,7 +23,10 @@ public sealed record UpdateAssistanceSettingsCommand(
 
 /// <summary>One provider to connect, or to keep connected.</summary>
 /// <param name="Provider">Which provider.</param>
-/// <param name="ApiKey">A new key, empty to clear it, or null to keep it.</param>
+/// <param name="ApiKey">
+/// A new key, empty to clear it, or null to keep it — which is only possible
+/// while the address stays what it is.
+/// </param>
 /// <param name="BaseUrl">Where it is, or empty for its own address.</param>
 public sealed record ConnectionEdit(string Provider, string? ApiKey, string BaseUrl);
 
@@ -77,7 +80,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
     /// three providers and four jobs on it and "that is not valid" would send
     /// somebody looking through all of them.
     /// </remarks>
-    private static Result Check(UpdateAssistanceSettingsCommand command)
+    private Result Check(UpdateAssistanceSettingsCommand command)
     {
         List<Result> problems =
         [
@@ -98,7 +101,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
         return Result.Combine(problems);
     }
 
-    private static Result CheckConnection(ConnectionEdit connection)
+    private Result CheckConnection(ConnectionEdit connection)
     {
         if (AssistantKind.Parse(connection.Provider) is not { } kind)
         {
@@ -116,10 +119,29 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
         // screen sends every provider it knows, every time, so most of them are
         // blank on most saves. What a blank row cannot do is be pointed at,
         // which is what CheckUse is for.
-        return address.Length > 0 && !IsUsableAddress(address)
-            ? Field($"{kind.Code}.baseUrl", AssistanceErrors.InvalidBaseUrl)
+        if (address.Length > 0 && !IsUsableAddress(address))
+        {
+            return Field($"{kind.Code}.baseUrl", AssistanceErrors.InvalidBaseUrl);
+        }
+
+        return KeepsKeyForAnotherAddress(kind, connection.ApiKey, address)
+            ? Field($"{kind.Code}.apiKey", AssistanceErrors.ApiKeyRequired)
             : Result.Success();
     }
+
+    /// <summary>
+    /// Whether a stored key would be kept for an address it was not saved for.
+    /// </summary>
+    /// <remarks>
+    /// The key goes wherever the address says, and listing the models asks that
+    /// address straight away. Kept across a change of address, it would go to a
+    /// server of the choosing of whoever changed it — so a new address needs
+    /// the key typed again.
+    /// </remarks>
+    private bool KeepsKeyForAnotherAddress(AssistantKind kind, string? apiKey, string address) =>
+        apiKey is null
+        && settings.ConnectionFor(kind) is { HasApiKey: true } stored
+        && stored.BaseUrl != address;
 
     /// <summary>
     /// Whether a job points at something that could ever do it.

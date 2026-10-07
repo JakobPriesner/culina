@@ -4424,7 +4424,12 @@ export interface components {
         SettingsUpdateAssistanceConnectionRequest: {
             /** @description `gemini`, `openai` or `ollama`. */
             provider: string;
-            /** @description A new API key, or null to keep the one already stored. */
+            /**
+             * @description A new API key, or null to keep the one already stored — for the address
+             *     it was stored with only: null with a different `baseUrl` is refused
+             *     with `assistance.api_key_required`, because a stored key is only
+             *     ever sent to the address it was saved for.
+             */
             apiKey?: string | null;
             /** @description Where the provider is, or empty for its own address. */
             baseUrl: string;
@@ -4506,7 +4511,10 @@ export interface components {
             username: string;
             /**
              * @description A new password, or null to keep the one already set. Write-only: no
-             *     response ever carries it back.
+             *     response ever carries it back. Kept only for the same server: null
+             *     with a different host, port, name or username is refused with
+             *     `settings.database_password_required`, because the stored password
+             *     is only ever sent to the server it was saved for.
              */
             password?: string | null;
             /** @description Whether the connection must use TLS. */
