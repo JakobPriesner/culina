@@ -1,7 +1,18 @@
 import { m } from '$shell/i18n';
 
 import type { RecipeSummary } from './types';
-import { wordYield } from './yieldWords';
+import { wordYield, type Yields } from './yieldWords';
+
+/**
+ * What the line of facts is made of: a summary has all of it, the surface a
+ * whole recipe has everything but how often it was cooked, which is not a fact
+ * about the recipe being read.
+ */
+export interface MetaFacts extends Yields {
+  readonly totalMinutes: number | null;
+  readonly yieldAmount: number;
+  readonly cookCount?: number;
+}
 
 /**
  * The one line of facts under a recipe's title.
@@ -11,7 +22,7 @@ import { wordYield } from './yieldWords';
  * decided once. Time first, because it is what decides whether tonight is the
  * night.
  */
-export function metaLineFor(recipe: RecipeSummary): string {
+export function metaLineFor(recipe: MetaFacts): string {
   const parts: string[] = [];
 
   if (recipe.totalMinutes !== null) {
@@ -22,7 +33,7 @@ export function metaLineFor(recipe: RecipeSummary): string {
 
   // Only once it has actually been cooked. "Made 0×" is noise on every recipe
   // nobody has got to yet.
-  if (recipe.cookCount > 0) {
+  if (recipe.cookCount) {
     parts.push(m['recipes.meta.cooked']({ count: recipe.cookCount }));
   }
 

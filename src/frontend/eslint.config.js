@@ -38,6 +38,17 @@ export default ts.config(
             'Use the typed client in $api/client. It owns credentials, CSRF, ETags and error mapping — see the frontend-api-client skill.'
         }
       ],
+      // `m[\`key.${x}\`]` is a computed lookup the message compiler cannot
+      // see through, so every message stays in the bundle. Write the keys out.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "MemberExpression[computed=true][object.name='m'][property.type='TemplateLiteral']",
+          message:
+            'Do not look up messages with a template literal: it defeats Paraglide tree-shaking. Map each key to its message explicitly.'
+        }
+      ],
       'no-restricted-imports': [
         'error',
         {
@@ -97,7 +108,7 @@ export default ts.config(
     // typed client is not available to it, and the whole point of the file is
     // to answer requests the network cannot. It is also the one file that must
     // never touch the API — see the comment at the top of it.
-    files: ['src/service-worker.ts'],
+    files: ['src/service-worker.ts', 'src/service-worker/**/*.ts'],
     rules: { 'no-restricted-globals': 'off' }
   },
   {

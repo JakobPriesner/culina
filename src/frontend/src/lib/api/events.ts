@@ -360,11 +360,13 @@ function parse(block: string): { data: string | null; id: string | null } {
 
 function pause(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-
-    signal.addEventListener('abort', () => {
+    const finish = () => {
       clearTimeout(timer);
+      signal.removeEventListener('abort', finish);
       resolve();
-    });
+    };
+    const timer = setTimeout(finish, ms);
+
+    signal.addEventListener('abort', finish, { once: true });
   });
 }

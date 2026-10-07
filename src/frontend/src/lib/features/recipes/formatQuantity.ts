@@ -156,5 +156,18 @@ function number(value: number, locale: string, unit: Unit | null): string {
 }
 
 /** Trimmed and localised: `1.0` is `1`, and `1.5` is `1,5` in German. */
-const decimal = (value: number, locale: string): string =>
-  new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+const decimal = (value: number, locale: string): string => decimalFormat(locale).format(value);
+
+/** Made once per locale: a scaled recipe formats an amount per ingredient. */
+const decimalFormats = new Map<string, Intl.NumberFormat>();
+
+function decimalFormat(locale: string): Intl.NumberFormat {
+  let format = decimalFormats.get(locale);
+
+  if (!format) {
+    format = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+    decimalFormats.set(locale, format);
+  }
+
+  return format;
+}

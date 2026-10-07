@@ -20,6 +20,7 @@ export { default as Icon } from './display/Icon.svelte';
 export { default as Image } from './display/Image.svelte';
 export { default as VisuallyHidden } from './display/VisuallyHidden.svelte';
 
+export { default as ActionMenu } from './overlay/ActionMenu.svelte';
 export { default as Modal } from './overlay/Modal.svelte';
 export { default as Popover } from './overlay/Popover.svelte';
 export { default as Sheet } from './overlay/Sheet.svelte';

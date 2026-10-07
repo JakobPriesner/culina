@@ -6,6 +6,7 @@
   import { preferences } from '$shell/preferences.svelte';
 
   import type { MealSlot, PlannedDay, PlannedMeal } from './mealPlan.svelte';
+  import { mealSlots, slotLabel } from './slots';
 
   /**
    * Where a meal goes, answered rather than aimed at.
@@ -63,9 +64,9 @@
   );
 
   const slotOptions = $derived<readonly RadioOption[]>(
-    (['breakfast', 'lunch', 'dinner'] as const).map((which) => ({
+    mealSlots.map((which) => ({
       value: which,
-      label: m[`plan.slot.${which}`]()
+      label: slotLabel[which]()
     }))
   );
 </script>

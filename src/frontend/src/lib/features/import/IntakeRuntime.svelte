@@ -15,35 +15,39 @@
       if (owner) void intakes.refresh();
     });
   });
-  onMount(() => {
-    void importPush.restore();
-    let timer: ReturnType<typeof setTimeout>;
+  onMount(() => void importPush.restore());
+  const busy = $derived(active.length > 0);
+  // The owner effect above makes the first request, so this only keeps up. It
+  // polls quickly while an import runs and slowly otherwise, and not at all in
+  // a hidden tab: coming back, or the connection returning, refreshes at once.
+  $effect(() => {
+    const delay = busy ? 2000 : 15000;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
     let polling = false;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (!disposed && !document.hidden) timer = setTimeout(() => void poll(), delay);
+    };
     const poll = async () => {
-      if (disposed || polling) return;
+      if (disposed || polling || document.hidden) return;
       polling = true;
       try {
         await intakes.refresh();
       } finally {
         polling = false;
-        if (!disposed) timer = setTimeout(() => void poll(), active.length ? 2000 : 15000);
+        schedule();
       }
     };
-    const visible = () => {
-      if (!document.hidden) {
-        clearTimeout(timer);
-        void poll();
-      }
-    };
-    timer = setTimeout(() => void poll(), 2000);
-    document.addEventListener('visibilitychange', visible);
-    window.addEventListener('online', visible);
+    const resume = () => void poll();
+    schedule();
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('online', resume);
     return () => {
       disposed = true;
       clearTimeout(timer);
-      document.removeEventListener('visibilitychange', visible);
-      window.removeEventListener('online', visible);
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('online', resume);
     };
   });
 </script>

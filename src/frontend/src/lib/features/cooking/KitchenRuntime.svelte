@@ -65,13 +65,19 @@
     else delete document.documentElement.dataset['kitchenLighting'];
   });
 
+  // Derived so the badge effect re-runs when a count changes, not on every
+  // tick of the clock that `runningCount` is computed from.
+  const runningCount = $derived(kitchenTimers.runningCount);
+  const uncheckedCount = $derived(
+    shopping.householdId === session.activeHouseholdId
+      ? shopping.items.filter((item) => !item.isChecked).length
+      : 0
+  );
+
   $effect(() => {
-    const id = cooking.session?.sessionId ?? null;
-    const count =
-      shopping.householdId === session.activeHouseholdId
-        ? shopping.items.filter((item) => !item.isChecked).length
-        : 0;
-    badgeManager.update(kitchenTimers.runningCount, count);
-    void editTimerState('__badge', (state) => ({ ...state, url: id ?? '', shoppingItems: count }));
+    const id = sessionId ?? '';
+    const count = uncheckedCount;
+    badgeManager.update(runningCount, count);
+    void editTimerState('__badge', (state) => ({ ...state, url: id, shoppingItems: count }));
   });
 </script>

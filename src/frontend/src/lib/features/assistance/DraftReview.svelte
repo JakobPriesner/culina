@@ -182,7 +182,7 @@
           <p class="source-text">{source.transcript}</p>
         {/if}
         {#each source.photos as photo (photo)}
-          <img src={photo} alt={m['import.review.photo']()} />
+          <img src={photo} alt={m['import.review.photo']()} loading="lazy" decoding="async" />
         {/each}
       </section>
       <DraftWriting {draft} {writing} />

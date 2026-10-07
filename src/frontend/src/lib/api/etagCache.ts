@@ -8,16 +8,38 @@
 interface CachedResponse {
   readonly etag: string;
   readonly body: string;
+  /** Parsed once when remembered, so `invalidate` does not parse every key. */
+  readonly path: string;
 }
 
+/** Enough for the pages in one sitting; the oldest-read entry goes first. */
+const capacity = 100;
+
+/** Insertion order is read order: a hit moves its entry to the end. */
 const entries = new Map<string, CachedResponse>();
 
 export function remember(url: string, etag: string, body: string): void {
-  entries.set(url, { etag, body });
+  entries.delete(url);
+  entries.set(url, { etag, body, path: pathOf(url) });
+
+  if (entries.size > capacity) {
+    const oldest = entries.keys().next().value;
+
+    if (oldest !== undefined) {
+      entries.delete(oldest);
+    }
+  }
 }
 
 export function cached(url: string): CachedResponse | undefined {
-  return entries.get(url);
+  const entry = entries.get(url);
+
+  if (entry) {
+    entries.delete(url);
+    entries.set(url, entry);
+  }
+
+  return entry;
 }
 
 /**
@@ -30,10 +52,8 @@ export function cached(url: string): CachedResponse | undefined {
 export function invalidate(url: string): void {
   const target = pathOf(url);
 
-  for (const key of [...entries.keys()]) {
-    const candidate = pathOf(key);
-
-    if (target.startsWith(candidate) || candidate.startsWith(target)) {
+  for (const [key, { path }] of [...entries]) {
+    if (target.startsWith(path) || path.startsWith(target)) {
       entries.delete(key);
     }
   }

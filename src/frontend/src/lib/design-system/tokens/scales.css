@@ -83,6 +83,17 @@
      figure here is room for a floating button, which most pages have at most. */
   --controls-inset: var(--space-24);
 
+  /* How far down from the top of the screen a step is brought to when a page
+     scrolls it into view: clear of the app's floating header. The cook page
+     overrides it with its own, smaller, figure. */
+  --step-top-inset: var(--space-24);
+
+  /* The column a sunken side panel sits in beside long-form text, and the inset
+     of any such panel. The recipe surface, its heading rows and the steps
+     beside it have to agree on both, or the page stops lining up. */
+  --side-column: 20rem;
+  --card-padding: clamp(1rem, 2vw, 1.5rem);
+
   /* How tall the shell's floating header is, for the few pages that put
      something of their own on its line. AppShell measures the real value and
      overrides this; the figure here is what the header comes to today — the
