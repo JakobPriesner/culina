@@ -48,8 +48,7 @@ internal sealed class ReadRecipeDraftEndpoint : IEndpoint
                             language,
                             context.CurrentUser().UserId)
                         {
-                            Photograph = photograph,
-                            PhotographMediaType = file.ContentType
+                            Photograph = photograph
                         },
                         cancellationToken)
                     .ConfigureAwait(false);

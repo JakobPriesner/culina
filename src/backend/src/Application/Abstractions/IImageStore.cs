@@ -46,6 +46,21 @@ public interface IImageStore
     /// </remarks>
     Task<Result<StoredImage>> StoreAsync(Stream content, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Re-encodes a picture for an assistant to read, and keeps nothing.
+    /// </summary>
+    /// <param name="content">The uploaded bytes.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <remarks>
+    /// The same decoding an upload gets, ending in a JPEG of the pixels and
+    /// nothing else, no bigger than a model reads text at. A photograph of a
+    /// cookbook page says where the kitchen is as surely as a photograph of
+    /// dinner, and this one leaves the instance for somebody else's servers.
+    /// </remarks>
+    Task<Result<RecipePicture>> ReEncodeForReadingAsync(
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken);
+
     /// <summary>Writes one rendition to a destination.</summary>
     /// <param name="contentHash">Which image.</param>
     /// <param name="width">Which rendition, from <see cref="ImageWidths"/>.</param>

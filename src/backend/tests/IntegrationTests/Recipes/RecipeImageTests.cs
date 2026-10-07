@@ -144,7 +144,7 @@ public class RecipeImageTests(PostgresFixture postgres)
         // otherwise hand out its own address with a picture of dinner.
         var (client, recipeId) = await SeedAsync();
 
-        await UploadAsync(client, recipeId, LocatedPhotograph(), "kitchen.jpg", "image/jpeg");
+        await UploadAsync(client, recipeId, TestImages.LocatedPhotograph(), "kitchen.jpg", "image/jpeg");
 
         // Act
         var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
@@ -281,27 +281,6 @@ public class RecipeImageTests(PostgresFixture postgres)
         exif.SetValue(
             SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation,
             (ushort)6);
-
-        image.Metadata.ExifProfile = exif;
-        image.Save(buffer, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
-
-        return buffer.ToArray();
-    }
-
-    /// <summary>A small photograph that says where it was taken.</summary>
-    private static byte[] LocatedPhotograph()
-    {
-        using var image = new Image<Rgba32>(64, 48);
-        using var buffer = new MemoryStream();
-
-        var exif = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
-
-        exif.SetValue(
-            SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.GPSLatitudeRef,
-            "N");
-        exif.SetValue(
-            SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.GPSLatitude,
-            [new Rational(49), new Rational(47), new Rational(0)]);
 
         image.Metadata.ExifProfile = exif;
         image.Save(buffer, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());

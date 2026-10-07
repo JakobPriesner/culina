@@ -5,6 +5,7 @@ using Domain.Recipes;
 using Domain.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.Processing;
@@ -79,6 +80,16 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
     /// </remarks>
     private static readonly SemaphoreSlim Decoding = new(2, 2);
 
+    /// <summary>
+    /// The longest side of a picture sent to an assistant to be read.
+    /// </summary>
+    /// <remarks>
+    /// About what the providers scale a picture down to anyway — OpenAI fits
+    /// it inside 2048 square — so anything larger is bytes sent abroad to be
+    /// thrown away. A phone screenshot or a cookbook page is still sharp here.
+    /// </remarks>
+    private const int LongestReadingSide = 2048;
+
     public async Task<Result<StoredImage>> StoreAsync(
         Stream content,
         CancellationToken cancellationToken)
@@ -100,6 +111,24 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             buffered.Position = 0;
 
             return await ReEncodeAsync(buffered, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public async Task<Result<RecipePicture>> ReEncodeForReadingAsync(
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken)
+    {
+        if (content.Length > settings.MaxImageBytes)
+        {
+            return ImageErrors.TooLarge(settings.MaxImageBytes);
+        }
+
+        var buffered = new MemoryStream(content.ToArray(), writable: false);
+
+        await using (buffered.ConfigureAwait(false))
+        {
+            return await DecodeAsync(buffered, image => ForReadingAsync(image, cancellationToken), cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 
@@ -202,6 +231,42 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
     }
 
     /// <summary>
+    /// A JPEG a model can read, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// Flattened onto white first: a JPEG has no transparency, and black text
+    /// on a transparent screenshot would otherwise come out black on black.
+    /// </remarks>
+    private static async Task<RecipePicture> ForReadingAsync(Image image, CancellationToken cancellationToken)
+    {
+        image.Mutate(context =>
+        {
+            context.BackgroundColor(Color.White);
+
+            if (image.Width > LongestReadingSide || image.Height > LongestReadingSide)
+            {
+                context.Resize(new ResizeOptions
+                {
+                    Size = new Size(LongestReadingSide, LongestReadingSide),
+                    Mode = ResizeMode.Max
+                });
+            }
+        });
+
+        var encoded = new MemoryStream();
+
+        await using (encoded.ConfigureAwait(false))
+        {
+            // Without metadata, for the same reason as a stored rendition.
+            await image
+                .SaveAsync(encoded, new JpegEncoder { Quality = 90, SkipMetadata = true }, cancellationToken)
+                .ConfigureAwait(false);
+
+            return new RecipePicture(encoded.ToArray(), "image/jpeg");
+        }
+    }
+
+    /// <summary>
     /// Opens an untrusted image and hands it over the right way up.
     /// </summary>
     /// <remarks>
@@ -254,6 +319,14 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             // amount of centring it in the frame puts the dish back in the
             // middle.
             image.Mutate(context => context.AutoOrient());
+
+            // Then nothing but pixels. Every encoder here is also told to skip
+            // metadata, but not every one listens: ImageSharp's JPEG encoder
+            // writes the EXIF profile, coordinates and all, with SkipMetadata
+            // set. Dropping the profiles is what does not depend on that.
+            image.Metadata.ExifProfile = null;
+            image.Metadata.XmpProfile = null;
+            image.Metadata.IptcProfile = null;
 
             return Result<TOut>.Success(await use(image).ConfigureAwait(false));
         }

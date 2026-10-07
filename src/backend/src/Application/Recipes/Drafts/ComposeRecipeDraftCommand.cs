@@ -38,9 +38,6 @@ public sealed record ComposeRecipeDraftCommand(
     /// </remarks>
     public ReadOnlyMemory<byte> Photograph { get; init; }
 
-    /// <summary>What kind of photograph, when there is one.</summary>
-    public string? PhotographMediaType { get; init; }
-
     /// <summary>More pages of the same recipe.</summary>
     public IReadOnlyList<RecipePicture> Pictures { get; init; } = [];
 
@@ -65,7 +62,8 @@ public sealed record DraftProgress(IAsyncEnumerable<Event> Events);
 internal sealed class ComposeRecipeDraftCommandHandler(
     AssistantRun assistant,
     IRecipeRepository recipes,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    IImageStore images)
     : ICommandHandler<ComposeRecipeDraftCommand, DraftProgress>
 {
     /// <summary>
@@ -186,7 +184,9 @@ internal sealed class ComposeRecipeDraftCommandHandler(
             return AssistanceErrors.NothingToWorkFrom;
         }
 
-        return RecipeWords.ToLanguage(command.Language ?? "en").Map(language =>
+        var pictures = await ReEncodedAsync(command, cancellationToken).ConfigureAwait(false);
+
+        return pictures.Bind(readable => RecipeWords.ToLanguage(command.Language ?? "en").Map(language =>
         {
             var writing = command.Kind == "idea";
 
@@ -198,11 +198,38 @@ internal sealed class ComposeRecipeDraftCommandHandler(
                     ? AssistantPrompts.Draft(language)
                     : social ? AssistantPrompts.Social(language) : AssistantPrompts.Read(language),
                 Material = social ? AssistantPrompts.SocialMaterial(material, command.Transcript) : material,
-                Picture = command.Photograph,
-                PictureMediaType = command.PhotographMediaType,
-                Pictures = command.Pictures
+                Pictures = readable
             };
-        });
+        }));
+    }
+
+    /// <summary>
+    /// Every picture the provider will see, the photograph first, re-encoded.
+    /// </summary>
+    /// <remarks>
+    /// Here rather than at each route, because every route that reads a
+    /// recipe out of pictures — a photograph, shared screenshots, a durable
+    /// intake — ends at this handler, and a route that forgot would send a
+    /// stranger's servers the coordinates of somebody's kitchen. What leaves is
+    /// a JPEG of the pixels, whatever the client said the file was.
+    /// </remarks>
+    private async Task<Result<IReadOnlyList<RecipePicture>>> ReEncodedAsync(
+        ComposeRecipeDraftCommand command,
+        CancellationToken cancellationToken)
+    {
+        var originals = command.Pictures
+            .Select(picture => picture.Content)
+            .Prepend(command.Photograph)
+            .Where(content => !content.IsEmpty);
+
+        List<Result<RecipePicture>> encoded = [];
+
+        foreach (var original in originals)
+        {
+            encoded.Add(await images.ReEncodeForReadingAsync(original, cancellationToken).ConfigureAwait(false));
+        }
+
+        return encoded.Collect();
     }
 
     private async Task<Result<Composition>> ForRevisionAsync(

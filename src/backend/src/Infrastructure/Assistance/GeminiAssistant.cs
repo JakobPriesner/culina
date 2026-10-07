@@ -283,18 +283,6 @@ internal sealed class GeminiAssistant(
             parts.Add(new Part { Text = material });
         }
 
-        if (!request.Picture.IsEmpty)
-        {
-            parts.Add(new Part
-            {
-                InlineData = new Blob
-                {
-                    Data = request.Picture.ToArray(),
-                    MimeType = request.PictureMediaType ?? "image/jpeg"
-                }
-            });
-        }
-
         foreach (var picture in request.Pictures)
         {
             parts.Add(new Part

@@ -149,7 +149,7 @@ public sealed record Connected(string ApiKey, string BaseUrl, string Model);
 /// <remarks>
 /// The separation is the whole defence against prompt injection, so it is
 /// structural rather than a convention. <see cref="Instruction"/> is written by
-/// this application. <see cref="Material"/> and <see cref="Picture"/> are
+/// this application. <see cref="Material"/> and <see cref="Pictures"/> are
 /// whatever a person pasted, typed or photographed, which on a shared instance
 /// means whatever somebody else pasted, typed or photographed. An adapter puts
 /// them in different parts of the request and never concatenates them, and what
@@ -182,13 +182,10 @@ public sealed record Composition
     /// <summary>What to do it to. Untrusted.</summary>
     public string? Material { get; init; }
 
-    /// <summary>A photograph to read a recipe out of. Untrusted.</summary>
-    public ReadOnlyMemory<byte> Picture { get; init; }
-
-    /// <summary>What kind of picture, when there is one.</summary>
-    public string? PictureMediaType { get; init; }
-
-    /// <summary>Additional pages of the same recipe, in reading order.</summary>
+    /// <summary>
+    /// Photographs or screenshots to read a recipe out of, in reading order.
+    /// Untrusted, and already re-encoded without their metadata.
+    /// </summary>
     public IReadOnlyList<RecipePicture> Pictures { get; init; } = [];
 }
 

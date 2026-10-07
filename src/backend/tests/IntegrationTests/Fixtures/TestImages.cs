@@ -1,5 +1,7 @@
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace IntegrationTests.Fixtures;
@@ -14,6 +16,23 @@ internal static class TestImages
         using var buffer = new MemoryStream();
 
         image.Save(buffer, new PngEncoder());
+
+        return buffer.ToArray();
+    }
+
+    /// <summary>A small photograph that says where it was taken.</summary>
+    internal static byte[] LocatedPhotograph(int width = 64, int height = 48)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        using var buffer = new MemoryStream();
+
+        var exif = new ExifProfile();
+
+        exif.SetValue(ExifTag.GPSLatitudeRef, "N");
+        exif.SetValue(ExifTag.GPSLatitude, [new Rational(49), new Rational(47), new Rational(0)]);
+
+        image.Metadata.ExifProfile = exif;
+        image.Save(buffer, new JpegEncoder());
 
         return buffer.ToArray();
     }

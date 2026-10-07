@@ -7,6 +7,7 @@ using Application.Abstractions.Settings;
 using Infrastructure.Import;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
+using SixLabors.ImageSharp;
 
 namespace IntegrationTests.Assistance;
 
@@ -334,9 +335,9 @@ public class DraftStreamTests(PostgresFixture postgres)
         form.Add(new StringContent("one cup"), "transcript");
         for (var page = 0; page < 2; page++)
         {
-            var photo = new ByteArrayContent([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]);
-            photo.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
-            form.Add(photo, "photos", $"page{page}.png");
+            var photo = new ByteArrayContent(TestImages.LocatedPhotograph());
+            photo.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+            form.Add(photo, "photos", $"page{page}.jpg");
         }
         using var request = new HttpRequestMessage(HttpMethod.Post,
             $"/api/v1/recipe-drafts/media?householdId={world.HouseholdId}&language=en")
@@ -354,6 +355,73 @@ public class DraftStreamTests(PostgresFixture postgres)
         Assert.Contains("<untrusted_transcript>one cup</untrusted_transcript>", text, StringComparison.Ordinal);
         Assert.Equal("image_url", parts[1].GetProperty("type").GetString());
         Assert.Equal("image_url", parts[2].GetProperty("type").GetString());
+
+        // Every screenshot is re-encoded on its way out, so none of them tells
+        // the provider where it was taken.
+        Assert.All(SentPictures(provider), AssertCarriesNothingButPixels);
+    }
+
+    [Fact]
+    public async Task Photograph_ShouldReachTheProvider_AsAJpegWithoutWhereItWasTaken()
+    {
+        // Arrange
+        // A photograph of a cookbook page carries the kitchen's coordinates as
+        // surely as a photograph of dinner, and this one goes to a third party.
+        // The client also says it is something it is not.
+        using var provider = new StubProvider(Written);
+        using var world = await ConnectedAsync(provider, reading: true);
+        var original = TestImages.LocatedPhotograph(3000, 1000);
+        Assert.NotNull(Image.Identify(original).Metadata.ExifProfile);
+
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(original);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/heic");
+        form.Add(file, "file", "page.heic");
+
+        // Act
+        var response = await world.Client.SendAsync(
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                $"/api/v1/recipe-drafts/photographs?householdId={world.HouseholdId}&language=en")
+            { Content = form },
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var sent = Assert.Single(SentPictures(provider));
+
+        AssertCarriesNothingButPixels(sent);
+
+        // No larger than the provider would read it at anyway.
+        using var decoded = Image.Load(sent.Bytes);
+        Assert.Equal(2048, decoded.Width);
+    }
+
+    /// <summary>The pictures in the last request, as the provider received them.</summary>
+    private static List<(string MediaType, byte[] Bytes)> SentPictures(StubProvider provider)
+    {
+        using var sent = JsonDocument.Parse(provider.LastRequest);
+
+        return
+        [
+            .. sent.RootElement.GetProperty("messages")[1].GetProperty("content").EnumerateArray()
+                .Where(part => part.GetProperty("type").GetString() == "image_url")
+                .Select(part => part.GetProperty("image_url").GetProperty("url").GetString()!)
+                .Select(url => url["data:".Length..].Split(";base64,"))
+                .Select(data => (data[0], Convert.FromBase64String(data[1])))
+        ];
+    }
+
+    private static void AssertCarriesNothingButPixels((string MediaType, byte[] Bytes) picture)
+    {
+        Assert.Equal("image/jpeg", picture.MediaType);
+
+        using var decoded = Image.Load(picture.Bytes);
+
+        Assert.Null(decoded.Metadata.ExifProfile);
+        Assert.Null(decoded.Metadata.XmpProfile);
+        Assert.Null(decoded.Metadata.IptcProfile);
     }
 
     [Fact]
@@ -413,7 +481,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         Assert.Equal(1, failed.GetProperty("photoCount").GetInt32());
         var photo = await world.Client.GetAsync($"/api/v1/recipe-intakes/{id}/photos/0", Token);
         Assert.Equal("image/png", photo.ContentHeaders.ContentType?.MediaType);
-        Assert.Equal(new byte[] { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1 }, photo.Bytes.ToArray());
+        Assert.Equal(IntakePage, photo.Bytes.ToArray());
         var registration = postgres.Api.Services.GetRequiredService<RegistrationSettings>();
         registration.OpenRegistration = true;
         registration.RequireInvitation = false;
@@ -534,6 +602,9 @@ public class DraftStreamTests(PostgresFixture postgres)
         Assert.Equal(before + 1, postgres.Api.PushRequests);
     }
 
+    /// <summary>A screenshot submitted with an intake, kept as it was sent until it is reviewed.</summary>
+    private static readonly byte[] IntakePage = TestImages.Png(40, 30);
+
     private static Task<ApiResponse> SubmitIntake(World world, Guid id, bool photo = false)
     {
         var form = new MultipartFormDataContent();
@@ -541,7 +612,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         form.Add(new StringContent("https://example.com/recipe"), "sourceUrl");
         if (photo)
         {
-            form.Add(new ByteArrayContent([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]), "photos", "recipe.png");
+            form.Add(new ByteArrayContent(IntakePage), "photos", "recipe.png");
         }
         return world.Client.SendAsync(new HttpRequestMessage(HttpMethod.Post, $"/api/v1/recipe-intakes?id={id}&householdId={world.HouseholdId}&language=de") { Content = form }, Token);
     }
