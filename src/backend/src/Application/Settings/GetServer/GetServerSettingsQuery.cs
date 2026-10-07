@@ -64,6 +64,7 @@ internal sealed class GetServerSettingsQueryHandler(
                 SourceRequestsPerHour = limits.SourceRequestsPerHour,
                 SharedRecipesPerIpPerMinute = limits.SharedRecipesPerIpPerMinute,
                 AssistantRequestsPerHour = limits.AssistantRequestsPerHour,
+                ArchiveExportsPerHour = limits.ArchiveExportsPerHour,
                 RequestsPerSessionPerMinute = limits.RequestsPerSessionPerMinute
             },
             Telemetry = new TelemetryContract

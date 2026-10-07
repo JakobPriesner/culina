@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Archive;
@@ -47,7 +48,9 @@ internal sealed class ExportArchiveEndpoint : IEndpoint
             .Produces<string>(StatusCodes.Status200OK, "application/json")
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequireAuthorization();
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitExtensions.Archive);
     }
 }
 

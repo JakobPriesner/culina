@@ -34,6 +34,7 @@ internal static class UpdateServerSettingsRequestExtensions
                 SourceRequestsPerHour = request.RateLimits.SourceRequestsPerHour,
                 SharedRecipesPerIpPerMinute = request.RateLimits.SharedRecipesPerIpPerMinute,
                 AssistantRequestsPerHour = request.RateLimits.AssistantRequestsPerHour,
+                ArchiveExportsPerHour = request.RateLimits.ArchiveExportsPerHour,
                 RequestsPerSessionPerMinute = request.RateLimits.RequestsPerSessionPerMinute
             },
             request.Telemetry.OtlpEndpoint,

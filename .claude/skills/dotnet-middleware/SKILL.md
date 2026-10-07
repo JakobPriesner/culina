@@ -35,6 +35,7 @@ app.UseAuthentication();        // 11. Cookie -> principal.
 app.UseSessionContext();        // 12. Principal -> session record, user id on the logging scope + span.
 app.UseCsrfGuard();             // 13. Needs the session to compare the token against.
 app.UseAuthorization();         // 14. Policies, after identity is fully established.
+app.UsePersonalRateLimits();    // 15. Costly limits per person (imports, sources, assistant, archive): only now is it known who asks.
 app.MapHealthEndpoints();
 app.MapEndpoints();
 ```

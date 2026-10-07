@@ -48,6 +48,7 @@ internal static class ServerSettingsFile
         [Limit(nameof(RateLimitSettings.SourceRequestsPerHour))] = Text(limits.SourceRequestsPerHour),
         [Limit(nameof(RateLimitSettings.SharedRecipesPerIpPerMinute))] = Text(limits.SharedRecipesPerIpPerMinute),
         [Limit(nameof(RateLimitSettings.AssistantRequestsPerHour))] = Text(limits.AssistantRequestsPerHour),
+        [Limit(nameof(RateLimitSettings.ArchiveExportsPerHour))] = Text(limits.ArchiveExportsPerHour),
         [Limit(nameof(RateLimitSettings.RequestsPerSessionPerMinute))] = Text(limits.RequestsPerSessionPerMinute)
     };
 
