@@ -7,15 +7,6 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Cookbooks;
 
-/// <summary>
-/// What a cookbook is, proved against a real database.
-/// </summary>
-/// <remarks>
-/// The rules worth a test are the ones a reader would otherwise have to take on
-/// trust: that a shelf points at recipes rather than owning them, that adding
-/// the same recipe twice is genuinely nothing, and that a shelf belonging to
-/// another kitchen is indistinguishable from one that never existed.
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class CookbookEndpointTests(PostgresFixture postgres)
 {
@@ -63,8 +54,6 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     public async Task AddRecipe_ShouldBeNothingTheSecondTime()
     {
         // Arrange
-        // A double tap and a retried request are both ordinary on a phone, and
-        // neither means "put it on twice".
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Wochentags");
@@ -85,9 +74,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NoContent, second.StatusCode);
         Assert.Equal(1, afterSecond.Json!.Value.GetProperty("recipeCount").GetInt32());
 
-        // And the version did not move, so every cached copy of the cookbook is
-        // still good. Churning it to report that nothing happened would throw
-        // them all away.
+        // The version must not move, or every cached copy of the cookbook is thrown away.
         Assert.Equal(afterFirst.ETag, afterSecond.ETag);
     }
 
@@ -95,10 +82,8 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     public async Task Cover_ShouldNameThePictureAndChangeTheTag_WhenAPictureIsReplaced()
     {
         // Arrange
-        // The picture's id goes into the cover's image address, so a cached
-        // cover is kept without asking. That is only safe while the id is
-        // current — and replacing a recipe's picture is not a write to the
-        // cookbook, so a tag of the cookbook's version alone would 304 over it.
+        // The cover URL embeds the picture id, and replacing a picture does not touch the cookbook's
+        // version, so the tag must cover the id too or a stale 304 would hide the new cover.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Wochentags");
@@ -147,8 +132,6 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     public async Task DeletingACookbook_ShouldLeaveItsRecipesAlone()
     {
         // Arrange
-        // The whole point: a cookbook is a pointer, and deleting one deletes no
-        // food.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Sommer");
@@ -184,7 +167,6 @@ public class CookbookEndpointTests(PostgresFixture postgres)
         await client.DeleteCurrentAsync($"/api/v1/recipes/{recipeId}", Token);
 
         // Assert
-        // A shelf pointing at nothing is worse than a shorter shelf.
         foreach (var cookbookId in new[] { first, second })
         {
             var shelf = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
@@ -298,8 +280,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     public async Task GetRecipes_ShouldNameEveryRecipeOnTheShelf_NotOnlyTheFirstPage()
     {
         // Arrange
-        // A picker has to mark what is already on before anybody taps it, and
-        // a shelf of a hundred is four pages of the recipe list.
+        // A picker marks what is already on, so this must not be paged.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Backen");
@@ -349,8 +330,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Taking off something that was never on is the outcome the caller
-        // wanted, and reporting it as a failure would make a retry unsafe.
+        // Already-off is the wanted outcome; failing would make a retry unsafe.
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
@@ -383,8 +363,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
 
         Assert.Equal(2, counted.GetProperty("recipeCount").GetInt32());
 
-        // A shelf with nothing on it still comes back. It is the one somebody
-        // just made and is about to fill.
+        // An empty shelf still comes back: it is the one just made.
         Assert.Equal(0, empty.GetProperty("recipeCount").GetInt32());
     }
 
@@ -392,9 +371,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
     public async Task List_ShouldAnswer_WhenACursorsTimeCarriesAnOffset()
     {
         // Arrange
-        // Every cursor this writes is in UTC, and PostgreSQL's driver refuses
-        // to send a timestamptz that is not. A hand-made one that says +02:00
-        // means the same instant, and is read as it.
+        // Npgsql refuses non-UTC timestamptz, so a hand-made +02:00 cursor must be normalised.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         await CookbookAsync(client, householdId, "Sonntag");
@@ -503,8 +480,7 @@ public class CookbookEndpointTests(PostgresFixture postgres)
 
     private async Task<ApiClient> SecondAccountAsync()
     {
-        // The first account is the instance's admin, so registration has to be
-        // opened before a second one can exist.
+        // The first account is the admin; registration must be opened for a second.
         using var admin = postgres.Api.NewApiClient();
 
         await admin.PostAsync(

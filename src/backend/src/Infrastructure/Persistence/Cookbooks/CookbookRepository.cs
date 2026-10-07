@@ -41,43 +41,17 @@ internal sealed record CookbookRow
 }
 
 /// <summary>Stores a household's shelves of recipes.</summary>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class CookbookRepository(DbExecutor executor) : ICookbookRepository
 {
     /// <summary>A hard ceiling, enforced here and not only in the endpoint.</summary>
     internal const int MaxLimit = 100;
 
-    /// <summary>
-    /// How many pictures a cover shows.
-    /// </summary>
-    /// <remarks>
-    /// Four, arranged as a mosaic — or one, or two, when that is all there is.
-    /// Beyond four a cover stops being recognisable and starts being a
-    /// contact sheet.
-    /// </remarks>
+    // Four pictures as a mosaic; beyond that a cover becomes a contact sheet.
     private const int CoverPictures = 4;
 
-    /// <summary>
-    /// Which recipes are on a shelf, whichever kind it is.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Written once and used by both the count and the cover, because a shelf
-    /// that counted one set of recipes and drew a picture of another would be
-    /// wrong in a way nobody could see.
-    /// </para>
-    /// <para>
-    /// A manual shelf names rows. A smart one names conditions, and they are
-    /// the same conditions the recipe search applies — asked here rather than
-    /// remembered anywhere, which is the whole of "it fills itself".
-    /// </para>
-    /// <para>
-    /// Either way only over the shelf's household's library: its own recipes
-    /// and the ones it inherits. A recipe that stops being inherited drops off
-    /// the shelves it was put on rather than lingering there unopenable, and
-    /// comes back if the inheritance does.
-    /// </para>
-    /// </remarks>
+    // Shared by the count and the cover so they cannot disagree. A smart shelf applies the same conditions
+    // as recipe search, only over the household's own and inherited recipes, so a recipe that stops being
+    // inherited drops off and returns with the inheritance.
     private static readonly string OnTheShelf = $"""
         select r.id, r.image_id, cr.added_at
         from recipes r
@@ -159,9 +133,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         var size = Math.Clamp(limit, 1, MaxLimit);
         var resume = CookbookCursor.Decode(cursor);
 
-        // One extra row tells us whether there is a next page without a second
-        // query, and the total comes from the same pass so a page and its count
-        // can never disagree.
+        // One extra row reveals a next page; the total comes from the same pass so page and count agree.
         var rows = await executor.QueryAsync<CookbookRow>(
             $"""
             with counted as (
@@ -237,9 +209,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     {
         ArgumentNullException.ThrowIfNull(cookbook);
 
-        // The version is in the WHERE, never compared in C#: zero rows means
-        // somebody else wrote first, which is the one answer a read-then-write
-        // check cannot give reliably.
+        // The version is in the WHERE: zero rows means somebody wrote first.
         var version = await executor.QuerySingleOrDefaultAsync<long?>(
             """
             update cookbooks
@@ -273,8 +243,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Into the bin: the cookbooks view stops showing it, and its shelf of
-        // recipes waits with it until it is restored or purged.
+        // Into the bin: the shelf waits with it until restore or purge.
         var deleted = await executor.ExecuteAsync(
             """
             update cookbooks
@@ -294,9 +263,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // do nothing, not do update: a recipe already on the shelf keeps the
-        // moment it went on. "Added in March" should not become "added today"
-        // because somebody tapped the button twice.
+        // do nothing, not do update: a recipe already on the shelf keeps when it went on.
         var written = await executor.ExecuteAsync(
             """
             insert into cookbook_recipes (cookbook_id, recipe_id, added_at, added_by)
@@ -335,8 +302,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         Guid cookbookId,
         CancellationToken cancellationToken)
     {
-        // Ids and nothing else: this answers "is it already on?" for every row
-        // of a picker at once, and a shelf of a thousand is a few kilobytes.
+        // Ids only: answers "already on?" for a whole picker at once.
         var ids = await executor.QueryAsync<Guid>(
             $"""
             select on_shelf.id
@@ -355,13 +321,8 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // Only the shelf's own row. This answers the tick marks in a sheet and
-        // the line under a recipe's title, neither of which draws a cover.
-        //
-        // Both kinds, through the same fragment the count and the cover use: a
-        // recipe is as genuinely on a shelf that matched it as on one somebody
-        // put it on, and a recipe page that admitted only the second would be
-        // the one place in the app where a smart cookbook was invisible.
+        // Only the shelf's own row (no cover). Both kinds, through the fragment the count and cover use, so a
+        // smart cookbook is not invisible on a recipe page.
         var rows = await executor.QueryAsync<CookbookRow>(
             $"""
             select c.id, c.household_id, c.name, c.description, c.created_by,
@@ -379,8 +340,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         return [.. rows.Select(ToShelf)];
     }
 
-    // Two arrays in one order rather than one array of pairs: the driver reads
-    // an array of uuids, and a composite would need a type mapping of its own.
+    // Two arrays in one order: the driver reads uuid arrays, a composite would need its own mapping.
     private static CookbookOnAShelf ToShelf(CookbookRow row) =>
         new(
             ToCookbook(row),
@@ -400,14 +360,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             row.UpdatedAt,
             row.Version);
 
-    /// <summary>
-    /// The name as stored.
-    /// </summary>
-    /// <remarks>
-    /// It went through the value object on the way in, so a row carrying one it
-    /// would now reject is a corrupt row — a defect, not a bad request, and
-    /// nothing in this call stack could act on it as a failure.
-    /// </remarks>
+    // A stored name that the value object now rejects is a corrupt row: a defect, not a bad request.
     private static CookbookName Unwrap(Result<CookbookName> result) =>
         result.Match(
             name => name,
@@ -415,12 +368,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
                 $"Stored cookbook name is not valid ({error.Code}). The row is corrupt."));
 }
 
-/// <summary>How a cookbook's kind is spelled in the database.</summary>
-/// <remarks>
-/// Text rather than an integer, for the reason the meal plan's slot is: a
-/// migration that inserted a kind in the middle could not silently reassign
-/// every row, and somebody reading the table can see what it says.
-/// </remarks>
+/// <summary>How a cookbook's kind is spelled in the database: text, so a migration cannot silently reassign rows.</summary>
 internal static class CookbookCodes
 {
     internal static string Of(CookbookKind kind) => kind == CookbookKind.Smart ? "smart" : "manual";

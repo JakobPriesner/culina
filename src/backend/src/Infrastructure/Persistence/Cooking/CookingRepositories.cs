@@ -45,7 +45,6 @@ internal sealed record CookLogRow
 }
 
 /// <summary>Stores one person's notes.</summary>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class PersonalNoteRepository(DbExecutor executor) : IPersonalNoteRepository
 {
     public async Task<IReadOnlyList<PersonalNote>> ForRecipeAsync(
@@ -53,8 +52,7 @@ internal sealed class PersonalNoteRepository(DbExecutor executor) : IPersonalNot
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Scoped to the caller in SQL, so "only your own notes" cannot be
-        // forgotten at a second call site.
+        // Scoped to the caller in SQL, so "only your own notes" cannot be forgotten at a second call site.
         var rows = await executor.QueryAsync<PersonalNoteRow>(
             """
             select id, recipe_id, user_id, step_id, body, updated_at
@@ -130,7 +128,6 @@ internal sealed class PersonalNoteRepository(DbExecutor executor) : IPersonalNot
 }
 
 /// <summary>Stores what someone has cooked.</summary>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepository
 {
     public async Task<IReadOnlyList<CookLogEntry>> ForRecipeAsync(
@@ -173,13 +170,7 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
         return rows.ToLookup(row => row.RecipeId, ToEntry);
     }
 
-    /// <summary>The photo a row carries, or null when it carries none.</summary>
-    /// <remarks>
-    /// The three columns move together — the database has a check constraint
-    /// saying so — but the mapper does not lean on it: a half-written row reads
-    /// as an attempt with no picture rather than throwing on a page somebody is
-    /// looking at.
-    /// </remarks>
+    // The three photo columns move together (check constraint) but a half-written row reads as no picture rather than throwing.
     private static CookLogEntry ToEntry(CookLogRow row) => CookLogEntry.Restore(
         row.Id,
         row.RecipeId,
@@ -197,8 +188,7 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Scoped to the caller in SQL: somebody else's attempt is not found
-        // rather than forbidden, which is the same answer a recipe gives.
+        // Scoped to the caller in SQL: another's attempt is not found rather than forbidden.
         var row = await executor.QuerySingleOrDefaultAsync<CookLogRow>(
             """
             select id, recipe_id, user_id, household_id, made_at, servings, note,

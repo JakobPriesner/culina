@@ -47,8 +47,7 @@ internal sealed class UpdateRegistrationSettingsCommandHandler(
 
         var saved = await store.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
 
-        // Persist first, then mutate. A failed save must never leave the
-        // process disagreeing with the database about who may register.
+        // Persist first, then mutate: a failed save must not change the running process.
         var result = saved.Map(() =>
         {
             settings.CopyFrom(updated);

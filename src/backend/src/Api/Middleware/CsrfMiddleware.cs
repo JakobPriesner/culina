@@ -6,26 +6,10 @@ using Domain.Sessions;
 
 namespace Api.Middleware;
 
-/// <summary>
-/// Requires unsafe cookie-authenticated requests to echo the session's CSRF
-/// token.
-/// </summary>
+/// <summary>Requires unsafe cookie-authenticated requests to echo the session's CSRF token.</summary>
 /// <remarks>
-/// <para>
-/// A synchronizer token, not a double-submit cookie comparison:
-/// <c>SameSite=Lax</c> and the origin check are necessary but not sufficient,
-/// and only the server knows the digest this session was issued.
-/// </para>
-/// <para>
-/// The digest is the one authentication read with the session, so the token is
-/// checked against the very session that let the request in, without reading
-/// it again.
-/// </para>
-/// <para>
-/// Safe methods are exempt, which is sound only because no <c>GET</c> endpoint
-/// in Culina changes state — a property an architecture-level test asserts
-/// rather than assumes.
-/// </para>
+/// A synchronizer token, not double-submit: only the server knows the digest, which comes from the same read that authenticated the session.
+/// Safe methods are exempt because no <c>GET</c> changes state, which an architecture test asserts.
 /// </remarks>
 /// <param name="next">The rest of the pipeline.</param>
 internal sealed class CsrfMiddleware(RequestDelegate next)
@@ -55,9 +39,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
         await CustomResults.WriteProblemAsync(context, SessionErrors.CsrfInvalid).ConfigureAwait(false);
     }
 
-    // Constant-time comparison, in the token service, so a timing signal
-    // cannot leak the digest one byte at a time. A principal without a digest
-    // was not admitted by the session handler and is refused.
+    // Constant-time comparison in the token service, so timing cannot leak the digest. A principal without a digest was not admitted by the session handler.
     private static bool IsValid(HttpContext context, ISecretTokens tokens) =>
         context.Request.Headers[CulinaHeaders.Csrf] is [{ Length: > 0 } presented]
         && RequestContext.CsrfTokenHash(context) is { } digest

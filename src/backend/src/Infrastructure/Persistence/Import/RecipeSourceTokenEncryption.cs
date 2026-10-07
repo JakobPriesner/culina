@@ -7,23 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace Infrastructure.Persistence.Import;
 
 /// <summary>
-/// Encrypts the connected-source tokens that were stored before tokens were
-/// encrypted.
+/// Encrypts connected-source tokens stored before encryption existed (migration 0027 marks them; SQL cannot reach the key ring).
+/// Each row updates only while still plain, so restarts and concurrent instances never encrypt twice.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Migration 0027 cannot do it: SQL has no access to the key ring, which is the
-/// point of the key ring. So the migration marks those rows and this encrypts
-/// them, at startup — after the migrations, because hosted services start in
-/// the order they were registered, and before the first request.
-/// </para>
-/// <para>
-/// Each row is its own update, and only while it is still plain, so a restart
-/// halfway through or a second instance doing the same work at the same moment
-/// never encrypts a token twice. After the first start there is nothing left
-/// to find, and this is one query.
-/// </para>
-/// </remarks>
 /// <param name="scopeFactory">Makes the scope the database connection lives in.</param>
 /// <param name="tokens">The protector source tokens are kept under.</param>
 /// <param name="logger">Says how many were encrypted.</param>

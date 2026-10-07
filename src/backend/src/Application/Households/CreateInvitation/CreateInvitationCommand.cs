@@ -8,8 +8,6 @@ using Response = Contracts.Households.CreateInvitation.Response;
 namespace Application.Households.CreateInvitation;
 
 /// <summary>Issues an invitation to a household. Owners only.</summary>
-/// <param name="HouseholdId">Which household.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record CreateInvitationCommand(Guid HouseholdId, Guid UserId);
 
 internal sealed class CreateInvitationCommandHandler(
@@ -57,9 +55,8 @@ internal sealed class CreateInvitationCommandHandler(
             {
                 var added = await invitations.AddAsync(invitation, token).ConfigureAwait(false);
 
-                // The code leaves here and is never recoverable: only its
-                // digest is stored, so this response is the one chance to show
-                // it.
+                // The code leaves here and is never recoverable (only its digest is stored): this
+                // response is the one chance to show it.
                 return added.Bind(() => Result<Response>.Success(new Response
                 {
                     InvitationId = invitation.Id,

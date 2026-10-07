@@ -18,14 +18,9 @@ internal static class PlanningWords
     };
 
     /// <summary>
-    /// Reads a slot, defaulting to dinner.
+    /// Reads a slot, defaulting to dinner (the ordinary case, so a household never has to learn the
+    /// concept).
     /// </summary>
-    /// <param name="value">The wire code, or null.</param>
-    /// <remarks>
-    /// Omitting it is the ordinary case: most planned meals are dinner, and a
-    /// household that never plans anything else never has to know the concept
-    /// exists.
-    /// </remarks>
     internal static Result<MealSlot> ToSlot(string? value) => value switch
     {
         null or "" or "dinner" => MealSlot.Dinner,
@@ -51,9 +46,8 @@ internal static class MealPlanMappings
         return new MealPlanResponse
         {
             From = from,
-            // Every day, planned or not. A week with holes in it is a week the
-            // client has to fill in itself, and an empty day is exactly where
-            // the screen offers to add something.
+            // Every day, planned or not: the client would otherwise fill the holes, and an empty
+            // day is where it offers to add.
             Days =
             [
                 .. Enumerable.Range(0, PlanWeek.Days).Select(offset =>

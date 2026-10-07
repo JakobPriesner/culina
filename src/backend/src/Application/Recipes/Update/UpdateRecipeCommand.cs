@@ -72,13 +72,12 @@ internal sealed class UpdateRecipeCommandHandler(
     }
 
     /// <summary>
-    /// Parses the whole request first, then hands it to the aggregate in two
-    /// calls — details, then contents — because only the aggregate can tell
-    /// whether a step's references resolve.
+    /// Parses the whole request, then hands it to the aggregate in two calls (details, contents):
+    /// only it can tell whether step references resolve.
     /// </summary>
     /// <remarks>
-    /// The child ids are settled before anything is parsed, while the recipe
-    /// still says which ones are its own — see <see cref="OwnIds"/>.
+    /// Child ids are settled before parsing, while the recipe still says which are its own (see
+    /// <see cref="OwnIds"/>).
     /// </remarks>
     private Result Apply(Recipe recipe, UpdateRecipeCommand command)
     {

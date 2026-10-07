@@ -3,8 +3,8 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Suggestions;
 
 /// <summary>
-/// The two hosts a set of weights is checked through: one ranking without its
-/// exploration jitter, and one ranking exactly as people get it.
+/// The two hosts a set of weights is checked through: ranking without exploration jitter, and
+/// exactly as people get it.
 /// </summary>
 internal sealed record RankingHosts(CulinaApiFactory Steady, CulinaApiFactory Jittered);
 
@@ -12,22 +12,12 @@ internal sealed record RankingHosts(CulinaApiFactory Steady, CulinaApiFactory Ji
 /// One ordering rule: a kitchen, a question, and the relation the answer must keep.
 /// </summary>
 /// <param name="Name">What the rule is called wherever a weight's comment cites it.</param>
-/// <param name="BrokenAsync">Builds its kitchen in the world, asks, and says why the rule broke — or null when it held.</param>
+/// <param name="BrokenAsync">
+/// Builds its kitchen, asks, and says why the rule broke, or null when it held.
+/// </param>
 /// <param name="Steady">
-/// Whether the rule is proven with the exploration jitter held still.
-/// <para>
-/// Almost all of them are. The jitter is worth ±0.075 per recipe and is seeded
-/// by the recipe's id, so between two recipes it spans ±0.15 — larger than some
-/// of the very terms these rules exist to pin down. Rule 4 is the honest
-/// example: a weekday separates its two recipes by 0.30 and is never in doubt,
-/// while a weekend separates them by 0.06 and the jitter decided it instead,
-/// which is how that test came to fail roughly one Sunday run in six. A rule is
-/// proven with the other terms held still; the jitter is a term like any other.
-/// </para>
-/// <para>
-/// The exception is the rule <i>about</i> the jitter, which held still would
-/// hold for any exploration weight at all and so bound nothing.
-/// </para>
+/// Whether it is proven with the jitter held still; the jitter (up to ±0.15 between two recipes)
+/// outweighs some terms the rules pin, so only the rule about the jitter itself runs unsteady.
 /// </param>
 internal sealed record RankingRule(string Name, Func<SuggestionWorld, Task<string?>> BrokenAsync, bool Steady = true)
 {
@@ -42,28 +32,12 @@ internal sealed record RankingRule(string Name, Func<SuggestionWorld, Task<strin
     public override string ToString() => Name;
 }
 
-/// <summary>
-/// The ordering rules, which are the actual specification of the weights.
-/// </summary>
+/// <summary>The ordering rules, which are the actual specification of the weights.</summary>
 /// <remarks>
-/// <para>
-/// The numbers in <c>RankingWeights</c> are not taste; they are the solution to
-/// the constraints in this file. Change a weight and one of these tells you
-/// which product promise you broke — which is the difference between a tuned
-/// system and a fiddled one, and the same move the theme contract test makes
-/// with colour.
-/// </para>
-/// <para>
-/// Rules rather than tests, so that the same promises can be put to any weight
-/// vector: <c>RankingOrderTests</c> puts them to the weights that ship, and a
-/// calibration puts them to every vector it is about to propose. Restating them
-/// there would be two specifications that drift.
-/// </para>
-/// <para>
-/// Each rule asserts a <i>relation</i> between two recipes rather than an
-/// absolute position, because an absolute position is a fact about the whole
-/// fixture and breaks for reasons that have nothing to do with the rule.
-/// </para>
+/// The numbers in <c>RankingWeights</c> solve these constraints: change a weight and a rule names
+/// the promise broken. Rules rather than tests, so the same promises can be put to any weight
+/// vector (shipped, or a calibration's proposal); each asserts a relation between two recipes, not
+/// an absolute position, which would break for unrelated reasons.
 /// </remarks>
 internal static class RankingRules
 {
@@ -87,7 +61,10 @@ internal static class RankingRules
 
     internal static RankingRule Named(string name) => All.Single(rule => rule.Name == name);
 
-    /// <summary>Every rule the weights behind these hosts break, each with why. Empty when they keep them all.</summary>
+    /// <summary>
+    /// Every rule the weights behind these hosts break, each with why. Empty when they keep them
+    /// all.
+    /// </summary>
     internal static async Task<IReadOnlyList<string>> BrokenAsync(PostgresFixture postgres, RankingHosts hosts)
     {
         List<string> broken = [];
@@ -111,8 +88,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule1_ARecipeCookedYesterday_ShouldNotOutrankTheSameOneCookedThreeWeeksAgo(SuggestionWorld world)
     {
-        // Fixes the repetition weight against the affinity weight. Two recipes
-        // the household likes identically; only when they last ate them differs.
+        // Fixes the repetition weight against affinity: two recipes liked identically, only when
+        // they were last eaten differs.
         var fresh = await world.WriteAsync("Yesterday", ingredients: ["rice", "egg"]);
         var rested = await world.WriteAsync("Three weeks ago", ingredients: ["rice", "egg"]);
 
@@ -134,13 +111,9 @@ internal static class RankingRules
 
     private static async Task<string?> Rule2_AmongRecipesNobodyHasCooked_TheOneMatchingTheirTasteShouldWin(SuggestionWorld world)
     {
-        // Fixes the content weight, and it is stated between two UNTOUCHED
-        // recipes on purpose. Comparing an untouched recipe against a cooked one
-        // measures content plus affinity plus rediscovery all at once, and an
-        // assertion about three terms cannot fix any of them.
-        //
-        // This is the rule that makes week one useful: a library nobody has
-        // worked through can otherwise only be ordered by chance.
+        // Fixes the content weight between two UNTOUCHED recipes: comparing with a cooked one
+        // measures content, affinity and rediscovery at once, and an assertion about three terms
+        // fixes none. This is the rule that makes week one useful.
         var curry = await world.WriteAsync(
             "Known curry",
             ingredients: ["aubergine", "coconut milk", "curry paste"],
@@ -168,10 +141,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule2b_AnUntouchedRecipeMatchingTheirTaste_ShouldBeatOneTheyAteYesterday(SuggestionWorld world)
     {
-        // The interaction worth pinning: content has to be strong enough to lift
-        // something nobody has tried over something they like but had last night.
-        // Without it, a household's rotation is self-reinforcing and nothing new
-        // is ever surfaced.
+        // Content must lift something untried over a favourite had last night, or a rotation is
+        // self-reinforcing and nothing new surfaces.
         var curry = await world.WriteAsync(
             "Known curry",
             ingredients: ["aubergine", "coconut milk", "curry paste"],
@@ -194,8 +165,7 @@ internal static class RankingRules
 
     private static async Task<string?> Rule3_ALovedRecipeUnmadeForMonths_ShouldBeatAMediocreOneMadeLastMonth(SuggestionWorld world)
     {
-        // Fixes the rediscovery weight. The thing a small library is uniquely
-        // good at: a household keeps three hundred recipes and cooks twenty.
+        // Fixes the rediscovery weight: a household keeps three hundred recipes and cooks twenty.
         var loved = await world.WriteAsync("Forgotten favourite", ingredients: ["lamb", "apricot"]);
 
         foreach (var daysAgo in new[] { 240, 280, 320, 360, 400 })
@@ -215,9 +185,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule3b_RediscoveryShouldNotLift_ARecipeTheyNeverActuallyLiked(SuggestionWorld world)
     {
-        // The other half of the rule, and the one that keeps the list from
-        // turning into archaeology: rediscovery is scaled by affinity, so a
-        // recipe nobody ever cooked is not "overdue", it is simply untouched.
+        // The other half, keeping the list from turning into archaeology: rediscovery scales with
+        // affinity, so a never-cooked recipe is untouched, not overdue.
         await world.WriteAsync("Never made", ingredients: ["okra"]);
         var loved = await world.WriteAsync("Loved and overdue", ingredients: ["lamb"]);
 
@@ -235,16 +204,15 @@ internal static class RankingRules
 
     private static async Task<string?> Rule4_AWeeknightShouldPreferTheQuickerOfTwoEqualRecipes(SuggestionWorld world)
     {
-        // Fixes the effort weight. Both are unknown to the household, so time
-        // is the only thing separating them.
+        // Fixes the effort weight: both recipes are unknown to the household, so time is the only
+        // difference.
         await world.WriteAsync("Twenty minutes", ingredients: ["egg"], prep: 10, cook: 10, steps: 2);
         await world.WriteAsync("Three hours", ingredients: ["egg"], prep: 30, cook: 150, steps: 9);
 
         var response = await world.SuggestAsync("&limit=5");
 
-        // A relation rather than a first place, because on a Saturday the sign
-        // of this term flips by design and the rule is about its magnitude
-        // either way.
+        // A relation, not a first place: on a Saturday the sign of this term flips by design, and
+        // the rule is about its magnitude.
         var weekend = DateTime.UtcNow.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 
         return Verdict(
@@ -254,8 +222,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule5_ARecipeAlwaysPlannedForBreakfast_ShouldNotLeadADinnerList(SuggestionWorld world)
     {
-        // Fixes the slot weight. Meal type is not a column on a recipe; it is
-        // what this household's plan says about it.
+        // Fixes the slot weight; meal type is not a recipe column but what this household's plan
+        // says.
         var porridge = await world.WriteAsync("Porridge", ingredients: ["oats"]);
         var stew = await world.WriteAsync("Stew", ingredients: ["oats"]);
 
@@ -276,10 +244,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule6_AnotherMembersFavourite_ShouldAppearWithoutTakingOver(SuggestionWorld world)
     {
-        // Bounds the household weight from BOTH sides, which is the point. It
-        // has to be big enough that your partner's cooking is discoverable and
-        // small enough that two people's different tastes are not flattened
-        // into one household average.
+        // Bounds the household weight from both sides: big enough that your partner's cooking is
+        // discoverable, small enough not to flatten two tastes into one average.
         var guest = await world.InviteAsync("bob@example.com", "Bob");
 
         var theirs = await world.WriteAsync("Bob's favourite", ingredients: ["liver"]);
@@ -308,9 +274,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule7_ExplorationShouldNotPromoteSomethingThatLost(SuggestionWorld world)
     {
-        // Bounds the exploration weight. It exists to reshuffle near-equals, and
-        // a jitter large enough to move a clear winner is noise rather than
-        // variety.
+        // Bounds the exploration weight: it should reshuffle near-equals, and a jitter that moves a
+        // clear winner is noise.
         var loved = await world.WriteAsync("Clear winner", ingredients: ["beef", "onion"]);
 
         foreach (var daysAgo in new[] { 120, 150, 180, 210, 240 })
@@ -332,8 +297,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule8_AnEmptyHistoryShouldStillProduceAnOrder_AndNotAnAlphabeticalOne(SuggestionWorld world)
     {
-        // Titles chosen so that alphabetical order and insertion order are both
-        // recognisable, and neither is what should come out.
+        // Titles chosen so alphabetical and insertion order are both recognisable, and neither is
+        // what should come out.
         string[] alphabetical = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"];
 
         foreach (var title in alphabetical)
@@ -349,10 +314,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule9_DiversityShouldBreakUpARunOfNearlyIdenticalRecipes(SuggestionWorld world)
     {
-        // Five suggestions that are five pasta dishes is what a small library
-        // produces most often, and it is the scoring being faithful to a taste
-        // that really is narrow. The diversity pass is what stops faithful from
-        // becoming useless.
+        // Five pasta suggestions is what a small library produces most often, the scoring being
+        // faithful to a narrow taste; the diversity pass stops faithful becoming useless.
         for (var index = 0; index < 6; index++)
         {
             await world.WriteAsync(
@@ -392,8 +355,7 @@ internal static class RankingRules
         var second = await world.SuggestAsync("&limit=6");
         var slotted = await world.SuggestAsync("&limit=6&slot=dinner");
 
-        // A different question may legitimately give a different answer; what
-        // must not happen is the same question giving two.
+        // A different question may give a different answer; the same question must not give two.
         return Verdict(
                 SuggestionWorld.Ids(first).SequenceEqual(SuggestionWorld.Ids(second)),
                 "The same question on the same day must give the same answer.")
@@ -402,11 +364,8 @@ internal static class RankingRules
 
     private static async Task<string?> Rule11_CloseToThisOne_ShouldMeanCloseToThisOne_NotWhatTheyCookMost(SuggestionWorld world)
     {
-        // The rule that keeps a heading honest. "Close to this one" is a
-        // question about the recipe on screen, and with personal taste left at
-        // full strength a favourite outscores a genuine resemblance — so the
-        // strip quietly fills with the same recipes the home page already
-        // suggests, under a heading that promises something else.
+        // Keeps a heading honest: with personal taste at full strength a favourite outscores a
+        // genuine resemblance, so "close to this one" fills with the home page's suggestions.
         var reading = await world.WriteAsync(
             "Linsensuppe",
             ingredients: ["rote linsen", "ingwer", "kokosmilch"],
@@ -437,9 +396,8 @@ internal static class RankingRules
 
     private static async Task<string?> IdfShouldSilenceAnIngredientEveryRecipeHas(SuggestionWorld world)
     {
-        // In a kitchen where nine recipes in ten contain salt, salt must carry
-        // no information at all — otherwise the taste profile is dominated by
-        // the store cupboard and every recipe looks equally like every other.
+        // In a kitchen where nine recipes in ten contain salt, salt must carry no information, or
+        // the taste profile is dominated by the store cupboard.
         var cooked = await world.WriteAsync("Cooked", ingredients: ["salt", "saffron"]);
         await world.CookedAsync(cooked, daysAgo: 60);
         await world.CookedAsync(cooked, daysAgo: 90);

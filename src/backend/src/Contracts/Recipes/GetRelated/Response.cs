@@ -16,10 +16,7 @@ public sealed record RelatedRecipe
     /// <summary>Which recipe.</summary>
     public required Guid RecipeId { get; init; }
 
-    /// <summary>
-    /// The household it belongs to. Another than the one asked about when that
-    /// one inherits it, which is what a card says "from" about.
-    /// </summary>
+    /// <summary>The household it belongs to; another than the one asked about when that one inherits it.</summary>
     public required Guid HouseholdId { get; init; }
 
     /// <summary>Its title.</summary>
@@ -56,25 +53,12 @@ public sealed record RelatedRecipe
     public required RelatedReason Reason { get; init; }
 }
 
-/// <summary>
-/// Why two recipes are related, in words a person can disagree with.
-/// </summary>
-/// <remarks>
-/// A suggestion whose reason is shown is one that can be argued with, which
-/// is what makes it feel like a tool rather than a slot machine.
-/// </remarks>
+/// <summary>Why two recipes are related, in words a person can disagree with.</summary>
 public sealed record RelatedReason
 {
-    /// <summary>
-    /// <c>kinds</c> when what they are is what they share most — both pasta
-    /// bakes, both Italian — or <c>ingredients</c> when it is what they are
-    /// made from.
-    /// </summary>
+    /// <summary><c>kinds</c> when what they are is what they share most (both pasta bakes), or <c>ingredients</c> when it is what they are made from.</summary>
     public required string Kind { get; init; }
 
-    /// <summary>
-    /// At most three things they share, the most telling first, worded in the
-    /// language of the recipe being read.
-    /// </summary>
+    /// <summary>At most three things they share, most telling first, in the language of the recipe being read.</summary>
     public required IReadOnlyList<string> Shared { get; init; }
 }

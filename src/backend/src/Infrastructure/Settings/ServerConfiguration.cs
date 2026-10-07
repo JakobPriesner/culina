@@ -8,10 +8,9 @@ using Microsoft.Extensions.Configuration.Json;
 namespace Infrastructure.Settings;
 
 /// <summary>
-/// Reads the configuration this process started with, and writes the settings
-/// file an administrator edits.
+/// Reads the configuration this process started with, and writes the settings file an administrator
+/// edits.
 /// </summary>
-/// <param name="configuration">The host's configuration, with the settings file among its sources.</param>
 internal sealed class ServerConfiguration(IConfiguration configuration) : IServerConfiguration
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
@@ -25,9 +24,8 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
         var providers = root.Providers.ToList();
         var file = providers.FindIndex(provider => provider is JsonConfigurationProvider { Source: ServerConfigurationSource });
 
-        // An empty value is not a pin. Compose writes `KEY: ${KEY:-}` as an
-        // empty variable when the operator set nothing, and the settings
-        // extensions already read empty as absent.
+        // An empty value is not a pin: Compose writes `KEY: ${KEY:-}` when the operator set
+        // nothing.
         return providers
             .Skip(file + 1)
             .Any(provider => provider.TryGet(key, out var value) && !string.IsNullOrEmpty(value));
@@ -77,9 +75,8 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException)
         {
-            // The expected failure of a deployment that mounted nothing here —
-            // a read-only root filesystem, a directory owned by root. Nothing
-            // about the request is wrong, and the screen says what to mount.
+            // A deployment that mounted nothing writable here (read-only root, root-owned dir): not
+            // the request's fault.
             return SettingsErrors.NotWritable;
         }
     }
@@ -93,14 +90,10 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
         ?? throw new InvalidOperationException(
             "The settings file is not among the configuration sources. Program must call AddServerConfigurationFile.");
 
-    /// <summary>
-    /// The file as it is now, or null when it is no longer a JSON object.
-    /// </summary>
+    /// <summary>The file as it is now, or null when it is no longer a JSON object.</summary>
     /// <remarks>
-    /// The process started from this file, so it parsed then; a file that no
-    /// longer parses, or holds something other than an object, was edited by
-    /// hand since. Saving over it would silently throw that edit away, so the
-    /// caller refuses instead and leaves the file as it is.
+    /// It parsed at startup, so a bad file was hand-edited since; saving would silently discard
+    /// that edit, so the caller refuses.
     /// </remarks>
     private async Task<JsonObject?> ReadAsync(CancellationToken cancellationToken)
     {
@@ -126,9 +119,8 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
     }
 
     /// <summary>
-    /// Written beside the file and moved over it, so a crash mid-write leaves
-    /// the old settings rather than half of the new ones — a truncated file is
-    /// one the next startup cannot parse.
+    /// Written beside the file and moved over it, so a crash leaves the old settings, not an
+    /// unparseable half.
     /// </summary>
     private async Task WriteAsync(JsonObject document, CancellationToken cancellationToken)
     {
@@ -145,15 +137,10 @@ internal sealed class ServerConfiguration(IConfiguration configuration) : IServe
         File.Move(temporary, Source.FilePath, overwrite: true);
     }
 
-    /// <summary>
-    /// Creates a file only the account the app runs as may read, from its
-    /// first byte.
-    /// </summary>
+    /// <summary>Creates a file only the app's account may read, from its first byte.</summary>
     /// <remarks>
-    /// It is about to hold the database password. Created with the process's
-    /// umask and narrowed afterwards, it would be readable by everyone for as
-    /// long as the write took. A file left behind by a crash is removed first,
-    /// because opening an existing file keeps whatever mode it already had.
+    /// It will hold the database password, so no narrowing afterwards; a leftover from a crash is
+    /// removed first, as an existing file keeps its mode.
     /// </remarks>
     internal static FileStream CreatePrivate(string path)
     {

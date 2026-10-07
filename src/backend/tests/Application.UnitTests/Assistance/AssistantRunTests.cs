@@ -9,8 +9,7 @@ using TestSupport;
 namespace Application.UnitTests.Assistance;
 
 /// <summary>
-/// The gate every assisted call goes through: allowed, afforded, and counted
-/// however it went.
+/// The gate every assisted call goes through: allowed, afforded, and counted however it went.
 /// </summary>
 public class AssistantRunTests
 {
@@ -19,15 +18,11 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldNotCallTheModel_WhenNoAssistantIsConnected()
     {
-        // Arrange
         var world = new World(connected: false);
 
-        // Act
         var result = await world.ComposeAsync();
 
-        // Assert
-        // Not configured rather than forbidden: an instance with no assistant
-        // is one where the thing does not exist.
+        // Not configured rather than forbidden: with no assistant the thing does not exist.
         result.ShouldBeFailure(AssistanceErrors.NotConfigured);
         Assert.Equal(0, world.Assistant.Calls);
         Assert.Empty(world.Ledger.Reservations);
@@ -36,14 +31,11 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldNotCallTheModel_WhenThatCapabilityIsSwitchedOff()
     {
-        // Arrange
         var world = new World();
         world.Settings.Uses = [Use(Capability.Draft, AssistantKind.OpenAi, on: false)];
 
-        // Act
         var result = await world.ComposeAsync();
 
-        // Assert
         result.ShouldBeFailure(AssistanceErrors.Disabled);
         Assert.Equal(0, world.Assistant.Calls);
     }
@@ -51,16 +43,12 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldNotCallTheModel_WhenTheBudgetIsSpent()
     {
-        // Arrange
         var world = new World();
         world.Ledger.RefuseWith = AssistanceErrors.BudgetExhausted;
 
-        // Act
         var result = await world.ComposeAsync();
 
-        // Assert
-        // The whole point of reserving before calling: the money is checked
-        // before it can be spent, not after.
+        // Reserving before calling is the point: the money is checked before it can be spent.
         result.ShouldBeFailure(AssistanceErrors.BudgetExhausted);
         Assert.Equal(0, world.Assistant.Calls);
     }
@@ -68,14 +56,11 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldSettleWithWhatWasUsed_WhenItWorked()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" }, new ModelUsage(120, 340, 0));
 
-        // Act
         var draft = (await world.ComposeAsync()).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal("Soup", draft.Title);
 
         var settlement = Assert.Single(world.Ledger.Settled);
@@ -87,17 +72,13 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldStillSettle_WhenTheProviderFailed()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.Throttled));
 
-        // Act
         var result = await world.ComposeAsync();
 
-        // Assert
-        // The one that is easy to get wrong. A reservation nobody settled holds
-        // its estimate against the month's budget until the month turns, so a
-        // provider having a bad afternoon would quietly spend the ceiling.
+        // Easy to get wrong: an unsettled reservation holds its estimate against the month's
+        // budget, so a provider having a bad afternoon would quietly spend the ceiling.
         result.ShouldBeFailure(AssistanceErrors.Throttled);
 
         var settlement = Assert.Single(world.Ledger.Settled);
@@ -107,18 +88,13 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeStreamAsync_ShouldRefuseBeforeTheStreamOpens_WhenTheBudgetIsSpent()
     {
-        // Arrange
         var world = new World();
         world.Ledger.RefuseWith = AssistanceErrors.BudgetExhausted;
 
-        // Act
         var result = await world.ComposeStreamAsync();
 
-        // Assert
-        // The reason this returns a result wrapping a stream rather than a
-        // stream that can fail. Once the first event is out the response is a
-        // 200 that has begun, and nothing after that can be a 429 — so every
-        // check that decides whether the call may happen runs first.
+        // A result wrapping a stream, not a stream that can fail: once the first event is out the
+        // response is a started 200 and nothing after can be a 429, so every check runs first.
         result.ShouldBeFailure(AssistanceErrors.BudgetExhausted);
         Assert.Equal(0, world.Assistant.Calls);
     }
@@ -126,15 +102,12 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeStreamAsync_ShouldSettleWithWhatWasUsed_WhenItRanToTheEnd()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" }, new ModelUsage(120, 340, 0));
 
-        // Act
         var parts = await world.ReadToTheEndAsync();
 
-        // Assert
-        // Thin first, whole last: that is what the screen shows arriving.
+        // Thin first, whole last: what the screen shows arriving.
         Assert.Equal(2, parts.Count);
         Assert.False(parts[0].Finished);
         Assert.True(parts[^1].Finished);
@@ -147,14 +120,11 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeStreamAsync_ShouldStillSettle_WhenTheProviderStoppedPartWay()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.Throttled));
 
-        // Act
         var parts = await world.ReadToTheEndAsync();
 
-        // Assert
         Assert.Equal(AssistanceErrors.Throttled, Assert.Single(parts).Failure);
         Assert.Equal("assistance.throttled", Assert.Single(world.Ledger.Settled).Outcome);
     }
@@ -162,16 +132,13 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeStreamAsync_ShouldNotTellACookThatTheKeyWasRefused()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.Rejected));
 
-        // Act
         var parts = await world.ReadToTheEndAsync();
 
-        // Assert
-        // A refused key is the administrator's to fix and is nothing somebody
-        // halfway through a recipe can act on. The ledger keeps the real code.
+        // A refused key is the administrator's to fix, not something a person mid-recipe can act
+        // on; the ledger keeps the real code.
         Assert.Equal(AssistanceErrors.Unavailable, Assert.Single(parts).Failure);
         Assert.Equal("assistance.rejected", Assert.Single(world.Ledger.Settled).Outcome);
     }
@@ -179,17 +146,13 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeStreamAsync_ShouldTellACookThatTheModelIsMissing()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.ModelMissing));
 
-        // Act
         var parts = await world.ReadToTheEndAsync();
 
-        // Assert
-        // Not folded into "unavailable" the way a refused key is: waiting will
-        // never make a model appear that nobody pulled, and the cook is so
-        // often the person who can pull it that the screen should say so.
+        // Not folded into "unavailable": waiting never makes a model appear, and the cook is often
+        // the person who can pull it.
         Assert.Equal(AssistanceErrors.ModelMissing, Assert.Single(parts).Failure);
         Assert.Equal("assistance.model_missing", Assert.Single(world.Ledger.Settled).Outcome);
     }
@@ -197,24 +160,20 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeStreamAsync_ShouldSettle_WhenNobodyReadsToTheEnd()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" }, new ModelUsage(120, 340, 0));
 
         var opened = (await world.ComposeStreamAsync()).ShouldBeSuccess();
 
-        // Act
-        // One part, and then the reader walks away — which is what a person
-        // closing the page looks like from here, and is an ordinary end rather
-        // than an edge case.
+        // One part, then the reader walks away as a person closing the page does: an ordinary end,
+        // not an edge case.
         await using (var parts = opened.GetAsyncEnumerator(Token))
         {
             Assert.True(await parts.MoveNextAsync());
         }
 
-        // Assert
-        // A reservation nobody settled holds its estimate against the month's
-        // budget until the month turns.
+        // An unsettled reservation holds its estimate against the month's budget until the month
+        // turns.
         var settlement = Assert.Single(world.Ledger.Settled);
         Assert.Equal("abandoned", settlement.Outcome);
     }
@@ -222,16 +181,13 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldReserveAgainstTheConfiguredCeilings()
     {
-        // Arrange
         var world = new World();
         world.Settings.MonthlyBudget = 20m;
         world.Settings.PersonalBudget = 5m;
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
 
-        // Act
         await world.ComposeAsync();
 
-        // Assert
         var reservation = Assert.Single(world.Ledger.Reservations);
         Assert.Equal(20m, reservation.MonthlyBudget);
         Assert.Equal(5m, reservation.PersonalBudget);
@@ -241,16 +197,12 @@ public class AssistantRunTests
     [Fact]
     public async Task DrawAsync_ShouldBeRefused_ForAProviderThatCannotDraw()
     {
-        // Arrange
         var world = new World(provider: AssistantKind.Ollama);
         world.Settings.Uses = [Use(Capability.Draw, AssistantKind.Ollama)];
 
-        // Act
         var result = await world.DrawAsync();
 
-        // Assert
-        // Refused by the settings rather than by the adapter: Ollama cannot
-        // draw, so the capability is not allowed however the switch is left.
+        // Refused by the settings, not the adapter: Ollama cannot draw, however the switch is left.
         result.ShouldBeFailure(AssistanceErrors.Disabled);
         Assert.Equal(0, world.Assistant.Calls);
     }
@@ -258,7 +210,6 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldCallTheProviderThisJobWasPointedAt()
     {
-        // Arrange
         // Two connected, and the job points at the second.
         var world = new World();
         world.Settings.Connections =
@@ -269,12 +220,9 @@ public class AssistantRunTests
         world.Settings.Uses = [Use(Capability.Draft, AssistantKind.Gemini)];
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
 
-        // Act
         await world.ComposeAsync();
 
-        // Assert
-        // The reason for any of this: each job reaches the provider it was
-        // pointed at rather than whichever one happened to be first.
+        // Each job reaches the provider it was pointed at, not whichever was first.
         Assert.Equal(AssistantKind.Gemini, Assert.Single(world.Ledger.Reservations).Provider);
         Assert.Equal("two", world.Assistant.LastConnection!.ApiKey);
     }
@@ -282,57 +230,45 @@ public class AssistantRunTests
     [Fact]
     public async Task ComposeAsync_ShouldUseTheChosenModel_AndTheDefaultWhenNoneWasChosen()
     {
-        // Arrange
         var world = new World();
         world.Settings.Uses = [Use(Capability.Draft, AssistantKind.OpenAi, model: "cheap-one")];
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
 
-        // Act
         await world.ComposeAsync();
 
-        // Assert
         Assert.Equal("cheap-one", world.Assistant.LastConnection!.Model);
 
-        // Arrange again, with nothing chosen.
         var second = new World();
         second.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
 
-        // Act
         await second.ComposeAsync();
 
-        // Assert
-        // Empty means "whatever is current for this job", which the registry
-        // answers — not a name this build was shipped believing.
+        // Empty means "whatever is current for this job", answered by the registry, not a name this
+        // build shipped believing.
         Assert.Equal("openai-default-draft", second.Assistant.LastConnection!.Model);
     }
 
     [Fact]
     public async Task ComposeAsync_ShouldUseTheProvidersOwnAddress_WhenNobodyOverrodeIt()
     {
-        // Arrange
         var world = new World();
         world.Assistant.WillCompose(new DraftedRecipe { Title = "Soup" });
 
-        // Act
         await world.ComposeAsync();
 
-        // Assert
         Assert.Equal("https://openai.example.com", world.Assistant.LastConnection!.BaseUrl);
     }
 
     [Fact]
     public async Task ComposeAsync_ShouldRefuse_WhenTheKeyRingCannotReadTheStoredKey()
     {
-        // Arrange
         var world = new World();
         world.Protector.KeysLost = true;
 
-        // Act
         var result = await world.ComposeAsync();
 
-        // Assert
-        // A key ring lost and restored empty leaves intact ciphertext nobody
-        // can read. That is "no assistant is configured", not a crash.
+        // A key ring lost and restored empty leaves unreadable ciphertext: "no assistant
+        // configured", not a crash.
         result.ShouldBeFailure(AssistanceErrors.NotConfigured);
         Assert.Equal(0, world.Assistant.Calls);
     }
@@ -340,10 +276,8 @@ public class AssistantRunTests
     [Fact]
     public void StartOfMonth_ShouldBeTheFirstInstantInUtc_BecauseThatIsHowAProviderBills()
     {
-        // Act
         var start = AssistantRun.StartOfMonth(new DateTimeOffset(2026, 9, 19, 14, 30, 0, TimeSpan.FromHours(2)));
 
-        // Assert
         Assert.Equal(new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), start);
     }
 
@@ -360,7 +294,6 @@ public class AssistantRunTests
             Model = model
         };
 
-    /// <summary>The run, and the things it talks to.</summary>
     private sealed class World
     {
         internal World(bool connected = true, AssistantKind? provider = null)
@@ -428,7 +361,6 @@ public class AssistantRunTests
                 },
                 Token);
 
-        /// <summary>Every part of a stream that was read properly.</summary>
         internal async Task<IReadOnlyList<Composing>> ReadToTheEndAsync()
         {
             var opened = (await ComposeStreamAsync()).ShouldBeSuccess();

@@ -9,16 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Pipeline;
 
-/// <summary>
-/// A request that stays open is not a connection kept out of the pool.
-/// </summary>
-/// <remarks>
-/// Watching an import, or an assistant writing a draft, keeps a response open
-/// for minutes after authentication has read the session. If that read kept
-/// the connection for the life of the response, a pool of twenty would be
-/// drained by twenty open tabs, and every other request would queue behind
-/// them.
-/// </remarks>
+/// <summary>A request that stays open (an import, a streamed draft) must not keep a connection out of the pool, or open tabs would drain it.</summary>
 [Collection(RequiresDatabase.Name)]
 public class ConnectionPoolTests(PostgresFixture postgres)
 {
@@ -27,7 +18,6 @@ public class ConnectionPoolTests(PostgresFixture postgres)
     [Fact]
     public async Task AnOpenResponse_ShouldLeaveThePoolToOtherRequests()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
 
         var stream = new HeldOpenEndpoint();
@@ -46,13 +36,10 @@ public class ConnectionPoolTests(PostgresFixture postgres)
         var held = client.GetAsync(HeldOpenEndpoint.Path, Token);
         await stream.Entered.WaitAsync(TimeSpan.FromSeconds(10), Token);
 
-        // Act
-        // The only connection there is: free, though the first request has
-        // been authenticated and is still open.
+        // The only connection there is: free, though the first request is authenticated and still open.
         var other = await client.GetAsync("/api/v1/sessions", Token);
         stream.Close();
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, other.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await held).StatusCode);
     }

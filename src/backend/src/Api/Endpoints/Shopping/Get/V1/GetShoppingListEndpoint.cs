@@ -43,11 +43,8 @@ internal sealed class GetShoppingListEndpoint : IEndpoint
             .RequireAuthorization();
     }
 
-    // Not the version alone. Each source's recipe title and planned day are
-    // read live from the recipe and the meal plan, and renaming a recipe or
-    // moving a meal is not a write to the list: a tag of the version alone
-    // answered 304 over the old name and the old day. Distinct, because the
-    // fingerprint folds with XOR and a recipe added twice would cancel itself out.
+    // Not the version alone: titles and planned days are read live, so a version-only tag answered 304 over stale
+    // names. Distinct, because the fingerprint folds with XOR and a recipe added twice would cancel out.
     private static string SourcesFingerprint(Response list) =>
         ETag.Fingerprint(list.Items
             .SelectMany(item => item.Sources.Select(source => string.Create(

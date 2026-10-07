@@ -4,29 +4,21 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Api.Authentication;
 
-/// <summary>
-/// Requires the account that administers this instance.
-/// </summary>
+/// <summary>Requires the account that administers this instance.</summary>
 /// <remarks>
-/// Checked against the database on each request rather than carried as a claim.
-/// A claim would be stale until the next sign-in, and "the stored row is the
-/// truth" is the property the whole session design is built on — it would be
-/// odd to abandon it for the one decision that gates instance-wide settings.
-/// The cost is one indexed lookup on a handful of endpoints.
+/// Checked against the database on each request, not carried as a claim that would be stale until
+/// the next sign-in: the stored row is the truth. Costs one indexed lookup.
 /// </remarks>
 internal static class AdminPolicy
 {
     internal const string Name = "culina.admin";
 
     /// <summary>
-    /// The administrator — or, while nobody has an account, whoever is setting
-    /// the instance up.
+    /// The administrator, or whoever is setting the instance up while nobody has an account.
     /// </summary>
     /// <remarks>
-    /// For the server and database settings, which the setup screen fills in
-    /// before the first account exists. It opens nothing that was closed
-    /// before: until there is an account, anyone may create the first one and
-    /// become the administrator anyway.
+    /// For the settings the setup screen fills in before the first account exists; it opens
+    /// nothing, as anyone may create the first account anyway.
     /// </remarks>
     internal const string OrSetupName = "culina.admin-or-setup";
 
@@ -44,8 +36,8 @@ internal static class AdminPolicy
     }
 
     /// <summary>
-    /// No authenticated user required: during setup there is nobody who could
-    /// be. Once there is, the requirement is the administrator's.
+    /// No authenticated user required during setup, when nobody could be; afterwards the
+    /// administrator's requirement.
     /// </summary>
     internal static AuthorizationBuilder AddAdminOrSetupPolicy(this AuthorizationBuilder builder)
     {
@@ -60,13 +52,12 @@ internal static class AdminPolicy
 internal class AdminRequirement : IAuthorizationRequirement;
 
 /// <summary>
-/// The administrator's requirement, which setup also satisfies. A subclass so
-/// the administrator's handler answers it without knowing it exists.
+/// The administrator's requirement, which setup also satisfies; a subclass so the administrator's
+/// handler answers it unaware.
 /// </summary>
 internal sealed class AdminOrSetupRequirement : AdminRequirement;
 
 /// <summary>Satisfies the setup requirement until somebody administers the instance.</summary>
-/// <param name="setup">Says how far setup has got.</param>
 internal sealed class SetupRequirementHandler(ISetupProgress setup)
     : AuthorizationHandler<AdminOrSetupRequirement>
 {
@@ -84,7 +75,6 @@ internal sealed class SetupRequirementHandler(ISetupProgress setup)
 }
 
 /// <summary>Answers the administrator requirement from the users table.</summary>
-/// <param name="users">Reads the admin flag.</param>
 internal sealed class AdminRequirementHandler(IUserRepository users)
     : AuthorizationHandler<AdminRequirement>
 {

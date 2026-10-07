@@ -6,12 +6,7 @@ using Request = Contracts.Recipes.Copy.Request;
 
 namespace Api.Endpoints.Recipes.Copy.V1;
 
-/// <summary>Makes a household its own copy of a recipe.</summary>
-/// <remarks>
-/// A copy is created, so it is a sub-resource that is posted to rather than a
-/// verb in the path: <c>POST /recipes/{id}/copies</c> answers with the new
-/// recipe and where it lives.
-/// </remarks>
+/// <summary>Makes a household its own copy of a recipe: a POST to the <c>copies</c> sub-resource, answering with the new recipe.</summary>
 internal sealed class CopyRecipeEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

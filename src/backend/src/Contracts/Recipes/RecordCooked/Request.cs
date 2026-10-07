@@ -1,12 +1,9 @@
 namespace Contracts.Recipes.RecordCooked;
 
-/// <summary>
-/// That you cooked this.
-/// </summary>
+/// <summary>That you cooked this.</summary>
 /// <remarks>
-/// Every field is optional, and an empty body is the expected case: one tap is
-/// the whole interaction, and anything more would be a form standing between
-/// someone and the thing they just finished cooking.
+/// Every field is optional and an empty body is the expected case: one tap is the whole
+/// interaction.
 /// </remarks>
 public sealed record Request
 {
@@ -20,8 +17,8 @@ public sealed record Request
     public string? Note { get; init; }
 
     /// <summary>
-    /// The household it was cooked in, for a recipe that household inherits.
-    /// Left out, the recipe's own household.
+    /// The household it was cooked in, for a recipe that household inherits; left out, the recipe's
+    /// own.
     /// </summary>
     public Guid? HouseholdId { get; init; }
 }

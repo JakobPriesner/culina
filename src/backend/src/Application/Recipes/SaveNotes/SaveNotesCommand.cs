@@ -10,10 +10,6 @@ using Response = Contracts.Recipes.GetNotes.Response;
 namespace Application.Recipes.SaveNotes;
 
 /// <summary>Replaces your notes on one recipe.</summary>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Whose notes.</param>
-/// <param name="Overall">A note about the recipe as a whole, or null.</param>
-/// <param name="Steps">Notes attached to steps.</param>
 public sealed record SaveNotesCommand(
     Guid RecipeId,
     Guid UserId,
@@ -49,10 +45,7 @@ internal sealed class SaveNotesCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Builds the notes to keep. A blank body is a deletion, not a stored empty
-    /// string, so the panel does not show a box nobody asked for.
-    /// </summary>
+    // A blank body is a deletion, not a stored empty string.
     private Result<IReadOnlyList<PersonalNote>> Build(Recipe recipe, SaveNotesCommand command)
     {
         var now = time.GetUtcNow();

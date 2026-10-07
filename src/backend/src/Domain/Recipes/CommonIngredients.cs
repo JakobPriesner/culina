@@ -4,30 +4,9 @@ using Domain.Shopping;
 namespace Domain.Recipes;
 
 /// <summary>
-/// The things a home kitchen actually buys, in both languages.
+/// A short seed list of common ingredients, in both languages, offered to a kitchen before it has written its own.
+/// Meant for offering whole names; <see cref="SectionKeywords"/> matches stems for guessing the aisle, so the two stay separate.
 /// </summary>
-/// <remarks>
-/// <para>
-/// What a new kitchen is offered before it has written anything of its own.
-/// After a few recipes a household's own words are the better suggestion — they
-/// are how <em>this</em> kitchen talks — so this list is the floor, not the
-/// vocabulary. Nothing is limited to it and nothing has to be chosen from it.
-/// </para>
-/// <para>
-/// Deliberately short. A list of nine hundred ingredients is a list where the
-/// thing you want is the ninth suggestion, and the long tail is exactly where a
-/// generic list is least likely to have the words a particular kitchen uses.
-/// </para>
-/// <para>
-/// This is not the same thing as <see cref="SectionKeywords"/>, which the two
-/// overlap with and neither replaces. That table matches <em>stems</em> inside
-/// a phrase — "strawberr" so that both "strawberry" and "strawberries" find the
-/// produce aisle — which is right for guessing and wrong for offering. These
-/// are names a person would be happy to see typed into their recipe, which is
-/// right for offering and useless for matching. Merging them would make one of
-/// the two worse.
-/// </para>
-/// </remarks>
 public static class CommonIngredients
 {
     /// <summary>One thing to buy, named in both languages.</summary>
@@ -41,17 +20,10 @@ public static class CommonIngredients
         public string In(Language language) => language == Language.De ? De : En;
     }
 
-    /// <summary>
-    /// The ones whose name begins with or contains what was typed, best first.
-    /// </summary>
+    /// <summary>The entries whose name contains the query, best first (names that start with it before those that merely contain it).</summary>
     /// <param name="query">What has been typed, which may be empty.</param>
     /// <param name="language">Which language to name them in.</param>
     /// <param name="limit">At most this many.</param>
-    /// <remarks>
-    /// A name that <em>starts</em> with the query comes before one that merely
-    /// contains it: somebody typing "oil" means the oil, not the boiled
-    /// potatoes.
-    /// </remarks>
     public static IReadOnlyList<Entry> Matching(string? query, Language language, int limit)
     {
         var wanted = ItemName.Fold(query ?? string.Empty);

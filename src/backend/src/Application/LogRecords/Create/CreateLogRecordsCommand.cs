@@ -11,9 +11,7 @@ namespace Application.LogRecords.Create;
 /// <param name="AppVersion">The build that reported it.</param>
 /// <param name="Records">What it reported.</param>
 /// <param name="UserAgent">The browser, as its request header names it.</param>
-/// <param name="Client">
-/// The browser and device, as the attributes every record is exported with.
-/// </param>
+/// <param name="Client">The browser and device, as the attributes every record is exported with.</param>
 public sealed record CreateLogRecordsCommand(
     string AppVersion,
     IReadOnlyList<ReportedRecord> Records,
@@ -25,9 +23,7 @@ public sealed record CreateLogRecordsCommand(
 /// <param name="Message">What it said.</param>
 /// <param name="Stack">Where it was thrown, if anywhere.</param>
 /// <param name="Route">The route id it happened on.</param>
-/// <param name="Context">
-/// What the page was like when it happened, as attributes of this record alone.
-/// </param>
+/// <param name="Context">What the page was like when it happened, as attributes of this record alone.</param>
 public sealed record ReportedRecord(
     string Event,
     string Message,
@@ -35,25 +31,10 @@ public sealed record ReportedRecord(
     string? Route,
     IReadOnlyList<KeyValuePair<string, object>> Context);
 
-/// <summary>
-/// Re-emits browser records through <see cref="ILogger"/>.
-/// </summary>
+/// <summary>Re-emits browser records through <see cref="ILogger"/>, so they leave with the server's exporter and logging scope.</summary>
 /// <remarks>
-/// <para>
-/// Through the server rather than from the browser to a collector: the
-/// collector stays on the operator's network, the page's
-/// <c>connect-src 'self'</c> stays as it is, and the records leave with the
-/// exporter the server is already configured with — the request id, the user
-/// id and the trace come along from the logging scope for free.
-/// </para>
-/// <para>
-/// Anybody can call this, signed in or not, because a sign-in page can break
-/// too. So every field has a ceiling, the batch has one, the endpoint has a
-/// rate limit per caller and one for every caller together, every line is a
-/// <c>Warning</c> however the browser describes it, and no text reaches the log
-/// with a line break or another control character in it: a console that does
-/// not escape them would otherwise print a forged line of the server's own.
-/// </para>
+/// Callable signed out, since a sign-in page can break too, so everything is bounded: field, batch and rate ceilings,
+/// every line a <c>Warning</c>, and control characters stripped so a console cannot print a forged server line.
 /// </remarks>
 internal sealed partial class CreateLogRecordsCommandHandler(ILoggerFactory loggers)
     : ICommandHandler<CreateLogRecordsCommand>
@@ -130,8 +111,7 @@ internal sealed partial class CreateLogRecordsCommandHandler(ILoggerFactory logg
             return;
         }
 
-        // Not validated, because nobody chooses it on purpose; cut, because it
-        // is still somebody else's text.
+        // Not validated, since nobody chooses it on purpose; cut, since it is somebody else's text.
         var userAgent = Printable(command.UserAgent.Length > LongestUserAgent
             ? command.UserAgent[..LongestUserAgent]
             : command.UserAgent);
@@ -148,8 +128,7 @@ internal sealed partial class CreateLogRecordsCommandHandler(ILoggerFactory logg
         {
             var message = Printable(record.Message);
 
-            // A scope rather than more template holes: the exporter turns each
-            // pair into an attribute of the line, and the message stays readable.
+            // A scope, not template holes: each pair becomes an attribute and the message stays readable.
             using var attributes = logger.BeginScope<IReadOnlyList<KeyValuePair<string, object>>>(
                 [.. shared, .. record.Context.Select(Bounded)]);
 
@@ -163,10 +142,7 @@ internal sealed partial class CreateLogRecordsCommandHandler(ILoggerFactory logg
         }
     }
 
-    /// <summary>
-    /// Cuts what the browser described itself with rather than refusing it:
-    /// losing the error over its context would be the worse trade.
-    /// </summary>
+    // Cuts what the browser described itself with rather than refusing it: losing the error over its context is the worse trade.
     private static KeyValuePair<string, object> Bounded(KeyValuePair<string, object> attribute) =>
         new(attribute.Key, attribute.Value switch
         {
@@ -178,15 +154,8 @@ internal sealed partial class CreateLogRecordsCommandHandler(ILoggerFactory logg
     private static string Cut(string text) =>
         Printable(text.Length > LongestAttribute ? text[..LongestAttribute] : text);
 
-    /// <summary>
-    /// The text with every line break and every other control or formatting
-    /// character, bidirectional overrides included, turned into a space.
-    /// </summary>
-    /// <remarks>
-    /// A browser's stack loses its line breaks with the rest. Each frame still
-    /// starts with its own <c>at</c>, and a stack that can start a new line can
-    /// start a forged one.
-    /// </remarks>
+    // Turns every line break and other control or formatting character (bidi overrides included) into a space:
+    // a stack that can start a new line can start a forged one.
     private static string Printable(string text) => Unprintable().Replace(text, " ");
 
     [GeneratedRegex(@"[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]")]

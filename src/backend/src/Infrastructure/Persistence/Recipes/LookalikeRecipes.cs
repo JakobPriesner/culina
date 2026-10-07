@@ -3,31 +3,15 @@ using Application.Abstractions;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>
-/// Finds the recipe a household already has that a new one looks like, by the
-/// three tests of docs/search-design.md §19.2.
+/// Finds the recipe a household already has that a new one looks like (docs/search-design.md
+/// §19.2).
 /// </summary>
 /// <remarks>
-/// <para>
-/// In order of certainty: the same title once folded — "Käsekuchen" and
-/// "Kaesekuchen" are one name; a title that is almost the same and most of the
-/// same ingredients — "Omas Spaghetti Bolognese"; or a recipe the lexicon
-/// reads as exactly the same thing, made from nearly all the same ingredients —
-/// "Linsen Suppe" and "Linsensuppe".
-/// </para>
-/// <para>
-/// A wrong warning is worse than a missed one, so every test that does not
-/// rest on the name also asks for <see cref="FewestShared"/> ingredients in
-/// common. Two three-ingredient recipes can share everything and still be
-/// different dishes; four shared ingredients and a name to match are a
-/// Bolognese imported twice.
-/// </para>
-/// <para>
-/// Ingredients are compared by their folded names, over the larger of the two
-/// lists, so a recipe with twelve ingredients is not the duplicate of one with
-/// three of them.
-/// </para>
+/// By certainty: same folded title; a near title with most ingredients shared; or the same lexicon
+/// reading with nearly all. A wrong warning is worse than a missed one, so name-independent tests
+/// also need <see cref="FewestShared"/> ingredients. Compared over the larger list, so twelve
+/// ingredients never duplicate three.
 /// </remarks>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class LookalikeRecipes(DbExecutor executor) : ILookalikeRecipes
 {
     /// <summary>How alike two titles must be for "almost the same name".</summary>
@@ -39,7 +23,9 @@ internal sealed class LookalikeRecipes(DbExecutor executor) : ILookalikeRecipes
     /// <summary>How much of the ingredients the same kind of dish must share.</summary>
     internal const double SameKindOverlap = 0.8d;
 
-    /// <summary>The fewest shared ingredients that can say two differently named recipes are one.</summary>
+    /// <summary>
+    /// The fewest shared ingredients that can say two differently named recipes are one.
+    /// </summary>
     internal const int FewestShared = 3;
 
     public async Task<Lookalike?> FindAsync(
@@ -68,11 +54,8 @@ internal sealed class LookalikeRecipes(DbExecutor executor) : ILookalikeRecipes
     }
 
     /// <remarks>
-    /// Every recipe of the household is compared, which is one pass over a
-    /// title column of a few thousand short strings — measured at a couple of
-    /// milliseconds for two thousand — and happens once per recipe imported.
-    /// Only the few that pass a title or concept test have their ingredients
-    /// counted.
+    /// Compares every recipe title of the household (a pass of a few thousand short strings, a
+    /// couple of ms) once per import; only title or concept matches have ingredients counted.
     /// </remarks>
     private const string Sql = """
         with incoming as (

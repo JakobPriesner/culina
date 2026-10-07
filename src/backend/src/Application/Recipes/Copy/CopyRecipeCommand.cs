@@ -9,15 +9,10 @@ using Domain.Shared;
 namespace Application.Recipes.Copy;
 
 /// <summary>Makes a household its own copy of a recipe it can read.</summary>
-/// <param name="RecipeId">The recipe to copy.</param>
-/// <param name="HouseholdId">The household the copy belongs to.</param>
-/// <param name="UserId">Who is asking.</param>
 /// <remarks>
-/// The answer to an inherited recipe somebody wants to change: it is not
-/// theirs, so they change their own copy instead, and the original stays
-/// exactly what its household wrote. Any recipe the caller may read can be
-/// copied into any household they are in — reading it is already all it takes
-/// to write it out again by hand.
+/// For an inherited recipe somebody wants to change: they change their own copy and the original
+/// stays what its household wrote. Reading is already all it takes to write it out by hand, so any
+/// readable recipe may be copied into any household they are in.
 /// </remarks>
 public sealed record CopyRecipeCommand(Guid RecipeId, Guid HouseholdId, Guid UserId);
 

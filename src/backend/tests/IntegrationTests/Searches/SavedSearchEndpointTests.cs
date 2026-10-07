@@ -5,16 +5,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Searches;
 
-/// <summary>
-/// What a saved search is, proved against a real database.
-/// </summary>
-/// <remarks>
-/// The rules worth a test are the ones a reader would otherwise take on trust:
-/// that the four filters come back exactly as they went in, that a search
-/// asking for nothing is refused, that two chips cannot share a label, and —
-/// the one that stops the feature rotting — that every order a search may
-/// remember is an order the recipe list actually accepts.
-/// </remarks>
+/// <summary>What a saved search is, proved against a real database; notably that every remembered order is one the recipe list accepts.</summary>
 [Collection(RequiresDatabase.Name)]
 public class SavedSearchEndpointTests(PostgresFixture postgres)
 {
@@ -27,11 +18,9 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Create_ShouldReturnEveryFilterItWasGiven()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
         var response = await client.PostAsync(
             "/api/v1/searches",
             new
@@ -48,10 +37,7 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // Saving is a copy rather than a translation: a saved search that came
-        // back as anything but what was sent could not be trusted to reopen as
-        // the search that was saved.
+        // A copy, not a translation: a saved search must reopen as the search that was saved.
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var criteria = response.Json!.Value.GetProperty("criteria");
@@ -65,74 +51,59 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Create_ShouldRefuseASearchThatAsksForNothing()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
         var response = await client.PostAsync(
             "/api/v1/searches",
             new { householdId, name = "Alles", criteria = new { tags = Array.Empty<string>() } },
             Token);
 
-        // Assert
-        // It would be the library, which is the screen it would be applied
-        // from.
+        // It would be the library, the screen it is applied from.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
     public async Task Create_ShouldRefuseASecondSearchWithTheSameName()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         await SaveAsync(client, householdId, "Feierabend", new { maxMinutes = 20 });
 
-        // Act
         var second = await SaveAsync(client, householdId, "feierabend", new { maxMinutes = 25 });
 
-        // Assert
-        // Case-insensitively, because two chips reading "Feierabend" and
-        // "feierabend" are two things nobody can tell apart.
+        // Case-insensitively: "Feierabend" and "feierabend" are indistinguishable chips.
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
 
     [Fact]
     public async Task Create_ShouldRefuseAnOrderTheLibraryCannotApply()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
-        // Legal on GET /recipes, but only alongside a cookbookId — so a saved
-        // search carrying it would be one the library could not apply.
+        // Legal on GET /recipes only alongside a cookbookId, so a saved search could not carry it.
         var response = await SaveAsync(
             client,
             householdId,
             "Reihenfolge",
             new { sort = "cookbookOrder" });
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
     public async Task List_ShouldBeOldestFirst()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         await SaveAsync(client, householdId, "Erste", new { maxMinutes = 15 });
         await SaveAsync(client, householdId, "Zweite", new { maxMinutes = 45 });
 
-        // Act
         var response = await client.GetAsync($"/api/v1/searches?householdId={householdId}", Token);
 
-        // Assert
         // A row of chips that reordered itself is a row nobody learns.
         var items = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
 
@@ -143,7 +114,6 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task List_ShouldBeEmptyForSomebodyElsesHousehold()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -151,10 +121,8 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
 
         using var stranger = await SecondAccountAsync();
 
-        // Act
         var response = await stranger.GetAsync($"/api/v1/searches?householdId={householdId}", Token);
 
-        // Assert
         // 404, not 403: a stranger learns nothing about which kitchens exist.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -162,22 +130,18 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldPointAnExistingSearchAtDifferentFilters()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         var created = await SaveAsync(client, householdId, "Wochenende", new { maxMinutes = 90 });
         var searchId = created.Json!.Value.GetProperty("searchId").GetGuid();
 
-        // Act
         var response = await client.PatchAsync(
             $"/api/v1/searches/{searchId}",
             new { name = "Wochenende", criteria = new { query = "braten", sort = "-cookCount" } },
             Token);
 
-        // Assert
-        // No If-Match: this is "save what I am looking at now over what I saved
-        // before", which is a deliberate overwrite rather than a clash.
+        // No If-Match: "save what I am looking at now" is a deliberate overwrite, not a clash.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var criteria = response.Json!.Value.GetProperty("criteria");
@@ -192,7 +156,6 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldAnswerTheSameWayTwice()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -201,10 +164,8 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
 
         await client.DeleteAsync($"/api/v1/searches/{searchId}", Token);
 
-        // Act
         var again = await client.DeleteAsync($"/api/v1/searches/{searchId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, again.StatusCode);
     }
 
@@ -212,23 +173,16 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
     [MemberData(nameof(EveryOrderASearchMayRemember))]
     public async Task EveryStoredOrder_ShouldBeOneTheRecipeListAccepts(string order)
     {
-        // Arrange
-        // The guard against the two vocabularies drifting apart. SearchOrders
-        // lists what a saved search may hold; GetRecipesRequestExtensions lists
-        // what the list endpoint parses. A seventh sort added to one and not the
-        // other would otherwise only be found by somebody applying a saved
-        // search and getting a 400.
+        // Guards the vocabularies drifting: SearchOrders (what a saved search may hold) vs GetRecipesRequestExtensions (what the list parses).
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         await SaveAsync(client, householdId, $"Nach {order}", new { sort = order });
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&sort={Uri.EscapeDataString(order)}",
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -278,8 +232,7 @@ public class SavedSearchEndpointTests(PostgresFixture postgres)
 
     private async Task<ApiClient> SecondAccountAsync()
     {
-        // The first account is the instance's admin, so registration has to be
-        // opened before a second one can exist.
+        // The first account is the admin, so registration must be opened before a second exists.
         using var admin = postgres.Api.NewApiClient();
 
         await admin.PostAsync(

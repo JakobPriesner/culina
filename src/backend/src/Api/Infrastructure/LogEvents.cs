@@ -1,12 +1,8 @@
 namespace Api.Infrastructure;
 
-/// <summary>
-/// The event-id blocks, allocated per domain.
-/// </summary>
+/// <summary>The event-id blocks, allocated per domain so an alert can key on an id that survives rewording.</summary>
 /// <remarks>
-/// Ids are allocated in blocks so an alert can key on an id that survives a
-/// message being reworded. A <c>LoggerMessage</c> declares its id inline; this
-/// file is the register that stops two domains claiming the same number.
+/// A <c>LoggerMessage</c> declares its id inline; this register stops two domains claiming the same number.
 ///
 /// <list type="table">
 ///   <item><term>1000-1099</term><description>Users and authentication</description></item>

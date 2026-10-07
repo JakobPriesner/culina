@@ -4,13 +4,9 @@ using Domain.Shopping;
 namespace Application.Shopping;
 
 /// <summary>
-/// How shopping values travel on the wire.
+/// How shopping values travel on the wire, in the shape of <c>RecipeWords</c>: a contract is a wire
+/// format, and the domain spells its enums as suits it.
 /// </summary>
-/// <remarks>
-/// The same shape as <c>RecipeWords</c>, and for the same reason: a contract is
-/// a wire format, and the domain should be free to spell its enums however suits
-/// the domain.
-/// </remarks>
 internal static class ShoppingWords
 {
     internal static string Of(ShoppingSection section) => section switch

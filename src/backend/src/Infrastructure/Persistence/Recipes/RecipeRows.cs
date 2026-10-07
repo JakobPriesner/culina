@@ -100,12 +100,9 @@ internal sealed record RecipeTagRow
 }
 
 /// <summary>
-/// The words each enum is stored as.
+/// The words each enum is stored as: text, so a dump is readable and a new member cannot renumber
+/// rows.
 /// </summary>
-/// <remarks>
-/// Text rather than integers, so a database dump is readable and inserting an
-/// enum member later cannot renumber existing rows.
-/// </remarks>
 internal static class RecipeCodes
 {
     internal static string Of(Language language) => language == Language.De ? "de" : "en";
@@ -117,19 +114,13 @@ internal static class RecipeCodes
     internal static YieldKind ToYieldKind(string stored) =>
         stored == "pieces" ? YieldKind.Pieces : YieldKind.Servings;
 
-    /// <summary>
-    /// A unit is stored as the code it carries, so this is a passthrough. The
-    /// table that used to be here existed only because the unit was an enum.
-    /// </summary>
+    /// <summary>A unit is stored as the code it carries, so this is a passthrough.</summary>
     internal static string? Of(Unit? unit) => unit?.Code;
 
     /// <summary>
-    /// A stored unit, or null when the column is empty.
+    /// A stored unit, or null when the column is empty; one that no longer parses reads as
+    /// unmeasured, since a recipe that mostly renders beats an error.
     /// </summary>
-    /// <remarks>
-    /// A unit that no longer parses is read as unmeasured rather than crashing
-    /// the read, because a recipe that mostly renders beats an error.
-    /// </remarks>
     internal static Unit? ToUnit(string? stored) =>
         string.IsNullOrEmpty(stored) ? null : Unit.Create(stored).Match<Unit?>(one => one, _ => null);
 }

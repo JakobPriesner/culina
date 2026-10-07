@@ -42,11 +42,8 @@ internal sealed class GetRecipeImageEndpoint : IEndpoint
                 "Widths 400, 800 and 1600. Private and revalidated, because an image is exactly as "
                 + "private as the recipe it belongs to; its ETag is the content hash, so a picture that "
                 + "was replaced is fetched and one that was not answers 304.")
-            // "v" is the picture's id, and nothing here reads it. It is in the
-            // address so that replacing a picture changes the address, which is
-            // what makes a browser fetch the new one instead of showing the old
-            // one it already has. Declared because the query guard rejects a
-            // parameter this endpoint has not claimed.
+            // "v" is the picture's id, unread here: it busts the browser cache when a picture is replaced.
+            // Declared because the query guard rejects unclaimed parameters.
             .WithRepeatableQueryParameters(["w", "v"], [], ["w"])
             .Produces<byte[]>(StatusCodes.Status200OK, "image/webp")
             .Produces(StatusCodes.Status304NotModified)

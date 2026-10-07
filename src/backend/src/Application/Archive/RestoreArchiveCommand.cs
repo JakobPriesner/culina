@@ -77,9 +77,7 @@ internal sealed class RestoreArchiveCommandHandler(
             return ArchiveErrors.TooManyRecipes;
         }
 
-        // Refused rather than half-read. A version this does not know may spell
-        // a step differently, and a half-restored recipe is worse than a failed
-        // restore — you cannot tell which half is wrong.
+        // Refused rather than half-read: a half-restored recipe is worse than a failed restore.
         if (archive.Culina != RecipeArchive.Version)
         {
             return ArchiveErrors.UnknownVersion;
@@ -106,15 +104,7 @@ internal sealed class RestoreArchiveCommandHandler(
         return new ArchiveRestored(restored, skipped);
     }
 
-    /// <summary>
-    /// Writes one recipe, in its own transaction.
-    /// </summary>
-    /// <remarks>
-    /// One at a time rather than all or nothing. An archive is usually restored
-    /// because something went wrong, and refusing four hundred recipes over one
-    /// that a newer version wrote strangely is the least helpful thing this
-    /// could do. What could not be written is counted and reported.
-    /// </remarks>
+    // One recipe per transaction, not all or nothing: an archive is restored because something went wrong, so one odd recipe must not block the rest. Failures are counted.
     private async Task<bool> WriteOneAsync(
         RestoreArchiveCommand command,
         ArchivedRecipe entry,
@@ -184,15 +174,8 @@ internal sealed class RestoreArchiveCommandHandler(
                 .Bind(lines => IngredientGroup.Create(null, group.Name, order, lines)))
             .Collect();
 
-    /// <summary>
-    /// The steps, with their ingredient positions turned back into references.
-    /// </summary>
-    /// <remarks>
-    /// The position is into the recipe's ingredients read in order, which is
-    /// how they were written out. A position that points past the end is
-    /// dropped rather than guessed at: a step referring to the wrong ingredient
-    /// is the one failure this app exists to prevent.
-    /// </remarks>
+    // Steps with ingredient positions turned back into references. A position past the end is dropped, not guessed:
+    // a step referring to the wrong ingredient is the failure this app exists to prevent.
     private static List<Step> BuildSteps(
         ArchivedRecipe entry,
         IReadOnlyList<IngredientGroup> groups)

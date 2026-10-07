@@ -31,9 +31,8 @@ internal sealed class SignInEndpoint : IEndpoint
                 return result.Match(
                     outcome =>
                     {
-                        // The endpoint is the only place that sees both halves:
-                        // the session token becomes an HttpOnly cookie and
-                        // never appears in the body.
+                        // Only here are both halves visible: the session token becomes an HttpOnly
+                        // cookie, never in the body.
                         SessionCookies.Write(
                             context,
                             cookies,
@@ -56,11 +55,8 @@ internal sealed class SignInEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .AllowAnonymous()
-            // Signing in is the way out of a session whose CSRF token has been
-            // lost, so it cannot be the thing the missing token blocks. What
-            // stops a cross-site form signing a browser in is that this
-            // endpoint reads only a JSON body, which such a form cannot send;
-            // see CsrfExempt.
+            // Signing in is the way out of a lost CSRF token, so it is exempt; a cross-site form
+            // cannot sign a browser in because this reads only a JSON body (see CsrfExempt).
             .WithMetadata(new CsrfExempt())
             .RequireRateLimiting(RateLimitExtensions.Login);
     }

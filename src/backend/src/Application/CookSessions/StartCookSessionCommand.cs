@@ -8,11 +8,9 @@ using Response = Contracts.CookSessions.Response;
 
 namespace Application.CookSessions;
 
-/// <summary>Starts cooking a recipe.</summary>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Who is cooking.</param>
-/// <param name="Servings">The scaling to cook at.</param>
-/// <param name="HouseholdId">The household it is cooked in, or null for the recipe's own.</param>
+/// <summary>
+/// Starts cooking a recipe at <c>Servings</c>, in the household given or the recipe's own.
+/// </summary>
 public sealed record StartCookSessionCommand(Guid RecipeId, Guid UserId, decimal Servings, Guid? HouseholdId);
 
 internal sealed class StartCookSessionCommandHandler(
@@ -31,8 +29,8 @@ internal sealed class StartCookSessionCommandHandler(
 
         using var tracked = UseCaseActivity.Start("CookSessions.Start");
 
-        // Reading the recipe is not only for the title: it is the membership
-        // check. A recipe the caller cannot see is a recipe they cannot cook.
+        // Reading the recipe is also the membership check: a recipe the caller cannot see is one
+        // they cannot cook.
         var recipe = await RecipeAccess
             .VisibleInAsync(recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);

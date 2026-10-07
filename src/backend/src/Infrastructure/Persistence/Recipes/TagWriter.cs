@@ -3,14 +3,7 @@ using Domain.Recipes;
 
 namespace Infrastructure.Persistence.Recipes;
 
-/// <summary>
-/// Creates tags on demand and links them to a recipe.
-/// </summary>
-/// <remarks>
-/// Tags have no management screen, because nobody wants one. A tag comes into
-/// existence the first time a recipe is saved with it, and disappears when the
-/// last recipe stops using it.
-/// </remarks>
+/// <summary>Creates tags on demand when a recipe is saved with them and removes them when the last recipe drops them.</summary>
 /// <param name="executor">Runs the SQL inside the caller's transaction.</param>
 internal sealed class TagWriter(DbExecutor executor)
 {
@@ -18,7 +11,7 @@ internal sealed class TagWriter(DbExecutor executor)
     {
         ArgumentNullException.ThrowIfNull(recipe);
 
-        // One tag per slug: an upsert cannot name the same row twice.
+        // One tag per slug, as an upsert cannot name a row twice.
         var named = recipe.Tags
             .Select(name => (name: name.Trim(), slug: Slugify(name)))
             .Where(tag => tag.slug.Length > 0)
@@ -54,10 +47,6 @@ internal sealed class TagWriter(DbExecutor executor)
         await DeleteOrphansAsync(recipe.HouseholdId, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Removes tags no recipe uses any more, so the filter bar never offers a
-    /// tag that would return nothing.
-    /// </summary>
     private Task<int> DeleteOrphansAsync(Guid householdId, CancellationToken cancellationToken) =>
         executor.ExecuteAsync(
             """
@@ -68,24 +57,8 @@ internal sealed class TagWriter(DbExecutor executor)
             new { householdId },
             cancellationToken);
 
-    /// <summary>
-    /// Folds a tag name to a comparable slug.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// German umlauts expand the way German speakers expect — "Süßspeise"
-    /// becomes "suessspeise", not "sspeise" — because stripping the diacritic
-    /// and dropping the eszett would turn two spellings of one word into two
-    /// tags.
-    /// </para>
-    /// <para>
-    /// Other accents are folded through an explicit table rather than Unicode
-    /// normalisation. The app is built with InvariantGlobalization, which
-    /// leaves String.Normalize without the ICU data it needs, and an explicit
-    /// table for the languages Culina actually supports is predictable where a
-    /// silent no-op is not.
-    /// </para>
-    /// </remarks>
+    // German umlauts expand ("Süßspeise" becomes "suessspeise") so two spellings of a word are one tag.
+    // Other accents use an explicit table because InvariantGlobalization leaves String.Normalize without ICU data.
     internal static string Slugify(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -112,18 +85,13 @@ internal sealed class TagWriter(DbExecutor executor)
         return slug.ToString().Trim('-');
     }
 
-    /// <summary>
-    /// The letters one character stands for, or empty when it is a separator.
-    /// </summary>
     private static string Fold(char character) => character switch
     {
-        // German, expanded rather than stripped.
         'ä' => "ae",
         'ö' => "oe",
         'ü' => "ue",
         'ß' => "ss",
 
-        // Everything else in the Latin-1 range folds to its base letter.
         'á' or 'à' or 'â' or 'ã' or 'å' => "a",
         'é' or 'è' or 'ê' or 'ë' => "e",
         'í' or 'ì' or 'î' or 'ï' => "i",

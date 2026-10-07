@@ -3,22 +3,12 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace Api.Infrastructure;
 
-/// <summary>
-/// Turns any unhandled exception into a problem document.
-/// </summary>
+/// <summary>Turns any unhandled exception into a problem document.</summary>
 /// <remarks>
-/// <para>
-/// This is the only place an unhandled exception is logged. Nothing else
-/// catches, logs and rethrows: that produces the same stack twice and hides the
-/// site that actually threw.
-/// </para>
-/// <para>
-/// The exception's message never reaches the client. It can contain a
-/// connection string, a file path or a SQL fragment, and the caller has the
-/// request id, which is what an operator needs to find the real detail.
-/// </para>
+/// The only place an unhandled exception is logged (catch-log-rethrow prints the stack twice). The
+/// message never reaches the client, as it can hold a connection string, path or SQL; the request
+/// id lets an operator find it.
 /// </remarks>
-/// <param name="logger">Records the defect, exactly once.</param>
 internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
     : IExceptionHandler
 {
@@ -27,16 +17,10 @@ internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> log
         "Something went wrong on our side. Try again, and quote the request id if it keeps happening.",
         ErrorType.Failure);
 
-    /// <summary>
-    /// A body the server could not read.
-    /// </summary>
+    /// <summary>A body the server could not read.</summary>
     /// <remarks>
-    /// The framework raises this before any handler runs — a missing required
-    /// field, a string where a number belongs — and left alone it arrives as a
-    /// 500 with a stack trace in the log. It is neither: the caller sent
-    /// something the contract does not describe, and saying "our side" for it
-    /// sends them looking in the wrong place while burying real faults under
-    /// noise.
+    /// Raised by the framework before any handler (missing field, string where a number belongs):
+    /// the caller broke the contract, which is not a 500 with a stack trace.
     /// </remarks>
     private static readonly Error Unreadable = new(
         "request.unreadable",
@@ -52,8 +36,7 @@ internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> log
 
         if (exception is BadHttpRequestException)
         {
-            // Logged at a level that does not page anyone: it is worth seeing
-            // when a client is misbehaving, and it is not a defect here.
+            // Logged below paging level: worth seeing when a client misbehaves, not a defect here.
             logger.UnreadableBody(httpContext.Request);
 
             await CustomResults.WriteProblemAsync(httpContext, Unreadable).ConfigureAwait(false);

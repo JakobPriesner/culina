@@ -26,10 +26,8 @@ internal sealed class SetInheritanceCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Households.SetInheritance");
 
-        // One transaction for reading and writing, so the chain the cycle check
-        // looked through is the chain that is still there when this one joins
-        // it. No If-Match: the body is the whole of the new state rather than
-        // an edit of something the caller read, so there is nothing to lose.
+        // One transaction for read and write, so the chain the cycle check saw is still there. No
+        // If-Match: the body is the whole new state.
         var result = await unitOfWork.InTransactionAsync(
             async token =>
             {

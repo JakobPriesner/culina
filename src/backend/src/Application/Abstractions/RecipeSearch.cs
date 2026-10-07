@@ -7,11 +7,7 @@ namespace Application.Abstractions;
 /// <param name="Tags">Tag slugs, all of which must be present.</param>
 /// <param name="Ingredients">Ingredients the caller has, for ranking.</param>
 /// <param name="MaxMinutes">A ceiling on total time.</param>
-/// <param name="CookbookId">
-/// Only what is on this shelf by hand, or null. A smart shelf does not set
-/// this — it sets <paramref name="Rules"/> instead, because what is on it was
-/// never written down anywhere.
-/// </param>
+/// <param name="CookbookId">Only what is on this shelf by hand, or null. A smart shelf sets <paramref name="Rules"/> instead.</param>
 /// <param name="Rules">What a smart shelf asks for, or null.</param>
 /// <param name="Sort">How to order the results.</param>
 /// <param name="Cursor">Where the previous page ended.</param>
@@ -29,32 +25,17 @@ public sealed record RecipeSearch(
     string? Cursor,
     int Limit)
 {
-    /// <summary>
-    /// What a query asked for beyond its words, once it has been understood.
-    /// </summary>
-    /// <remarks>
-    /// A property rather than a parameter: only the recipe list reads a query
-    /// for meaning, and every other caller of the search is better off not
-    /// having to say that it did not.
-    /// </remarks>
+    /// <summary>What a query asked for beyond its words, once understood. A property so other callers need not say they did not.</summary>
     public RecipeConstraints Constraints { get; init; } = RecipeConstraints.None;
 
-    /// <summary>
-    /// The households whose recipes this one inherits, searched with its own.
-    /// </summary>
-    /// <remarks>
-    /// Empty unless a caller asks, so a search that must stay within the
-    /// household's own recipes — the archive export — does without saying so.
-    /// </remarks>
+    /// <summary>The households whose recipes this one inherits, searched with its own. Empty unless asked, e.g. for the archive export.</summary>
     public IReadOnlyList<Guid> InheritedFrom { get; init; } = [];
 
     /// <summary>Every household whose recipes are searched: this one, then what it inherits.</summary>
     public IReadOnlyList<Guid> Library => [HouseholdId, .. InheritedFrom];
 }
 
-/// <summary>
-/// What a query was understood to ask, as the searcher needs it.
-/// </summary>
+/// <summary>What a query was understood to ask, as the searcher needs it.</summary>
 /// <param name="Diets">Lexicon diets a recipe must keep, all of them.</param>
 /// <param name="Meals">Lexicon meals a recipe must be, any of them.</param>
 /// <param name="Cuisines">Lexicon cuisines a recipe must be, any of them.</param>
@@ -74,14 +55,7 @@ public sealed record RecipeConstraints(
     /// <summary>Nothing beyond the words.</summary>
     public static RecipeConstraints None { get; } = new([], [], [], [], [], [], Quick: false);
 
-    /// <summary>
-    /// Lexicon meals set aside because no recipe was one: what resembles them
-    /// still comes first. Never a filter.
-    /// </summary>
-    /// <remarks>
-    /// A property rather than a parameter, because only a search that had to
-    /// set its meal aside ever has one.
-    /// </remarks>
+    /// <summary>Lexicon meals set aside because no recipe was one: what resembles them still comes first. Never a filter.</summary>
     public IReadOnlyList<string> PreferredMeals { get; init; } = [];
 }
 
@@ -103,41 +77,17 @@ public enum RecipeSort
     /// <summary>Best fit for the query and the named ingredients.</summary>
     Relevance = 4,
 
-    /// <summary>
-    /// The order a cookbook was built in. Only legal with a cookbook, and the
-    /// default when there is one.
-    /// </summary>
+    /// <summary>The order a cookbook was built in. Only legal with a cookbook, and its default.</summary>
     CookbookOrder = 5,
 
-    /// <summary>
-    /// What this person would most likely want to cook, now.
-    /// </summary>
+    /// <summary>What this person would most likely want to cook, now.</summary>
     /// <remarks>
-    /// <para>
-    /// A sort and not a second collection, for the same reason a cookbook is a
-    /// view of the library rather than one of its own: every filter above
-    /// composes with it for free, so "what should I cook?" and "I have
-    /// twenty-five minutes and some chicken" are one feature rather than two
-    /// that can disagree.
-    /// </para>
-    /// <para>
-    /// Scored as of the current day rather than the current instant, so the
-    /// order is stable for as long as somebody is looking at it and a cursor
-    /// still means something on the second page.
-    /// </para>
+    /// A sort, so every filter composes with it. Scored per day, not per instant, so a cursor stays valid across pages.
     /// </remarks>
     Suggested = 6
 }
 
-/// <summary>
-/// What a smart cookbook asks for, as the searcher needs it.
-/// </summary>
-/// <remarks>
-/// A copy of the domain's rules rather than the domain type itself, because
-/// this is a port: <c>Application.Abstractions</c> describes what the database
-/// is asked, and a search that took a <c>Cookbook</c> would make every caller
-/// of the recipe list know what a cookbook is.
-/// </remarks>
+/// <summary>What a smart cookbook asks for. A copy of the domain's rules: this port must not make callers know what a cookbook is.</summary>
 /// <param name="Tags">Tag slugs a recipe must all carry.</param>
 /// <param name="Ingredients">Ingredient names a recipe must all use.</param>
 /// <param name="MaxMinutes">The longest a recipe may take, or null.</param>
@@ -157,10 +107,7 @@ public sealed record RecipePage(
 
 /// <summary>One matching recipe, with everything a card needs.</summary>
 /// <param name="RecipeId">Its id.</param>
-/// <param name="HouseholdId">
-/// The household it belongs to — not always the one searching, when that one
-/// inherits recipes.
-/// </param>
+/// <param name="HouseholdId">The household it belongs to, not always the searcher's when that one inherits.</param>
 /// <param name="Title">What it is called.</param>
 /// <param name="ImageId">Its hero image.</param>
 /// <param name="TotalMinutes">Prep plus cook, or null.</param>
@@ -169,16 +116,11 @@ public sealed record RecipePage(
 /// <param name="YieldLabel">The recipe's own word for it, or null for the usual one.</param>
 /// <param name="Tags">Its tag slugs.</param>
 /// <param name="CookCount">How often the caller has made it.</param>
-/// <param name="LastCookedAt">
-/// When the caller last made it, or null if they never have. Read in the same
-/// scan as the count, which the cook log's index already serves.
-/// </param>
+/// <param name="LastCookedAt">When the caller last made it, or null.</param>
 /// <param name="UpdatedAt">When it last changed.</param>
 /// <param name="MatchedIngredients">How many named ingredients it uses.</param>
 /// <param name="IngredientCount">How many ingredients it has in total.</param>
-/// <param name="AddedToCookbookAt">
-/// When it went on the cookbook being read, or null when none is.
-/// </param>
+/// <param name="AddedToCookbookAt">When it went on the cookbook being read, or null.</param>
 public sealed record RecipeSearchRow(
     Guid RecipeId,
     Guid HouseholdId,
@@ -196,34 +138,20 @@ public sealed record RecipeSearchRow(
     int IngredientCount,
     DateTimeOffset? AddedToCookbookAt)
 {
-    /// <summary>
-    /// Why the row is here, when the answer is not "its title": null for a
-    /// title match and for every row of a search without words.
-    /// </summary>
+    /// <summary>Why the row is here when not its title; null for title matches and wordless searches.</summary>
     public MatchReason? Reason { get; init; }
 
-    /// <summary>
-    /// The diet the query asked for, when the recipe keeps it only by
-    /// presumption — nothing in it refutes the diet, and nobody said so.
-    /// </summary>
+    /// <summary>The diet the query asked for, when the recipe keeps it only by presumption.</summary>
     public string? PresumedDiet { get; init; }
 }
 
 /// <summary>Why a recipe answers a query it does not name in its title.</summary>
-/// <param name="Kind">
-/// <c>ingredient</c>, <c>tag</c>, <c>text</c> (its description or a step) or
-/// <c>concept</c> (only what it is, through the lexicon).
-/// </param>
-/// <param name="Term">
-/// The ingredient or tag as the recipe writes it, or for a concept its lexicon
-/// key; null for text.
-/// </param>
+/// <param name="Kind"><c>ingredient</c>, <c>tag</c>, <c>text</c> or <c>concept</c> (lexicon only).</param>
+/// <param name="Term">The ingredient or tag as written, or a concept's lexicon key; null for text.</param>
 /// <param name="Language">The recipe's language, which a concept is named in.</param>
 public sealed record MatchReason(string Kind, string? Term, string Language);
 
-/// <summary>
-/// What a set of results could be narrowed by, counted over all of it.
-/// </summary>
+/// <summary>What a set of results could be narrowed by, counted over all of it.</summary>
 /// <param name="Total">How many recipes the counts are out of.</param>
 /// <param name="Tags">Tag slugs, with their names.</param>
 /// <param name="Times">Time ceilings in minutes: how many fit within each.</param>

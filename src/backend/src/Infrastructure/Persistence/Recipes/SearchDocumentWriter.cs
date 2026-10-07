@@ -3,54 +3,23 @@ using Domain.Search;
 
 namespace Infrastructure.Persistence.Recipes;
 
-/// <summary>
-/// Keeps a recipe's search document in step with the recipe.
-/// </summary>
+/// <summary>Keeps a recipe's search document in step with the recipe.</summary>
 /// <remarks>
-/// <para>
-/// Called from inside the recipe's own write, so the document and the recipe
-/// are never observed apart: a recipe saved on the tablet is findable from the
-/// phone immediately, and a write that could not be indexed is a write that
-/// failed rather than a recipe that quietly cannot be found. That is the same
-/// trade <c>step_ingredient_refs</c> already makes, and the reason is the same
-/// — a derived index that lags its source is an index that is occasionally
-/// wrong with nothing to say so.
-/// </para>
-/// <para>
-/// The text of the document is built by the database from the rows that were
-/// just written, through the <c>recipe_search_input</c> view. Assembling it in
-/// C# instead would put the definition of "what is searchable about a recipe"
-/// in two places — here and in the migration that has to backfill two thousand
-/// of them — and the two would drift the first time somebody added a field to
-/// one of them.
-/// </para>
-/// <para>
-/// The concepts are the exception, and for the mirror-image reason: the
-/// lexicon they come from is C#, and a copy of it in SQL would be the second
-/// place. So the database writes the text, then this reads back the three
-/// fields the lexicon looks at and writes what it found.
-/// </para>
+/// Called inside the recipe's own write, so the two are never observed apart and an unindexable
+/// write fails. The text is built by the database (<c>recipe_search_input</c>) so "what is
+/// searchable" is defined once; concepts are the exception because the lexicon is C#.
 /// </remarks>
-/// <param name="executor">Runs the SQL inside the request's transaction.</param>
 internal sealed class SearchDocumentWriter(DbExecutor executor)
 {
-    /// <summary>
-    /// Rebuilds one recipe's document.
-    /// </summary>
-    /// <param name="recipeId">The recipe that has just been written.</param>
-    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <summary>Rebuilds one recipe's document.</summary>
     internal async Task WriteAsync(Guid recipeId, CancellationToken cancellationToken)
     {
         await executor.ExecuteAsync(Upsert, new { recipeId }, cancellationToken).ConfigureAwait(false);
         await WriteConceptsAsync([recipeId], cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Rebuilds the concepts of documents a different lexicon built.
-    /// </summary>
+    /// <summary>Rebuilds the concepts of documents a different lexicon built.</summary>
     /// <returns>How many were rebuilt: fewer than asked for means none are left.</returns>
-    /// <param name="batchSize">How many to rebuild in this call.</param>
-    /// <param name="cancellationToken">Cancels between rows.</param>
     internal async Task<int> ReindexStaleAsync(int batchSize, CancellationToken cancellationToken)
     {
         var stale = await executor.QueryAsync<Guid>(
@@ -102,7 +71,6 @@ internal sealed class SearchDocumentWriter(DbExecutor executor)
             cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>The three things the lexicon reads about a recipe.</summary>
     private const string Sources = """
         select
             r.id as recipe_id,
@@ -118,12 +86,9 @@ internal sealed class SearchDocumentWriter(DbExecutor executor)
         """;
 
     /// <summary>
-    /// The same statement the migration runs over every row, narrowed to one.
+    /// The migration's statement, narrowed to one row; an upsert so a concurrent reader never sees
+    /// no document.
     /// </summary>
-    /// <remarks>
-    /// An upsert rather than a delete and an insert, so a concurrent reader
-    /// inside another transaction never sees a recipe with no document at all.
-    /// </remarks>
     private const string Upsert = """
         insert into recipe_search_documents (
             recipe_id, household_id, language, document, fuzzy_text,

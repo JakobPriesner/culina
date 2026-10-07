@@ -6,12 +6,10 @@ using TestSupport;
 
 namespace Application.UnitTests.LogRecords;
 
-/// <summary>
-/// What the browser's reports turn into on the server, and what is refused.
-/// </summary>
+/// <summary>What the browser's reports turn into on the server, and what is refused.</summary>
 /// <remarks>
-/// Anybody can send these, so the properties worth proving are the ones that
-/// stop a caller choosing how loud a line is or how much of it there is.
+/// Anybody can send these, so what matters is that a caller cannot choose how loud a line is or how
+/// much of it there is.
 /// </remarks>
 public class CreateLogRecordsCommandHandlerTests
 {
@@ -20,16 +18,13 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldWriteOneLinePerRecord_InTheWebAppCategory()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
 
-        // Act
         var result = await handler.Handle(
             Command(Record("uncaught_error"), Record("unhandled_rejection")),
             Token);
 
-        // Assert
         result.ShouldBeSuccess();
         Assert.Equal(2, loggers.Lines.Count);
         Assert.All(loggers.Lines, line => Assert.Equal("Culina.WebApp.Untrusted", line.Category));
@@ -45,30 +40,24 @@ public class CreateLogRecordsCommandHandlerTests
     [InlineData("csp_violation")]
     public async Task Handle_ShouldWriteAWarning_WhateverTheEvent(string @event)
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
 
-        // Act
         await handler.Handle(Command(Record(@event)), Token);
 
-        // Assert
-        // Anybody can send one. An Error is a defect in this server, and a
-        // stranger who could write one could page somebody at night.
+        // Anybody can send one: an Error is a defect in this server, and a stranger writing one
+        // could page somebody at night.
         Assert.Equal(LogLevel.Warning, Assert.Single(loggers.Lines).Level);
     }
 
     [Fact]
     public async Task Handle_ShouldNameEveryFieldAsTheClients_SoNoneReadsAsTheServersOwn()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
 
-        // Act
         await handler.Handle(Command(Record("uncaught_error")), Token);
 
-        // Assert
         var line = Assert.Single(loggers.Lines);
         Assert.StartsWith("Untrusted report from the web app", line.Message, StringComparison.Ordinal);
         Assert.Equal(
@@ -79,7 +68,6 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldReplaceLineBreaksAndControlCharacters_InEverythingTheCallerSent()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
         const string forged = "\r\n12:00:00 fail: Api[1800] Unhandled exception\u0007\u202e\u2028";
@@ -97,10 +85,8 @@ public class CreateLogRecordsCommandHandlerTests
             Client = [new("browser.platform", "macOS" + forged), new("culina.web.languages", new[] { "de" + forged })]
         };
 
-        // Act
         await handler.Handle(command, Token);
 
-        // Assert
         // A console that does not escape a line break would print the rest as
         // a line of the server's own.
         var line = Assert.Single(loggers.Lines);
@@ -121,15 +107,12 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldCarryTheBrowsersStack_AsTheException()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
         const string stack = "at render (https://culina.example/_app/immutable/chunks/a.js:1:42)";
 
-        // Act
         await handler.Handle(Command(Record("uncaught_error") with { Stack = stack }), Token);
 
-        // Assert
         // Where a collector looks for a stack is exception.stacktrace, which
         // is what an attached exception is exported as.
         var exception = Assert.IsType<WebAppException>(Assert.Single(loggers.Lines).Exception);
@@ -141,14 +124,11 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseAnEventItDoesNotKnow()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
 
-        // Act
         var result = await handler.Handle(Command(Record("anything_at_all")), Token);
 
-        // Assert
         Assert.Equal("records[0].event", Field(result));
         Assert.Empty(loggers.Lines);
     }
@@ -156,15 +136,12 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseMoreThanTenRecords_AndWriteNoneOfThem()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
         var eleven = Enumerable.Repeat(Record("uncaught_error"), 11).ToArray();
 
-        // Act
         var result = await handler.Handle(Command(eleven), Token);
 
-        // Assert
         Assert.Equal("records", Field(result));
         Assert.Empty(loggers.Lines);
     }
@@ -172,15 +149,12 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuseAMessageOverItsCeiling()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
         var record = Record("uncaught_error") with { Message = new string('x', 1_001) };
 
-        // Act
         var result = await handler.Handle(Command(Record("uncaught_error"), record), Token);
 
-        // Assert
         // All or nothing, so a refused batch is never half in the log.
         Assert.Equal("records[1]", Field(result));
         Assert.Empty(loggers.Lines);
@@ -195,7 +169,6 @@ public class CreateLogRecordsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldAttachTheBrowsersDetails_CutToTheirCeiling()
     {
-        // Arrange
         var loggers = new RecordingLoggers();
         var handler = new CreateLogRecordsCommandHandler(loggers);
         var command = Command(Record("uncaught_error") with { Context = [new("culina.web.online", false)] }) with
@@ -208,10 +181,8 @@ public class CreateLogRecordsCommandHandlerTests
             ]
         };
 
-        // Act
         await handler.Handle(command, Token);
 
-        // Assert
         // Each one an attribute of the line, and none of them an open door:
         // anybody can send these.
         var attributes = Assert.Single(loggers.Lines).Attributes;
@@ -239,7 +210,6 @@ public class CreateLogRecordsCommandHandlerTests
         Exception? Exception,
         IReadOnlyDictionary<string, object> Attributes);
 
-    /// <summary>Every line written, by every logger it handed out.</summary>
     private sealed class RecordingLoggers : ILoggerFactory
     {
         public List<Line> Lines { get; } = [];

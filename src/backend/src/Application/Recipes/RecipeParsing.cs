@@ -6,13 +6,9 @@ using Domain.Shared;
 namespace Application.Recipes;
 
 /// <summary>
-/// Turns the wire shape into domain objects, naming the field that was wrong.
+/// Turns the wire shape into domain objects, naming the field that was wrong so a form can mark the
+/// right control.
 /// </summary>
-/// <remarks>
-/// Every failure is reported with the request field it came from, so a form can
-/// mark the right control rather than showing one general message over a
-/// twenty-field editor.
-/// </remarks>
 internal static class RecipeParsing
 {
     internal static Result<RecipeDetails> ToDetails(RecipeDraft draft)
@@ -55,9 +51,8 @@ internal static class RecipeParsing
     }
 
     /// <summary>
-    /// Sort order comes from position in the request, not from a field the
-    /// client sends: the list the user sees is the order, and a separate field
-    /// is one more thing that can disagree with it.
+    /// Sort order is the position in the request, not a field the client sends: a separate field is
+    /// one more thing that can disagree with the list the user sees.
     /// </summary>
     private static Result<Step> ToStep(StepContract step, int sortOrder) =>
         Step.Create(

@@ -1,13 +1,9 @@
 namespace Contracts.LogRecords;
 
-/// <summary>
-/// What the web app reports, as the codes it reports them under.
-/// </summary>
+/// <summary>What the web app reports, as the codes it reports them under.</summary>
 /// <remarks>
-/// A closed set, so the client cannot invent a kind of record and an operator
-/// can filter on every one of them. The server decides the level from the code
-/// rather than taking one from the browser: a page that could choose its own
-/// severity could also page somebody at night.
+/// A closed set; the server decides the level from the code, as a page choosing its own severity
+/// could page somebody at night.
 /// </remarks>
 public static class LogRecordVocabulary
 {

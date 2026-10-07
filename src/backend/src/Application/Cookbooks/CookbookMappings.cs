@@ -50,12 +50,7 @@ internal static class CookbookMappings
         ImageId = picture.ImageId
     };
 
-    /// <summary>The rules, but only for a shelf that has any.</summary>
-    /// <remarks>
-    /// Null rather than an empty object for a manual cookbook: "this has no
-    /// rules" and "this has rules, and they are blank" are different claims,
-    /// and only one of them is possible.
-    /// </remarks>
+    // Null for a manual cookbook: "no rules" and "blank rules" are different claims.
     private static CookbookRulesContract? ToContract(Cookbook cookbook) =>
         cookbook.Kind == CookbookKind.Smart
             ? new CookbookRulesContract

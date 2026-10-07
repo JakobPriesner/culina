@@ -4,21 +4,9 @@ using Application.Abstractions;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>
-/// Where the previous page ended.
+/// Where the previous page ended. Keyset paging, so a concurrent insert cannot shift later pages;
+/// the id tiebreaker keeps rows with equal sort keys in a stable order.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Keyset paging, not offsets: a recipe inserted while someone is scrolling
-/// would otherwise shift every later page by one and make a row appear twice
-/// or not at all. The cursor carries the sort key of the last row plus its id,
-/// so the next page starts exactly after it regardless of what changed.
-/// </para>
-/// <para>
-/// The id tiebreaker matters even for sorts that look unique: two recipes saved
-/// in the same millisecond, or two with the same title, would otherwise have no
-/// stable order and the same row could be returned on two pages.
-/// </para>
-/// </remarks>
 /// <param name="Sort">The order this cursor belongs to.</param>
 /// <param name="Keys">The last row's sort key values, in order.</param>
 /// <param name="Id">The last row's id.</param>
@@ -26,25 +14,10 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
 {
     internal string Encode() => PageCursor.Encode(this);
 
-    /// <summary>
-    /// Reads a cursor, or null when it is absent, unreadable, or from a
-    /// different sort order.
-    /// </summary>
+    /// <summary>Reads a cursor, or null when absent, unreadable, from a different sort, or with keys its sort would not write.</summary>
     /// <remarks>
-    /// <para>
-    /// A cursor that does not match the current sort is ignored rather than
-    /// rejected: the caller changed the ordering, which means they want the
-    /// first page of the new order, not an error.
-    /// </para>
-    /// <para>
-    /// So is one whose keys are not what its sort writes. A cursor is opaque
-    /// but not sealed — anybody can base64 some JSON — and the keys are cast
-    /// in SQL, so a word where a count belongs, a key too few or a null would
-    /// otherwise fail inside PostgreSQL and come back as a 500. Each key is
-    /// read as its type and written back through the same <c>Key</c> overload
-    /// a real cursor was written with, so the SQL only ever sees text this
-    /// class produced.
-    /// </para>
+    /// Ignored, not rejected: a changed ordering wants page one. Keys are cast in SQL, so a forged cursor
+    /// would 500 in PostgreSQL; each is re-read as its type and rewritten through <c>Key</c>.
     /// </remarks>
     internal static RecipeCursor? Decode(string? encoded, RecipeSort sort)
     {
@@ -67,16 +40,8 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
         return keys.Contains(null) ? null : cursor with { Keys = keys! };
     }
 
-    /// <summary>
-    /// How each key of a sort is read back, in the order
-    /// <see cref="RecipeSearchSql.KeysOf"/> writes them. A reader answers null
-    /// for a key that is not its type.
-    /// </summary>
-    /// <remarks>
-    /// The counts — a tier, minutes, times cooked — are never negative, so a
-    /// sign is refused along with everything else that is not a digit. That
-    /// also keeps the tier clear of the one int PostgreSQL cannot negate.
-    /// </remarks>
+    // How each key of a sort is read back, in the order RecipeSearchSql.KeysOf writes them; null for a key of the wrong type.
+    // Counts are never negative, so a sign is refused (which also avoids the one int PostgreSQL cannot negate).
     private static Func<string, string?>[] KeyReaders(RecipeSort sort) => sort switch
     {
         RecipeSort.Title => [title => title],
@@ -116,25 +81,9 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
 
     internal static string Key(int value) => value.ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>
-    /// A relevance score, round-tripped exactly.
-    /// </summary>
-    /// <remarks>
-    /// "R" rather than a fixed number of decimal places: a cursor that rounds
-    /// its own sort key is a cursor that can skip the row after it, or return
-    /// that row twice, and either one looks like a paging bug nobody can
-    /// reproduce.
-    /// </remarks>
+    /// <summary>A relevance score, round-tripped exactly with "R": a rounded sort key can skip or repeat the next row.</summary>
     internal static string Key(double value) => value.ToString("R", CultureInfo.InvariantCulture);
 
-    /// <summary>
-    /// A suggestion score, round-tripped exactly.
-    /// </summary>
-    /// <remarks>
-    /// The same rule one type along. "G" is decimal's round-trip format, and
-    /// the scoring already rounds to six places before this sees one — so the
-    /// cursor carries the number the order was cut on rather than a number near
-    /// it.
-    /// </remarks>
+    /// <summary>A suggestion score, round-tripped exactly with "G"; scoring already rounds to six places.</summary>
     internal static string Key(decimal value) => value.ToString("G", CultureInfo.InvariantCulture);
 }

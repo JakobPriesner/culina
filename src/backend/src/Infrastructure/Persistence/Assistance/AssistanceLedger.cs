@@ -14,33 +14,13 @@ internal sealed class AssistanceLedger(
     IUnitOfWork transactions,
     TimeProvider time) : IAssistanceLedger
 {
-    /// <summary>
-    /// What still counts against the budget.
-    /// </summary>
-    /// <remarks>
-    /// A settled row costs what it cost; a row still in flight costs what it
-    /// reserved. Written once here because the instance total, the personal
-    /// total and both of the follow-up reads all have to agree about it — two
-    /// spellings of this expression is two budgets.
-    /// </remarks>
+    // What counts against the budget: the cost once settled, the estimate while in flight. One definition so all totals agree.
     private const string Spent = "coalesce(sum(coalesce(cost, estimate)), 0)";
 
     /// <inheritdoc />
     /// <remarks>
-    /// <para>
-    /// One reservation at a time, instance-wide. A single <c>insert … where
-    /// spent + estimate &lt;= budget</c> is not enough on its own: under read
-    /// committed each statement reads a snapshot taken as it starts, so twenty
-    /// simultaneous requests all see the same total, all find room, and all
-    /// insert. The advisory lock makes the next reservation wait until the
-    /// previous one has committed, and its statement then starts late enough
-    /// to see that row.
-    /// </para>
-    /// <para>
-    /// One lock rather than one per person: the instance budget is shared by
-    /// everybody, and a reservation is a single insert held for milliseconds,
-    /// so queueing them all costs nothing anybody could notice.
-    /// </para>
+    /// Serialised instance-wide by an advisory lock: under read committed, concurrent inserts would all see the same
+    /// total and all find room. One lock, not per person, because the budget is shared and the hold lasts milliseconds.
     /// </remarks>
     public Task<Result<Guid>> ReserveAsync(
         Reservation reservation,
@@ -106,15 +86,7 @@ internal sealed class AssistanceLedger(
             : await WhichBudgetAsync(reservation, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Works out which of the two ceilings refused, for the error message.
-    /// </summary>
-    /// <remarks>
-    /// A second read, and only ever on the path where nothing is going to
-    /// happen anyway. Folding it into the insert would make the statement that
-    /// guards every assisted request more complicated to save a query that runs
-    /// when somebody has already run out of money.
-    /// </remarks>
+    // A second read, only on the refusal path, to keep the guarding insert simple.
     private async Task<Result<Guid>> WhichBudgetAsync(
         Reservation reservation,
         CancellationToken cancellationToken)
@@ -164,9 +136,7 @@ internal sealed class AssistanceLedger(
         DateTimeOffset since,
         CancellationToken cancellationToken)
     {
-        // Three reads rather than one grouped query read three ways: the totals
-        // and the two breakdowns group differently, and a single result set
-        // that carried all three would have to be unpicked in C#.
+        // Three reads: the totals and the two breakdowns group differently.
         var totals = await executor.QuerySingleOrDefaultAsync<TotalsRow>(
                 """
                 select coalesce(sum(cost), 0)                            as cost,

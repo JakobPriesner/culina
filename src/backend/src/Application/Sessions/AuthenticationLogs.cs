@@ -3,20 +3,9 @@ using Microsoft.Extensions.Logging;
 namespace Application.Sessions;
 
 /// <summary>
-/// Refused credentials, each under an event id of its own.
+/// Refused credentials, each under its own event id so fail2ban or CrowdSec can key on it.
+/// Never log the email tried: a mistyped password is often another account's, and the address makes it half a credential.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The counters say how many; these say from where. The request scope carries
-/// the client address, so fail2ban or CrowdSec can key on the event id and ban
-/// the address without anything here naming it twice.
-/// </para>
-/// <para>
-/// Never the email address that was tried: a mistyped password is often the
-/// password for something else, typed into the wrong box, and an address next
-/// to it is half a credential.
-/// </para>
-/// </remarks>
 internal static partial class AuthenticationLogs
 {
     [LoggerMessage(

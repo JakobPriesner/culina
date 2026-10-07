@@ -3,25 +3,9 @@ using Microsoft.AspNetCore.HttpLogging;
 namespace Api.Infrastructure;
 
 /// <summary>
-/// Keeps the request line to API calls and adds what the framework cannot see.
+/// Keeps the request line to API calls (assets, shell and probes get none) and adds the error code and route template.
+/// The path goes through <see cref="SecretPaths"/>: a share token or invitation code would hand the log's reader what it opens.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Static assets, the app shell and health probes are most of the requests and
-/// none of the questions, so they get no line.
-/// </para>
-/// <para>
-/// An expected failure — a recipe that is not there, a wrong password — is a
-/// value, not an exception, and leaves nothing else in the log. Its code on
-/// the request line is what lets the log alone say why a request failed. The
-/// route template says which endpoint answered without reading ids out of a
-/// path.
-/// </para>
-/// <para>
-/// The path is written through <see cref="SecretPaths"/>: a share token or an
-/// invitation code in it would hand whoever reads the log what it opens.
-/// </para>
-/// </remarks>
 internal sealed class RequestLogInterceptor : IHttpLoggingInterceptor
 {
     public ValueTask OnRequestAsync(HttpLoggingInterceptorContext logContext)
@@ -37,8 +21,7 @@ internal sealed class RequestLogInterceptor : IHttpLoggingInterceptor
             return ValueTask.CompletedTask;
         }
 
-        // Under the framework's own name for it, without the share token or
-        // invitation code a path can carry.
+        // Under the framework's name for it, minus any share token or invitation code.
         logContext.Disable(HttpLoggingFields.RequestPath);
         logContext.AddParameter("Path", SecretPaths.Redact(path));
 
@@ -49,8 +32,7 @@ internal sealed class RequestLogInterceptor : IHttpLoggingInterceptor
     {
         ArgumentNullException.ThrowIfNull(logContext);
 
-        // A parameter added here would bring back the line the request side
-        // switched off.
+        // A parameter added here would bring back the line the request side switched off.
         if (logContext.LoggingFields == HttpLoggingFields.None)
         {
             return ValueTask.CompletedTask;

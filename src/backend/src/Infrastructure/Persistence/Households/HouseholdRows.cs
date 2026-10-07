@@ -48,14 +48,10 @@ internal sealed record HouseholdMemberRow
     public DateTimeOffset JoinedAt { get; init; }
 }
 
-/// <summary>
-/// The members-with-names projection as PostgreSQL returns it.
-/// </summary>
+/// <summary>The members-with-names projection as PostgreSQL returns it.</summary>
 /// <remarks>
-/// A row type with settable properties rather than mapping straight onto the
-/// positional read model: Dapper's underscore matching applies to properties,
-/// not to constructor parameters, so a positional record silently fails to bind
-/// snake_case columns.
+/// Settable properties, not the positional read model: Dapper's underscore matching skips
+/// constructor parameters.
 /// </remarks>
 internal sealed record HouseholdMemberViewRow
 {
@@ -110,9 +106,7 @@ internal static class HouseholdRowMappings
     }
 
     /// <summary>
-    /// Roles are stored as text rather than as an integer, so a dump is
-    /// readable and inserting an enum member later cannot renumber the
-    /// existing rows.
+    /// Roles are stored as text, so a dump is readable and a new enum member cannot renumber rows.
     /// </summary>
     internal static string ToStorage(this HouseholdRole role) => role switch
     {

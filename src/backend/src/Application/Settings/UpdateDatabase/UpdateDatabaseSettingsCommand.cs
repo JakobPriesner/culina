@@ -12,8 +12,7 @@ namespace Application.Settings.UpdateDatabase;
 /// <param name="Name">The database name.</param>
 /// <param name="Username">The role to connect as.</param>
 /// <param name="Password">
-/// A new password, or null to keep the current one — which is only possible
-/// while the host, port, database name and user stay what they are.
+/// A new password, or null to keep the current one while the server is unchanged.
 /// </param>
 /// <param name="RequireSsl">Whether the connection must use TLS.</param>
 /// <param name="MaxPoolSize">The most connections to keep open.</param>
@@ -27,17 +26,10 @@ public sealed record UpdateDatabaseSettingsCommand(
     int MaxPoolSize);
 
 /// <remarks>
-/// <para>
-/// The connection is tried before anything is saved. A database that cannot be
-/// reached, or that the migrations cannot run in, is found here while the old
-/// settings still work — rather than after the restart, as a process that
-/// stops on every start and leaves nobody a screen to fix it from.
-/// </para>
-/// <para>
-/// A value the deployment pins is tried as the deployment pins it, not as the
-/// request says: that is the value the next start will use, and the request
-/// cannot change it.
-/// </para>
+/// The connection is tried before anything is saved: an unreachable database, or one the migrations
+/// cannot run in, is found while the old settings still work, not after a restart that stops on
+/// every start. A value the deployment pins is tried as pinned, since that is what the next start
+/// uses.
 /// </remarks>
 internal sealed class UpdateDatabaseSettingsCommandHandler(
     IServerConfiguration configuration,
@@ -55,8 +47,7 @@ internal sealed class UpdateDatabaseSettingsCommandHandler(
 
         var current = ConfiguredDatabase.Read(configuration);
 
-        // None typed, or one the deployment fixes: either way it is the
-        // password already set that would be sent.
+        // None typed, or pinned by the deployment: either way the password already set is sent.
         var storedPassword = string.IsNullOrEmpty(command.Password) || IsPinned(nameof(DatabaseSettings.Password));
         var proposed = new DatabaseSettings
         {
@@ -88,18 +79,16 @@ internal sealed class UpdateDatabaseSettingsCommandHandler(
     private bool IsPinned(string property) =>
         configuration.IsPinned(SettingsKey.Of(DatabaseSettings.SectionName, property));
 
-    /// <summary>What the request asks for, unless the deployment pins it: then what runs now.</summary>
+    /// <summary>
+    /// What the request asks for, unless the deployment pins it: then what runs now.
+    /// </summary>
     private T Proposed<T>(string property, T current, T requested) =>
         IsPinned(property) ? current : requested;
 
-    /// <summary>
-    /// Whether the stored password would go to the server it was saved for.
-    /// </summary>
+    /// <summary>Whether the stored password would go to the server it was saved for.</summary>
     /// <remarks>
-    /// Keeping the stored password is only for saving other changes. Sent along
-    /// with a new host, port, database or user, it would be handed to whatever
-    /// answers there — during setup, an address of anybody's choosing — so a
-    /// new server needs the password typed again.
+    /// Keeping it is only for saving other changes; sent with a new host, port, database or user it
+    /// would reach whatever answers there (during setup, anybody's address).
     /// </remarks>
     private static bool SameServer(DatabaseSettings current, DatabaseSettings proposed) =>
         current.Host == proposed.Host
@@ -117,9 +106,8 @@ internal sealed class UpdateDatabaseSettingsCommandHandler(
             return ServerChange.None;
         }
 
-        // Before the check, which can take the whole connection timeout: there
-        // is no point making somebody wait ten seconds to be told the answer
-        // could never have been saved.
+        // Before the check, which can take the whole connection timeout: no point making somebody
+        // wait ten seconds to learn it could not be saved.
         if (!configuration.CanSave())
         {
             return SettingsErrors.NotWritable;

@@ -3,53 +3,19 @@ using System.Net.Sockets;
 
 namespace Infrastructure.Import;
 
-/// <summary>
-/// Opens sockets only to addresses that have been checked.
-/// </summary>
+/// <summary>Opens sockets only to addresses that have been checked, shared by everything that fetches on a user's behalf.</summary>
 /// <remarks>
-/// <para>
-/// Shared by everything that makes the server fetch on a user's behalf, and the
-/// reason it is shared is that getting it slightly different in two places is
-/// how one of them ends up wrong.
-/// </para>
-/// <para>
-/// The load-bearing part is that it connects to the <em>address it resolved and
-/// checked</em>, not to the host name. Validating a name and then handing the
-/// name to a socket leaves a window in which the name can resolve to something
-/// else, and that window is DNS rebinding. Handing back a socket already
-/// connected to a checked address closes it.
-/// </para>
+/// It connects to the <em>address it resolved and checked</em>, not the host name, which closes the
+/// DNS-rebinding window between validation and connect.
 /// </remarks>
 internal static class CheckedConnections
 {
-    /// <summary>
-    /// A handler whose every connection goes to a checked address.
-    /// </summary>
-    /// <param name="admits">
-    /// Which resolved addresses may be reached. Public only for anything a
-    /// stranger can aim — a pasted link — and wider only for a connection the
-    /// operator has opted into, because their own recipe server is very often
-    /// the machine next door.
-    /// </param>
-    /// <param name="dialling">
-    /// Told about every connection before it is dialled: the name and port that
-    /// were asked for, and the checked address that is about to be connected
-    /// to. Nothing is ever sent on a connection this has not been told about.
-    /// </param>
+    /// <summary>A handler whose every connection goes to a checked address.</summary>
     /// <remarks>
-    /// <para>
-    /// Never through a proxy. Through one, the connection this handler opens is
-    /// to the proxy, so the address that gets checked is the proxy's — and the
-    /// proxy then connects wherever it is asked, cloud metadata and the
-    /// database container included. Left at its default, an
-    /// <c>HTTP_PROXY</c> or <c>HTTPS_PROXY</c> in the environment would switch
-    /// every check here off without anything saying so.
-    /// </para>
-    /// <para>
-    /// Never following a redirect by itself, either: a followed redirect is a
-    /// second request nobody checked the address of. Whoever wants redirects
-    /// follows them by hand, through this handler again.
-    /// </para>
+    /// <paramref name="admits"/> chooses which resolved addresses may be reached (public for pasted links, wider for
+    /// operator-approved connections); <paramref name="dialling"/> is told about each connection before it is dialled.
+    /// Never through a proxy (it would check the proxy's address, and <c>HTTP_PROXY</c> would silently disable every
+    /// check) and never following redirects by itself: an unchecked second request.
     /// </remarks>
     internal static SocketsHttpHandler Handler(
         Func<IPAddress, bool> admits,

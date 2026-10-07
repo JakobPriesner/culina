@@ -32,13 +32,9 @@ public sealed record ItemContract
     public required string Name { get; init; }
 
     /// <summary>
-    /// How much, unrounded.
+    /// How much, unrounded: summing rounded amounts compounds error, and display is the client's
+    /// business.
     /// </summary>
-    /// <remarks>
-    /// Deliberately not rounded here. Summing rounded amounts compounds error,
-    /// and how a number is shown is the client's business — see
-    /// docs/scaling-rules.md.
-    /// </remarks>
     public decimal? Quantity { get; init; }
 
     /// <summary>In what, or null for a bare count.</summary>

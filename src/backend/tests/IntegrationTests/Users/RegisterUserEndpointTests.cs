@@ -11,16 +11,12 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldCreateTheAdministratorAndAHousehold_WhenTheInstanceIsEmpty()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
 
-        // Act
         var response = await client.PostAsync("/api/v1/users", Body("ada@example.com"), Token);
 
-        // Assert
-        // A fresh instance has to have a way in, so the first account always
-        // succeeds and becomes the administrator.
+        // A fresh instance needs a way in: the first account succeeds and becomes the administrator.
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = response.Json!.Value;
         Assert.True(created.GetProperty("isAdmin").GetBoolean());
@@ -32,32 +28,24 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldNormaliseTheAddress_SoSignInIsUnambiguous()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
 
-        // Act
         var response = await client.PostAsync("/api/v1/users", Body("  Ada@EXAMPLE.com "), Token);
 
-        // Assert
         Assert.Equal("ada@example.com", response.Json!.Value.GetProperty("email").GetString());
     }
 
     [Fact]
     public async Task Register_ShouldBeClosed_ForTheSecondAccount_WhenTheAdminHasNotOpenedIt()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
         await client.PostAsync("/api/v1/users", Body("first@example.com"), Token);
 
-        // Act
         var response = await client.PostAsync("/api/v1/users", Body("second@example.com"), Token);
 
-        // Assert
-        // Registration is closed by default: an instance that opened it the
-        // moment it came online would be filled with accounts before its owner
-        // finished setting it up.
+        // Closed by default, so a freshly online instance is not filled with accounts before its owner finishes setup.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("users.registration_closed", response.ProblemCode);
     }
@@ -65,17 +53,14 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldReportEveryBadFieldAtOnce_SoTheFormCanMarkThemAll()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
 
-        // Act
         var response = await client.PostAsync(
             "/api/v1/users",
             new { email = "not-an-address", displayName = "  ", password = "short" },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var fields = response.Json!.Value.GetProperty("errors").EnumerateArray()
             .Select(cause => cause.GetProperty("field").GetString())
@@ -86,17 +71,14 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldRejectAShortPassword_AtTheBoundary()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
 
-        // Act
         var response = await client.PostAsync(
             "/api/v1/users",
             new { email = "ada@example.com", displayName = "Ada", password = new string('a', 11) },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("users.weak_password", response.Body, StringComparison.Ordinal);
     }
@@ -104,18 +86,15 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldNeverEchoThePassword_InAnyForm()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
         const string password = "correct horse battery staple";
 
-        // Act
         var response = await client.PostAsync(
             "/api/v1/users",
             new { email = "ada@example.com", displayName = "Ada", password },
             Token);
 
-        // Assert
         Assert.DoesNotContain(password, response.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("argon2", response.Body, StringComparison.OrdinalIgnoreCase);
     }
@@ -123,32 +102,23 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldNotRequireACsrfToken_BecauseThereIsNoSessionYet()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var client = postgres.Api.NewApiClient();
 
-        // Act
         var response = await client.PostAsync("/api/v1/users", Body("ada@example.com"), Token);
 
-        // Assert
-        // The CSRF guard applies to cookie-authenticated requests; sign-up has
-        // no ambient credential to abuse.
+        // The CSRF guard covers cookie-authenticated requests; sign-up has no ambient credential.
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]
     public async Task Register_ShouldMakeExactlyOneAdministrator_WhenFirstRegistrationsRace()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
 
-        // Act
         var responses = await RegisterAllAtOnceAsync(8);
 
-        // Assert
-        // Each of these saw an empty instance when it arrived. Only one may
-        // act on that; the rest are judged by the registration policy, which
-        // is closed by default.
+        // Each saw an empty instance on arrival; only one may act on that, the rest face the (closed) registration policy.
         var created = Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
         Assert.True(created.Json!.Value.GetProperty("isAdmin").GetBoolean());
         Assert.All(
@@ -162,7 +132,6 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Register_ShouldStopAtTheUserLimit_WhenRegistrationsRaceForTheLastPlace()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var first = postgres.Api.NewApiClient();
         await first.PostAsync("/api/v1/users", Body("first@example.com"), Token);
@@ -172,20 +141,15 @@ public class RegisterUserEndpointTests(PostgresFixture postgres)
         settings.RequireInvitation = false;
         settings.MaxUsers = 2;
 
-        // Act
         var responses = await RegisterAllAtOnceAsync(8);
 
-        // Assert
         Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
         Assert.Equal(2L, await postgres.QuerySingleAsync<long>("select count(*) from users;", Token));
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    /// <summary>
-    /// Sends one registration per client, all released together, so they
-    /// arrive while each of the others is still in flight.
-    /// </summary>
+    /// <summary>Sends one registration per client, all released together so they overlap in flight.</summary>
     private async Task<IReadOnlyList<ApiResponse>> RegisterAllAtOnceAsync(int count)
     {
         var clients = Enumerable.Range(0, count).Select(_ => postgres.Api.NewApiClient()).ToList();

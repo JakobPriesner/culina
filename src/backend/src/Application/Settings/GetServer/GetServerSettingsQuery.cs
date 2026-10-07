@@ -14,9 +14,8 @@ namespace Application.Settings.GetServer;
 public sealed record GetServerSettingsQuery(string? RemoteAddress, bool Forwarded, bool ProxyTrusted);
 
 /// <remarks>
-/// Read from the singletons rather than from the configuration: they are what
-/// the process actually runs with, defaults applied, which is what a person
-/// deciding whether to change something needs to see.
+/// Read from the singletons, not the configuration: they are what the process runs with, defaults
+/// applied.
 /// </remarks>
 internal sealed class GetServerSettingsQueryHandler(
     CookieSettings cookies,

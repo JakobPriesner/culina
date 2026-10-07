@@ -16,8 +16,8 @@ public sealed record Response
     public required bool IsAdmin { get; init; }
 
     /// <summary>
-    /// The household created with the account, when one was. Null means the
-    /// client should offer to create one or redeem an invitation.
+    /// The household created with the account; null means the client should offer to create one or
+    /// redeem an invitation.
     /// </summary>
     public Guid? HouseholdId { get; init; }
 }

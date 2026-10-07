@@ -3,27 +3,13 @@ using System.Diagnostics.Metrics;
 
 namespace Application.Telemetry;
 
-/// <summary>
-/// The one activity source and meter the application emits through.
-/// </summary>
-/// <remarks>
-/// Automatic instrumentation already covers ASP.NET Core, HttpClient, Npgsql
-/// and the runtime. What it cannot see is the use case, which is what these
-/// exist for.
-/// </remarks>
+/// <summary>The one activity source and meter for use-case telemetry; automatic instrumentation covers the rest.</summary>
 public static class CulinaTelemetry
 {
     /// <summary>The activity source and meter name the collector filters on.</summary>
     public const string Name = "Culina";
 
-    /// <summary>
-    /// The log category the web app's records are written under, which is
-    /// exported as a service of its own.
-    /// </summary>
-    /// <remarks>
-    /// Named untrusted because anybody can send one. Still under
-    /// <c>Culina.WebApp</c>, so a level filter set on that keeps applying.
-    /// </remarks>
+    /// <summary>The log category for web app records, exported as its own service; "untrusted" because anybody can send one.</summary>
     public const string WebAppCategory = "Culina.WebApp.Untrusted";
 
     /// <summary>The one source use-case spans are started on.</summary>
@@ -32,10 +18,7 @@ public static class CulinaTelemetry
     /// <summary>The one meter application counters live on.</summary>
     public static readonly Meter Meter = new(Name);
 
-    /// <summary>
-    /// How long each use case takes, tagged with its name and outcome. Answers
-    /// "what got slow" without searching traces.
-    /// </summary>
+    /// <summary>How long each use case takes, tagged with name and outcome.</summary>
     public static readonly Histogram<double> UseCaseDuration = Meter.CreateHistogram<double>(
         "culina.usecase.duration",
         unit: "ms",

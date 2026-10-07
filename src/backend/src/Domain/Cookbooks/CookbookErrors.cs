@@ -6,11 +6,10 @@ namespace Domain.Cookbooks;
 public static class CookbookErrors
 {
     /// <summary>No such cookbook, or none this person is allowed to see.</summary>
-    /// <remarks>
-    /// One error for both, so a cookbook belonging to another household is
-    /// indistinguishable from one that never existed. Existence is not leaked
-    /// through a status code.
-    /// </remarks>
+    /// <summary>
+    /// No such cookbook, or none this person may see; one error for both, so existence is not
+    /// leaked.
+    /// </summary>
     /// <param name="cookbookId">The one that was asked for.</param>
     public static Error NotFound(Guid cookbookId) => new(
         "cookbooks.not_found",
@@ -42,13 +41,9 @@ public static class CookbookErrors
         ErrorType.Validation);
 
     /// <summary>
-    /// Somebody tried to put a recipe on a shelf that decides for itself.
+    /// Somebody tried to put a recipe on a shelf that decides for itself; a conflict, as it is this
+    /// cookbook's nature that refuses.
     /// </summary>
-    /// <remarks>
-    /// A conflict rather than a validation failure: the request is well formed
-    /// and would be fine against any other cookbook. It is this one's nature
-    /// that refuses it.
-    /// </remarks>
     public static readonly Error RulesDecideMembership = new(
         "cookbooks.rules_decide_membership",
         "This cookbook fills itself, so recipes cannot be put on it by hand.",

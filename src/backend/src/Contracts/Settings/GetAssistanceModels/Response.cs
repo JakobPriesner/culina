@@ -2,9 +2,8 @@ namespace Contracts.Settings.GetAssistanceModels;
 
 /// <summary>What each connected provider currently offers.</summary>
 /// <remarks>
-/// One request for every provider rather than one each, because the settings
-/// screen wants them all at once — and a provider that cannot be reached is a
-/// row that says so rather than a failure that loses the other two.
+/// One request for all providers; an unreachable one is a row saying so, not a failure losing the
+/// other two.
 /// </remarks>
 public sealed record Response
 {
@@ -22,14 +21,9 @@ public sealed record ProviderModelsContract
     public required bool Reachable { get; init; }
 
     /// <summary>
-    /// Why it did not, when it did not.
+    /// Why the provider did not answer, as an error code (the client has the words); a wrong key
+    /// and an unreachable address both land here.
     /// </summary>
-    /// <remarks>
-    /// An error code rather than a sentence, like every other failure in this
-    /// API: the client has the words. A wrong key and an unreachable address
-    /// both land here, which is the first place an administrator finds out that
-    /// what they pasted does not work.
-    /// </remarks>
     public string? Problem { get; init; }
 
     /// <summary>What it offers, newest naming and all.</summary>
@@ -46,11 +40,8 @@ public sealed record ModelContract
     public required string Label { get; init; }
 
     /// <summary>
-    /// Whether it makes pictures.
+    /// Whether it makes pictures; read from the model's name by the adapter, as no provider states
+    /// it.
     /// </summary>
-    /// <remarks>
-    /// Read from the model's name by the adapter, because none of the three
-    /// providers states it. It decides which list the drawing job offers.
-    /// </remarks>
     public required bool CanDraw { get; init; }
 }

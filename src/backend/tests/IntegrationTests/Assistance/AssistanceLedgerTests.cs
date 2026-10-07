@@ -10,13 +10,11 @@ using TestSupport;
 
 namespace IntegrationTests.Assistance;
 
-/// <summary>
-/// The budget gate, against a real database and several requests at once.
-/// </summary>
+/// <summary>The budget gate, against a real database and several requests at once.</summary>
 /// <remarks>
-/// Only a real database can show this. The gate used to be one insert that
-/// checked the total in its own WHERE, and under read committed every one of a
-/// burst of simultaneous requests read the same total, found room and inserted.
+/// Only a real database can show this: the gate used to be one insert checking the total in its own
+/// WHERE, and under read committed a burst of simultaneous requests all read the same total, found
+/// room and inserted.
 /// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class AssistanceLedgerTests(PostgresFixture postgres)
@@ -27,17 +25,14 @@ public class AssistanceLedgerTests(PostgresFixture postgres)
     [Fact]
     public async Task ReserveAsync_ShouldLetOnlyWhatFits_WhenTenRequestsArriveAtOnce()
     {
-        // Arrange
         var userId = await SeedUserAsync();
 
         // Room for three reservations of ten cents, and not a fourth.
         var reservation = Reservation(userId, monthlyBudget: 0.30m, personalBudget: null);
 
-        // Act
         var results = await Task.WhenAll(
             Enumerable.Range(0, 10).Select(_ => Task.Run(() => ReserveAsync(reservation), Token)));
 
-        // Assert
         Assert.Equal(3, await RowsAsync());
         Assert.Equal(3, results.Count(result => result.Match(_ => true, _ => false)));
         Assert.All(
@@ -48,15 +43,12 @@ public class AssistanceLedgerTests(PostgresFixture postgres)
     [Fact]
     public async Task ReserveAsync_ShouldHoldOnePersonToTheirShare_WhenTheirRequestsArriveAtOnce()
     {
-        // Arrange
         var userId = await SeedUserAsync();
         var reservation = Reservation(userId, monthlyBudget: null, personalBudget: 0.30m);
 
-        // Act
         var results = await Task.WhenAll(
             Enumerable.Range(0, 10).Select(_ => Task.Run(() => ReserveAsync(reservation), Token)));
 
-        // Assert
         Assert.Equal(3, await RowsAsync());
         Assert.All(
             results.Where(result => result.Match(_ => false, _ => true)),

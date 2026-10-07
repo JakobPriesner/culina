@@ -5,13 +5,8 @@ using Domain.Shopping;
 namespace Domain.UnitTests.Shopping;
 
 /// <summary>
-/// What a line on the list is a sum of, and what that makes possible.
+/// A line remembers which meals it sums, so a planned week is not added twice and a meal can be withdrawn.
 /// </summary>
-/// <remarks>
-/// A planned week can only be put on the list twice without doubling if the
-/// list knows which meals are already on it, and a meal can only be taken back
-/// off if the list knows how much of each line was that meal's.
-/// </remarks>
 public class ShoppingItemSourceTests
 {
     private static readonly Guid Waffles = Guid.CreateVersion7();
@@ -56,7 +51,7 @@ public class ShoppingItemSourceTests
     public void CountFor_ShouldTakeARecipeAddedByItself_AsThePlannedMealsShopping()
     {
         // Arrange
-        // The waffles went on the list from their recipe, then onto Saturday.
+        // The waffles went on the list from their recipe first, then onto Saturday.
         var list = ShoppingList.Create(Guid.CreateVersion7());
 
         list.Add(Name("Mehl"), For(Waffles, planEntryId: null, 250), ShoppingSection.DryGoods);
@@ -65,7 +60,6 @@ public class ShoppingItemSourceTests
         var counted = list.CountFor(Waffles, Saturday, SaturdayDate, MealSlot.Dinner);
 
         // Assert
-        // Counted, not added again: Saturday is shopped for once.
         Assert.True(counted);
         Assert.True(list.IsShoppedFor(Saturday));
         Assert.Equal(250m, Assert.Single(list.Items).Quantity.Amount);
@@ -81,7 +75,7 @@ public class ShoppingItemSourceTests
         list.Add(Name("Mehl"), For(Waffles, Saturday, 250), ShoppingSection.DryGoods);
 
         // Act & Assert
-        // Waffles twice in a week is two meals, and each needs its own flour.
+        // Waffles twice in a week is two meals, each needing its own flour.
         Assert.False(list.CountFor(Waffles, Sunday, SundayDate, MealSlot.Dinner));
     }
 
@@ -99,8 +93,7 @@ public class ShoppingItemSourceTests
         var changed = list.Withdraw(Saturday);
 
         // Assert
-        // The flour the pasta still needs stays; the milk only the waffles
-        // wanted goes.
+        // The pasta's flour stays; the waffles-only milk goes.
         Assert.Equal(2, changed);
 
         var line = Assert.Single(list.Items);
@@ -123,7 +116,7 @@ public class ShoppingItemSourceTests
         var changed = list.Withdraw(Saturday);
 
         // Assert
-        // It has been bought. A list that un-bought it would argue with the shop.
+        // Already bought, so it stays.
         Assert.Equal(0, changed);
         Assert.Single(list.Items);
     }

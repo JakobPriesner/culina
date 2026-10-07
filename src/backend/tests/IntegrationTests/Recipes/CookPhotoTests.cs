@@ -6,16 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Recipes;
 
-/// <summary>
-/// The photograph of one attempt, and how a browser is told to cache it.
-/// </summary>
-/// <remarks>
-/// This route had no tests at all, which is how it kept an hour of freshness
-/// after the two other image routes were changed to revalidate. A cook photo is
-/// replaced under the address it is served from — the PUT and the GET are the
-/// same URL, and nothing versions it — so an hour of freshness meant replacing
-/// one left the old picture on screen.
-/// </remarks>
+/// <summary>The photograph of one attempt and how a browser caches it: it is replaced under the address it is served from, so an hour of freshness would keep the old picture on screen.</summary>
 [Collection(RequiresDatabase.Name)]
 public class CookPhotoTests(PostgresFixture postgres)
 {
@@ -24,21 +15,17 @@ public class CookPhotoTests(PostgresFixture postgres)
     [Fact]
     public async Task Served_ShouldBeRevalidated_NotFreshForAnHour()
     {
-        // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
         await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
-        // Act
         var served = await client.GetAsync(Photo(recipeId, entryId), Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, served.StatusCode);
         Assert.NotNull(served.ETag);
 
         var caching = served.Headers.CacheControl!.ToString();
 
-        // Private, because it is one person's photograph; no-cache, because the
-        // next one arrives at this same address.
+        // Private (one person's photograph) and no-cache (the next arrives at the same address).
         Assert.Contains("private", caching, StringComparison.Ordinal);
         Assert.Contains("no-cache", caching, StringComparison.Ordinal);
         Assert.DoesNotContain("max-age=3600", caching, StringComparison.Ordinal);
@@ -47,34 +34,29 @@ public class CookPhotoTests(PostgresFixture postgres)
     [Fact]
     public async Task Served_ShouldAnswerNotModified_WhenTheCallerAlreadyHasThisPhoto()
     {
-        // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
         await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
         var first = await client.GetAsync(Photo(recipeId, entryId), Token);
 
-        // Act
         var request = new HttpRequestMessage(HttpMethod.Get, Photo(recipeId, entryId));
         request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(first.ETag!));
         var again = await client.SendAsync(request, Token);
 
-        // Assert
-        // Revalidating costs a request and no bytes. Without this the route was
-        // paying for the round trip and sending the picture anyway.
+        // Revalidating costs a request and no bytes.
         Assert.Equal(HttpStatusCode.NotModified, again.StatusCode);
     }
 
     [Fact]
     public async Task Served_ShouldAnswerNotModified_WithoutReadingTheFile()
     {
-        // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
         await UploadAsync(client, recipeId, entryId, TestImages.Png(610, 410));
 
         var first = await client.GetAsync(Photo(recipeId, entryId), Token);
         var hash = first.ETag!.Trim('"');
 
-        // Take the file away. A 304 that still reads it now fails with a 404.
+        // Take the file away: a 304 that still reads it would now fail with a 404.
         var storage = postgres.Api.Services.GetRequiredService<StorageSettings>();
 
         foreach (var file in Directory.GetFiles(
@@ -84,14 +66,11 @@ public class CookPhotoTests(PostgresFixture postgres)
             File.Delete(file);
         }
 
-        // Act
         var request = new HttpRequestMessage(HttpMethod.Get, Photo(recipeId, entryId));
         request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(first.ETag!));
         var again = await client.SendAsync(request, Token);
 
-        // Assert
-        // The hash is enough to know the caller has these bytes; the file was
-        // only ever read to be thrown away.
+        // The hash is enough to know the caller has these bytes.
         Assert.Equal(HttpStatusCode.NotModified, again.StatusCode);
         Assert.Equal(first.ETag, again.ETag);
     }
@@ -99,22 +78,18 @@ public class CookPhotoTests(PostgresFixture postgres)
     [Fact]
     public async Task Served_ShouldSendTheNewPicture_WhenThePhotoWasReplaced()
     {
-        // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
         await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
         var before = await client.GetAsync(Photo(recipeId, entryId), Token);
 
-        // Act
         await UploadAsync(client, recipeId, entryId, TestImages.Png(320, 240));
 
         var request = new HttpRequestMessage(HttpMethod.Get, Photo(recipeId, entryId));
         request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(before.ETag!));
         var after = await client.SendAsync(request, Token);
 
-        // Assert
-        // The tag is the content hash, so a replaced picture cannot match the
-        // one the caller is holding.
+        // The tag is the content hash, so a replaced picture cannot match the one the caller holds.
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
         Assert.NotEqual(before.ETag, after.ETag);
     }
@@ -122,14 +97,11 @@ public class CookPhotoTests(PostgresFixture postgres)
     [Fact]
     public async Task Served_ShouldRefuseAWidthItDoesNotKeep()
     {
-        // Arrange
         var (client, recipeId, entryId) = await SeedAsync();
         await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
 
-        // Act
         var response = await client.GetAsync($"{Photo(recipeId, entryId)}?w=1234", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("recipes.image_unknown_width", response.ProblemCode);
     }

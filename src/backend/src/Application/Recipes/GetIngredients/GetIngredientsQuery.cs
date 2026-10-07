@@ -10,11 +10,9 @@ using Domain.Shopping;
 
 namespace Application.Recipes.GetIngredients;
 
-/// <summary>Suggests what an ingredient line could be about.</summary>
-/// <param name="HouseholdId">Whose kitchen.</param>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="Query">What has been typed, which may be empty.</param>
-/// <param name="Language">Which language to name the seeded ones in.</param>
+/// <summary>
+/// Suggests what an ingredient line could be about; <c>Language</c> names the seeded ones.
+/// </summary>
 public sealed record GetIngredientsQuery(
     Guid HouseholdId,
     Guid UserId,
@@ -27,12 +25,9 @@ internal sealed class GetIngredientsQueryHandler(
     : IQueryHandler<GetIngredientsQuery, Response>
 {
     /// <summary>
-    /// How many to offer.
+    /// How many to offer: a list you scroll is a list you stop reading, and ten is about as many as
+    /// anyone scans.
     /// </summary>
-    /// <remarks>
-    /// A list you scroll is a list you stop reading. Ten is about as many as
-    /// anyone scans before giving up and finishing the word themselves.
-    /// </remarks>
     private const int Limit = 10;
 
     public async Task<Result<Response>> Handle(
@@ -59,8 +54,8 @@ internal sealed class GetIngredientsQueryHandler(
         GetIngredientsQuery query,
         CancellationToken cancellationToken)
     {
-        // A bad language code is not worth a 400 for a list of suggestions:
-        // the worst it can do is name the seeded ones in English.
+        // A bad language code is not worth a 400 here: the worst it does is name the seeded ones in
+        // English.
         var language = RecipeWords.ToLanguage(query.Language).Match(one => one, _ => Language.En);
 
         var library = await HouseholdAccess

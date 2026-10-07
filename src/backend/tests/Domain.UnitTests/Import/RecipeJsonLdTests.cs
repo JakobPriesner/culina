@@ -2,21 +2,12 @@ using Domain.Import;
 
 namespace Domain.UnitTests.Import;
 
-/// <summary>
-/// Reading the structured data a recipe site publishes.
-/// </summary>
-/// <remarks>
-/// It is the honest way to import a recipe — the data the site chose to
-/// publish, rather than a guess at what its markup means — and every shape
-/// below is one that real sites actually emit. A decade of plugins wrote the
-/// same idea six ways.
-/// </remarks>
+/// <summary>Reading the structured data a recipe site publishes; every shape here is one real sites emit.</summary>
 public class RecipeJsonLdTests
 {
     [Fact]
     public void Read_ShouldTakeTheOrdinaryShape()
     {
-        // Arrange
         const string json = """
             {
               "@context": "https://schema.org",
@@ -29,10 +20,8 @@ public class RecipeJsonLdTests
             }
             """;
 
-        // Act
         var recipe = RecipeJsonLd.Read(json);
 
-        // Assert
         Assert.NotNull(recipe);
         Assert.Equal("Lemon orzo", recipe.Title);
         Assert.Equal(["200 g orzo", "2 courgettes"], recipe.IngredientLines);
@@ -44,9 +33,7 @@ public class RecipeJsonLdTests
     [Fact]
     public void Read_ShouldFindTheRecipeInsideAGraph()
     {
-        // Arrange
-        // What most WordPress sites emit: the recipe is one node among the
-        // page, the organisation and the author.
+        // What most WordPress sites emit: the recipe is one node among page, organisation and author.
         const string json = """
             {
               "@context": "https://schema.org",
@@ -58,10 +45,8 @@ public class RecipeJsonLdTests
             }
             """;
 
-        // Act
         var recipe = RecipeJsonLd.Read(json);
 
-        // Assert
         Assert.NotNull(recipe);
         Assert.Equal("Pancakes", recipe.Title);
     }
@@ -69,7 +54,6 @@ public class RecipeJsonLdTests
     [Fact]
     public void Read_ShouldTakeTheWordsOutOfHowToSteps()
     {
-        // Arrange
         const string json = """
             {
               "@type": "Recipe",
@@ -80,19 +64,15 @@ public class RecipeJsonLdTests
             }
             """;
 
-        // Act
         var recipe = RecipeJsonLd.Read(json);
 
-        // Assert
-        // `text` before `name`: a step that carries both means the words, and
-        // the name is usually a heading repeated.
+        // `text` before `name`: a step with both means the words; the name is usually a repeated heading.
         Assert.Equal(["Heat the oven.", "Mix it all."], recipe!.Steps);
     }
 
     [Fact]
     public void Read_ShouldFlattenASectionIntoItsSteps()
     {
-        // Arrange
         const string json = """
             {
               "@type": "Recipe",
@@ -106,24 +86,19 @@ public class RecipeJsonLdTests
             }
             """;
 
-        // Act
         var recipe = RecipeJsonLd.Read(json);
 
-        // Assert
-        // The section's own name is not a step. "For the sauce" in the method
-        // is a heading somebody would try to follow.
+        // The section's own name is a heading, not a step.
         Assert.Equal(["Soften the onion.", "Add the tomatoes."], recipe!.Steps);
     }
 
     [Fact]
     public void Read_ShouldTakeInstructionsWrittenAsOneString()
     {
-        // Arrange
         const string json = """
             { "@type": "Recipe", "recipeInstructions": "Mix everything and bake." }
             """;
 
-        // Act & Assert
         Assert.Equal(["Mix everything and bake."], RecipeJsonLd.Read(json)!.Steps);
     }
 
@@ -137,12 +112,9 @@ public class RecipeJsonLdTests
     [InlineData("\"F\u00fcr 4 Personen\"", 4)]
     public void Read_ShouldTakeTheFirstNumberOfTheYield(string yield, int expected)
     {
-        // Arrange
         var json = $$"""{ "@type": "Recipe", "recipeYield": {{yield}} }""";
 
-        // Act & Assert
-        // A range takes its lower bound, which is the same reading the paste
-        // import gives.
+        // A range takes its lower bound, as the paste import does.
         Assert.Equal(expected, RecipeJsonLd.Read(json)!.Servings);
     }
 
@@ -151,12 +123,9 @@ public class RecipeJsonLdTests
     [InlineData("\"\"")]
     public void Read_ShouldLeaveAYieldItCannotCountAlone(string yield)
     {
-        // Arrange
         var json = $$"""{ "@type": "Recipe", "recipeYield": {{yield}} }""";
 
-        // Act & Assert
-        // Rather than guessing. A made-up number of servings scales every
-        // amount in the recipe by a lie.
+        // No guess: a made-up serving count scales every amount by a lie.
         Assert.Null(RecipeJsonLd.Read(json)!.Servings);
     }
 
@@ -165,16 +134,11 @@ public class RecipeJsonLdTests
     [InlineData("P99999999D")]
     public void Read_ShouldLeaveATotalTimeItCannotRead(string totalTime)
     {
-        // Arrange
         var json = $$"""{ "@type": "Recipe", "name": "Stew", "totalTime": "{{totalTime}}" }""";
 
-        // Act
         var recipe = RecipeJsonLd.Read(json);
 
-        // Assert
-        // A duration too long for a TimeSpan is still a valid XSD duration,
-        // so it overflows rather than failing to parse. Either way the rest
-        // of the recipe is kept.
+        // A duration too long for a TimeSpan is a valid XSD duration that overflows; the rest of the recipe is kept.
         Assert.NotNull(recipe);
         Assert.Equal("Stew", recipe.Title);
         Assert.Null(recipe.TotalMinutes);
@@ -188,9 +152,7 @@ public class RecipeJsonLdTests
     [InlineData("{ \"name\": \"No type\" }")]
     public void Read_ShouldFindNothing_WhenThereIsNoRecipe(string? json)
     {
-        // Arrange & Act & Assert
-        // A page with broken or absent structured data is a page with none.
-        // Nothing is lost: the caller falls back to reading the words.
+        // Broken or absent structured data is a page with none: the caller falls back to the words.
         Assert.Null(RecipeJsonLd.Read(json));
     }
 }

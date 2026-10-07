@@ -26,16 +26,8 @@ public sealed record ComposeRecipeDraftCommand(
     string? Language,
     Guid UserId)
 {
-    /// <summary>
-    /// A photograph to read a recipe out of, for the <c>photo</c> kind.
-    /// </summary>
-    /// <remarks>
-    /// Bytes rather than a stream, because they go into a request body that may
-    /// be built more than once and a stream read twice is a stream read once.
-    /// Not part of the positional record: every other caller has none, and a
-    /// twelfth constructor argument that is almost always empty is an argument
-    /// nobody reads.
-    /// </remarks>
+    /// <summary>A photograph to read a recipe out of, for the <c>photo</c> kind.</summary>
+    /// <remarks>Bytes, not a stream: the request body may be built more than once.</remarks>
     public ReadOnlyMemory<byte> Photograph { get; init; }
 
     /// <summary>More pages of the same recipe.</summary>
@@ -45,18 +37,12 @@ public sealed record ComposeRecipeDraftCommand(
     public string? Transcript { get; init; }
 }
 
-/// <summary>
-/// A draft, arriving.
-/// </summary>
+/// <summary>A draft, arriving.</summary>
 /// <param name="Events">
-/// The recipe as it is written: thin at first, fuller each time, and a last one
-/// that says it is finished or says why it stopped.
+/// The recipe as written: thin at first, fuller each time, last one finished or says why it
+/// stopped.
 /// </param>
-/// <remarks>
-/// A wrapper rather than the sequence itself, so the handler's result reads the
-/// same as every other handler's and the endpoint can turn a refusal into a
-/// status code before a single byte of the body has been sent.
-/// </remarks>
+/// <remarks>A wrapper so a refusal can become a status code before any body byte is sent.</remarks>
 public sealed record DraftProgress(IAsyncEnumerable<Event> Events);
 
 internal sealed class ComposeRecipeDraftCommandHandler(
@@ -67,26 +53,14 @@ internal sealed class ComposeRecipeDraftCommandHandler(
     : ICommandHandler<ComposeRecipeDraftCommand, DraftProgress>
 {
     /// <summary>
-    /// How much text this will send.
+    /// Cap on material length: about cost, not capability, so a pasted book is refused.
     /// </summary>
-    /// <remarks>
-    /// Generous enough for a long recipe pasted out of a message, short enough
-    /// that a pasted book is refused before it becomes a bill. The limit is
-    /// about cost rather than about capability: a model would happily read ten
-    /// times this, at ten times the price, on a request anybody with an account
-    /// can make.
-    /// </remarks>
     private const int LongestMaterial = DraftLimits.MaxMaterialCharacters;
 
-    /// <summary>
-    /// Everything that can refuse the ask, then the stream.
-    /// </summary>
+    /// <summary>Everything that can refuse the ask, then the stream.</summary>
     /// <remarks>
-    /// The split matters more here than in a handler that answers once. Access,
-    /// the material, the capability and the budget are all decided before
-    /// anything is returned, so each of them is still an ordinary failure with
-    /// an ordinary status code. After that the response has begun and the only
-    /// way left to say anything is on the stream itself.
+    /// Refusals are decided first so they stay ordinary status codes; afterwards only the stream
+    /// can speak.
     /// </remarks>
     public async Task<Result<DraftProgress>> Handle(
         ComposeRecipeDraftCommand command,
@@ -95,8 +69,7 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         ArgumentNullException.ThrowIfNull(command);
 
 #pragma warning disable CA2000 // Handed to the stream below, which closes it.
-        // Not disposed here, unlike every other handler's: a stream that has
-        // been handed back has not finished doing the thing being measured.
+        // Not disposed here: a stream handed back has not finished what is being measured.
         var tracked = UseCaseActivity.Start("Recipes.ComposeDraft");
 #pragma warning restore CA2000
 
@@ -144,14 +117,10 @@ internal sealed class ComposeRecipeDraftCommandHandler(
             .ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Works out what to ask for, and what to ask it about.
-    /// </summary>
+    /// <summary>Works out what to ask for and about.</summary>
     /// <remarks>
-    /// The instruction comes from <see cref="AssistantPrompts"/> and the
-    /// material from the request or from a stored recipe — never joined. That
-    /// separation is structural rather than a convention, because on a shared
-    /// instance the material is whatever somebody else typed.
+    /// Instruction and material are never joined: on a shared instance the material is someone
+    /// else's text.
     /// </remarks>
     private async Task<Result<Composition>> PrepareAsync(
         ComposeRecipeDraftCommand command,
@@ -166,8 +135,7 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         var social = command.Kind == "social";
         var material = Material(command);
 
-        // A photograph on its own is enough; words on their own are enough;
-        // neither is not.
+        // A photograph or words alone are enough; neither is not.
         if (material is null && !photographed && command.Pictures.Count == 0
             && string.IsNullOrWhiteSpace(command.Transcript))
         {
@@ -203,15 +171,10 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         }));
     }
 
-    /// <summary>
-    /// Every picture the provider will see, the photograph first, re-encoded.
-    /// </summary>
+    /// <summary>Every picture the provider will see, photograph first, re-encoded.</summary>
     /// <remarks>
-    /// Here rather than at each route, because every route that reads a
-    /// recipe out of pictures — a photograph, shared screenshots, a durable
-    /// intake — ends at this handler, and a route that forgot would send a
-    /// stranger's servers the coordinates of somebody's kitchen. What leaves is
-    /// a JPEG of the pixels, whatever the client said the file was.
+    /// Done here because every picture route ends at this handler; a missed one would leak photo
+    /// metadata such as GPS.
     /// </remarks>
     private async Task<Result<IReadOnlyList<RecipePicture>>> ReEncodedAsync(
         ComposeRecipeDraftCommand command,
@@ -245,10 +208,8 @@ internal sealed class ComposeRecipeDraftCommandHandler(
             .EditableAsync(recipes, households, recipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        // Editable by the caller is not enough: the call is billed to the
-        // household in the request, so the recipe has to be that household's.
-        // Otherwise somebody in two kitchens could charge one for rewriting
-        // the other's recipes.
+        // Editable is not enough: the call is billed to the request's household, so the recipe must
+        // be its own.
         var owned = editable.Bind(recipe => recipe.HouseholdId == command.HouseholdId
             ? Result<Recipe>.Success(recipe)
             : RecipeErrors.NotFound(recipeId));
@@ -256,11 +217,8 @@ internal sealed class ComposeRecipeDraftCommandHandler(
         return owned.Map(recipe => new Composition
         {
             Capability = Capability.Improve,
-            // What it is stored as, which is the caller's business and not the
-            // prompt's. The instruction names no language at all: rewriting a
-            // German recipe into English is not tidying it up, and the stored
-            // field is not evidence of which one it is — nothing has ever asked
-            // anybody to set it, so a German recipe is usually stored as "en".
+            // The stored language, which is the caller's business: the instruction names none, and
+            // the field is unreliable.
             Language = recipe.Language,
             Instruction = AssistantPrompts.Improve(),
             Material = RecipeAsText.Of(recipe)
@@ -268,13 +226,9 @@ internal sealed class ComposeRecipeDraftCommandHandler(
     }
 
     /// <summary>
-    /// The stream a client reads, with the span held open across it.
+    /// The stream a client reads, with the span held open across it; one draft id for all events of
+    /// one ask.
     /// </summary>
-    /// <remarks>
-    /// One draft id for every event of one ask, because they are all the same
-    /// draft arriving — a new id per event would be a client unable to tell a
-    /// second ask from the next few characters of the first.
-    /// </remarks>
     private static async IAsyncEnumerable<Event> Watched(
         IAsyncEnumerable<Composing> parts,
         UseCaseActivity tracked)
@@ -305,14 +259,9 @@ internal sealed class ComposeRecipeDraftCommandHandler(
     }
 
     /// <summary>
-    /// What went wrong with this part, if anything did.
+    /// What went wrong with this part, if anything; a finished answer with nothing in it is a
+    /// failure.
     /// </summary>
-    /// <remarks>
-    /// An answer with nothing in it counts. A model that finished having said
-    /// no title, no ingredients and no steps did not write a thin recipe, it
-    /// failed to answer — and a blank draft offered for correction is worse
-    /// than being told to ask again.
-    /// </remarks>
     private static Error? Wrong(Composing part) => part switch
     {
         { Failure: { } failure } => failure,

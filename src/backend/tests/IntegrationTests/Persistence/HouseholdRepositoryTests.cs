@@ -18,16 +18,13 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task AddAndFind_ShouldRoundTripTheHouseholdWithItsMembers()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("owner@example.com");
         var household = AHousehold(owner);
 
-        // Act
         await scope.Households.AddAsync(household, Token);
         var found = await scope.Households.FindAsync(household.Id, Token);
 
-        // Assert
         var stored = found.ShouldBeSuccess();
         Assert.Equal("Kitchen", stored.Name.Value);
         var member = Assert.Single(stored.Members);
@@ -38,7 +35,6 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldPersistBothTheNameAndTheMembership_InOneTransaction()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("owner@example.com");
         var joiner = await scope.AddUserAsync("joiner@example.com");
@@ -48,10 +44,8 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
         household.Rename(HouseholdName.Create("The Kitchen").ShouldBeSuccess(), owner).ShouldBeSuccess();
         household.Add(joiner, HouseholdRole.Member, Now).ShouldBeSuccess();
 
-        // Act
         var version = await scope.Households.UpdateAsync(household, expectedVersion: 1, Token);
 
-        // Assert
         Assert.Equal(2, version.ShouldBeSuccess());
         var reloaded = (await scope.Households.FindAsync(household.Id, Token)).ShouldBeSuccess();
         Assert.Equal("The Kitchen", reloaded.Name.Value);
@@ -61,24 +55,20 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldFailThePrecondition_WhenSomeoneElseWroteFirst()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("owner@example.com");
         var household = AHousehold(owner);
         await scope.Households.AddAsync(household, Token);
         await scope.Households.UpdateAsync(household, expectedVersion: 1, Token);
 
-        // Act
         var result = await scope.Households.UpdateAsync(household, expectedVersion: 1, Token);
 
-        // Assert
         result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);
     }
 
     [Fact]
     public async Task ForUser_ShouldReturnEveryHouseholdWithItsOwnMembers()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("owner@example.com");
         var other = await scope.AddUserAsync("other@example.com");
@@ -89,10 +79,8 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
         await scope.Households.AddAsync(first, Token);
         await scope.Households.AddAsync(second, Token);
 
-        // Act
         var households = await scope.Households.ForUserAsync(owner, Token);
 
-        // Assert
         Assert.Equal(2, households.Count);
         // Members must not bleed between households in the batched read.
         Assert.Equal(2, households.Single(h => h.Name.Value == "Cabin").Members.Count);
@@ -102,16 +90,13 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldHideTheHousehold_ButKeepItsMembershipForARestore()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("owner@example.com");
         var household = AHousehold(owner);
         await scope.Households.AddAsync(household, Token);
 
-        // Act
         var result = await scope.Households.DeleteAsync(household.Id, household.Version, owner, Now, Token);
 
-        // Assert
         result.ShouldBeSuccess();
         var found = await scope.Households.FindAsync(household.Id, Token);
         found.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
@@ -121,16 +106,13 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldKeepTheHousehold_WhenTheVersionIsStale()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("owner@example.com");
         var household = AHousehold(owner);
         await scope.Households.AddAsync(household, Token);
 
-        // Act
         var result = await scope.Households.DeleteAsync(household.Id, household.Version + 1, owner, Now, Token);
 
-        // Assert
         result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);
         (await scope.Households.FindAsync(household.Id, Token)).ShouldBeSuccess();
     }
@@ -138,17 +120,13 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldKeepAnHeirsInheritance_WhenWhoeverSetItOnlyChangesRole()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var (parent, heir, setter) = await InheritingAsync(scope);
         parent.ChangeRole(setter, HouseholdRole.Owner, parent.Members[0].UserId).ShouldBeSuccess();
 
-        // Act
         (await scope.Households.UpdateAsync(parent, parent.Version, Token)).ShouldBeSuccess();
 
-        // Assert
-        // Saving the parent's members must not delete and re-insert them:
-        // the heir's link hangs off the setter's membership row.
+        // Saving the parent's members must not delete and re-insert them: the heir's link hangs off the setter's row.
         var reloaded = (await scope.Households.FindAsync(heir.Id, Token)).ShouldBeSuccess();
         Assert.Equal(parent.Id, reloaded.InheritsFrom);
         Assert.Equal(setter, reloaded.InheritsSetBy);
@@ -157,19 +135,15 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task DeletingAnAccount_ShouldEndTheInheritanceItSetUp()
     {
-        // Arrange
-        // There is no endpoint for it; an operator deleting the row is the
-        // case, and the database has to close the link on its own.
+        // No endpoint does this; an operator deleting the row must be closed by the database itself.
         await using var scope = await NewScopeAsync();
         var (_, heir, setter) = await InheritingAsync(scope);
 
-        // Act
         await new DbExecutor(scope.Session).ExecuteAsync(
             "delete from users where id = @setter;",
             new { setter },
             Token);
 
-        // Assert
         var reloaded = (await scope.Households.FindAsync(heir.Id, Token)).ShouldBeSuccess();
         Assert.Null(reloaded.InheritsFrom);
         Assert.Null(reloaded.InheritsSetBy);
@@ -177,10 +151,7 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    /// <summary>
-    /// A parent kitchen, a plain member of it, and a household of that
-    /// member's own that they made inherit the parent.
-    /// </summary>
+    /// <summary>A parent kitchen, a member of it, and that member's own household inheriting the parent.</summary>
     private static async Task<(Household Parent, Household Heir, Guid Setter)> InheritingAsync(RepositoryScope scope)
     {
         var owner = await scope.AddUserAsync("owner@example.com");

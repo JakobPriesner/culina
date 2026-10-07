@@ -4,15 +4,7 @@ using Domain.Shared;
 
 namespace Application.Recipes.Sources;
 
-/// <summary>
-/// Answers whether the caller may use a connection.
-/// </summary>
-/// <remarks>
-/// A connection belongs to a household, so the rule is the same one recipes
-/// have: are you in it. It matters more here than elsewhere, because a
-/// connection holds a credential and can be made to fetch — being able to use
-/// somebody else's connection would be being able to read their Tandoor.
-/// </remarks>
+/// <summary>Answers whether the caller may use a connection: the household rule recipes have, mattering more as a connection holds a credential.</summary>
 internal static class SourceAccess
 {
     internal static async Task<Result<RecipeSource>> UsableAsync(
@@ -29,21 +21,12 @@ internal static class SourceAccess
                 .IsMemberAsync(source.HouseholdId, userId, cancellationToken)
                 .ConfigureAwait(false)
                     ? Result<RecipeSource>.Success(source)
-                    // Not found, never forbidden: a stranger learns nothing
-                    // about which kitchens have connected what.
+                    // Not found, never forbidden: a stranger learns nothing about which kitchens connected what.
                     : ImportErrors.SourceNotFound(sourceId),
             error => Task.FromResult(Result<RecipeSource>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// A connection the caller may use and that can actually be read from.
-    /// </summary>
-    /// <remarks>
-    /// Usable and not readable is a connection whose stored token can no
-    /// longer be decrypted. That is refused here, before anything is sent to
-    /// the other app — and only here, so disconnecting it, which is how it gets
-    /// fixed, still works.
-    /// </remarks>
+    // A usable connection that can be read from. One whose token can no longer be decrypted is refused here only, so disconnecting it (the fix) still works.
     internal static async Task<Result<RecipeSource>> ReadableAsync(
         IRecipeSourceRepository sources,
         IHouseholdRepository households,

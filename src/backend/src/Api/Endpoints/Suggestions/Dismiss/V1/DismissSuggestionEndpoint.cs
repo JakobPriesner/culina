@@ -5,13 +5,7 @@ using Application.Suggestions.Dismiss;
 namespace Api.Endpoints.Suggestions.Dismiss.V1;
 
 /// <summary>Hides a recipe from your own suggestions.</summary>
-/// <remarks>
-/// <c>PUT</c> and <c>DELETE</c> on the dismissal itself rather than a pair of
-/// verbs, because "I do not want to be shown this" is a fact at a known address
-/// with two possible values. Both are therefore idempotent, which is what makes
-/// a double tap and a retried request harmless — and both are ordinary on a
-/// phone, where the undo is the next thing a thumb reaches for.
-/// </remarks>
+/// <remarks><c>PUT</c> and <c>DELETE</c> on the dismissal resource itself, so both are idempotent and a double tap or retry is harmless.</remarks>
 internal sealed class DismissSuggestionEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

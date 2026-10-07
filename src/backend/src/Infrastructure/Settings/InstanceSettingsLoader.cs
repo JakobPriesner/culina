@@ -5,14 +5,9 @@ using Microsoft.Extensions.Hosting;
 namespace Infrastructure.Settings;
 
 /// <summary>
-/// Loads every instance-settings group once, before the app serves traffic.
+/// Loads every instance-settings group once, before traffic; runs after migrations, and a group
+/// with no row keeps its defaults.
 /// </summary>
-/// <remarks>
-/// Runs after the migration service, so the <c>settings</c> table exists. A
-/// group with no stored row keeps its compiled-in defaults, which is what makes
-/// a fresh instance work without any setup step.
-/// </remarks>
-/// <param name="scopeFactory">Creates the scope the stores live in.</param>
 internal sealed class InstanceSettingsLoader(IServiceScopeFactory scopeFactory) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)

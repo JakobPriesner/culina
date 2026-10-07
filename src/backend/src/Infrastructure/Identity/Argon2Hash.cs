@@ -2,14 +2,7 @@ using System.Globalization;
 
 namespace Infrastructure.Identity;
 
-/// <summary>
-/// The PHC string form of an Argon2id hash.
-/// </summary>
-/// <remarks>
-/// Self-describing on purpose: the parameters travel with the hash, so they can
-/// be raised later and every existing hash still verifies with the parameters
-/// it was created under.
-/// </remarks>
+/// <summary>The PHC string form of an Argon2id hash. Self-describing, so parameters can be raised and old hashes still verify.</summary>
 /// <param name="MemoryKib">Memory cost in kibibytes.</param>
 /// <param name="Iterations">Time cost.</param>
 /// <param name="Parallelism">Lanes.</param>
@@ -57,10 +50,7 @@ internal sealed record Argon2Hash(
         return new Argon2Hash(memory, iterations, parallelism, salt, hash);
     }
 
-    /// <summary>
-    /// Whether this hash was produced with weaker settings than are configured
-    /// now, so it should be replaced on the owner's next successful sign-in.
-    /// </summary>
+    // Whether this hash used weaker settings than are configured now, so it is replaced on the next successful sign-in.
     internal bool IsWeakerThan(int memoryKib, int iterations, int parallelism) =>
         MemoryKib < memoryKib || Iterations < iterations || Parallelism < parallelism;
 
@@ -90,9 +80,7 @@ internal static class Base64Url
         }
         catch (FormatException)
         {
-            // A stored hash that is not base64 is corrupt, which is a failed
-            // verification rather than a crash: the account simply cannot be
-            // signed into until the password is reset.
+            // A corrupt stored hash is a failed verification, not a crash.
             decoded = [];
 
             return false;

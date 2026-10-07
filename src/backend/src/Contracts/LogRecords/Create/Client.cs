@@ -3,11 +3,7 @@ namespace Contracts.LogRecords.Create;
 /// <summary>
 /// The browser and device the records came from, as far as the page can tell.
 /// </summary>
-/// <remarks>
-/// Every field is optional, because no browser offers all of them, and the
-/// server cuts any text to 128 characters and any list to ten entries rather
-/// than refusing the report it came with.
-/// </remarks>
+/// <remarks>Every field is optional; the server cuts text to 128 characters and lists to ten entries instead of refusing the report.</remarks>
 public sealed record Client
 {
     /// <summary>Random per page load, so records from one page can be told apart from another's.</summary>

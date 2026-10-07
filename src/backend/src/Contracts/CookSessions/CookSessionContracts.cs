@@ -10,16 +10,15 @@ public sealed record StartRequest
     public required decimal Servings { get; init; }
 
     /// <summary>
-    /// The household it is being cooked in, for a recipe that household
-    /// inherits. Left out, the recipe's own household.
+    /// The household it is cooked in, for an inherited recipe; left out, the recipe's own
+    /// household.
     /// </summary>
     public Guid? HouseholdId { get; init; }
 }
 
 /// <summary>A change to a session in progress.</summary>
 /// <remarks>
-/// Both fields are optional: a step advance sends only the step, which is by
-/// far the most frequent call and stays cheap.
+/// Both fields are optional: a step advance sends only the step, by far the most frequent call.
 /// </remarks>
 public sealed record UpdateRequest
 {

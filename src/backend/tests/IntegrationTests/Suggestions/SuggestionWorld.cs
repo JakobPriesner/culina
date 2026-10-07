@@ -7,27 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Suggestions;
 
-/// <summary>
-/// A kitchen, built through the API the way a person would build one.
-/// </summary>
-/// <remarks>
-/// Seeded through HTTP rather than by inserting rows, because the suggestion
-/// ranking reads eight tables written by six different handlers. A fixture that
-/// wrote them itself would be a second opinion about what a cooked recipe looks
-/// like in the database, and the first thing to rot.
-/// </remarks>
+/// <summary>A kitchen built through the API as a person would, since the ranking reads tables written by six handlers.</summary>
 internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, CulinaApiFactory Api)
 {
     private const string Password = "correct horse battery staple";
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    /// <param name="api">
-    /// Which host to build the kitchen through. The ordering rules use the one
-    /// that ranks without exploration jitter, because a rule cannot be asserted
-    /// against noise the rule does not control; everything else uses the
-    /// ordinary host, jitter and all, which is what people actually get.
-    /// </param>
+    // The ordering rules pass the host that ranks without exploration jitter; everything else uses the ordinary one.
     internal static async Task<SuggestionWorld> NewAsync(
         PostgresFixture postgres,
         string email = "ada@example.com",
@@ -47,10 +34,7 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
     /// <summary>A second person in the same kitchen, for the household-taste rules.</summary>
     internal async Task<ApiClient> InviteAsync(string email, string displayName)
     {
-        // An instance refuses a second account by default, which is the right
-        // default and would otherwise make every request this guest sends a
-        // silent 401 — and a household-taste rule asserted against a member who
-        // never joined passes or fails for no reason anybody could see.
+        // An instance refuses a second account by default, which would make the guest's requests silent 401s.
         var settings = Api.Services.GetRequiredService<RegistrationSettings>();
         settings.OpenRegistration = true;
         settings.RequireInvitation = false;
@@ -93,7 +77,6 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
         return client;
     }
 
-    /// <summary>Writes a recipe down, with as much or as little as the test needs.</summary>
     internal async Task<Guid> WriteAsync(
         string title,
         string[]? ingredients = null,
@@ -147,11 +130,9 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
         return recipeId;
     }
 
-    /// <summary>Records that somebody cooked it, however long ago.</summary>
     internal Task CookedAsync(Guid recipeId, int daysAgo, ApiClient? by = null) =>
         CookedAtAsync(recipeId, DateTimeOffset.UtcNow.AddDays(-daysAgo), by);
 
-    /// <summary>Records that somebody cooked it at a particular moment.</summary>
     internal Task CookedAtAsync(Guid recipeId, DateTimeOffset madeAt, ApiClient? by = null) =>
         (by ?? Client).PostAsync($"/api/v1/recipes/{recipeId}/cook-log", new { madeAt }, Token);
 
@@ -167,7 +148,6 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
     internal Task<ApiResponse> SuggestAsync(string query = "") =>
         Client.GetAsync($"/api/v1/suggestions?householdId={HouseholdId}{query}", Token);
 
-    /// <summary>The suggested titles, in the order they came back.</summary>
     internal static List<string> Titles(ApiResponse response) =>
         [.. response.Json!.Value.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("title").GetString()!)];
@@ -176,7 +156,6 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
         [.. response.Json!.Value.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("recipeId").GetGuid())];
 
-    /// <summary>Where a recipe came in the order, or -1 when it did not.</summary>
     internal static int PositionOf(ApiResponse response, string title) =>
         Titles(response).IndexOf(title);
 

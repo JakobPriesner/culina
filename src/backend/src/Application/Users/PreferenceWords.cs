@@ -3,20 +3,10 @@ using Domain.Users;
 
 namespace Application.Users;
 
-/// <summary>
-/// Parses preference codes off the wire, naming the field that was wrong.
-/// </summary>
-/// <remarks>
-/// The codes themselves live in <see cref="PreferenceCodes"/>; this only adds
-/// the field labelling a form needs to mark the right control.
-/// </remarks>
+/// <summary>Parses preference codes off the wire (the codes live in <see cref="PreferenceCodes"/>), naming the wrong field for the form.</summary>
 internal static class PreferenceWords
 {
-    /// <summary>
-    /// Checks a language choice. <c>system</c> is one, but has no
-    /// <see cref="Language"/> to parse to: it leaves the language to whichever
-    /// device is reading.
-    /// </summary>
+    // Checks a language choice; <c>system</c> is valid but has no Language to parse to.
     internal static Result CheckLanguage(string? value) =>
         value == PreferenceCodes.System || PreferenceCodes.ToLanguage(value) is not null
             ? Result.Success()

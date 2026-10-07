@@ -13,10 +13,7 @@ namespace Application.Recipes.RecordCooked;
 /// <param name="MadeAt">When, or null for now.</param>
 /// <param name="Servings">How much was made.</param>
 /// <param name="Note">Anything worth remembering.</param>
-/// <param name="HouseholdId">
-/// The household it was cooked in, or null for the recipe's own. An inherited
-/// recipe cooked in the heir is the heir's history, not the parent's.
-/// </param>
+/// <param name="HouseholdId">The household it was cooked in, or null for the recipe's own.</param>
 public sealed record RecordCookedCommand(
     Guid RecipeId,
     Guid UserId,
@@ -45,9 +42,7 @@ internal sealed class RecordCookedCommandHandler(
             .VisibleInAsync(recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        // Stamped with the kitchen it was cooked in. Stamping the recipe's own
-        // household instead would put somebody who only inherits it into the
-        // parent's suggestions by name, in a household they are not part of.
+        // Stamped with the kitchen it was cooked in, so an heir never lands in the parent's suggestions.
         var prepared = visible.Bind(recipe => CookLogEntry.Record(
             recipe.Id,
             command.UserId,
@@ -74,9 +69,7 @@ internal sealed class RecordCookedCommandHandler(
                 return await added.Match(
                     async () =>
                     {
-                        // The new count comes back with the entry, so the "made
-                        // it" toast can say "that's the 8th time" without the
-                        // client asking again.
+                        // The new count comes back so the client need not ask again.
                         var entries = await log
                             .ForRecipeAsync(entry.RecipeId, entry.UserId, token)
                             .ConfigureAwait(false);

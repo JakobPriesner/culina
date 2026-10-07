@@ -3,10 +3,7 @@ using Npgsql;
 
 namespace Infrastructure.Persistence;
 
-/// <summary>
-/// The readiness probe: one round trip, no schema knowledge.
-/// </summary>
-/// <param name="executor">Runs the statement.</param>
+/// <summary>The readiness probe: one round trip, no schema knowledge.</summary>
 internal sealed class DatabaseProbe(DbExecutor executor) : IDatabaseProbe
 {
     public async Task<bool> IsReachableAsync(CancellationToken cancellationToken)
@@ -19,9 +16,7 @@ internal sealed class DatabaseProbe(DbExecutor executor) : IDatabaseProbe
         }
         catch (NpgsqlException)
         {
-            // An unreachable database is the answer this probe exists to give,
-            // not a defect to propagate: a 503 from readiness is what tells an
-            // orchestrator to stop sending traffic.
+            // An unreachable database is the answer this probe exists to give; a 503 tells the orchestrator to stop sending traffic.
             return false;
         }
     }

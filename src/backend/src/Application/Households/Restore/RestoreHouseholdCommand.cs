@@ -6,10 +6,7 @@ using Domain.Shared;
 
 namespace Application.Households.Restore;
 
-/// <summary>
-/// Takes a household out of the bin, with its members, recipes and cookbooks.
-/// Owners only, as deleting it was.
-/// </summary>
+/// <summary>Takes a household out of the bin with its members, recipes and cookbooks. Owners only, as deleting was.</summary>
 /// <param name="HouseholdId">Which household.</param>
 /// <param name="UserId">Who is asking.</param>
 public sealed record RestoreHouseholdCommand(Guid HouseholdId, Guid UserId);
@@ -27,8 +24,7 @@ internal sealed class RestoreHouseholdCommandHandler(
 
         var deleted = await trash.DeletedHouseholdAsync(command.HouseholdId, cancellationToken).ConfigureAwait(false);
 
-        // The memberships were kept for exactly this: the same rule decides
-        // who may bring a household back as decided who could delete it.
+        // Memberships were kept for this: the rule that let someone delete decides who may restore.
         Result permitted = deleted is null
             ? HouseholdErrors.NotFound(command.HouseholdId)
             : HouseholdMembershipPolicy.CanAdminister(deleted, command.UserId);

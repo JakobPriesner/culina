@@ -4,14 +4,9 @@ using Domain.Shared;
 namespace Domain.Shopping;
 
 /// <summary>
-/// What an item is called, and the form two names are compared in.
+/// What an item is called, plus the folded form two names are compared in, so the list shows their
+/// words but merges on ours ("Müsli" and "Muesli").
 /// </summary>
-/// <remarks>
-/// "Müsli" and "Muesli" are the same thing in a trolley, and so are "Butter"
-/// and "butter". The comparison form is folded once and stored alongside the
-/// name the person actually wrote, because the list should show their words and
-/// merge on ours.
-/// </remarks>
 public sealed record ItemName
 {
     /// <summary>The longest name a shopping list needs.</summary>
@@ -46,14 +41,9 @@ public sealed record ItemName
     }
 
     /// <summary>
-    /// The form two names are compared in.
+    /// The comparison form. German umlauts are expanded (<c>ü</c> to <c>ue</c>) so "Müsli" meets "Muesli";
+    /// other diacritics are dropped.
     /// </summary>
-    /// <remarks>
-    /// German umlauts are expanded rather than stripped: <c>ü</c> becomes
-    /// <c>ue</c>, so "Müsli" and "Muesli" meet. Stripping the diacritic would
-    /// give "Musli", which meets neither. The rest is folded by decomposing and
-    /// dropping the marks, which handles "crème" and "creme".
-    /// </remarks>
     public static string Fold(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -72,8 +62,7 @@ public sealed record ItemName
             });
         }
 
-        // InvariantGlobalization makes String.Normalize a no-op, so the marks
-        // are dropped by hand for the accents German and English borrow.
+        // InvariantGlobalization makes String.Normalize a no-op, so marks are dropped by hand.
         var folded = new StringBuilder(expanded.Length);
 
         foreach (var character in expanded.ToString())

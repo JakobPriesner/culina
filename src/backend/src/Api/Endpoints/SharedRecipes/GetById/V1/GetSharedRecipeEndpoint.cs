@@ -8,17 +8,9 @@ namespace Api.Endpoints.SharedRecipes.GetById.V1;
 
 /// <summary>Serves a recipe to whoever follows its link.</summary>
 /// <remarks>
-/// <para>
-/// The only endpoint in Culina with no <c>RequireAuthorization()</c> on a read
-/// of somebody's data, and it earns that by never seeing a recipe id: the token
-/// is the identifier, so there is no id to substitute and no membership check
-/// to get wrong. A request without a valid token can address nothing.
-/// </para>
-/// <para>
-/// Its own tag and its own path rather than a second route into
-/// <c>/recipes</c>, so that "everything under /recipes needs a session" stays
-/// true by reading the routes.
-/// </para>
+/// The only read of somebody's data with no <c>RequireAuthorization()</c>: it never sees a recipe
+/// id (the token is the identifier), so there is no id to substitute and no membership check to get
+/// wrong. Its own tag and path keep "everything under /recipes needs a session" true.
 /// </remarks>
 internal sealed class GetSharedRecipeEndpoint : IEndpoint
 {
@@ -55,13 +47,9 @@ internal sealed class GetSharedRecipeEndpoint : IEndpoint
     }
 
     /// <summary>
-    /// Kept out of shared caches.
+    /// Kept out of shared caches: the address carries a credential, and a proxy that cached the
+    /// answer would serve a household's recipe from a store nobody can revoke.
     /// </summary>
-    /// <remarks>
-    /// The address carries a credential, so nothing between here and the reader
-    /// may hold on to the answer: a proxy that cached it would be serving one
-    /// household's recipe from a store nobody can revoke.
-    /// </remarks>
     private static IResult Served(HttpContext context, Response recipe)
     {
         context.Response.Headers.CacheControl = "private, no-store";

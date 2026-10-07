@@ -9,22 +9,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace IntegrationTests.Import;
 
 /// <summary>
-/// How well an import tells a recipe the household already has from one it
-/// does not, measured against the golden library.
+/// How well an import tells a recipe the household has from one it does not, against the golden
+/// library.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Two numbers, and they are not worth the same. A missed duplicate is a
-/// second Bolognese somebody deletes; a wrong warning is a recipe held back
-/// for no reason, from a feature that then stops being believed. So the bar is
-/// recall of at least 0.9 and not one false positive.
-/// </para>
-/// <para>
-/// The near misses are the point of the list: the same dish with one thing
-/// changed, the same ingredients in a different dish, a name that contains
-/// another. Pairs a careful person could argue either way — Chicken Tikka and
-/// Chicken Tikka Masala — are left out rather than ruled on here.
-/// </para>
+/// A wrong warning costs more than a missed duplicate, so the bar is recall of at least 0.9 and no
+/// false positive. Pairs a careful person could argue either way (Chicken Tikka and Chicken Tikka
+/// Masala) are left out.
 /// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class LookalikeRecipeTests(PostgresFixture postgres)
@@ -73,13 +64,11 @@ public class LookalikeRecipeTests(PostgresFixture postgres)
     [Fact]
     public async Task Lookalikes_ShouldFindTheDuplicates_AndNeverWarnAboutARecipeThatIsNotOne()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         await GoldenLibrary.Load().SeedAsync(kitchen);
         var me = await kitchen.Client.GetAsync("/api/v1/users/me", Token);
         var userId = me.Json!.Value.GetProperty("userId").GetGuid();
 
-        // Act
         var found = new List<(Case Case, string? Title)>();
 
         await using (var scope = postgres.Api.Services.CreateAsyncScope())
@@ -101,7 +90,6 @@ public class LookalikeRecipeTests(PostgresFixture postgres)
             }
         }
 
-        // Assert
         var duplicates = found.Where(one => one.Case.Duplicates is not null).ToList();
         var recall = duplicates.Count(one => one.Title == one.Case.Duplicates) / (double)duplicates.Count;
         var wrong = found.Where(one => one.Title is not null && one.Title != one.Case.Duplicates).ToList();

@@ -10,33 +10,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Assistance;
 
-/// <summary>
-/// Talks to Google's models.
-/// </summary>
+/// <summary>Talks to Google's models through Google's own client library.</summary>
 /// <remarks>
-/// <para>
-/// Google's own client library rather than this app's reading of their
-/// documentation. The fault it removes is the one with no symptom: the token
-/// counts were read from fields nothing sends, so every Gemini call in this
-/// instance's ledger is recorded as having cost nothing at all.
-/// </para>
-/// <para>
-/// No <c>Microsoft.Extensions.AI</c> package exists for this SDK, so unlike the
-/// other two this adapter speaks it directly. The shape of what it does is the
-/// same all the same: a system instruction kept apart from the material, a
-/// schema the answer must fit, and failures returned rather than thrown.
-/// </para>
-/// <para>
-/// One call does both jobs. An image model answers <c>generateContent</c> with
-/// an inline picture where a text model answers with text, so what differs
-/// between writing a recipe and drawing one is which parts are asked for and
-/// which part is read back.
-/// </para>
-/// <para>
-/// Stateless with respect to configuration: the key, the address and the model
-/// all arrive with the call, so one instance serves however many connections an
-/// administrator has set up.
-/// </para>
+/// The SDK reports the token counts the hand-written client read from fields nothing sends, which
+/// recorded every call as free. It has no <c>Microsoft.Extensions.AI</c> package, so this adapter
+/// speaks it directly. One call both writes (text) and draws (inline image); the key, address and
+/// model arrive with each call.
 /// </remarks>
 /// <param name="http">The shared client, whose rules the SDK is made to keep.</param>
 /// <param name="logger">Records what a provider refused, and why.</param>
@@ -84,9 +63,8 @@ internal sealed class GeminiAssistant(
 
         using var client = Client(@using);
 
-        // Advanced by hand rather than with `await foreach`, because a `yield`
-        // may not live inside a `try` that catches — and every part of this
-        // that talks to the provider has to be inside one.
+        // Advanced by hand: a `yield` may not sit in a `try` that catches, and everything that
+        // talks to the provider must.
         var parts = client.Models
             .GenerateContentStreamAsync(@using.Model, Material(request), Writing(request), cancellationToken)
             .GetAsyncEnumerator(cancellationToken);
@@ -159,8 +137,8 @@ internal sealed class GeminiAssistant(
 
         var config = new GenerateContentConfig
         {
-            // Asked for explicitly. An image model given no modalities answers
-            // with a description of the picture rather than the picture.
+            // Asked for explicitly: an image model given no modalities describes the picture
+            // instead of drawing it.
             ResponseModalities = ["TEXT", "IMAGE"]
         };
 
@@ -206,8 +184,7 @@ internal sealed class GeminiAssistant(
                 listed.Add(new ModelInfo(id, Labelled(model, id), DrawingModel.Draws(id, model.DisplayName)));
             }
 
-            // Name order, and no date: Google's listing does not say when a
-            // model appeared, and a date invented here would sort this list
+            // Name order, no date: Google's listing has none, and an invented date would sort
             // convincingly and wrongly.
             IReadOnlyList<ModelInfo> everything = ModelLabels.Distinguish(
                 [.. listed.OrderBy(model => model.Id, StringComparer.Ordinal)]);
@@ -222,12 +199,10 @@ internal sealed class GeminiAssistant(
     }
 
     /// <summary>How to ask for a recipe, whether or not it is read as it arrives.</summary>
-    /// <param name="request">What to do, and what to do it to.</param>
     private static GenerateContentConfig Writing(Composition request) => new()
     {
-        // The instruction is a field of its own rather than a turn in the
-        // conversation, which is the strongest separation this provider
-        // offers between what the app says and what a stranger pasted.
+        // The instruction is a field of its own, not a turn: the strongest separation from what a
+        // stranger pasted.
         SystemInstruction = new Content { Parts = [new Part { Text = request.Instruction }] },
         ResponseMimeType = "application/json",
         ResponseJsonSchema = RecipeSchema.Definition,
@@ -235,14 +210,9 @@ internal sealed class GeminiAssistant(
     };
 
     /// <summary>
-    /// The last part of a stream that ended badly.
+    /// The last part of a stream that ended badly; it still carries the recipe so the screen can
+    /// offer it beside the reason.
     /// </summary>
-    /// <remarks>
-    /// It still carries the recipe, and deliberately: a provider that cut out
-    /// after the ingredients wrote something worth keeping, and the screen can
-    /// offer it beside the reason rather than throwing away work that was paid
-    /// for.
-    /// </remarks>
     private static Composing Stopped(PartialRecipe answer, Error failure) => new()
     {
         Recipe = answer.SoFar(),
@@ -251,14 +221,9 @@ internal sealed class GeminiAssistant(
     };
 
     /// <summary>
-    /// The counts, which this provider repeats on every chunk.
+    /// The usage counts, kept when a chunk omits them: a call recorded as free is the fault this
+    /// SDK was adopted to remove.
     /// </summary>
-    /// <remarks>
-    /// Kept rather than overwritten by an absence: the last chunk of a Gemini
-    /// stream carries the totals, but nothing promises that every chunk does,
-    /// and a call recorded as free is the fault this adapter's SDK was adopted
-    /// to remove.
-    /// </remarks>
     private static ModelUsage Counted(GenerateContentResponse part, ModelUsage soFar) =>
         part.UsageMetadata is null
             ? soFar
@@ -268,12 +233,9 @@ internal sealed class GeminiAssistant(
                 Pictures: 0);
 
     /// <summary>
-    /// The material, as the parts of the one user turn.
+    /// The material, as the parts of the one user turn; the instruction is the config's own field
+    /// and is never concatenated with it.
     /// </summary>
-    /// <remarks>
-    /// The instruction is not here. It is the config's own field, and the two
-    /// are never concatenated.
-    /// </remarks>
     private static List<Content> Material(Composition request)
     {
         List<Part> parts = [];
@@ -313,9 +275,7 @@ internal sealed class GeminiAssistant(
         }
         catch (JsonException)
         {
-            // The model answered with something that is not the shape it was
-            // given. Ordinary rather than exceptional, and the person asking
-            // gets to try again.
+            // The model answered in a shape it was not given: ordinary, and the person can retry.
             return AssistanceErrors.UnusableAnswer;
         }
     }
@@ -337,14 +297,9 @@ internal sealed class GeminiAssistant(
     }
 
     /// <summary>
-    /// What it consumed.
+    /// What it consumed; thinking tokens are left out, so a budget on a reasoning model runs
+    /// slightly under the invoice.
     /// </summary>
-    /// <remarks>
-    /// Thinking is counted apart, in <c>ThoughtsTokenCount</c>, and left out of
-    /// both. Google bills it, so a budget built from these two runs slightly
-    /// under the invoice on a reasoning model — the alternative is to add a
-    /// number to output that the provider does not put there.
-    /// </remarks>
     private static ModelUsage Usage(GenerateContentResponse answered, int pictures) => new(
         answered.UsageMetadata?.PromptTokenCount ?? 0,
         answered.UsageMetadata?.CandidatesTokenCount ?? 0,
@@ -363,29 +318,21 @@ internal sealed class GeminiAssistant(
         string.IsNullOrWhiteSpace(model.DisplayName) ? id : model.DisplayName!;
 
     /// <summary>
-    /// What is left after the models that cannot write a recipe or draw one.
+    /// What is left after the models that cannot write or draw a recipe (embedding, retrieval,
+    /// answering), by name since the SDK's model type says nothing of what a model does.
     /// </summary>
-    /// <remarks>
-    /// The listing carries embedding, retrieval and answering models too, and
-    /// offering those as a choice for "write me a recipe" would be offering
-    /// something that cannot answer. By name, because the client's model type
-    /// carries a name, a display name and a description and nothing that says
-    /// what it does.
-    /// </remarks>
     private static bool Usable(string id) =>
         !id.Contains("embedding", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("aqa", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("retrieval", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The client for one connection.
+    /// The client for one connection, built per call because the key and address belong to the
+    /// connection.
     /// </summary>
     /// <remarks>
-    /// Built per call rather than held: the key and the address belong to the
-    /// connection being used, and an instance of this class serves all of them.
-    /// The transport is the app's own, so the SDK inherits the rules the
-    /// hand-written client had — no redirects with a key attached, one pool,
-    /// one deadline.
+    /// The transport is the app's own, so the SDK keeps the hand-written client's rules: no
+    /// redirects with a key attached, one pool, one deadline.
     /// </remarks>
     private Client Client(Connected @using, bool drawing = false) => new(
         apiKey: @using.ApiKey,
@@ -411,13 +358,9 @@ internal sealed class GeminiAssistant(
             or InvalidOperationException or JsonException;
 
     /// <summary>
-    /// What a refusal means.
+    /// What a refusal means: a refused credential stays itself here, and becomes "unavailable" only
+    /// before reaching somebody cooking.
     /// </summary>
-    /// <remarks>
-    /// A refused credential is carried as itself this far. It is turned back
-    /// into "unavailable" before it can reach somebody who is cooking, but the
-    /// settings screen and the ledger are read by the person holding the key.
-    /// </remarks>
     private static Error Failure(Exception failure) =>
         failure is HttpRequestException { StatusCode: { } status }
             ? status switch

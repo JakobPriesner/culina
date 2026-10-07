@@ -5,9 +5,8 @@ namespace Application.Cookbooks;
 
 /// <summary>How a cookbook's kind and rules are spelled on the wire.</summary>
 /// <remarks>
-/// Words rather than numbers, for the reason the meal plan's slot is text: a
-/// client branching on <c>"smart"</c> reads, and one branching on <c>1</c>
-/// breaks silently the day somebody inserts a kind in the middle.
+/// Words, not numbers: a client branching on <c>"smart"</c> reads, one branching on <c>1</c> breaks
+/// silently when a kind is inserted in the middle.
 /// </remarks>
 internal static class CookbookWords
 {
@@ -22,7 +21,6 @@ internal static class CookbookWords
         stored == Smart ? CookbookKind.Smart : CookbookKind.Manual;
 
     /// <summary>Reads the rules a request states, or none when it states none.</summary>
-    /// <param name="wire">What the caller sent, or null.</param>
     internal static Result<CookbookRules> ToRules(Contracts.Cookbooks.CookbookRulesContract? wire) =>
         wire is null
             ? Result<CookbookRules>.Success(CookbookRules.None)

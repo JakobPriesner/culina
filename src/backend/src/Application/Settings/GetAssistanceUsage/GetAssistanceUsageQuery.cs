@@ -53,15 +53,9 @@ internal sealed class GetAssistanceUsageQueryHandler(
     }
 
     /// <summary>
-    /// The first instant of the calendar month, in UTC.
+    /// The first instant of the calendar month in UTC, so the budget resets on the same day a
+    /// provider's invoice does.
     /// </summary>
-    /// <remarks>
-    /// UTC rather than the instance's local time, and a calendar month rather
-    /// than a rolling thirty days, because this number is being compared
-    /// against a provider's invoice and that is how a provider bills. A budget
-    /// that reset on a different day from the bill would be a budget that
-    /// cannot be reconciled with it.
-    /// </remarks>
     private static DateTimeOffset StartOfMonth(DateTimeOffset now) =>
         new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
 }

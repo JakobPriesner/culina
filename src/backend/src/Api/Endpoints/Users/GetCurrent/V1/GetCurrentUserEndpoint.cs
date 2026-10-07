@@ -22,12 +22,7 @@ internal sealed class GetCurrentUserEndpoint : IEndpoint
                     .ConfigureAwait(false);
 
                 return result.Match(
-                    // The households and the assistant's availability are part
-                    // of the body, so they are part of the tag: joining a
-                    // kitchen, renaming one, changing whose recipes it inherits
-                    // or an administrator switching the assistant on does not
-                    // change the account itself, and a tag made only of the
-                    // account's version would say "nothing changed".
+                    // Households and assistant availability are in the body, so they go in the tag too.
                     user => ETag.Ok(
                         context,
                         user,

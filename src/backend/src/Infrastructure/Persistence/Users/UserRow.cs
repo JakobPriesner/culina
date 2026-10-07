@@ -1,12 +1,6 @@
 namespace Infrastructure.Persistence.Users;
 
-/// <summary>
-/// The <c>users</c> row exactly as PostgreSQL returns it.
-/// </summary>
-/// <remarks>
-/// Never leaves Infrastructure. An Application signature mentioning a row type
-/// would let the persistence shape dictate the domain's.
-/// </remarks>
+/// <summary>The <c>users</c> row exactly as PostgreSQL returns it; never leaves Infrastructure.</summary>
 internal sealed record UserRow
 {
     public Guid Id { get; init; }

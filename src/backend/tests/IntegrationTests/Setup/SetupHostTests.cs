@@ -5,24 +5,18 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Setup;
 
-/// <summary>
-/// The host a fresh container runs: no database configured anywhere, so it
-/// serves the setup screen and the database settings, and nothing else.
-/// </summary>
+/// <summary>The host a fresh container runs: no database configured, so it serves only the setup screen and the database settings.</summary>
 [Collection(RequiresDatabase.Name)]
 public class SetupHostTests(PostgresFixture postgres)
 {
     [Fact]
     public async Task Setup_ShouldBeAtTheDatabaseStep_WhenNoneIsConfigured()
     {
-        // Arrange
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
 
-        // Act
         var response = await client.GetAsync("/api/v1/setup", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("database", response.Json!.Value.GetProperty("stage").GetString());
     }
@@ -30,14 +24,11 @@ public class SetupHostTests(PostgresFixture postgres)
     [Fact]
     public async Task EveryOtherApiRoute_ShouldSaySetupIsRequired_RatherThanNotFound()
     {
-        // Arrange
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
 
-        // Act
         var response = await client.GetAsync("/api/v1/users/me", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("settings.setup_required", response.ProblemCode);
     }
@@ -45,26 +36,21 @@ public class SetupHostTests(PostgresFixture postgres)
     [Fact]
     public async Task Readiness_ShouldBeReady_SoAProxyRoutesToTheSetupScreen()
     {
-        // Arrange
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
 
-        // Act
         var response = await client.GetAsync("/health/ready", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task Database_ShouldBeSavedAndARestartAskedFor_WhenItCanBeReached()
     {
-        // Arrange
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
         var settings = postgres.Settings;
 
-        // Act
         var response = await client.PutAsync(
             "/api/v1/settings/database",
             new
@@ -79,7 +65,6 @@ public class SetupHostTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.Equal(1, factory.Restarts.Scheduled);
 
@@ -91,12 +76,10 @@ public class SetupHostTests(PostgresFixture postgres)
     [Fact]
     public async Task Database_ShouldBeRefusedWithoutTheServersOwnWords_WhenThePasswordIsWrong()
     {
-        // Arrange
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
         var settings = postgres.Settings;
 
-        // Act
         var response = await client.PutAsync(
             "/api/v1/settings/database",
             new
@@ -111,9 +94,7 @@ public class SetupHostTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // Which kind of failure, and nothing the server said: anybody may ask
-        // this during setup, of any address.
+        // Which kind of failure and nothing the server said: anybody may ask this during setup, of any address.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("settings.database_login_refused", response.ProblemCode);
         Assert.DoesNotContain("password authentication failed", response.Body, StringComparison.OrdinalIgnoreCase);
@@ -124,19 +105,15 @@ public class SetupHostTests(PostgresFixture postgres)
     [Fact]
     public async Task Database_ShouldBeAccepted_WhenTheExtensionsAreMissingButTheRoleMayInstallThem()
     {
-        // Arrange
-        // Owning the database is what the production init script arranges, and
-        // it is enough: the first migration installs the extensions itself.
+        // Owning the database is enough (the production init script arranges it); the first migration installs the extensions.
         var fresh = $"fresh_{Guid.CreateVersion7():n}";
         await postgres.ExecuteAsSuperuserAsync($"create database {fresh} owner {postgres.Settings.Username};", Token);
 
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
 
-        // Act
         var response = await client.PutAsync("/api/v1/settings/database", DatabaseRequest(fresh), Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.Equal(1, factory.Restarts.Scheduled);
     }
@@ -144,7 +121,6 @@ public class SetupHostTests(PostgresFixture postgres)
     [Fact]
     public async Task Database_ShouldBeRefused_WhenTheRoleMayNotInstallTheExtensionsTheSchemaNeeds()
     {
-        // Arrange
         // Created by someone else, so the application role has no CREATE on it.
         var foreign = $"foreign_{Guid.CreateVersion7():n}";
         await postgres.ExecuteAsSuperuserAsync($"create database {foreign};", Token);
@@ -152,12 +128,9 @@ public class SetupHostTests(PostgresFixture postgres)
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
 
-        // Act
         var response = await client.PutAsync("/api/v1/settings/database", DatabaseRequest(foreign), Token);
 
-        // Assert
-        // Found now, while the setup screen can still say so — not by the
-        // migrations after the restart, as a process that stops on every start.
+        // Found now, while setup can still say so, not by migrations after the restart.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("settings.database_unsuitable", response.ProblemCode);
         Assert.Contains(
@@ -169,9 +142,7 @@ public class SetupHostTests(PostgresFixture postgres)
     [Fact]
     public async Task Database_ShouldBeRefusedWith429_OnceOneAddressHasTriedTenTimesInAMinute()
     {
-        // Arrange
-        // Every attempt opens a connection to the address it names, and anybody
-        // may ask while the instance is unclaimed.
+        // Every attempt connects to the address it names, and anybody may ask while the instance is unclaimed.
         using var factory = new SetupApiFactory();
         using var client = factory.NewApiClient();
         var nowhere = new
@@ -191,10 +162,8 @@ public class SetupHostTests(PostgresFixture postgres)
             Assert.Equal(HttpStatusCode.BadRequest, tried.StatusCode);
         }
 
-        // Act
         var response = await client.PutAsync("/api/v1/settings/database", nowhere, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
         Assert.Equal("request.rate_limited", response.ProblemCode);
         Assert.NotNull(response.Headers.RetryAfter);

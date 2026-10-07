@@ -11,19 +11,12 @@ using OpenTelemetry.Resources;
 
 namespace IntegrationTests.Pipeline;
 
-/// <summary>
-/// Which service the web app's records are exported as.
-/// </summary>
-/// <remarks>
-/// They reach the collector through the API, and an operator looking at a
-/// broken page should not have to know that: it is filed under the web app.
-/// </remarks>
+/// <summary>The web app's records reach the collector through the API but are filed under the web app's service.</summary>
 public class WebAppTelemetryTests
 {
     [Fact]
     public void WebAppRecords_ShouldBeExportedAsTheWebApp_WithTheRequestScope()
     {
-        // Arrange
         var exported = new Exported();
 
         using var provider = new WebAppLoggerProvider(
@@ -32,7 +25,6 @@ public class WebAppTelemetryTests
             logging => logging.AddProcessor(exported));
         using var loggers = LoggerFactory.Create(logging => logging.AddProvider(provider));
 
-        // Act
         using (loggers.CreateLogger(CulinaTelemetry.WebAppCategory)
                    .BeginScope(new Dictionary<string, object> { ["RequestId"] = "request-1" }))
         {
@@ -41,7 +33,6 @@ public class WebAppTelemetryTests
 
         loggers.CreateLogger("Api.Anything").LogError("The server broke");
 
-        // Assert
         var record = Assert.Single(exported.Records);
         Assert.Equal(CulinaTelemetry.WebAppCategory, record.Category);
         Assert.Equal(ObservabilityExtensions.WebAppService, record.Service);
@@ -51,7 +42,6 @@ public class WebAppTelemetryTests
     [Fact]
     public void WebAppRecords_ShouldNotBeExportedAsTheApi()
     {
-        // Arrange
         var exported = new Exported();
         var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
 
@@ -61,11 +51,9 @@ public class WebAppTelemetryTests
         using var host = builder.Build();
         var loggers = host.Services.GetRequiredService<ILoggerFactory>();
 
-        // Act
         loggers.CreateLogger(CulinaTelemetry.WebAppCategory).LogError("The page broke");
         loggers.CreateLogger("Api.Anything").LogError("The server broke");
 
-        // Assert
         var record = Assert.Single(exported.Records);
         Assert.Equal("Api.Anything", record.Category);
         Assert.Equal(ObservabilityExtensions.ApiService, record.Service);

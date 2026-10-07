@@ -6,14 +6,9 @@ using Response = Contracts.Registration.GetPolicy.Response;
 namespace Api.Endpoints.Registration.GetPolicy.V1;
 
 /// <summary>
-/// Tells a sign-up form what this instance allows.
+/// Tells a sign-up form what this instance allows. Anonymous, with only the global per-address ceiling:
+/// the registration limit would be spent by page visits and link hovers.
 /// </summary>
-/// <remarks>
-/// Anonymous by necessity — the caller has no account yet. Only the global
-/// per-address ceiling applies: the register page reads this on every visit
-/// and on every hover over a link to it, so sharing the registration limit
-/// spent a household's sign-up attempts before anybody submitted the form.
-/// </remarks>
 internal sealed class GetRegistrationPolicyEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

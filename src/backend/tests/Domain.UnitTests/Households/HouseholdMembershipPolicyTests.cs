@@ -3,10 +3,6 @@ using TestSupport;
 
 namespace Domain.UnitTests.Households;
 
-/// <summary>
-/// Membership rules are Domain tests, not HTTP round trips: a rule about who
-/// may edit a household is true whether or not the app has an API.
-/// </summary>
 public class HouseholdMembershipPolicyTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 12, 10, 0, 0, TimeSpan.Zero);
@@ -24,8 +20,7 @@ public class HouseholdMembershipPolicyTests
         var result = HouseholdMembershipPolicy.CanView(household, Stranger);
 
         // Assert
-        // Not "forbidden": that would confirm the household exists, which is
-        // exactly what a non-member has no business learning.
+        // Not "forbidden": that would confirm the household exists.
         result.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
     }
 
@@ -92,8 +87,7 @@ public class HouseholdMembershipPolicyTests
         var result = household.Remove(Owner, actingUserId: Owner);
 
         // Assert
-        // The last owner cannot leave, even voluntarily: a household with no
-        // owner can never be administered again.
+        // Even voluntarily: an ownerless household can never be administered again.
         result.ShouldBeFailure(HouseholdErrors.LastOwner);
     }
 
@@ -149,8 +143,7 @@ public class HouseholdMembershipPolicyTests
         var result = household.Remove(target, actingUserId: Stranger);
 
         // Assert
-        // One answer for a member, a non-member and the stranger themselves:
-        // anything else tells a stranger the household exists and who is in it.
+        // One answer whoever is named, so a stranger learns neither that it exists nor who is in it.
         result.ShouldBeFailure(HouseholdErrors.NotFound(household.Id));
     }
 
@@ -265,7 +258,7 @@ public class HouseholdMembershipPolicyTests
         var result = heir.StopInheriting(actingUserId: Owner);
 
         // Assert
-        // A link is both halves or neither; the database refuses half of one.
+        // A link is both halves or neither.
         result.ShouldBeSuccess();
         Assert.Null(heir.InheritsFrom);
         Assert.Null(heir.InheritsSetBy);
@@ -297,9 +290,7 @@ public class HouseholdMembershipPolicyTests
         var result = heir.Inherit(strangers, [strangers.Id], actingUserId: Owner);
 
         // Assert
-        // Inheriting shows the parent's recipes to everybody in the heir, so
-        // only somebody who can already see them may do it, and a stranger to
-        // the parent learns nothing about whether it exists.
+        // Only someone who can already see the parent's recipes may expose them; a stranger learns nothing.
         result.ShouldBeFailure(HouseholdErrors.NotFound(strangers.Id));
         Assert.Null(heir.InheritsFrom);
     }
@@ -368,8 +359,7 @@ public class HouseholdMembershipPolicyTests
         var result = heir.StopInheritingFrom(parent, actingUserId: Owner);
 
         // Assert
-        // The owner of the kitchen being read keeps a say over who reads it,
-        // without being in the household that does.
+        // The parent's owner keeps a say over who reads it without being in the heir.
         result.ShouldBeSuccess();
         Assert.Null(heir.InheritsFrom);
         Assert.Null(heir.InheritsSetBy);

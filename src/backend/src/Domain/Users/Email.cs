@@ -16,16 +16,7 @@ public sealed partial record Email
     /// <summary>The normalised address.</summary>
     public string Value { get; }
 
-    /// <summary>
-    /// Parses an address, returning a failure rather than throwing.
-    /// </summary>
-    /// <param name="value">What the caller supplied.</param>
-    /// <remarks>
-    /// The pattern is deliberately permissive. Fully validating an address is
-    /// impossible in a regular expression and pointless in practice: the only
-    /// proof an address works is a message arriving at it. This rejects the
-    /// obvious mistakes and nothing else.
-    /// </remarks>
+    /// <summary>Parses an address, returning a failure rather than throwing; the pattern is deliberately permissive and rejects only obvious mistakes.</summary>
     public static Result<Email> Create(string? value)
     {
         var normalised = value?.Trim().ToLowerInvariant();
@@ -40,12 +31,7 @@ public sealed partial record Email
         return new Email(normalised);
     }
 
-    /// <summary>The address, for logging in a form that reveals nothing.</summary>
-    /// <remarks>
-    /// A full address is personal data and never appears in a log line. The
-    /// domain alone is enough to tell "our users" from "a bot with a
-    /// disposable address".
-    /// </remarks>
+    /// <summary>The domain alone, for logging: a full address is personal data and never appears in a log line.</summary>
     public string Domain => Value[(Value.IndexOf('@', StringComparison.Ordinal) + 1)..];
 
     /// <inheritdoc/>

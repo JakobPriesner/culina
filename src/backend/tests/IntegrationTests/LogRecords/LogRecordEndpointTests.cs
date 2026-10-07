@@ -8,14 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.LogRecords;
 
-/// <summary>
-/// The web app's way of telling the operator what went wrong in it.
-/// </summary>
-/// <remarks>
-/// What is worth proving end to end is the reach of it: a page that broke
-/// before anybody signed in has to be able to say so, and a signed-in page is
-/// still held to the CSRF rule every other write is.
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class LogRecordEndpointTests(PostgresFixture postgres)
 {
@@ -33,7 +25,7 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
         var response = await client.PostAsync("/api/v1/log-records", Batch("uncaught_error"), Token);
 
         // Assert
-        // The sign-in page is a page too, and it breaks for the same reasons.
+        // The sign-in page breaks for the same reasons.
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
 
@@ -92,9 +84,7 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
         var refused = await client.SendAsync(Report(121), Token);
 
         // Assert
-        // One report from each of 121 addresses: none of them near its own
-        // limit, and still the last one refused, because a botnet is many
-        // addresses and the disk is one.
+        // 121 addresses, none near its own limit, yet the last is refused: the ceiling is shared.
         Assert.Equal(120, accepted);
         Assert.Equal(HttpStatusCode.TooManyRequests, refused.StatusCode);
         Assert.Equal("request.rate_limited", refused.ProblemCode);
@@ -112,10 +102,7 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
         return request;
     }
 
-    /// <summary>
-    /// Lets a test speak from many addresses, which the in-memory test server
-    /// otherwise cannot.
-    /// </summary>
+    // Lets a test speak from many addresses, which the in-memory test server cannot.
     private sealed class ClientAddressFromHeader : IStartupFilter
     {
         internal const string Header = "X-Test-Client-Address";

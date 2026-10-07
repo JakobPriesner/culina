@@ -35,12 +35,8 @@ internal sealed class GetCurrentCookSessionQueryHandler(
             return tracked.Record(Result<Response>.Failure(CookingErrors.SessionNotFound));
         }
 
-        // The title comes along so the resume bar is one request, not two: it
-        // is on screen from the moment the app boots, and a second round trip
-        // there is a second round trip on every page. Asked through access
-        // again, not trusted from when cooking began: somebody who has since
-        // left the household, or whose kitchen stopped inheriting the recipe,
-        // has nothing to resume and is not told its title.
+        // The title comes along so the resume bar (on screen from boot) is one request. Access is
+        // re-checked: someone who left the household or lost inheritance has nothing to resume.
         var recipe = await RecipeAccess
             .VisibleInAsync(recipes, households, session.RecipeId, session.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);

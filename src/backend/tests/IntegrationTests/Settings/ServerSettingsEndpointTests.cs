@@ -27,7 +27,7 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
         Assert.Equal("grpc", body.GetProperty("telemetry").GetProperty("otlpProtocol").GetString());
         Assert.True(body.GetProperty("writable").GetBoolean());
 
-        // The test host sets these the way a deployment would, above the file.
+        // The test host pins these the way a deployment would.
         var pinned = body.GetProperty("pinned").EnumerateArray().Select(entry => entry.GetString()).ToList();
         Assert.Contains("Cookies__Secure", pinned);
         Assert.Contains("RateLimits__LoginPerIpPerMinute", pinned);
@@ -70,7 +70,7 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
         var response = await admin.PutAsync("/api/v1/settings/server", proposal, Token);
 
         // Assert
-        // Saving without an edit must not take the server away for a moment.
+        // Saving without an edit must not restart the server.
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(0, factory.Restarts.Scheduled);
         Assert.False(File.Exists(factory.ServerSettingsFile));
@@ -133,8 +133,7 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
         var response = await admin.PutAsync("/api/v1/settings/server", proposal, Token);
 
         // Assert
-        // A typed refusal, not a 500 — and not a fresh file in its place, which
-        // would throw away whatever the hand edit was for.
+        // A typed refusal, and the hand-edited file is left alone.
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("settings.file_unreadable", response.ProblemCode);
         Assert.Equal(broken, await File.ReadAllTextAsync(factory.ServerSettingsFile, Token));
@@ -154,8 +153,7 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
         var response = await admin.PutAsync("/api/v1/settings/server", proposal, Token);
 
         // Assert
-        // "Make it work" from the screen would let every client forge its
-        // address, which the per-address limits and the security log trust.
+        // A too-wide network would let every client forge its address, which rate limits and the security log trust.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("settings.proxy_network_too_wide", response.ProblemCode);
         Assert.Equal(0, factory.Restarts.Scheduled);
@@ -175,8 +173,7 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
         var settings = await stranger.GetAsync("/api/v1/settings/server", Token);
 
         // Assert
-        // Whoever creates the first account administers the instance anyway,
-        // so the setup screen may fill these in before it exists.
+        // The first account becomes administrator anyway, so setup may edit these before it exists.
         Assert.Equal("account", setup.Json!.Value.GetProperty("stage").GetString());
         Assert.Equal(HttpStatusCode.OK, settings.StatusCode);
     }
@@ -230,7 +227,6 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    /// <summary>What the settings screen would send back unedited: the groups it read.</summary>
     private static async Task<JsonObject> ProposalAsync(ApiClient admin)
     {
         var read = JsonNode.Parse((await admin.GetAsync("/api/v1/settings/server", Token)).Body)!.AsObject();

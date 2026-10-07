@@ -19,8 +19,8 @@ internal sealed class ExportArchiveEndpoint : IEndpoint
                 IQueryHandler<ExportArchiveQuery, ArchiveWritten> handler,
                 CancellationToken cancellationToken) =>
             {
-                // Named and typed before a byte is written, because once the
-                // body has started there is no way back to a problem response.
+                // Named and typed before a byte is written: once the body starts there is no
+                // problem response.
                 context.Response.ContentType = "application/json";
                 context.Response.Headers.ContentDisposition =
                     $"attachment; filename=\"culina-{DateTime.UtcNow:yyyy-MM-dd}.json\"";

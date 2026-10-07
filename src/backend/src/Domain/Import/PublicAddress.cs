@@ -3,36 +3,16 @@ using System.Net.Sockets;
 
 namespace Domain.Import;
 
-/// <summary>
-/// Whether an address is one the server may be asked to fetch.
-/// </summary>
+/// <summary>Whether an address is one the server may be asked to fetch.</summary>
 /// <remarks>
-/// <para>
-/// The whole of the danger in "paste a link and I will read it" is that the
-/// server does the reading. Without this, anyone with an account could aim it
-/// at <c>169.254.169.254</c> and read a cloud instance's credentials, or walk
-/// the private network the container sits in and use the timing of the replies
-/// as a port scanner.
-/// </para>
-/// <para>
-/// A deny list of ranges rather than an allow list of hosts, because the
-/// feature is "any recipe website". What it denies is everything that is not
-/// the public internet — and it is applied to the <em>resolved address</em>,
-/// every time, including after each redirect, because a name that resolved
-/// publicly a moment ago can resolve to 127.0.0.1 on the next lookup.
-/// </para>
+/// The server does the reading, so without this anyone could aim it at cloud metadata or port-scan the
+/// private network. A deny list of non-public ranges applied to the <em>resolved address</em> every time,
+/// including after redirects, since a name can resolve differently on the next lookup.
 /// </remarks>
 public static class PublicAddress
 {
-    /// <summary>
-    /// Cloud metadata services that live inside a private range rather than at
-    /// the link-local address most clouds use: Alibaba's, and AWS's over IPv6.
-    /// </summary>
-    /// <remarks>
-    /// Compared as bytes, not with <see cref="IPAddress.Equals(object)"/>,
-    /// which also compares an IPv6 scope id — and <c>fd00:ec2::254%1</c> is the
-    /// same machine as <c>fd00:ec2::254</c>.
-    /// </remarks>
+    // Cloud metadata inside private ranges (Alibaba, AWS over IPv6). Compared as bytes: IPAddress.Equals also
+    // compares the IPv6 scope id.
     private static readonly byte[][] CloudMetadata =
     [
         [100, 100, 100, 200],
@@ -40,7 +20,6 @@ public static class PublicAddress
     ];
 
     /// <summary>Whether the server may open a connection to this address.</summary>
-    /// <param name="address">A resolved address, never a host name.</param>
     public static bool IsPublic(IPAddress? address)
     {
         if (address is null)
@@ -48,8 +27,7 @@ public static class PublicAddress
             return false;
         }
 
-        // An IPv4 address written as IPv6 is the same address, and checking the
-        // wrapper instead of the value is how ::ffff:127.0.0.1 gets through.
+        // An IPv4-mapped IPv6 address is the same address; checking the wrapper lets ::ffff:127.0.0.1 through.
         if (address.IsIPv4MappedToIPv6)
         {
             return IsPublic(address.MapToIPv4());
@@ -59,30 +37,15 @@ public static class PublicAddress
         {
             AddressFamily.InterNetwork => IsPublicV4(address),
             AddressFamily.InterNetworkV6 => IsPublicV6(address),
-            // Anything else is a unix socket or something stranger, and no
-            // recipe website has ever been at one.
+            // Anything else is a unix socket or stranger.
             _ => false
         };
     }
 
-    /// <summary>
-    /// Whether an address is on a private network an operator may opt into.
-    /// </summary>
-    /// <param name="address">A resolved address, never a host name.</param>
+    /// <summary>Whether an address is on a private network an operator may opt into.</summary>
     /// <remarks>
-    /// <para>
-    /// The ranges a home or a container network actually hands out: RFC 1918,
-    /// the shared space (100.64.0.0/10) that Tailscale and carrier NAT use, and
-    /// IPv6 unique local addresses. That is where somebody's own recipe server
-    /// is, and it is all that allowing private addresses allows.
-    /// </para>
-    /// <para>
-    /// Never anything else, whatever the operator said. Loopback is this very
-    /// server and its admin ports; link-local is where cloud metadata answers;
-    /// 0.0.0.0 means "here" on some stacks; multicast and broadcast are not one
-    /// machine at all. None of those is where a recipe library lives, and each
-    /// is where an attack starts.
-    /// </para>
+    /// Only RFC 1918, shared space (100.64.0.0/10) and IPv6 unique local: where a self-hosted recipe server
+    /// lives. Loopback, link-local (cloud metadata), 0.0.0.0, multicast and broadcast are never allowed.
     /// </remarks>
     public static bool IsPrivateNetwork(IPAddress? address)
     {
@@ -125,7 +88,7 @@ public static class PublicAddress
 
         return octets[0] switch
         {
-            // This network, and 0.0.0.0 — which on some stacks means "here".
+            // This network, and 0.0.0.0 ("here" on some stacks).
             0 => false,
             // Loopback.
             127 => false,
@@ -137,8 +100,7 @@ public static class PublicAddress
             172 => octets[1] is < 16 or > 31,
             192 => octets[1] switch
             {
-                // Private, and the documentation range that some resolvers
-                // hand back for a name that does not exist.
+                // Private, and the documentation range some resolvers return for nonexistent names.
                 168 => false,
                 0 => false,
                 _ => true
@@ -156,11 +118,8 @@ public static class PublicAddress
     {
         var bytes = address.GetAddressBytes();
 
-        // Global unicast, 2000::/3, is the whole of the IPv6 internet. Outside
-        // it are loopback, the unspecified address, link-local, unique local,
-        // multicast, the NAT64 prefix — a door into whatever the translator
-        // can reach — and the old ways of writing an IPv4 address in IPv6
-        // (::127.0.0.1). None of them is a recipe website.
+        // Only global unicast (2000::/3) is the IPv6 internet; the rest (loopback, link-local, unique local,
+        // multicast, NAT64, IPv4-compatible) is never a recipe website.
         if ((bytes[0] & 0xE0) != 0x20)
         {
             return false;

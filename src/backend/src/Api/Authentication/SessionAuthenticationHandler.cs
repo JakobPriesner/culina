@@ -10,15 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Authentication;
 
-/// <summary>
-/// Turns the session cookie into a principal.
-/// </summary>
-/// <remarks>
-/// A handler of our own rather than the framework's cookie authentication,
-/// because Culina's cookie carries an opaque reference and not a serialised
-/// ticket. Every request therefore reads the session row, which is what makes
-/// revocation immediate — the cost is one indexed lookup.
-/// </remarks>
+/// <summary>Turns the session cookie into a principal; reads the session row per request so revocation is immediate.</summary>
 internal sealed class SessionAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
@@ -32,9 +24,7 @@ internal sealed class SessionAuthenticationHandler(
     {
         if (SessionCookies.Read(Context, cookies) is not { Length: > 0 } token)
         {
-            // No cookie is not a failure: most requests to the app shell and to
-            // static files are anonymous, and reporting failure would fill the
-            // log with noise.
+            // No cookie is not a failure: anonymous requests are the norm.
             return AuthenticateResult.NoResult();
         }
 
@@ -48,7 +38,7 @@ internal sealed class SessionAuthenticationHandler(
             _ => Task.FromResult(AuthenticateResult.NoResult())).ConfigureAwait(false);
     }
 
-    /// <summary>Admits the session, and keeps it from lapsing while it is used.</summary>
+    /// <summary>Admits the session and keeps it from lapsing while used.</summary>
     private async Task<AuthenticateResult> AdmitAsync(Session session, DateTimeOffset now)
     {
         if (!session.IsActive(now))
@@ -58,13 +48,11 @@ internal sealed class SessionAuthenticationHandler(
 
         var renewed = await RenewAsync(session, now).ConfigureAwait(false);
 
-        // A session revoked between the read and the renewal stays revoked,
-        // and this request is not let in on it.
+        // Revoked between the read and the renewal: stays revoked.
         return renewed.Match(
             () =>
             {
-                // CsrfMiddleware compares against this, so an unsafe request
-                // reads its session once rather than twice.
+                // CsrfMiddleware compares against this, saving a second session read.
                 RequestContext.SetCsrfTokenHash(Context, session.CsrfTokenHash);
 
                 return AuthenticateResult.Success(TicketFor(session.UserId, session.Id));
@@ -72,19 +60,7 @@ internal sealed class SessionAuthenticationHandler(
             _ => AuthenticateResult.NoResult());
     }
 
-    /// <summary>
-    /// Keeps a session that is being used from lapsing.
-    /// </summary>
-    /// <remarks>
-    /// Culina has no refresh token, because the cookie is an opaque reference
-    /// and not a self-contained one: there is nothing to exchange, and a
-    /// revoked session stops working on the next request rather than at the end
-    /// of an access token's life. This is what takes its place — the row's
-    /// expiry and both cookies move forward while the session is in use, so
-    /// <c>Cookies__SessionDays</c> means "thirty days unused" rather than
-    /// "thirty days from signing in" — up to <c>Cookies__MaxSessionDays</c>
-    /// after signing in, when the session ends however busy it is.
-    /// </remarks>
+    /// <summary>Slides the session expiry and cookies forward while in use, up to <c>Cookies__MaxSessionDays</c>.</summary>
     private async Task<Result> RenewAsync(Session session, DateTimeOffset now)
     {
         if (!session.IsDueForRenewal(now, cookies.RenewAfter))
@@ -96,8 +72,7 @@ internal sealed class SessionAuthenticationHandler(
 
         var renewed = await sessions.RenewAsync(session, Context.RequestAborted).ConfigureAwait(false);
 
-        // Authentication runs before any endpoint, so the response has not
-        // started and a cookie can still be added to it.
+        // Runs before any endpoint, so the response has not started.
         return renewed.Tap(() => SessionCookies.Renew(Context, cookies, now));
     }
 

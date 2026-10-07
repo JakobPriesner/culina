@@ -37,8 +37,7 @@ internal sealed class GetCurrentUserQueryHandler(
                     .ForUserAsync(user.Id, cancellationToken)
                     .ConfigureAwait(false);
 
-                // One short walk per household. A person is in two or three,
-                // and each chain is a link or two long.
+                // One short walk per household: a person is in two or three, each chain a link or two long.
                 var ancestors = new Dictionary<Guid, IReadOnlyList<InheritedHousehold>>();
 
                 foreach (var household in memberships)
@@ -90,15 +89,8 @@ internal static class CurrentUserMappings
         };
     }
 
-    /// <summary>What the assistant may be asked for, as the client needs it.</summary>
+    /// <summary>What the assistant may be asked for. Asked of <c>Allows</c>, so it says what the server will say when the request arrives.</summary>
     /// <param name="settings">The live instance settings.</param>
-    /// <remarks>
-    /// Asked of <c>Allows</c> rather than read off the four switches, so this
-    /// says the same thing the server will say when the request arrives — on,
-    /// connected, allowed here, and possible for this provider. A client told a
-    /// capability was available and then refused would be a client showing a
-    /// button that does not work.
-    /// </remarks>
     private static Contracts.Users.GetCurrent.AssistanceAvailability ToAvailability(
         this AssistanceSettings settings) =>
         new()

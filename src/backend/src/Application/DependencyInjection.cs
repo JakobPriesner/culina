@@ -91,31 +91,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Application;
 
-/// <summary>
-/// Registers every command and query handler, explicitly, one line each.
-/// </summary>
+/// <summary>Registers every command and query handler, explicitly, one line each.</summary>
 /// <remarks>
-/// <para>
-/// No scanning. A handler that is deleted, renamed or never registered must
-/// fail the build rather than surface as a 500 on the one route nobody tested;
-/// an architecture test asserts that every handler in this assembly appears
-/// here.
-/// </para>
-/// <para>
-/// Handlers are scoped: they hold a unit of work and repositories, which belong
-/// to one request.
-/// </para>
+/// No scanning, so a handler never registered fails the build (an architecture test checks);
+/// scoped, as they hold a unit of work.
 /// </remarks>
 public static class DependencyInjection
 {
     /// <summary>Adds the use cases.</summary>
-    /// <param name="services">The container to register into.</param>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Handlers are grouped by domain, in the same order as the folders.
-        // Nothing depends on the order itself.
+        // Grouped by domain, in folder order; the order itself does not matter.
         return services
             // Users
             .AddScoped<Application.Recipes.Intake.RecipeIntake>()
@@ -306,11 +294,10 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<ImportFromSourceCommand,
                 Contracts.Recipes.Sources.ImportStartedResponse>, ImportFromSourceCommandHandler>()
             .AddScoped<IQueryHandler<WatchImportQuery, ImportProgress>, WatchImportQueryHandler>()
-            // One recipe's worth of work, resolved once per recipe: an import
-            // runs them in parallel and a unit of work is a connection.
+            // One recipe's worth of work, resolved once per recipe: imports run them in parallel.
             .AddScoped<RecipeImporter>()
-            // Singletons: an import outlives the request that asked for it, and
-            // the runs a watcher reconnects to are the ones this process holds.
+            // Singletons: an import outlives its request, and a watcher reconnects to runs this
+            // process holds.
             .AddSingleton<ImportRuns>()
             .AddSingleton<SourceImportRunner>()
             .AddScoped<IQueryHandler<GetMealPlanQuery, Contracts.Planning.MealPlanResponse>,
@@ -358,16 +345,11 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// The use cases the host that runs before there is a database can serve:
-    /// where setup has got to, and the database settings.
+    /// The use cases the pre-database host can serve: setup progress and database settings.
     /// </summary>
     /// <remarks>
-    /// Part of <see cref="AddApplication"/> as well, because the same routes
-    /// exist once there is a database — the setup screen asks the same
-    /// questions of both hosts, and the settings screen edits the same
-    /// database settings later.
+    /// Also part of <see cref="AddApplication"/>: the same routes exist once there is a database.
     /// </remarks>
-    /// <param name="services">The container to register into.</param>
     public static IServiceCollection AddSetupHandlers(this IServiceCollection services) =>
         services
             .AddScoped<IQueryHandler<GetSetupQuery, Contracts.Setup.Get.Response>, GetSetupQueryHandler>()

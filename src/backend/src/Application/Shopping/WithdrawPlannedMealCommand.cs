@@ -7,15 +7,10 @@ using Domain.Shared;
 
 namespace Application.Shopping;
 
-/// <summary>Takes a planned meal's shopping back off the list.</summary>
+/// <summary>Takes a planned meal's shopping off the list: only what that meal added; typed lines and bought items stay. Idempotent.</summary>
 /// <param name="HouseholdId">Whose list.</param>
 /// <param name="UserId">Who is asking.</param>
 /// <param name="PlanEntryId">The planned meal, which may already be off the plan.</param>
-/// <remarks>
-/// Exactly what that meal asked for, and nothing else: another meal's share of
-/// the same flour stays, a line somebody typed stays, and what is already in
-/// the trolley stays because it has been bought. Repeating it changes nothing.
-/// </remarks>
 public sealed record WithdrawPlannedMealCommand(Guid HouseholdId, Guid UserId, Guid PlanEntryId);
 
 internal sealed class WithdrawPlannedMealCommandHandler(

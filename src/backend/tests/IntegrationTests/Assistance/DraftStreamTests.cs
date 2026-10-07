@@ -12,36 +12,14 @@ using SixLabors.ImageSharp;
 namespace IntegrationTests.Assistance;
 
 /// <summary>
-/// A recipe arriving a field at a time, over the wire, from a provider.
+/// A recipe typed by a model reaches a browser as several drafts: the whole chain from endpoint to framing, against a localhost stub in OpenAI's streaming shape.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The one test that exercises the whole chain: the endpoint, the budget
-/// checks, the adapter, the lenient reading of JSON that has not finished
-/// arriving, and the framing on the way out. Each of those has a test of its
-/// own; none of them proves that a recipe typed by a model reaches a browser as
-/// several drafts, and that is the feature.
-/// </para>
-/// <para>
-/// The provider is a stub on localhost answering in OpenAI's streaming shape,
-/// which is exactly what "anything that answers in their shape" means — the
-/// adapter is pointed at it by an administrator setting a base address, the
-/// same way somebody points this at a gateway of their own.
-/// </para>
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class DraftStreamTests(PostgresFixture postgres)
 {
     private const string Password = "correct horse battery staple";
 
-    /// <summary>
-    /// The recipe, cut where a model would pause for breath.
-    /// </summary>
-    /// <remarks>
-    /// Deliberately cut mid-value in places — <c>"Auber</c> and <c>"Alles ko</c>
-    /// — because a provider does not send whole fields and the reading has to
-    /// survive halves.
-    /// </remarks>
+    /// <summary>The recipe, cut mid-value (<c>"Auber</c>) because providers do not send whole fields.</summary>
     private static readonly string[] Written =
     [
         "{\"title\":\"Auber",
@@ -55,11 +33,9 @@ public class DraftStreamTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldArriveInPieces_EachOneFullerThanTheLast()
     {
-        // Arrange
         using var provider = new StubProvider(Written);
         var world = await ConnectedAsync(provider);
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -71,24 +47,21 @@ public class DraftStreamTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/event-stream", response.ContentHeaders.ContentType?.MediaType);
 
         var events = Events(response.Body!);
 
-        // More than one, or this is a request that answers once wearing a
-        // stream's clothes.
+        // More than one, or this is a request that answers once in a stream's clothes.
         Assert.True(events.Count > 1, $"The draft arrived as {events.Count} event(s).");
 
-        // The title lands while the steps are still being written, which is the
-        // whole reason for any of this.
+        // The title lands while the steps are still being written.
         var first = events[0];
         Assert.Equal("Auberginenauflauf", first.GetProperty("draft").GetProperty("title").GetString());
         Assert.False(first.GetProperty("finished").GetBoolean());
         Assert.Empty(first.GetProperty("draft").GetProperty("steps").EnumerateArray());
 
-        // One draft arriving, not several drafts.
+        // One draft arriving, not several.
         var draftIds = events
             .Select(one => one.GetProperty("draft").GetProperty("draftId").GetString())
             .Distinct()
@@ -111,11 +84,9 @@ public class DraftStreamTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldBeAskedForAsAStructuredOutput_NotAsARequestForJson()
     {
-        // Arrange
         using var provider = new StubProvider(Written);
         var world = await ConnectedAsync(provider);
 
-        // Act
         await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -127,12 +98,7 @@ public class DraftStreamTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // Asserted on the wire rather than on the schema object, because the
-        // client library rewrites what it is given on the way out — and it was
-        // the rewriting that went wrong: it marked every property required
-        // while leaving the request unstrict, so the answer was asked for in a
-        // shape nothing held it to.
+        // Asserted on the wire: the client library rewrote the schema (every property required, request not strict).
         var asked = JsonDocument.Parse(provider.LastRequest).RootElement
             .GetProperty("response_format")
             .GetProperty("json_schema");
@@ -143,11 +109,7 @@ public class DraftStreamTests(PostgresFixture postgres)
 
         Assert.False(schema.GetProperty("additionalProperties").GetBoolean());
 
-        // Every property required, which is what strict demands — and every
-        // optional one a union with null, which is what makes that honest. A
-        // required `prepMinutes` that could not be null is a model inventing a
-        // cooking time, and an invented time on a recipe read out of a
-        // photograph is the one failure of this feature nobody would catch.
+        // Strict needs every property required and every optional one nullable; a non-null `prepMinutes` would invent a cooking time.
         Assert.Equal(
             ["title", "description", "yieldAmount", "yieldLabel", "prepMinutes", "cookMinutes", "groups", "steps", "tags"],
             schema.GetProperty("required").EnumerateArray().Select(one => one.GetString()));
@@ -157,8 +119,7 @@ public class DraftStreamTests(PostgresFixture postgres)
             schema.GetProperty("properties").GetProperty("prepMinutes").GetProperty("type")
                 .EnumerateArray().Select(one => one.GetString()));
 
-        // The one that must not be null: a line with an amount and no
-        // ingredient is not a shorter line, it is a mistake.
+        // A line with an amount and no ingredient is a mistake, not a shorter line.
         Assert.Equal(
             "string",
             schema.GetProperty("properties").GetProperty("groups")
@@ -170,11 +131,9 @@ public class DraftStreamTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldCapWhatTheModelMayWrite_AtWhatTheReservationCovers()
     {
-        // Arrange
         using var provider = new StubProvider(Written);
         var world = await ConnectedAsync(provider);
 
-        // Act
         await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -186,9 +145,7 @@ public class DraftStreamTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // The budget sets aside a fixed sum before the call. Without a ceiling
-        // on the answer, one call could cost any amount past it.
+        // The budget reserves a fixed sum, so the answer needs a ceiling.
         var asked = JsonDocument.Parse(provider.LastRequest).RootElement;
 
         Assert.Equal(
@@ -199,9 +156,7 @@ public class DraftStreamTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldReadANullAsSilence_NotAsAValue()
     {
-        // Arrange
-        // What a strict answer looks like when the recipe does not say: every
-        // property present, and the ones it has nothing for set to null.
+        // A strict answer when the recipe is silent: every property present, nulls where it has nothing.
         using var provider = new StubProvider(
         [
             "{\"title\":\"Linsensuppe\",\"description\":null,\"yieldAmount\":null,",
@@ -214,7 +169,6 @@ public class DraftStreamTests(PostgresFixture postgres)
 
         var world = await ConnectedAsync(provider);
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -226,11 +180,9 @@ public class DraftStreamTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
         var draft = Events(response.Body!)[^1].GetProperty("draft");
 
-        // A null arrives as an absence, not as the string "null" and not as a
-        // zero. The editor this opens in must show an empty cooking time.
+        // A null arrives as an absence, not "null" or zero, so the editor shows an empty cooking time.
         Assert.False(draft.TryGetProperty("prepMinutes", out var prep) && prep.ValueKind is not JsonValueKind.Null);
         Assert.False(draft.TryGetProperty("description", out var about) && about.ValueKind is not JsonValueKind.Null);
 
@@ -243,11 +195,9 @@ public class DraftStreamTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldSayWhyOnTheLastEvent_WhenTheModelAnswersWithNonsense()
     {
-        // Arrange
         using var provider = new StubProvider(["I am afraid I cannot help with that."]);
         var world = await ConnectedAsync(provider);
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -259,10 +209,7 @@ public class DraftStreamTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // A 200 that has already begun cannot become a 422, so the failure
-        // travels as an event. This is the expected failure of the whole
-        // feature, not an exceptional one.
+        // A begun 200 cannot become a 422, so the failure travels as an event.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var last = Events(response.Body!)[^1];
@@ -276,11 +223,9 @@ public class DraftStreamTests(PostgresFixture postgres)
     [Fact]
     public async Task ProviderRefusal_ShouldBeLogged_WithWhatTheProviderSaid()
     {
-        // Arrange
         using var provider = new StubProvider(Written, refuseWith: HttpStatusCode.Unauthorized);
         var world = await ConnectedAsync(provider);
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -292,10 +237,7 @@ public class DraftStreamTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // Somebody cooking is told only that the assistant is unavailable; the
-        // operator holding the key needs to know it was refused, and the
-        // provider's own words are what tell a revoked key from a renamed model.
+        // The cook sees only "unavailable"; the operator needs the provider's words to tell a revoked key from a renamed model.
         Assert.Equal(
             "assistance.unavailable",
             Events(response.Body!)[^1].GetProperty("problem").GetProperty("code").GetString());
@@ -306,7 +248,7 @@ public class DraftStreamTests(PostgresFixture postgres)
 
         Assert.Contains(StubProvider.Refusal, line.Message + line.Exception, StringComparison.Ordinal);
 
-        // And the call itself, as the ledger settled it.
+        // The call itself, as the ledger settled it.
         var settled = await postgres.Api.Logs.WaitForAsync(
             line => line.EventId == 1502 && line["Outcome"] == "assistance.rejected");
 
@@ -356,18 +298,14 @@ public class DraftStreamTests(PostgresFixture postgres)
         Assert.Equal("image_url", parts[1].GetProperty("type").GetString());
         Assert.Equal("image_url", parts[2].GetProperty("type").GetString());
 
-        // Every screenshot is re-encoded on its way out, so none of them tells
-        // the provider where it was taken.
+        // Every screenshot is re-encoded so none tells the provider where it was taken.
         Assert.All(SentPictures(provider), AssertCarriesNothingButPixels);
     }
 
     [Fact]
     public async Task Photograph_ShouldReachTheProvider_AsAJpegWithoutWhereItWasTaken()
     {
-        // Arrange
-        // A photograph of a cookbook page carries the kitchen's coordinates as
-        // surely as a photograph of dinner, and this one goes to a third party.
-        // The client also says it is something it is not.
+        // A cookbook photo carries the kitchen's coordinates like any other, and this one goes to a third party.
         using var provider = new StubProvider(Written);
         using var world = await ConnectedAsync(provider, reading: true);
         var original = TestImages.LocatedPhotograph(3000, 1000);
@@ -378,7 +316,6 @@ public class DraftStreamTests(PostgresFixture postgres)
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/heic");
         form.Add(file, "file", "page.heic");
 
-        // Act
         var response = await world.Client.SendAsync(
             new HttpRequestMessage(
                 HttpMethod.Post,
@@ -386,14 +323,13 @@ public class DraftStreamTests(PostgresFixture postgres)
             { Content = form },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var sent = Assert.Single(SentPictures(provider));
 
         AssertCarriesNothingButPixels(sent);
 
-        // No larger than the provider would read it at anyway.
+        // No larger than the provider would read it anyway.
         using var decoded = Image.Load(sent.Bytes);
         Assert.Equal(2048, decoded.Width);
     }
@@ -442,8 +378,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.Accepted, accepted.StatusCode);
         var again = await SubmitIntake(world, id);
         Assert.Equal(id, again.Json!.Value.GetProperty("id").GetGuid());
-        // The response is complete while the provider is still waiting.
-        // Disposing the initiating client cannot cancel the server job.
+        // The response is complete while the provider still waits; disposing the client cannot cancel the server job.
         Assert.Equal(before, postgres.Api.PushRequests);
         world.Client.Dispose();
         provider.Continue();
@@ -545,8 +480,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         var draft = JsonSerializer.Deserialize<Contracts.Recipes.Drafts.Response>(string.Concat(Written)[..^1] +
             $",\"draftId\":\"{id}\",\"tags\":[]}}", json);
         var savedDraft = JsonSerializer.Serialize(draft, json);
-        // Exactly the state a stopped server leaves after its last streamed
-        // event and before committing the recipe. An expired lease is reclaimed.
+        // The state a stopped server leaves after its last streamed event, before the recipe commits. An expired lease is reclaimed.
         await postgres.ExecuteAsync($"""
             insert into recipe_intake_jobs(id,user_id,household_id,material,stage,draft,attempts,lease_until)
             values('{id}','{userId}','{world.HouseholdId}',$material${material}$material$::jsonb,
@@ -591,8 +525,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         await other.PostAsync("/api/v1/users", new { email = "other@example.com", displayName = "Other", password = Password }, Token);
         await other.PostAsync("/api/v1/sessions", new { email = "other@example.com", password = Password }, Token);
         Assert.Equal(HttpStatusCode.NoContent, (await other.PutAsync("/api/v1/push/subscription", registration, Token)).StatusCode);
-        // A delayed retry still belongs to the original user, even if the same
-        // device endpoint is now registered by somebody else.
+        // A delayed retry stays with the original user even if the device endpoint is now registered by somebody else.
         await postgres.ExecuteAsync($"update recipe_intake_notifications set delivered_at=null,retry_at=now() where job_id='{id}'", Token);
         var scope = postgres.Api.Services.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
@@ -686,15 +619,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         return new World(client, householdId);
     }
 
-    /// <summary>
-    /// A model provider, as far as the adapter can tell.
-    /// </summary>
-    /// <remarks>
-    /// Answers every request with the chunks it was given, in OpenAI's
-    /// streaming shape. A stub rather than a mocked client because what is
-    /// being proved includes the adapter and the SDK underneath it — a double
-    /// of the SDK would only prove that the double agrees with itself.
-    /// </remarks>
+    /// <summary>A stub model provider. A stub rather than a mocked client so the adapter and SDK are exercised.</summary>
     private sealed class StubProvider : IDisposable
     {
         private readonly HttpListener listener = new();

@@ -11,48 +11,20 @@ using OllamaSharp;
 namespace Infrastructure.Assistance;
 
 /// <summary>
-/// Talks to a model running on your own hardware.
+/// Talks to a model running on your own hardware: free, private, and works offline.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The provider this app is most obviously for. Culina is self-hosted, so the
-/// household that installed it is the household most likely to already have a
-/// model running in the same house — and for them the assistant costs nothing,
-/// sends nothing to anybody, and works with the network unplugged. Every
-/// privacy sentence elsewhere in this feature is about the other two providers;
-/// this one has none to write.
-/// </para>
-/// <para>
-/// OllamaSharp rather than the OpenAI-compatible endpoint, and the reasons are
-/// the same ones that made this class worth its own file when it spoke HTTP:
-/// the native API takes a JSON schema directly and the runner enforces it,
-/// where the compatibility layer's has been uneven; and the counts come back
-/// under names of their own, so an adapter pretending to be the OpenAI one
-/// reported zero usage for every call.
-/// </para>
-/// <para>
-/// The client is an <see cref="IChatClient"/> of its own accord, so composition
-/// here reads the same as it does for OpenAI. Drawing does not: no model this
-/// runner serves makes pictures, and the settings screen does not offer the
-/// job — this is the backstop for a request that arrived anyway.
-/// </para>
-/// <para>
-/// No key: there is nobody to authenticate to. The address is not optional for
-/// the same reason — a model on your own machine is wherever you put it.
-/// </para>
+/// OllamaSharp rather than the OpenAI-compatible endpoint: the native API enforces a JSON schema
+/// directly and reports usage under its own names. Needs no key; the address is required.
 /// </remarks>
-/// <param name="http">The shared client.</param>
-/// <param name="logger">Records what the runner refused, and why.</param>
 internal sealed class OllamaAssistant(
     AssistantHttp http,
     ILogger<OllamaAssistant> logger) : IAssistant
 {
-    /// <summary>Where Ollama listens when nobody has moved it.</summary>
-    /// <remarks>
-    /// Only a hint for the settings screen. The address is required, because a
-    /// default that is wrong on the machines where it matters is worse than an
-    /// empty box.
-    /// </remarks>
+    /// <summary>
+    /// Where Ollama listens by default; only a hint, since a wrong default is worse than an empty
+    /// box.
+    /// </summary>
     internal const string UsualAddress = "http://localhost:11434";
 
     public AssistantKind Kind => AssistantKind.Ollama;
@@ -70,9 +42,8 @@ internal sealed class OllamaAssistant(
             using var transport = http.ClientFor(@using.BaseUrl);
             using var client = new OllamaApiClient(transport, @using.Model);
 
-            // Through the interface on purpose: the client offers a shape of
-            // its own beside this one, and what this adapter wants is the one
-            // the OpenAI adapter also speaks.
+            // Through the interface: the client's own overload is not the shape the OpenAI adapter
+            // speaks.
             var answered = await ((IChatClient)client)
                 .GetResponseAsync(ChatAsk.Conversation(request), ChatAsk.Options(), cancellationToken)
                 .ConfigureAwait(false);
@@ -93,9 +64,7 @@ internal sealed class OllamaAssistant(
         ArgumentNullException.ThrowIfNull(@using);
         ArgumentNullException.ThrowIfNull(request);
 
-        // Both are disposed when the enumeration ends, however it ends —
-        // including a caller who walks away halfway through, which is what a
-        // person closing the page looks like from here.
+        // Disposed when the enumeration ends, including a caller who walks away halfway.
         using var transport = http.ClientFor(@using.BaseUrl);
         using var client = new OllamaApiClient(transport, @using.Model);
 
@@ -114,13 +83,8 @@ internal sealed class OllamaAssistant(
     }
 
     /// <summary>
-    /// Refused, because nothing this runner serves draws.
+    /// Refused, because nothing this runner serves draws; the settings screen does not offer it.
     /// </summary>
-    /// <remarks>
-    /// A fact about the provider rather than a failure of the call, which is
-    /// why the settings screen declines to offer the switch at all. This is the
-    /// backstop for a request that arrived anyway.
-    /// </remarks>
     public Task<Result<Drawn>> DrawAsync(
         Connected @using,
         Drawing request,
@@ -144,14 +108,8 @@ internal sealed class OllamaAssistant(
             [
                 .. pulled
                     .Where(model => (model.Name ?? string.Empty).Length > 0)
-                    // Whether anything here draws is read from its name like
-                    // everywhere else. Ollama serves language and vision models
-                    // today, so this is expected to say no to all of them — and
-                    // says yes rather than hiding a model somebody has pulled
-                    // on purpose.
-                    //
-                    // The date is when the model was pulled or last changed,
-                    // which on a machine of one's own is what "added" means.
+                    // Whether a model draws is read from its name as elsewhere; expected to say no
+                    // to all. The date is when it was pulled or last changed.
                     .Select(model => new ModelInfo(
                         model.Name!,
                         model.Name!,
@@ -186,9 +144,8 @@ internal sealed class OllamaAssistant(
         }
         catch (JsonException)
         {
-            // A local model held to a schema still occasionally answers with
-            // something else. Ordinary rather than exceptional, and the person
-            // asking gets to try again.
+            // A schema-bound local model still occasionally answers with something else; the person
+            // can retry.
             return AssistanceErrors.UnusableAnswer;
         }
     }
@@ -199,17 +156,12 @@ internal sealed class OllamaAssistant(
         Pictures: 0);
 
     /// <summary>
-    /// What a thrown failure means, or null where it is not the runner's.
+    /// What a thrown failure means, or null where it is not the runner's; streams need a verdict,
+    /// not a catch.
     /// </summary>
-    /// <remarks>
-    /// The same two decisions a <c>catch</c> filter and its body make, as one
-    /// value — which is what a stream needs, because it cannot catch around a
-    /// <c>yield</c> and has to be handed the verdict instead.
-    /// </remarks>
     private static Error? Recognised(Exception failure) =>
         Expected(failure) ? Failure(failure) : null;
 
-    /// <summary>Classifies a failure and records what the provider said.</summary>
     private Error Failed(Exception failure)
     {
         var error = Failure(failure);
@@ -219,19 +171,13 @@ internal sealed class OllamaAssistant(
         return error;
     }
 
-    /// <summary>The failures that are the runner's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>
         failure is HttpRequestException or OperationCanceledException or IOException
             or InvalidOperationException or JsonException;
 
     /// <summary>
-    /// What a refusal means.
+    /// What a refusal means: a runner that is not there, is busy, or lacks the model.
     /// </summary>
-    /// <remarks>
-    /// No key here, so nothing can be rejected for one. What is left is a
-    /// runner that is not there, is busy, or was asked for a model it has not
-    /// pulled.
-    /// </remarks>
     private static Error Failure(Exception failure) =>
         failure is HttpRequestException { StatusCode: { } status }
             ? status switch

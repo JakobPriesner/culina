@@ -11,27 +11,17 @@ public interface ISavedSearchRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<SavedSearch>> FindAsync(Guid searchId, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Every one the household has, oldest first.
-    /// </summary>
-    /// <remarks>
-    /// Not paged, and not bounded by a cursor: these are drawn as a row of
-    /// chips beside the search field, so the whole list is what the caller
-    /// needs and it is a handful of rows.
-    /// </remarks>
+    /// <summary>Every search the household has, oldest first; not paged, as there are only a handful.</summary>
     /// <param name="householdId">Whose searches.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyList<SavedSearch>> ListAsync(Guid householdId, CancellationToken cancellationToken);
 
-    /// <summary>Writes a new saved search.</summary>
+    /// <summary>
+    /// Writes a new saved search; fails with <see cref="SavedSearchErrors.NameTaken"/> from the unique index,
+    /// as a separate check could interleave.
+    /// </summary>
     /// <param name="search">The new search.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    /// <remarks>
-    /// Fails with <see cref="SavedSearchErrors.NameTaken"/> when the household
-    /// already has one by that name — caught from the unique index rather than
-    /// checked first, because a check and an insert are two statements two
-    /// people can interleave.
-    /// </remarks>
     Task<Result> AddAsync(SavedSearch search, CancellationToken cancellationToken);
 
     /// <summary>Saves a rename, and whatever it now asks for.</summary>

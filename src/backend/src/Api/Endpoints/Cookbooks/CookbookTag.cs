@@ -4,16 +4,7 @@ using Contracts.Cookbooks;
 
 namespace Api.Endpoints.Cookbooks;
 
-/// <summary>
-/// The ETag of one cookbook as its own page reads it.
-/// </summary>
-/// <remarks>
-/// Not the version alone. The body carries how many recipes are on the shelf
-/// and the pictures on its cover, and neither is the cookbook's own write: a
-/// recipe that gains a picture, or matches a smart shelf's rules, changes the
-/// cover and leaves the version where it was. A tag of the version alone
-/// answered 304 over a cover that had moved on.
-/// </remarks>
+/// <summary>The ETag of one cookbook as its page reads it: not the version alone, since the cover and recipe count change without a cookbook write.</summary>
 internal static class CookbookTag
 {
     internal static IResult Ok(HttpContext context, CookbookDetail cookbook) =>
@@ -23,8 +14,7 @@ internal static class CookbookTag
             cookbook.Version,
             cookbook.CookbookId,
             ETag.Fingerprint(cookbook.CoverPictures
-                // The position is part of each picture, because the fingerprint
-                // ignores order and a cover whose tiles swapped places has changed.
+                // The position is part of each picture: the fingerprint ignores order, and swapped tiles are a change.
                 .Select((picture, position) => string.Create(
                     CultureInfo.InvariantCulture,
                     $"{position}:{picture.RecipeId:N}:{picture.ImageId:N}"))

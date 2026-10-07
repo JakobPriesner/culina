@@ -6,8 +6,8 @@ namespace Api.Endpoints.Recipes.RevokeShare.V1;
 
 /// <summary>Stops sharing a recipe.</summary>
 /// <remarks>
-/// 204 whether or not it was shared: "this recipe is not published" is the
-/// state the caller asked for, and a second tap is not a failure.
+/// 204 whether or not it was shared: "not published" is the state asked for, and a second tap is
+/// not a failure.
 /// </remarks>
 internal sealed class RevokeRecipeShareEndpoint : IEndpoint
 {

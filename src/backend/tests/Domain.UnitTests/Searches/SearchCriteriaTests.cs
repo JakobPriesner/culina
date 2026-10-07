@@ -3,7 +3,6 @@ using TestSupport;
 
 namespace Domain.UnitTests.Searches;
 
-/// <summary>What a saved search keeps of the filters it was given.</summary>
 public class SearchCriteriaTests
 {
     [Fact]

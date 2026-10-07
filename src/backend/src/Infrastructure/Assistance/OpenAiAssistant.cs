@@ -13,43 +13,14 @@ using OpenAiImageOptions = OpenAI.Images.ImageGenerationOptions;
 
 namespace Infrastructure.Assistance;
 
-/// <summary>
-/// Talks to OpenAI's models, and to anything that answers in their shape.
-/// </summary>
+/// <summary>Talks to OpenAI's models, and to anything that answers in their shape.</summary>
 /// <remarks>
-/// <para>
-/// OpenAI's own client library rather than this app's reading of their
-/// documentation. What that buys is the fault with no symptom: a field written
-/// <c>b64_json</c> where a hand-written record expected <c>b64Json</c> bound to
-/// null, and a picture that had arrived was reported as an answer that could
-/// not be read. Those types are now maintained by the people who change the
-/// wire format.
-/// </para>
-/// <para>
-/// Composition goes through <see cref="IChatClient"/>, so the two providers
-/// that offer one are asked for text in identical words and differ only where
-/// they really differ. Drawing and listing have no such abstraction and use the
-/// SDK directly.
-/// </para>
-/// <para>
-/// The system role survives, which matters more to this feature than anything
-/// else about it: the instruction is a system message and the untrusted
-/// material is a user message — two kinds of thing rather than two halves of
-/// one.
-/// </para>
-/// <para>
-/// The second half of "anything that answers in their shape" is why the address
-/// is overridable. A great many self-hosted runners and gateways speak this API
-/// and nothing else, so this adapter is also the adapter for those.
-/// </para>
-/// <para>
-/// Stateless with respect to configuration: the key, the address and the model
-/// all arrive with the call, so one instance serves however many connections an
-/// administrator has set up.
-/// </para>
+/// Uses OpenAI's own client library (a hand-written wire record once bound <c>b64_json</c> to null).
+/// Composition goes through <see cref="IChatClient"/>; drawing and listing use the SDK directly. The
+/// system instruction stays a system message and untrusted material a user message. The address is
+/// overridable because many self-hosted runners and gateways speak this API. Stateless: key, address
+/// and model arrive with each call.
 /// </remarks>
-/// <param name="http">The shared client, whose rules the SDK is made to keep.</param>
-/// <param name="logger">Records what a provider refused, and why.</param>
 internal sealed class OpenAiAssistant(
     AssistantHttp http,
     ILogger<OpenAiAssistant> logger) : IAssistant
@@ -109,9 +80,7 @@ internal sealed class OpenAiAssistant(
                 .GetImageClient(@using.Model)
                 .GenerateImageAsync(
                     request.Subject,
-                    // One square picture. Not a choice this app offers, because
-                    // every other combination costs more and none of them makes
-                    // a recipe card look different.
+                    // One square picture: every other size costs more and changes nothing on a recipe card.
                     new OpenAiImageOptions { Size = GeneratedImageSize.W1024xH1024 },
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -183,9 +152,7 @@ internal sealed class OpenAiAssistant(
         }
         catch (JsonException)
         {
-            // The model answered with something that is not the shape it was
-            // given. Ordinary rather than exceptional, and the person asking
-            // gets to try again.
+            // The model answered in the wrong shape: ordinary, and the person can try again.
             return AssistanceErrors.UnusableAnswer;
         }
     }
@@ -195,45 +162,20 @@ internal sealed class OpenAiAssistant(
         (int)(answered.Usage?.OutputTokenCount ?? 0),
         Pictures: 0);
 
-    /// <summary>
-    /// The client for one connection.
-    /// </summary>
-    /// <remarks>
-    /// Built per call rather than held: the key and the address belong to the
-    /// connection being used, and an instance of this class serves all of them.
-    /// The transport is the app's own, so the SDK inherits the rules the
-    /// hand-written client had — no redirects with a key attached, one pool,
-    /// one deadline.
-    /// </remarks>
+    // Built per call: key and address belong to the connection. The transport is the app's own, so the
+    // SDK keeps the no-redirects, one-pool, one-deadline rules.
     private OpenAIClient Client(Connected @using, bool drawing = false) => new(
         new ApiKeyCredential(@using.ApiKey),
         new OpenAIClientOptions
         {
             Endpoint = Endpoint(@using.BaseUrl),
             Transport = new HttpClientPipelineTransport(http.Client(drawing)),
-            // Set as well as on the client: the library keeps a deadline of its
-            // own, and the shorter of the two is the one that decides.
+            // The library keeps a deadline of its own; the shorter of the two wins.
             NetworkTimeout = http.Client(drawing).Timeout
         });
 
-    /// <summary>
-    /// Where the client should be pointed.
-    /// </summary>
-    /// <param name="baseUrl">The address the connection carries.</param>
-    /// <remarks>
-    /// <para>
-    /// The version segment belongs to the endpoint this library is given: it
-    /// appends <c>models</c> or <c>responses</c> to whatever it is handed, so
-    /// an address without <c>/v1</c> asks for <c>api.openai.com/models</c> and
-    /// is answered with a 404 — which reads on the settings screen as a
-    /// provider that has nothing to offer.
-    /// </para>
-    /// <para>
-    /// Added only when it is missing, because an administrator pointing this at
-    /// a gateway may reasonably paste either form, and the documentation for
-    /// most of them prints the one ending in <c>/v1</c>.
-    /// </para>
-    /// </remarks>
+    // The library appends models/responses to the endpoint, so a missing /v1 would 404. Added only when
+    // missing since admins may paste either form.
     private static Uri Endpoint(string baseUrl)
     {
         var address = baseUrl.TrimEnd('/');
@@ -246,18 +188,8 @@ internal sealed class OpenAiAssistant(
     private IChatClient ChatWith(Connected @using) =>
         Client(@using).GetChatClient(@using.Model).AsIChatClient();
 
-    /// <summary>
-    /// Whether this one could write a recipe.
-    /// </summary>
-    /// <remarks>
-    /// This listing is everything the account can reach — embeddings, speech,
-    /// transcription, moderation, the lot — and there is no field saying which
-    /// is which. Filtering by name is crude and is the only thing available;
-    /// erring towards keeping a model means an odd entry in a list, where
-    /// erring the other way means a model somebody wanted is missing. And a
-    /// key that can reach only speech models would be filtered to nothing,
-    /// which <see cref="ModelCatalogue.Narrow"/> refuses to do.
-    /// </remarks>
+    // The listing includes embeddings, speech, moderation and more with no field to tell them apart, so
+    // filter by name, erring towards keeping a model. Narrow refuses to filter down to nothing.
     private static bool Usable(string id) =>
         id.Length > 0
         && !id.Contains("embedding", StringComparison.OrdinalIgnoreCase)
@@ -267,18 +199,10 @@ internal sealed class OpenAiAssistant(
         && !id.Contains("audio", StringComparison.OrdinalIgnoreCase)
         && !id.Contains("realtime", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// What a thrown failure means, or null where it is not the provider's.
-    /// </summary>
-    /// <remarks>
-    /// The same two decisions a <c>catch</c> filter and its body make, as one
-    /// value — which is what a stream needs, because it cannot catch around a
-    /// <c>yield</c> and has to be handed the verdict instead.
-    /// </remarks>
+    // One value instead of a catch filter plus body, because a stream cannot catch around a yield.
     private static Error? Recognised(Exception failure) =>
         Expected(failure) ? Failure(failure) : null;
 
-    /// <summary>Classifies a failure and records what the provider said.</summary>
     private Error Failed(Exception failure)
     {
         var error = Failure(failure);
@@ -288,30 +212,18 @@ internal sealed class OpenAiAssistant(
         return error;
     }
 
-    /// <summary>The failures that are the provider's rather than this app's.</summary>
     private static bool Expected(Exception failure) =>
         failure is ClientResultException or HttpRequestException or OperationCanceledException
             or IOException or InvalidOperationException;
 
-    /// <summary>
-    /// What a refusal means.
-    /// </summary>
-    /// <remarks>
-    /// A refused credential is carried as itself this far. It is turned back
-    /// into "unavailable" before it can reach somebody who is cooking, but the
-    /// settings screen and the ledger are read by the person holding the key,
-    /// and telling them their key was refused is the whole of what they need.
-    /// </remarks>
+    // A refused credential is carried as itself: it becomes "unavailable" before reaching a cook, but
+    // the settings screen and ledger are read by the key holder.
     private static Error Failure(Exception failure) => failure switch
     {
         ClientResultException { Status: 429 } => AssistanceErrors.Throttled,
-        // Forbidden as well as unauthorized: a key scoped to inference and not
-        // to reading the catalogue answers 403 while signing every other call
-        // in this app perfectly well.
+        // 403 too: a key scoped to inference answers 403 on the catalogue.
         ClientResultException { Status: 401 or 403 } => AssistanceErrors.Rejected,
-        // A content filter and a malformed request both answer 400. The
-        // caller's options are the same either way, and the log line tells
-        // them apart.
+        // A content filter and a malformed request both answer 400; the log tells them apart.
         ClientResultException { Status: 400 } => AssistanceErrors.Refused,
         ClientResultException { Status: 404 } => AssistanceErrors.ModelMissing,
         _ => AssistanceErrors.Unavailable

@@ -10,23 +10,9 @@ using Microsoft.Extensions.Logging;
 namespace Application.Recipes.Sources;
 
 /// <summary>
-/// Does the work of one import, away from the request that asked for it.
+/// Does the work of one import away from the request that asked for it: the whole selection, a few recipes in parallel,
+/// each outcome recorded as it lands, one scope per recipe (a unit of work is a connection).
 /// </summary>
-/// <remarks>
-/// <para>
-/// The request that starts an import is over in milliseconds; the import is
-/// not. Holding a connection open for ten minutes of somebody else's server
-/// meant the browser's deadline, the proxy's deadline and a closed laptop were
-/// each enough to lose the work — which is why the client used to slice its own
-/// selection into batches and drive them one at a time.
-/// </para>
-/// <para>
-/// Here instead: the whole selection, fetched a few at a time in parallel,
-/// recording each outcome the moment it lands so anybody watching sees it. One
-/// scope per recipe, because a unit of work is a database connection and two
-/// recipes may not share one.
-/// </para>
-/// </remarks>
 /// <param name="scopes">Creates the scope each recipe is written in.</param>
 /// <param name="time">The injected clock.</param>
 /// <param name="logger">Records how a run went, and anything that ended it.</param>
@@ -35,17 +21,7 @@ public sealed class SourceImportRunner(
     TimeProvider time,
     ILogger<SourceImportRunner> logger)
 {
-    /// <summary>
-    /// How many recipes are fetched at the same time.
-    /// </summary>
-    /// <remarks>
-    /// The limit is somebody else's server, not this one. Each recipe is a
-    /// round trip for the recipe and usually a second for its photo, against an
-    /// instance that may be on the end of a domestic upload — asking it for
-    /// four hundred at once would be indistinguishable from attacking it. Four
-    /// is enough to make an import several times faster than doing them one at
-    /// a time, and few enough to stay a polite guest.
-    /// </remarks>
+    // How many recipes are fetched at once. The limit is somebody else's server: four is several times faster than serial and still a polite guest.
     private const int AtOnce = 4;
 
     /// <summary>Runs an import to its end, whatever happens on the way.</summary>
@@ -55,9 +31,7 @@ public sealed class SourceImportRunner(
     {
         ArgumentNullException.ThrowIfNull(run);
 
-        // Its own trace: the request that queued it ended long ago, and the
-        // recipes it fetches would otherwise be spans belonging to nothing.
-        // Not "Recipes.Import", which is the paste-a-link handler.
+        // Its own trace: the queueing request ended long ago. Not "Recipes.Import", the paste-a-link handler.
         using var activity = CulinaTelemetry.ActivitySource.StartActivity("Recipes.ImportRun");
         activity?.SetTag("culina.import_id", run.Id);
 
@@ -77,8 +51,7 @@ public sealed class SourceImportRunner(
         }
         catch (OperationCanceledException)
         {
-            // The host is stopping. What arrived is written and has its origin
-            // row, so asking for the same selection again brings over the rest.
+            // The host is stopping. Arrived recipes are written with their origin row, so asking again brings over the rest.
             ImportLogs.RunStopped(logger, run.Id);
         }
 #pragma warning disable CA1031 // A defect in one import must not take the worker down with it.
@@ -103,8 +76,7 @@ public sealed class SourceImportRunner(
         {
             var services = scope.ServiceProvider;
 
-            // Looked up again in this scope rather than carried over from the
-            // request's: an entity belongs to the connection it was read on.
+            // Looked up again in this scope: an entity belongs to the connection it was read on.
             var found = await SourceAccess
                 .ReadableAsync(
                     services.GetRequiredService<IRecipeSourceRepository>(),
@@ -128,8 +100,7 @@ public sealed class SourceImportRunner(
     {
         var reader = services.GetRequiredService<IRecipeLibraries>().For(source.Kind);
 
-        // Once for the run, not once per recipe: every recipe in one import
-        // lands in the language of the one person who asked for it.
+        // Once per run: every recipe lands in the language of the person who asked.
         var theirs = await services.GetRequiredService<IUserPreferencesRepository>()
             .GetAsync(run.UserId, cancellationToken)
             .ConfigureAwait(false);
@@ -159,15 +130,7 @@ public sealed class SourceImportRunner(
             error => RefuseAsync(run, error)).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Every recipe asked for, a few at a time, each in a scope of its own.
-    /// </summary>
-    /// <remarks>
-    /// One task per recipe and one await for all of them, so the run is over
-    /// when the last one is. The gate is what keeps "in parallel" from meaning
-    /// "all at once" — without it, four hundred recipes would be four hundred
-    /// simultaneous connections to their server and to this one's pool.
-    /// </remarks>
+    // Every recipe asked for, one task each, gated by AtOnce so four hundred recipes are not four hundred simultaneous connections.
     private async Task EachAsync(
         ImportRun run,
         ImportInto into,
@@ -220,14 +183,7 @@ public sealed class SourceImportRunner(
         }
     }
 
-    /// <summary>
-    /// Says the same thing about every recipe asked for.
-    /// </summary>
-    /// <remarks>
-    /// The connection was disconnected, or this no longer knows how to read
-    /// that app. The import cannot start at all — but it was accepted, so the
-    /// answer is a reason per recipe rather than a silence.
-    /// </remarks>
+    // The import cannot start (connection disconnected, or the app is no longer readable) but was accepted, so each recipe gets a reason.
     private static Task RefuseAsync(ImportRun run, Error error)
     {
         foreach (var externalId in run.ExternalIds)
@@ -266,9 +222,7 @@ public sealed class SourceImportRunner(
     }
 }
 
-/// <summary>
-/// Import log lines. Event ids 1210-1219.
-/// </summary>
+/// <summary>Import log lines. Event ids 1210-1219.</summary>
 internal static partial class ImportLogs
 {
     [LoggerMessage(
@@ -289,10 +243,7 @@ internal static partial class ImportLogs
         Message = "Recipe {ExternalId} could not be brought over")]
     internal static partial void RecipeFailed(ILogger logger, string externalId, Exception failure);
 
-    /// <remarks>
-    /// The rest of the total were already here or looked like a recipe that
-    /// was, and were left alone.
-    /// </remarks>
+    // The rest of the total were already here or looked like a recipe that was, and were left alone.
     [LoggerMessage(
         EventId = 1213,
         Level = LogLevel.Information,

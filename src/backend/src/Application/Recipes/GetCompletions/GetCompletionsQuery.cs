@@ -21,9 +21,7 @@ internal sealed class GetCompletionsQueryHandler(
     : IQueryHandler<GetCompletionsQuery, Response>
 {
     /// <summary>
-    /// How many of each kind: three recipes, three ingredients, three tags and
-    /// a refinement is a list read at a glance, which is the whole point of
-    /// offering it before the results arrive.
+    /// How many of each kind: small enough to read at a glance before the results arrive.
     /// </summary>
     private const int PerKind = 3;
 
@@ -49,12 +47,11 @@ internal sealed class GetCompletionsQueryHandler(
 
     private async Task<Response> CompleteAsync(GetCompletionsQuery query, CancellationToken cancellationToken)
     {
-        // Only the words still to be found are completed: "vegetarisch häh"
-        // is a diet that has been understood and a word that has not.
+        // Only the words still to be found are completed: in "vegetarisch häh" the diet is already
+        // understood.
         var typed = QueryUnderstanding.Parse(query.Query).FreeText;
 
-        // One letter is a prefix of half the library, and completing it is
-        // noise rather than help.
+        // One letter is a prefix of half the library: noise, not help.
         if (SearchText.FoldAe(typed).Length < 2)
         {
             return new Response { Items = [] };
@@ -99,9 +96,7 @@ internal sealed class GetCompletionsQueryHandler(
     }
 
     /// <summary>
-    /// "Hähnchen · unter 30 Minuten", offered only when it would split what
-    /// the ingredient finds: a refinement that keeps every recipe, or none,
-    /// is a tap wasted.
+    /// "Hähnchen · unter 30 Minuten", offered only when it would split what the ingredient finds.
     /// </summary>
     private static IEnumerable<Completion> Refinement(IReadOnlyList<IngredientCompletion> ingredients) =>
         ingredients

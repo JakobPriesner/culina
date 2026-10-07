@@ -3,20 +3,15 @@ using Domain.Shared;
 namespace Domain.Users;
 
 /// <summary>
-/// A person with an account.
+/// A person with an account; state changes go through methods, so an invariant cannot be broken by
+/// assigning a property.
 /// </summary>
-/// <remarks>
-/// State changes go through methods that return a <see cref="Result"/>, so an
-/// invariant cannot be broken by assigning a property.
-/// </remarks>
 public sealed class User
 {
-    /// <summary>The shortest password the app accepts.</summary>
-    /// <remarks>
-    /// Length is the only rule. Composition rules ("one digit, one symbol")
-    /// push people toward predictable substitutions and away from passphrases,
-    /// which are both longer and easier to remember.
-    /// </remarks>
+    /// <summary>
+    /// The shortest password the app accepts; length is the only rule, as composition rules breed
+    /// predictable substitutions.
+    /// </summary>
     public const int MinimumPasswordLength = 12;
 
     private User(Guid id, Email email, DisplayName displayName, string passwordHash, DateTimeOffset createdAt, long version)
@@ -39,8 +34,7 @@ public sealed class User
     public DisplayName DisplayName { get; private set; }
 
     /// <summary>
-    /// The encoded Argon2id hash. Never logged, never returned by an endpoint,
-    /// never placed on a span.
+    /// The encoded Argon2id hash. Never logged, returned by an endpoint, or placed on a span.
     /// </summary>
     public string PasswordHash { get; private set; }
 
@@ -51,10 +45,6 @@ public sealed class User
     public long Version { get; private set; }
 
     /// <summary>Creates a new account.</summary>
-    /// <param name="email">The validated address.</param>
-    /// <param name="displayName">The validated name.</param>
-    /// <param name="passwordHash">An already-hashed password.</param>
-    /// <param name="createdAt">The injected current time.</param>
     public static User Register(
         Email email,
         DisplayName displayName,
@@ -68,11 +58,10 @@ public sealed class User
         return new User(CulinaId.New(), email, displayName, passwordHash, createdAt, version: 1);
     }
 
-    /// <summary>Rebuilds a user from storage.</summary>
-    /// <remarks>
-    /// Separate from <see cref="Register"/> so persistence can restore a state
-    /// the domain would not create afresh, without loosening the constructor.
-    /// </remarks>
+    /// <summary>
+    /// Rebuilds a user from storage, which may restore a state <see cref="Register"/> would not
+    /// create.
+    /// </summary>
     public static User Restore(
         Guid id,
         Email email,
@@ -88,14 +77,12 @@ public sealed class User
     }
 
     /// <summary>Checks a plaintext password against the length rule.</summary>
-    /// <param name="password">The password a person chose.</param>
     public static Result EnsureAcceptablePassword(string? password) =>
         password is { Length: >= MinimumPasswordLength }
             ? Result.Success()
             : UserErrors.WeakPassword;
 
     /// <summary>Renames the user.</summary>
-    /// <param name="displayName">The new name.</param>
     public Result ChangeDisplayName(DisplayName displayName)
     {
         ArgumentNullException.ThrowIfNull(displayName);
@@ -106,7 +93,6 @@ public sealed class User
     }
 
     /// <summary>Replaces the stored hash.</summary>
-    /// <param name="passwordHash">A newly computed hash.</param>
     public void ChangePasswordHash(string passwordHash)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
@@ -115,7 +101,6 @@ public sealed class User
     }
 
     /// <summary>Changes the address used to sign in.</summary>
-    /// <param name="email">The new validated address.</param>
     public Result ChangeEmail(Email email)
     {
         ArgumentNullException.ThrowIfNull(email);

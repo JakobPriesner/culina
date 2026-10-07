@@ -3,44 +3,32 @@ using Application.Abstractions;
 namespace IntegrationTests.Suggestions.Replay;
 
 /// <summary>
-/// Whether the shortlists were any good to look at, as opposed to whether they
-/// predicted dinner. See <c>docs/suggestions-research.md</c> §M.2.
+/// Whether the shortlists were any good to look at, not whether they predicted dinner
+/// (<c>docs/suggestions-research.md</c> §M.2).
 /// </summary>
 /// <remarks>
-/// <para>
-/// These are the four numbers that catch the failure a small catalogue is prone
-/// to — the same eight recipes forever — and none of them needs a person to say
-/// anything. A ranker can score well on recall by suggesting the household's
-/// three staples every night; it cannot also score well here.
-/// </para>
-/// <para>
-/// The research document computes them from <c>suggestion_impressions</c>.
-/// That table was deliberately not built: a write on every render is a real cost,
-/// and the replay already knows exactly what the front page would have shown on
-/// every evening it predicts. So they are computed from the replayed shortlists,
-/// which also means they are available for a weight vector nobody has shipped.
-/// </para>
+/// Catches the failure a small catalogue is prone to (the same eight recipes forever) without
+/// anyone judging. Computed from replayed shortlists, not <c>suggestion_impressions</c>: a write on
+/// every render was not worth it.
 /// </remarks>
 /// <param name="Coverage">
-/// Distinct recipes shown over the library size. Well above 0.3 is healthy; a
-/// collapse towards 0.05 means the profile has over-specialised.
+/// Distinct recipes shown over the library size; well above 0.3 is healthy, near 0.05 is
+/// over-specialised.
 /// </param>
 /// <param name="RepetitionRate">
-/// Share of shown recipes the same person was also shown within the previous
-/// week. Near zero is the promise the daily seed and the repetition term make.
+/// Share of shown recipes the same person also saw within the previous week.
 /// </param>
 /// <param name="NoveltyShare">Share of shown recipes this person had never cooked.</param>
 /// <param name="Gini">
-/// Inequality of how often each recipe was shown, zero for perfectly even and
-/// approaching one for a single recipe every time. One number for "is it
-/// showing eight recipes forever?".
+/// Inequality of how often each recipe was shown: 0 is even, near 1 is one recipe every time.
 /// </param>
 internal sealed record ShortlistQuality(double Coverage, double RepetitionRate, double NoveltyShare, double Gini)
 {
-    /// <summary>How many of each replayed list a person actually sees: the shortlist the front page asks for.</summary>
+    /// <summary>
+    /// How many of each replayed list a person sees: what the front page asks for.
+    /// </summary>
     internal const int Shown = SuggestionContext.DefaultCount;
 
-    /// <summary>How far back a repeat counts as one.</summary>
     private static readonly TimeSpan RepeatWindow = TimeSpan.FromDays(7);
 
     internal static ShortlistQuality Of(IReadOnlyList<ReplayOutcome> outcomes)
@@ -90,7 +78,6 @@ internal sealed record ShortlistQuality(double Coverage, double RepetitionRate, 
         return total == 0 ? 0 : (double)repeats / total;
     }
 
-    /// <summary>The Gini coefficient of some counts, including the zeros.</summary>
     private static double GiniOf(List<int> counts)
     {
         var sum = counts.Sum();

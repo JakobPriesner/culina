@@ -10,9 +10,7 @@ namespace Application.Recipes.Sources;
 /// <param name="ImportId">Which import.</param>
 /// <param name="UserId">Who is asking.</param>
 /// <param name="From">
-/// How many outcomes the caller already has, so a reconnect picks up where it
-/// stopped. Zero reads the run from the beginning, which is what makes a stream
-/// that was never connected and one that dropped the same thing.
+/// How many outcomes the caller already has, so a reconnect resumes; zero reads from the beginning.
 /// </param>
 public sealed record WatchImportQuery(Guid SourceId, Guid ImportId, Guid UserId, int From);
 
@@ -22,8 +20,7 @@ public sealed record WatchImportQuery(Guid SourceId, Guid ImportId, Guid UserId,
 /// <param name="CookbookId">The shelf they are landing on.</param>
 /// <param name="CookbookName">What that shelf is called.</param>
 /// <param name="Events">
-/// One event per recipe finished, then one saying the run is over. It replays
-/// what already happened before it waits for anything new.
+/// One event per recipe finished, then one saying the run is over; replays history before waiting.
 /// </param>
 public sealed record ImportProgress(
     Guid ImportId,
@@ -33,12 +30,8 @@ public sealed record ImportProgress(
     IAsyncEnumerable<ImportEvent> Events);
 
 /// <summary>
-/// Hands a caller the events of a run they started.
+/// Hands a caller the events of a run they started; a query, since watching changes nothing.
 /// </summary>
-/// <remarks>
-/// A query rather than a command: watching an import changes nothing about it,
-/// and an import with nobody watching runs exactly the same.
-/// </remarks>
 internal sealed class WatchImportQueryHandler(ImportRuns runs)
     : IQueryHandler<WatchImportQuery, ImportProgress>
 {
@@ -50,9 +43,7 @@ internal sealed class WatchImportQueryHandler(ImportRuns runs)
 
         var run = runs.Find(query.ImportId);
 
-        // Whoever asked for the import is who may watch it — and a run that has
-        // been forgotten, or that belongs to somebody else, is equally "no such
-        // import". Nothing here says which of the two it was.
+        // Not the owner and a forgotten run are both "no such import", without saying which.
         if (run is null || run.SourceId != query.SourceId || run.UserId != query.UserId)
         {
             return Task.FromResult(

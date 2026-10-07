@@ -9,41 +9,31 @@ using Application.Abstractions.Settings;
 using Infrastructure;
 using Infrastructure.Settings;
 
-// Server settings an administrator saves are bootstrap settings: read once,
-// validated, immutable. So a saved change applies by building the host again,
-// and the host is built in a loop — it runs until it stops, and is built anew
-// only when it stopped to apply a setting. See IHostRestart.
+// Bootstrap settings are read once and immutable, so a saved change applies by rebuilding the host
+// in this loop. See IHostRestart.
 while (true)
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // Asks the container it is running in whether it is ready, and exits.
-    // Before anything else is configured: it makes one HTTP request and never
-    // becomes a host of its own.
+    // Health probe: makes one HTTP request and exits, before anything else is configured.
     if (HealthCheckProbe.Requested(args))
     {
         return await HealthCheckProbe.RunAsync(builder.Configuration).ConfigureAwait(false);
     }
 
-    // Above appsettings.json and below the environment, and before anything
-    // reads a setting. See IServerConfiguration.
+    // Above appsettings.json, below the environment. See IServerConfiguration.
     builder.Configuration.AddServerConfigurationFile();
 
-    // The export starts the host, so it needs somewhere to listen — but not the
-    // port the app uses, or exporting the contract would be impossible while
-    // the app is running, which is exactly when it is usually done. Port 0 is
-    // whatever is free; no request is ever served on it.
+    // The export starts the host but must not take the app's port; port 0 is any free one.
     if (OpenApiExport.Requested(args))
     {
         builder.WebHost.UseUrls("http://127.0.0.1:0");
     }
 
-    // Nobody has configured a database anywhere yet: serve the setup screen and
-    // nothing else, until someone gives it one.
+    // No database configured yet: serve only the setup screen.
     var app = builder.Configuration.IsDatabaseConfigured() ? BuildCulina(builder) : BuildSetup(builder);
 
-    // After the endpoints are mapped: the document is built by enumerating
-    // them, so exporting any earlier produces an empty file.
+    // After the endpoints are mapped, since the document is built by enumerating them.
     if (OpenApiExport.Requested(args))
     {
         await OpenApiExport.WriteAsync(app, args).ConfigureAwait(false);
@@ -75,12 +65,8 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
 
     var app = builder.Build();
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // THE ORDER OF THIS PIPELINE IS THE CONTRACT, not a preference. Moving a
-    // line is a security change: it needs a test, not a review comment. Each
-    // entry says why it sits where it does, and IntegrationTests/Pipeline
-    // asserts the properties that depend on the ordering.
-    // ─────────────────────────────────────────────────────────────────────────
+    // THE ORDER OF THIS PIPELINE IS THE CONTRACT: moving a line is a security change and needs a test.
+    // IntegrationTests/Pipeline asserts the ordering-dependent properties.
 
     app.UseCulinaForwardedHeaders();  //  1. Real client IP and scheme, before anything reads them.
     app.UseRequestContext();          //  2. Correlation id, so every later line carries it.
@@ -90,9 +76,7 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
     app.UseProblemStatusPages();      //  6. Framework-generated statuses get a problem body too.
     app.UseSinglePageApp();           //  7. Static assets are cheap and never reach authentication.
 
-    // Explicit, so the checks below can read endpoint metadata. Relying on the
-    // implicit UseRouting would leave the position of a security check to a
-    // framework detail.
+    // Explicit, so the checks below can read endpoint metadata.
     app.UseRouting();
 
     app.UseQueryParameterGuard();     //  8. Reject unknown or repeated input before binding.
@@ -138,12 +122,8 @@ static void LogStarting(WebApplication app)
     }
 }
 
-// The host for an instance nobody has configured a database for. The same
-// shell, headers and error format as the real one, and only what setting up
-// needs: where setup has got to, and the database settings. No forwarded
-// headers — no proxy has been named to trust — and no sessions and so no CSRF.
-// Its rate limiter enforces only the fixed limit the database endpoint
-// carries, since the configurable limits are part of what is being set up.
+// The host for an instance with no database: the same shell, headers and error format, but only setup
+// endpoints, no forwarded headers (no proxy named yet), no sessions or CSRF, and only the fixed rate limit.
 static WebApplication BuildSetup(WebApplicationBuilder builder)
 {
     builder.AddObservability();
@@ -178,8 +158,7 @@ static WebApplication BuildSetup(WebApplicationBuilder builder)
     return app;
 }
 
-// A singleton that captured a scoped service is a bug that otherwise surfaces
-// as an intermittent failure in production. Fail at startup instead.
+// Fails at startup instead of intermittently in production when a singleton captures a scoped service.
 static void ValidateScopesInDevelopment(WebApplicationBuilder builder) =>
     builder.Host.UseDefaultServiceProvider(options =>
     {

@@ -11,14 +11,14 @@ public sealed record Response
 public sealed record TagSuggestion
 {
     /// <summary>
-    /// What to show and, when added, what to save: the household's own name for
-    /// it where it has one, or the lexicon's word in the recipe's language.
+    /// What to show and, when added, save: the household's own name where it has one, else the
+    /// lexicon's word in the recipe's language.
     /// </summary>
     public required string Name { get; init; }
 
     /// <summary>
-    /// The household's tag, when it already uses one for this; null for a tag
-    /// that adding would create.
+    /// The household's tag when it already uses one for this; null for a tag that adding would
+    /// create.
     /// </summary>
     public string? Slug { get; init; }
 }

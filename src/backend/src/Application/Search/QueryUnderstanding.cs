@@ -3,32 +3,11 @@ using Domain.Search;
 
 namespace Application.Search;
 
-/// <summary>
-/// Reads what a search query asks for beyond its words.
-/// </summary>
+/// <summary>Reads what a search query asks for beyond its words: time, diets, meals, cuisines, exclusions and ingredient sentences.</summary>
 /// <remarks>
-/// <para>
-/// "vegetarisches Abendessen unter 30 Minuten mit Kartoffeln" is five
-/// requests in one sentence: a diet, a meal, a time, an ingredient, and no
-/// words at all to look for. This takes each out in turn — time first, because
-/// a number is unambiguous; then diets, meals, cuisines and "schnell"; then
-/// what is to be left out; then the sentence around what is to be used — and
-/// hands whatever is left to the lexical lanes.
-/// </para>
-/// <para>
-/// Two rules carry most of the risk. <b>Under-parsing beats
-/// over-parsing:</b> every sentence rule is anchored to the whole of what is
-/// left, so "Nudeln mit Tomatensoße" — where "mit" joins two foods in a dish's
-/// name — produces nothing and is searched as typed. And <b>every inference is
-/// shown</b>: each comes back with the characters it was read from, so the
-/// client can draw it as a chip and remove it by deleting exactly those
-/// characters. A parser that does not show its work is one people stop
-/// trusting the first time it guesses wrong.
-/// </para>
-/// <para>
-/// Deterministic, allocation-light and without I/O, so it is a static function
-/// rather than a service: the same query always reads the same way.
-/// </para>
+/// Under-parsing beats over-parsing: sentence rules are anchored to everything left, so "Nudeln mit Tomatensoße" is searched as typed.
+/// Every inference comes back with the characters it was read from, so the client can draw it as a removable chip.
+/// A pure static function: the same query always reads the same way.
 /// </remarks>
 public static class QueryUnderstanding
 {
@@ -73,11 +52,7 @@ public static class QueryUnderstanding
     private static readonly HashSet<string> Connectors =
         new(["und", "and", "oder", "or", "sowie"], StringComparer.Ordinal);
 
-    /// <summary>
-    /// Words that carry nothing once something else has been understood:
-    /// "Gericht ohne Fleisch" is the vegetarian filter, not a search for the
-    /// word "Gericht".
-    /// </summary>
+    // Words that carry nothing once something else is understood: "Gericht ohne Fleisch" is the vegetarian filter.
     private static readonly HashSet<string> Fillers = new(
         [
             "gericht", "gerichte", "rezept", "rezepte", "rezeptideen", "essen", "mahlzeit", "mahlzeiten",
@@ -88,11 +63,7 @@ public static class QueryUnderstanding
         ],
         StringComparer.Ordinal);
 
-    /// <summary>
-    /// The sentences people wrap an ingredient in, anchored to the whole of
-    /// what is left: <c>*</c> is the ingredient, and a word ending in
-    /// <c>?</c> may be missing.
-    /// </summary>
+    // The sentences people wrap an ingredient in, anchored to everything left: `*` is the ingredient, a trailing `?` may be missing.
     private static readonly string[][] SentenceShapes =
     [
         ["was", "kann", "ich", "heute?|noch?|damit?", "mit", "*", "machen?|kochen?|zubereiten?|backen?"],
@@ -109,12 +80,7 @@ public static class QueryUnderstanding
         ["mit|with", "*"]
     ];
 
-    /// <summary>One run of letters and digits in the query, where it was.</summary>
-    /// <param name="Text">As typed.</param>
-    /// <param name="Folded">Folded the ä → ae way, for comparison.</param>
-    /// <param name="Start">Where it begins in the query.</param>
-    /// <param name="End">Where it ends, exclusive.</param>
-    /// <param name="Negated">Written with a minus directly in front: "-Reis".</param>
+    /// <summary>One run of letters and digits in the query. <c>Folded</c> is the ä → ae form used for comparison.</summary>
     private sealed record Token(string Text, string Folded, int Start, int End, bool Negated);
 
     private sealed class Reading
@@ -237,8 +203,7 @@ public static class QueryUnderstanding
             var rest = left;
             var bare = true;
 
-            // A sentence can sit inside another — "ich suche ein Rezept für
-            // Lasagne" — so what one leaves is asked again, a few times at most.
+            // Sentences nest ("ich suche ein Rezept für Lasagne"), so what one leaves is asked again, a few times.
             for (var round = 0; round < 3; round++)
             {
                 var inner = rest;
@@ -260,9 +225,7 @@ public static class QueryUnderstanding
 
             var found = ReadIngredients(rest);
 
-            // A bare "mit …" left over once everything else was understood is
-            // a sentence only if what follows is an ingredient; otherwise the
-            // words stay exactly as they were typed.
+            // A leftover bare "mit …" is a sentence only if an ingredient follows; otherwise the words stay as typed.
             if (found.Count == 0 && bare)
             {
                 return;
@@ -280,8 +243,7 @@ public static class QueryUnderstanding
                 return;
             }
 
-            // One ingredient and nothing else: the chip is the sentence, so
-            // removing it leaves nothing behind.
+            // One ingredient and nothing else: the chip is the sentence, so removing it leaves nothing.
             var index = applied.IndexOf(found[0]);
             applied[index] = found[0] with
             {
@@ -358,9 +320,7 @@ public static class QueryUnderstanding
             return found;
         }
 
-        /// <summary>
-        /// Matches a sentence against the tokens left, anchored at both ends.
-        /// </summary>
+        /// <summary>Matches a sentence against the tokens left, anchored at both ends.</summary>
         private bool Match(string[] sentence, int slot, int[] left, int position, out int[] rest)
         {
             rest = [];
@@ -374,9 +334,7 @@ public static class QueryUnderstanding
 
             if (pattern == "*")
             {
-                // The ingredient runs only as far as it must for the rest of
-                // the sentence to match: "machen" in "…mit Kartoffeln machen"
-                // belongs to the sentence, not to the potatoes.
+                // The ingredient runs only as far as the rest of the sentence needs: "machen" belongs to the sentence.
                 for (var end = position + 1; end <= left.Length; end++)
                 {
                     if (Match(sentence, slot + 1, left, end, out _))
@@ -459,10 +417,7 @@ public static class QueryUnderstanding
         private bool Unit(int at, HashSet<string> units) =>
             at < tokens.Length && !consumed[at] && units.Contains(tokens[at].Folded);
 
-        /// <summary>
-        /// How many tokens before a time belong to it: "unter", "weniger als",
-        /// and an article in between — "in einer halben Stunde".
-        /// </summary>
+        /// <summary>How many tokens before a time belong to it: "unter", "weniger als", an article in between.</summary>
         private int PrefixBefore(int at)
         {
             var article = at > 0 && !consumed[at - 1] && Articles.Contains(tokens[at - 1].Folded) ? 1 : 0;
@@ -540,15 +495,7 @@ public static class QueryUnderstanding
         private string Span(int first, int last) => query[tokens[first].Start..tokens[last].End];
     }
 
-    /// <summary>
-    /// The name an ingredient line would use for what was typed.
-    /// </summary>
-    /// <remarks>
-    /// The ranking counts ingredients by name, and a line says "Kartoffel" where
-    /// a query says "Kartoffeln". So it is the shortest of the concept's own
-    /// forms that the typed word begins with — four letters at least, or "Ei"
-    /// would be found in "Reis".
-    /// </remarks>
+    /// <summary>The name an ingredient line would use for what was typed: the shortest concept form it begins with, four letters at least ("Ei" would hit "Reis").</summary>
     private static string LineName(Concept concept, string typed)
     {
         var folded = SearchText.FoldAe(typed);

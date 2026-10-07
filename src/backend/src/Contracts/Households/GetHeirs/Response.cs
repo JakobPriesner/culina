@@ -17,9 +17,8 @@ public sealed record Heir
     public required string Name { get; init; }
 
     /// <summary>
-    /// The household it inherits from directly. The one asked about for a
-    /// direct heir — the only kind its owners can cut loose — or the heir it
-    /// inherits through.
+    /// The household it inherits from directly: the one asked about for a direct heir (whose owners
+    /// can cut it loose), else the heir it inherits through.
     /// </summary>
     public required Guid InheritsFrom { get; init; }
 }

@@ -2,15 +2,7 @@ using Domain.Shared;
 
 namespace Api.Infrastructure;
 
-/// <summary>
-/// Failures that are facts about the wire rather than about the domain:
-/// a malformed header, a missing precondition, a rejected origin.
-/// </summary>
-/// <remarks>
-/// They live in <c>Api</c> because nothing below it knows that HTTP exists, but
-/// they follow the same <c>module.reason</c> code contract as every domain
-/// error, so a client branches on them identically.
-/// </remarks>
+/// <summary>Failures that are facts about the wire (malformed header, missing precondition, rejected origin), following the same <c>module.reason</c> codes as domain errors.</summary>
 internal static class RequestErrors
 {
     internal static readonly Error PreconditionRequired = new(

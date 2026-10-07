@@ -2,9 +2,7 @@ using Domain.Import;
 
 namespace Domain.UnitTests.Import;
 
-/// <summary>
-/// The original's address, which becomes a link on every reading of a recipe.
-/// </summary>
+/// <summary>The original's address, which becomes a link on every reading of a recipe.</summary>
 public class SourceUrlTests
 {
     [Theory]
@@ -15,10 +13,8 @@ public class SourceUrlTests
     [InlineData("https://tandoor.lan:8080/view/recipe/7", "https://tandoor.lan:8080/view/recipe/7")]
     public void From_ShouldKeep_AnHttpAddressWithAHost(string text, string expected)
     {
-        // Arrange & Act
         var url = SourceUrl.From(text);
 
-        // Assert
         Assert.Equal(expected, url?.Value);
     }
 
@@ -44,17 +40,14 @@ public class SourceUrlTests
     [InlineData(null)]
     public void From_ShouldRefuse_AnythingThatIsNotAnHttpAddressWithAHost(string? text)
     {
-        // Arrange & Act & Assert
         Assert.Null(SourceUrl.From(text));
     }
 
     [Fact]
     public void From_ShouldRefuse_AnAddressLongerThanAnyRecipePage()
     {
-        // Arrange
         var text = "https://example.com/" + new string('a', SourceUrl.MaxLength);
 
-        // Act & Assert
         Assert.Null(SourceUrl.From(text));
     }
 }

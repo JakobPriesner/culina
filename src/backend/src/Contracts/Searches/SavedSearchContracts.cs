@@ -1,12 +1,7 @@
 namespace Contracts.Searches;
 
 /// <summary>A household's saved searches.</summary>
-/// <remarks>
-/// Wrapped, never a bare array, for the same reason every other collection here
-/// is. Not paged: a kitchen keeps a handful of these and they are drawn as a
-/// row of chips, so a cursor would be machinery for a list that fits on one
-/// line.
-/// </remarks>
+/// <remarks>Not paged: a kitchen keeps a handful.</remarks>
 public sealed record SavedSearchesResponse
 {
     /// <summary>The searches, oldest first, so the row of chips stops moving.</summary>
@@ -38,14 +33,7 @@ public sealed record SavedSearchDetail
     public required DateTimeOffset UpdatedAt { get; init; }
 }
 
-/// <summary>
-/// What a saved search asks the library for.
-/// </summary>
-/// <remarks>
-/// The same four values <c>GET /recipes</c> takes as <c>query</c>, <c>tag</c>,
-/// <c>maxMinutes</c> and <c>sort</c>, so applying one is assigning them rather
-/// than translating anything.
-/// </remarks>
+/// <summary>What a saved search asks for: the <c>query</c>, <c>tag</c>, <c>maxMinutes</c> and <c>sort</c> of <c>GET /recipes</c>.</summary>
 public sealed record SearchCriteriaContract
 {
     /// <summary>The words that were in the search box, or omit.</summary>
@@ -58,14 +46,9 @@ public sealed record SearchCriteriaContract
     public int? MaxMinutes { get; init; }
 
     /// <summary>
-    /// The order to read in, or omit for whatever the library would choose.
+    /// The order to read in, or omit for the default. One of <c>relevance</c>, <c>suggested</c>, <c>-updatedAt</c>,
+    /// <c>title</c>, <c>totalMinutes</c> or <c>-cookCount</c> (not <c>cookbookOrder</c>, which needs a cookbook).
     /// </summary>
-    /// <remarks>
-    /// One of <c>relevance</c>, <c>suggested</c>, <c>-updatedAt</c>,
-    /// <c>title</c>, <c>totalMinutes</c> or <c>-cookCount</c> — the same words
-    /// <c>GET /recipes</c> accepts, minus <c>cookbookOrder</c>, which needs a
-    /// cookbook to be an order of.
-    /// </remarks>
     public string? Sort { get; init; }
 }
 
@@ -83,12 +66,7 @@ public sealed record CreateSavedSearchRequest
 }
 
 /// <summary>Renames a saved search, and rewrites what it asks for.</summary>
-/// <remarks>
-/// Both together rather than one patch per field: renaming a search and
-/// pointing it at what you are looking at now are the same gesture from the
-/// same sheet, and two requests for one gesture is two ways for half of it to
-/// fail.
-/// </remarks>
+/// <remarks>Both together, as one gesture, so half of it cannot fail.</remarks>
 public sealed record UpdateSavedSearchRequest
 {
     /// <summary>The new name.</summary>

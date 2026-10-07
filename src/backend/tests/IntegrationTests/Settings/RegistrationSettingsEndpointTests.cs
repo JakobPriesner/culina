@@ -11,13 +11,10 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Read_ShouldShowTheShippedDefaults_OnAFreshInstance()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.GetAsync("/api/v1/settings/registration", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(response.Json!.Value.GetProperty("openRegistration").GetBoolean());
         Assert.True(response.Json!.Value.GetProperty("requireInvitation").GetBoolean());
@@ -26,10 +23,8 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldTakeEffectOnTheNextRegistration_WithoutARestart()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         await admin.PutAsync(
             "/api/v1/settings/registration",
             new { openRegistration = true, requireInvitation = false, maxUsers = 100 },
@@ -41,42 +36,34 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
             new { email = "grace@example.com", displayName = "Grace", password = Password },
             Token);
 
-        // Assert
-        // The live singleton every handler holds is mutated in place, so there
-        // is no cache to invalidate and no restart to wait for.
+        // The live singleton is mutated in place: no cache to invalidate, no restart.
         Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
     }
 
     [Fact]
     public async Task Update_ShouldSurviveAReload_BecauseItIsPersistedNotJustMutated()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
             new { openRegistration = true, requireInvitation = false, maxUsers = 42 },
             Token);
 
-        // Act
         var read = await admin.GetAsync("/api/v1/settings/registration", Token);
 
-        // Assert
         Assert.Equal(42, read.Json!.Value.GetProperty("maxUsers").GetInt32());
     }
 
     [Fact]
     public async Task Update_ShouldRejectAnImpossibleLimit_NamingTheField()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.PutAsync(
             "/api/v1/settings/registration",
             new { openRegistration = true, requireInvitation = false, maxUsers = 0 },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("settings.invalid_value", response.ProblemCode);
     }
@@ -84,7 +71,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Settings_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -101,19 +87,15 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
             new { email = "grace@example.com", password = Password },
             Token);
 
-        // Act
         var response = await ordinary.GetAsync("/api/v1/settings/registration", Token);
 
-        // Assert
-        // Checked against the users table on every request rather than carried
-        // as a claim, so it cannot go stale.
+        // Checked against the users table per request rather than a claim, so it cannot go stale.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
     public async Task Registration_ShouldAcceptAnInvitationCode_WhenTheInstanceRequiresOne()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -130,7 +112,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
 
         using var newcomer = postgres.Api.NewApiClient();
 
-        // Act
         var registered = await newcomer.PostAsync(
             "/api/v1/users",
             new
@@ -142,9 +123,7 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // The account and its membership are one atomic step: a consumed
-        // invitation with no account behind it would be worse than a refusal.
+        // Account and membership are one atomic step.
         Assert.Equal(HttpStatusCode.Created, registered.StatusCode);
         Assert.Equal(householdId, registered.Json!.Value.GetProperty("householdId").GetGuid());
 
@@ -155,7 +134,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Registration_ShouldBeRefused_WhenACodeIsRequiredAndNoneIsGiven()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -164,20 +142,17 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
 
         using var newcomer = postgres.Api.NewApiClient();
 
-        // Act
         var registered = await newcomer.PostAsync(
             "/api/v1/users",
             new { email = "grace@example.com", displayName = "Grace", password = Password },
             Token);
 
-        // Assert
         Assert.Equal("households.invitation_invalid", registered.ProblemCode);
     }
 
     [Fact]
     public async Task Registration_ShouldLeaveNoAccountBehind_WhenItIsRefusedForWantOfACode()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -195,7 +170,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
         using var newcomer = postgres.Api.NewApiClient();
         var account = new { email = "grace@example.com", displayName = "Grace", password = Password };
 
-        // Act
         await newcomer.PostAsync("/api/v1/users", account, Token);
 
         var signedIn = await newcomer.PostAsync(
@@ -207,10 +181,7 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
             new { account.email, account.displayName, account.password, invitationCode = code },
             Token);
 
-        // Assert
-        // A refusal leaves nothing behind: otherwise anyone could sign in to
-        // an invite-only instance, and the address would be spent for a later
-        // honest attempt.
+        // A refusal leaves nothing behind: the address stays usable for a later honest attempt.
         Assert.Equal("auth.invalid_credentials", signedIn.ProblemCode);
         Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
     }
@@ -220,7 +191,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
     [InlineData("not-a-real-code")]
     public async Task Registration_ShouldNotSayAnAddressIsTaken_ToSomebodyWithoutAWorkingInvitation(string? code)
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -229,39 +199,32 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
 
         using var stranger = postgres.Api.NewApiClient();
 
-        // Act
         var probed = await stranger.PostAsync(
             "/api/v1/users",
             new { email = "ada@example.com", displayName = "Mallory", password = Password, invitationCode = code },
             Token);
 
-        // Assert
-        // The invitation is settled before the address is: on an invite-only
-        // instance, registration must not be a way to learn who has an account.
+        // The invitation is settled before the address, so registration cannot reveal who has an account.
         Assert.Equal("households.invitation_invalid", probed.ProblemCode);
     }
 
     [Fact]
     public async Task Registration_ShouldNotSayAnAddressIsTaken_WhenRegistrationIsClosed()
     {
-        // Arrange
         using var admin = await AdminAsync();
         using var stranger = postgres.Api.NewApiClient();
 
-        // Act
         var probed = await stranger.PostAsync(
             "/api/v1/users",
             new { email = "ada@example.com", displayName = "Mallory", password = Password },
             Token);
 
-        // Assert
         Assert.Equal("users.registration_closed", probed.ProblemCode);
     }
 
     [Fact]
     public async Task Registration_ShouldSayAnAddressIsTaken_OnceThePolicyAdmitsTheCaller()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -270,16 +233,12 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
 
         using var newcomer = postgres.Api.NewApiClient();
 
-        // Act
         var taken = await newcomer.PostAsync(
             "/api/v1/users",
             new { email = "ada@example.com", displayName = "Ada", password = Password },
             Token);
 
-        // Assert
-        // Accepted on purpose: with registration open to everyone and no email
-        // to send a "you already have an account" message, saying so is the
-        // only way the person in front of the form finds out.
+        // Accepted on purpose: with open registration and no email, this is how the person learns they have an account.
         Assert.Equal(HttpStatusCode.Conflict, taken.StatusCode);
         Assert.Equal("users.email_already_used", taken.ProblemCode);
     }
@@ -287,7 +246,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Registration_ShouldLeaveTheInvitationUnused_WhenTheAddressTurnsOutToBeTaken()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -301,7 +259,6 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
 
         using var newcomer = postgres.Api.NewApiClient();
 
-        // Act
         var taken = await newcomer.PostAsync(
             "/api/v1/users",
             new { email = "ada@example.com", displayName = "Grace", password = Password, invitationCode = code },
@@ -311,9 +268,7 @@ public class RegistrationSettingsEndpointTests(PostgresFixture postgres)
             new { email = "grace@example.com", displayName = "Grace", password = Password, invitationCode = code },
             Token);
 
-        // Assert
-        // Somebody holding a working invitation is somebody the instance would
-        // admit, so they are told; the code is not spent on the refusal.
+        // Someone holding a working invitation would be admitted, so they are told; the code is not spent.
         Assert.Equal("users.email_already_used", taken.ProblemCode);
         Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
     }

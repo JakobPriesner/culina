@@ -4,14 +4,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Recipes.Evaluation;
 
-/// <summary>
-/// The sixty recipes and forty-four judged queries of <c>golden-library.json</c>.
-/// </summary>
-/// <remarks>
-/// A library built to be difficult — see <see cref="SearchEvaluationTests"/> —
-/// and shared, because every feature that reads the search document is
-/// measured against the same kitchen.
-/// </remarks>
+/// <summary>The sixty recipes and forty-four judged queries of <c>golden-library.json</c>, shared so every feature reading the search document is measured on one kitchen; see <see cref="SearchEvaluationTests"/>.</summary>
 internal sealed record GoldenLibrary(List<GoldenRecipe> Recipes, List<GoldenQuery> Queries)
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);

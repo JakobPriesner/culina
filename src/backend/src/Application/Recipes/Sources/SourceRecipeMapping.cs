@@ -4,60 +4,32 @@ using Domain.Shared;
 
 namespace Application.Recipes.Sources;
 
-/// <summary>
-/// Turns a recipe from somebody else's app into one of this app's recipes.
-/// </summary>
+/// <summary>Turns a recipe from somebody else's app into one of this app's recipes.</summary>
 /// <remarks>
-/// <para>
-/// Forgiving on purpose, and this is the one place in the codebase where that
-/// is the right answer. Everywhere else a value that does not fit the model is
-/// a mistake somebody just made and can fix — a form is open and they are
-/// looking at it. Here, the values come from a library of eight hundred recipes
-/// written over five years by somebody who was not thinking about this app's
-/// rules, and there is nobody to ask.
-/// </para>
-/// <para>
-/// So nothing here refuses a recipe over a detail. An ingredient name of 140
-/// characters is shortened, a unit this app cannot spell becomes part of the
-/// note, an implausible cooking time is dropped. Refusing instead would mean an
-/// import that stops on recipe 341 with "invalid unit" — which is technically
-/// correct and completely useless.
-/// </para>
-/// <para>
-/// The one thing it will not do is invent. A serving count that cannot be read
-/// becomes the default rather than a guess, because that number scales every
-/// amount in the recipe, and a wrong one is worse than an absent one.
-/// </para>
+/// Forgiving on purpose: values come from a large library nobody can be asked about, so details are
+/// shortened or dropped rather than refused. It never invents: an unreadable serving count becomes
+/// the default, since it scales every amount.
 /// </remarks>
 internal static class SourceRecipeMapping
 {
-    /// <summary>More tags than any recipe carries meaningfully.</summary>
     private const int MaxTags = 25;
 
-    /// <summary>Longer than any introduction, and short of a pasted article.</summary>
     private const int MaxDescriptionLength = 4000;
 
-    /// <summary>
-    /// Everything about a recipe except its ingredients and steps.
-    /// </summary>
+    /// <summary>Everything about a recipe except its ingredients and steps.</summary>
     /// <param name="source">The recipe over there.</param>
     /// <param name="language">The language of the person bringing it over.</param>
     internal static Result<RecipeDetails> ToDetails(SourceRecipe source, Language language)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // The one hard requirement. A recipe with no name is not a recipe that
-        // can be shortened into one.
+        // The one hard requirement: a recipe with no name cannot be shortened into one.
         return RecipeTitle.Create(Shorten(source.Title, RecipeTitle.MaxLength))
             .Map(title => new RecipeDetails(
                 title,
                 Shorten(source.Description, MaxDescriptionLength),
-                // Still not guessed from the words — reading "Mehl" as German
-                // because it looks German is the kind of cleverness that gets
-                // one recipe in twenty wrong with no way to notice. Taken from
-                // the person instead: somebody connecting their own library is
-                // almost always bringing over recipes in the language they
-                // read, and English for all of them was a guess too.
+                // The importer's language; guessing from the words would be silently wrong for some
+                // recipes.
                 language,
                 ToYield(source.Servings),
                 Minutes(source.PrepMinutes),
@@ -86,11 +58,8 @@ internal static class SourceRecipeMapping
                     break;
                 }
 
-                // Dropped rather than failed: an ingredient with no name is a
-                // blank row somebody left behind over there, and it is not
-                // worth refusing their recipe over. Recorded either way, so a
-                // step that points at the row after it still points at the row
-                // after it.
+                // Dropped, not failed: a nameless row is a blank left behind. Still recorded in
+                // `landed`, so later step references keep their indexes.
                 landed.Add(ToIngredient(line, ingredients.Count).Match(
                     ingredient =>
                     {
@@ -102,7 +71,6 @@ internal static class SourceRecipeMapping
                     _ => null));
             }
 
-            // An empty group would be a heading with nothing under it.
             if (ingredients.Count == 0)
             {
                 continue;
@@ -129,36 +97,21 @@ internal static class SourceRecipeMapping
             }
         }
 
-        // Every recipe has a group, even an empty one: it is the list people
-        // type into, and a recipe with none has nowhere to put the first line.
+        // Every recipe has a group, even an empty one: it is the list people type into.
         IReadOnlyList<IngredientGroup> filled =
             groups.Count == 0 ? [IngredientGroup.Implicit()] : groups;
 
         return Result<ImportedIngredients>.Success(new ImportedIngredients(filled, landed));
     }
 
-    /// <summary>
-    /// The steps, with the references the other app made kept as references.
-    /// </summary>
+    /// <summary>The steps, with references made in the other app kept as references.</summary>
     /// <param name="source">The recipe over there.</param>
     /// <param name="landed">
-    /// Where each of the source's ingredients ended up, from
-    /// <see cref="ToGroups"/>.
+    /// Where each source ingredient ended up, from <see cref="ToGroups"/>.
     /// </param>
     /// <remarks>
-    /// <para>
-    /// A step is linked to an ingredient only where the other app linked it.
-    /// Nothing here reads the words: matching "Mehl" in a sentence against an
-    /// ingredient called "Mehl, gesiebt" is exactly the silent guessing the
-    /// editor deliberately stopped doing — done here, it would be wrong
-    /// invisibly, eight hundred times.
-    /// </para>
-    /// <para>
-    /// A reference that was made over there is not a guess, though. It is the
-    /// same fact this app stores, written by the same person, and carrying it
-    /// across is what keeps the amounts in an imported step moving with the
-    /// servings.
-    /// </para>
+    /// Nothing reads the words: matching "Mehl" against "Mehl, gesiebt" is the silent guessing the
+    /// editor stopped doing. A reference made over there is not a guess.
     /// </remarks>
     internal static Result<IReadOnlyList<Step>> ToSteps(
         SourceRecipe source,
@@ -204,14 +157,8 @@ internal static class SourceRecipeMapping
     }
 
     /// <summary>
-    /// One step's segments, with each reference resolved to a real ingredient.
+    /// One step's segments, with each reference resolved; one that resolves to nothing is dropped.
     /// </summary>
-    /// <remarks>
-    /// A reference that resolves to nothing is dropped rather than written out
-    /// as words. It points at a row this app did not keep — one with no name,
-    /// or one past the ingredient limit — and a sentence missing a noun reads
-    /// better than one naming something the list does not contain.
-    /// </remarks>
     private static List<StepSegment> ToSegments(SourceStep step, IReadOnlyList<Guid?> landed)
     {
         List<StepSegment> segments = [];
@@ -239,13 +186,7 @@ internal static class SourceRecipeMapping
         return segments;
     }
 
-    /// <summary>
-    /// The step's segments with the whitespace at its two ends removed.
-    /// </summary>
-    /// <remarks>
-    /// The two ends only. A space between two words is still a space when one
-    /// of the words is a reference to an ingredient.
-    /// </remarks>
+    /// <summary>The step's segments with whitespace removed from its two ends only.</summary>
     private static List<StepSegment> Trim(List<StepSegment> segments)
     {
         if (segments is [TextSegment first, ..])
@@ -262,15 +203,9 @@ internal static class SourceRecipeMapping
     }
 
     /// <summary>
-    /// As much of the step as the column holds.
+    /// As much of the step as the column holds, measured in stored form (references cost more
+    /// stored).
     /// </summary>
-    /// <remarks>
-    /// Measured in the stored form, because that is what the limit is on and a
-    /// reference costs far more stored than it does written. Shortened rather
-    /// than refused, for the same reason everything else here is: a step of
-    /// four thousand characters is an outlier, and one is not worth losing the
-    /// recipe over.
-    /// </remarks>
     private static List<StepSegment> Fit(List<StepSegment> segments, int limit)
     {
         List<StepSegment> kept = [];
@@ -295,8 +230,8 @@ internal static class SourceRecipeMapping
             break;
         }
 
-        // A literal "[[" in the words grows by a character when it is stored,
-        // so the cut above can still land a hair over the line.
+        // A literal "[[" grows by a character when stored, so the cut can still land over the
+        // limit.
         while (kept.Count > 0 && StepText.Serialise(kept).Length > limit)
         {
             kept.RemoveAt(kept.Count - 1);
@@ -307,9 +242,7 @@ internal static class SourceRecipeMapping
 
     private static Result<RecipeIngredient> ToIngredient(SourceIngredient line, int sortOrder)
     {
-        // A unit this app cannot spell — "1/2 Dose", "some" — is kept as words
-        // rather than thrown away. The amount is still right, and the note is
-        // where a cook will read it.
+        // A unit this app cannot spell ("1/2 Dose") is kept in the note rather than thrown away.
         var unit = Unit.Create(line.Unit).Match(value => value, _ => (Unit?)null);
         var strayUnit = unit is null && !string.IsNullOrWhiteSpace(line.Unit) ? line.Unit!.Trim() : null;
 
@@ -326,13 +259,11 @@ internal static class SourceRecipeMapping
             Shorten(note, RecipeIngredient.MaxNoteLength));
     }
 
-    /// <summary>What it makes, or the default when the number is not usable.</summary>
     private static Yield ToYield(decimal? servings) =>
         servings is null or <= 0 or > Yield.MaxAmount
             ? Yield.Default
-            // Servings rather than pieces. Which of the two a number means is
-            // something the other app does not record, and portions is what it
-            // is far more often.
+            // Servings rather than pieces: the other app does not record which, and portions is far
+            // more common.
             : Yield.Create(servings.Value, YieldKind.Servings).Match(value => value, _ => Yield.Default);
 
     private static IReadOnlyList<string> ToTags(IReadOnlyList<string> tags) =>
@@ -345,7 +276,6 @@ internal static class SourceRecipeMapping
             .Take(MaxTags)
     ];
 
-    /// <summary>A duration, or nothing when it is not one.</summary>
     private static int? Minutes(int? value) =>
         value is null or <= 0 or > Recipe.MaxMinutes ? null : value;
 
@@ -356,13 +286,8 @@ internal static class SourceRecipeMapping
         value is null or <= 0 or > Quantity.MaxAmount ? null : value;
 
     /// <summary>
-    /// Shortens rather than refuses, and returns null for nothing at all.
+    /// Shortens rather than refuses, cutting at a word boundary near the end; null for nothing.
     /// </summary>
-    /// <remarks>
-    /// Cut at a word boundary when there is one near the end, because a name
-    /// that stops mid-word reads as corruption while one that stops between
-    /// words reads as a long name.
-    /// </remarks>
     private static string? Shorten(string? value, int limit)
     {
         var trimmed = value?.Trim();
@@ -397,15 +322,11 @@ internal static class SourceRecipeMapping
     }
 }
 
-/// <summary>
-/// The recipe's ingredient list, and a way back to the other app's.
-/// </summary>
+/// <summary>The recipe's ingredient list, and a way back to the other app's.</summary>
 /// <param name="Groups">The list as this app will have it.</param>
 /// <param name="Landed">
-/// One entry for each of the source's ingredients, in the source's own order:
-/// the id of the line it became, or null where the row was dropped. It is what
-/// turns "the third ingredient over there" — which is all a step's reference
-/// ever says — into one of this recipe's own ingredients.
+/// The id of the line each source ingredient became (null if dropped), in source order; it turns a
+/// step's "third ingredient over there" into one of this recipe's own.
 /// </param>
 internal sealed record ImportedIngredients(
     IReadOnlyList<IngredientGroup> Groups,

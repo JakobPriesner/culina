@@ -37,60 +37,27 @@ internal sealed record ReplayOutcome(ReplayPoint Point, IReadOnlyList<ScoredReci
 }
 
 /// <summary>
-/// Asks the ranker what it would have suggested just before each thing a
-/// household actually cooked. See <c>docs/suggestions-research.md</c> §M.1.
+/// Asks the ranker what it would have suggested just before each thing a household cooked; see <c>docs/suggestions-research.md</c> §M.1.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The cook log is dated, so the counterfactual is computable without shipping
-/// anything: for an entry at <c>t</c>, put the household back the way it was
-/// just before <c>t</c>, ask for a shortlist, and see whether what they cooked
-/// is on it. A few hundred entries is nowhere near enough to fit a weight
-/// vector, and plenty to say which of two is better.
-/// </para>
-/// <para>
-/// <b>The world is put back by deleting the future, and then not keeping the
-/// deletion.</b> Everything dated at or after <c>t</c> is removed inside a
-/// transaction, the real <see cref="SuggestionRanker"/> runs inside the same
-/// transaction, and the transaction is rolled back. So the ranking under test
-/// is the production SQL, unaltered — a replay with its own copy of the scoring
-/// would measure the copy.
-/// </para>
-/// <para>
-/// What cannot be put back is what was edited in place: a recipe's current
-/// tags and ingredients stand in for whatever they were at <c>t</c>, and a plan
-/// entry has no creation date, so everything planned for <c>t</c>'s day or later
-/// is treated as not yet planned. The second errs towards knowing too little,
-/// which is the safe direction: planning dinner and then cooking it would
-/// otherwise hand the ranker the answer.
-/// </para>
+/// The future is deleted inside a transaction, the production <see cref="SuggestionRanker"/> runs, and the transaction is rolled back,
+/// so the SQL under test is unaltered. Edits in place cannot be rewound (current tags stand in), and plan entries from that day on count as
+/// not yet planned: knowing too little is the safe direction.
 /// </remarks>
-/// <param name="session">
-/// One connection for the whole run. Nothing it does survives: every point is a
-/// transaction that is rolled back.
-/// </param>
+/// <param name="session">One connection for the whole run; every point is a rolled-back transaction.</param>
+/// <param name="householdId">Whose cook log.</param>
 /// <param name="householdId">Whose cook log.</param>
 internal sealed class SuggestionReplay(DbSession session, Guid householdId)
 {
-    /// <summary>How long a household's history runs before its entries are worth predicting.</summary>
-    /// <remarks>
-    /// The first weeks of a cook log are a cold start, and every ranker is bad
-    /// at them in the same way. Scoring them would mostly measure the length of
-    /// the history rather than the quality of the weights.
-    /// </remarks>
+    // How long a history runs before its entries are worth predicting: the first weeks are a cold start that would measure history length, not weights.
     internal const int WarmUpDays = 90;
 
-    /// <summary>The longest shortlist scored. recall@5 is read off the front of it.</summary>
+    // The longest shortlist scored. recall@5 is read off the front of it.
     internal const int ListLength = 10;
 
     private readonly DbExecutor executor = new(session);
 
-    /// <summary>Every entry worth predicting, oldest first.</summary>
-    /// <remarks>
-    /// An entry for a recipe written down after it was cooked — somebody logging
-    /// last week's dinner the day they imported it — is left out: the ranker
-    /// cannot be blamed for not suggesting a recipe that was not in the book.
-    /// </remarks>
+    // Every entry worth predicting, oldest first. Entries for recipes written down after they were cooked are left out: not in the book yet.
     internal Task<IReadOnlyList<ReplayPoint>> PointsAsync(CancellationToken cancellationToken) =>
         executor.QueryAsync<ReplayPoint>(
             """
@@ -107,7 +74,7 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
             new { householdId, warmUpDays = WarmUpDays },
             cancellationToken);
 
-    /// <summary>What the ranker, weighted like this, would have suggested before each point.</summary>
+    // What the ranker, weighted like this, would have suggested before each point.
     internal async Task<IReadOnlyList<ReplayOutcome>> RunAsync(
         IReadOnlyList<ReplayPoint> points,
         RankingWeights weights,
@@ -129,8 +96,7 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
             }
             finally
             {
-                // Ending without a commit is the rollback, and it is the whole
-                // trick: the future is deleted for exactly one question.
+                // No commit is the rollback: the future is deleted for exactly one question.
                 await session.EndTransactionAsync();
             }
         }
@@ -138,7 +104,7 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
         return outcomes;
     }
 
-    /// <summary>Deletes everything the household did at or after <paramref name="at"/>, and says how many recipes are left.</summary>
+    // Deletes everything the household did at or after `at`, and says how many recipes are left.
     private async Task<int> RewindAsync(DateTimeOffset at, CancellationToken cancellationToken)
     {
         await executor.ExecuteAsync(
@@ -174,14 +140,7 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
             cancellationToken);
     }
 
-    /// <summary>
-    /// The question the front page would have asked that day: a shortlist for
-    /// whoever cooked, as of that morning.
-    /// </summary>
-    /// <remarks>
-    /// Truncated to the day exactly as the endpoint truncates it, so the replay
-    /// asks the question people are actually asked, jitter and all.
-    /// </remarks>
+    // The question the front page would have asked that day, truncated to the day as the endpoint does it.
     private SuggestionContext ContextFor(ReplayPoint point) => new(
         householdId,
         point.UserId,

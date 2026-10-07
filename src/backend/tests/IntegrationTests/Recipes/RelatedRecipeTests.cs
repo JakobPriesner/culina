@@ -7,15 +7,7 @@ using IntegrationTests.Recipes.Evaluation;
 
 namespace IntegrationTests.Recipes;
 
-/// <summary>
-/// "Recipes like this one", measured against the golden library.
-/// </summary>
-/// <remarks>
-/// A related recipe with no reason is a slot machine; one with a reason is a
-/// suggestion somebody can disagree with. So every one of them is checked for
-/// having something to say, and the report beside the assertion is what to
-/// read when changing the weights.
-/// </remarks>
+/// <summary>"Recipes like this one" against the golden library; every result must carry a reason.</summary>
 [Collection(RequiresDatabase.Name)]
 public class RelatedRecipeTests(PostgresFixture postgres)
 {
@@ -24,12 +16,10 @@ public class RelatedRecipeTests(PostgresFixture postgres)
     [Fact]
     public async Task Related_ShouldOfferAtLeastThreeWithAReason_ForEveryRecipeOfTheGoldenLibrary()
     {
-        // Arrange
         var golden = GoldenLibrary.Load();
         var kitchen = await Kitchen.OpenAsync(postgres);
         var ids = await golden.SeedAsync(kitchen);
 
-        // Act
         var answers = new Dictionary<string, List<JsonElement>>(StringComparer.Ordinal);
 
         foreach (var (title, recipeId) in ids)
@@ -37,7 +27,6 @@ public class RelatedRecipeTests(PostgresFixture postgres)
             answers[title] = await RelatedAsync(kitchen.Client, recipeId);
         }
 
-        // Assert
         var report = Report(answers);
         TestContext.Current.SendDiagnosticMessage(report);
 
@@ -49,26 +38,16 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         });
     }
 
-    /// <summary>
-    /// What a recipe is counts for more than what it happens to share.
-    /// </summary>
-    /// <remarks>
-    /// The example the design was written around: somebody reading a
-    /// Bolognese wants the Lasagne, not the Chili that has three of the same
-    /// tins in it.
-    /// </remarks>
+    /// <summary>What a recipe is counts for more than what it shares: Bolognese gets Lasagne, not the Chili with the same tins.</summary>
     [Fact]
     public async Task Related_ShouldRankWhatARecipeIsAboveWhatItIsMadeFrom()
     {
-        // Arrange
         var golden = GoldenLibrary.Load();
         var kitchen = await Kitchen.OpenAsync(postgres);
         var ids = await golden.SeedAsync(kitchen);
 
-        // Act
         var related = (await RelatedAsync(kitchen.Client, ids["Spaghetti Bolognese"])).Select(Title).ToList();
 
-        // Assert
         Assert.Contains("Lasagne Bolognese", related);
         var chili = related.IndexOf("Chili con Carne");
         Assert.True(
@@ -79,13 +58,11 @@ public class RelatedRecipeTests(PostgresFixture postgres)
     [Fact]
     public async Task Related_ShouldWalkEveryPageOnceAndInOrder_WhenFollowingTheCursor()
     {
-        // Arrange
         var golden = GoldenLibrary.Load();
         var kitchen = await Kitchen.OpenAsync(postgres);
         var ids = await golden.SeedAsync(kitchen);
         var recipeId = ids["Spaghetti Bolognese"];
 
-        // Act
         List<string> walked = [];
         string? cursor = null;
 
@@ -94,7 +71,6 @@ public class RelatedRecipeTests(PostgresFixture postgres)
             var page = await PageAsync(kitchen.Client, $"/api/v1/recipes/{recipeId}/related?limit=3{(cursor is null ? string.Empty : $"&cursor={cursor}")}");
             var items = page.GetProperty("items").EnumerateArray().Select(Title).ToList();
 
-            // A page is only ever short at the end of the shelf.
             cursor = page.TryGetProperty("nextCursor", out var next) && next.ValueKind == JsonValueKind.String
                 ? next.GetString()
                 : null;
@@ -106,7 +82,6 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         var once = (await PageAsync(kitchen.Client, $"/api/v1/recipes/{recipeId}/related?limit=12"))
             .GetProperty("items").EnumerateArray().Select(Title).ToList();
 
-        // Assert
         Assert.True(walked.Count > 3, string.Join(" · ", walked));
         Assert.Equal(walked.Count, walked.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(once, walked.Take(once.Count));
@@ -115,18 +90,14 @@ public class RelatedRecipeTests(PostgresFixture postgres)
     [Fact]
     public async Task Related_ShouldSayNotFound_ForARecipeInAnotherHousehold()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await kitchen.SaveAsync(
             "Spaghetti Bolognese", "de", 15, 45, [("Hackfleisch", "g")], ["pasta"], "Anbraten.");
         using var stranger = await Kitchen.StrangerAsync(postgres);
 
-        // Act
         var response = await stranger.GetAsync($"/api/v1/recipes/{recipeId}/related", Token);
 
-        // Assert
-        // Never a 403, and never the neighbour's recipes: that would confirm
-        // the recipe exists and say what else is in that kitchen.
+        // Never a 403, which would confirm the recipe exists.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("recipes.not_found", response.ProblemCode);
     }
@@ -134,9 +105,7 @@ public class RelatedRecipeTests(PostgresFixture postgres)
     [Fact]
     public async Task Related_ShouldAnswer_WhenACursorsTimeCarriesAnOffset()
     {
-        // Arrange
-        // Every cursor is written in UTC, and the driver refuses a timestamptz
-        // that is not; a hand-made one in +02:00 is the same instant.
+        // Cursors are UTC and the driver refuses non-UTC timestamptz; a +02:00 one is the same instant.
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await kitchen.SaveAsync(
             "Spaghetti Bolognese", "de", 15, 45, [("Hackfleisch", "g")], ["pasta"], "Anbraten.");
@@ -145,12 +114,10 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         var cursor = System.Buffers.Text.Base64Url.EncodeToString(Encoding.UTF8.GetBytes(
             $$"""{"Score":1,"UpdatedAt":"2999-01-01T00:00:00+02:00","Id":"{{Guid.Empty}}"}"""));
 
-        // Act
         var response = await kitchen.Client.GetAsync(
             $"/api/v1/recipes/{recipeId}/related?cursor={cursor}",
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 

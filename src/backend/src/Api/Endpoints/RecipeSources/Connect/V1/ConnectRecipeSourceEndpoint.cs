@@ -8,10 +8,8 @@ namespace Api.Endpoints.RecipeSources.Connect.V1;
 
 /// <summary>Connects another app's recipe library.</summary>
 /// <remarks>
-/// Rate limited with the same policy the pasted-link import uses, because it is
-/// the same risk: the server opens a connection to an address somebody else
-/// chose. Unlike that one, this also carries a credential — which is why the
-/// token is write-only and appears in no response on this API.
+/// Rate limited like the pasted-link import: the server opens a connection to an address somebody
+/// else chose. It also carries a credential, so the token is write-only and appears in no response.
 /// </remarks>
 internal sealed class ConnectRecipeSourceEndpoint : IEndpoint
 {

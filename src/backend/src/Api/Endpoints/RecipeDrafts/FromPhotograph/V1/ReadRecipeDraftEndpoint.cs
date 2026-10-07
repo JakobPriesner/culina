@@ -9,13 +9,7 @@ using Event = Contracts.Recipes.Drafts.Event;
 namespace Api.Endpoints.RecipeDrafts.FromPhotograph.V1;
 
 /// <summary>Reads a recipe out of a photograph.</summary>
-/// <remarks>
-/// Its own route rather than a third shape of <c>POST /recipe-drafts</c>,
-/// because a photograph arrives as multipart and the other three arrive as
-/// JSON — and one route cannot bind both. <c>photographs</c> is the sub-
-/// collection the photograph is posted to, which keeps it a noun; the draft
-/// that comes back is the same one the JSON route returns.
-/// </remarks>
+/// <remarks>A separate route because a photograph arrives as multipart and the other draft kinds as JSON.</remarks>
 internal sealed class ReadRecipeDraftEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
@@ -85,14 +79,7 @@ internal sealed class ReadRecipeDraftEndpoint : IEndpoint
     private static IResult Stream(DraftProgress progress) =>
         TypedResults.ServerSentEvents(progress.Events);
 
-    /// <summary>
-    /// The whole file, in memory.
-    /// </summary>
-    /// <remarks>
-    /// Bounded by the same ceiling an upload has, checked before this runs. A
-    /// photograph goes into a request body that the client may build more than
-    /// once, so it has to be bytes rather than a stream.
-    /// </remarks>
+    // Bytes rather than a stream, because the request body may be built more than once. Size is checked before this runs.
     private static async Task<ReadOnlyMemory<byte>> ReadAsync(
         IFormFile file,
         CancellationToken cancellationToken)
