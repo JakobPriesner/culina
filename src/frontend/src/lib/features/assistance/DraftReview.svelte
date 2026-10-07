@@ -18,6 +18,7 @@
   } from './draftToRecipe';
 
   import type { Recipe } from '$features/recipes/types';
+  import { sourceLink } from '$features/recipes/sourceLink';
 
   /**
    * What the assistant suggested, beside what is there now.
@@ -83,6 +84,7 @@
   let accepted = $state<Accepted>(acceptNothing());
 
   const available = $derived(draft ? offers(draft) : acceptNothing());
+  const original = $derived(sourceLink(source?.url));
   const parts = $derived.by(() => {
     if (!draft) {
       return [];
@@ -167,10 +169,10 @@
     <div class="source-comparison">
       <section class="original" aria-label={m['import.review.source']()}>
         <h3>{m['import.review.source']()}</h3>
-        {#if source.url}
-          <!-- External URL validated by intake, not an application route. -->
+        {#if original}
+          <!-- An external web address, checked by sourceLink, not an application route. -->
           <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-          <a href={source.url} target="_blank" rel="noopener noreferrer"
+          <a href={original.href} target="_blank" rel="noopener noreferrer"
             >{m['import.review.openSource']()}</a
           >
         {/if}

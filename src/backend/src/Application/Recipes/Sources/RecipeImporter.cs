@@ -211,7 +211,7 @@ internal sealed class RecipeImporter(
                                         into.Source.Kind,
                                         into.Source.Id,
                                         theirs.ExternalId,
-                                        theirs.SourceUrl,
+                                        SourceUrl.From(theirs.SourceUrl),
                                         now),
                                     token)
                                 .ConfigureAwait(false);

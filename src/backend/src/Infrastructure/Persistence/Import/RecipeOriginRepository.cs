@@ -53,7 +53,7 @@ internal sealed class RecipeOriginRepository(DbExecutor executor) : IRecipeOrigi
                         kind = origin.Kind.Code,
                         sourceId = origin.SourceId,
                         externalId = origin.ExternalId,
-                        sourceUrl = origin.SourceUrl,
+                        sourceUrl = origin.SourceUrl?.Value,
                         importedAt = origin.ImportedAt
                     },
                     cancellationToken)
@@ -128,13 +128,16 @@ internal static class RecipeOriginRowMappings
         var kind = SourceKind.Parse(row.Kind)
             ?? throw new InvalidOperationException($"Stored origin kind '{row.Kind}' is not known.");
 
+        // Read through the same rule it is written through, because rows from
+        // before the rule existed were stored as they arrived: one that is not
+        // an http or https address simply has no link.
         return new RecipeOrigin(
             row.RecipeId,
             row.HouseholdId,
             kind,
             row.SourceId,
             row.ExternalId,
-            row.SourceUrl,
+            SourceUrl.From(row.SourceUrl),
             row.ImportedAt);
     }
 }

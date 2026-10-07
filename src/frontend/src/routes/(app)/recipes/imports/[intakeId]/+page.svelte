@@ -11,8 +11,11 @@
   import { intakes, running } from '$features/import/intakes.svelte';
   import { importPush } from '$features/import/push.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { sourceLink } from '$features/recipes/sourceLink';
   const id = $derived(page.params.intakeId ?? '');
   const job = $derived(intakes.jobs.find((job) => job.id === id));
+  /** A link only for a web address: what was shared is not this app's to vouch for. */
+  const original = $derived(sourceLink(job?.sourceUrl));
   const working = $derived(job ? running(job) : false);
   const pose = $derived<Pose>(
     job?.stage === 'ready'
@@ -133,11 +136,11 @@
     <div class="comparison">
       <section class="source">
         <h2>{m['import.review.source']()}</h2>
-        {#if job.sourceUrl}<a
+        {#if original}<a
             class="source-link"
-            href={job.sourceUrl}
+            href={original.href}
             target="_blank"
-            rel="noopener noreferrer">{job.sourceUrl}</a
+            rel="noopener noreferrer">{original.href}</a
           >{/if}
         {#if job.material}<pre>{job.material}</pre>{/if}
         {#if job.transcript}<h3>{m['import.review.transcript']()}</h3>
