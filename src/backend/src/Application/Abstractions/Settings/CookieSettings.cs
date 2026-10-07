@@ -76,8 +76,22 @@ public sealed record CookieSettings
     /// </remarks>
     public int RenewAfterHours { get; init; } = 24;
 
+    /// <summary>
+    /// How long a session may live at all, however much it is used.
+    /// </summary>
+    /// <remarks>
+    /// Renewal slides the expiry while a session is used, so without a ceiling
+    /// a stolen cookie that is used now and then would never expire. Past this
+    /// many days since signing in, renewal stops and the next sign-in is a
+    /// fresh one.
+    /// </remarks>
+    public int MaxSessionDays { get; init; } = 90;
+
     /// <summary>How long a session lives without activity, as a span.</summary>
     public TimeSpan SessionLifetime => TimeSpan.FromDays(SessionDays);
+
+    /// <summary>How long a session may live at all, as a span.</summary>
+    public TimeSpan MaxSessionLifetime => TimeSpan.FromDays(MaxSessionDays);
 
     /// <summary>How long a session may sit idle before a request renews it.</summary>
     public TimeSpan RenewAfter => TimeSpan.FromHours(RenewAfterHours);
@@ -99,5 +113,10 @@ public sealed record CookieSettings
         // session it is meant to extend is a renewal that never happens, and
         // the symptom is people being signed out for no visible reason.
         SettingsGuard.InRange(RenewAfterHours, 0, SessionDays * 24, SectionName, nameof(RenewAfterHours));
+
+        // Never shorter than the idle lifetime, which it would silently cut
+        // short; ten years is as good as no ceiling, and no smaller number is
+        // more right than another.
+        SettingsGuard.InRange(MaxSessionDays, SessionDays, 3650, SectionName, nameof(MaxSessionDays));
     }
 }

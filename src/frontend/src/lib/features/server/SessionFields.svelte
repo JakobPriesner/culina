@@ -4,7 +4,7 @@
   import SettingField from './SettingField.svelte';
   import { variables, wholeNumber, type ServerDraft, type ServerFacts } from './types';
 
-  /** How long a session lasts, and how often a visit extends it. */
+  /** How long a session lasts, how often a visit extends it, and how long it may last at all. */
   interface Props {
     draft: ServerDraft;
     facts: ServerFacts;
@@ -37,4 +37,15 @@
   error={problem(draft.renewAfterHours)}
   {disabled}
   bind:value={draft.renewAfterHours}
+/>
+
+<SettingField
+  label={m['server.maxSessionDays']()}
+  hint={m['server.maxSessionDays.hint']()}
+  variable={variables.maxSessionDays}
+  pinned={facts.pinned.has(variables.maxSessionDays)}
+  inputmode="numeric"
+  error={problem(draft.maxSessionDays)}
+  {disabled}
+  bind:value={draft.maxSessionDays}
 />

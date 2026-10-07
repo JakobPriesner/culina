@@ -30,6 +30,9 @@ public sealed record CookiesContract
 
     /// <summary>How many hours a session may go unused before a request extends it.</summary>
     public required int RenewAfterHours { get; init; }
+
+    /// <summary>How many days a session may last at all, however much it is used.</summary>
+    public required int MaxSessionDays { get; init; }
 }
 
 /// <summary>Which proxies may say who the client really is.</summary>

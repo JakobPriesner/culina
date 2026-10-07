@@ -4318,6 +4318,11 @@ export interface components {
              * @description How many hours a session may go unused before a request extends it.
              */
             renewAfterHours: number;
+            /**
+             * Format: int32
+             * @description How many days a session may last at all, however much it is used.
+             */
+            maxSessionDays: number;
         };
         /** @description Which proxies may say who the client really is. */
         SettingsGetServerForwardedHeadersContract: {
@@ -4545,6 +4550,11 @@ export interface components {
              * @description How many hours a session may go unused before a request extends it.
              */
             renewAfterHours: number;
+            /**
+             * Format: int32
+             * @description How many days a session may last at all, however much it is used.
+             */
+            maxSessionDays: number;
         };
         /** @description Which proxies may say who the client really is. */
         SettingsUpdateServerForwardedHeadersContract: {

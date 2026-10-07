@@ -23,14 +23,19 @@ public static class CookieSettingsExtensions
         ArgumentNullException.ThrowIfNull(environment);
 
         var section = new SettingsSection(configuration, CookieSettings.SectionName);
+        var sessionDays = section.Int(nameof(CookieSettings.SessionDays), 30);
 
         var settings = new CookieSettings
         {
             Secure = section.Bool(nameof(CookieSettings.Secure), true),
             InsecureAllowed = environment.IsDevelopment()
                 || section.Bool(CookieSettings.AllowInsecureKey, fallback: false),
-            SessionDays = section.Int(nameof(CookieSettings.SessionDays), 30),
-            RenewAfterHours = section.Int(nameof(CookieSettings.RenewAfterHours), 24)
+            SessionDays = sessionDays,
+            RenewAfterHours = section.Int(nameof(CookieSettings.RenewAfterHours), 24),
+            // Ninety days, or the idle lifetime when that is longer: a
+            // deployment that set a long SessionDays before the ceiling
+            // existed must still start.
+            MaxSessionDays = section.Int(nameof(CookieSettings.MaxSessionDays), Math.Max(90, sessionDays))
         };
 
         settings.Validate();

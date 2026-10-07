@@ -46,7 +46,8 @@ internal sealed class GetServerSettingsQueryHandler(
             {
                 Secure = cookies.Secure,
                 SessionDays = cookies.SessionDays,
-                RenewAfterHours = cookies.RenewAfterHours
+                RenewAfterHours = cookies.RenewAfterHours,
+                MaxSessionDays = cookies.MaxSessionDays
             },
             ForwardedHeaders = new ForwardedHeadersContract
             {

@@ -147,7 +147,7 @@ public class SessionStoreTests(PostgresFixture postgres)
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
-        session.Touch(Now.AddDays(20), Lifetime);
+        session.Touch(Now.AddDays(20), Lifetime, TimeSpan.FromDays(90));
 
         // Act
         var renewed = await scope.Sessions.RenewAsync(session, Token);
@@ -170,7 +170,7 @@ public class SessionStoreTests(PostgresFixture postgres)
         // revokes that device before the request gets round to renewing it.
         var read = (await scope.Sessions.FindActiveByTokenAsync(token, Now, Token)).ShouldBeSuccess();
         await scope.Sessions.RevokeAsync(session.Id, userId, Now.AddSeconds(1), Token);
-        read.Touch(Now.AddSeconds(2), Lifetime);
+        read.Touch(Now.AddSeconds(2), Lifetime, TimeSpan.FromDays(90));
 
         // Act
         var renewed = await scope.Sessions.RenewAsync(read, Token);

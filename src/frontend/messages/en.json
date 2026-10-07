@@ -1512,5 +1512,7 @@
   "notAllowed.ticket.chef": "Head chef only",
   "intake.pause": "Pause animation",
   "intake.resume": "Play animation",
-  "problem.settings.insecure_cookies": "Secure cookies can only be turned off when this server's deployment allows it. Open Culina through https:// instead."
+  "problem.settings.insecure_cookies": "Secure cookies can only be turned off when this server's deployment allows it. Open Culina through https:// instead.",
+  "server.maxSessionDays": "Days a session lasts at most",
+  "server.maxSessionDays.hint": "Counted from signing in, however often it is used. Then a fresh sign-in is needed."
 }

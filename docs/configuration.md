@@ -108,8 +108,13 @@ protects later would otherwise change key on every restart.
 | --- | --- | --- |
 | `Cookies__Secure` | `true` | In the app. Only plain-HTTP access justifies `false`. With it true the session cookie takes the `__Host-` prefix, which requires HTTPS — over plain `http://` the browser refuses it and signing in cannot work (`localhost` is the exception browsers make). Changing it signs everybody out once, because the cookie changes name. |
 | `Cookies__AllowInsecureOutsideDevelopment` | `false` | Not in the app. Outside the `Development` environment Culina refuses to start with `Cookies__Secure=false`, and refuses to save it from the app, unless this is `true` — a session cookie in cleartext, without its `__Host-` prefix, is the deployment's risk to accept, not an administrator's switch. Every start with insecure cookies logs a warning (event id 1603). |
-| `Cookies__SessionDays` | `30` | In the app. How long a session survives without activity. Activity slides it: a device in regular use is never signed out. |
+| `Cookies__SessionDays` | `30` | In the app. How long a session survives without activity. Activity slides it, up to `Cookies__MaxSessionDays`. |
 | `Cookies__RenewAfterHours` | `24` | In the app. How long a session may sit unused before the next request extends it and re-issues both cookies. Culina has no refresh token — the cookie is an opaque reference, so this renewal is what takes its place. Lower costs a write per request for nothing; `0` renews on every request and only a test wants that. |
+| `Cookies__MaxSessionDays` | `90` | In the app. How long a session may last at all, counted from signing in, however often it is used; then a fresh sign-in is needed. Without a ceiling a stolen cookie that keeps being used never expires. At least `Cookies__SessionDays`; unset, it is 90 or `Cookies__SessionDays` if that is longer. |
+
+Signing in again from a browser that still holds a session ends that
+session: the new cookie replaces the old one, so the old row would only ever
+be used by somebody who copied it.
 
 ## Behind a reverse proxy
 

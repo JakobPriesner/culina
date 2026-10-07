@@ -140,13 +140,22 @@ public sealed class Session
     public bool IsDueForRenewal(DateTimeOffset now, TimeSpan idleFor) =>
         now - LastSeenAt >= idleFor;
 
-    /// <summary>Extends the session because it was used.</summary>
+    /// <summary>Extends the session because it was used, but never past its ceiling.</summary>
+    /// <remarks>
+    /// Without the ceiling a stolen cookie that is used now and then never
+    /// expires. With it, a session ends a fixed time after signing in however
+    /// busy it is, and the next sign-in starts a new one.
+    /// </remarks>
     /// <param name="now">The injected current time.</param>
     /// <param name="lifetime">How long it may live without further activity.</param>
-    public void Touch(DateTimeOffset now, TimeSpan lifetime)
+    /// <param name="maxLifetime">How long after it began it ends regardless.</param>
+    public void Touch(DateTimeOffset now, TimeSpan lifetime, TimeSpan maxLifetime)
     {
+        var idleExpiry = now.Add(lifetime);
+        var ceiling = CreatedAt.Add(maxLifetime);
+
         LastSeenAt = now;
-        ExpiresAt = now.Add(lifetime);
+        ExpiresAt = idleExpiry < ceiling ? idleExpiry : ceiling;
     }
 
     /// <summary>Ends the session immediately.</summary>

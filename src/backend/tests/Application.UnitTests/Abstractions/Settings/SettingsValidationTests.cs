@@ -257,6 +257,22 @@ public class SettingsValidationTests
     }
 
     [Fact]
+    public void CookieValidate_ShouldThrow_WhenTheCeilingIsShorterThanTheIdleLifetime()
+    {
+        // Arrange
+        var settings = new CookieSettings { SessionDays = 60, MaxSessionDays = 30 };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        // The ceiling would silently cut every session short of the lifetime
+        // the setting beside it promises.
+        var refused = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains("MaxSessionDays", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StorageValidate_ShouldCreateTheDirectories_WhenTheyDoNotExist()
     {
         // Arrange

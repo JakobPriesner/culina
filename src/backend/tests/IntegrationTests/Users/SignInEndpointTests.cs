@@ -168,6 +168,47 @@ public class SignInEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task SignIn_ShouldEndTheSessionTheBrowserHeld_WhenItSignsInAgain()
+    {
+        // Arrange
+        using var client = await RegisteredClientAsync("ada@example.com");
+        var first = await client.PostAsync("/api/v1/sessions", Credentials("ada@example.com"), Token);
+        var replaced = SessionTokenFrom(first);
+
+        // Act
+        await client.PostAsync("/api/v1/sessions", Credentials("ada@example.com"), Token);
+
+        // Assert
+        // The old row used to stay alive beside the new one, usable by
+        // anybody who had copied its cookie for as long as they kept using it.
+        var devices = await client.GetAsync("/api/v1/sessions", Token);
+        Assert.Single(devices.Json!.Value.GetProperty("items").EnumerateArray());
+
+        using var holderOfTheOldCookie = postgres.Api.NewApiClient();
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/sessions");
+        request.Headers.TryAddWithoutValidation("Cookie", $"culina.session={replaced}");
+        var reused = await holderOfTheOldCookie.SendAsync(request, Token);
+        Assert.Equal(HttpStatusCode.Unauthorized, reused.StatusCode);
+    }
+
+    [Fact]
+    public async Task SignIn_ShouldLeaveTheEarlierSession_WhenThePasswordIsWrong()
+    {
+        // Arrange
+        using var client = await SignedInClientAsync("ada@example.com");
+
+        // Act
+        await client.PostAsync(
+            "/api/v1/sessions",
+            new { email = "ada@example.com", password = "not the password" },
+            Token);
+
+        // Assert
+        var stillSignedIn = await client.GetAsync("/api/v1/sessions", Token);
+        Assert.Equal(HttpStatusCode.OK, stillSignedIn.StatusCode);
+    }
+
+    [Fact]
     public async Task Sessions_ShouldListTheCallersDevices_AndMarkTheCurrentOne()
     {
         // Arrange
@@ -209,6 +250,12 @@ public class SignInEndpointTests(PostgresFixture postgres)
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static object Credentials(string email) => new { email, password = Password };
+
+    private static string SessionTokenFrom(ApiResponse signedIn) =>
+        signedIn.Headers.GetValues("Set-Cookie")
+            .Single(cookie => cookie.StartsWith("culina.session=", StringComparison.Ordinal))
+            ["culina.session=".Length..]
+            .Split(';', 2)[0];
 
     private static async Task Register(ApiClient client, string email) =>
         await client.PostAsync(

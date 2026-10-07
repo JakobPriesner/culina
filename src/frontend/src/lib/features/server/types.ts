@@ -43,6 +43,7 @@ export interface ServerDraft {
   secure: boolean;
   sessionDays: string;
   renewAfterHours: string;
+  maxSessionDays: string;
   knownProxies: string;
   knownNetworks: string;
   limits: Record<RateLimit, string>;
@@ -80,6 +81,7 @@ export const variables = {
   secure: 'Cookies__Secure',
   sessionDays: 'Cookies__SessionDays',
   renewAfterHours: 'Cookies__RenewAfterHours',
+  maxSessionDays: 'Cookies__MaxSessionDays',
   knownProxies: 'ForwardedHeaders__KnownProxies',
   knownNetworks: 'ForwardedHeaders__KnownNetworks',
   otlpEndpoint: 'OTEL_EXPORTER_OTLP_ENDPOINT',
@@ -111,6 +113,7 @@ export function toServerDraft(wire: ServerWire): ServerDraft {
     secure: wire.cookies.secure,
     sessionDays: String(wire.cookies.sessionDays),
     renewAfterHours: String(wire.cookies.renewAfterHours),
+    maxSessionDays: String(wire.cookies.maxSessionDays),
     knownProxies: list(wire.forwardedHeaders.knownProxies),
     knownNetworks: list(wire.forwardedHeaders.knownNetworks),
     limits: Object.fromEntries(
@@ -137,6 +140,7 @@ export function unreadableNumbers(draft: ServerDraft): string[] {
   const numbers: Record<string, string> = {
     sessionDays: draft.sessionDays,
     renewAfterHours: draft.renewAfterHours,
+    maxSessionDays: draft.maxSessionDays,
     ...draft.limits
   };
 
@@ -153,7 +157,8 @@ export function toServerRequest(draft: ServerDraft): ServerRequest {
     cookies: {
       secure: draft.secure,
       sessionDays: number(draft.sessionDays),
-      renewAfterHours: number(draft.renewAfterHours)
+      renewAfterHours: number(draft.renewAfterHours),
+      maxSessionDays: number(draft.maxSessionDays)
     },
     forwardedHeaders: {
       knownProxies: entries(draft.knownProxies),
