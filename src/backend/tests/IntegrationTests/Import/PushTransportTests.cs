@@ -34,6 +34,29 @@ public class PushTransportTests
     public void Push_ShouldAcceptOnlySupportedSecureServices(string endpoint, bool allowed) =>
         Assert.Equal(allowed, IntakeNotifications.AllowedEndpoint(endpoint));
 
+    [Fact]
+    public async Task Push_ShouldNotConnect_ToAnAddressInsideTheNetwork()
+    {
+        // Arrange
+        // The real transport, aimed at a listener on loopback: the allow list
+        // checks a push service's name, and this is what checks where it
+        // resolves to.
+        using var server = new LoopbackServer("{}");
+        using var transport = new PushTransport();
+        var keys = IntakeNotifications.GenerateKeys();
+        var browser = IntakeNotifications.GenerateKeys();
+        var auth = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+        // Act
+        var failure = await Record.ExceptionAsync(() => transport.SendAsync(
+            $"https://127.0.0.1:{server.Port}/push", browser.PublicKey, auth, "ready", keys.PublicKey, keys.PrivateKey,
+            TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.IsType<HttpRequestException>(failure);
+        Assert.Equal(0, server.Requests);
+    }
+
     private sealed class CapturingHandler : HttpMessageHandler
     {
         internal string? Encoding { get; private set; }
