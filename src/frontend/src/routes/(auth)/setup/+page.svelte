@@ -83,11 +83,14 @@
 
     const draft = structuredClone($state.snapshot(server.server));
 
-    // The browser knows what the server cannot: whether this page came over
-    // HTTPS. Behind a proxy that terminates TLS, every request the server
-    // sees is plain HTTP, so its default has to be corrected from here.
+    // The browser knows what the server cannot: whether it will keep a Secure
+    // cookie on this page. Behind a proxy that terminates TLS, every request
+    // the server sees is plain HTTP, so its default has to be corrected from
+    // here. A secure context rather than https: alone, because browsers keep
+    // Secure cookies on http://localhost too — and outside Development the
+    // server refuses to turn them off at all unless the deployment allows it.
     if (!server.serverFacts.pinned.has(variables.secure)) {
-      draft.secure = location.protocol === 'https:';
+      draft.secure = window.isSecureContext;
     }
 
     serverDraft = draft;

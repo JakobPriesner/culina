@@ -104,6 +104,8 @@ async function fillDatabase() {
 
 beforeEach(() => {
   server.clear();
+  // jsdom has no notion of a secure context; each test says which it is.
+  vi.stubGlobal('isSecureContext', false);
 });
 
 describe('setting up a fresh instance', () => {
@@ -145,12 +147,29 @@ describe('setting up a fresh instance', () => {
       await screen.findByRole('heading', { name: 'How people reach Culina' }, { timeout: 3000 })
     ).toBeInTheDocument();
 
-    // The test page is plain HTTP, so secure cookies would lock this visitor
-    // out: the step starts with them off, whatever the server's default.
+    // Plain HTTP to another machine, where the browser would drop a Secure
+    // cookie and lock this visitor out: the step starts with them off,
+    // whatever the server's default.
     expect(await screen.findByRole('switch', { name: 'Secure cookies' })).toHaveAttribute(
       'aria-checked',
       'false'
     );
+  });
+
+  it('proposes secure cookies on http://localhost, where the browser keeps them', async () => {
+    vi.stubGlobal('isSecureContext', true);
+    serverAnswers(true);
+
+    renderWithProviders(SetupPage, atStage('account'));
+    await settle();
+
+    // A secure context: https://, or localhost over plain HTTP. Proposing
+    // "off" here would be a save the server refuses outside Development.
+    expect(await screen.findByRole('switch', { name: 'Secure cookies' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.queryByText(/reached Culina over plain HTTP/)).not.toBeInTheDocument();
   });
 
   it('skips the database when the deployment already configured one', async () => {

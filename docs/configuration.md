@@ -58,9 +58,10 @@ to it, and the log says so as a warning. The screen asks for:
    one of the `RateLimits__*` settings, which are part of what is being set up
    — here and in Settings → Server alike (`429 request.rate_limited`).
    Then it restarts into the real app.
-2. **How people reach it**: secure cookies (defaulted from whether the browser
-   is on `https://`) and which proxy to trust (it shows the address requests
-   actually arrive from). Everything else is folded away with its defaults.
+2. **How people reach it**: secure cookies (on whenever the browser would keep
+   a Secure cookie — on `https://`, and on `http://localhost`) and which proxy
+   to trust (it shows the address requests actually arrive from). Everything
+   else is folded away with its defaults.
 3. **The first account**, which administers the instance.
 
 If the database is configured through the environment, the first step is

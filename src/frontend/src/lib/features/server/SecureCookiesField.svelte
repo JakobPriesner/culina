@@ -11,7 +11,8 @@
    * plain HTTP, the browser refuses the cookie and nobody can sign in. The
    * server cannot see this — behind a proxy that terminates TLS every request
    * it receives is plain HTTP — but the browser can, so the warning is decided
-   * here, from the address the page itself was loaded from.
+   * here, from whether the page itself is a secure context: https://, or
+   * http://localhost, where browsers keep a Secure cookie as well.
    */
   interface Props {
     checked: boolean;
@@ -21,7 +22,7 @@
 
   let { checked = $bindable(), pinned = false, disabled = false }: Props = $props();
 
-  const plainHttp = typeof location !== 'undefined' && location.protocol === 'http:';
+  const plainHttp = typeof window !== 'undefined' && !window.isSecureContext;
 </script>
 
 <div class="secure">
