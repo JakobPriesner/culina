@@ -113,15 +113,9 @@ internal sealed class AddPlannedMealsToListCommandHandler(
         IReadOnlyList<PlannedRecipe> week,
         CancellationToken cancellationToken)
     {
-        var cooked = new Dictionary<Guid, Recipe>();
-
-        foreach (var recipeId in week.Select(planned => planned.Entry.RecipeId).Distinct())
-        {
-            var found = await recipes.FindAsync(recipeId, cancellationToken).ConfigureAwait(false);
-
-            found.Match(recipe => cooked[recipeId] = recipe, _ => { });
-        }
-
-        return cooked;
+        // A recipe deleted since the week was read is simply not in the answer.
+        return await recipes
+            .FindManyAsync([.. week.Select(planned => planned.Entry.RecipeId).Distinct()], cancellationToken)
+            .ConfigureAwait(false);
     }
 }
