@@ -66,6 +66,8 @@ test.describe('source review @offline', () => {
       '120 g beans #ad'
     );
     await expect(page.getByRole('button', { name: 'Create recipe', exact: true })).toHaveCount(0);
+    // A shared link is filled in, never fetched on arrival: one tap reads it.
+    await page.getByRole('button', { name: 'Import recipe', exact: true }).click();
     await page.getByRole('button', { name: 'Review recipe', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Review the recipe' });
     await expect(dialog).toBeVisible();

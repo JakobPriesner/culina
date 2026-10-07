@@ -47,7 +47,10 @@
      * has to be able to see that this one has been taken.
      */
     open?: boolean;
-    /** An initial URL to populate and immediately read (e.g. from the OS share target). */
+    /**
+     * A URL to fill in (from the OS share target, or a link to this page).
+     * Filled in only: it is read when somebody taps the button beside it.
+     */
     initialUrl?: string;
     /** An initial block of text to populate. */
     initialText?: string;
@@ -100,6 +103,17 @@
     'clipboard' in navigator &&
     typeof navigator.clipboard?.readText === 'function';
 
+  /**
+   * A link that arrived from outside, filled in and not yet read.
+   *
+   * Never read on arrival. Reading makes the server fetch the address, and any
+   * page or message can link here with one in the query string — or post one
+   * to the share target — so arriving must not be enough to make this server
+   * fetch somebody's address or spend their import allowance. The link is put
+   * in the field and the person decides, with the one button beside it.
+   */
+  let waiting = $state(false);
+
   onMount(() => {
     iphoneShareHelp =
       /iPhone|iPad|iPod/.test(navigator.userAgent) ||
@@ -113,7 +127,7 @@
     if (initialUrl.trim()) {
       open = true;
       url = initialUrl.trim();
-      void read();
+      waiting = true;
     }
   });
 
@@ -146,6 +160,7 @@
       return;
     }
 
+    waiting = false;
     reading = true;
     failure = null;
 
@@ -308,6 +323,7 @@
               sourceUrl = '';
               transcript = '';
               published = null;
+              waiting = false;
             }}
           />
         {/snippet}
@@ -323,6 +339,12 @@
         {m['import.url.read']()}
       </Button>
     </div>
+
+    {#if waiting}
+      <p class="hint" role="status">
+        {m['import.url.waiting']({ action: m['import.url.read']() })}
+      </p>
+    {/if}
 
     {#if failure}<p class="failure" role="alert">{failure}</p>{/if}
 
