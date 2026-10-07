@@ -25,7 +25,7 @@ public class SessionStoreTests(PostgresFixture postgres)
         await scope.Sessions.AddAsync(session, Token);
 
         // Act
-        var found = await scope.Sessions.FindActiveByTokenAsync(token, Token);
+        var found = await scope.Sessions.FindActiveByTokenAsync(token, Now, Token);
 
         // Assert
         Assert.Equal(session.Id, found.ShouldBeSuccess().Id);
@@ -41,7 +41,7 @@ public class SessionStoreTests(PostgresFixture postgres)
         await scope.Sessions.AddAsync(session, Token);
 
         // Act
-        var found = await scope.Sessions.FindActiveByTokenAsync(scope.Tokens.NewToken(), Token);
+        var found = await scope.Sessions.FindActiveByTokenAsync(scope.Tokens.NewToken(), Now, Token);
 
         // Assert
         found.ShouldBeFailure(SessionErrors.NotAuthenticated);
@@ -61,8 +61,44 @@ public class SessionStoreTests(PostgresFixture postgres)
 
         // Assert
         result.ShouldBeSuccess();
-        var found = await scope.Sessions.FindActiveByTokenAsync(token, Token);
-        Assert.False(found.ShouldBeSuccess().IsActive(Now));
+        var found = await scope.Sessions.FindActiveByTokenAsync(token, Now, Token);
+        found.ShouldBeFailure(SessionErrors.NotAuthenticated);
+    }
+
+    [Fact]
+    public async Task FindActiveByToken_ShouldFindNothing_WhenTheSessionWasRevoked()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var userId = await scope.AddUserAsync("ada@example.com");
+        var (session, token) = scope.NewSession(userId);
+        await scope.Sessions.AddAsync(session, Token);
+        await scope.Sessions.RevokeAsync(session.Id, userId, Now, Token);
+
+        // Act
+        var found = await scope.Sessions.FindActiveByTokenAsync(token, Now.AddMinutes(1), Token);
+
+        // Assert
+        // The CSRF guard looks sessions up by this method too and does not
+        // ask again whether they are active; a revoked session's token must
+        // not pass it.
+        found.ShouldBeFailure(SessionErrors.NotAuthenticated);
+    }
+
+    [Fact]
+    public async Task FindActiveByToken_ShouldFindNothing_WhenTheSessionHasExpired()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var userId = await scope.AddUserAsync("ada@example.com");
+        var (session, token) = scope.NewSession(userId, lifetime: TimeSpan.FromMinutes(1));
+        await scope.Sessions.AddAsync(session, Token);
+
+        // Act
+        var found = await scope.Sessions.FindActiveByTokenAsync(token, Now.AddMinutes(1), Token);
+
+        // Assert
+        found.ShouldBeFailure(SessionErrors.NotAuthenticated);
     }
 
     [Fact]
@@ -119,7 +155,7 @@ public class SessionStoreTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal(1, removed);
-        (await scope.Sessions.FindActiveByTokenAsync(liveToken, Token)).ShouldBeSuccess();
+        (await scope.Sessions.FindActiveByTokenAsync(liveToken, Now, Token)).ShouldBeSuccess();
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;

@@ -8,8 +8,13 @@ public interface ISessionStore
 {
     /// <summary>Finds the session a cookie value refers to, if it is still active.</summary>
     /// <param name="token">The raw cookie value.</param>
+    /// <param name="now">The injected current time, against which expiry is judged.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    Task<Result<Session>> FindActiveByTokenAsync(string token, CancellationToken cancellationToken);
+    /// <returns><c>auth.not_authenticated</c> for an unknown, revoked or expired session alike.</returns>
+    Task<Result<Session>> FindActiveByTokenAsync(
+        string token,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
 
     /// <summary>The user's sessions, newest first, for the devices screen.</summary>
     /// <param name="userId">Whose sessions.</param>

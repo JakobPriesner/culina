@@ -221,6 +221,7 @@ public class CsrfGuardTests
                 context,
                 new StubSessionStore(session),
                 Tokens,
+                TimeProvider.System,
                 NullLogger<CsrfMiddleware>.Instance);
 
             return reached;
@@ -238,7 +239,10 @@ public class CsrfGuardTests
     /// <summary>Returns the one session this test set up, for the matching token.</summary>
     private sealed class StubSessionStore(Session session) : ISessionStore
     {
-        public Task<Result<Session>> FindActiveByTokenAsync(string token, CancellationToken cancellationToken) =>
+        public Task<Result<Session>> FindActiveByTokenAsync(
+            string token,
+            DateTimeOffset now,
+            CancellationToken cancellationToken) =>
             Task.FromResult(Result<Session>.Success(session));
 
         public Task<IReadOnlyList<Session>> ForUserAsync(Guid userId, CancellationToken cancellationToken) =>
