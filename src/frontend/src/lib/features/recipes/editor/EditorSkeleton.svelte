@@ -3,11 +3,6 @@
   import { m } from '$shell/i18n';
 
   import EditorLayout from './EditorLayout.svelte';
-
-  /**
-   * The shape of the editor, not a spinner: what is coming is a long form, and
-   * a skeleton the same shape means nothing moves when it lands.
-   */
 </script>
 
 <EditorLayout aria-busy="true" aria-label={m['editor.loading']()}>

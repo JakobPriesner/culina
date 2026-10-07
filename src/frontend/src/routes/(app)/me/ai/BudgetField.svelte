@@ -19,8 +19,7 @@
   <Field {label}>
     {#snippet children({ id, describedBy, invalid })}
       <div class="amount">
-        <!-- Aria-hidden: the unit is in the section's own description, and
-             a lone currency symbol announced before the field would be a
+        <!-- Aria-hidden: the unit is in the section description; a lone symbol announced first is a
              word without a sentence. -->
         <span class="unit" aria-hidden="true">$</span>
         <TextInput
@@ -38,8 +37,7 @@
 </SettingsRow>
 
 <style>
-  /* The unit beside the field rather than inside it: typing "$" into a box
-     that parses numbers is a mistake the box would have to reject. */
+  /* Unit beside the field: typing "$" into a number box would have to be rejected. */
   .amount {
     display: flex;
     align-items: center;

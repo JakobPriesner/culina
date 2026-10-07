@@ -2,12 +2,8 @@
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
 
-  /**
-   * Said instead of a form whose every keystroke the server would refuse: the
-   * recipe belongs to another household, and this one only reads it.
-   */
+  /** Shown instead of a form the server would refuse every save of. */
   interface Props {
-    /** The household that owns it, when it is known. */
     owner: string | null | undefined;
     backHref: string;
   }

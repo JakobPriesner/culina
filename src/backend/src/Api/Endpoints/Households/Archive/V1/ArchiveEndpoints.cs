@@ -105,15 +105,11 @@ internal sealed class RestoreArchiveEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
-            // The whole archive is read into memory, photographs and all, so
-            // the upload has a ceiling of its own rather than whatever the
-            // server was left with.
+            // The whole archive is read into memory, so the upload gets its own ceiling.
             .WithMetadata(new RequestSizeLimitAttribute(MaxArchiveBytes))
             .DisableAntiforgery()
             .RequireAuthorization()
-            // The same budget as taking one: restoring is the heavier of the
-            // two, and a person who may do either a few times an hour has
-            // everything an honest use of them needs.
+            // Shares the export budget.
             .RequireRateLimiting(RateLimitExtensions.Archive);
     }
 }

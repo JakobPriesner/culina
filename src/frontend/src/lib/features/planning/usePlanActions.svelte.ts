@@ -15,10 +15,8 @@ import {
 import { weekdayName } from './weekDates';
 import type { Held, Landing } from './weekDrag.svelte';
 
-/** What the actions need to know about the page they are on. */
 interface Page {
   readonly householdId: () => string | null;
-  /** The Monday on screen. */
   readonly monday: () => string;
 }
 
@@ -28,21 +26,13 @@ const goToList = async () => {
   await goto(resolve('/(app)/shopping'));
 };
 
-/**
- * What can be done to the week on screen: moving a meal, taking one off, and
- * putting the week's shopping on the list. Every one ends in a toast, so the
- * page is left with markup and with the week it is showing.
- */
+/** Actions on the week on screen; each ends in a toast. */
 export function usePlanActions(page: Page) {
-  /** Whether the week's shopping is on its way to the list. */
   const ui = $state({ busy: false });
 
   /**
-   * Puts a meal on another day, and offers to put it back.
-   *
-   * Undo rather than a confirmation: a drop is cheap to reverse and expensive
-   * to interrupt, and the drop that lands a day out is common enough on a phone
-   * that the way back has to be on the screen it lands on.
+   * Moves a meal to another day and offers undo: a drop is cheap to reverse and a confirmation
+   * would interrupt it.
    */
   async function move(entryId: string, to: { date: string; slot?: MealSlot; position?: number }) {
     const householdId = page.householdId();
@@ -60,9 +50,8 @@ export function usePlanActions(page: Page) {
       return;
     }
 
-    // Where it landed, read from the week that came back rather than from the
-    // one that was on screen: the server decides the order of a day, so its
-    // answer is the only one an undo can be built against.
+    // Read from the returned week: the server decides a day's order, so only its answer can anchor
+    // an undo.
     const after = placeOf(mealPlan.days, entryId);
 
     toaster.show({
@@ -81,7 +70,7 @@ export function usePlanActions(page: Page) {
     });
   }
 
-  /** A card let go over a day. The gaps either side of where it was are no move. */
+  /** The gaps either side of the card's own position are no move. */
   function drop(held: Held, landing: Landing) {
     const before = placeOf(mealPlan.days, held.entryId);
 
@@ -96,12 +85,8 @@ export function usePlanActions(page: Page) {
   }
 
   /**
-   * Puts the week's shopping on the list, each meal once.
-   *
-   * One request, because only the server can see which meals are already on
-   * the list — and pressing this twice, or after adding one of the recipes from
-   * its own page, must not buy anything twice. The week is read again after, so
-   * every card says truthfully which meals are on the list now.
+   * Adds the week's shopping in one request: only the server knows which meals are already on the
+   * list.
    */
   async function shop() {
     const householdId = page.householdId();
@@ -149,11 +134,8 @@ export function usePlanActions(page: Page) {
   }
 
   /**
-   * Takes a meal off the plan, and offers to take its shopping off too.
-   *
-   * Offered rather than done: the ingredients may already be in a cupboard,
-   * or wanted for something else, and a list that emptied itself behind
-   * somebody's back would be as untrustworthy as one that doubled.
+   * Unplans a meal and offers (rather than forces) removing its shopping, which may be in the
+   * cupboard already.
    */
   async function unplan(meal: PlannedMeal) {
     const householdId = page.householdId();

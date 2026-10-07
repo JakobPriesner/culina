@@ -3,9 +3,7 @@
   import { m } from '$shell/i18n';
 
   /**
-   * A banner in the form rather than two buttons in the corner: this is the
-   * only thing on the screen that needs a decision, and a decision offered in
-   * the chrome is one nobody sees.
+   * In the form, not the chrome: it is the one thing needing a decision, and chrome goes unseen.
    */
   interface Props {
     onkeepmine: () => void;

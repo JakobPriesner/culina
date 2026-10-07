@@ -46,10 +46,7 @@ internal sealed class RestoreArchiveCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// The most recipes one restore will write. A household that really has
-    /// more restores them in more than one archive.
-    /// </summary>
+    /// <summary>The most recipes one restore writes; larger households restore in several archives.</summary>
     internal const int MaxRecipes = 2_000;
 
     private async Task<Result<ArchiveRestored>> RestoreAsync(
@@ -74,9 +71,7 @@ internal sealed class RestoreArchiveCommandHandler(
             return ArchiveErrors.NotAnArchive;
         }
 
-        // Counted before a single recipe is written: each one is a transaction
-        // of its own, so an archive of a million empty recipes would otherwise
-        // keep the database busy until somebody noticed.
+        // Checked up front: each recipe is its own transaction.
         if (archive.Recipes.Count > MaxRecipes)
         {
             return ArchiveErrors.TooManyRecipes;

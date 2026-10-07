@@ -1,22 +1,12 @@
 /*
- * A plain Map on purpose: recency is its insertion order, which `get` has to
- * change while a component is rendering — a write a SvelteMap would reject.
- * Reactivity is the `#version` counter instead.
+ * A plain Map on purpose: recency is insertion order, which `get` changes during render,
+ * a write a SvelteMap would reject. Reactivity is the `#version` counter instead.
  */
 /* eslint-disable svelte/prefer-svelte-reactivity */
 
 /**
- * A reactive map that holds at most `limit` entries, dropping the one used
- * least recently.
- *
- * The entries live in a plain `Map`, whose insertion order is the recency
- * order, and one `$state` counter says when they changed. A reactive record
- * would copy itself on every write; this copies nothing, and a reader that
- * called `get` is told to run again whenever any entry is written.
- *
- * `get` counts as use, so what is on screen is never what gets dropped.
- * `peek` reads without either — for code that is about to write the key, and
- * must not make an effect depend on it.
+ * Reactive map of at most `limit` entries, dropping the least recently used. `get` counts as use;
+ * `peek` neither tracks nor counts, for code about to write the key.
  */
 export class LruCache<TValue> {
   #entries = new Map<string, TValue>();
@@ -68,7 +58,6 @@ export class LruCache<TValue> {
     this.#version += 1;
   }
 
-  /** Replaces every entry with `change` of it, keeping the order. */
   update(change: (value: TValue) => TValue): void {
     for (const [key, value] of this.#entries) {
       this.#entries.set(key, change(value));
@@ -77,7 +66,6 @@ export class LruCache<TValue> {
     this.#version += 1;
   }
 
-  /** What `restore` puts back exactly as it was. */
   snapshot(): Map<string, TValue> {
     return new Map(this.#entries);
   }

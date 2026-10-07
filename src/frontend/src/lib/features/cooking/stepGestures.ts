@@ -1,9 +1,6 @@
 /**
- * Moving between steps without aiming at a button.
- *
- * A cook's hands are busy and the target should be the phone rather than a
- * button on it: arrow keys for a laptop propped on the counter, horizontal
- * swipes for a phone on a stand.
+ * Step navigation without aiming at a button: arrow keys for a laptop on the counter, swipes for a
+ * phone on a stand.
  */
 
 /** Anything that already has its own use for a key press or a touch. */
@@ -22,7 +19,6 @@ interface StepGestureOptions {
   ready: () => boolean;
   currentStep: () => number;
   move: (index: number) => void;
-  /** Forward, or done. */
   advance: () => void;
 }
 

@@ -1,107 +1,50 @@
-/*
- * The one narrow exception for the API: a list of exact reads that are kept, in
- * their own cache, so a recipe you have opened stays readable without a network.
- * Nothing that changes anything is ever answered from here.
- */
+/* The narrow API exception: exact reads kept so opened recipes stay readable offline. Writes are never answered from here. */
 import { base } from '$service-worker';
 import { forgetKitchen } from '../lib/features/cooking/timerState';
 import { privateCacheName } from './scope';
 
-/**
- * How many recipe responses to keep.
- *
- * A number, because a cache with no limit is a disk-space bug waiting for the
- * person with three hundred recipes. Oldest written goes first, which for a
- * recipe collection is close enough to least used.
- */
+/** Cap on kept responses; the oldest written goes first. */
 const privateCacheLimit = 120;
 
-/**
- * Who is signed in, as far as the worker knows: the last answer the network
- * gave to this read, which is kept like the others.
- */
+/** Who is signed in, as far as the worker knows: the last network answer to this read. */
 const whoIsSignedIn = `${base}/api/v1/users/me`;
 
 /**
- * Names the user a kept copy was read for.
- *
- * The cache is keyed by address only, and `/recipes/r1` is the same address
- * for everybody. Emptying it on sign-in and sign-out depends on a message from
- * the page reaching the worker, which a tab closed straight after signing out
- * may never send. So every copy is stored with this header — the user
- * `whoIsSignedIn` named when the read began, or for that read itself the user
- * it answered with — and a copy is only ever answered to that same user. Once
- * the network has said somebody else is signed in, the last person's copies
- * are never shown again, offline or not; a copy with no owner is never shown.
- *
- * What it cannot do is tell two people apart while the network says nothing:
- * somebody picking up a tablet offline is, to the worker, whoever was signed
- * in last.
+ * Names the user a kept copy was read for; a copy is only answered to that user, never an unowned one.
+ * Needed because the cache is keyed by address alone and the sign-out message may never arrive.
  */
 const ownerHeader = 'X-Culina-Owner';
 
-/**
- * How long a network-first read waits for the network when there is a copy.
- *
- * Without one, a stalled connection — the supermarket, the far end of the
- * kitchen — never rejects the fetch, so the cache was never reached: the page
- * gave up first and said the server was unavailable while the recipe sat in
- * the cache. Shorter than the four seconds the app waits for who is signed in
- * at boot, so the copy arrives before the app stops waiting for it.
- */
+/** How long a network-first read waits when a copy exists; a stalled connection never rejects. Under the app's 4s boot wait. */
 const networkDeadlineMs = 2_500;
 
 export const isApi = (url: URL): boolean =>
   url.pathname === `${base}/api` || url.pathname.startsWith(`${base}/api/`);
 
-/**
- * The only API reads that are ever kept, and how.
- *
- * An allow-list of exact shapes. A rule like "cache anything under /recipes"
- * would quietly start keeping whatever is added there next.
- */
+/** How a kept read is answered; the allow-list below holds exact shapes so new routes are never cached by accident. */
 export type CachePolicy = 'cache-first' | 'network-first';
 
 const one = (pattern: RegExp, policy: CachePolicy) => ({ pattern, policy }) as const;
 
 const readable = [
-  // Content-addressed and immutable: the URL carries the width and the
-  // picture's id, so what is cached can never be the wrong picture.
+  // Content-addressed and immutable: the URL carries the width and picture id.
   one(/^\/api\/v1\/recipes\/[^/]+\/image$/, 'cache-first'),
-  // The recipe, the list, and who is signed in: the network wins whenever it
-  // answers in time, and the cache only ever catches a fall or a stall.
-  //
-  // Not stale-while-revalidate, which is the obvious choice and the wrong one.
-  // Showing the stored copy first means that the moment after somebody edits a
-  // recipe, opening it shows the version from before their edit — the app
-  // arguing with itself about what it just saved. Opening a recipe is fast
-  // enough without it, and what was promised is that a recipe stays *readable*
-  // with no network, not that it appears instantly with one.
+  // Network wins when it answers in time. Not stale-while-revalidate: it would show the
+  // pre-edit recipe right after saving one.
   one(/^\/api\/v1\/recipes\/[^/]+$/, 'network-first'),
   one(/^\/api\/v1\/recipes$/, 'network-first'),
-  // The household shopping list: supermarkets often have poor or no cellular
-  // reception. Network-first lets an offline device display the list as last seen.
+  // Shopping list: supermarkets often have no reception.
   one(/^\/api\/v1\/households\/[^/]+\/shopping-list$/, 'network-first'),
-  // Who is signed in. Without this a cold start with no network cannot tell
-  // "offline" from "signed out", and answers the second one — which locks
-  // somebody out of the recipes this cache exists to have kept for them.
-  // Never cached as a failure: a 401 is not `ok`, so an expired session is
-  // still an expired session the moment the network comes back.
+  // Without this an offline cold start cannot tell "offline" from "signed out". A 401 is never cached.
   one(/^\/api\/v1\/users\/me$/, 'network-first')
-  // Deliberately not `/api/v1/cookbooks`. What a cookbook promises offline is
-  // the recipes on it, and those are the `/recipes` rule above — a cookbook's
-  // own name and cover are chrome, and caching them would widen the offline
-  // surface past anything that was promised.
+  // Deliberately not `/api/v1/cookbooks`: offline promises the recipes, not cookbook chrome.
 ];
 
 export function policyFor(url: URL): CachePolicy | null {
   const path = url.pathname.slice(base.length);
   const policy = readable.find((candidate) => candidate.pattern.test(path))?.policy ?? null;
 
-  // Cache first is only true of an address that names its content. A picture
-  // asked for without `v` is whatever the recipe has now, and keeping that
-  // forever showed a replaced picture forever. Left to the browser instead,
-  // it revalidates against the image's ETag and costs a 304.
+  // Without `v` the picture is mutable; leave it to the browser's ETag revalidation.
   if (policy === 'cache-first' && !url.searchParams.has('v')) {
     return null;
   }
@@ -110,19 +53,12 @@ export function policyFor(url: URL): CachePolicy | null {
 }
 
 /**
- * Answers a recipe read, keeping a copy for the next time there is no network.
- *
- * A cached response is returned as it was stored, headers and all, so the
- * client's own ETag handling sees exactly what the server sent.
- *
- * Nothing in here may throw. A rejected promise passed to `respondWith` reaches
- * the page as "Failed to fetch" — a network error the app cannot tell apart
- * from a dead wifi, for a request that actually succeeded.
+ * Answers a read and keeps a copy for offline use; cached responses keep their headers (ETag).
+ * Must never throw: a rejection reaches the page as "Failed to fetch".
  */
 export async function apiResponse(event: FetchEvent, policy: CachePolicy): Promise<Response> {
   const request = event.request;
   const cache = await caches.open(privateCacheName).catch(() => null);
-  // Two independent reads of the same cache, so not one after the other.
   const [owner, kept] = cache
     ? await Promise.all([signedInAs(cache), cache.match(request).catch(() => undefined)])
     : [null, undefined];
@@ -132,9 +68,7 @@ export async function apiResponse(event: FetchEvent, policy: CachePolicy): Promi
     return cached;
   }
 
-  // Started once and awaited once: a `Request` is spent by the fetch that used
-  // it, so there is no second attempt to be had. Kept alive past the answer,
-  // so a slow network that loses to the deadline still refreshes the copy.
+  // A `Request` is spent by its fetch, so start once. Kept alive past the answer so a slow network still refreshes the copy.
   const fresh = fetchAndStore(request, cache, owner);
 
   event.waitUntil(fresh);
@@ -149,13 +83,11 @@ export async function apiResponse(event: FetchEvent, policy: CachePolicy): Promi
     return cached;
   }
 
-  // Nothing cached and no network. The app has a good sentence for this; what
-  // it needs from here is the ordinary failure, which is what re-throwing the
-  // fetch gives it.
+  // Nothing cached and no network: re-throw the ordinary fetch failure.
   return fetch(request.url, { credentials: 'include', headers: request.headers });
 }
 
-/** Resolves with nothing once the network has had its chance. */
+/** Resolves with null once the network has had its chance. */
 function deadline(): Promise<null> {
   return new Promise((resolve) => setTimeout(() => resolve(null), networkDeadlineMs));
 }
@@ -169,10 +101,7 @@ async function fetchAndStore(
   try {
     const response = await fetch(request);
 
-    // The server saying there is no session. One that ended while the app was
-    // closed never reached a sign-out, and the page does not end it either:
-    // the 401 arrives at boot, before the app listens for an expiry. Without
-    // this the next person's first offline start answered as the last one.
+    // A session that ended while the app was closed never reached a sign-out; the boot 401 is the only signal.
     if (response.status === 401) {
       await caches.delete(privateCacheName).catch(() => false);
       await forgetKitchen();
@@ -180,12 +109,8 @@ async function fetchAndStore(
       return response;
     }
 
-    // A 304 carries no body to keep, and an error response cached is a fault
-    // that outlives the deploy that fixed it.
-    //
-    // A refresh that lands after `culina:forget` cannot bring the last
-    // person's copy back: `cache` was opened before the delete, and a deleted
-    // cache stays writable but is no longer the one `caches.open` returns.
+    // A 304 has no body and a cached error outlives its fix. A refresh landing after
+    // `culina:forget` writes into the already-deleted cache, so it cannot resurrect copies.
     if (cache && response.ok && response.type === 'basic') {
       try {
         const readFor =
@@ -196,8 +121,7 @@ async function fetchAndStore(
           await trim(cache);
         }
       } catch {
-        // Out of quota, or a response the Cache API will not take. Worth
-        // nothing and worth failing over even less.
+        // Out of quota or an unstorable response; not worth failing over.
       }
     }
 
@@ -207,7 +131,7 @@ async function fetchAndStore(
   }
 }
 
-/** The user the kept `whoIsSignedIn` names, or nobody when there is none. */
+/** The user the kept `whoIsSignedIn` names, or null. */
 async function signedInAs(cache: Cache): Promise<string | null> {
   const me = await cache.match(whoIsSignedIn).catch(() => undefined);
 
@@ -220,7 +144,7 @@ async function userIdIn(response: Response): Promise<string | null> {
   return typeof userId === 'string' ? userId : null;
 }
 
-/** The response as it came, plus whose it is. */
+/** The response plus its owner header. */
 function ownedCopy(response: Response, owner: string): Response {
   const headers = new Headers(response.headers);
 

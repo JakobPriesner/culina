@@ -6,15 +6,7 @@ import { Connections, type SourceDraft } from './connections.svelte';
 import { ImportRunner } from './importRun.svelte';
 import { LibraryBrowser } from './libraryBrowser.svelte';
 
-/**
- * The libraries connected here, and the one being looked through.
- *
- * The whole of the import's client state, including the progress of a run, in
- * one place for the pages to read: which libraries are connected
- * (`connections.svelte.ts`), the one being looked through
- * (`libraryBrowser.svelte.ts`) and the import being followed
- * (`importRun.svelte.ts`). This is only where the three meet.
- */
+/** Facade over `connections`, `libraryBrowser` and `importRun`: the import's client state in one place for pages. */
 class SourceStore {
   #connections = new Connections();
   #library = new LibraryBrowser();
@@ -64,7 +56,6 @@ class SourceStore {
     return this.#library.loadingMore;
   }
 
-  /** True while the rest of the library is being fetched to select all of it. */
   get loadingAll(): boolean {
     return this.#library.loadingAll;
   }
@@ -73,7 +64,7 @@ class SourceStore {
     return this.#library.moreFailed;
   }
 
-  /** How many they have over there, when that app says. */
+  /** How many the other app has, when it says. */
   get total(): number | null {
     return this.#library.total;
   }
@@ -86,7 +77,6 @@ class SourceStore {
     return this.#runner.importing;
   }
 
-  /** The refusal that stopped an import from starting, if there was one. */
   get importError(): AppError | null {
     return this.#runner.error;
   }
@@ -103,7 +93,7 @@ class SourceStore {
     return this.#connections.connect(draft);
   }
 
-  /** Forgets a connection, and closes its library if that is the one being looked through. */
+  /** Also closes its library if that is the one open. */
   disconnect(sourceId: string): Promise<void> {
     if (this.#library.open?.sourceId === sourceId) {
       this.#library.close();
@@ -112,7 +102,6 @@ class SourceStore {
     return this.#connections.disconnect(sourceId);
   }
 
-  /** Starts looking through one library, or through what matches a search of it. */
   browse(source: ConnectedSource, query = ''): Promise<void> {
     this.#runner.clearError();
 

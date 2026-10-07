@@ -30,10 +30,7 @@ internal static class AdminPolicy
     /// </remarks>
     internal const string OrSetupName = "culina.admin-or-setup";
 
-    /// <summary>
-    /// The request's own token, so a caller who hung up does not still cost a
-    /// lookup. Absent when the resource is not an HTTP request.
-    /// </summary>
+    /// <summary>The request's abort token, so a caller who hung up costs no lookup.</summary>
     internal static CancellationToken RequestAborted(AuthorizationHandlerContext context) =>
         (context.Resource as HttpContext)?.RequestAborted ?? CancellationToken.None;
 

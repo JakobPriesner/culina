@@ -10,20 +10,14 @@ export interface IntakeSource {
   householdId: string;
   text: string;
   transcript: string;
-  /** The address the page was already read from, if it was. */
+  /** The address already read from. */
   sourceUrl: string;
-  /** What is in the address field, which may be a link not yet read. */
+  /** The address field's content, possibly a link not yet read. */
   url: string;
   photos: File[];
 }
 
-/**
- * Hands what was pasted to the assistant to read, as a queued job.
- *
- * Sending the same material again — a second tap after a failure — is the same
- * submission, so the server can recognise it. Resolves to the job's id, or to
- * the words for why there is none.
- */
+/** Queues the pasted material as an assistant job; identical material reuses one submission key so a retry is recognised. */
 export function createAssistedIntake() {
   const keyFor = createSubmissionKey();
 

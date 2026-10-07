@@ -3,12 +3,7 @@ export const canReadClipboard =
   'clipboard' in navigator &&
   typeof navigator.clipboard?.readText === 'function';
 
-/**
- * What was copied, and the first web address in it, if there is one.
- *
- * Null when the clipboard cannot be read or reading it was refused: pasting by
- * hand is still there, so neither is worth an error.
- */
+/** The clipboard text and its first web address; null when unreadable or refused (manual paste remains). */
 export async function readClipboardRecipe(): Promise<{ text: string; url?: string } | null> {
   if (!canReadClipboard) {
     return null;

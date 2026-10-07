@@ -4,11 +4,7 @@ import { shopping } from '$features/shopping/stores/shopping.svelte';
 
 import { addShelfToShoppingList } from './addShelfToShoppingList';
 
-/*
- * The shelf on screen is only its first page, so "add the shelf" has to read
- * past it: a cookbook of forty recipes that puts twenty-four on the list and
- * says it added the cookbook is a shopping trip with half of dinner missing.
- */
+// The shelf on screen is only its first page, so adding it must read past that page.
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -26,7 +22,6 @@ const wire = (id: string, yieldAmount = 4) => ({
   updatedAt: '2026-09-14T00:00:00Z'
 });
 
-/** Pages of recipes, then whatever the shopping list is asked to take. */
 function server(
   pages: ReturnType<typeof wire>[][],
   {
@@ -91,7 +86,6 @@ describe('adding a whole shelf to the shopping list', () => {
       { recipeId: 'r3', servings: 4 },
       { recipeId: 'r4', servings: 6 }
     ]);
-    // Only the shelf is asked for, whatever the page on screen is narrowed to.
     expect(new Set(asked)).toEqual(new Set(['c1']));
   });
 

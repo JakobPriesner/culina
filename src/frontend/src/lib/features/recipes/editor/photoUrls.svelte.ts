@@ -1,11 +1,8 @@
 import { onDestroy } from 'svelte';
 
 /**
- * Previewable addresses for the photos a form holds.
- *
- * One object URL per photo for as long as the photo is held: adding one photo
- * does not re-read and re-decode the others, and a photo that is let go has its
- * URL revoked. Call it while a component initialises.
+ * One object URL per held photo, so adding one does not re-decode the rest; a released photo's URL is revoked.
+ * Call while a component initialises.
  */
 export function createPhotoUrls(photos: () => readonly File[]) {
   const objectUrls = new WeakMap<File, string>();

@@ -1,10 +1,6 @@
 import type { Quantity, StepSegment } from '../types';
 
-/**
- * The inline half of a step's Markdown: emphasis, code and links over atoms,
- * where an atom is one character or one whole ingredient reference. The
- * block half — paragraphs and lists — is `stepMarkdown.ts`.
- */
+/** Inline Markdown (emphasis, code, links) over atoms; the block half is `stepMarkdown.ts`. */
 
 export interface IngredientReference {
   readonly kind: 'ingredient';
@@ -26,12 +22,7 @@ export type Inline =
 /** One character, or one ingredient reference. */
 export type Atom = string | IngredientReference;
 
-/**
- * The delimiters, longest first.
- *
- * Order is the whole of why `**bold**` is not an empty italic: `**` is tried
- * before `*` at the same position.
- */
+/** Longest first, so `**` is tried before `*` at the same position. */
 const delimiters = [
   { marks: '**', kind: 'strong' },
   { marks: '__', kind: 'strong' },
@@ -40,12 +31,12 @@ const delimiters = [
   { marks: '_', kind: 'emphasis' }
 ] as const;
 
-/** A link has to go somewhere a link can go. `javascript:` is not a place. */
+/** Only http(s) and mailto links, never `javascript:`. */
 const safeHref = (href: string) => /^(?:https?:\/\/|mailto:)/i.test(href);
 
 export const isSpace = (atom: Atom | undefined) => typeof atom === 'string' && /\s/.test(atom);
 
-/** Nothing at all is not a word character; an ingredient reference is. */
+/** An ingredient reference counts as a word character. */
 const isWordCharacter = (atom: Atom | undefined) =>
   atom === undefined ? false : typeof atom !== 'string' || /[\p{L}\p{N}]/u.test(atom);
 
@@ -55,7 +46,6 @@ export const atomsOf = (segments: readonly StepSegment[]): Atom[] =>
 export const textOf = (atoms: readonly Atom[]) =>
   atoms.map((atom) => (typeof atom === 'string' ? atom : '')).join('');
 
-/** The atoms of one paragraph or list item, as formatted pieces. */
 export function parseInline(atoms: readonly Atom[]): Inline[] {
   const nodes: Inline[] = [];
   let pending = '';
@@ -82,8 +72,7 @@ export function parseInline(atoms: readonly Atom[]): Inline[] {
       continue;
     }
 
-    // A backslash spends itself on the next character, which is how somebody
-    // writes an asterisk they mean literally.
+    // A backslash makes the next character literal.
     if (atom === '\\' && typeof atoms[index + 1] === 'string') {
       pending += atoms[index + 1] as string;
       index += 2;
@@ -120,13 +109,7 @@ export function parseInline(atoms: readonly Atom[]): Inline[] {
   return nodes;
 }
 
-/**
- * A code span at `start`, if one opens there.
- *
- * Its contents are characters and nothing else: a reference inside backticks is
- * a reference the cook can no longer scale, so the backticks stay literal
- * rather than swallowing it.
- */
+/** A code span at `start`; references inside stay literal, since the cook could no longer scale them. */
 function codeAt(atoms: readonly Atom[], start: number): { text: string; width: number } | null {
   if (atoms[start] !== '`') {
     return null;
@@ -145,7 +128,6 @@ function codeAt(atoms: readonly Atom[], start: number): { text: string; width: n
   return null;
 }
 
-/** A `[label](href)` at `start`, if one opens there and goes somewhere real. */
 function linkAt(
   atoms: readonly Atom[],
   start: number
@@ -176,13 +158,8 @@ function linkAt(
 }
 
 /**
- * An emphasis, strong or strikethrough span at `start`, if one opens there.
- *
- * The two rules that stop a sentence from being mangled: a run that opens is
- * followed by something other than a space, and the run that closes it is
- * preceded by something other than a space — so "2 * 3 * 4" is arithmetic. For
- * `_` there is a third, that neither end sits inside a word, which is what
- * leaves `sous_vide_notes` alone.
+ * An emphasis, strong or strikethrough span at `start`. The opener needs a non-space after it and the closer a non-space before ("2 * 3 * 4" stays arithmetic);
+ * `_` also may not touch word characters (`sous_vide_notes`).
  */
 function spanAt(
   atoms: readonly Atom[],
@@ -193,8 +170,7 @@ function spanAt(
       continue;
     }
 
-    // `**` was tried first and did not open. The second asterisk of a run is
-    // not the start of an italic, so "2 ** 3" stays arithmetic.
+    // `**` already failed to open; its second asterisk must not start an italic ("2 ** 3").
     if (marks.length === 1 && atoms[start + 1] === marks) {
       continue;
     }

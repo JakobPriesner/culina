@@ -7,12 +7,6 @@
   import { scaleQuantity } from '../scaling';
   import type { ParsedRecipe } from './parseRecipeText';
 
-  /**
-   * What was understood of a pasted recipe, as separate parts.
-   *
-   * Sunken, so it reads as a quotation of what was pasted rather than as a form
-   * that has already been filled in.
-   */
   interface Props {
     parsed: ParsedRecipe;
   }
@@ -98,8 +92,7 @@
   }
 
   .steps {
-    /* Numbers inside, so they line up with the headings above rather than
-       hanging into the panel's padding. */
+    /* Numbers inside so they align with the headings. */
     list-style-position: inside;
     margin: var(--space-2) 0 0;
     padding: 0;

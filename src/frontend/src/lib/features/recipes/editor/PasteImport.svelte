@@ -24,37 +24,17 @@
   import { parseRecipeText, type ParsedRecipe } from './parseRecipeText';
   import { units } from '../stores/units.svelte';
 
-  /**
-   * A recipe pasted in, read back before anything is made of it.
-   *
-   * Almost every recipe arrives as a block of text — a message from a friend, a
-   * page copied out of a browser, something typed out of a book — and retyping
-   * it line by line is why most of them never get written down.
-   *
-   * The preview is the feature, not the parser. What was understood is shown as
-   * separate parts before a recipe exists, so a wrong reading is obvious and
-   * costs a keystroke instead of a deletion. Nothing is applied silently.
-   */
+  /** A pasted recipe shown as a preview of what was understood before anything is created; nothing is applied silently. */
   interface Props {
     /** Whose kitchen, so a unit it has added is read as a unit. */
     householdId: string;
     onimport: (parsed: ParsedRecipe) => void | Promise<boolean | undefined>;
     busy?: boolean;
     saveError?: AppError | null;
-    /**
-     * Whether the box is open, readable by the page around it.
-     *
-     * The page offers a second way in beside this one, and two invitations
-     * either side of an open editor is one invitation too many — so the caller
-     * has to be able to see that this one has been taken.
-     */
+    /** Bindable so the page can hide its own second way in while this is open. */
     open?: boolean;
-    /**
-     * A URL to fill in (from the OS share target, or a link to this page).
-     * Filled in only: it is read when somebody taps the button beside it.
-     */
+    /** A shared link to fill in; it is only read when the person taps the button beside it. */
     initialUrl?: string;
-    /** An initial block of text to populate. */
     initialText?: string;
     initialPhotos?: File[];
     ondraft?: (draft: Draft, sourceUrl: string) => void | Promise<boolean>;
@@ -94,15 +74,7 @@
   let failure = $state<string | null>(null);
   let iphoneShareHelp = $state(false);
 
-  /**
-   * A link that arrived from outside, filled in and not yet read.
-   *
-   * Never read on arrival. Reading makes the server fetch the address, and any
-   * page or message can link here with one in the query string — or post one
-   * to the share target — so arriving must not be enough to make this server
-   * fetch somebody's address or spend their import allowance. The link is put
-   * in the field and the person decides, with the one button beside it.
-   */
+  /** An external link filled in but never auto-read: anyone can link here, and reading makes the server fetch it and spend the import allowance. */
   let waiting = $state(false);
 
   onMount(() => {
@@ -122,29 +94,14 @@
     }
   });
 
-  /**
-   * What a website published, when a website published it.
-   *
-   * Held apart from the pasted text rather than folded into it: structured data
-   * is what the site said, and rewriting it into a block of words only to read
-   * it back with heuristics would lose the very thing that made it worth
-   * fetching. Typing into the box takes over, because that is somebody
-   * disagreeing with it.
-   */
+  /** A site's structured data, kept apart from the text so it is not re-parsed heuristically; typing in the box overrides it. */
   let published = $state<ParsedRecipe | null>(null);
 
   const parsed = $derived(published ?? parseRecipeText(text, units.own));
-  /** Something is already in flight, so the inputs hold still. */
   const locked = $derived(intakes.submitting || reading || drafts.asking);
   const tooLong = $derived(text.length + transcript.length > 20000);
   const found = $derived(parsed.ingredients.length + parsed.steps.length);
 
-  /**
-   * Reads a recipe from a web page.
-   *
-   * What comes back lands in the same preview a paste does: nothing is created
-   * until somebody looks at it.
-   */
   async function read() {
     const address = url.trim();
 
@@ -171,7 +128,6 @@
 
     if ('words' in page) {
       published = null;
-      // Keep the words the person shared beside what the page publishes.
       text = [...new Set([text.trim(), page.words.trim()].filter(Boolean))].join('\n\n');
 
       return;
@@ -295,7 +251,6 @@
       rows={8}
       oninput={(next) => {
         text = next;
-        // Typing is somebody disagreeing with what the site said.
         published = null;
       }}
     />
@@ -321,8 +276,7 @@
     {/if}
 
     {#if text.trim() || published}
-      <!-- Polite: it reports what was understood while somebody is still
-           looking at what they pasted, and must not interrupt them. -->
+      <!-- role=status (polite): must not interrupt someone still reading their paste. -->
       <p class="count" role="status">
         {m['import.paste.found']({
           ingredients: parsed.ingredients.length,

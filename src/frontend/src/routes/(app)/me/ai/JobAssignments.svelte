@@ -16,13 +16,8 @@
   import SettingsSection from '../SettingsSection.svelte';
 
   /**
-   * Which provider and model does each job.
-   *
-   * A provider is connected once; which provider does a job is changed
-   * whenever somebody reads that a new model is better at it. Flattening the
-   * two into "the assistant's settings" is what made this a single global
-   * choice — and a single global choice meant picking the provider that was
-   * least bad at everything.
+   * Provider and model per job; one global choice meant picking the provider least bad at
+   * everything.
    */
   interface Props {
     settings: AiSettingsDraft;
@@ -32,9 +27,7 @@
 </script>
 
 {#if assistance.unlisted}
-  <!-- The listing itself did not happen, so there is no per-provider row to
-       say so. Without this the pickers below are bare text boxes and the
-       screen gives no reason for it. -->
+  <!-- The listing itself failed, so no per-provider row says why the pickers are bare text boxes. -->
   <p class="failure" role="alert">{m['ai.models.unlisted']()}</p>
 {/if}
 
@@ -57,12 +50,9 @@
             onchange={(value) => {
               settings.editUse(capability, {
                 provider: value as Provider | '',
-                // Choosing a provider is switching the job on; choosing
-                // "not offered" is switching it off. One gesture, because
-                // there is no state where both answers are interesting.
+                // Choosing a provider switches the job on; "not offered" switches it off.
                 enabled: value !== '',
-                // The old model belonged to the old provider. Carrying it
-                // over would name something the new one has never heard of.
+                // The old model belonged to the old provider.
                 model: ''
               });
               settings.commit();
@@ -73,9 +63,8 @@
 
       {#if use.provider !== ''}
         {#if !choices && assistance.listing}
-          <!-- The provider has not answered yet. A placeholder select rather
-               than the text box below it: the box would be replaced by a
-               select a moment later, under whatever had been typed into it. -->
+          <!-- A placeholder select, not the text box, which would be swapped for a select under
+               what was typed. -->
           <Field label={m['ai.job.model']()}>
             {#snippet children({ id, describedBy, invalid })}
               <Select
@@ -90,10 +79,7 @@
             {/snippet}
           </Field>
         {:else if choices}
-          <!-- The whole catalogue rather than the filtered part of it, when
-               the filter came up empty. Said plainly under the picker, so
-               nobody wonders why a writing model is being offered to the
-               job that draws. -->
+          <!-- The whole catalogue when the filter came up empty; the hint says so. -->
           {@const unfiltered = offersWholeCatalogue(assistance.models, capability, use)}
           <Field
             label={m['ai.job.model']()}
@@ -117,9 +103,7 @@
             {/snippet}
           </Field>
         {:else}
-          <!-- No list to choose from at all. A text box is what this was
-               before lists existed, and it still works — the convenience is
-               what is lost, never the ability to configure anything. -->
+          <!-- No list at all: a text box loses only the convenience, not the ability to configure. -->
           <Field
             label={m['ai.job.model']()}
             hint={unlistedByProvider(assistance.models, use)

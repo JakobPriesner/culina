@@ -3,8 +3,8 @@ import { drifted, trim, type ScaledQuantity } from './quantityMath';
 import { canonicalOf, largerUnit, toCanonical, type Unit } from './units';
 
 /**
- * Mass and volume snap to a step a kitchen scale can show, then re-express
- * upward when the number gets unwieldy.
+ * Mass and volume snap to a step a kitchen scale shows, then move to the larger unit when it reads
+ * better.
  */
 export function measured(exact: number, unit: Unit): ScaledQuantity {
   const canonical = canonicalOf(unit)!;
@@ -13,9 +13,7 @@ export function measured(exact: number, unit: Unit): ScaledQuantity {
 
   const bigger = largerUnit(canonical);
 
-  // Upward only, and only when the bigger unit reads better. `1.5 kg` is how a
-  // recipe writes 1500 g; `1.35 kg` is not how anyone writes 1350 g, and
-  // `0.5 kg` is not how anyone writes 500 g — a scale shows grams.
+  // Upward only: 1.5 kg reads like a recipe, 1.35 kg and 0.5 kg do not (a scale shows grams).
   if (bigger && readsBetterAs(rounded)) {
     return {
       value: trim(rounded / 1000),
@@ -38,12 +36,8 @@ export function measured(exact: number, unit: Unit): ScaledQuantity {
 }
 
 /**
- * Mass and volume, in the units a US kitchen owns.
- *
- * Converted from the exact amount and rounded once, onto a measure that is
- * actually in the drawer. Mass becomes ounces and pounds and never cups: a cup
- * of flour is between 120 g and 150 g depending on how it was packed, and
- * turning 250 g into "2 cups" is a confidently wrong recipe.
+ * Mass and volume in US kitchen units, converted from the exact amount and rounded once.
+ * Mass never becomes cups: a cup of flour is 120-150 g depending on packing.
  */
 export function customary(exact: number, unit: Unit, isMass: boolean): ScaledQuantity {
   const inCanonical = exact * toCanonical(unit);
@@ -61,15 +55,11 @@ export function customary(exact: number, unit: Unit, isMass: boolean): ScaledQua
 }
 
 /**
- * Whether an amount is better said in the larger unit.
- *
- * At least one of it, and no more than one decimal place: 1500 becomes 1.5 kg,
- * 1350 stays 1350 g.
+ * At least 1 of the larger unit with at most one decimal: 1500 becomes 1.5 kg, 1350 stays grams.
  */
 const readsBetterAs = (canonicalAmount: number): boolean =>
   canonicalAmount >= 1000 && Number(((canonicalAmount / 1000) * 10).toFixed(6)) % 1 === 0;
 
-/** The step a number of this magnitude should land on. */
 function stepFor(amount: number): number {
   const magnitude = Math.abs(amount);
 
@@ -85,15 +75,11 @@ function stepFor(amount: number): number {
 }
 
 /**
- * Rounding never makes an amount disappear.
- *
- * Below the smallest step — 0.2 g of saffron, 2 g of yeast in ounces — the
- * grid has nothing between zero and an amount several times too much, and
- * either would change what is cooked. The arithmetic is the honest answer.
+ * Rounding never turns a small amount (0.2 g of saffron) into zero, which would change what is
+ * cooked.
  */
 const orExact = (rounded: number, exact: number): number => (rounded === 0 ? exact : rounded);
 
 const toStep = (amount: number, step: number): number =>
-  // Half away from zero, so 2.5 g at a 0.5 step is 2.5 and 7.25 is 7.5 — the
-  // direction a cook rounds when they are already pouring.
+  // Half away from zero, the way a cook rounds while pouring.
   Math.sign(amount) * Math.round((Math.abs(amount) / step) * (1 + Number.EPSILON)) * step;

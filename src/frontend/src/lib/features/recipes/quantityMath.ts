@@ -1,9 +1,5 @@
 import type { Unit } from './units';
 
-/**
- * What an amount is before and after scaling, and the arithmetic every rounding
- * rule shares.
- */
 export interface Quantity {
   /** Null when the recipe does not say how much. */
   readonly value: number | null;
@@ -19,22 +15,13 @@ export interface ScaledQuantity {
   /** True when rounding moved the value by more than 2%. */
   readonly isApproximate: boolean;
   readonly isRange: boolean;
-  /**
-   * The arithmetic, before any of it was made readable — in the unit of
-   * `value`, so the two can be compared directly.
-   *
-   * Kept so that an approximation can say what it approximated, and so that
-   * nothing downstream has to re-derive it from a number that was already
-   * rounded. Scaling an already-scaled amount drifts, and drifts differently
-   * depending on how many times somebody tapped the stepper.
-   */
+  /** The unrounded amount in the unit of `value`; kept so nothing re-scales an already-rounded number, which drifts. */
   readonly exact: number | null;
 }
 
 /** Rounding that moves an amount by more than this is an approximation. */
 const approximationThreshold = 0.02;
 
-/** True when rounding moved the amount by more than the threshold. */
 export const drifted = (exact: number, rounded: number): boolean =>
   exact !== 0 && Math.abs(rounded - exact) / Math.abs(exact) > approximationThreshold;
 

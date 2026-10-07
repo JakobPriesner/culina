@@ -3,7 +3,6 @@ import type { Recipe } from '$features/recipes/types';
 
 import { offers, type Accepted, type Draft } from './draftToRecipe';
 
-/** One thing the assistant would change: what it is now, and what it says instead. */
 export interface DraftPart {
   key: keyof Accepted;
   label: string;
@@ -23,12 +22,7 @@ const yieldText = (amount: number, label: string | null | undefined): string =>
 const ingredientCount = (groups: readonly { ingredients: readonly unknown[] }[]): number =>
   groups.flatMap((group) => group.ingredients).length;
 
-/**
- * The rows of the review, before beside after.
- *
- * Only what the draft has something to say about: a part it left out must not
- * offer to replace what is there with nothing.
- */
+/** Review rows, only for parts the draft has: a part it left out must not offer to replace content with nothing. */
 export function draftParts(draft: Draft | null, current: Recipe): DraftPart[] {
   if (!draft) {
     return [];

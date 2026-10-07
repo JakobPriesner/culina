@@ -1,7 +1,4 @@
-/**
- * Olli's geometry, as SVG transforms and paths: no CSS transform-origin to
- * disagree about between browsers.
- */
+/** Olli's geometry as SVG transforms and paths, avoiding cross-browser CSS transform-origin differences. */
 
 export type Point = readonly [x: number, y: number];
 
@@ -18,16 +15,11 @@ export function bodyTransform(
   );
 }
 
-/** An eye shut by scaling it about its own centre. */
 export function eyeTransform(x: number, lid: number): string {
   return `translate(${x} 75) scale(1 ${lid}) translate(${-x} -75)`;
 }
 
-/**
- * Where the green handle holds the pencil. It stays attached as the tip
- * crosses each line; the paper and pencil use different rotations, so both are
- * applied to the grip's position.
- */
+/** Where the handle holds the pencil; paper and pencil rotate differently, so both apply to the grip. */
 export function pencilGrip(pencilX: number, pencilY: number, penLift: number): Point {
   const localX = pencilX + 9.9;
   const localY = pencilY - penLift - 5;
@@ -39,7 +31,6 @@ export function brushGrip(brushX: number, brushY: number): Point {
   return [brushX + 9, brushY - 14];
 }
 
-/** The right handle, bent towards the hand's place when it holds a prop. */
 export function rightHandlePath(usingBrush: boolean, [handX, handY]: Point): string {
   return usingBrush
     ? `M91 62 C101 62 109 63 ${handX} ${handY - 4}

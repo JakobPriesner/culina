@@ -3,10 +3,7 @@ import type { Rig } from './rig.svelte';
 
 const finePointer = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches;
 
-/**
- * What a poke or a hovering pointer does to Olli. Nothing while it is still,
- * and nothing where somebody is stuck or refused.
- */
+/** A poke or hover reaction for Olli; ignored when motion is off or in a sombre pose. */
 export function createTouch({
   rig,
   spec,
@@ -20,7 +17,6 @@ export function createTouch({
   later: (ms: number, run: () => void) => unknown;
   blink: () => void;
 }) {
-  // Plain field, not state: bookkeeping that nothing renders.
   let taps: number[] = [];
 
   function poke(): void {

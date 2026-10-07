@@ -5,9 +5,8 @@
   import NowCookingBar from '$features/cooking/NowCookingBar.svelte';
 
   /**
-   * The slot above the bottom bar, for whatever is under way: an import, a
-   * recipe being cooked, and a page's own bar. Reserved whether or not
-   * anything is in it, so a bar appearing never pushes the page.
+   * The slot above the bottom bar for what is under way; always reserved, so a bar appearing never
+   * pushes the page.
    */
   interface Props {
     children?: Snippet;

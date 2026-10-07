@@ -88,12 +88,7 @@ public sealed record RateLimitSettings
     /// <summary>
     /// Archives one person may take or restore per hour.
     /// </summary>
-    /// <remarks>
-    /// An archive streams every recipe in a household with every photograph
-    /// inline, which makes it the heaviest read there is. Taking one is a
-    /// once-in-a-while thing; a few an hour leaves room for a download that
-    /// failed, and none for a loop.
-    /// </remarks>
+    /// <remarks>An archive streams every recipe with every photograph inline; a few an hour allows a retry, not a loop.</remarks>
     public int ArchiveExportsPerHour { get; init; } = 5;
 
     /// <summary>

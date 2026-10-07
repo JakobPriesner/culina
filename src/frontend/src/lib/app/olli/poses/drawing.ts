@@ -2,10 +2,7 @@ import { cubicOut, linear } from 'svelte/easing';
 
 import type { Performance } from '../stage';
 
-/**
- * A complete work phrase, with brisk strokes and purposeful holds. The
- * painting is kept on later cycles: Olli refines it, never wipes it.
- */
+/** A full painting phrase; later cycles refine the painting rather than wiping it. */
 export const drawing: Performance = ({ rig, later, blink, working }) => {
   const stroke = (at: number, x: number, y: number, progress: number) =>
     later(at, () => {

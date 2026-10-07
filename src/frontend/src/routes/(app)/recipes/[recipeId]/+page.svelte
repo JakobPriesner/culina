@@ -21,25 +21,12 @@
   import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
 
-  /**
-   * One recipe, at rest.
-   *
-   * The same surface the cook route renders; only the emphasis differs. See
-   * RecipeSurface for why those are one component and not two pages.
-   */
   const recipeId = $derived(page.params.recipeId ?? '');
   const servings = $derived(yieldFrom(page.url, recipes.detail));
 
-  /** The sheet that is up over the recipe, if any. */
   let sheet = $state<RecipeSheet | null>(null);
 
-  /**
-   * Whose recipe it is, when it is not this household's own.
-   *
-   * An inherited recipe is read, cooked, planned and shopped for here like any
-   * other; editing, deleting and publishing it are its own household's. Null
-   * for a recipe of the household being looked at.
-   */
+  /** The owning household of an inherited recipe (read-only here), else null. */
   const inheritedFrom = $derived(
     recipes.detail && recipes.detail.householdId !== session.activeHouseholdId
       ? recipes.detail.householdId
@@ -63,9 +50,7 @@
     }
   });
 
-  // Which shelves it is on, for the line under the title. Asked here rather
-  // than by the sheet alone, because the line is visible before anybody opens
-  // the sheet. This household's shelves, which an inherited recipe can be on.
+  // Shelves for the line under the title, needed before the sheet opens.
   $effect(() => {
     if (recipeId) {
       void cookbooks.loadMemberships(recipeId, session.activeHouseholdId);

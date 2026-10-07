@@ -1,37 +1,20 @@
-/**
- * The reading half of a server-sent event stream: bytes in, decoded events out.
- * Opening the connection, retrying and the session are `events.ts`.
- */
+/** The reading half of a server-sent event stream; connecting and retrying live in `events.ts`. */
 
 import type { AppError } from './problem';
 
-/** A stream that is being read. */
 export interface Stream {
-  /** Stops reading. Never stops the work on the other end. */
+  /** Stops reading; never stops the work on the other end. */
   close(): void;
 }
 
-/** What a stream tells its caller. */
 export interface StreamHandlers<TEvent> {
-  /** One decoded event. */
   message: (event: TEvent) => void;
 
-  /**
-   * The stream is over and will not come back by itself.
-   *
-   * Carries why, so the screen can say it: a session that lapsed, a run that is
-   * no longer there, or a network that stayed down across every retry.
-   */
+  /** The stream is over for good; carries why (lapsed session, missing run, network down). */
   failed: (error: AppError) => void;
 }
 
-/**
- * Reads events until the body ends, and says which id it got to.
- *
- * A body that ends is not by itself a failure — a proxy cutting an idle
- * connection looks exactly like a server that finished — so this returns and
- * lets the caller decide whether to pick it back up.
- */
+/** Reads events until the body ends and returns the last id. An ended body is not a failure; the caller decides whether to resume. */
 export async function drain<TEvent>(
   body: ReadableStream<Uint8Array>,
   handlers: StreamHandlers<TEvent>,
@@ -54,8 +37,7 @@ export async function drain<TEvent>(
 
       pending += decoder.decode(value, { stream: true });
 
-      // Events are separated by a blank line; anything after the last one is
-      // half an event, and waits for the rest of it.
+      // Events end at a blank line; the remainder is a partial event.
       const blocks = pending.split(/\r?\n\r?\n/);
 
       pending = blocks.pop() ?? '';
@@ -81,14 +63,12 @@ export async function drain<TEvent>(
   return last;
 }
 
-/** One event block, as the format defines it: fields, in any order. */
 export function parse(block: string): { data: string | null; id: string | null } {
   const data: string[] = [];
   let id: string | null = null;
 
   for (const line of block.split(/\r?\n/)) {
-    // A line beginning with a colon is a comment, which is how a stream says
-    // nothing out loud to keep itself open.
+    // A leading colon is a keep-alive comment.
     if (line.startsWith(':')) {
       continue;
     }

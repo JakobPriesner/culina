@@ -1,5 +1,4 @@
 <script lang="ts">
-  /** What an image field's frame says while a file is held over it. */
   interface Props {
     label: string;
   }
@@ -7,23 +6,13 @@
   let { label }: Props = $props();
 </script>
 
-<!-- Over the picture as well as the template: dropping onto a photo
-     replaces it, and the frame says where it will land either way. -->
+<!-- Covers the photo too: dropping onto it replaces it. -->
 <div class="drop" aria-hidden="true">
   <p class="drop-label">{label}</p>
 </div>
 
 <style>
-  /*
-   * Where a held file will land.
-   *
-   * The same dashed outline as the empty template, in the accent: the frame
-   * saying "here" in the one convention it already uses for it. Not a target
-   * itself — the frame underneath is — so it never swallows the events that
-   * keep it on screen. Opaque, because whatever it covers — the template's
-   * hint or the photo about to go — showing through it is a second sentence
-   * under the one that matters.
-   */
+  /* Dashed accent outline like the empty template. Not a drop target itself (`pointer-events: none` keeps the frame's events) and opaque so what it covers does not show through. */
   .drop {
     position: absolute;
     z-index: 3;

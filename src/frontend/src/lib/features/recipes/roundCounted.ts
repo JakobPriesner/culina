@@ -4,27 +4,12 @@ import type { Unit } from './units';
 /** How close to a whole number a count has to be before it is simply that number. */
 const countSnap = 0.15;
 
-/**
- * The pieces of one thing a kitchen has words for.
- *
- * A quarter is the floor: below that the honest answer for a countable
- * ingredient stops existing, and a quarter of an onion is the smallest piece
- * anybody is going to cut.
- */
+/** The pieces a kitchen has words for; a quarter is the smallest worth cutting. */
 const kitchenFractions = [0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1];
 
-/**
- * Countable things become an honest range rather than a fraction.
- *
- * Half of three cloves is not one and a half cloves; it is one or two, and the
- * cook decides.
- */
+/** Countable things become a range, not a fraction: half of three cloves is one or two. */
 export function counted(exact: number, unit: Unit | null): ScaledQuantity {
-  // Below one, the fraction is the answer. Half a recipe wants half an onion,
-  // and saying "1 onion" instead is not a rounding — it is two and a half
-  // times the onion, silently, in the one direction nobody checks. It is
-  // written as a fraction a kitchen recognises rather than as `0.4`, and never
-  // as nothing: a quarter is the smallest piece of a thing worth asking for.
+  // Below one the fraction is the answer: "1 onion" for half a recipe would silently scale it 2.5x.
   if (exact < 1) {
     const fraction = closest(exact, kitchenFractions);
 
@@ -60,8 +45,7 @@ export function counted(exact: number, unit: Unit | null): ScaledQuantity {
     value: lower,
     upper,
     unit,
-    // A range is not an approximation: it states the truth, which is that
-    // either amount will do.
+    // A range states the truth (either will do), so it is not an approximation.
     isApproximate: false,
     isRange: true,
     exact

@@ -4,17 +4,10 @@
   import type { RecipeQuery, RecipeSort } from '../stores/libraryView.svelte';
   import { sortLabel, timeLabel } from './labels';
 
-  /**
-   * What is applied, each removable where it stands.
-   *
-   * Chips rather than a sentence, and the same vocabulary the search overlay
-   * uses, so the two arrive as one idea rather than two.
-   */
   interface Props {
     view: RecipeQuery;
-    /** The tag's own word, by slug, so a chip reads "Vegetarisch" rather than its slug. */
+    /** Tag display names by slug. */
     named: ReadonlyMap<string, string>;
-    /** The order the list is actually in. */
     order: RecipeSort;
   }
 

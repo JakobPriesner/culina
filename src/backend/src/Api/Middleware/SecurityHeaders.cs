@@ -53,19 +53,11 @@ internal static class SecurityHeaders
     /// </remarks>
     internal const string AnnouncerStyleHash = "sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=";
 
-    /// <summary>
-    /// The only Trusted Types policies a page may create — each one is a place
-    /// a string becomes markup or a script address, so each is named.
-    /// </summary>
+    /// <summary>The only Trusted Types policies a page may create, each a named string-to-markup/URL sink.</summary>
     /// <remarks>
-    /// <c>svelte-trusted-html</c> is Svelte's, for the static markup of its
-    /// compiled templates. <c>sveltekit-trusted-url</c> is SvelteKit's, named
-    /// because its generated boot code creates it whenever it registers the
-    /// worker itself; Culina registers the worker, so it is not used today.
-    /// <c>culina-worker-url</c> is ours, in <c>updates.svelte.ts</c>, and
-    /// accepts the worker's address and nothing else. There is no
-    /// <c>default</c> policy and no <c>'allow-duplicates'</c>: a library that
-    /// writes a string into the DOM is refused rather than quietly trusted.
+    /// <c>sveltekit-trusted-url</c> is unused while Culina registers the worker itself.
+    /// <c>culina-worker-url</c> lives in <c>updates.svelte.ts</c>. No <c>default</c> policy,
+    /// so a library writing strings into the DOM is refused.
     /// </remarks>
     internal const string TrustedTypesPolicies =
         "svelte-trusted-html sveltekit-trusted-url culina-worker-url";
@@ -100,9 +92,7 @@ internal static class SecurityHeaders
             "base-uri 'none'",
             "frame-ancestors 'none'",
             "form-action 'self'",
-            // Every DOM sink that takes script — innerHTML, a script's text,
-            // the worker's address — must be handed a value a named policy made,
-            // so a string an attacker controls cannot reach one by accident.
+            // DOM sinks that take script must be given a value a named policy made.
             "require-trusted-types-for 'script'",
             $"trusted-types {TrustedTypesPolicies}");
 }

@@ -40,8 +40,7 @@ function idea({ rig, later }: Stage) {
   });
 }
 
-// Three lines read, then a hold: a loop past five seconds is motion somebody
-// would have to be able to stop.
+// Kept under five seconds: longer looping motion would need a way to stop it.
 function reading({ rig, later }: Stage) {
   for (let i = 0; i < 6; i++) {
     later(i * 600, () => (rig.lookX.target = i % 2 ? 1.5 : -1.5));

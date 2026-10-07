@@ -5,7 +5,6 @@
   import type { RecipeQuery } from '../stores/libraryView.svelte';
   import { savedSearches, type SavedSearch } from '../stores/savedSearches.svelte';
 
-  /** The household's saved searches, one tap each to apply. */
   interface Props {
     householdId: string;
     view: RecipeQuery;
@@ -20,7 +19,6 @@
     }
   });
 
-  /** Whether the toolbar is showing exactly what this saved search asks for. */
   function showing(search: SavedSearch): boolean {
     return (
       search.query === view.query &&
@@ -43,9 +41,7 @@
 {/if}
 
 <style>
-  /* One line that scrolls rather than wraps: saved searches that wrapped would
-     push the results below the fold on a phone, which is the one screen where
-     the point of them is not having to set the filters again. */
+  /* Scroll instead of wrapping so results stay above the fold on phones. */
   .saved {
     display: flex;
     gap: var(--space-2);

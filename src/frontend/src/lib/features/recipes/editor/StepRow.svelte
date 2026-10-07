@@ -8,16 +8,11 @@
   import { secondsFromMinutes } from './stepEdits';
   import StepIngredients from './StepIngredients.svelte';
 
-  /**
-   * One step: its name, its sentence, its timer and what it needs.
-   *
-   * Every edit is reported as the whole changed step, so the list around it
-   * never has to know which part of a step was touched.
-   */
+  // Every edit is reported as the whole changed step.
   interface Props {
     step: Step;
     index: number;
-    /** How many steps there are, so the last one cannot be moved down. */
+    /** Total steps, so the last one can't move down. */
     count: number;
     ingredients: readonly Ingredient[];
     onchange: (step: Step) => void;
@@ -130,38 +125,25 @@
     gap: var(--space-3);
     min-width: 0;
     padding: var(--space-4);
-    /* Cleared of the app's floating header: an ingredient's "in step 3" jumps
-       here, and landing with the step under the navbar helps nobody. */
+    /* Clears the floating header when an ingredient's "in step N" link jumps here. */
     scroll-margin-top: var(--space-24);
   }
 
   .head {
     display: flex;
-    /* Wraps only when it has to. The three buttons keep their size, so at 200%
-       text they are 280px of a 320px screen and the title beside them cannot
-       fit — and a row that will not wrap makes the page scroll sideways
-       instead. At every ordinary size this changes nothing. */
+    /* Wraps for 200% text: the three buttons are 280px of a 320px screen and would force sideways scroll. */
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
   }
 
-  /* The title takes the room the number used to, and the three buttons keep
-     theirs: a step is named far more often than it is moved. */
   .name {
     flex: 1;
     min-width: 0;
   }
 
-  /*
-   * Set as the recipe will read it back.
-   *
-   * The reading surface puts a small accented line over every step — the step's
-   * name, or its number when it has none — so that is what this field is. It
-   * was a full-height bordered text box, which made the most optional field in
-   * the editor the loudest thing in every step.
-   */
+  /* Styled as the reading surface's small accented step label, so this optional field isn't the loudest thing. */
   .name :global(.ds-control) {
     height: var(--control-sm);
     padding-inline: var(--space-2);
@@ -180,14 +162,11 @@
 
   .controls {
     display: flex;
-    /* And the buttons wrap within it. Giving the group its own line is not
-       enough on its own: three of them are 280px at 200% text, which is wider
-       than a 320px screen once the step's padding is counted. */
+    /* The group itself wraps too: at 200% text it is wider than a 320px screen. */
     flex-wrap: wrap;
     justify-content: flex-end;
     flex: none;
-    /* `flex: none` sizes this to its contents, so without a bound it never
-       reaches the point of wrapping — it just gets wider than the screen. */
+    /* `flex: none` sizes to content, so without a bound it never wraps. */
     max-width: 100%;
     gap: var(--space-1);
   }
@@ -205,9 +184,7 @@
     font-size: var(--text-sm);
   }
 
-  /* Three buttons per step is nine down a three-step recipe, and a method that
-     reads as a toolbar. They belong to the step being worked on; on a touch
-     screen, where nothing reveals them, they stay. */
+  /* Controls appear on hover/focus so the method doesn't read as a toolbar; on touch they stay. */
   @media (hover: hover) {
     .controls {
       opacity: 0;

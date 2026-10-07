@@ -50,11 +50,7 @@ internal static class RecipeAccess
             error => Task.FromResult(Result<Recipe>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// <see cref="VisibleAsync"/> for an operation that never reads the recipe:
-    /// the household it belongs to, or not-found, from one row rather than the
-    /// whole aggregate.
-    /// </summary>
+    /// <summary><see cref="VisibleAsync"/> without loading the recipe: its household, or not-found.</summary>
     internal static async Task<Result<Guid>> VisibleHouseholdAsync(
         IRecipeRepository recipes,
         IHouseholdRepository households,
@@ -73,9 +69,7 @@ internal static class RecipeAccess
             error => Task.FromResult(Result<Guid>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// <see cref="EditableAsync"/> for an operation that never reads the recipe.
-    /// </summary>
+    /// <summary><see cref="EditableAsync"/> without loading the recipe.</summary>
     internal static async Task<Result<Guid>> EditableHouseholdAsync(
         IRecipeRepository recipes,
         IHouseholdRepository households,

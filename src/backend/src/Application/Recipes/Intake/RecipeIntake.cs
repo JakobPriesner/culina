@@ -47,11 +47,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             error => Task.FromResult(Result<IntakeJob>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// How often a draft that is still being written is stored. Every part of a
-    /// recipe is an update that rewrites the whole draft, and a recipe is
-    /// hundreds of parts; the person watching is shown a few a second at most.
-    /// </summary>
+    /// <summary>How often a growing draft is stored: every part rewrites the whole draft.</summary>
     private static readonly TimeSpan ProgressEvery = TimeSpan.FromMilliseconds(500);
 
     /// <summary>Runs on server lifetime, never a request cancellation token.</summary>
@@ -84,10 +80,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
         await SaveAsync(work, draft, token).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Reads the page the person shared and adds what it says to what they
-    /// wrote. Null once the job has been failed.
-    /// </summary>
+    /// <summary>Adds the shared page's text to what the person wrote; null once the job has failed.</summary>
     private async Task<IntakeWork?> FetchSourceAsync(IntakeWork work, string sourceUrl, CancellationToken token)
     {
         await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
@@ -102,8 +95,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             var material = string.Join("\n\n", new[] { source.Text, pageText }.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal));
             var transcript = source.Transcript.Length > 0 ? source.Transcript : page.Transcript ?? "";
 
-            // The same combined limit as every provider ask. Original shared
-            // words win; fetched captions use the remaining space.
+            // The person's own words win; fetched captions use the remaining space.
             var limit = DraftLimits.MaxMaterialCharacters;
             var textBudget = limit - Math.Min(source.Transcript.Length, limit);
             material = material[..Math.Min(material.Length, textBudget)];
@@ -124,10 +116,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
         return work with { Material = source };
     }
 
-    /// <summary>
-    /// Has the model write the recipe, storing it as it grows. Null once the job
-    /// has been failed.
-    /// </summary>
+    /// <summary>Has the model write the recipe, storing it as it grows; null once the job has failed.</summary>
     private async Task<Draft?> ComposeAsync(IntakeWork work, CancellationToken token)
     {
         await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
@@ -169,7 +158,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
 
             finished = part.Finished;
 
-            // The last part is always stored: it is the one that is saved.
+            // The last part is always stored.
             if (finished || time.GetElapsedTime(lastStored) >= ProgressEvery)
             {
                 await jobs.ProgressAsync(work.Id, finished ? "saving" : "writing", draft, token).ConfigureAwait(false);

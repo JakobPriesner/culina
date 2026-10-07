@@ -1,13 +1,8 @@
-/**
- * One in-flight write per key.
- *
- * Two quick edits to the same recipe must not race: the second waits for the
- * first, so the version it sends is the one the first produced.
- */
+/** One in-flight write per key: a second edit waits so it sends the version the first produced. */
 export class WriteQueue {
   #writes = new Map<string, Promise<unknown>>();
 
-  /** Runs `write` after whatever is already queued for `key`, failed or not. */
+  /** Runs `write` after the key's queue, even if an earlier write failed. */
   async run<TResult>(key: string, write: () => Promise<TResult>): Promise<TResult> {
     const queued = (this.#writes.get(key) ?? Promise.resolve()).then(write, write);
 

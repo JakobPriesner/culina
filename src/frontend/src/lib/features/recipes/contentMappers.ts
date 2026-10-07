@@ -14,8 +14,7 @@ export const toGroup = (wire: WireGroup): IngredientGroup => ({
 });
 
 const toIngredient = (wire: WireIngredient): Ingredient => ({
-  // The wire allows an absent id because a *write* creates lines without one.
-  // On a read the server has always assigned one.
+  // The wire allows an absent id (writes create lines without one); reads always have it.
   id: wire.ingredientId ?? '',
   quantity: { value: wire.quantity ?? null, unit: wire.unit ?? null },
   name: wire.name,
@@ -30,13 +29,7 @@ export const toStep = (wire: WireStep): Step => ({
   durationSeconds: wire.durationSeconds ?? null
 });
 
-/**
- * Narrows the flattened union the contract carries.
- *
- * The wire keeps it flat on purpose, so a generated client does not have to
- * narrow one; the narrowing happens here, once, and components get a real
- * discriminated union.
- */
+/** The wire keeps the segment union flat; it is narrowed once here. */
 const toSegment = (wire: WireSegment): StepSegment =>
   wire.type === 'ingredient'
     ? {
@@ -47,7 +40,6 @@ const toSegment = (wire: WireSegment): StepSegment =>
       }
     : { kind: 'text', text: wire.value ?? '' };
 
-/** The app's shape back onto the wire, for a write. */
 export const toWireGroups = (groups: readonly IngredientGroup[]): WireGroup[] =>
   groups.map((group) => ({
     groupId: group.id ?? undefined,
@@ -61,13 +53,7 @@ export const toWireGroups = (groups: readonly IngredientGroup[]): WireGroup[] =>
     }))
   }));
 
-/**
- * Whether a step has anything in it to store.
- *
- * "Add a step" puts an empty one on screen for the author to write in, and the
- * autosave can fire before they have. The server refuses a step with no text,
- * so until there is some it stays on screen and out of the save.
- */
+/** A just-added empty step stays on screen but out of the save, since the server refuses empty text. */
 const saysAnything = (step: Step): boolean =>
   step.segments.some((segment) => segment.kind === 'ingredient' || segment.text !== '');
 
@@ -84,7 +70,6 @@ export const toWireSteps = (steps: readonly Step[]): WireStep[] =>
     )
   }));
 
-/** A recipe as the update request carries it. */
 export const toWireRecipe = (recipe: Recipe) => ({
   title: recipe.title,
   description: recipe.description ?? undefined,

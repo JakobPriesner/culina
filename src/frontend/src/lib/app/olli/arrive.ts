@@ -4,19 +4,16 @@ import { perform } from './performances';
 import { idleBlinks, poses, restAfter, type Pose, type PoseSpec } from './poses';
 import type { Rig } from './rig.svelte';
 
-/** What arriving in a pose needs from the component that owns the timers. */
 interface Arrival {
   rig: Rig;
   later: (ms: number, run: () => void) => unknown;
   /** Cancels every pending beat. */
   rest: () => void;
   blink: () => void;
-  /** Whether anybody can see Olli right now. */
   watched: () => boolean;
   working: () => boolean;
 }
 
-/** Every part heads for the pose's resting place, at once or by spring. */
 function settle(rig: Rig, target: PoseSpec, instant: boolean): void {
   void rig.tilt.set(target.tilt, { instant });
   void rig.armL.set(target.arms[0], { instant });
@@ -30,10 +27,8 @@ function settle(rig: Rig, target: PoseSpec, instant: boolean): void {
   void rig.lean.set(0, { instant });
 }
 
-/** The first arrival fades in, dropping into place unless it is Olli's day job. */
 function fadeIn(rig: Rig, next: Pose, target: PoseSpec): void {
-  // Fading is not motion, so even a reader who asked for less of it sees
-  // Olli arrive rather than pop in.
+  // Fading is not motion, so it stays even with reduced motion.
   void rig.shown.set(0, { duration: 0 });
   void rig.shown.set(1, { duration: next !== 'onDuty' ? 320 : 200, easing: cubicOut });
 
@@ -43,13 +38,12 @@ function fadeIn(rig: Rig, next: Pose, target: PoseSpec): void {
   }
 }
 
-/** The steam that means something — a question, sleep — still shows when still. */
+/** Meaningful steam (question, sleep) still shows when not animating. */
 function stillSteam(steam: PoseSpec['steam']): number {
   if (steam === 'bulb') return 0.5;
   return steam === 'question' || steam === 'sleep' ? 1 : 0;
 }
 
-/** Props and paint are left exactly as they would be at the end of a performance. */
 function holdStill(rig: Rig, next: Pose, target: PoseSpec): void {
   rig.drawingPhase = 'still';
   rig.warmBrush = false;
@@ -70,11 +64,8 @@ function steamDuration(steam: PoseSpec['steam']): number {
 }
 
 /**
- * Olli's arrival in a pose, as a function to call each time the pose changes.
- *
- * Remembers whether it has arrived before: the first arrival fades in, later
- * ones blink on the way. When there is work being done it starts over after
- * resting, so the movement carries on for as long as the work does.
+ * Arrival in a pose, called on each pose change: the first fades in, later ones blink.
+ * While working it restarts after resting, so the movement lasts as long as the work.
  */
 export function createArrival({ rig, later, rest, blink, watched, working }: Arrival) {
   let arrived = false;

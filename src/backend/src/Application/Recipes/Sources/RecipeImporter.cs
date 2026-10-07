@@ -14,14 +14,8 @@ namespace Application.Recipes.Sources;
 /// <param name="UserId">Who asked for it.</param>
 /// <param name="Language">The language they read, which every recipe lands in.</param>
 /// <param name="AllowLookalikes">Whether a recipe like one already here is written anyway.</param>
-/// <param name="AlreadyHere">Which of the recipes asked for are here already, when the run has asked once for all of them.</param>
-/// <remarks>
-/// Everything that is the same for every recipe in one import, passed once
-/// rather than threaded through six parameters per call. The language is here
-/// for exactly that reason: it is read once for the run rather than once per
-/// recipe, which for four hundred recipes is the difference between one query
-/// and four hundred.
-/// </remarks>
+/// <param name="AlreadyHere">Already-imported recipes by external id, looked up once per run.</param>
+/// <remarks>What is the same for every recipe in one import, so it is read once per run.</remarks>
 public sealed record ImportInto(
     RecipeSource Source,
     IRecipeLibrary Reader,
@@ -75,11 +69,8 @@ internal sealed class RecipeImporter(
     {
         ArgumentNullException.ThrowIfNull(into);
 
-        // Answered for the whole selection when the run knows it, which for
-        // four hundred recipes is one query instead of four hundred. Alone, a
-        // recipe asks for itself. Either way the unique index on the origin is
-        // what really keeps a recipe from arriving twice: a second run that
-        // wrote it first makes this one a failure of one line, not a duplicate.
+        // The run answers for the whole selection in one query; alone, a recipe asks for itself.
+        // The unique index on the origin is what really prevents duplicates.
         var here = into.AlreadyHere
             ?? await origins
                 .AlreadyHereAsync(into.Source.HouseholdId, into.Source.Kind, [externalId], cancellationToken)

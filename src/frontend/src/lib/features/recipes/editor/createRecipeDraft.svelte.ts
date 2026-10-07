@@ -14,23 +14,14 @@ import {
 import { adoptSaved } from './adoptSaved';
 import { describeSave } from './describeSave';
 
-/**
- * The recipe being edited, and everything that keeps it safe while it is.
- *
- * Holds the edited copy, the journal that keeps it on this device until the
- * server has it, the autosave that sends it, and the two ways out of a
- * conflict. It makes no effects and no lifecycle calls — the page decides when
- * `takeLoaded` runs and calls `dispose` on the way out — so it can be driven
- * from a test without mounting anything.
- */
+/** The edited recipe with its local journal, autosave and conflict handling. Has no effects or lifecycle calls, so tests can drive it unmounted. */
 export function createRecipeDraft(recipeId: () => string) {
-  /** The edited copy. Null until the recipe has arrived. */
   let draft = $state<Recipe | null>(null);
 
-  /** Whether what is on screen exists only on this device. */
+  /** What is on screen exists only on this device. */
   let unsent = $state(false);
 
-  /** True when this editor opened onto work a previous visit had not saved. */
+  /** The editor opened onto work a previous visit had not saved. */
   let recovered = $state(false);
 
   let typed = $state<TypedNumbers>(nothingTyped());
@@ -47,8 +38,7 @@ export function createRecipeDraft(recipeId: () => string) {
       adopt(sent);
     }
 
-    // Dropped only once the server has it. A failed save leaves the journal
-    // exactly where it was, which is the whole point of writing it first.
+    // Dropped only once the server has it; a failed save keeps the journal.
     if (!failure && session.user) {
       forget(session.user.userId, recipeId());
       unsent = false;
@@ -57,14 +47,7 @@ export function createRecipeDraft(recipeId: () => string) {
     return failure;
   });
 
-  /**
-   * The household it belongs to, when that is not the one being looked at.
-   *
-   * Such a recipe is inherited here, and not this household's to change: the
-   * server would refuse every save. The link to this page is not offered for
-   * it, but an address can still be typed or kept from before, so the editor
-   * says so rather than opening a form whose every keystroke would fail.
-   */
+  /** Owning household when it is not the active one; such an inherited recipe cannot be saved, so the editor says so instead of opening. */
   const inheritedFrom = $derived(
     recipes.detail?.id === recipeId() && recipes.detail.householdId !== session.activeHouseholdId
       ? recipes.detail.householdId
@@ -95,8 +78,7 @@ export function createRecipeDraft(recipeId: () => string) {
     draft = { ...draft, ...patch };
     recovered = false;
 
-    // Written here first, synchronously, before anything is sent. The gap
-    // between a keystroke and a save is where work goes missing.
+    // Journal synchronously before anything is sent.
     if (session.user) {
       remember(session.user.userId, recipeId(), draft);
       unsent = true;
@@ -105,7 +87,6 @@ export function createRecipeDraft(recipeId: () => string) {
     autosave.touch();
   }
 
-  /** The recipe in the store, once it is the one this editor is for. */
   function latestLoaded(): Recipe | null {
     const latest = recipes.detail;
 
@@ -135,19 +116,7 @@ export function createRecipeDraft(recipeId: () => string) {
       return typed;
     },
 
-    /**
-     * What the small word beside the title says.
-     *
-     * In the order that matters. A conflict is never masked by anything
-     * reassuring; work that has not reached the server never reads as "Saved";
-     * and a lost connection reads as where the work is rather than as a
-     * failure, because the work is not lost — it is on this device, and saying
-     * "Could not save" about it is both alarming and untrue.
-     *
-     * At rest it says that the recipe saves itself, which is the one question
-     * an editor with no Save button owes an answer to before anything has
-     * happened.
-     */
+    /** The status word beside the title: conflict wins, unsent work is never "Saved", a lost connection is not a failure. */
     get saveState() {
       return saveState;
     },
@@ -158,16 +127,7 @@ export function createRecipeDraft(recipeId: () => string) {
 
     change,
 
-    /**
-     * Taken once per recipe: after that the draft is what the author is
-     * editing, and overwriting it from the store would delete what they just
-     * typed.
-     *
-     * What this device kept wins over what the server has. It is newer by
-     * definition — it exists precisely because it never reached the server —
-     * and the alternative is opening an editor onto an older version of
-     * somebody's own sentence.
-     */
+    /** Takes the loaded recipe once per recipe, so it never overwrites typing. What this device kept wins over the server copy. */
     takeLoaded() {
       const loaded = latestLoaded();
 
@@ -183,18 +143,8 @@ export function createRecipeDraft(recipeId: () => string) {
     },
 
     /**
-     * Keeps the draft in step with a photo saved by its own endpoint.
-     *
-     * Not through `change`: that would write the whole recipe again for a
-     * change it does not own. But the photo is part of the recipe, so writing
-     * it moves the recipe on one version, and a draft left on the old one sent
-     * a stale `If-Match` with every save after it — a 412 on each keystroke,
-     * for a conflict nobody else caused.
-     *
-     * Exactly one step, never the version a response names. If somebody else
-     * wrote in between, the server is further on than that, the next save is
-     * refused, and the author is asked — rather than their change being
-     * quietly saved over.
+     * Mirrors a photo saved by its own endpoint, which bumps the version by one.
+     * Steps exactly one (never the response's version) so a concurrent write still conflicts instead of being overwritten.
      */
     photoWritten(imageId: string | null) {
       if (!draft) {
@@ -203,17 +153,13 @@ export function createRecipeDraft(recipeId: () => string) {
 
       draft = { ...draft, imageId, version: draft.version + 1 };
 
-      // What this device kept is opened in place of the server's copy next
-      // time, so it has to know about the step too.
+      // The journal is reopened in place of the server copy, so it needs the step too.
       if (unsent && session.user) {
         remember(session.user.userId, recipeId(), draft);
       }
     },
 
-    /**
-     * The yield field keeps what was typed and the recipe keeps the last
-     * number that made sense.
-     */
+    /** The field keeps the typed text; the recipe keeps the last valid number. */
     writeYield(text: string) {
       typed = { ...typed, yieldAmount: text };
 
@@ -234,14 +180,7 @@ export function createRecipeDraft(recipeId: () => string) {
       }
     },
 
-    /**
-     * Two ways out of a conflict, and no third.
-     *
-     * Merging two people's recipes automatically is a guess, and a guess about
-     * somebody's dinner is worse than a question. So the choice is theirs — and
-     * it has to be offered, because the journal keeps what was typed and would
-     * otherwise show it again on every reload, conflicting again forever.
-     */
+    /** One of two conflict exits (no auto-merge): the journal would otherwise re-open the conflicting text on every reload. */
     async keepMine() {
       const mine = draft;
 
@@ -249,9 +188,7 @@ export function createRecipeDraft(recipeId: () => string) {
         return;
       }
 
-      // Re-read to learn the version somebody else's change produced, then
-      // write this text on top of it. Nothing of theirs is silently kept: they
-      // were told to look, and this is the person looking.
+      // Re-read to learn the other change's version, then write this text on top.
       await recipes.load(recipeId());
 
       const latest = latestLoaded();
@@ -262,7 +199,7 @@ export function createRecipeDraft(recipeId: () => string) {
 
       draft = { ...mine, version: latest.version };
       autosave.clear();
-      // Clearing forgave what was owed, and this text is owed again.
+      // Clearing dropped the pending save; this text is owed again.
       autosave.touch();
 
       await autosave.flush();
@@ -281,19 +218,14 @@ export function createRecipeDraft(recipeId: () => string) {
         return;
       }
 
-      // Assigned here rather than left to `takeLoaded`, which deliberately
-      // takes the recipe only once: it is what stops a save in flight from
-      // overwriting what is being typed, and it would leave this showing the
-      // version the conflict was about.
+      // Not left to `takeLoaded`, which takes a recipe only once and would keep the conflicting version.
       draft = latest;
       unsent = false;
       recovered = false;
-      // Their numbers, not the ones this browser was in the middle of typing.
       typed = nothingTyped();
       autosave.clear();
     },
 
-    /** Sends what is owed on the way out, and stops the timer. */
     dispose() {
       void autosave.flush();
       autosave.dispose();

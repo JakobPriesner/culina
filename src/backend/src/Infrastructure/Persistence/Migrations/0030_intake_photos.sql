@@ -1,13 +1,7 @@
--- The photographs of a recipe import, out of the job's material.
---
--- They were base64 inside recipe_intake_jobs.material, up to 40 MB a job. The
--- page that lists imports strips them with jsonb_set and counts them with
--- jsonb_array_length, and both read and decompress the whole value, for every
--- row of every poll; showing one photograph deserialised all of them.
---
--- Kept as rows of their own, so listing a job reads a small document and one
--- photograph is one row. Existing jobs are moved over, and their material is
--- left with an empty list, which is what the application now writes.
+-- Moves import photographs out of recipe_intake_jobs.material (base64, up to
+-- 40 MB a job): listing jobs decompressed all of it on every poll. As rows of
+-- their own, listing reads a small document and one photograph is one row.
+-- Existing jobs are moved over, leaving an empty photos list.
 
 create table recipe_intake_photos (
     job_id     uuid    not null references recipe_intake_jobs (id) on delete cascade,

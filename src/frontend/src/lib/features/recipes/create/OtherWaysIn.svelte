@@ -11,18 +11,12 @@
   let { onpaste, ondescribe }: Props = $props();
 </script>
 
-<!--
-  The other two ways in, and both heavier than typing a name — so they
-  are offered second, as doors rather than as forms. Putting all three
-  on one screen as equals would make the ten-second thing feel like the
-  beginning of a migration.
--->
+<!-- Offered after the name field, as doors not forms, so quick creation doesn't feel like a migration. -->
 <section class="others" aria-labelledby="other-ways">
   <h2 class="others-title" id="other-ways">{m['editor.otherWays']()}</h2>
 
   <div class="ways">
-    <!-- The whole tile is the control, so there is one label to read
-         rather than a heading, a sentence and a button repeating it. -->
+    <!-- The whole tile is the control, so there is one label to read. -->
     <button type="button" class="way" onclick={onpaste}>
       <span class="way-title">{m['import.paste.title']()}</span>
       <span class="way-body">{m['import.paste.hint']()}</span>
@@ -33,8 +27,7 @@
       <span class="way-body">{m['import.source.hint']()}</span>
     </a>
 
-    <!-- Third, and only where an assistant is connected. On every
-         other instance this door is not shut — it is not there. -->
+    <!-- Only where an assistant is connected. -->
     {#if session.user?.assistance.draft}
       <button type="button" class="way" onclick={ondescribe}>
         <span class="way-title">{m['assist.idea.title']()}</span>
@@ -59,10 +52,7 @@
     min-width: 0;
   }
 
-  /* Sentence case, not capitals. A caption set in letterspaced capitals is
-     louder than the sentence inside the tile it introduces, and two lines of it
-     on a phone is the loudest thing on a page whose whole argument is that
-     starting a recipe is easy. */
+  /* Sentence case: letterspaced capitals would be louder than the tiles they introduce. */
   .others-title {
     color: var(--text-muted);
     font-size: var(--text-sm);
@@ -75,8 +65,6 @@
     min-width: 0;
   }
 
-  /* Quiet at rest and edged on hover: two doors beside a lit one, which is the
-     whole of what these are. */
   .way {
     display: flex;
     flex-direction: column;

@@ -3,28 +3,16 @@ import { http, request, watch, type AppError, type Stream } from '$api';
 import type { ImportEvent, ImportRun } from '../types';
 import { toEvent, type ImportEventWire } from './wire';
 
-/**
- * One import being brought over, and the stream that reports it.
- *
- * Lives in a store rather than in the page because an import of eight hundred
- * recipes takes minutes, and a person who taps a recipe halfway through to see
- * whether it really arrived must be able to come back to it.
- */
+/** One import being brought over and its event stream; a store so a minutes-long import survives navigating away. */
 export class ImportRunner {
   #run = $state<ImportRun | null>(null);
 
-  /** Set while a run is going, so a second tap cannot start a second one. */
   #importing = $state(false);
 
-  /** Why an import could not be started. Not why one went badly. */
+  /** Why an import could not be started, not why one went badly. */
   #error = $state<AppError | null>(null);
 
-  /**
-   * The stream of the run being followed, and which run it is.
-   *
-   * Deliberately not `$state`: nothing renders them, and the import they follow
-   * carries on whether or not this tab is listening.
-   */
+  /** Not $state: nothing renders them, and the import carries on whether or not this tab listens. */
   #stream: Stream | null = null;
   #following: { sourceId: string; importId: string } | null = null;
 
@@ -36,25 +24,15 @@ export class ImportRunner {
     return this.#importing;
   }
 
-  /** The refusal that stopped an import from starting, if there was one. */
   get error(): AppError | null {
     return this.#error;
   }
 
-  /** Forgets the last refusal, as looking at another library does. */
   clearError(): void {
     this.#error = null;
   }
 
-  /**
-   * Asks for a selection to be brought over, and follows it.
-   *
-   * The request names the work and comes back at once; the recipes arrive
-   * afterwards, brought over by the server and reported one at a time over a
-   * stream. So the import is not this tab's to finish: the answer already says
-   * which cookbook everything is landing on, and closing the laptop costs the
-   * progress bar and nothing else.
-   */
+  /** Requests a selection and follows it; the server does the work, so closing the tab only loses the progress bar. */
   async start(
     sourceId: string,
     externalIds: readonly string[],
@@ -79,8 +57,7 @@ export class ImportRunner {
     );
 
     if (!result.ok) {
-      // Nothing was started, so there is no run to show — the selection is
-      // still on screen and the refusal belongs beside the button that made it.
+      // Nothing started: keep the selection on screen and show the refusal beside its button.
       this.#importing = false;
       this.#error = result.error;
 
@@ -105,12 +82,7 @@ export class ImportRunner {
     this.#listen();
   }
 
-  /**
-   * Brings over the recipes somebody chose from those an import held back.
-   *
-   * Onto the same shelf as the rest of that import, and only because a person
-   * looked at each one beside the recipe it resembles and said so.
-   */
+  /** Brings over recipes a person chose from those an import held back, onto the same shelf. */
   async startAnyway(externalIds: readonly string[]): Promise<void> {
     const following = this.#following;
     const cookbookId = this.#run?.cookbookId;
@@ -122,14 +94,7 @@ export class ImportRunner {
     await this.start(following.sourceId, externalIds, { cookbookId });
   }
 
-  /**
-   * Picks the stream back up after it was lost.
-   *
-   * From where it stopped rather than from the beginning: the server numbers
-   * every event with how many outcomes it has sent, which is exactly `done`, so
-   * asking to resume from there is asking for what this tab is missing and
-   * nothing else. The counts on screen stay as they are.
-   */
+  /** Resumes the stream from `done` (the server numbers events by outcomes sent); on-screen counts stay. */
   reconnect(): void {
     if (!this.#following || this.#run === null || this.#run.finished) {
       return;
@@ -140,7 +105,6 @@ export class ImportRunner {
     this.#listen();
   }
 
-  /** Clears a finished run, so the flow can be started again. */
   forget(): void {
     this.#stopListening();
     this.#run = null;
@@ -168,15 +132,12 @@ export class ImportRunner {
       {
         message: (event) => this.#apply(toEvent(event)),
         failed: (error) => {
-          // What stopped is this tab's view, not necessarily the import — so
-          // the run is kept, the reason is shown, and looking again is offered.
-          // Which of the two it was is the error's to say, not this method's.
+          // Only this tab's view stopped, not necessarily the import: keep the run, show why, offer to look again.
           this.#stopListening();
           this.#run = this.#run && { ...this.#run, lost: error };
         }
       },
-      // Where to resume: the server numbers each event with the number of
-      // outcomes it has sent, which is the count already on screen.
+      // Resume from the outcome count already on screen.
       this.#run === null || this.#run.done === 0 ? null : String(this.#run.done)
     );
   }
@@ -187,13 +148,7 @@ export class ImportRunner {
     this.#importing = false;
   }
 
-  /**
-   * Folds one event into the run.
-   *
-   * `done` is taken from the event rather than counted here, so a stream that
-   * dropped and resumed cannot leave the bar disagreeing with the server about
-   * how far along it is.
-   */
+  /** Folds one event into the run; `done` comes from the event so a resumed stream cannot drift from the server. */
   #apply(event: ImportEvent): void {
     const run = this.#run;
 
@@ -209,8 +164,7 @@ export class ImportRunner {
     }
 
     if (!event.recipe) {
-      // A tick that says nothing has finished yet, sent so the connection
-      // survives a slow recipe.
+      // Keep-alive tick; nothing has finished.
       this.#run = { ...run, done: event.done };
 
       return;
@@ -222,8 +176,7 @@ export class ImportRunner {
       ...run,
       done: event.done,
       imported: run.imported + (outcome.outcome === 'imported' ? 1 : 0),
-      // Not a failure, and never counted as one: re-running an import is the
-      // ordinary way to catch up on what is new.
+      // Not a failure: re-running is the normal way to catch up.
       skipped: run.skipped + (outcome.outcome === 'already_here' ? 1 : 0),
       failures:
         outcome.outcome === 'failed'

@@ -97,23 +97,10 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         c.kind, c.rule_tags, c.rule_ingredients, c.rule_max_minutes
         """;
 
-    /// <summary>
-    /// The count and the cover, read with the shelf rather than after it.
-    /// </summary>
+    /// <summary>The count and cover, read with the shelf.</summary>
     /// <remarks>
-    /// <para>
-    /// A lateral join and not a join with a group by: a shelf with nothing on
-    /// it must still come back, and the count and the pictures are two
-    /// different slices of the same set. The set is worked out once per shelf —
-    /// for a smart one that is a scan of the library, so reading it three times
-    /// for a count and two pictures lists was three scans per card.
-    /// </para>
-    /// <para>
-    /// Oldest first, so a cover stops moving once four photographed recipes
-    /// are on it — a face that changed every time something was added is not
-    /// one anybody would learn. A smart shelf has no added_at, so its cover
-    /// falls back to the recipe id, which is time-ordered anyway.
-    /// </para>
+    /// Lateral so the shelf's set is computed once (a smart shelf scans the library) and an empty shelf still comes back.
+    /// Oldest first so the cover stops moving once full; smart shelves have no added_at, so they fall back to the time-ordered id.
     /// </remarks>
     private static readonly string ShelfContents = $$"""
         cross join lateral (

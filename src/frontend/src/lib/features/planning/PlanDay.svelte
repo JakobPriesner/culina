@@ -32,9 +32,7 @@
   {#if day.meals.length > 0 || landing}
     <ul class="meals">
       {#each day.meals as meal, index (meal.entryId)}
-        <!-- The line the card would land on. Drawn between the cards
-             rather than around the day, because a day is the answer to
-             "which day" and this is the answer to "where in it". -->
+        <!-- Drop indicator between cards. -->
         {#if landing?.position === index}
           <li class="seam" aria-hidden="true"></li>
         {/if}
@@ -61,8 +59,6 @@
     </ul>
   {/if}
 
-  <!-- Every day offers it, planned or not. An "add" that only appears
-       on an empty day is an add you cannot use twice. -->
   <Button size="sm" variant="ghost" onclick={onadd}>+ {m['plan.add']()}</Button>
 </li>
 
@@ -78,22 +74,17 @@
     background: var(--surface-sunken);
   }
 
-  /* Lit rather than boxed: today keeps its place in the row and the eye finds
-     it without the layout moving. */
   .today {
     background: var(--surface-accent-subtle);
   }
 
-  /* Outlined rather than filled, because today already owns the filled one and
-     today is a day you can drop on. Inset, so the seven columns do not shift
-     by a border's width as a card crosses them. */
+  /* Outlined (today owns the fill) and inset so columns do not shift by a border width. */
   .over {
     outline: 2px dashed var(--border-focus);
     outline-offset: calc(-1 * var(--space-1));
   }
 
-  /* Where it would land. Kept to the height of the gap it opens so the day does
-     not grow by a whole card as the pointer crosses it. */
+  /* Kept to the gap's height so the day does not grow by a card while dragging. */
   .seam {
     height: var(--space-1);
     border-radius: var(--radius-full);

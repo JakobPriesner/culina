@@ -1,12 +1,7 @@
 <script lang="ts">
-  /**
-   * The links to a form's sections, with the one being read marked.
-   *
-   * Only on a wide screen: five pills above a form on a 360px screen cost more
-   * room than the scrolling they save.
-   */
+  /** Section links with the current one marked; wide screens only, where it costs no room above the form. */
   interface Props {
-    /** Names the nav, which is a list of links without a heading. */
+    /** Names the nav, which has no heading. */
     label: string;
     sections: readonly { id: string; label: string; count?: number }[];
     current: string | null;
@@ -20,10 +15,7 @@
   {#each sections as section (section.id)}
     {@const selected = current === section.id}
 
-    <!-- A fragment on the page that is already open, which the rule cannot
-         tell apart from a route. `resolve()` is for routes, and there is
-         nothing here to resolve. -->
-    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- In-page fragment, not a route. -->
     <a
       class="section"
       class:selected
@@ -44,11 +36,6 @@
     display: none;
   }
 
-  /*
-   * Wide enough for a column of its own: the bar unrolls into the rail the
-   * settings screens already use, so an inner navigation looks like this app's
-   * inner navigation wherever it appears.
-   */
   @media (min-width: 64rem) {
     .sections {
       display: flex;
@@ -57,7 +44,6 @@
       margin-top: var(--space-2);
     }
 
-    /* The same pill the settings rail and the navbar use. */
     .section {
       display: flex;
       align-items: center;

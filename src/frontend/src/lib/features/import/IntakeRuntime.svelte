@@ -17,9 +17,7 @@
   });
   onMount(() => void importPush.restore());
   const busy = $derived(active.length > 0);
-  // The owner effect above makes the first request, so this only keeps up. It
-  // polls quickly while an import runs and slowly otherwise, and not at all in
-  // a hidden tab: coming back, or the connection returning, refreshes at once.
+  // Keeps up after the owner effect's first request: fast while importing, slow otherwise, paused in a hidden tab.
   $effect(() => {
     const delay = busy ? 2000 : 15000;
     let timer: ReturnType<typeof setTimeout> | undefined;

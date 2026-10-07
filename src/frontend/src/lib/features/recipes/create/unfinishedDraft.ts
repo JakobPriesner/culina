@@ -6,13 +6,7 @@ import {
 } from '$features/recipes/editor/lastDraft';
 import { toRecipe } from '$features/recipes/mappers';
 
-/**
- * The recipe this person started here and never wrote anything into, if any.
- *
- * A kept draft that has gone, or has since been filled in, is forgotten rather
- * than offered: creation is only unfinished while it is still nothing but its
- * title.
- */
+/** The kept draft that is still only a title, if any; one that is gone or filled in is forgotten. */
 export async function findUnfinishedDraft(
   userId: string,
   householdId: string
@@ -28,8 +22,7 @@ export async function findUnfinishedDraft(
   );
 
   if (!result.ok) {
-    // Gone, or no longer this household's to see. Either way, not worth
-    // offering back.
+    // Gone, or no longer visible to this household.
     if (result.error.status === 404) {
       forgetLastDraft(userId, householdId);
     }
@@ -45,8 +38,7 @@ export async function findUnfinishedDraft(
     return { recipeId: recipe.id, title: recipe.title };
   }
 
-  // It has ingredients or steps now — started elsewhere, or finished here
-  // and simply revisited. Either way, creation is no longer unfinished.
+  // Has content now, so creation is no longer unfinished.
   forgetLastDraft(userId, householdId);
 
   return null;

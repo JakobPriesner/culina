@@ -2,16 +2,15 @@
   import { Button, Field, TextInput } from '$ds';
   import { m } from '$shell/i18n';
 
-  /** The address of a recipe page, with the buttons that read it. */
   interface Props {
     url: string;
-    /** Something else is in flight, so the field holds still. */
+    /** Something else is in flight. */
     locked: boolean;
     reading: boolean;
     /** The assistant is already writing a draft; reading would race it. */
     asking: boolean;
     canPasteClipboard: boolean;
-    /** The address was typed over, so whatever was read from the old one is stale. */
+    /** The address was edited, so what was read from the old one is stale. */
     onedit: () => void;
     onread: () => void;
     onpasteclipboard: () => void;

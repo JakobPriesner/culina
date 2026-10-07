@@ -11,17 +11,14 @@
   import { reasonLine } from './wording';
 
   /**
-   * The listbox the arrow keys walk through: what the half-typed word could
-   * become, grouped, and then the recipes it found.
-   *
-   * The field keeps focus the whole time, so an option is only ever
-   * highlighted (`aria-selected`), never focused.
+   * The listbox the arrow keys walk; the field keeps focus, so options are only `aria-selected`,
+   * never focused.
    */
   interface Props {
     id: string;
     options: readonly SearchOption[];
     highlighted: number;
-    /** What was searched for, which the matches are marked in. */
+    /** The searched text, marked in matches. */
     applied: string;
     onactivate: (option: SearchOption) => void;
     onopen: (recipeId: string) => void;

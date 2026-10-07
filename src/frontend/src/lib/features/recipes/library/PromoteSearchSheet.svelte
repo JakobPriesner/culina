@@ -7,7 +7,7 @@
   import { toaster } from '$shell/toaster.svelte';
 
   interface Props {
-    /** The saved search being offered as a shelf, which opens the sheet. */
+    /** The saved search offered as a shelf; non-null opens the sheet. */
     search: SavedSearch | null;
     householdId: string | null;
   }
@@ -16,15 +16,7 @@
 
   let busy = $state(false);
 
-  /**
-   * A saved search, made into a shelf.
-   *
-   * The two are different things — a search is a lens, ordered and fuzzy; a
-   * shelf is a curation that can be counted, drawn and taken to the shop — and
-   * this is the one door between them. Only what a shelf can actually ask for
-   * crosses: the tags and the time limit. The words stay behind, and the sheet
-   * says so rather than quietly dropping them.
-   */
+  /** Only tags and the time limit carry over to a shelf; the typed words stay behind (the sheet says so). */
   const preset = $derived(
     search
       ? {
@@ -56,8 +48,6 @@
   }
 </script>
 
-<!-- A saved search, offered as a shelf. The same sheet the cookbooks page
-     uses, so a cookbook made this way is made exactly like every other one. -->
 <CookbookSheet
   open={search !== null}
   householdId={householdId ?? ''}

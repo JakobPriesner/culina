@@ -4,10 +4,6 @@
 
   import DraftProgress from './DraftProgress.svelte';
 
-  /**
-   * What the review shows while the assistant is still writing: the progress
-   * line, and before anything has arrived the shape of what is coming.
-   */
   interface Props {
     /** Whether any of the draft has arrived yet. */
     arriving: boolean;
@@ -34,8 +30,7 @@
 {/if}
 
 <style>
-  /* Its own ground rather than a tint: the assistant's glow round the edge is
-     what marks it out, and an accent wash underneath would muddy the colours. */
+  /* Neutral ground, not an accent tint, which would muddy the aura's colours. */
   .progress {
     position: relative;
     isolation: isolate;

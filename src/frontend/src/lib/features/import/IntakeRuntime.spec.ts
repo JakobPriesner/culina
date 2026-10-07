@@ -10,8 +10,8 @@ import { importPush } from './push.svelte';
 vi.mock('$features/auth/session.svelte', () => ({ session: { user: { userId: 'person' } } }));
 
 /*
- * The runtime keeps the import status current. Polling a hidden tab, or asking
- * twice at start, is cost nobody sees, so the schedule is what is pinned here.
+ * The runtime keeps import status current; polling a hidden tab is invisible cost, so the schedule
+ * is pinned.
  */
 const job = (stage: string): IntakeJob => ({ id: stage, stage }) as IntakeJob;
 

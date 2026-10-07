@@ -18,27 +18,14 @@
   import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
 
-  /**
-   * One cookbook.
-   *
-   * The shelf's recipes are the recipe store with a `cookbookId` filter, drawn
-   * by the same grid the collection uses. What is genuinely new is the header
-   * and the two things you can do to a shelf: put something on it, and take the
-   * whole of it to the shop.
-   */
   const cookbookId = $derived(page.params.cookbookId ?? '');
   const householdId = $derived(session.activeHouseholdId);
 
   const cookbook = $derived(cookbooks.open?.id === cookbookId ? cookbooks.open : null);
 
-  /** A shelf that fills itself has nothing to put on it by hand. */
   const automatic = $derived(cookbook?.kind === 'smart');
 
-  /**
-   * Everything already on the shelf, so the picker can mark it before it is
-   * touched. Asked when the picker opens rather than read off the shelf on
-   * screen, which is only its first page.
-   */
+  /** Every member, loaded when the picker opens; the shelf on screen is only its first page. */
   const taken = $derived(cookbooks.membersOf(cookbookId));
 
   const list = useCookbookShelf({ cookbookId: () => cookbookId, householdId: () => householdId });

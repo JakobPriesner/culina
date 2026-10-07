@@ -1,13 +1,10 @@
 <script lang="ts">
   import type { PoseSpec } from './poses';
 
-  /**
-   * What rises from the pot on arrival: steam, a question, a bulb, sleep.
-   * Rises 8 units and fades, and is kept when it means something.
-   */
+  /** Steam, question, bulb or sleep: rises 8 units and fades, except the meaningful ones, which stay. */
   interface Props {
     steam: PoseSpec['steam'];
-    /** How far this arrival's steam has risen, from 0 to 1. */
+    /** 0 to 1. */
     progress: number;
   }
 

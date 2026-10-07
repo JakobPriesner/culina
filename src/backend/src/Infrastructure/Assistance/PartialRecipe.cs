@@ -45,11 +45,7 @@ internal sealed class PartialRecipe
     /// </remarks>
     private string lastRead = string.Empty;
 
-    /// <summary>
-    /// Whether anything has arrived that could move a cut point. Rescanning
-    /// the whole text for every token is quadratic in the length of the answer,
-    /// and a cut point only appears with one of <c>, } ]</c>.
-    /// </summary>
+    /// <summary>Whether a <c>, } ]</c> has arrived since the last read; rescanning per token is quadratic.</summary>
     private bool cutPointArrived;
 
     /// <summary>Everything the model has written so far.</summary>

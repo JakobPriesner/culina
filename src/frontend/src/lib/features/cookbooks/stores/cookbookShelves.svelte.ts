@@ -6,13 +6,7 @@ import type { Cookbook, CookbookDetail, CookbookRules } from '../types';
 
 const pageSize = 24;
 
-/**
- * Rules as the API takes them, or nothing at all.
- *
- * Undefined rather than an empty object for a manual cookbook: sending blank
- * rules would be claiming it has some, and the server rightly refuses to give a
- * shelf somebody fills by hand a set of conditions as well.
- */
+// Undefined (not empty rules) for a manual cookbook; the server rejects rules on one.
 const toWireRules = (rules?: CookbookRules | null) =>
   rules
     ? {
@@ -22,11 +16,7 @@ const toWireRules = (rules?: CookbookRules | null) =>
       }
     : undefined;
 
-/**
- * The shelves a household has and the one that is open: reading, paging,
- * making, renaming and deleting them. Which recipes are on them is
- * `cookbookMemberships.svelte.ts`.
- */
+/** A household's cookbook shelves and the open one; membership lives in `cookbookMemberships.svelte.ts`. */
 export class Shelves {
   #items = $state<Cookbook[]>([]);
   #open = $state<CookbookDetail | null>(null);
@@ -36,22 +26,10 @@ export class Shelves {
   #moreFailed = $state(false);
   #error = $state<AppError | null>(null);
 
-  /**
-   * Whether a first answer has ever arrived.
-   *
-   * Deliberately **not** `$state`. `list` is called from an `$effect`, and an
-   * effect tracks every reactive value read while it runs — so a `list` that
-   * read `#items` to decide whether to show a skeleton would depend on the
-   * thing it is about to write, and re-run itself forever. The same trap
-   * `units.svelte.ts` documents.
-   */
+  // Not $state: `list` runs in an $effect, and a tracked read here would make it re-run on its own writes.
   #loaded = false;
 
-  /**
-   * Whose items these are. Plain rather than $state: it is read before the
-   * first await of a method an effect calls, and a tracked read there would
-   * make the method's own writes call it again.
-   */
+  // Not $state, for the same reason as `#loaded`.
   #householdId: string | null = null;
 
   get items(): readonly Cookbook[] {
@@ -79,8 +57,7 @@ export class Shelves {
   }
 
   async list(householdId: string): Promise<void> {
-    // Another household's shelves are not the ones to keep while this one's
-    // arrive, so a change of household gets the skeleton a first read gets.
+    // A household change drops the old shelves and shows the first-read skeleton.
     if (this.#householdId !== householdId) {
       this.#householdId = householdId;
       this.#items = [];
@@ -88,9 +65,7 @@ export class Shelves {
       this.#loaded = false;
     }
 
-    // The shelves already on screen stay while the next answer arrives:
-    // replacing them with a skeleton to show the same shelves again loses your
-    // place for nothing. Only the very first read shows one.
+    // Only the first read shows a skeleton; refreshes keep the shelves on screen.
     if (!this.#loaded) {
       this.#status = 'loading';
     }
@@ -118,7 +93,7 @@ export class Shelves {
     this.#status = 'failed';
   }
 
-  /** Appends the next page. What is already on screen is never disturbed. */
+  /** Appends the next page without disturbing what is on screen. */
   async loadMore(householdId: string): Promise<void> {
     if (!this.#cursor || this.#loadingMore) {
       return;
@@ -142,8 +117,7 @@ export class Shelves {
       return;
     }
 
-    // The page that is there stays. A failed page is a reason to stop fetching
-    // and ask, not to empty the screen.
+    // A failed page keeps what is already shown.
     this.#error = result.error;
     this.#moreFailed = true;
   }
@@ -167,12 +141,7 @@ export class Shelves {
     this.#status = 'failed';
   }
 
-  /**
-   * Starts a cookbook.
-   *
-   * Rules are what makes one that fills itself; there is no separate flag that
-   * could disagree with them.
-   */
+  /** Creates a cookbook; rules make it fill itself, with no separate flag. */
   async create(
     householdId: string,
     name: string,
@@ -193,8 +162,7 @@ export class Shelves {
 
     const created = toDetail(result.value);
 
-    // Straight to the front, where the list orders it anyway: a shelf somebody
-    // just made should be the one they can see.
+    // Front of the list, where the server orders it anyway.
     this.#items = [created, ...this.#items];
     this.#error = null;
 
@@ -240,11 +208,7 @@ export class Shelves {
     return true;
   }
 
-  /**
-   * Deletes the open cookbook, quoting the version it was opened at: somebody
-   * who renamed it or changed its rules in the meantime gets a 412 here, not a
-   * shelf that vanished under them.
-   */
+  /** Deletes the open cookbook at the version it was opened at, so a concurrent edit gets a 412. */
   async remove(cookbookId: string): Promise<boolean> {
     const current = this.#open;
 
@@ -254,8 +218,7 @@ export class Shelves {
 
     const removed = this.#items;
 
-    // Gone from the screen before the server has agreed, and put back exactly
-    // as it was if it does not.
+    // Optimistic; restored below on failure.
     this.#items = this.#items.filter((shelf) => shelf.id !== cookbookId);
 
     const result = await request(() =>

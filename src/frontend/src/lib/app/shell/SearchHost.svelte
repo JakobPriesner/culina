@@ -4,16 +4,7 @@
   import { session } from '$features/auth/session.svelte';
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
 
-  /**
-   * Search as the shell offers it: the shortcut, and the overlay it opens.
-   *
-   * The overlay is fetched the first time it is opened. Nobody pays for it on
-   * first load: it is a few kilobytes that only matter once somebody reaches
-   * for search, and by then a moment's import is hidden behind the sheet
-   * rising.
-   */
   interface Props {
-    /** Whether search is on offer on this page. */
     searchable: boolean;
   }
 
@@ -26,6 +17,7 @@
     onclose: () => void;
   }> | null>(null);
 
+  // Lazy import on first open keeps the overlay out of the initial load.
   $effect(() => {
     if (searchOverlay.open && Overlay === null) {
       void import('$features/recipes/search/SearchOverlay.svelte').then((loaded) => {
@@ -34,10 +26,7 @@
     }
   });
 
-  /**
-   * ⌘K / Ctrl-K anywhere, and "/" wherever nothing is being typed — the habit
-   * people already have from every other app with a search.
-   */
+  /** ⌘K / Ctrl-K anywhere, and "/" when not typing. */
   function shortcut(event: KeyboardEvent) {
     if (!searchable || searchOverlay.open) {
       return;

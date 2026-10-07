@@ -151,9 +151,7 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             new { listId = list.Id },
             cancellationToken).ConfigureAwait(false);
 
-        // One statement for the items and one for their sources, whatever the
-        // size of the list: every tick, add and edit lands here, and a round
-        // trip per row is what made a long list slow to tick.
+        // Two statements whatever the list size: every tick lands here.
         var items = list.Items;
 
         await executor.ExecuteAsync(

@@ -2,11 +2,7 @@ import { m } from '$shell/i18n';
 
 import type { Capability, Provider } from '../types';
 
-/*
- * Static maps rather than `m[`ai.provider.${provider}`]`: a computed key makes
- * every message reachable, so Paraglide cannot drop the ones that are never
- * used and they all ship in one shared chunk. Every key is named here instead.
- */
+// Static maps, not computed `m[...]` keys, so Paraglide can tree-shake unused messages.
 
 const providerNames: Record<Provider, () => string> = {
   gemini: () => m['ai.provider.gemini'](),

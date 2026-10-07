@@ -1,9 +1,4 @@
-/**
- * What somebody typed into a step's timer, as the seconds it stores.
- *
- * Minutes, because that is what a cook says; empty, unreadable or not above
- * zero is no timer at all, and nothing runs for longer than a day.
- */
+/** Typed minutes as stored seconds; empty, unreadable or non-positive means no timer, and it caps at a day. */
 export function secondsFromMinutes(written: string): number | null {
   const minutes = Number(written);
 
@@ -14,7 +9,6 @@ export function secondsFromMinutes(written: string): number | null {
   return Math.min(86_400, Math.round(minutes * 60));
 }
 
-/** The list with one item moved by `by` places, or the list itself when it cannot move that far. */
 export function moved<T>(items: readonly T[], index: number, by: number): readonly T[] {
   const to = index + by;
 

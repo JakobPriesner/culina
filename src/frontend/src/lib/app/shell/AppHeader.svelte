@@ -15,28 +15,17 @@
   import NavigationProgress from './NavigationProgress.svelte';
   import SearchButton from './SearchButton.svelte';
 
-  /** The floating row at the top: brand, destinations on a wide screen, and the tools. */
   interface Props {
-    /** Whether search is on offer here; the shell decides, because the shortcut follows it. */
+    /** The shell decides, because the search shortcut follows it. */
     searchable: boolean;
-    /** How tall the header is once measured; left unset until then. */
     height?: number;
   }
 
   let { searchable, height = $bindable() }: Props = $props();
 
-  /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
   const creating = $derived(offersNewRecipe(page.url.pathname));
 
-  /**
-   * Where a change of household leaves the page.
-   *
-   * A list — the library, the plan, the shopping — stays put and shows the
-   * other household's. A page about one thing, whose route names it, goes back
-   * to the library instead: that recipe or that cookbook belongs to the
-   * household just left, and staying on it would be showing one kitchen's
-   * thing under another kitchen's name.
-   */
+  /** Lists stay put on a household change; a page for one thing (route with a param) belongs to the old household, so go to the library. */
   function switched() {
     if (page.route.id?.includes('[')) {
       void goto(resolve('/(app)'));
@@ -52,9 +41,7 @@
 
     <div class="wide-only"><Navigation placement="top" /></div>
 
-    <!-- Takes pointer events back from the header for the household menu's
-         sake: its panel opens inside this, and would otherwise inherit the
-         header's "none" and pass every click through to the page beneath. -->
+    <!-- Re-enables pointer events: the household menu opens inside and would inherit the header's "none". -->
     <div class="actions">
       {#if session.activeHousehold}
         <div class="tools">
@@ -81,10 +68,7 @@
     pointer-events: none;
   }
 
-  /* The page fading out under the pills instead of being cut in half at the
-     top edge. A gradient and not a blur: what passes under here is a centred
-     column on a flat background, so a full-width backdrop-filter would spend
-     every scroll frame blurring the gutters on either side of it. */
+  /* Fades the page out under the pills. A gradient, not a full-width backdrop-filter, which would blur the empty gutters every scroll frame. */
   .header::before {
     content: '';
     position: absolute;
@@ -94,13 +78,9 @@
     background: linear-gradient(to bottom, var(--surface) 35%, transparent);
   }
 
-  /* Three floating groups share one row: the brand, the destinations, and
-     the header's tools — the household and search in one capsule, and on the
-     library the way to write a new recipe beside it. The tools are there on
-     every page, so the destinations stay centred rather than sliding across as
-     the page changes. */
+  /* Brand, destinations and tools share one row; the tools are on every page so the destinations stay centred. */
   .header-inner {
-    /* Positioned, so the pills paint above the scrim rather than under it. */
+    /* Positioned so the pills paint above the scrim. */
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -123,16 +103,7 @@
     pointer-events: auto;
   }
 
-  /*
-   * One pane of glass with two controls in it, after the grouped toolbar
-   * buttons of Apple's Liquid Glass.
-   *
-   * Search and the household are both about what is on screen — find
-   * something in this kitchen, or look at another one — and two lone circles
-   * at opposite ends of the header said they had nothing to do with each
-   * other. The capsule is the glass; the buttons inside are only a lit circle
-   * under the pointer, so the pair reads as one thing with two parts.
-   */
+  /* One glass capsule grouping search and household, which relate to each other. */
   .tools {
     display: flex;
     align-items: center;
@@ -144,7 +115,6 @@
     box-shadow: var(--shadow-glass);
   }
 
-  /* Connection feedback gets its own small badge without moving the controls. */
   .status {
     grid-column: 1 / -1;
     display: flex;
@@ -163,8 +133,6 @@
     text-align: end;
   }
 
-  /* The narrow header keeps the brand and recipe creation. Expanded navigation
-     takes the middle slot between them on desktop. */
   .wide-only {
     pointer-events: auto;
     grid-column: 2;
@@ -177,20 +145,14 @@
     }
   }
 
-  /* Guided cooking has its own way back to the recipe. On compact screens
-     the instructions need the space used by the app's header and navigation. */
+  /* Guided cooking has its own way back; compact screens need the space for the instructions. */
   @media (width < 64rem) {
     :global(.shell.focused-cooking) .header {
       display: none;
     }
   }
 
-  /* Expanded navigation needs room for the brand, labels and recipe creation.
-     The first column is never narrower than the brand: just past 64rem the
-     labelled destinations leave each side about 9rem, less than the brand
-     pill, which squeezed the wordmark's dot onto a line of its own. Wider than
-     the brand, both sides are equal and the destinations sit centred; at the
-     narrowest they give way by the few pixels the brand needs. */
+  /* The first column never shrinks below the brand: just past 64rem it would get ~9rem and wrap the wordmark's dot. */
   @media (min-width: 64rem) {
     .header-inner {
       grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
@@ -212,17 +174,12 @@
       top: auto;
     }
 
-    /* Not sticky here, so nothing ever passes under it. */
     .header::before {
       display: none;
     }
   }
 
-  /* And the same answer when it is text rather than the window that has taken
-     the room: the header scrolls away with the page instead of floating over
-     what is left of it. The bars at the bottom stay — they are how somebody
-     gets anywhere — and giving back the header's share is enough to read and
-     type in what remains. */
+  /* Same as short viewports when enlarged text crowds the screen: the header scrolls away; the bottom bars stay for navigation. */
   :global(.shell.crowded) .header {
     position: relative;
     top: auto;

@@ -124,8 +124,7 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             return ImageErrors.TooLarge(settings.MaxImageBytes);
         }
 
-        // Over the caller's own array when it is one, rather than a copy of up
-        // to the largest picture the instance accepts.
+        // Wraps the caller's array when there is one instead of copying it.
         var buffered = MemoryMarshal.TryGetArray(content, out var segment)
             ? new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false)
             : new MemoryStream(content.ToArray(), writable: false);

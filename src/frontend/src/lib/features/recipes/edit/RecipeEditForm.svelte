@@ -22,9 +22,8 @@
 
   interface Props {
     editor: RecipeDraft;
-    /** The draft being edited, which the page has already checked is there. */
     recipe: Recipe;
-    /** Where "done" goes: the recipe at rest. */
+    /** Where "done" goes. */
     back: string;
     ingredients: IngredientEdits;
     improvement: RecipeImprovement;
@@ -41,11 +40,7 @@
   ]);
 </script>
 
-<!-- Every page says what it is. This one's title is a text field that can
-     be empty and can change while it is read aloud, so the heading is a
-     sentence about the page rather than the field's value. Not shown: the
-     field is right there, and printing the title twice above itself is how
-     a screen fills up with things nobody asked for. -->
+<!-- Visually hidden: the title field is right there and may be empty, so the heading is a sentence about the page. -->
 <h1 class="ds-clipped">{m['editor.heading']({ title: recipe.title })}</h1>
 
 <EditorLayout>
@@ -68,9 +63,7 @@
 
   <EditorSection id="recipe" title={m['editor.section.recipe']()}>
     {#snippet action()}
-      <!-- Only when the instance has an assistant and this capability is
-           on. Absent rather than disabled: an instance with no model must
-           look exactly like Culina looked before there was one. -->
+      <!-- Absent, not disabled, when the instance has no assistant or the capability is off. -->
       {#if session.user?.assistance.improve}
         <Button variant="secondary" size="sm" loading={drafts.asking} onclick={improvement.improve}>
           {m['assist.improve']()}
@@ -78,11 +71,7 @@
       {/if}
     {/snippet}
 
-    <!-- An ask that failed has to say so here. The review dialog only
-         opens on an answer, so without this the button spends a few
-         seconds looking busy and then goes quiet — which is what a
-         budget that is spent, a provider that is down and a bug all
-         looked like. -->
+    <!-- The review dialog opens only on an answer, so a failed ask must say so here or the button just goes quiet. -->
     {#if drafts.error && !improvement.reviewing}
       <div class="assistFailure">
         <AssistFailure error={drafts.error} />
@@ -134,17 +123,13 @@
     />
   </EditorSection>
 
-  <!-- The end of the method is where somebody finishes writing, so it is
-       where the way out belongs. The same words as the rail's quiet link
-       above: one action, offered where each of the two hands is. -->
   <footer class="finish">
     <Button variant="primary" size="lg" href={back}>{m['editor.done']()}</Button>
   </footer>
 </EditorLayout>
 
 <style>
-  /* Inside the section whose header holds the button, so the answer to
-     "why did nothing happen" is next to the thing that did nothing. */
+  /* Sits inside the section whose header holds the button, next to what failed. */
   .assistFailure {
     margin-bottom: var(--space-4);
   }
