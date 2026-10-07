@@ -22,10 +22,11 @@ test.describe('responsive transitions @offline', () => {
       await expect(next).toBeInViewport({ ratio: 1 });
       await expectReflow(page);
       const navigation = page.locator('nav.nav:visible');
-      await expect(navigation).toHaveCount(1);
+      await expect(navigation).toHaveCount(size.width < 1024 ? 0 : 1);
       if (size.width < 1024) {
         const button = (await next.boundingBox())!;
-        expect(button.y + button.height).toBeLessThanOrEqual((await navigation.boundingBox())!.y);
+        expect(button.y + button.height).toBeLessThanOrEqual(size.height);
+        await expect(page.locator('.shell > header.header')).toBeHidden();
       }
     }
   });

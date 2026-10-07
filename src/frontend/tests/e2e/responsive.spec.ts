@@ -37,8 +37,13 @@ test.describe('responsive production layouts @offline', () => {
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
             await expectReflow(page);
             if (path === '/login' || path === '/register') return;
-            await expect(page.locator('nav.nav:visible')).toHaveCount(1);
-            await expect(page.locator(width < 1024 ? 'nav.bottom' : 'nav.top')).toBeVisible();
+            const focusedCooking = path.endsWith('/cook') && width < 1024;
+            await expect(page.locator('nav.nav:visible')).toHaveCount(focusedCooking ? 0 : 1);
+            if (focusedCooking) {
+              await expect(page.locator('.shell > header.header')).toBeHidden();
+            } else {
+              await expect(page.locator(width < 1024 ? 'nav.bottom' : 'nav.top')).toBeVisible();
+            }
             // A name, on one line: at 1024px its dot once wrapped below it.
             const wordmark = page.locator('header .wordmark');
             expect(
@@ -115,9 +120,9 @@ test.describe('responsive production layouts @offline', () => {
     await next.scrollIntoViewIfNeeded();
     await expect(next).toBeInViewport({ ratio: 1 });
     expect((await next.boundingBox())!.height).toBeGreaterThanOrEqual(56);
-    const nav = (await page.locator('nav.bottom').boundingBox())!;
     const button = (await next.boundingBox())!;
-    expect(button.y + button.height).toBeLessThanOrEqual(nav.y);
+    expect(button.y + button.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    await expect(page.locator('nav.bottom')).toBeHidden();
     const stop = page.locator('article.cooking > footer');
     await stop.scrollIntoViewIfNeeded();
     const stopBox = (await stop.boundingBox())!;
@@ -149,6 +154,121 @@ test.describe('responsive production layouts @offline', () => {
     expect(hero.height).toBeLessThanOrEqual(hero.width / 3.9);
     await expectReflow(page);
     await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
+  });
+
+  for (const locale of ['de', 'en'] as const) {
+    test(`${locale} cooking actions stay compact across phone and tablet widths`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport and text-size matrix.');
+      await responsiveData(page, locale, { longSteps: true });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      for (const [width, fontSize] of [
+        [320, 16],
+        [390, 16],
+        [639, 16],
+        [640, 16],
+        [768, 16],
+        [1024, 16],
+        [1280, 16],
+        [768, 24]
+      ] as const) {
+        await page.setViewportSize({ width, height: 1000 });
+        await page.goto(`/recipes/${recipeId}/cook`);
+        await page.evaluate((size) => {
+          document.documentElement.style.fontSize = `${size}px`;
+        }, fontSize);
+        const controls = page.locator('.controls:has(.moves)');
+        const next = controls.getByRole('button', { name: /nächster schritt|next step/i });
+        await expect(next).toBeEnabled();
+        await next.scrollIntoViewIfNeeded();
+        await expect(next).toBeInViewport({ ratio: 1 });
+        const box = (await next.boundingBox())!;
+        expect(box.width).toBeGreaterThanOrEqual(100);
+        expect(box.height).toBeLessThanOrEqual(fontSize * 5);
+        expect((await controls.boundingBox())!.height).toBeLessThanOrEqual(fontSize * 13);
+        // Reflow checks cannot catch a word broken into a tall stack of letters.
+        const words = await next.locator('.advance-label').evaluate((element) => {
+          const text = element.firstChild!;
+          return [...text.textContent!.matchAll(/\S+/g)].map((word) => {
+            const range = document.createRange();
+            range.setStart(text, word.index!);
+            range.setEnd(text, word.index! + word[0].length);
+            return range.getClientRects().length;
+          });
+        });
+        expect(words.every((lines) => lines === 1)).toBe(true);
+        await expectReflow(page);
+        if (locale === 'de' && [390, 640].includes(width)) {
+          await page.screenshot({ path: testInfo.outputPath(`cooking-actions-${width}.png`) });
+        }
+        await next.click();
+        await expect(
+          page.getByText(locale === 'de' ? 'Schritt 2 von 4' : 'Step 2 of 4', { exact: true })
+        ).toBeVisible();
+        await controls.getByRole('button', { name: /vorheriger schritt|previous step/i }).click();
+        await expect(
+          page.getByText(locale === 'de' ? 'Schritt 1 von 4' : 'Step 1 of 4', { exact: true })
+        ).toBeVisible();
+      }
+    });
+  }
+
+  test('mobile cooking hides app navigation and returns to the recipe without losing its place', async ({
+    page
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport transitions.');
+    await responsiveData(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const ended: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() === 'DELETE' && /cook-sessions|timers/.test(request.url())) {
+        ended.push(request.url());
+      }
+    });
+    await page.goto(`/recipes/${recipeId}/cook?yield=4`);
+    await page.getByRole('button', { name: /nächster schritt/i }).click();
+    await expect(page.getByText('Schritt 2 von 4', { exact: true })).toBeVisible();
+
+    for (const width of [390, 1023, 1024, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      const header = page.locator('.shell > header.header');
+      if (width < 1024) {
+        await expect(header).toBeHidden();
+        await expect(page.locator('nav.nav:visible')).toHaveCount(0);
+        await expect
+          .poll(() =>
+            page.locator('.shell').evaluate((element) => {
+              const style = getComputedStyle(element);
+              return [
+                style.getPropertyValue('--header-inset'),
+                style.getPropertyValue('--bar-inset')
+              ];
+            })
+          )
+          .toEqual(['0px', '0px']);
+      } else {
+        await expect(header).toBeVisible();
+        await expect(page.locator('nav.top')).toBeVisible();
+      }
+      await expectReflow(page);
+    }
+
+    const back = page.getByRole('link', { name: 'Zurück zum Rezept' });
+    await back.scrollIntoViewIfNeeded();
+    await expect(back).toBeInViewport({ ratio: 1 });
+    expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await back.click();
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}\\?yield=4$`));
+    await expect(page.locator('.shell > header.header')).toBeVisible();
+    await expect(page.locator('nav.bottom')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await page.getByRole('link', { name: /weiterkochen/i }).click();
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook\\?yield=4$`));
+    await expect(page.getByText('Schritt 2 von 4', { exact: true })).toBeVisible();
+    await expect(page.locator('.shell > header.header')).toBeHidden();
+    expect(ended).toEqual([]);
   });
 
   for (const [width, height] of [
@@ -248,8 +368,10 @@ async function expectCurrentStepReadable(page: Page) {
 
   const measure = () =>
     page.evaluate(() => {
-      const top = (selector: string) =>
-        document.querySelector(selector)?.getBoundingClientRect().top ?? innerHeight;
+      const top = (selector: string) => {
+        const box = document.querySelector(selector)?.getBoundingClientRect();
+        return box && box.height > 0 ? box.top : innerHeight;
+      };
       const step = document.querySelector('.step.current')!.getBoundingClientRect();
       return {
         top: step.top,
@@ -266,9 +388,9 @@ async function expectCurrentStepReadable(page: Page) {
   await expect
     .poll(async () => {
       const at = await measure();
-      return at.top >= at.clearTop && at.top < at.clearBottom;
+      return at.top >= at.clearTop && at.top < at.clearBottom ? 'readable' : JSON.stringify(at);
     })
-    .toBe(true);
+    .toBe('readable');
 
   const at = await measure();
   await page.evaluate((by) => scrollBy(0, by), Math.max(0, at.bottom - at.clearBottom));
