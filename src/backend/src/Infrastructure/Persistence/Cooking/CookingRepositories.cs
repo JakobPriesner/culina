@@ -104,21 +104,23 @@ internal sealed class PersonalNoteRepository(DbExecutor executor) : IPersonalNot
             new { recipeId, userId },
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var note in notes)
+        if (notes.Count > 0)
         {
             await executor.ExecuteAsync(
                 """
                 insert into personal_notes (id, recipe_id, user_id, step_id, body, updated_at)
-                values (@id, @recipeId, @userId, @stepId, @body, @updatedAt);
+                select id, @recipeId, @userId, step_id, body, updated_at
+                from unnest(@ids::uuid[], @stepIds::uuid[], @bodies::text[], @updatedAts::timestamptz[])
+                    as n(id, step_id, body, updated_at);
                 """,
                 new
                 {
-                    id = note.Id,
                     recipeId,
                     userId,
-                    stepId = note.StepId,
-                    body = note.Body,
-                    updatedAt = note.UpdatedAt
+                    ids = notes.Select(note => note.Id).ToArray(),
+                    stepIds = notes.Select(note => note.StepId).ToArray(),
+                    bodies = notes.Select(note => note.Body).ToArray(),
+                    updatedAts = notes.Select(note => note.UpdatedAt).ToArray()
                 },
                 cancellationToken).ConfigureAwait(false);
         }

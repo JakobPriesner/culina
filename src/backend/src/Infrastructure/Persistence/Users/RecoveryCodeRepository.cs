@@ -23,10 +23,30 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
             new { userId },
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var code in codes)
+        if (codes.Count == 0)
         {
-            await AddAsync(code, cancellationToken).ConfigureAwait(false);
+            return;
         }
+
+        await executor.ExecuteAsync(
+            """
+            insert into recovery_codes (id, user_id, code_hash, issued_by, created_at, expires_at)
+            select id, user_id, code_hash, issued_by, created_at, expires_at
+            from unnest(
+                @ids::uuid[], @userIds::uuid[], @codeHashes::bytea[], @issuedBys::uuid[],
+                @createdAts::timestamptz[], @expiresAts::timestamptz[])
+                as c(id, user_id, code_hash, issued_by, created_at, expires_at);
+            """,
+            new
+            {
+                ids = codes.Select(code => code.Id).ToArray(),
+                userIds = codes.Select(code => code.UserId).ToArray(),
+                codeHashes = codes.Select(code => code.CodeHash.ToArray()).ToArray(),
+                issuedBys = codes.Select(code => code.IssuedBy).ToArray(),
+                createdAts = codes.Select(code => code.CreatedAt).ToArray(),
+                expiresAts = codes.Select(code => code.ExpiresAt).ToArray()
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddAsync(RecoveryCode code, CancellationToken cancellationToken)
