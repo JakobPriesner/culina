@@ -34,7 +34,7 @@ public sealed class RecipeSource
         SourceKind kind,
         string label,
         SourceAddress address,
-        string secret,
+        string? secret,
         Guid createdBy,
         DateTimeOffset createdAt,
         DateTimeOffset? lastUsedAt,
@@ -67,8 +67,20 @@ public sealed class RecipeSource
     /// <summary>Where it is.</summary>
     public SourceAddress Address { get; }
 
-    /// <summary>The API token. Never returned to a caller.</summary>
-    public string Secret { get; private set; }
+    /// <summary>
+    /// The API token, or null when the stored one can no longer be read.
+    /// Never returned to a caller.
+    /// </summary>
+    /// <remarks>
+    /// Null is what an instance restored without its key ring finds: the token
+    /// was stored encrypted, the ciphertext is intact, and nothing can decrypt
+    /// it. The connection still lists and can still be disconnected; reading
+    /// from it waits until somebody connects it again.
+    /// </remarks>
+    public string? Secret { get; }
+
+    /// <summary>Whether this connection has to be made again before it can be read.</summary>
+    public bool NeedsReconnecting => Secret is null;
 
     /// <summary>Who connected it.</summary>
     public Guid CreatedBy { get; }
@@ -146,7 +158,7 @@ public sealed class RecipeSource
     /// <param name="kind">Which app it is.</param>
     /// <param name="label">What it is called.</param>
     /// <param name="address">Where it is.</param>
-    /// <param name="secret">The stored token.</param>
+    /// <param name="secret">The stored token, or null if it could not be read.</param>
     /// <param name="createdBy">Who connected it.</param>
     /// <param name="createdAt">When it was connected.</param>
     /// <param name="lastUsedAt">When it was last read from.</param>
@@ -157,7 +169,7 @@ public sealed class RecipeSource
         SourceKind kind,
         string label,
         SourceAddress address,
-        string secret,
+        string? secret,
         Guid createdBy,
         DateTimeOffset createdAt,
         DateTimeOffset? lastUsedAt,

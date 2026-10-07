@@ -34,4 +34,28 @@ internal static class SourceAccess
                     : ImportErrors.SourceNotFound(sourceId),
             error => Task.FromResult(Result<RecipeSource>.Failure(error))).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// A connection the caller may use and that can actually be read from.
+    /// </summary>
+    /// <remarks>
+    /// Usable and not readable is a connection whose stored token can no
+    /// longer be decrypted. That is refused here, before anything is sent to
+    /// the other app — and only here, so disconnecting it, which is how it gets
+    /// fixed, still works.
+    /// </remarks>
+    internal static async Task<Result<RecipeSource>> ReadableAsync(
+        IRecipeSourceRepository sources,
+        IHouseholdRepository households,
+        Guid sourceId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var usable = await UsableAsync(sources, households, sourceId, userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return usable.Bind(source => source.NeedsReconnecting
+            ? Result<RecipeSource>.Failure(ImportErrors.SourceNeedsReconnecting)
+            : source);
+    }
 }

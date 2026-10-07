@@ -273,7 +273,7 @@ internal sealed class BrowseSourceQueryHandler(
         using var tracked = UseCaseActivity.Start("Sources.Browse");
 
         var found = await SourceAccess
-            .UsableAsync(sources, households, query.SourceId, query.UserId, cancellationToken)
+            .ReadableAsync(sources, households, query.SourceId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await found.Match(

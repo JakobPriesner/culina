@@ -151,10 +151,10 @@ Four things, and all four are needed. They are two kinds of thing, and they
 must not travel together:
 
 - **The data** — the database and the photographs. The dump holds every recipe,
-  every account and password hash, and the model provider's API key and the
-  push-notification key, both encrypted. The API tokens of connected recipe
-  libraries are in it as they are.
-- **The secrets** — the key ring, which decrypts those two keys, and
+  every account and password hash, and three kinds of secret, all encrypted:
+  the model provider's API key, the push-notification key and the API tokens
+  of connected recipe libraries.
+- **The secrets** — the key ring, which decrypts those, and
   `culina.json`, which holds the database password in plain text when it was
   entered on the setup screen. Neither file is encrypted on the volume.
 
@@ -192,10 +192,12 @@ encrypts the model provider's API key, so restoring an instance without it
 leaves the assistant switched off with an unreadable key stored — which the app
 treats as "no assistant is configured" rather than as an error, and an
 administrator enters the key again. It also encrypts the key notifications are
-signed with, and without it a finished import no longer notifies anyone.
-Nothing else is lost: Culina's session cookie carries an opaque reference
-rather than an encrypted payload, so the key ring still has nothing to do with
-who stays signed in.
+signed with, and without it a finished import no longer notifies anyone. And it
+encrypts the API tokens of connected recipe libraries (a Tandoor): without the
+key ring each connection still lists, but browsing or importing from it says to
+disconnect it and connect it again. Nothing else is lost: Culina's session
+cookie carries an opaque reference rather than an encrypted payload, so the key
+ring still has nothing to do with who stays signed in.
 
 The key ring is not encrypted on its own volume. Anyone who can read
 `/data/keys` on the host can already read the database it protects, so

@@ -106,7 +106,7 @@ public sealed class SourceImportRunner(
             // Looked up again in this scope rather than carried over from the
             // request's: an entity belongs to the connection it was read on.
             var found = await SourceAccess
-                .UsableAsync(
+                .ReadableAsync(
                     services.GetRequiredService<IRecipeSourceRepository>(),
                     services.GetRequiredService<IHouseholdRepository>(),
                     run.SourceId,

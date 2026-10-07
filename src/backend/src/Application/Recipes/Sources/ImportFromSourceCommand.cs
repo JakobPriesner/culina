@@ -85,7 +85,7 @@ internal sealed class ImportFromSourceCommandHandler(
         }
 
         var found = await SourceAccess
-            .UsableAsync(sources, households, command.SourceId, command.UserId, cancellationToken)
+            .ReadableAsync(sources, households, command.SourceId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await found.Match(
