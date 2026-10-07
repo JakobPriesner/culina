@@ -1401,6 +1401,10 @@
    */
   @media screen and (width < 64rem) {
     .cook-action {
+      --action-height: 0px;
+      --action-top: auto;
+      --action-left: auto;
+      --action-width: auto;
       position: static;
       min-height: var(--action-height, 0px);
     }
