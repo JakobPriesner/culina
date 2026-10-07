@@ -43,7 +43,7 @@ internal sealed class SameOriginMiddleware(RequestDelegate next)
         }
 
         CulinaTelemetry.ForeignOriginRejections.Add(1);
-        logger.Rejected(context.Request.Method, context.Request.Path, RequestErrors.ForeignOrigin.Code);
+        logger.Rejected(context.Request, RequestErrors.ForeignOrigin.Code);
 
         return CustomResults.WriteProblemAsync(context, RequestErrors.ForeignOrigin);
     }

@@ -63,7 +63,7 @@ internal sealed class QueryParameterGuardMiddleware(RequestDelegate next)
 
     private static Task Reject(HttpContext context, ILogger logger, Error error)
     {
-        logger.Rejected(context.Request.Method, context.Request.Path, error.Code);
+        logger.Rejected(context.Request, error.Code);
 
         return CustomResults.WriteProblemAsync(context, error);
     }

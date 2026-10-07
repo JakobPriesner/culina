@@ -17,6 +17,10 @@ namespace Api.Infrastructure;
 /// route template says which endpoint answered without reading ids out of a
 /// path.
 /// </para>
+/// <para>
+/// The path is written through <see cref="SecretPaths"/>: a share token or an
+/// invitation code in it would hand whoever reads the log what it opens.
+/// </para>
 /// </remarks>
 internal sealed class RequestLogInterceptor : IHttpLoggingInterceptor
 {
@@ -24,10 +28,19 @@ internal sealed class RequestLogInterceptor : IHttpLoggingInterceptor
     {
         ArgumentNullException.ThrowIfNull(logContext);
 
-        if (!ApiPaths.IsApi(logContext.HttpContext.Request.Path))
+        var path = logContext.HttpContext.Request.Path;
+
+        if (!ApiPaths.IsApi(path))
         {
             logContext.LoggingFields = HttpLoggingFields.None;
+
+            return ValueTask.CompletedTask;
         }
+
+        // Under the framework's own name for it, without the share token or
+        // invitation code a path can carry.
+        logContext.Disable(HttpLoggingFields.RequestPath);
+        logContext.AddParameter("Path", SecretPaths.Redact(path));
 
         return ValueTask.CompletedTask;
     }
