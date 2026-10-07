@@ -122,9 +122,10 @@ internal sealed class DatabaseConnectionCheck(ILogger<DatabaseConnectionCheck> l
 
     /// <summary>Which kind of failure it was, and nothing more.</summary>
     /// <remarks>
-    /// The TLS case is told apart by Npgsql's own message, since it carries no
-    /// type of its own. Should that wording change, the failure falls through
-    /// to "not a usable server" — less helpful, never more revealing.
+    /// A refused sign-in method and TLS are told apart by Npgsql's own
+    /// message, since neither carries a type of its own. Should that wording
+    /// change, the failure falls through to "not a usable server" — less
+    /// helpful, never more revealing.
     /// </remarks>
     private static Error Category(NpgsqlException failure, DatabaseSettings settings) => failure switch
     {
@@ -133,6 +134,8 @@ internal sealed class DatabaseConnectionCheck(ILogger<DatabaseConnectionCheck> l
             or PostgresException { SqlState: PostgresErrorCodes.InvalidCatalogName } => SettingsErrors.DatabaseLoginRefused,
         PostgresException => SettingsErrors.DatabaseNotPostgres,
         { InnerException: SocketException or TimeoutException } => SettingsErrors.DatabaseUnreachable,
+        _ when failure.Message.Contains("authentication method", StringComparison.OrdinalIgnoreCase) =>
+            SettingsErrors.DatabaseInsecureAuth,
         _ when settings.RequireSsl && failure.Message.Contains("SSL", StringComparison.Ordinal) =>
             SettingsErrors.DatabaseTlsFailed,
         _ => SettingsErrors.DatabaseNotPostgres

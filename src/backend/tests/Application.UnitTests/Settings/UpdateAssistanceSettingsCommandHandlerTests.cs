@@ -88,6 +88,45 @@ public class UpdateAssistanceSettingsCommandHandlerTests
         Assert.Equal(25m, world.Settings.MonthlyBudget);
     }
 
+    [Theory]
+    [InlineData("https://collector.example/v1")]
+    [InlineData("")]
+    public async Task Handle_ShouldNotKeepAStoredKey_WhenTheAddressChanges(string address)
+    {
+        // Arrange
+        var world = new World();
+        await world.Handle(Command(
+            connections: [new ConnectionEdit("openai", "sk-one", "https://proxy.example/v1")],
+            uses: []));
+
+        // Act
+        var result = await world.Handle(Command(
+            connections: [new ConnectionEdit("openai", ApiKey: null, address)],
+            uses: []));
+
+        // Assert
+        // The key would go wherever the new address says.
+        result.ShouldBeFailure(AssistanceErrors.ApiKeyRequired);
+        Assert.Equal("https://proxy.example/v1", world.Settings.Connections.Single().BaseUrl);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldMoveAProviderToANewAddress_WhenItsKeyIsEnteredAgain()
+    {
+        // Arrange
+        var world = new World();
+        await world.Handle(Command(connections: [Hosted("openai", "sk-one")], uses: []));
+
+        // Act
+        var result = await world.Handle(Command(
+            connections: [new ConnectionEdit("openai", "sk-one", "https://proxy.example/v1")],
+            uses: []));
+
+        // Assert
+        result.ShouldBeSuccess();
+        Assert.Equal("https://proxy.example/v1", world.Settings.Connections.Single().BaseUrl);
+    }
+
     [Fact]
     public async Task Handle_ShouldDisconnectAProvider_WhenItsKeyIsCleared()
     {

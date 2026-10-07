@@ -94,7 +94,22 @@ say — than the rest.
 
 Changing the database in the app connects to the new one first. Culina copies
 nothing between databases: pointing it at an empty one starts an empty
-instance, and the setup screen with it.
+instance, and the setup screen with it. Leaving the password box empty keeps
+the stored password only while the host, port, database name and user stay
+the same; change any of them and the password has to be typed again, because
+the stored one is only ever sent to the server it was saved for. A value the
+environment pins is tried as pinned, whatever the form sends.
+
+**Culina signs in with SCRAM-SHA-256 only.** It refuses a server that asks for
+the password in clear text or as MD5, or for no password at all (`trust`) —
+`settings.database_insecure_auth` on the settings screen, a failed start
+otherwise — so a server that merely pretends to be PostgreSQL is never handed
+the password. PostgreSQL has defaulted to SCRAM
+since version 14, and the bundled `postgres:18` image uses it. A cluster
+upgraded from an older version may still hold an MD5 password for the role:
+run `SET password_encryption = 'scram-sha-256';` and set the role's password
+again (`ALTER ROLE culina_app PASSWORD '…';`), and make sure `pg_hba.conf`
+says `scram-sha-256` rather than `md5` or `password`.
 
 ## Storage
 

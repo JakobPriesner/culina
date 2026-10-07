@@ -17,7 +17,10 @@ public sealed record Request
 
     /// <summary>
     /// A new password, or null to keep the one already set. Write-only: no
-    /// response ever carries it back.
+    /// response ever carries it back. Kept only for the same server: null
+    /// with a different host, port, name or username is refused with
+    /// <c>settings.database_password_required</c>, because the stored password
+    /// is only ever sent to the server it was saved for.
     /// </summary>
     public string? Password { get; init; }
 

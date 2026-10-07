@@ -380,6 +380,24 @@ describe('the assistant settings page', () => {
     expect(gemini.apiKey).toBeUndefined();
   });
 
+  it('says the key is needed again once the address of a provider with one changes', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    await userEvent.click(screen.getByText('Advanced'));
+    const address = screen.getByRole('textbox', { name: 'OpenAI — Address' });
+    await userEvent.type(address, 'https://collector.example/v1');
+
+    // The server only sends a stored key to the address it was saved for.
+    expect(
+      screen.getByText(
+        'Changing the address means entering the key again: Culina only sends a stored key to the address it was saved for.'
+      )
+    ).toBeInTheDocument();
+  });
+
   it('takes a key away only when asked to', async () => {
     const fetched = serverAnswers();
 

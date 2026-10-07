@@ -120,6 +120,24 @@
       defaultModel: ''
     };
 
+  /**
+   * Whether a provider's address was changed while its stored key is kept.
+   *
+   * The server only ever sends a stored key to the address it was saved with,
+   * so that save asks for the key again — said here, under the address being
+   * typed, rather than only in the refusal afterwards.
+   */
+  function keyNeededAgain(provider: Provider): boolean {
+    const saved = assistance.settings?.connections.find((one) => one.provider === provider);
+    const edited = connectionFor(provider);
+
+    return (
+      saved?.apiKeyConfigured === true &&
+      edited.apiKey === undefined &&
+      edited.baseUrl.trim() !== saved.baseUrl
+    );
+  }
+
   /** The providers this job could be given to, plus "not offered". */
   const choicesFor = (capability: Capability) => [
     { value: '', label: m['ai.job.none']() },
@@ -514,7 +532,9 @@
           {#if providerFacts[provider].needsApiKey}
             <Field
               label={`${m[`ai.provider.${provider}`]()} — ${m['ai.address']()}`}
-              hint={m['ai.address.optional']({ provider: m[`ai.provider.${provider}`]() })}
+              hint={keyNeededAgain(provider)
+                ? m['ai.address.keyAgain']()
+                : m['ai.address.optional']({ provider: m[`ai.provider.${provider}`]() })}
             >
               {#snippet children({ id, describedBy, invalid })}
                 <TextInput

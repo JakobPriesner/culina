@@ -20,6 +20,12 @@ internal static class CulinaDataSource
             Username = settings.Username,
             Password = settings.Password,
             SslMode = settings.RequireSsl ? SslMode.Require : SslMode.Disable,
+            // Signs in by SCRAM only, which never hands the server the
+            // password or anything it could replay. A server asking for it in
+            // clear text or as MD5 — what one that only pretends to be
+            // PostgreSQL asks, to be sent it — is refused before anything is
+            // sent. PostgreSQL has defaulted to SCRAM since version 14.
+            RequireAuth = "ScramSHA256",
             // Npgsql tries GSS encryption first unless told not to, which loads
             // libgssapi_krb5 — absent from the chiseled image, so the process
             // aborts on the first connection. Culina never uses Kerberos.

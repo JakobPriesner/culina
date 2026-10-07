@@ -1521,5 +1521,10 @@
   "problem.settings.database_login_refused": "The database server refused the user, the password or the database name.",
   "problem.settings.database_tls_failed": "Culina couldn't set up an encrypted connection with that server. Enable TLS on the database server, or turn off “Require TLS” if the database is on the same private network.",
   "problem.settings.database_not_postgres": "Something answered at that address, but not a PostgreSQL server Culina can use.",
-  "problem.settings.database_superuser": "Culina has to connect as a role of its own, not as a superuser. Use the role that owns Culina's database."
+  "problem.settings.database_superuser": "Culina has to connect as a role of its own, not as a superuser. Use the role that owns Culina's database.",
+  "problem.settings.database_password_required": "Enter the password again. The host, port, database name or user changed, and Culina only sends a stored password to the server it was saved for.",
+  "problem.settings.database_insecure_auth": "The database server wants a sign-in method Culina doesn't use. Culina signs in only with SCRAM-SHA-256: set password_encryption to scram-sha-256, set the role's password again, and use scram-sha-256 in pg_hba.conf.",
+  "problem.assistance.api_key_required": "Enter the key again. The address changed, and Culina only sends a stored key to the address it was saved for.",
+  "server.database.password.again": "Enter the password again: Culina only sends the stored one to the server it was saved for.",
+  "ai.address.keyAgain": "Changing the address means entering the key again: Culina only sends a stored key to the address it was saved for."
 }

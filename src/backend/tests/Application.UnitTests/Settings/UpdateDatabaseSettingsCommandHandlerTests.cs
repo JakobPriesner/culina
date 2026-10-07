@@ -29,19 +29,73 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ShouldTryTheCurrentPassword_WhenNoNewOneIsGiven()
+    public async Task Handle_ShouldTryTheCurrentPassword_WhenNoNewOneIsGivenForTheSameServer()
     {
         // Arrange
         var world = new World();
 
         // Act
-        await world.Handle(Command(host: "db.internal", password: null));
+        await world.Handle(Command(password: null, maxPoolSize: 40));
 
         // Assert
         // Write-only: the form never has the password to send back, so leaving
         // the field empty has to mean "keep it", not "clear it".
         Assert.Equal("secret", world.Check.Tried!.Password);
         Assert.False(world.Configuration.Saved!.ContainsKey("Database:Password"));
+    }
+
+    [Theory]
+    [InlineData("attacker.example", 5432, "culina", "culina_app")]
+    [InlineData("localhost", 6543, "culina", "culina_app")]
+    [InlineData("localhost", 5432, "other", "culina_app")]
+    [InlineData("localhost", 5432, "culina", "someone_else")]
+    public async Task Handle_ShouldNotSendTheStoredPassword_WhenTheServerChanges(
+        string host,
+        int port,
+        string name,
+        string username)
+    {
+        // Arrange
+        var world = new World();
+
+        // Act
+        var result = await world.Handle(
+            new UpdateDatabaseSettingsCommand(host, port, name, username, null, RequireSsl: false, MaxPoolSize: 20));
+
+        // Assert
+        result.ShouldBeFailure(SettingsErrors.DatabasePasswordRequired);
+        Assert.Null(world.Check.Tried);
+        Assert.Null(world.Configuration.Saved);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldTryTheNewServer_WhenThePasswordIsEnteredAgain()
+    {
+        // Arrange
+        var world = new World();
+
+        // Act
+        var change = (await world.Handle(Command(host: "db.internal", password: "secret"))).ShouldBeSuccess();
+
+        // Assert
+        Assert.Equal(ServerChange.Restarting, change);
+        Assert.Equal("db.internal", world.Check.Tried!.Host);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldTryWhatTheDeploymentPins_RatherThanWhatWasSent()
+    {
+        // Arrange
+        var world = new World(pinned: ["Database:Host", "Database:Password"]);
+
+        // Act
+        await world.Handle(Command(host: "attacker.example", password: "typed", maxPoolSize: 40));
+
+        // Assert
+        // The next start uses the pinned values, so those are what is tried —
+        // and the pinned password never leaves for the address sent instead.
+        Assert.Equal("localhost", world.Check.Tried!.Host);
+        Assert.Equal("secret", world.Check.Tried!.Password);
     }
 
     [Fact]
@@ -103,20 +157,25 @@ public class UpdateDatabaseSettingsCommandHandlerTests
         Assert.Equal("settings.invalid_value", result.ShouldBeFailure().Code);
     }
 
-    private static UpdateDatabaseSettingsCommand Command(string host = "localhost", string? password = "secret") =>
-        new(host, 5432, "culina", "culina_app", password, RequireSsl: false, MaxPoolSize: 20);
+    private static UpdateDatabaseSettingsCommand Command(
+        string host = "localhost",
+        string? password = "secret",
+        int maxPoolSize = 20) =>
+        new(host, 5432, "culina", "culina_app", password, RequireSsl: false, maxPoolSize);
 
-    private sealed class World(IReadOnlyDictionary<string, string>? running = null)
+    private sealed class World(IReadOnlyDictionary<string, string>? running = null, IEnumerable<string>? pinned = null)
     {
-        public FakeServerConfiguration Configuration { get; } = new(running ?? new Dictionary<string, string>
-        {
-            ["Database:Host"] = "localhost",
-            ["Database:Port"] = "5432",
-            ["Database:Name"] = "culina",
-            ["Database:Username"] = "culina_app",
-            ["Database:Password"] = "secret",
-            ["Database:RequireSsl"] = "false"
-        });
+        public FakeServerConfiguration Configuration { get; } = new(
+            running ?? new Dictionary<string, string>
+            {
+                ["Database:Host"] = "localhost",
+                ["Database:Port"] = "5432",
+                ["Database:Name"] = "culina",
+                ["Database:Username"] = "culina_app",
+                ["Database:Password"] = "secret",
+                ["Database:RequireSsl"] = "false"
+            },
+            pinned);
 
         public FakeDatabaseConnectionCheck Check { get; } = new();
 
