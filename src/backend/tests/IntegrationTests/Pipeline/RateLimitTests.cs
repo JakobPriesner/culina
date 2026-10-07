@@ -177,4 +177,41 @@ public class RateLimitTests(PostgresFixture postgres)
         displayName = "Ada",
         password = "correct horse battery staple"
     };
+
+    [Fact]
+    public async Task ArchiveRestore_ShouldShareTheArchiveBudget_WithTakingOne()
+    {
+        // Arrange
+        await postgres.ResetAsync(Token);
+        using var factory = new CulinaApiFactory(
+            postgres,
+            new Dictionary<string, string> { ["RateLimits:ArchiveExportsPerHour"] = "1" });
+        using var client = await SignedInAsync(factory, register: true);
+        var me = await client.GetAsync("/api/v1/users/me", Token);
+        var householdId = me.Json!.Value.GetProperty("households")[0].GetProperty("householdId").GetGuid();
+
+        // Act
+        var exported = await client.GetAsync($"/api/v1/households/{householdId}/archive", Token);
+        var restored = await RestoreAsync(client, householdId);
+
+        // Assert
+        // Restoring is the heavier of the two, and it had no limit at all.
+        Assert.Equal(HttpStatusCode.OK, exported.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, restored.StatusCode);
+    }
+
+    private static async Task<ApiResponse> RestoreAsync(ApiClient client, Guid householdId)
+    {
+        using var content = new MultipartFormDataContent();
+        using var file = new ByteArrayContent("{}"u8.ToArray());
+
+        content.Add(file, "file", "culina.json");
+
+        return await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Post, $"/api/v1/households/{householdId}/archive")
+            {
+                Content = content
+            },
+            Token);
+    }
 }

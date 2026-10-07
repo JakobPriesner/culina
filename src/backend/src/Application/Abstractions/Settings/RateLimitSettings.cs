@@ -86,7 +86,7 @@ public sealed record RateLimitSettings
     public int AssistantRequestsPerHour { get; init; } = 60;
 
     /// <summary>
-    /// Archives one person may take per hour.
+    /// Archives one person may take or restore per hour.
     /// </summary>
     /// <remarks>
     /// An archive streams every recipe in a household with every photograph
