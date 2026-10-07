@@ -138,6 +138,11 @@ Three kinds, defined once on the shared `Meter`:
 - Everything else comes free from the ASP.NET Core, HttpClient, Npgsql and
   runtime instrumentation — request rate, status distribution, GC, thread pool,
   connection pool. Do not re-implement any of these by hand.
+- What Npgsql does not measure — how long a request waited for a connection,
+  and how long one was kept out of the pool — `ConnectionPoolWatch` turns into
+  `Warning` 1970/1971, at most once a minute each with a count of the rest. A
+  warning that can fire on every request is throttled the same way, never
+  logged per occurrence.
 
 Never put a user id, path parameter, or free-text value in a metric tag.
 

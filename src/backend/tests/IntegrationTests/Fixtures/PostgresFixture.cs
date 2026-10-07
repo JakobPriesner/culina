@@ -2,6 +2,7 @@ using Application.Abstractions.Settings;
 using Domain.Suggestions;
 using Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -110,7 +111,14 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// A connection for a test, from the one pool this fixture owns. Building a
     /// data source per test would leak a pool per test.
     /// </summary>
-    internal DbSession NewSession() => new(DataSource);
+    internal DbSession NewSession() => SessionOn(DataSource);
+
+    /// <summary>
+    /// A session on a pool the test chose, built as the app builds one but
+    /// reporting how it uses the pool to nobody.
+    /// </summary>
+    internal static DbSession SessionOn(NpgsqlDataSource pool) =>
+        new(pool, new ConnectionPoolWatch(TimeProvider.System, NullLogger<ConnectionPoolWatch>.Instance));
 
     /// <summary>
     /// Runs one statement against the instance's database.

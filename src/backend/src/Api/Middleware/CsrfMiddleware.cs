@@ -17,6 +17,11 @@ namespace Api.Middleware;
 /// and only the server knows the digest this session was issued.
 /// </para>
 /// <para>
+/// The digest is the one authentication read with the session, so the token is
+/// checked against the very session that let the request in, without reading
+/// it again.
+/// </para>
+/// <para>
 /// Safe methods are exempt, which is sound only because no <c>GET</c> endpoint
 /// in Culina changes state — a property an architecture-level test asserts
 /// rather than assumes.
@@ -27,27 +32,17 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(
         HttpContext context,
-        ISessionStore sessions,
         ISecretTokens tokens,
-        TimeProvider time,
         ILogger<CsrfMiddleware> logger)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(sessions);
         ArgumentNullException.ThrowIfNull(tokens);
-        ArgumentNullException.ThrowIfNull(time);
         ArgumentNullException.ThrowIfNull(logger);
 
         if (SafeMethods.Includes(context.Request.Method)
             || context.User.FindFirst(CulinaClaims.SessionId) is null
-            || context.GetEndpoint()?.Metadata.GetMetadata<CsrfExempt>() is not null)
-        {
-            await next(context).ConfigureAwait(false);
-
-            return;
-        }
-
-        if (await IsValidAsync(context, sessions, tokens, time.GetUtcNow()).ConfigureAwait(false))
+            || context.GetEndpoint()?.Metadata.GetMetadata<CsrfExempt>() is not null
+            || IsValid(context, tokens))
         {
             await next(context).ConfigureAwait(false);
 
@@ -60,32 +55,11 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
         await CustomResults.WriteProblemAsync(context, SessionErrors.CsrfInvalid).ConfigureAwait(false);
     }
 
-    private static async Task<bool> IsValidAsync(
-        HttpContext context,
-        ISessionStore sessions,
-        ISecretTokens tokens,
-        DateTimeOffset now)
-    {
-        if (context.Request.Headers[CulinaHeaders.Csrf] is not [{ Length: > 0 } presented])
-        {
-            return false;
-        }
-
-        var settings = context.RequestServices
-            .GetRequiredService<Application.Abstractions.Settings.CookieSettings>();
-
-        if (SessionCookies.Read(context, settings) is not { Length: > 0 } sessionToken)
-        {
-            return false;
-        }
-
-        var found = await sessions.FindActiveByTokenAsync(sessionToken, now, context.RequestAborted)
-            .ConfigureAwait(false);
-
-        // Constant-time comparison, in the token service, so a timing signal
-        // cannot leak the digest one byte at a time.
-        return found.Match(
-            session => tokens.Matches(presented, session.CsrfTokenHash),
-            _ => false);
-    }
+    // Constant-time comparison, in the token service, so a timing signal
+    // cannot leak the digest one byte at a time. A principal without a digest
+    // was not admitted by the session handler and is refused.
+    private static bool IsValid(HttpContext context, ISecretTokens tokens) =>
+        context.Request.Headers[CulinaHeaders.Csrf] is [{ Length: > 0 } presented]
+        && RequestContext.CsrfTokenHash(context) is { } digest
+        && tokens.Matches(presented, digest);
 }

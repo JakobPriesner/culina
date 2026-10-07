@@ -107,14 +107,14 @@ public class MigrationRunnerTests(PostgresFixture postgres)
         Assert.True(await TableExistsAsync(executor, "settings"));
     }
 
-    private DbSession NewSession() => new(CulinaDataSource.Build(postgres.Settings));
+    private DbSession NewSession() => PostgresFixture.SessionOn(CulinaDataSource.Build(postgres.Settings));
 
     private static (MigrationRunner Runner, DbExecutor Executor) Build(DbSession session)
     {
         var executor = new DbExecutor(session);
         IUnitOfWork unitOfWork = new UnitOfWork(session);
 
-        return (new MigrationRunner(executor, unitOfWork, NullLogger<MigrationRunner>.Instance), executor);
+        return (new MigrationRunner(session, executor, unitOfWork, NullLogger<MigrationRunner>.Instance), executor);
     }
 
     private static string Unique(string prefix) => $"{prefix}_{Guid.CreateVersion7():n}";

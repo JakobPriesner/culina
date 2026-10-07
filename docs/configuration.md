@@ -90,7 +90,7 @@ nobody can sign in, and `Cookies__Secure=false` with
 | `Database__Username` | — | yes | **Required**, here or on the setup screen. The application role. Never a superuser — the migrations do not need one, and a compromised app should not be able to drop the cluster. The setup and settings screens refuse a superuser. |
 | `Database__Password` | — | yes | **Required**, here or on the setup screen. Never logged, never echoed by an endpoint, never in a problem document. Entered in the app, it is stored in `culina.json`, which only the app's own user may read. |
 | `Database__RequireSsl` | `true` | yes | Set to `false` only when the database is on the same private network and nothing else is. |
-| `Database__MaxPoolSize` | `20` | yes | |
+| `Database__MaxPoolSize` | `20` | yes | Connections this instance may hold at once. A request holds one only while a statement or transaction runs, not while its response stays open, so twenty serve far more than twenty open requests. Every instance's pool counts against PostgreSQL's `max_connections`. Event ids 1970 and 1971 say when it is getting tight (see `operations.md`). |
 
 Configured as parts rather than one connection string so each part can be
 validated and the password can come from a different place — a Docker secret,

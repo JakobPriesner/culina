@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using Api.Authentication;
+using Api.Infrastructure;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Sessions;
@@ -19,6 +20,7 @@ namespace IntegrationTests.Identity;
 public class SessionAuthenticationHandlerTests
 {
     private const string SessionToken = "the-cookie-value";
+    private const string CsrfToken = "the-csrf-token";
 
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 9, 0, 0, TimeSpan.Zero);
 
@@ -36,6 +38,23 @@ public class SessionAuthenticationHandlerTests
     }
 
     [Fact]
+    public async Task Authenticate_ShouldLeaveTheSessionsCsrfDigest_WhenItLetsTheRequestIn()
+    {
+        // Arrange
+        var (handler, context) = await HandlerAsync(renewal: Result.Success());
+
+        // Act
+        await handler.AuthenticateAsync();
+
+        // Assert
+        // CsrfMiddleware compares against this instead of reading the session
+        // a second time.
+        var digest = RequestContext.CsrfTokenHash(context);
+        Assert.NotNull(digest);
+        Assert.True(new SecretTokens().Matches(CsrfToken, digest.Value));
+    }
+
+    [Fact]
     public async Task Authenticate_ShouldRefuse_WhenTheSessionWasRevokedBeforeItsRenewal()
     {
         // Arrange
@@ -49,6 +68,7 @@ public class SessionAuthenticationHandlerTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.Equal(0, context.Response.Headers.SetCookie.Count);
+        Assert.Null(RequestContext.CsrfTokenHash(context));
     }
 
     private static async Task<(SessionAuthenticationHandler Handler, HttpContext Context)> HandlerAsync(Result renewal)
@@ -57,7 +77,7 @@ public class SessionAuthenticationHandlerTests
         var session = Session.Start(
             Guid.CreateVersion7(),
             tokens.Digest(SessionToken),
-            tokens.Digest("the-csrf-token"),
+            tokens.Digest(CsrfToken),
             Now.AddDays(-2),
             TimeSpan.FromDays(30),
             "203.0.113.7",

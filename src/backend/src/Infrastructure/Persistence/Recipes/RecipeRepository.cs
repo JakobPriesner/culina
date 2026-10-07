@@ -83,7 +83,7 @@ internal sealed class RecipeRepository(
         // One round trip for the whole aggregate. A recipe is never useful
         // without its ingredients, so a query per collection would be four
         // round trips to render one page.
-        var reader = await executor.QueryMultipleAsync(
+        return await executor.QueryMultipleAsync<Result<Recipe>>(
             """
             select id, household_id, title, description, language as recipe_language,
                    yield_amount, yield_kind, yield_label, prep_minutes, cook_minutes, image_id,
@@ -112,31 +112,30 @@ internal sealed class RecipeRepository(
             where rt.recipe_id = @recipeId order by t.slug;
             """,
             new { recipeId },
-            cancellationToken).ConfigureAwait(false);
-
-        await using (reader.ConfigureAwait(false))
-        {
-            var row = await reader.ReadSingleOrDefaultAsync<RecipeRow>().ConfigureAwait(false);
-
-            if (row is null)
+            async reader =>
             {
-                return RecipeErrors.NotFound(recipeId);
-            }
+                var row = await reader.ReadSingleOrDefaultAsync<RecipeRow>().ConfigureAwait(false);
 
-            var groups = await reader.ReadAsync<IngredientGroupRow>().ConfigureAwait(false);
-            var ingredients = await reader.ReadAsync<RecipeIngredientRow>().ConfigureAwait(false);
-            var steps = await reader.ReadAsync<StepRow>().ConfigureAwait(false);
-            var uses = await reader.ReadAsync<StepIngredientRefRow>().ConfigureAwait(false);
-            var slugs = await reader.ReadAsync<string>().ConfigureAwait(false);
+                if (row is null)
+                {
+                    return RecipeErrors.NotFound(recipeId);
+                }
 
-            return RecipeAssembler.Assemble(
-                [.. groups],
-                [.. ingredients],
-                [.. steps],
-                [.. uses],
-                [.. slugs],
-                row);
-        }
+                var groups = await reader.ReadAsync<IngredientGroupRow>().ConfigureAwait(false);
+                var ingredients = await reader.ReadAsync<RecipeIngredientRow>().ConfigureAwait(false);
+                var steps = await reader.ReadAsync<StepRow>().ConfigureAwait(false);
+                var uses = await reader.ReadAsync<StepIngredientRefRow>().ConfigureAwait(false);
+                var slugs = await reader.ReadAsync<string>().ConfigureAwait(false);
+
+                return RecipeAssembler.Assemble(
+                    [.. groups],
+                    [.. ingredients],
+                    [.. steps],
+                    [.. uses],
+                    [.. slugs],
+                    row);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result> AddAsync(Recipe recipe, CancellationToken cancellationToken)

@@ -47,7 +47,7 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
         Guid userId,
         CancellationToken cancellationToken)
     {
-        var reader = await executor.QueryMultipleAsync(
+        return await executor.QueryMultipleAsync<IReadOnlyList<DeletedHousehold>>(
             """
             select h.id, h.name, h.created_at, h.version, h.inherits_from, h.inherits_set_by, h.deleted_at
             from households_with_deleted h
@@ -62,22 +62,21 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
                 select household_id from household_members where user_id = @userId and role = 'owner');
             """,
             new { userId },
+            async reader =>
+            {
+                var rows = await reader.ReadAsync<DeletedHouseholdRow>().ConfigureAwait(false);
+                var members = (await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false)).ToList();
+
+                return [.. rows.Select(row => new DeletedHousehold(
+                    row.ToHouseholdRow().ToDomain(members.Where(member => member.HouseholdId == row.Id)),
+                    row.DeletedAt))];
+            },
             cancellationToken).ConfigureAwait(false);
-
-        await using (reader.ConfigureAwait(false))
-        {
-            var rows = await reader.ReadAsync<DeletedHouseholdRow>().ConfigureAwait(false);
-            var members = (await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false)).ToList();
-
-            return [.. rows.Select(row => new DeletedHousehold(
-                row.ToHouseholdRow().ToDomain(members.Where(member => member.HouseholdId == row.Id)),
-                row.DeletedAt))];
-        }
     }
 
     public async Task<Household?> DeletedHouseholdAsync(Guid householdId, CancellationToken cancellationToken)
     {
-        var reader = await executor.QueryMultipleAsync(
+        return await executor.QueryMultipleAsync<Household?>(
             """
             select id, name, created_at, version, inherits_from, inherits_set_by, deleted_at
             from households_with_deleted
@@ -87,15 +86,14 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
             from household_members where household_id = @householdId;
             """,
             new { householdId },
+            async reader =>
+            {
+                var row = await reader.ReadSingleOrDefaultAsync<DeletedHouseholdRow>().ConfigureAwait(false);
+                var members = await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false);
+
+                return row?.ToHouseholdRow().ToDomain(members);
+            },
             cancellationToken).ConfigureAwait(false);
-
-        await using (reader.ConfigureAwait(false))
-        {
-            var row = await reader.ReadSingleOrDefaultAsync<DeletedHouseholdRow>().ConfigureAwait(false);
-            var members = await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false);
-
-            return row?.ToHouseholdRow().ToDomain(members);
-        }
     }
 
     // Joined to the households view: a recipe in the bin of a household that

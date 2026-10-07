@@ -12,35 +12,34 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
     {
         // One round trip for the aggregate rather than a query per collection:
         // a household is never useful without its members.
-        var reader = await executor.QueryMultipleAsync(
+        return await executor.QueryMultipleAsync<Result<Household>>(
             """
             select id, name, created_at, version, inherits_from, inherits_set_by from households where id = @householdId;
             select household_id, user_id, role, joined_at
             from household_members where household_id = @householdId;
             """,
             new { householdId },
-            cancellationToken).ConfigureAwait(false);
-
-        await using (reader.ConfigureAwait(false))
-        {
-            var row = await reader.ReadSingleOrDefaultAsync<HouseholdRow>().ConfigureAwait(false);
-
-            if (row is null)
+            async reader =>
             {
-                return HouseholdErrors.NotFound(householdId);
-            }
+                var row = await reader.ReadSingleOrDefaultAsync<HouseholdRow>().ConfigureAwait(false);
 
-            var members = await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false);
+                if (row is null)
+                {
+                    return HouseholdErrors.NotFound(householdId);
+                }
 
-            return row.ToDomain(members);
-        }
+                var members = await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false);
+
+                return row.ToDomain(members);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<Household>> ForUserAsync(
         Guid userId,
         CancellationToken cancellationToken)
     {
-        var reader = await executor.QueryMultipleAsync(
+        return await executor.QueryMultipleAsync<IReadOnlyList<Household>>(
             """
             select h.id, h.name, h.created_at, h.version, h.inherits_from, h.inherits_set_by
             from households h
@@ -54,16 +53,15 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
                 select household_id from household_members where user_id = @userId);
             """,
             new { userId },
+            async reader =>
+            {
+                var rows = await reader.ReadAsync<HouseholdRow>().ConfigureAwait(false);
+                var members = (await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false)).ToList();
+
+                return [.. rows.Select(row =>
+                    row.ToDomain(members.Where(member => member.HouseholdId == row.Id)))];
+            },
             cancellationToken).ConfigureAwait(false);
-
-        await using (reader.ConfigureAwait(false))
-        {
-            var rows = await reader.ReadAsync<HouseholdRow>().ConfigureAwait(false);
-            var members = (await reader.ReadAsync<HouseholdMemberRow>().ConfigureAwait(false)).ToList();
-
-            return [.. rows.Select(row =>
-                row.ToDomain(members.Where(member => member.HouseholdId == row.Id)))];
-        }
     }
 
     public async Task<Result> AddAsync(Household household, CancellationToken cancellationToken)

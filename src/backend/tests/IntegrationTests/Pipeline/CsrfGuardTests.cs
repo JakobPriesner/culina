@@ -1,12 +1,9 @@
 using System.Text.Json;
 using Api.Infrastructure;
 using Api.Middleware;
-using Application.Abstractions;
 using Domain.Sessions;
-using Domain.Shared;
 using Infrastructure.Identity;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace IntegrationTests.Pipeline;
@@ -120,6 +117,23 @@ public class CsrfGuardTests
     }
 
     [Fact]
+    public async Task UnsafeRequest_ShouldBeRejected_WhenAuthenticationLeftNoDigest()
+    {
+        // Arrange
+        // A principal the session handler did not admit has no digest to
+        // compare against, and is refused rather than waved through.
+        var world = new CsrfWorld();
+        var context = world.Request("POST", csrfHeader: world.CsrfToken, withDigest: false);
+
+        // Act
+        var reached = await world.InvokeAsync(context);
+
+        // Assert
+        Assert.False(reached);
+        Assert.Equal("auth.csrf_invalid", await CodeAsync(context));
+    }
+
+    [Fact]
     public async Task UnsafeRequest_ShouldBeAccepted_WhenTheTokenMatchesTheSession()
     {
         // Arrange
@@ -142,12 +156,10 @@ public class CsrfGuardTests
         return document.GetProperty("code").GetString();
     }
 
-    /// <summary>A session that exists, and the two tokens that belong to it.</summary>
+    /// <summary>A session that exists, and the CSRF token that belongs to it.</summary>
     private sealed class CsrfWorld
     {
         internal SecretTokens Tokens { get; } = new();
-
-        internal string SessionToken { get; }
 
         internal string CsrfToken { get; }
 
@@ -155,12 +167,11 @@ public class CsrfGuardTests
 
         internal CsrfWorld()
         {
-            SessionToken = Tokens.NewToken();
             CsrfToken = Tokens.NewToken();
 
             session = Session.Start(
                 Guid.CreateVersion7(),
-                Tokens.Digest(SessionToken),
+                Tokens.Digest(Tokens.NewToken()),
                 Tokens.Digest(CsrfToken),
                 Now,
                 TimeSpan.FromDays(30),
@@ -172,17 +183,10 @@ public class CsrfGuardTests
             string method,
             string? csrfHeader,
             bool signedIn = true,
-            bool exempt = false)
+            bool exempt = false,
+            bool withDigest = true)
         {
-            var services = new ServiceCollection()
-                .AddSingleton(new Application.Abstractions.Settings.CookieSettings { Secure = false })
-                .BuildServiceProvider();
-
-            var context = new DefaultHttpContext
-            {
-                Response = { Body = new MemoryStream() },
-                RequestServices = services
-            };
+            var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
             context.Request.Method = method;
             context.Request.Path = "/api/v1/recipes";
@@ -196,7 +200,12 @@ public class CsrfGuardTests
             if (signedIn)
             {
                 context.User = PrincipalFor(session);
-                context.Request.Headers.Cookie = $"culina.session={SessionToken}";
+            }
+
+            // What the session handler leaves behind when it admits a session.
+            if (signedIn && withDigest)
+            {
+                RequestContext.SetCsrfTokenHash(context, session.CsrfTokenHash);
             }
 
             if (csrfHeader is not null)
@@ -217,12 +226,7 @@ public class CsrfGuardTests
                 return Task.CompletedTask;
             });
 
-            await middleware.InvokeAsync(
-                context,
-                new StubSessionStore(session),
-                Tokens,
-                TimeProvider.System,
-                NullLogger<CsrfMiddleware>.Instance);
+            await middleware.InvokeAsync(context, Tokens, NullLogger<CsrfMiddleware>.Instance);
 
             return reached;
         }
@@ -234,33 +238,5 @@ public class CsrfGuardTests
                     new System.Security.Claims.Claim("sid", session.Id.ToString())
                 ],
                 "culina.session"));
-    }
-
-    /// <summary>Returns the one session this test set up, for the matching token.</summary>
-    private sealed class StubSessionStore(Session session) : ISessionStore
-    {
-        public Task<Result<Session>> FindActiveByTokenAsync(
-            string token,
-            DateTimeOffset now,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(Result<Session>.Success(session));
-
-        public Task<IReadOnlyList<Session>> ForUserAsync(Guid userId, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<Session>>([session]);
-
-        public Task<Result> AddAsync(Session value, CancellationToken cancellationToken) =>
-            Task.FromResult(Result.Success());
-
-        public Task<Result> RenewAsync(Session value, CancellationToken cancellationToken) =>
-            Task.FromResult(Result.Success());
-
-        public Task<Result> RevokeAsync(Guid sessionId, Guid userId, DateTimeOffset now, CancellationToken cancellationToken) =>
-            Task.FromResult(Result.Success());
-
-        public Task RevokeAllAsync(Guid userId, Guid? keepSessionId, DateTimeOffset now, CancellationToken cancellationToken) =>
-            Task.CompletedTask;
-
-        public Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
-            Task.FromResult(0);
     }
 }
