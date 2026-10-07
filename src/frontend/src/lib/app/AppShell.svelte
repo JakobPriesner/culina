@@ -65,7 +65,9 @@
    * place through the server's render rather than a zero that would put those
    * pills half off the top edge until the page hydrates.
    */
-  let headerHeight = $state(0);
+  let headerHeight = $state<number>();
+
+  const focusedCooking = $derived(page.route.id === '/(app)/recipes/[recipeId]/cook');
 
   /** See `offersNewRecipe`: only where a new recipe would belong to what is on screen. */
   const creating = $derived(offersNewRecipe(page.url.pathname));
@@ -143,7 +145,7 @@
    * the shell already measures all three, so it is the one place that can.
    */
   const crowded = $derived(
-    viewportHeight > 0 && headerHeight + dockHeight + barHeight > viewportHeight / 2
+    viewportHeight > 0 && (headerHeight ?? 0) + dockHeight + barHeight > viewportHeight / 2
   );
 </script>
 
@@ -154,9 +156,10 @@
 <div
   class="shell"
   class:crowded
+  class:focused-cooking={focusedCooking}
   style:--bar-inset="{barHeight}px"
   style:--bottom-inset="{dockHeight + barHeight}px"
-  style:--header-inset={headerHeight ? `${headerHeight}px` : null}
+  style:--header-inset={headerHeight === undefined ? null : `${headerHeight}px`}
 >
   <!-- First in the tab order and invisible until focused: without it, reaching
        the page content by keyboard means tabbing through the navigation on
@@ -522,6 +525,19 @@
   @media (width < 40rem) {
     .header-inner {
       gap: var(--space-2);
+    }
+  }
+
+  /* Guided cooking has its own way back to the recipe. On compact screens
+     the instructions need the space used by the app's header and navigation. */
+  @media (width < 64rem) {
+    .focused-cooking .header,
+    .focused-cooking .bar {
+      display: none;
+    }
+
+    .focused-cooking .content {
+      padding-top: env(safe-area-inset-top, 0px);
     }
   }
 

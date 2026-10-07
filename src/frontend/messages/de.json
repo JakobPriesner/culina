@@ -1529,5 +1529,7 @@
   "ai.address.keyAgain": "Wer die Adresse ändert, muss den Schlüssel erneut eingeben: Culina schickt einen gespeicherten Schlüssel nur an die Adresse, für die er gespeichert wurde.",
   "problem.import.source_needs_reconnecting": "Der Token dieser Verbindung kann nicht mehr gelesen werden. Trenne die Verbindung und verbinde sie neu.",
   "import.url.waiting": "Dieser Link wurde noch nicht geöffnet. Tippe auf „{action}“, um ihn zu lesen.",
-  "auth.join.confirm.household": "Du bist eingeladen, {household} beizutreten."
+  "auth.join.confirm.household": "Du bist eingeladen, {household} beizutreten.",
+  "cooking.backToRecipe": "Zurück zum Rezept",
+  "cooking.recipe": "Rezept"
 }

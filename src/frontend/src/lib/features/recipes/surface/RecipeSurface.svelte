@@ -1246,7 +1246,8 @@
 
   .step {
     /* Clear of the page's own floating controls too; see `--controls-inset`. */
-    scroll-margin-block: var(--space-24) calc(var(--bottom-inset) + var(--controls-inset));
+    scroll-margin-block: var(--step-top-inset, var(--space-24))
+      calc(var(--bottom-inset) + var(--controls-inset));
     padding-block: var(--space-6);
     border-top: 1px solid var(--border);
   }

@@ -323,21 +323,46 @@
 
       <div class="controls" bind:clientHeight={controlsHeight}>
         {#if duration !== null}
-          <StepTimer
-            durationSeconds={duration}
-            timer={stepTimer}
-            secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
-            onstart={() => timers.start(currentStep, duration, stepName)}
-            ondismiss={() => timers.dismiss(currentStep)}
-            onpause={() => timers.pause(currentStep)}
-            onresume={() => timers.resume(currentStep)}
-          />
+          <div class="control-timer">
+            <StepTimer
+              durationSeconds={duration}
+              timer={stepTimer}
+              secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
+              onstart={() => timers.start(currentStep, duration, stepName)}
+              ondismiss={() => timers.dismiss(currentStep)}
+              onpause={() => timers.pause(currentStep)}
+              onresume={() => timers.resume(currentStep)}
+            />
+          </div>
         {/if}
 
         <div class="control-summary">
-          <p class="progress">
-            {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
-          </p>
+          <div class="control-place">
+            <a
+              class="recipe-return"
+              href={urlAtYield(
+                new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url),
+                servings,
+                recipes.detail
+              )}
+              aria-label={m['cooking.backToRecipe']()}
+              title={m['cooking.backToRecipe']()}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="m10 6-6 6 6 6M4 12h16" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span>{m['cooking.recipe']()}</span>
+            </a>
+            <p class="progress">
+              {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
+            </p>
+          </div>
           <Button
             size="sm"
             label={autoScrolling ? m['cooking.autoScroll.stop']() : undefined}
@@ -395,7 +420,9 @@
              tabbing back into the page to finish. -->
           <div class="advance">
             <Button size="lg" variant="primary" full disabled={!ready} onclick={advance}>
-              {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
+              <span class="advance-label">
+                {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
+              </span>
             </Button>
           </div>
         </div>
@@ -568,11 +595,12 @@
     position: sticky;
     bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-4));
     z-index: var(--z-sticky);
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    /* Wrap whole groups according to their available space, including when
+       text is enlarged. Navigation must never become a sliver beside them. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
+    gap: var(--space-3);
     margin-top: var(--space-8);
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--border);
@@ -581,24 +609,62 @@
     box-shadow: var(--shadow-overlay);
   }
 
+  .control-timer {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
   .control-summary {
-    display: flex;
-    flex: 1 0 auto;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-2);
   }
 
   .progress {
+    margin: 0;
     color: var(--text-muted);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
+    overflow-wrap: normal;
+  }
+
+  .control-place {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .recipe-return {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--control-sm);
+    color: var(--accent);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+
+  .recipe-return:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .recipe-return svg {
+    flex: none;
+    width: var(--space-4);
+    height: var(--space-4);
   }
 
   .moves {
-    display: flex;
-    flex: 1;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
     min-width: 0;
     gap: var(--space-2);
   }
@@ -607,22 +673,23 @@
      pressed when something went wrong, and a target's size should say which is
      which. */
   .advance {
-    flex: 1;
     min-width: 0;
   }
 
-  /* On a phone the progress line takes its own row, so the controls have the
-     whole width rather than whatever the words beside them left over. */
-  @media (width < 40rem) {
-    .controls {
-      flex-direction: column;
-      align-items: stretch;
-    }
+  .advance :global(.button) {
+    padding-inline: var(--space-3);
+  }
 
-    .progress {
-      text-align: center;
+  .advance-label {
+    overflow-wrap: normal;
+  }
+
+  @media (width < 64rem) {
+    .cook {
+      --step-top-inset: calc(env(safe-area-inset-top, 0px) + var(--space-4));
     }
   }
+
   @media screen and (max-height: 32rem) {
     .cook {
       --controls-inset: var(--space-8);
