@@ -51,6 +51,50 @@ internal static class RecipeAccess
     }
 
     /// <summary>
+    /// <see cref="VisibleAsync"/> for an operation that never reads the recipe:
+    /// the household it belongs to, or not-found, from one row rather than the
+    /// whole aggregate.
+    /// </summary>
+    internal static async Task<Result<Guid>> VisibleHouseholdAsync(
+        IRecipeRepository recipes,
+        IHouseholdRepository households,
+        Guid recipeId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var owner = await recipes.HouseholdOfAsync(recipeId, cancellationToken).ConfigureAwait(false);
+
+        return await owner.Match(
+            async household => await households
+                .CanSeeRecipesAsync(household, userId, cancellationToken)
+                .ConfigureAwait(false)
+                    ? Result<Guid>.Success(household)
+                    : RecipeErrors.NotFound(recipeId),
+            error => Task.FromResult(Result<Guid>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// <see cref="EditableAsync"/> for an operation that never reads the recipe.
+    /// </summary>
+    internal static async Task<Result<Guid>> EditableHouseholdAsync(
+        IRecipeRepository recipes,
+        IHouseholdRepository households,
+        Guid recipeId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var owner = await recipes.HouseholdOfAsync(recipeId, cancellationToken).ConfigureAwait(false);
+
+        return await owner.Match(
+            async household => await households
+                .IsMemberAsync(household, userId, cancellationToken)
+                .ConfigureAwait(false)
+                    ? Result<Guid>.Success(household)
+                    : RecipeErrors.NotFound(recipeId),
+            error => Task.FromResult(Result<Guid>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Whether the caller may change the recipe: they are in the household it
     /// belongs to. Inheriting it is not enough.
     /// </summary>

@@ -169,6 +169,8 @@ internal sealed class ExportArchiveQueryHandler(
             .ForRecipeAsync(recipe.Id, userId, cancellationToken)
             .ConfigureAwait(false);
 
+        var positions = PositionsOf(recipe);
+
         return new ArchivedRecipe
         {
             Title = recipe.Title.Value,
@@ -181,7 +183,7 @@ internal sealed class ExportArchiveQueryHandler(
             CookMinutes = recipe.CookMinutes,
             Tags = [.. recipe.Tags],
             Groups = [.. recipe.Groups.Select(ToArchived)],
-            Steps = [.. recipe.Steps.Select(step => ToArchived(step, recipe))],
+            Steps = [.. recipe.Steps.Select(step => ToArchived(step, positions))],
             Image = await ToArchivedImageAsync(recipe.Id, cancellationToken).ConfigureAwait(false),
             // The overall note, which is the one on the recipe rather than on a
             // step: a step note restored against a step that moved is a note
@@ -209,14 +211,8 @@ internal sealed class ExportArchiveQueryHandler(
     /// group — the same order they are written back in — so a step that said
     /// "melt the butter" still says it after a restore.
     /// </remarks>
-    private static ArchivedStep ToArchived(Step step, Recipe recipe)
-    {
-        var order = recipe.Groups
-            .SelectMany(group => group.Ingredients)
-            .Select((ingredient, index) => (ingredient.Id, index))
-            .ToDictionary(one => one.Id, one => one.index);
-
-        return new ArchivedStep(
+    private static ArchivedStep ToArchived(Step step, Dictionary<Guid, int> order) =>
+        new(
             [
                 .. step.Segments.Select(segment => segment switch
                 {
@@ -232,7 +228,12 @@ internal sealed class ExportArchiveQueryHandler(
             step.DurationSeconds,
             [.. step.Uses.Where(order.ContainsKey).Select(id => order[id]).Order()],
             step.Title);
-    }
+
+    /// <summary>Where each of the recipe's ingredients sits, worked out once per recipe.</summary>
+    private static Dictionary<Guid, int> PositionsOf(Recipe recipe) => recipe.Groups
+        .SelectMany(group => group.Ingredients)
+        .Select((ingredient, index) => (ingredient.Id, index))
+        .ToDictionary(one => one.Id, one => one.index);
 
     private async Task<ArchivedImage?> ToArchivedImageAsync(
         Guid recipeId,
@@ -252,7 +253,7 @@ internal sealed class ExportArchiveQueryHandler(
                         .ConfigureAwait(false);
 
                     return copied.Match<ArchivedImage?>(
-                        () => new ArchivedImage("image/webp", Convert.ToBase64String(buffer.ToArray())),
+                        () => new ArchivedImage("image/webp", Convert.ToBase64String(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))),
                         // A row whose file is gone exports without a picture
                         // rather than failing the whole archive.
                         _ => null);

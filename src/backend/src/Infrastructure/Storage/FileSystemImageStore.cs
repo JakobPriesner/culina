@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
@@ -123,7 +124,11 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             return ImageErrors.TooLarge(settings.MaxImageBytes);
         }
 
-        var buffered = new MemoryStream(content.ToArray(), writable: false);
+        // Over the caller's own array when it is one, rather than a copy of up
+        // to the largest picture the instance accepts.
+        var buffered = MemoryMarshal.TryGetArray(content, out var segment)
+            ? new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false)
+            : new MemoryStream(content.ToArray(), writable: false);
 
         await using (buffered.ConfigureAwait(false))
         {

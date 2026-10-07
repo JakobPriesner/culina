@@ -28,12 +28,12 @@ internal sealed class RevokeShareCommandHandler(
         using var tracked = UseCaseActivity.Start("Recipes.RevokeShare");
 
         var editable = await RecipeAccess
-            .EditableAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .EditableHouseholdAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await editable.Match(
-            recipe => unitOfWork.InTransactionAsync(
-                token => shares.RemoveAsync(recipe.Id, token),
+            _ => unitOfWork.InTransactionAsync(
+                token => shares.RemoveAsync(command.RecipeId, token),
                 cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 

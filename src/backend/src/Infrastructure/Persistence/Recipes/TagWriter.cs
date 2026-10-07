@@ -18,37 +18,37 @@ internal sealed class TagWriter(DbExecutor executor)
     {
         ArgumentNullException.ThrowIfNull(recipe);
 
-        foreach (var name in recipe.Tags)
+        // One tag per slug: "Veggie" and "veggie" are the same tag, and a
+        // statement that names one twice cannot upsert it twice.
+        var named = recipe.Tags
+            .Select(name => (name: name.Trim(), slug: Slugify(name)))
+            .Where(tag => tag.slug.Length > 0)
+            .DistinctBy(tag => tag.slug)
+            .ToArray();
+
+        if (named.Length > 0)
         {
-            var slug = Slugify(name);
-
-            if (slug.Length == 0)
-            {
-                continue;
-            }
-
-            var tagId = await executor.ExecuteScalarAsync<Guid?>(
+            await executor.ExecuteAsync(
                 """
-                insert into tags (id, household_id, name, slug)
-                values (@id, @householdId, @name, @slug)
-                on conflict (household_id, slug) do update set name = tags.name
-                returning id;
+                with upserted as (
+                    insert into tags (id, household_id, name, slug)
+                    select id, @householdId, name, slug
+                    from unnest(@ids::uuid[], @names::text[], @slugs::text[]) as t(id, name, slug)
+                    on conflict (household_id, slug) do update set name = tags.name
+                    returning id
+                )
+                insert into recipe_tags (recipe_id, tag_id)
+                select @recipeId, id from upserted
+                on conflict do nothing;
                 """,
                 new
                 {
-                    id = Domain.Shared.CulinaId.New(),
+                    recipeId = recipe.Id,
                     householdId = recipe.HouseholdId,
-                    name = name.Trim(),
-                    slug
+                    ids = named.Select(_ => Domain.Shared.CulinaId.New()).ToArray(),
+                    names = named.Select(tag => tag.name).ToArray(),
+                    slugs = named.Select(tag => tag.slug).ToArray()
                 },
-                cancellationToken).ConfigureAwait(false);
-
-            await executor.ExecuteAsync(
-                """
-                insert into recipe_tags (recipe_id, tag_id) values (@recipeId, @tagId)
-                on conflict do nothing;
-                """,
-                new { recipeId = recipe.Id, tagId },
                 cancellationToken).ConfigureAwait(false);
         }
 

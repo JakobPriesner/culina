@@ -3,6 +3,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
+using Application.Recipes.Drafts;
 using Application.Recipes.Intake;
 using Contracts.Recipes.Intake;
 using Domain.Assistance;
@@ -19,7 +20,7 @@ internal sealed class RecipeIntakeEndpoint : IEndpoint
             [FromForm] IFormFileCollection photos, [FromForm] string? material, [FromForm] string? transcript, [FromForm] string? sourceUrl, [FromForm] bool? fetchSource,
             Guid id, Guid householdId, string? language, HttpContext context, StorageSettings storage, RecipeIntake intake, CancellationToken token) =>
         {
-            if (photos.Count > 8 || photos.Sum(p => p.Length) > 40 * 1024 * 1024 || photos.Any(p => p.Length == 0 || p.Length > storage.MaxImageBytes))
+            if (photos.Count > DraftLimits.MaxPhotos || photos.Sum(p => p.Length) > DraftLimits.MaxPhotoBytes || photos.Any(p => p.Length == 0 || p.Length > storage.MaxImageBytes))
             {
                 return CustomResults.Problem(AssistanceErrors.TooMuchToWorkFrom);
             }
@@ -93,7 +94,7 @@ internal sealed class RecipeIntakeEndpoint : IEndpoint
 
             var photo = material.Photos[index];
             context.Response.Headers.CacheControl = "no-store";
-            return Results.Bytes(photo.Bytes.ToArray(), photo.MediaType);
+            return Results.Bytes(photo.Bytes, photo.MediaType);
         }).WithName("getRecipeIntakePhotoV1").WithTags(Tags.Recipes).RequireAuthorization();
         app.MapPost($"{ApiPaths.V1}/recipe-intakes/{{id:guid}}/reviewed", async (Guid id, HttpContext context, IRecipeIntakeJobs jobs, CancellationToken token) =>
         {
