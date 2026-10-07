@@ -1,6 +1,8 @@
+using System.Buffers.Text;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Cookbooks;
@@ -384,6 +386,29 @@ public class CookbookEndpointTests(PostgresFixture postgres)
         // A shelf with nothing on it still comes back. It is the one somebody
         // just made and is about to fill.
         Assert.Equal(0, empty.GetProperty("recipeCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task List_ShouldAnswer_WhenACursorsTimeCarriesAnOffset()
+    {
+        // Arrange
+        // Every cursor this writes is in UTC, and PostgreSQL's driver refuses
+        // to send a timestamptz that is not. A hand-made one that says +02:00
+        // means the same instant, and is read as it.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        await CookbookAsync(client, householdId, "Sonntag");
+        var cursor = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(
+            $$"""{"UpdatedAt":"2999-01-01T00:00:00+02:00","Id":"{{Guid.Empty}}"}"""));
+
+        // Act
+        var response = await client.GetAsync(
+            $"/api/v1/cookbooks?householdId={householdId}&cursor={cursor}",
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Single(response.Json!.Value.GetProperty("items").EnumerateArray());
     }
 
     private static Task<ApiResponse> RenameAsync(

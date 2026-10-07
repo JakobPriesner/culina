@@ -17,6 +17,12 @@ internal sealed record RelatedCursor(decimal Score, DateTimeOffset UpdatedAt, Gu
 
     /// <summary>Reads a cursor, or null when it is absent or unreadable.</summary>
     /// <param name="encoded">What the caller sent back.</param>
+    /// <remarks>
+    /// The time is put back into UTC, for the reason
+    /// <see cref="Cookbooks.CookbookCursor.Decode"/> gives.
+    /// </remarks>
     internal static RelatedCursor? Decode(string? encoded) =>
-        PageCursor.TryDecode<RelatedCursor>(encoded);
+        PageCursor.TryDecode<RelatedCursor>(encoded) is { } cursor
+            ? cursor with { UpdatedAt = cursor.UpdatedAt.ToUniversalTime() }
+            : null;
 }

@@ -11014,7 +11014,7 @@
         "properties": {
           "ingredientId": {
             "type": "string",
-            "description": "The line's id. Omit to create a new one; steps refer to it.",
+            "description": "The line's id, as the recipe gave it; steps refer to it. Omit to create\na new line. An id the recipe does not have creates one too, with an id\nof the server's choosing, and a step in the same request that refers to\nthe id sent is pointed at that new line — so read the ids back from the\nresponse rather than keeping the ones sent.",
             "format": "uuid",
             "nullable": true
           },
@@ -11049,7 +11049,7 @@
         "properties": {
           "groupId": {
             "type": "string",
-            "description": "The group's id. Omit to create a new one.",
+            "description": "The group's id, as the recipe gave it. Omit to create a new one; an id\nthe recipe does not have creates a new one too, with an id of the\nserver's choosing.",
             "format": "uuid",
             "nullable": true
           },
@@ -11799,7 +11799,7 @@
         "properties": {
           "stepId": {
             "type": "string",
-            "description": "The step's id. Omit to create a new one.",
+            "description": "The step's id, as the recipe gave it. Omit to create a new one; an id\nthe recipe does not have creates a new one too, with an id of the\nserver's choosing.",
             "format": "uuid",
             "nullable": true
           },
