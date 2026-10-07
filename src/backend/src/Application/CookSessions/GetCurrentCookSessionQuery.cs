@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Recipes;
 using Application.Telemetry;
 using Domain.Cooking;
 using Domain.Shared;
@@ -13,7 +14,8 @@ public sealed record GetCurrentCookSessionQuery(Guid UserId);
 
 internal sealed class GetCurrentCookSessionQueryHandler(
     ICookSessionRepository sessions,
-    IRecipeRepository recipes)
+    IRecipeRepository recipes,
+    IHouseholdRepository households)
     : IQueryHandler<GetCurrentCookSessionQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -35,8 +37,12 @@ internal sealed class GetCurrentCookSessionQueryHandler(
 
         // The title comes along so the resume bar is one request, not two: it
         // is on screen from the moment the app boots, and a second round trip
-        // there is a second round trip on every page.
-        var recipe = await recipes.FindAsync(session.RecipeId, cancellationToken)
+        // there is a second round trip on every page. Asked through access
+        // again, not trusted from when cooking began: somebody who has since
+        // left the household, or whose kitchen stopped inheriting the recipe,
+        // has nothing to resume and is not told its title.
+        var recipe = await RecipeAccess
+            .VisibleInAsync(recipes, households, session.RecipeId, session.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         return tracked.Record(recipe.Map(found => session.ToResponse(found.Title.Value)));

@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Recipes;
 using Application.Telemetry;
 using Domain.Cooking;
 using Domain.Shared;
@@ -21,6 +22,7 @@ public sealed record UpdateCookSessionCommand(
 internal sealed class UpdateCookSessionCommandHandler(
     ICookSessionRepository sessions,
     IRecipeRepository recipes,
+    IHouseholdRepository households,
     TimeProvider time)
     : ICommandHandler<UpdateCookSessionCommand, Response>
 {
@@ -48,14 +50,21 @@ internal sealed class UpdateCookSessionCommandHandler(
         UpdateCookSessionCommand command,
         CancellationToken cancellationToken)
     {
+        // Access first, on every step: somebody who has lost the recipe since
+        // they began — left the household, or it stopped being inherited —
+        // has lost the session with it, title and all.
+        var recipe = await RecipeAccess
+            .VisibleInAsync(recipes, households, session.RecipeId, session.HouseholdId, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
         var now = time.GetUtcNow();
         var before = session.Version;
 
         // Rescaling is worth a version; a step advance is not. Doing both in
         // one call therefore takes the guarded path.
-        var rescaled = command.Servings is { } servings
+        var rescaled = recipe.Bind(_ => command.Servings is { } servings
             ? session.Rescale(servings, now)
-            : Result.Success();
+            : Result.Success());
 
         var moved = rescaled.Bind(() => command.CurrentStepIndex is { } index
             ? session.MoveTo(index, now)
@@ -66,9 +75,6 @@ internal sealed class UpdateCookSessionCommandHandler(
                 ? sessions.TouchAsync(session, cancellationToken)
                 : sessions.UpdateAsync(session, before, cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
-
-        var recipe = await recipes.FindAsync(session.RecipeId, cancellationToken)
-            .ConfigureAwait(false);
 
         return saved.Bind(() => recipe).Map(found => session.ToResponse(found.Title.Value));
     }
