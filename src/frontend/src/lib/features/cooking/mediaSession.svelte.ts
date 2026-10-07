@@ -3,12 +3,11 @@ import { SvelteURL } from 'svelte/reactivity';
 import type { RecipeReading } from '$features/recipes/types';
 import { imageUrl } from '$features/recipes/recipeImage';
 import { createScaling } from '$features/recipes/surface/scaled.svelte';
-import { parseStep, type Inline } from '$features/recipes/surface/stepMarkdown';
 import { registerStore } from '$shell/stores';
-import { m } from '$shell/i18n';
 import { haptics } from '$shell/haptics';
 import { cooking } from './stores/cooking.svelte';
 import { kitchenTimers } from './kitchen.svelte';
+import { describeStep, selectTimer, stepExcerpt, timerLine } from './mediaPresentation';
 
 const actions = ['nexttrack', 'previoustrack', 'play', 'pause', 'stop'] as const;
 
@@ -41,70 +40,28 @@ export function createCookingMediaSession() {
   }
 
   function selectedTimer() {
-    const eligible = kitchenTimers.timers.filter((timer) =>
-      timer.pausedRemaining !== undefined ? timer.pausedRemaining > 0 : timer.endsAt > Date.now()
+    return selectTimer(
+      kitchenTimers.timers,
+      cooking.session?.currentStepIndex,
+      pausedTimerStep,
+      Date.now()
     );
-    return (
-      eligible.find((timer) => timer.stepIndex === cooking.session?.currentStepIndex) ??
-      eligible.find(
-        (timer) => timer.stepIndex === pausedTimerStep && timer.pausedRemaining !== undefined
-      ) ??
-      eligible
-        .filter((timer) => timer.pausedRemaining === undefined)
-        .sort((a, b) => a.endsAt - b.endsAt)[0] ??
-      eligible.sort((a, b) => a.stepIndex - b.stepIndex)[0]
-    );
-  }
-
-  function inlineText(nodes: readonly Inline[]): string {
-    return nodes
-      .map((node) => {
-        if (node.kind === 'ingredient')
-          return [scaling.amountFor(node).text, node.name].filter(Boolean).join(' ');
-        if ('children' in node) return inlineText(node.children);
-        return node.text;
-      })
-      .join('');
   }
 
   function publish() {
     if (!valid() || !active || !recipe || !supported()) return;
     const index = Math.max(0, Math.min(cooking.session!.currentStepIndex, recipe.steps.length - 1));
     const step = recipe.steps[index];
-    const excerpt = step
-      ? parseStep(step.segments)
-          .map((block) =>
-            block.kind === 'paragraph'
-              ? inlineText(block.children)
-              : block.items.map(inlineText).join(' ')
-          )
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 180)
-      : '';
+    const excerpt = stepExcerpt(step, scaling.amountFor);
     const timer = selectedTimer();
-    const remaining = timer
-      ? (timer.pausedRemaining ?? Math.max(0, Math.ceil((timer.endsAt - Date.now()) / 1000)))
-      : 0;
-    const timerText = timer
-      ? `${timer.label} · ${
-          timer.pausedRemaining !== undefined
-            ? m['cooking.timer.paused']({
-                minutes: Math.floor(remaining / 60),
-                seconds: String(remaining % 60).padStart(2, '0')
-              })
-            : m['cooking.timer.running']({
-                minutes: Math.floor(remaining / 60),
-                seconds: String(remaining % 60).padStart(2, '0')
-              })
-        }`
-      : '';
-    const progress = m['cooking.stepOf']({ current: index + 1, total: recipe.steps.length });
+    const { progress, ...text } = describeStep(
+      recipe,
+      index,
+      excerpt,
+      timerLine(timer, Date.now())
+    );
     const metadata = {
-      title: `${recipe.title} · ${progress}${timerText ? ` · ${timerText}` : ''}`,
-      artist: [step?.title, excerpt].filter(Boolean).join(' · '),
-      album: m['cooking.nowCooking']({ title: recipe.title }),
+      ...text,
       artwork: recipe.imageId
         ? [{ src: new SvelteURL(imageUrl(recipe.id, 400, recipe.imageId), document.baseURI).href }]
         : []

@@ -3,8 +3,7 @@
 
   /**
    * What rises from the pot on arrival: steam, a question, a bulb, sleep.
-   * Rises 8 units and fades, and is kept when it means something. Styled by
-   * Olli, whose rules reach in through `:global`.
+   * Rises 8 units and fades, and is kept when it means something.
    */
   interface Props {
     steam: PoseSpec['steam'];
@@ -50,3 +49,38 @@
     {/each}
   {/if}
 </g>
+
+<style>
+  .bulb {
+    fill: var(--mascot-cheek);
+  }
+
+  .bulb-rays {
+    stroke: var(--mascot-cheek);
+  }
+
+  .steam {
+    fill: none;
+    stroke: var(--mascot-steam);
+    stroke-width: 2.8;
+  }
+
+  .question {
+    fill: var(--mascot-cheek);
+    stroke-width: 1.2;
+    font-family: var(--font-editorial);
+    font-size: 24px;
+  }
+
+  .sleep {
+    fill: var(--mascot-line);
+    stroke: none;
+    font-family: var(--font-editorial);
+    font-style: italic;
+  }
+
+  .spark {
+    fill: var(--mascot-cheek);
+    stroke-width: 1.2;
+  }
+</style>

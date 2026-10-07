@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { Button, Checkbox, GenerationAura, Modal, Skeleton } from '$ds';
+  import { Button, Modal } from '$ds';
   import type { AppError } from '$api';
   import { m } from '$shell/i18n';
   import { explain } from '$shell/explain';
 
   import AssistFailure from './AssistFailure.svelte';
-  import DraftProgress from './DraftProgress.svelte';
-  import DraftWriting from './DraftWriting.svelte';
+  import DraftParts from './DraftParts.svelte';
+  import DraftPending from './DraftPending.svelte';
+  import { draftParts } from './draftParts';
+  import SourceComparison from './SourceComparison.svelte';
   import {
     acceptEverything,
     acceptNothing,
     anyAccepted,
-    offers,
     toPatch,
     type Accepted,
     type Draft
   } from './draftToRecipe';
 
   import type { Recipe } from '$features/recipes/types';
-  import { sourceLink } from '$features/recipes/sourceLink';
 
   /**
    * What the assistant suggested, beside what is there now.
@@ -83,64 +83,7 @@
 
   let accepted = $state<Accepted>(acceptNothing());
 
-  const available = $derived(draft ? offers(draft) : acceptNothing());
-  const original = $derived(sourceLink(source?.url));
-  const parts = $derived.by(() => {
-    if (!draft) {
-      return [];
-    }
-
-    return (
-      [
-        ['title', m['assist.part.title'](), current.title, draft.title],
-        ['description', m['assist.part.description'](), current.description, draft.description],
-        ['yield', m['assist.part.yield'](), describeYield(current), describeDraftYield()],
-        ['times', m['assist.part.times'](), describeTimes(current), describeDraftTimes()],
-        [
-          'ingredients',
-          m['assist.part.ingredients'](),
-          m['assist.lines']({ count: current.groups.flatMap((g) => g.ingredients).length }),
-          m['assist.lines']({ count: draft.groups.flatMap((g) => g.ingredients).length })
-        ],
-        [
-          'steps',
-          m['assist.part.steps'](),
-          m['assist.stepCount']({ count: current.steps.length }),
-          m['assist.stepCount']({ count: draft.steps.length })
-        ]
-      ] as const
-    ).filter(([key]) => available[key]);
-  });
-
-  function describeYield(recipe: Recipe): string {
-    return `${recipe.yieldAmount} ${recipe.yieldLabel ?? ''}`.trim();
-  }
-
-  function describeDraftYield(): string {
-    if (!draft) {
-      return '';
-    }
-
-    return `${draft.yieldAmount ?? current.yieldAmount} ${draft.yieldLabel ?? ''}`.trim();
-  }
-
-  function describeTimes(recipe: Recipe): string {
-    return [recipe.prepMinutes, recipe.cookMinutes]
-      .filter((value): value is number => value != null)
-      .map((value) => m['assist.minutes']({ count: value }))
-      .join(' + ');
-  }
-
-  function describeDraftTimes(): string {
-    if (!draft) {
-      return '';
-    }
-
-    return [draft.prepMinutes, draft.cookMinutes]
-      .filter((value): value is number => value != null)
-      .map((value) => m['assist.minutes']({ count: value }))
-      .join(' + ');
-  }
+  const parts = $derived(draftParts(draft, current));
 
   function accept(): void {
     if (!draft) {
@@ -166,82 +109,24 @@
 >
   {#if source}
     <p class="lead">{m['import.review.hint']()}</p>
-    <div class="source-comparison">
-      <section class="original" aria-label={m['import.review.source']()}>
-        <h3>{m['import.review.source']()}</h3>
-        {#if original}
-          <!-- An external web address, checked by sourceLink, not an application route. -->
-          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-          <a href={original.href} target="_blank" rel="noopener noreferrer"
-            >{m['import.review.openSource']()}</a
-          >
-        {/if}
-        {#if source.text}<p class="source-text">{source.text}</p>{/if}
-        {#if source.transcript}
-          <h4>{m['import.review.transcript']()}</h4>
-          <p class="source-text">{source.transcript}</p>
-        {/if}
-        {#each source.photos as photo (photo)}
-          <img src={photo} alt={m['import.review.photo']()} loading="lazy" decoding="async" />
-        {/each}
-      </section>
-      <DraftWriting {draft} {writing} />
-    </div>
+    <SourceComparison {source} {draft} {writing} />
   {:else}
     <p class="lead">{m['assist.improve.lead']()}</p>
 
     {#if writing}
-      <div class="progress">
-        <GenerationAura />
-        <DraftProgress
-          label={draft ? m['assist.improve.writing']() : m['assist.improve.asking']()}
-          arriving={draft !== null}
-        />
-      </div>
+      <DraftPending arriving={draft !== null} />
     {/if}
 
-    {#if !draft && writing}
-      <div class="forming" aria-hidden="true">
-        <Skeleton width="9rem" height="1rem" />
-        <Skeleton width="100%" height="3.5rem" shape="block" />
-        <Skeleton width="7rem" height="1rem" />
-        <Skeleton width="82%" height="1rem" />
-      </div>
-    {:else if parts.length === 0 && !writing && !error}
-      <p class="lead">{m['assist.nothing']()}</p>
-    {:else if draft}
-      <ul class="parts">
-        {#each parts as [key, label, before, after] (key)}
-          <li class="part arrival">
-            <Checkbox
-              checked={accepted[key]}
-              {label}
-              onchange={(checked) => (accepted = { ...accepted, [key]: checked })}
-            />
-
-            <div class="compare">
-              <p class="side">
-                <span class="which">{m['assist.before']()}</span>
-                <span class="was">{before || m['assist.empty']()}</span>
-              </p>
-              <p class="side">
-                <span class="which">{m['assist.after']()}</span>
-                <span>{after || m['assist.empty']()}</span>
-              </p>
-            </div>
-          </li>
-        {/each}
-      </ul>
-
-      {#if draft.steps.length > 0}
-        <ol class="steps">
-          {#each draft.steps as step, index (index)}
-            <li class="arrival">
-              {#if step.title}<span class="stepTitle">{step.title}</span>{/if}
-              {step.text}
-            </li>
-          {/each}
-        </ol>
+    {#if draft || !writing}
+      {#if parts.length === 0 && !writing && !error}
+        <p class="lead">{m['assist.nothing']()}</p>
+      {:else if draft}
+        <DraftParts
+          {parts}
+          {accepted}
+          steps={draft.steps}
+          onchange={(key, checked) => (accepted = { ...accepted, [key]: checked })}
+        />
       {/if}
     {/if}
   {/if}
@@ -286,127 +171,10 @@
 </Modal>
 
 <style>
-  .source-comparison {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
-    margin-top: var(--space-4);
-    align-items: start;
-  }
-  .original {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-  .original h3,
-  .original h4 {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-  }
-  .original img {
-    width: 100%;
-    height: auto;
-    border-radius: var(--radius-md);
-  }
-  .source-text {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    font-size: var(--text-sm);
-  }
-  @media (max-width: 40rem) {
-    .source-comparison {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
   .lead {
     max-width: var(--measure);
     color: var(--text-muted);
     line-height: var(--leading-normal);
-  }
-
-  /* Its own ground rather than a tint: the assistant's glow round the edge is
-     what marks it out, and an accent wash underneath would muddy the colours. */
-  .progress {
-    position: relative;
-    isolation: isolate;
-    margin: var(--space-4) var(--space-1) 0;
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-md);
-    background: var(--surface-raised);
-  }
-
-  .forming {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    margin-top: var(--space-4);
-    padding: var(--space-4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--surface-sunken);
-  }
-
-  .parts {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    margin-top: var(--space-4);
-    list-style: none;
-  }
-
-  .part {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--border);
-  }
-
-  /* Two columns where there is room, stacked where there is not: reading a
-     before against an after side by side is the whole job of this dialog, and
-     on a phone the two lines one above the other say the same thing. */
-  .compare {
-    display: grid;
-    gap: var(--space-2);
-    padding-left: var(--space-6);
-    font-size: var(--text-sm);
-    line-height: var(--leading-normal);
-  }
-
-  .side {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    min-width: 0;
-  }
-
-  .which {
-    color: var(--text-subtle);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .was {
-    color: var(--text-muted);
-  }
-
-  .steps {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    margin-top: var(--space-4);
-    padding-left: var(--space-6);
-    font-size: var(--text-sm);
-    line-height: var(--leading-normal);
-  }
-
-  .stepTitle {
-    display: block;
-    font-weight: var(--weight-semibold);
   }
 
   .warning {
@@ -414,33 +182,5 @@
     margin-top: var(--space-4);
     color: var(--text-muted);
     font-size: var(--text-sm);
-  }
-
-  .arrival {
-    animation: arrive var(--duration-base) var(--ease-out) both;
-  }
-
-  @keyframes arrive {
-    from {
-      opacity: 0;
-      transform: translateY(var(--space-1));
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @media (min-width: 40rem) {
-    .compare {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .arrival {
-      animation: none;
-    }
   }
 </style>
