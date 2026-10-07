@@ -10,14 +10,11 @@ using TestSupport;
 
 namespace IntegrationTests.Import;
 
-/// <summary>
-/// The connected-source client, against servers it can actually reach.
-/// </summary>
+/// <summary>The connected-source client, against servers it can actually reach.</summary>
 /// <remarks>
-/// Every server here is on loopback, which is the address no setting lets a
-/// deployment reach. Where a test needs the client to get through anyway, it
-/// builds one that admits every address, which is how the background import
-/// tests reach their fake Tandoor.
+/// Every server is on loopback, which no setting lets a deployment reach; where a test needs the
+/// client through anyway it builds one that admits every address, as the background import tests
+/// do.
 /// </remarks>
 public class SourceHttpTests
 {
@@ -37,18 +34,15 @@ public class SourceHttpTests
     [InlineData("localhost")]
     public async Task GetAsync_ShouldRefuseLoopback_WhenPrivateAddressesAreAllowed(string host)
     {
-        // Arrange
         // Allowing private addresses opens the household's own network, and
         // never this machine: loopback is where the admin ports are.
         using var server = new LoopbackServer("{}", contentType: "application/json");
         using var http = new SourceHttp(new ImportSettings { AllowPrivateSourceAddresses = true }, Storage);
 
-        // Act
         var result = await http
             .GetAsync<JsonElement>(new Uri($"http://{host}:{server.Port}/api/recipe/"), Token, Cancellation)
             .ConfigureAwait(true);
 
-        // Assert
         result.ShouldBeFailure(ImportErrors.CouldNotFetch);
         Assert.Equal(0, server.Requests);
     }
@@ -59,19 +53,15 @@ public class SourceHttpTests
     [InlineData(500, "{}")]
     public async Task GetAsync_ShouldSayOnlyCouldNotFetch_WhenTheServerIsOnAPrivateAddress(int status, string body)
     {
-        // Arrange
-        // A refused token and an answer that is not JSON would otherwise be
-        // told apart, and together they map which services run inside the
-        // network and what they speak.
+        // A refused token and a non-JSON answer would otherwise be told apart, and together they
+        // map which services run inside the network.
         using var server = new LoopbackServer(body, status, "application/json");
         using var http = new SourceHttp(Storage, admits: _ => true);
 
-        // Act
         var result = await http
             .GetAsync<JsonElement>(new Uri($"http://127.0.0.1:{server.Port}/api/recipe/"), Token, Cancellation)
             .ConfigureAwait(true);
 
-        // Assert
         result.ShouldBeFailure(ImportErrors.CouldNotFetch);
         Assert.Equal(1, server.Requests);
     }
@@ -79,53 +69,44 @@ public class SourceHttpTests
     [Fact]
     public async Task PostFormAsync_ShouldSayOnlyCouldNotFetch_WhenAPrivateServerRefusesTheSignIn()
     {
-        // Arrange
         using var server = new LoopbackServer("{}", 400, "application/json");
         using var http = new SourceHttp(Storage, admits: _ => true);
         var form = new Dictionary<string, string>(StringComparer.Ordinal) { ["username"] = "ada" };
 
-        // Act
         var result = await http
             .PostFormAsync<JsonElement>(new Uri($"http://127.0.0.1:{server.Port}/api-token-auth/"), form, Cancellation)
             .ConfigureAwait(true);
 
-        // Assert
         result.ShouldBeFailure(ImportErrors.CouldNotFetch);
     }
 
     [Fact]
     public async Task GetAsync_ShouldStillReadTheAnswer_WhenTheServerIsOnAPrivateAddress()
     {
-        // Arrange
         // Vague about failure, not deaf: a recipe server on the LAN still works.
         using var server = new LoopbackServer("""{"count": 3}""", contentType: "application/json");
         using var http = new SourceHttp(Storage, admits: _ => true);
 
-        // Act
         var result = await http
             .GetAsync<JsonElement>(new Uri($"http://127.0.0.1:{server.Port}/api/recipe/"), Token, Cancellation)
             .ConfigureAwait(true);
 
-        // Assert
         Assert.Equal(3, result.ShouldBeSuccess().GetProperty("count").GetInt32());
     }
 
     [Fact]
     public async Task GetAsync_ShouldGiveUp_WhenTheAnswerStallsAfterItsHeaders()
     {
-        // Arrange
         // Headers at once, then nothing. The client's own timeout has stopped
         // counting by then, so only a deadline over the body ends this.
         using var server = new StallingServer();
         using var http = new SourceHttp(Storage, admits: _ => true, deadline: TimeSpan.FromSeconds(1));
         var clock = System.Diagnostics.Stopwatch.StartNew();
 
-        // Act
         var result = await http
             .GetAsync<JsonElement>(server.Url, Token, Cancellation)
             .ConfigureAwait(true);
 
-        // Assert
         result.ShouldBeFailure(ImportErrors.CouldNotFetch);
         Assert.InRange(clock.Elapsed, TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(10));
     }
@@ -133,26 +114,22 @@ public class SourceHttpTests
     [Fact]
     public async Task PostFormAsync_ShouldGiveUp_WhenTheAnswerStallsAfterItsHeaders()
     {
-        // Arrange
         using var server = new StallingServer();
         using var http = new SourceHttp(Storage, admits: _ => true, deadline: TimeSpan.FromSeconds(1));
         var form = new Dictionary<string, string>(StringComparer.Ordinal) { ["username"] = "ada" };
         var clock = System.Diagnostics.Stopwatch.StartNew();
 
-        // Act
         var result = await http
             .PostFormAsync<JsonElement>(server.Url, form, Cancellation)
             .ConfigureAwait(true);
 
-        // Assert
         result.ShouldBeFailure(ImportErrors.CouldNotFetch);
         Assert.InRange(clock.Elapsed, TimeSpan.FromSeconds(0.9), TimeSpan.FromSeconds(10));
     }
 }
 
 /// <summary>
-/// A server that sends a JSON answer's headers and its first byte, and then
-/// nothing more until it is disposed.
+/// A server that sends a JSON answer's headers and first byte, then nothing until it is disposed.
 /// </summary>
 internal sealed class StallingServer : IDisposable
 {

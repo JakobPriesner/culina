@@ -5,13 +5,10 @@ namespace Domain.Sessions;
 /// <summary>Failures relating to signing in and staying signed in.</summary>
 public static class SessionErrors
 {
-    /// <summary>
-    /// The credentials did not match.
-    /// </summary>
+    /// <summary>The credentials did not match.</summary>
     /// <remarks>
-    /// One error for "no such account" and "wrong password", always. Telling
-    /// them apart turns the sign-in form into a way to discover which addresses
-    /// are registered.
+    /// One error for "no such account" and "wrong password": telling them apart would reveal which
+    /// addresses are registered.
     /// </remarks>
     public static readonly Error InvalidCredentials = new(
         "auth.invalid_credentials",
@@ -36,21 +33,11 @@ public static class SessionErrors
         "This request could not be verified. Reload the page and try again.",
         ErrorType.Forbidden);
 
-    /// <summary>
-    /// The address and recovery code do not unlock an account.
-    /// </summary>
+    /// <summary>The address and recovery code do not unlock an account.</summary>
     /// <remarks>
-    /// <para>
-    /// One error for an unknown address, a wrong code, a used code, an expired
-    /// code and another account's code. Any distinction between them tells
-    /// whoever is guessing which guesses were close.
-    /// </para>
-    /// <para>
-    /// A validation failure rather than a 401, because nobody is signed in to
-    /// be told they are not: a 401 is what every client reads as "your session
-    /// ended", and answering a typo with that would throw the person off the
-    /// form they are filling in.
-    /// </para>
+    /// One error for every way it can fail, so a guesser learns nothing about close guesses. A
+    /// validation failure, not a 401: clients read 401 as "your session ended", which would throw
+    /// the person off the form.
     /// </remarks>
     public static readonly Error InvalidRecoveryCode = new(
         "auth.invalid_recovery_code",

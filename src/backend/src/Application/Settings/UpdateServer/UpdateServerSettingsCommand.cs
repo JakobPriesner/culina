@@ -12,12 +12,7 @@ namespace Application.Settings.UpdateServer;
 /// <param name="RateLimits">The ceilings on what one client may ask for.</param>
 /// <param name="OtlpEndpoint">The collector's address, or null to export nothing.</param>
 /// <param name="OtlpProtocol"><c>grpc</c> or <c>http_protobuf</c>.</param>
-/// <remarks>
-/// The groups arrive as the settings records themselves, because a proposal is
-/// exactly that: the values the next start would run with. Only the endpoint
-/// is still text, so that an address that is not one is reported rather than
-/// quietly becoming "none".
-/// </remarks>
+/// <remarks>The groups arrive as the settings records, being what the next start would run with; only the endpoint is text, so a bad address is reported rather than becoming "none".</remarks>
 public sealed record UpdateServerSettingsCommand(
     CookieSettings Cookies,
     ForwardedHeadersSettings ForwardedHeaders,
@@ -42,8 +37,7 @@ internal sealed class UpdateServerSettingsCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Settings.UpdateServer");
 
-        // Whether cookies may go without Secure is the deployment's to say,
-        // decided at startup, and never the proposal's.
+        // Whether cookies may go without Secure is the deployment's to say, never the proposal's.
         var proposal = command with { Cookies = command.Cookies with { InsecureAllowed = cookies.InsecureAllowed } };
 
         var result = proposal.Cookies.InsecureWithoutConsent
@@ -55,10 +49,7 @@ internal sealed class UpdateServerSettingsCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Every group validated exactly as the next startup will validate it, all
-    /// failures reported at once.
-    /// </summary>
+    // Every group validated as the next startup will validate it, all failures at once.
     private Result<Dictionary<string, string>> Proposal(UpdateServerSettingsCommand command)
     {
         var raw = command.OtlpEndpoint?.Trim();
@@ -86,11 +77,7 @@ internal sealed class UpdateServerSettingsCommandHandler(
             .Map(() => Values(command.Cookies, command.ForwardedHeaders, command.RateLimits, exporter));
     }
 
-    /// <summary>
-    /// The proxies validated as the next startup will validate them, with the
-    /// override the deployment set (the screen never offers it), and a network
-    /// too wide to trust reported as such rather than as a bad value.
-    /// </summary>
+    // Validated as at startup, with the deployment's wide-network override (the screen never offers it); a too-wide network is reported as such.
     private static Result CheckProxies(ForwardedHeadersSettings proposed) =>
         proposed.TooWideNetwork() is { } wide
             ? SettingsErrors.ProxyNetworkTooWide(wide)

@@ -3,12 +3,9 @@ using Application.Abstractions.Settings;
 namespace Application.Settings;
 
 /// <summary>
-/// The exporter's protocol names, and the spelling they travel in.
+/// The exporter's protocol names and the spelling they travel in: OpenTelemetry writes
+/// <c>http/protobuf</c> with a slash, a wire enum is snake_case.
 /// </summary>
-/// <remarks>
-/// OpenTelemetry writes one of them with a slash; an enum on the wire is
-/// lowercase snake_case, so <c>http/protobuf</c> is <c>http_protobuf</c> there.
-/// </remarks>
 internal static class OtlpProtocols
 {
     private const string HttpProtobufOnTheWire = "http_protobuf";

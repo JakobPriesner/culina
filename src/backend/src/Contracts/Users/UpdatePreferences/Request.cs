@@ -1,10 +1,6 @@
 namespace Contracts.Users.UpdatePreferences;
 
-/// <summary>The preferences to store.</summary>
-/// <remarks>
-/// A complete replacement rather than a patch: there are four values, they are
-/// edited on one screen, and "unchanged" is not a state worth encoding.
-/// </remarks>
+/// <summary>The preferences to store, as a complete replacement rather than a patch.</summary>
 public sealed record Request
 {
     /// <summary>The language to read in: <c>en</c>, <c>de</c>, or <c>system</c> to follow the device.</summary>

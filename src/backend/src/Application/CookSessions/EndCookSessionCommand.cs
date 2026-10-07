@@ -9,10 +9,7 @@ namespace Application.CookSessions;
 /// <summary>Finishes a session, or gives up on it.</summary>
 /// <param name="SessionId">Which session.</param>
 /// <param name="UserId">Whose it must be.</param>
-/// <param name="Completed">
-/// True when the cooking was finished, false when it was abandoned. The
-/// difference is worth keeping: one of them means the recipe worked.
-/// </param>
+/// <param name="Completed">True when the cooking was finished, false when abandoned; one of them means the recipe worked.</param>
 public sealed record EndCookSessionCommand(Guid SessionId, Guid UserId, bool Completed);
 
 internal sealed class EndCookSessionCommandHandler(

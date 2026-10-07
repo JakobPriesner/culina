@@ -8,8 +8,6 @@ using Infrastructure.Persistence.Suggestions;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>The named parameters a search statement is run with.</summary>
-/// <param name="time">The clock the suggested order is ranked against.</param>
-/// <param name="weights">What each term of the suggested order is worth.</param>
 internal sealed partial class RecipeSearchParameters(TimeProvider time, RankingWeights weights)
 {
     internal DynamicParameters Build(RecipeSearch search, RecipeCursor? cursor, bool scored)
@@ -94,7 +92,9 @@ internal sealed partial class RecipeSearchParameters(TimeProvider time, RankingW
         return parameters;
     }
 
-    /// <summary>The concepts a query names, for the concept lane; a <c>-word</c> names nothing to look for.</summary>
+    /// <summary>
+    /// The concepts a query names, for the concept lane; a <c>-word</c> names nothing to look for.
+    /// </summary>
     private static string[] ConceptsAskedFor(string? query) =>
         query is null
             ? []
@@ -103,7 +103,9 @@ internal sealed partial class RecipeSearchParameters(TimeProvider time, RankingW
     [GeneratedRegex(@"(?<!\S)-\S+")]
     private static partial Regex Excluded();
 
-    /// <summary>The day being ranked for, not the instant, so a cursor can resume the same order.</summary>
+    /// <summary>
+    /// The day being ranked for, not the instant, so a cursor can resume the same order.
+    /// </summary>
     private DateTimeOffset Today()
     {
         var now = time.GetUtcNow();

@@ -5,11 +5,7 @@ namespace Domain.Searches;
 /// <summary>Failures from saved searches.</summary>
 public static class SavedSearchErrors
 {
-    /// <summary>No such saved search, or none this person is allowed to see.</summary>
-    /// <remarks>
-    /// One error for both, so a search belonging to another household is
-    /// indistinguishable from one that never existed.
-    /// </remarks>
+    /// <summary>No such saved search, or none this person may see: one error, so another household's search looks like none.</summary>
     /// <param name="searchId">The one that was asked for.</param>
     public static Error NotFound(Guid searchId) => new(
         "searches.not_found",
@@ -22,14 +18,7 @@ public static class SavedSearchErrors
         "A saved search needs a name, and it must be shorter than that.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// Two searches in one kitchen cannot share a name.
-    /// </summary>
-    /// <remarks>
-    /// A conflict rather than a validation failure: the request is well formed
-    /// and would be fine in any other household. It is what is already there
-    /// that refuses it.
-    /// </remarks>
+    /// <summary>Two searches in one kitchen cannot share a name. A conflict, not validation: what is already there refuses it.</summary>
     public static readonly Error NameTaken = new(
         "searches.name_taken",
         "This household already has a saved search with that name.",

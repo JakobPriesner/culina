@@ -23,10 +23,7 @@ public sealed record UpdateAssistanceSettingsCommand(
 
 /// <summary>One provider to connect, or to keep connected.</summary>
 /// <param name="Provider">Which provider.</param>
-/// <param name="ApiKey">
-/// A new key, empty to clear it, or null to keep it — which is only possible
-/// while the address stays what it is.
-/// </param>
+/// <param name="ApiKey">A new key, empty to clear it, or null to keep it (only while the address is unchanged).</param>
 /// <param name="BaseUrl">Where it is, or empty for its own address.</param>
 public sealed record ConnectionEdit(string Provider, string? ApiKey, string BaseUrl);
 
@@ -44,14 +41,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
     ISecretProtector protector)
     : ICommandHandler<UpdateAssistanceSettingsCommand, Response>
 {
-    /// <summary>
-    /// More than anybody spends on recipes in a month, by a wide margin.
-    /// </summary>
-    /// <remarks>
-    /// Not a business rule — a typo guard. A budget entered as 100000 instead
-    /// of 100.00 is a budget that will never stop anything, and the person who
-    /// typed it would have no reason to look at it again.
-    /// </remarks>
+    /// <summary>A typo guard (100000 for 100.00), not a business rule.</summary>
     private const decimal LargestReasonableBudget = 10_000m;
 
     public async Task<Result<Response>> Handle(
@@ -72,14 +62,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Everything that can be wrong with the form, as field errors.
-    /// </summary>
-    /// <remarks>
-    /// Field errors rather than one refusal, because this is a screen with
-    /// three providers and four jobs on it and "that is not valid" would send
-    /// somebody looking through all of them.
-    /// </remarks>
+    /// <summary>Everything wrong with the form, as field errors.</summary>
     private Result Check(UpdateAssistanceSettingsCommand command)
     {
         List<Result> problems =
@@ -115,10 +98,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
 
         var address = connection.BaseUrl.Trim();
 
-        // Whether a blank row is a mistake is not this row's question — the
-        // screen sends every provider it knows, every time, so most of them are
-        // blank on most saves. What a blank row cannot do is be pointed at,
-        // which is what CheckUse is for.
+        // A blank row is fine: the screen sends every provider on every save. CheckUse refuses pointing at one.
         if (address.Length > 0 && !IsUsableAddress(address))
         {
             return Field($"{kind.Code}.baseUrl", AssistanceErrors.InvalidBaseUrl);
@@ -129,28 +109,13 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
             : Result.Success();
     }
 
-    /// <summary>
-    /// Whether a stored key would be kept for an address it was not saved for.
-    /// </summary>
-    /// <remarks>
-    /// The key goes wherever the address says, and listing the models asks that
-    /// address straight away. Kept across a change of address, it would go to a
-    /// server of the choosing of whoever changed it — so a new address needs
-    /// the key typed again.
-    /// </remarks>
+    /// <summary>Whether a stored key would be kept for a new address; it would be sent there, so it must be retyped.</summary>
     private bool KeepsKeyForAnotherAddress(AssistantKind kind, string? apiKey, string address) =>
         apiKey is null
         && settings.ConnectionFor(kind) is { HasApiKey: true } stored
         && stored.BaseUrl != address;
 
-    /// <summary>
-    /// Whether a job points at something that could ever do it.
-    /// </summary>
-    /// <remarks>
-    /// "Ever" is the distinction. Drawing pointed at a provider that does not
-    /// draw is permanently wrong and is refused; drawing pointed at a provider
-    /// nobody has pasted a key into yet is merely unfinished, and is not.
-    /// </remarks>
+    /// <summary>Whether a job points at a provider that could ever do it (connection state is not checked).</summary>
     private static Result CheckUse(UseEdit use)
     {
         if (Capability.Parse(use.Capability) is not { } capability)
@@ -163,7 +128,6 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
             return Field($"{capability.Code}.model", AssistanceErrors.InvalidModel);
         }
 
-        // An unassigned job is fine; it simply is not offered.
         if (use.Provider.Length is 0)
         {
             return Result.Success();
@@ -179,24 +143,12 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
             return Field($"{capability.Code}.provider", AssistanceErrors.DrawingNotSupported);
         }
 
-        // Deliberately nothing about whether that provider is actually
-        // connected yet. This screen refuses what is wrong, not what is
-        // unfinished: a job pointed at a provider whose key has not been pasted
-        // in is simply a job that is not offered, which `Allows` already knows.
-        // Refusing it would mean clearing a key required unassigning every job
-        // first, on a form where both arrive in the same save.
+        // Nothing about whether the provider is connected yet: that is unfinished, not wrong, and `Allows` handles it.
+        // Refusing it would force unassigning every job before clearing a key.
         return Result.Success();
     }
 
-    /// <summary>
-    /// Whether an override address is one this could actually call.
-    /// </summary>
-    /// <remarks>
-    /// Http and https only, and absolute. This is an administrator typing, not
-    /// a user, so the private-address rules that guard the import path do not
-    /// apply — pointing at a model on the same machine is the ordinary reason
-    /// to set this at all.
-    /// </remarks>
+    /// <summary>Whether an override address is absolute http(s); the import path's private-address rules do not apply to administrators.</summary>
     private static bool IsUsableAddress(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var address)
         && (address.Scheme == Uri.UriSchemeHttp || address.Scheme == Uri.UriSchemeHttps);
@@ -210,15 +162,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
     private static Result Field(string field, Error error) =>
         new FieldError(field, error.Code, error.Description);
 
-    /// <summary>
-    /// Builds the settings to store, encrypting new keys on the way.
-    /// </summary>
-    /// <remarks>
-    /// A connection with nothing in it is dropped rather than stored empty, so
-    /// the list holds what somebody actually set up. Switching the assistant on
-    /// before anything is connected is quietly corrected rather than refused,
-    /// because the form lets somebody fill the key box last.
-    /// </remarks>
+    /// <summary>Builds the settings to store, encrypting new keys; drops empty connections and switches the assistant off if none is connected.</summary>
     private Result<AssistanceSettings> Prepare(UpdateAssistanceSettingsCommand command)
     {
         var connections = command.Connections
@@ -271,8 +215,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
     {
         var saved = await store.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
 
-        // Persist first, then mutate. A failed save must never leave the
-        // process talking to a provider the database has not heard of.
+        // Persist first, then mutate: a failed save must not change the running process.
         return saved.Map(() =>
         {
             settings.CopyFrom(updated);

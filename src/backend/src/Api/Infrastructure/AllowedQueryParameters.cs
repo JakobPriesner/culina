@@ -1,22 +1,16 @@
 namespace Api.Infrastructure;
 
-/// <summary>
-/// The query parameters one endpoint accepts, attached as endpoint metadata.
-/// </summary>
+/// <summary>The query parameters one endpoint accepts, attached as endpoint metadata.</summary>
 /// <remarks>
-/// Declared once and used twice: the guard middleware rejects anything not
-/// listed here, and the OpenAPI document describes exactly these — so the
-/// generated client can only send what the server will accept.
+/// Declared once, used twice: the guard rejects anything unlisted and OpenAPI describes exactly
+/// these.
 /// </remarks>
 /// <param name="single">Parameters that may appear at most once.</param>
 /// <param name="repeatable">
-/// Parameters that may appear several times, because repeating them means
-/// something — <c>?tag=vegan&amp;tag=quick</c> asks for both.
+/// Parameters that may repeat meaningfully (<c>?tag=vegan&amp;tag=quick</c> asks for both).
 /// </param>
 /// <param name="integers">
-/// Which of them are whole numbers. A query string is text either way; this
-/// only tells the contract, so a client sends <c>20</c> rather than
-/// <c>"20"</c>.
+/// Which are whole numbers; only tells the contract, so a client sends <c>20</c> not <c>"20"</c>.
 /// </param>
 internal sealed class AllowedQueryParameters(
     IReadOnlyCollection<string> single,

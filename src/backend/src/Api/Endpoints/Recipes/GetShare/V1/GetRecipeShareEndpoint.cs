@@ -7,9 +7,8 @@ namespace Api.Endpoints.Recipes.GetShare.V1;
 
 /// <summary>Reads the link a recipe is published behind.</summary>
 /// <remarks>
-/// A singleton sub-resource, because a recipe has at most one link and the
-/// database says so. 404 is the ordinary answer and means "not shared" — which
-/// is what the sheet renders as the off state.
+/// A singleton sub-resource: a recipe has at most one link. 404 is the ordinary answer and means
+/// "not shared", which the sheet renders as off.
 /// </remarks>
 internal sealed class GetRecipeShareEndpoint : IEndpoint
 {

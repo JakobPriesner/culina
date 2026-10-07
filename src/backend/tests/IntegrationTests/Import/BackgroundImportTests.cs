@@ -11,22 +11,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace IntegrationTests.Import;
 
 /// <summary>
-/// An import, from the request that asks for it to the last event of the
-/// stream, against a real database and a real Tandoor-shaped server.
+/// An import, from the request that asks for it to the last event of the stream, against a real
+/// database and a real Tandoor-shaped server.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The only test that exercises the thing the feature actually is: a request
-/// that returns before the work does, a background worker that brings the
-/// recipes over several at a time, and a stream that reports each one. None of
-/// that is provable from a handler in isolation — the interesting failures are
-/// in the seams between them.
-/// </para>
-/// <para>
-/// The Tandoor on the other end is a few hundred lines of nothing: it answers
-/// the two endpoints the reader asks for, sleeps for a moment on each recipe so
-/// that "in parallel" is observable, and fails one of them on purpose.
-/// </para>
+/// The only test of the feature as it is: a request returning before the work, a worker importing
+/// several recipes at a time, a stream reporting each. The fake Tandoor sleeps per recipe so "in
+/// parallel" is observable, and fails one on purpose.
 /// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class BackgroundImportTests(PostgresFixture postgres)
@@ -45,13 +36,11 @@ public class BackgroundImportTests(PostgresFixture postgres)
     [Fact]
     public async Task Import_ShouldBringTheRecipesOver_AndReportEachOneOnTheStream()
     {
-        // Arrange
         using var tandoor = FakeTandoor.Start(recipes: 4, broken: Broken);
         using var factory = Factory();
         using var client = await SignedInAsync(factory);
         var sourceId = await ConnectAsync(client, tandoor);
 
-        // Act
         var started = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = Four },
@@ -60,9 +49,7 @@ public class BackgroundImportTests(PostgresFixture postgres)
         var importId = started.Json!.Value.GetProperty("importId").GetGuid();
         var events = await WatchAsync(client, sourceId, importId);
 
-        // Assert
-        // Accepted, not done: the answer comes back with a shelf and an id long
-        // before the recipes do.
+        // Accepted, not done: the answer comes back with a shelf and an id long before the recipes.
         Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
         Assert.Equal(4, started.Json!.Value.GetProperty("total").GetInt32());
 
@@ -85,14 +72,14 @@ public class BackgroundImportTests(PostgresFixture postgres)
         // One recipe that could not be read is one line, not the end of the run.
         Assert.Equal("failed", outcomes[Broken.ToString(CultureInfo.InvariantCulture)]);
 
-        // And the three that worked are on the shelf the request named, which
-        // is the whole of "what just happened, and how do I undo it".
+        // The three that worked are on the shelf the request named: what just happened, and how to
+        // undo it.
         var cookbookId = started.Json!.Value.GetProperty("cookbookId").GetGuid();
         var shelf = await client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
 
         Assert.Equal(3, shelf.Json!.Value.GetProperty("recipeCount").GetInt32());
 
-        // And an operator who reads nothing but the log sees how it went.
+        // An operator who reads only the log sees how it went.
         var finished = Assert.Single(factory.Logs.Lines, line => line.EventId == 1213);
         Assert.Equal(importId.ToString(), finished["ImportId"]);
         Assert.Equal("3", finished["Imported"]);
@@ -106,13 +93,11 @@ public class BackgroundImportTests(PostgresFixture postgres)
     [Fact]
     public async Task Import_ShouldAccountForEachRecipe_WhenTheLogIsTurnedUpToDebug()
     {
-        // Arrange
         using var tandoor = FakeTandoor.Start(recipes: 4, broken: Broken);
         using var factory = Factory(logLevel: "Debug");
         using var client = await SignedInAsync(factory);
         var sourceId = await ConnectAsync(client, tandoor);
 
-        // Act
         var started = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = Four },
@@ -120,9 +105,8 @@ public class BackgroundImportTests(PostgresFixture postgres)
 
         await WatchAsync(client, sourceId, started.Json!.Value.GetProperty("importId").GetGuid());
 
-        // Assert
-        // Raising the level is the one thing an operator can do without a
-        // debugger, so it has to show where each recipe went.
+        // Raising the level is all an operator can do without a debugger, so it must show where
+        // each recipe went.
         Assert.Single(factory.Logs.Lines, line => line.EventId == 1214);
 
         var recipes = factory.Logs.Lines.Where(line => line.EventId == 1215).ToList();
@@ -134,13 +118,11 @@ public class BackgroundImportTests(PostgresFixture postgres)
     [Fact]
     public async Task Import_ShouldFetchSeveralRecipesAtOnce_RatherThanOneAfterAnother()
     {
-        // Arrange
         using var tandoor = FakeTandoor.Start(recipes: 4, broken: null, dwell: TimeSpan.FromMilliseconds(200));
         using var factory = Factory();
         using var client = await SignedInAsync(factory);
         var sourceId = await ConnectAsync(client, tandoor);
 
-        // Act
         var started = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = Four },
@@ -148,10 +130,8 @@ public class BackgroundImportTests(PostgresFixture postgres)
 
         await WatchAsync(client, sourceId, started.Json!.Value.GetProperty("importId").GetGuid());
 
-        // Assert
-        // The whole reason the import moved to the server: four recipes are
-        // four round trips to somebody else's instance, and waiting for each
-        // one before starting the next is where the ten minutes went.
+        // The reason the import moved to the server: waiting for each of four round trips to
+        // another instance before the next is where the ten minutes went.
         Assert.True(
             tandoor.MostAtOnce > 1,
             $"Recipes were fetched one at a time: at most {tandoor.MostAtOnce} was in flight.");
@@ -160,13 +140,11 @@ public class BackgroundImportTests(PostgresFixture postgres)
     [Fact]
     public async Task Import_ShouldBeANoOpTheSecondTime_SoAnInterruptedOneCanBeAskedForAgain()
     {
-        // Arrange
         using var tandoor = FakeTandoor.Start(recipes: 2, broken: null);
         using var factory = Factory();
         using var client = await SignedInAsync(factory);
         var sourceId = await ConnectAsync(client, tandoor);
 
-        // Act
         var first = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = Two },
@@ -182,9 +160,8 @@ public class BackgroundImportTests(PostgresFixture postgres)
         var events = await WatchAsync(
             client, sourceId, second.Json!.Value.GetProperty("importId").GetGuid());
 
-        // Assert
-        // Not an error and not a second copy: this is how somebody catches up
-        // on what is new, and how an import that was interrupted is finished.
+        // Neither an error nor a second copy: this is how somebody catches up on what is new, and
+        // how an interrupted import is finished.
         var outcomes = events
             .Where(one => one.GetProperty("recipe").ValueKind != JsonValueKind.Null)
             .Select(one => one.GetProperty("recipe").GetProperty("outcome").GetString())
@@ -200,7 +177,6 @@ public class BackgroundImportTests(PostgresFixture postgres)
     [Fact]
     public async Task Import_ShouldHoldBackALookalike_AndBringItOverWhenAskedToAnyway()
     {
-        // Arrange
         using var tandoor = FakeTandoor.Start(recipes: 2, broken: null);
         using var factory = Factory();
         using var client = await SignedInAsync(factory);
@@ -211,7 +187,6 @@ public class BackgroundImportTests(PostgresFixture postgres)
         var typed = await client.PostAsync("/api/v1/recipes", new { householdId, title = "Recipe 2" }, Token);
         var mine = typed.Json!.Value.GetProperty("recipeId").GetGuid();
 
-        // Act
         var first = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = Two },
@@ -225,7 +200,6 @@ public class BackgroundImportTests(PostgresFixture postgres)
             Token);
         var brought = Outcomes(await WatchAsync(client, sourceId, anyway.Json!.Value.GetProperty("importId").GetGuid()));
 
-        // Assert
         Assert.Equal("imported", held["1"].GetProperty("outcome").GetString());
 
         // Not written, not dropped: held, with what it looks like.
@@ -233,7 +207,6 @@ public class BackgroundImportTests(PostgresFixture postgres)
         Assert.Equal(mine, held["2"].GetProperty("recipeId").GetGuid());
         Assert.Equal("Recipe 2", held["2"].GetProperty("looksLike").GetProperty("title").GetString());
 
-        // Then brought over after all, onto the shelf the rest landed on.
         Assert.Equal("imported", brought["2"].GetProperty("outcome").GetString());
         Assert.Equal(cookbookId, anyway.Json!.Value.GetProperty("cookbookId").GetGuid());
 
@@ -247,7 +220,6 @@ public class BackgroundImportTests(PostgresFixture postgres)
     [Fact]
     public async Task Import_ShouldSayNotFound_WhenAskedToLandOnAnotherKitchensShelf()
     {
-        // Arrange
         using var tandoor = FakeTandoor.Start(recipes: 2, broken: null);
         using var factory = Factory();
         using var client = await SignedInAsync(factory);
@@ -273,13 +245,11 @@ public class BackgroundImportTests(PostgresFixture postgres)
             new { householdId = kitchen.Json!.Value.GetProperty("householdId").GetGuid(), name = "Graces Sonntage" },
             Token);
 
-        // Act
         var started = await client.PostAsync(
             $"/api/v1/recipe-sources/{sourceId}/imports",
             new { externalIds = Two, cookbookId = theirs.Json!.Value.GetProperty("cookbookId").GetGuid() },
             Token);
 
-        // Assert
         // Never somebody else's shelf, and never a hint that it exists.
         Assert.Equal(HttpStatusCode.NotFound, started.StatusCode);
         Assert.Equal("cookbooks.not_found", started.ProblemCode);
@@ -292,13 +262,9 @@ public class BackgroundImportTests(PostgresFixture postgres)
             .ToDictionary(recipe => recipe.GetProperty("externalId").GetString()!);
 
     /// <summary>
-    /// Reads the stream to its end.
+    /// Reads the stream to its end: the whole body at once, which works as the stream is finite; a
+    /// browser reads event by event.
     /// </summary>
-    /// <remarks>
-    /// The whole body at once, which works because the stream is finite: it
-    /// ends with the run. A browser reads it event by event, which is the
-    /// difference that matters to a person and not to an assertion.
-    /// </remarks>
     private static async Task<List<JsonElement>> WatchAsync(
         ApiClient client,
         Guid sourceId,
@@ -325,9 +291,8 @@ public class BackgroundImportTests(PostgresFixture postgres)
             ["RateLimits:SourceRequestsPerHour"] = "10000",
             ["Logging:LogLevel:Default"] = logLevel
         },
-        // The fake Tandoor is on loopback, which no setting lets a deployment
-        // reach — not even the one that allows private addresses — so the
-        // client that talks to it is swapped for one that may.
+        // The fake Tandoor is on loopback, which no setting lets a deployment reach (not even
+        // allow-private), so its client is swapped for one that may.
         replace: services => services.AddSingleton(provider =>
             new SourceHttp(provider.GetRequiredService<StorageSettings>(), admits: _ => true)));
 
@@ -377,13 +342,10 @@ public class BackgroundImportTests(PostgresFixture postgres)
     }
 }
 
-/// <summary>
-/// Enough of Tandoor to be read: a list, a detail, and a way to be slow.
-/// </summary>
+/// <summary>Enough of Tandoor to be read: a list, a detail, and a way to be slow.</summary>
 /// <remarks>
-/// A real socket rather than a stubbed handler, because what is being proved
-/// includes that the server opens several connections at the same time — which
-/// a fake at the wrong layer would answer by construction.
+/// A real socket, not a stubbed handler: what is proved includes the server opening several
+/// connections at once, which a fake at the wrong layer would answer by construction.
 /// </remarks>
 internal sealed class FakeTandoor : IDisposable
 {
@@ -399,7 +361,6 @@ internal sealed class FakeTandoor : IDisposable
     /// <summary>The most recipe fetches that were in flight at the same time.</summary>
     public int MostAtOnce { get; private set; }
 
-    /// <summary>Where it is listening.</summary>
     public string Address { get; private set; } = string.Empty;
 
     public static FakeTandoor Start(int recipes, int? broken, TimeSpan dwell = default)

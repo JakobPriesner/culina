@@ -9,14 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace IntegrationTests.Households;
 
 /// <summary>
-/// What one household can see of another, and what a session keeps after it
-/// should have stopped.
+/// What one household can see of another, and what a session keeps after it should have stopped.
 /// </summary>
 /// <remarks>
-/// These are the boundaries the whole product rests on: a household is the
-/// kitchen you share, and everything else is somebody else's. Documentation and
-/// a dependency scanner cannot show that the boundary holds; two real accounts
-/// on a real host can.
+/// The boundaries the whole product rests on; two real accounts on a real host can show they hold,
+/// which documentation and a dependency scanner cannot.
 /// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class BoundaryTests(PostgresFixture postgres)
@@ -28,17 +25,14 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Stranger_ShouldSeeNothingOfAnotherHousehold_EvenWithItsExactIds()
     {
-        // Arrange
-        // Not a guessed id: the real one, which is the case a test with random
-        // GUIDs never reaches. Anything that answers differently for a real id
-        // than for an invented one is a way to enumerate what exists.
+        // The real id, not a guessed one: anything answering differently for a real id than an
+        // invented one is a way to enumerate what exists.
         var (owner, stranger) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var strangerClient = stranger;
 
         var (householdId, recipeId, entryId) = await PhotographedRecipeAsync(owner);
 
-        // Act
         var reads = new[]
         {
             await stranger.GetAsync($"/api/v1/households/{householdId}", Token),
@@ -56,7 +50,6 @@ public class BoundaryTests(PostgresFixture postgres)
             await stranger.GetAsync($"/api/v1/recipes?householdId={householdId}", Token)
         };
 
-        // Assert
         // 404 rather than 403 throughout: a stranger learns nothing about which
         // households or recipes exist.
         Assert.All(reads, read => Assert.Equal(HttpStatusCode.NotFound, read.StatusCode));
@@ -65,7 +58,6 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Stranger_ShouldChangeNothingInAnotherHousehold_EvenWithItsExactIds()
     {
-        // Arrange
         var (owner, stranger) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var strangerClient = stranger;
@@ -73,7 +65,6 @@ public class BoundaryTests(PostgresFixture postgres)
         var householdId = await FirstHouseholdIdAsync(owner);
         var recipeId = await RecipeAsync(owner, householdId);
 
-        // Act
         var writes = new[]
         {
             await stranger.PostAsync(
@@ -94,14 +85,12 @@ public class BoundaryTests(PostgresFixture postgres)
                 Token)
         };
 
-        // Assert
         Assert.All(
             writes,
             write => Assert.True(
                 write.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden,
                 $"a stranger got {(int)write.StatusCode} where they should have got nothing"));
 
-        // And the recipe is still there, which is the part that matters.
         var stillThere = await owner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
         Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
@@ -110,10 +99,9 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Stranger_ShouldChangeNothingInAnotherHouseholdsRecipes_EvenWithTheirExactIdsAndVersion()
     {
-        // Arrange
-        // The owner's own ETag, entry and photo, and an archive that would
-        // restore cleanly anywhere the stranger is allowed: nothing is refused
-        // for a malformed request, only for being somebody else's.
+        // The owner's own ETag, entry and photo, and an archive that restores cleanly where the
+        // stranger is allowed: nothing is refused for being malformed, only for being somebody
+        // else's.
         var (owner, stranger) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var strangerClient = stranger;
@@ -124,7 +112,6 @@ public class BoundaryTests(PostgresFixture postgres)
         await RecipeAsync(stranger, strangersKitchen);
         var archive = (await stranger.GetAsync($"/api/v1/households/{strangersKitchen}/archive", Token)).Body;
 
-        // Act
         var writes = new[]
         {
             await PutRecipeAsync(stranger, recipeId, before.ETag!),
@@ -138,10 +125,8 @@ public class BoundaryTests(PostgresFixture postgres)
             await stranger.SendAsync(ArchiveUpload(householdId, archive), Token)
         };
 
-        // Assert
         Assert.All(writes, write => Assert.Equal(HttpStatusCode.NotFound, write.StatusCode));
 
-        // And nothing changed, which is the part that matters.
         var after = await owner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
         var library = await owner.GetAsync($"/api/v1/recipes?householdId={householdId}", Token);
         var photo = await owner.GetAsync(CookPhoto(recipeId, entryId), Token);
@@ -157,10 +142,8 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Stranger_ShouldLearnNothingAboutWhoIsInAnotherHousehold_OrWhoInheritsIt()
     {
-        // Arrange
-        // The real owner and the real heir next to invented ids: an answer
-        // that differs between them says who is in the household, and that
-        // it exists at all.
+        // The real owner and heir beside invented ids: an answer that differs says who is in the
+        // household, and that it exists.
         var (owner, stranger) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var strangerClient = stranger;
@@ -171,7 +154,6 @@ public class BoundaryTests(PostgresFixture postgres)
             .Json!.Value.GetProperty("householdId").GetGuid();
         var invented = Guid.NewGuid();
 
-        // Act
         var answers = new[]
         {
             await stranger.DeleteAsync($"/api/v1/households/{householdId}/members/{ownerId}", Token),
@@ -182,7 +164,6 @@ public class BoundaryTests(PostgresFixture postgres)
             await stranger.DeleteAsync($"/api/v1/households/{householdId}/heirs/{invented}", Token)
         };
 
-        // Assert
         Assert.All(answers, answer =>
         {
             Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
@@ -190,7 +171,6 @@ public class BoundaryTests(PostgresFixture postgres)
         });
         Assert.Single(answers.Select(answer => answer.Json!.Value.GetProperty("detail").GetString()).Distinct());
 
-        // And nothing changed, which is the part that matters.
         var members = await owner.GetAsync($"/api/v1/households/{householdId}/members", Token);
         var heirs = await owner.GetAsync($"/api/v1/households/{householdId}/heirs", Token);
         Assert.Equal("owner", members.Json!.Value.GetProperty("items")[0].GetProperty("role").GetString());
@@ -200,12 +180,9 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldAnswerTheSame_ForAStrangerAndForNothingAtAll()
     {
-        // Arrange
-        // Deleting is idempotent: the answer says the recipe is not there any
-        // more, which for a caller who could never see it was already true. The
-        // subtlety is that the two answers must be the same — a 404 for a
-        // recipe in somebody else's household and a 204 for one that never
-        // existed would be a way to ask which recipes exist.
+        // Deleting is idempotent: "not there any more" was already true for a caller who could
+        // never see it. The two answers must match: a 404 for another household's recipe and a 204
+        // for one that never existed would reveal which exist.
         var (owner, stranger) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var strangerClient = stranger;
@@ -213,16 +190,13 @@ public class BoundaryTests(PostgresFixture postgres)
         var householdId = await FirstHouseholdIdAsync(owner);
         var recipeId = await RecipeAsync(owner, householdId);
 
-        // Act
-        // A version a stranger could guess, so the answer is about access and
-        // not about a missing precondition.
+        // A version a stranger could guess, so the answer is about access, not a missing
+        // precondition.
         var theirs = await stranger.DeleteAsync($"/api/v1/recipes/{recipeId}", "\"v1\"", Token);
         var imagined = await stranger.DeleteAsync($"/api/v1/recipes/{Guid.NewGuid()}", "\"v1\"", Token);
 
-        // Assert
         Assert.Equal(imagined.StatusCode, theirs.StatusCode);
 
-        // And nothing was deleted, which is the part that matters.
         var stillThere = await owner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
         Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
@@ -231,10 +205,8 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Member_ShouldLoseAccess_TheMomentTheyAreRemoved()
     {
-        // Arrange
-        // A live session is not a licence. Membership is read on every request,
-        // and somebody shown out of a household must stop seeing its recipes
-        // without having to be signed out first.
+        // A live session is not a licence: membership is read on every request, so somebody shown
+        // out of a household stops seeing its recipes without signing out.
         var (owner, joiner) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var joinerClient = joiner;
@@ -253,7 +225,6 @@ public class BoundaryTests(PostgresFixture postgres)
 
         var whileInside = await joiner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
-        // Act
         var joinerId = (await joiner.GetAsync("/api/v1/users/me", Token))
             .Json!.Value.GetProperty("userId").GetGuid();
 
@@ -263,7 +234,6 @@ public class BoundaryTests(PostgresFixture postgres)
 
         var afterwards = await joiner.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, whileInside.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, afterwards.StatusCode);
     }
@@ -271,10 +241,8 @@ public class BoundaryTests(PostgresFixture postgres)
     [Fact]
     public async Task Session_ShouldStopWorking_TheMomentItIsRevokedFromAnotherDevice()
     {
-        // Arrange
-        // Signing out the tablet left in a holiday flat is the whole reason the
-        // devices list exists. A revoked session that still works until it
-        // expires is a devices list that lies.
+        // Signing out the tablet left in a holiday flat is why the devices list exists; a revoked
+        // session that works until it expires is a list that lies.
         await postgres.ResetAsync(Token);
 
         using var laptop = postgres.Api.NewApiClient();
@@ -298,18 +266,15 @@ public class BoundaryTests(PostgresFixture postgres)
             .EnumerateArray()
             .First(session => !session.GetProperty("isCurrent").GetBoolean());
 
-        // Act
         var revoked = await laptop.DeleteAsync(
             $"/api/v1/sessions/{theTablet.GetProperty("sessionId").GetGuid()}",
             Token);
 
         var afterwards = await tablet.GetAsync("/api/v1/users/me", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, revoked.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, afterwards.StatusCode);
 
-        // And the laptop that did the revoking is untouched.
         var laptopStill = await laptop.GetAsync("/api/v1/users/me", Token);
 
         Assert.Equal(HttpStatusCode.OK, laptopStill.StatusCode);
@@ -326,8 +291,8 @@ public class BoundaryTests(PostgresFixture postgres)
             Token)).Json!.Value.GetProperty("recipeId").GetGuid();
 
     /// <summary>
-    /// The owner's recipe with a picture, and one time they cooked it with a
-    /// photo of that: every id a stranger could aim at, all of them real.
+    /// The owner's recipe with a picture, and one time they cooked it with a photo: every id a
+    /// stranger could aim at, all of them real.
     /// </summary>
     private static async Task<(Guid HouseholdId, Guid RecipeId, Guid EntryId)> PhotographedRecipeAsync(ApiClient owner)
     {
@@ -366,7 +331,9 @@ public class BoundaryTests(PostgresFixture postgres)
         return new HttpRequestMessage(method, path) { Content = new MultipartFormDataContent { { file, "file", name } } };
     }
 
-    /// <summary>Saves the whole recipe under a new title, as the editor would, with the version given.</summary>
+    /// <summary>
+    /// Saves the whole recipe under a new title, as the editor would, with the version given.
+    /// </summary>
     private static Task<ApiResponse> PutRecipeAsync(ApiClient client, Guid recipeId, string etag)
     {
         var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")

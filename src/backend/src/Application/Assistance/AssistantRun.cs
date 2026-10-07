@@ -11,34 +11,10 @@ namespace Application.Assistance;
 /// One assisted call: allowed, resolved, afforded, made, and counted.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Every capability goes through here, which is the point. The checks before a
-/// model is called are the same every time — is the assistant on, is this job
-/// switched on, was a provider chosen for it, is that provider connected, can
-/// it do this job, and is there any budget left — and a capability that forgot
-/// one of them would be a capability that spends money it was told not to.
-/// </para>
-/// <para>
-/// Resolving lives here too, and that is what lets one instance use three
-/// providers at once. The settings say <em>which</em> provider does this job;
-/// this turns that into a decrypted key, an address and a model name, and hands
-/// the adapter something it can simply call. Adapters therefore know nothing
-/// about settings, encryption, or defaults.
-/// </para>
-/// <para>
-/// Not a decorator over <see cref="IAssistant"/>. A cost check hidden inside
-/// something whose name says nothing about money is a cost check nobody
-/// remembers is there; a handler that writes <c>run.ComposeAsync</c> is a
-/// handler whose reader can see what it costs.
-/// </para>
+/// Every capability goes through here so each runs the same checks and none can spend money it was
+/// told not to. Resolving (decrypted key, address, model) lives here too, so adapters know nothing
+/// about settings or encryption.
 /// </remarks>
-/// <param name="settings">The live instance settings.</param>
-/// <param name="assistants">The adapter for each provider.</param>
-/// <param name="protector">Decrypts a stored key.</param>
-/// <param name="ledger">Decides whether there is budget, and records what was used.</param>
-/// <param name="prices">Works out what a call came to.</param>
-/// <param name="time">The injected clock, for which month this is, and how long a call took.</param>
-/// <param name="logger">Records each call as it is settled.</param>
 public sealed partial class AssistantRun(
     AssistanceSettings settings,
     IAssistants assistants,
@@ -48,33 +24,13 @@ public sealed partial class AssistantRun(
     TimeProvider time,
     ILogger<AssistantRun> logger)
 {
-    /// <summary>
-    /// What one composition might cost, reserved before the real number exists.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// A guess, and deliberately a generous one: its only job is to stop two
-    /// simultaneous requests both fitting into the last of the money, and it is
-    /// replaced by the real figure a few seconds later. Erring high means a
-    /// budget stops slightly early under load, which is the safe direction.
-    /// </para>
-    /// <para>
-    /// Sized to the ceiling every ask carries: <see cref="Composition.MostOutputTokens"/>
-    /// at the dearest output price the price table lists, ten dollars a
-    /// million, is eight cents, and the rest covers a long paste or a few
-    /// photographs going in. A call can still come in a little over, never
-    /// many times over.
-    /// </para>
-    /// </remarks>
+    // Reserved before the real cost is known, so two simultaneous requests cannot both fit into the
+    // last of the budget. Deliberately generous: ~8 cents of output at the dearest price plus input.
     private const decimal ComposeEstimate = 0.10m;
 
-    /// <summary>What one picture might cost. Dearer, and more variable.</summary>
     private const decimal DrawEstimate = 0.20m;
 
     /// <summary>Asks for a recipe, if everything about doing so is in order.</summary>
-    /// <param name="who">Who is asking, and for which kitchen.</param>
-    /// <param name="request">What to do, and what to do it to.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
     public Task<Result<DraftedRecipe>> ComposeAsync(
         Asker who,
         Composition request,
@@ -97,30 +53,10 @@ public sealed partial class AssistantRun(
             cancellationToken);
     }
 
-    /// <summary>
-    /// Asks for a recipe and hands it over as it is written, if everything
-    /// about doing so is in order.
-    /// </summary>
-    /// <param name="who">Who is asking, and for which kitchen.</param>
-    /// <param name="request">What to do, and what to do it to.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <summary>Asks for a recipe and hands it over as it is written.</summary>
     /// <remarks>
-    /// <para>
-    /// A result wrapping a stream rather than a stream that can fail, and the
-    /// difference is what a caller can still say. Every check that decides
-    /// whether this call may happen at all — switched on, connected, afforded —
-    /// runs before anything is returned, so "no assistant here" and "the budget
-    /// is spent" are still ordinary failures with ordinary status codes. Once
-    /// the stream exists the response has already begun, and nothing after that
-    /// can be a 429.
-    /// </para>
-    /// <para>
-    /// The reservation is taken here and settled when the stream closes,
-    /// however it closes. A person who shuts the page halfway through settles
-    /// it too — an unsettled reservation holds its estimate against the budget
-    /// until the month turns, and a page that was closed is the ordinary way a
-    /// stream ends.
-    /// </para>
+    /// All checks run before the stream is returned, so "not configured" and "budget spent" stay
+    /// ordinary failures; the reservation is settled when the stream closes, however it closes.
     /// </remarks>
     public async Task<Result<IAsyncEnumerable<Composing>>> ComposeStreamAsync(
         Asker who,
@@ -136,9 +72,6 @@ public sealed partial class AssistantRun(
     }
 
     /// <summary>Asks for a picture, if everything about doing so is in order.</summary>
-    /// <param name="who">Who is asking, and for which kitchen.</param>
-    /// <param name="request">What to draw.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
     public Task<Result<Drawn>> DrawAsync(
         Asker who,
         Drawing request,
@@ -161,23 +94,9 @@ public sealed partial class AssistantRun(
             cancellationToken);
     }
 
-    /// <summary>
-    /// Checks and affords a picture now, so that it can be asked for later.
-    /// </summary>
-    /// <param name="who">Who is asking, and for which kitchen.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
+    /// <summary>Checks and affords a picture now, so it can be asked for later.</summary>
     /// <remarks>
-    /// <para>
-    /// Two phases for the same reason composing has them: drawing is streamed,
-    /// and a caller that opened the stream first would have already sent a 200
-    /// by the time it learned there is no assistant here or no budget left.
-    /// Those are not events, they are answers — a 404 and a 429, the second of
-    /// which carries how long to wait.
-    /// </para>
-    /// <para>
-    /// The money is set aside here and settled by the call below, which is what
-    /// stops two simultaneous requests both fitting into the last of it.
-    /// </para>
+    /// Drawing is streamed, so failures like 404 or 429 must be known before the 200 is sent.
     /// </remarks>
     public async Task<Result<ReservedDrawing>> ReserveDrawingAsync(
         Asker who,
@@ -189,14 +108,7 @@ public sealed partial class AssistantRun(
         return prepared.Map(ready => new ReservedDrawing(this, ready));
     }
 
-    /// <summary>
-    /// A provider already checked and afforded, still to be asked for a picture.
-    /// </summary>
-    /// <remarks>
-    /// Its own type rather than a tuple, because what a caller may do with it is
-    /// exactly one thing and the reservation behind it must be settled however
-    /// that goes.
-    /// </remarks>
+    /// <summary>A provider already checked and afforded, still to be asked for a picture.</summary>
     public sealed class ReservedDrawing
     {
         private readonly AssistantRun run;
@@ -209,8 +121,6 @@ public sealed partial class AssistantRun(
         }
 
         /// <summary>Asks for the picture, and settles whatever it came to.</summary>
-        /// <param name="request">What to draw.</param>
-        /// <param name="cancellationToken">Cancels the call.</param>
         public async Task<Result<Drawn>> AskAsync(
             Drawing request,
             CancellationToken cancellationToken)
@@ -247,15 +157,6 @@ public sealed partial class AssistantRun(
             error => Task.FromResult(Result<TAnswer>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Everything that has to be true before a provider is called, and the
-    /// money set aside for calling it.
-    /// </summary>
-    /// <remarks>
-    /// Shared by the streaming and the waiting paths, because these checks are
-    /// the point of this class and a second copy of them is a second place to
-    /// forget one.
-    /// </remarks>
     private async Task<Result<Reserved>> PrepareAsync(
         Asker who,
         Capability capability,
@@ -280,9 +181,7 @@ public sealed partial class AssistantRun(
     {
         if (!settings.Allows(capability))
         {
-            // One answer for "no assistant here" and "not that, here". A caller
-            // learns nothing from being told which, and the affordance that
-            // asked should not have been on screen either way.
+            // One answer for "no assistant" and "not for this job": the caller gains nothing from the difference.
             return settings.IsConnected ? AssistanceErrors.Disabled : AssistanceErrors.NotConfigured;
         }
 
@@ -293,15 +192,7 @@ public sealed partial class AssistantRun(
             error => Task.FromResult(Result<Reserved>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Turns "this job uses that provider" into something callable.
-    /// </summary>
-    /// <remarks>
-    /// The key is decrypted here and nowhere else, so it exists in memory for
-    /// the length of one call and never reaches a class whose job is HTTP. A
-    /// key that cannot be decrypted — a key ring that was lost and came back
-    /// empty — reads as "not configured", because that is what it is.
-    /// </remarks>
+    // The key is decrypted here and nowhere else, so it lives only for one call.
     private Result<Chosen> Resolve(Capability capability)
     {
         if (settings.UseFor(capability) is not { } use
@@ -315,9 +206,7 @@ public sealed partial class AssistantRun(
             return AssistanceErrors.NotConfigured;
         }
 
-        // Null only for a provider that needs a key and whose stored one cannot
-        // be read — a key ring lost and restored empty. That is "not
-        // configured", because it is.
+        // Null when the stored key cannot be read (key ring lost): that is "not configured".
         var key = kind.NeedsApiKey ? protector.Unprotect(connection.ProtectedApiKey) : string.Empty;
 
         if (key is null)
@@ -357,15 +246,7 @@ public sealed partial class AssistantRun(
         return taken.Map(id => new Reserved(id, capability, chosen, time.GetTimestamp()));
     }
 
-    /// <summary>
-    /// Makes the call, and settles the reservation however it goes.
-    /// </summary>
-    /// <remarks>
-    /// The settlement is not optional and not conditional. A reservation that
-    /// was never settled holds its estimate against the budget until the month
-    /// turns — so a failed call must still write its row, with whatever tokens
-    /// it managed to consume and the error code as its outcome.
-    /// </remarks>
+    // Settles even a failed call: an unsettled reservation holds its estimate until the month turns.
     private async Task<Result<TAnswer>> CallAsync<TAnswer>(
         Reserved ready,
         Func<IAssistant, Connected, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
@@ -386,16 +267,7 @@ public sealed partial class AssistantRun(
             error => Result<TAnswer>.Failure(Leaving(error)));
     }
 
-    /// <summary>
-    /// Reads the answer off the provider, and settles however it ends.
-    /// </summary>
-    /// <remarks>
-    /// The settlement is in a <c>finally</c> because the three ways this ends
-    /// are not two. It finishes; it stops because the provider stopped; or the
-    /// person closed the page and nobody ever asks for another part — and that
-    /// last one is the ordinary end of a stream, not an edge case. A
-    /// reservation left unsettled holds its estimate against the month.
-    /// </remarks>
+    // Settles in a finally: a closed page abandons the stream, which is an ordinary ending.
     private async IAsyncEnumerable<Composing> Streaming(
         Reserved ready,
         Composition request,
@@ -403,9 +275,7 @@ public sealed partial class AssistantRun(
     {
         var usage = default(ModelUsage);
 
-        // Not "ok" until something says so. A stream nobody read to the end was
-        // paid for and produced nothing, and the ledger should say that rather
-        // than record a success that never happened.
+        // Not "ok" until the stream says so: an unread stream was paid for and produced nothing.
         var outcome = "abandoned";
 
         try
@@ -457,8 +327,7 @@ public sealed partial class AssistantRun(
 
         return ledger.SettleAsync(
             new Settlement(ready.ReservationId, usage, cost, outcome),
-            // Not the caller's token: a cancelled request must still leave the
-            // budget it spent accounted for.
+            // Not the caller's token: a cancelled request must still account for what it spent.
             CancellationToken.None);
     }
 
@@ -468,20 +337,12 @@ public sealed partial class AssistantRun(
         Message = "Asking {Provider} {Model} for {Capability}")]
     private static partial void Asking(ILogger logger, string provider, string model, string capability);
 
-    /// <remarks>
-    /// Switched off, not connected, or out of budget: the request line carries
-    /// the code too, but not which capability it was for.
-    /// </remarks>
     [LoggerMessage(
         EventId = 1504,
         Level = LogLevel.Debug,
         Message = "Not asking an assistant for {Capability}: {Code}")]
     private static partial void NotAsking(ILogger logger, string capability, string code);
 
-    /// <remarks>
-    /// The ledger keeps the same figures for the budget; this is the operator's
-    /// copy, with how long the provider took, which the ledger does not keep.
-    /// </remarks>
     [LoggerMessage(
         EventId = 1502,
         Level = LogLevel.Information,
@@ -499,25 +360,11 @@ public sealed partial class AssistantRun(
         int pictures,
         decimal? cost);
 
-    /// <summary>
-    /// What a failure becomes on its way out.
-    /// </summary>
-    /// <remarks>
-    /// The ledger row keeps the precise code; what leaves here does not. A
-    /// refused key is the administrator's to fix and is nothing a person
-    /// halfway through a recipe can act on, so they are told the assistant
-    /// could not be reached — which, for them, is what happened.
-    /// </remarks>
+    // The ledger keeps the precise code; a refused key is the admin's to fix, so users see "unavailable".
     private static Error Leaving(Error error) =>
         error == AssistanceErrors.Rejected ? AssistanceErrors.Unavailable : error;
 
-    /// <summary>The first instant of the calendar month, in UTC.</summary>
-    /// <param name="now">The injected present.</param>
-    /// <remarks>
-    /// A calendar month because that is how a provider bills, and UTC because a
-    /// budget that reset on a different day from the invoice could not be
-    /// reconciled with it.
-    /// </remarks>
+    /// <summary>The first instant of the calendar month, in UTC, matching how providers bill.</summary>
     internal static DateTimeOffset StartOfMonth(DateTimeOffset now) =>
         new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -529,6 +376,4 @@ public sealed partial class AssistantRun(
 }
 
 /// <summary>Who is asking, for the ledger.</summary>
-/// <param name="UserId">The person.</param>
-/// <param name="HouseholdId">Their kitchen, when the request is about one.</param>
 public sealed record Asker(Guid UserId, Guid? HouseholdId);

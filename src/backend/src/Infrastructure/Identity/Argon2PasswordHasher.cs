@@ -6,24 +6,11 @@ using Konscious.Security.Cryptography;
 
 namespace Infrastructure.Identity;
 
-/// <summary>
-/// Argon2id, with the parameters the deployment configured.
-/// </summary>
+/// <summary>Argon2id, with the parameters the deployment configured. Thread-safe, so a singleton.</summary>
 /// <remarks>
-/// <para>
-/// Thread-safe, so it is registered as a singleton. Memory-hard by design: the
-/// cost that matters is <c>MemoryKib</c>, because it is what stops an attacker
-/// running thousands of guesses in parallel on a GPU.
-/// </para>
-/// <para>
-/// That same cost is paid by the server, and every sign-in pays it — an
-/// unknown address included, against the decoy. Unbounded, a burst of
-/// anonymous sign-ins would claim memory and CPU without limit, so at most one
-/// hash per core runs at a time and the rest wait their turn. Waiting rather
-/// than failing keeps a busy moment from looking like a wrong password.
-/// </para>
+/// Memory-hard, and every sign-in pays that cost (an unknown address too, against the decoy), so at most one
+/// hash per core runs at a time and the rest wait: a burst of anonymous sign-ins must not claim unbounded resources.
 /// </remarks>
-/// <param name="settings">The configured cost parameters.</param>
 internal sealed class Argon2PasswordHasher(PasswordHashingSettings settings) : IPasswordHasher, IDisposable
 {
     private const int SaltBytes = 16;
@@ -62,8 +49,7 @@ internal sealed class Argon2PasswordHasher(PasswordHashingSettings settings) : I
             () => Derive(password, stored.Salt, stored.MemoryKib, stored.Iterations, stored.Parallelism),
             cancellationToken).ConfigureAwait(false);
 
-        // Constant time: a byte-by-byte comparison leaks how much of the hash
-        // matched, which is enough to reconstruct it one byte at a time.
+        // Constant time: byte-by-byte comparison leaks how much of the hash matched.
         if (!CryptographicOperations.FixedTimeEquals(candidate, stored.Hash))
         {
             return PasswordVerification.Failed;

@@ -1,38 +1,27 @@
 namespace Application.Abstractions;
 
-/// <summary>
-/// Hashes and verifies passwords.
-/// </summary>
+/// <summary>Hashes and verifies passwords.</summary>
 /// <remarks>
-/// Asynchronous because a caller may have to wait its turn: each hash holds a
-/// large block of memory for its whole run, so only a few run at once and the
-/// rest queue rather than fail.
+/// Asynchronous because each hash holds a large block of memory, so only a few run at once and the
+/// rest queue.
 /// </remarks>
 public interface IPasswordHasher
 {
     /// <summary>Hashes a password with the currently configured parameters.</summary>
-    /// <param name="password">The plaintext, which is never stored or logged.</param>
-    /// <param name="cancellationToken">Stops waiting for a turn.</param>
     Task<string> HashAsync(string password, CancellationToken cancellationToken);
 
     /// <summary>Checks a password against a stored hash, in constant time.</summary>
-    /// <param name="password">The plaintext supplied by the caller.</param>
-    /// <param name="encodedHash">The stored hash, including its parameters.</param>
-    /// <param name="cancellationToken">Stops waiting for a turn.</param>
     Task<PasswordVerification> VerifyAsync(
         string password,
         string encodedHash,
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// A hash of a value nobody knows, for verifying against when the account
-    /// does not exist.
+    /// A hash of a value nobody knows, to verify against when the account does not exist.
     /// </summary>
     /// <remarks>
-    /// Sign-in must cost the same whether or not the address is registered.
-    /// Skipping the hash for an unknown user makes the response measurably
-    /// faster, which turns the login endpoint into an account-enumeration
-    /// oracle no matter how careful the error message is.
+    /// Sign-in must cost the same for unknown addresses, or the faster response makes login an
+    /// account-enumeration oracle.
     /// </remarks>
     string DecoyHash { get; }
 }
@@ -47,8 +36,8 @@ public enum PasswordVerification
     Valid = 1,
 
     /// <summary>
-    /// The password matches, but the stored hash used weaker parameters than
-    /// the configuration now asks for, so it should be replaced.
+    /// The password matches, but the stored hash uses weaker parameters than configured and should
+    /// be replaced.
     /// </summary>
     ValidButNeedsRehash = 2
 }

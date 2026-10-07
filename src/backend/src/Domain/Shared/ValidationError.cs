@@ -1,9 +1,6 @@
 namespace Domain.Shared;
 
-/// <summary>
-/// An error carrying several contributing failures, so one round trip can
-/// report every problem with a request instead of one problem per submit.
-/// </summary>
+/// <summary>An error carrying several contributing failures, so one round trip reports every problem with a request.</summary>
 public sealed record ValidationError : Error
 {
     /// <summary>The code every validation aggregate reports.</summary>

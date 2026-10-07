@@ -2,15 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Recipes;
 
-/// <summary>
-/// What a recipe is called.
-/// </summary>
-/// <remarks>
-/// The only thing a recipe actually requires. A recipe with nothing but a title
-/// is valid, because it is the placeholder for "I want to write this down
-/// later" — and a create form that demands more than this is a form people
-/// abandon.
-/// </remarks>
+/// <summary>What a recipe is called. The only thing a recipe requires.</summary>
 public sealed record RecipeTitle
 {
     /// <summary>The longest title the database column accepts.</summary>

@@ -7,11 +7,7 @@ using Response = Contracts.Households.GetInvitationByCode.Response;
 namespace Api.Endpoints.Invitations.GetByCode.V1;
 
 /// <summary>Names the household an invitation code admits to, without using it.</summary>
-/// <remarks>
-/// Signed in only, like the code's whole purpose: the name is what somebody
-/// deciding whether to press Join needs, and a signed-out holder of a link has
-/// no decision to make yet.
-/// </remarks>
+/// <remarks>Signed in only: the name is what somebody deciding whether to press Join needs.</remarks>
 internal sealed class GetInvitationEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

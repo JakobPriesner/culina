@@ -5,17 +5,11 @@ using Infrastructure.Persistence;
 
 namespace Infrastructure.Settings;
 
-/// <summary>
-/// Stores one settings group as a single JSONB row.
-/// </summary>
+/// <summary>Stores one settings group as a single JSONB row.</summary>
 /// <remarks>
-/// One row per group rather than a column per value, so adding an admin
-/// checkbox later is not a schema migration. The trade is that the database
-/// cannot type-check the payload — which is acceptable because exactly one
-/// writer produces it and the record supplies defaults for anything absent.
+/// One row per group, so a new admin checkbox is not a migration; the payload is untyped but has
+/// one writer and defaults for anything absent.
 /// </remarks>
-/// <typeparam name="TSettings">The group.</typeparam>
-/// <param name="executor">Runs the SQL.</param>
 internal sealed class PostgresSettingsStore<TSettings>(DbExecutor executor) : ISettingsStore<TSettings>
     where TSettings : class, IInstanceSettings<TSettings>
 {

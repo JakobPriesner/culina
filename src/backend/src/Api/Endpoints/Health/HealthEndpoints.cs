@@ -2,13 +2,10 @@ using Application.Abstractions;
 
 namespace Api.Endpoints.Health;
 
-/// <summary>
-/// Liveness and readiness.
-/// </summary>
+/// <summary>Liveness and readiness.</summary>
 /// <remarks>
-/// Neither lives under <c>/api</c>, neither requires authentication, and both
-/// are filtered out of tracing — they are most of the traffic and none of the
-/// information.
+/// Neither lives under <c>/api</c>, requires authentication, or is traced: they are most of the
+/// traffic and none of the information.
 /// </remarks>
 internal static class HealthEndpoints
 {
@@ -16,9 +13,8 @@ internal static class HealthEndpoints
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        // Liveness answers "is the process running", and must touch nothing
-        // else: a dependency failure here would make an orchestrator restart a
-        // process that is working fine.
+        // Liveness answers "is the process running" and touches nothing else: a dependency failure
+        // would make an orchestrator restart a process that works.
         app.MapGet("/health/live", () => Results.Ok(new HealthResponse("live")))
             .WithName("healthLive")
             .ExcludeFromDescription()
@@ -43,13 +39,10 @@ internal static class HealthEndpoints
         return app;
     }
 
-    /// <summary>
-    /// Health for the host that runs before there is a database.
-    /// </summary>
+    /// <summary>Health for the host that runs before there is a database.</summary>
     /// <remarks>
-    /// Ready, deliberately. What this process serves — the setup screen — it
-    /// can serve, and a proxy that routes only to healthy containers (Traefik
-    /// does) would otherwise hide the one page that makes it healthy.
+    /// Ready, deliberately: the setup screen it serves is servable, and a proxy routing only to
+    /// healthy containers (Traefik) would otherwise hide the page that makes it healthy.
     /// </remarks>
     internal static WebApplication MapSetupHealthEndpoints(this WebApplication app)
     {

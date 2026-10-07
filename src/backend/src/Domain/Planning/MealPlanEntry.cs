@@ -2,14 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Planning;
 
-/// <summary>
-/// A recipe this household means to cook on a particular day.
-/// </summary>
-/// <remarks>
-/// Household-owned, like the recipe itself: a plan is what the people who eat
-/// together have agreed on, and one that only its author could see would be a
-/// diary rather than a plan.
-/// </remarks>
+/// <summary>A recipe this household means to cook on a particular day. Household-owned, like the recipe.</summary>
 public sealed class MealPlanEntry
 {
     private MealPlanEntry(
@@ -42,10 +35,7 @@ public sealed class MealPlanEntry
     /// <summary>What is being cooked.</summary>
     public Guid RecipeId { get; }
 
-    /// <summary>
-    /// How many it is being made for, or null for however many it was written
-    /// for.
-    /// </summary>
+    /// <summary>How many it is being made for, or null for however many it was written for.</summary>
     public decimal? Servings { get; }
 
     /// <summary>Which meal of the day.</summary>
@@ -84,18 +74,10 @@ public sealed class MealPlanEntry
             sortOrder);
     }
 
-    /// <summary>
-    /// The same meal, on another day.
-    /// </summary>
+    /// <summary>The same meal on another day, as a copy: what is cooked and for how many does not move with the date.</summary>
     /// <param name="date">Which day it moves to.</param>
     /// <param name="slot">Which meal of that day.</param>
     /// <param name="sortOrder">Where it asks to sit among that day's entries.</param>
-    /// <remarks>
-    /// A copy rather than a mutation, like everything else here: an entry that
-    /// could be edited in place is an entry somebody else is holding while it
-    /// changes underneath them. What is cooked and for how many does not move
-    /// with the date — moving a meal is not re-planning it.
-    /// </remarks>
     public MealPlanEntry MoveTo(DateOnly date, MealSlot slot, int sortOrder) =>
         new(Id, HouseholdId, date, RecipeId, Servings, slot, sortOrder);
 
@@ -118,15 +100,7 @@ public sealed class MealPlanEntry
         new(id, householdId, date, recipeId, servings, slot, sortOrder);
 }
 
-/// <summary>
-/// Which meal of the day something is for.
-/// </summary>
-/// <remarks>
-/// Three, and no "snack" or "dessert". A slot only earns its place if it
-/// changes what you buy, and the week view hides every slot nothing is planned
-/// in — so for the household that only ever plans dinner, the concept is
-/// invisible.
-/// </remarks>
+/// <summary>Which meal of the day something is for. Three only: a slot earns its place by changing what you buy.</summary>
 public enum MealSlot
 {
     /// <summary>The first meal.</summary>

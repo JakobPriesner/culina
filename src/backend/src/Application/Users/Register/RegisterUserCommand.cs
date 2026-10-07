@@ -10,11 +10,6 @@ using Response = Contracts.Users.Register.Response;
 namespace Application.Users.Register;
 
 /// <summary>Creates an account.</summary>
-/// <param name="Email">The address to sign in with.</param>
-/// <param name="DisplayName">What to call them.</param>
-/// <param name="Password">Their chosen password.</param>
-/// <param name="HouseholdName">What to call the first household, if one is created.</param>
-/// <param name="InvitationCode">A code that joins the new account to a household.</param>
 public sealed record RegisterUserCommand(
     string Email,
     string DisplayName,
@@ -39,9 +34,7 @@ internal sealed class RegisterUserCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Users.Register");
 
-        // A first look, so a refusal the policy can make now costs no Argon2
-        // run. It decides nothing: the count is read again under the
-        // registration lock, and that reading is the one that counts.
+        // A first look so a policy refusal costs no Argon2 run; the count is re-read under the registration lock.
         var existing = await users.CountAsync(cancellationToken).ConfigureAwait(false);
 
         var accepted = MayRegister(existing, command.InvitationCode).Bind(() => Validate(command));
@@ -53,11 +46,7 @@ internal sealed class RegisterUserCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// The first account is always allowed: a fresh instance has to have a way
-    /// in, and that account becomes the administrator who can then open
-    /// registration to everyone else.
-    /// </summary>
+    // The first account is always allowed (a fresh instance needs a way in) and becomes the administrator.
     private Result MayRegister(int existingUsers, string? invitationCode)
     {
         if (existingUsers == 0)
@@ -75,18 +64,13 @@ internal sealed class RegisterUserCommandHandler(
             return UserErrors.MaxUsersReached;
         }
 
-        // Refused before anything looks at the address, so a stranger without
-        // a code learns nothing from an invite-only instance about who has an
-        // account there.
+        // Refused before the address is looked at, so an invite-only instance reveals nothing about accounts.
         return dependencies.Registration.RequireInvitation && string.IsNullOrWhiteSpace(invitationCode)
             ? HouseholdErrors.InvitationInvalid
             : Result.Success();
     }
 
-    /// <summary>
-    /// Checks every field in one pass, so the form can mark all of its wrong
-    /// inputs at once instead of one per submit.
-    /// </summary>
+    // One pass over every field so the form can mark all wrong inputs at once.
     private static Result<NewAccount> Validate(RegisterUserCommand command)
     {
         var email = Email.Create(command.Email);
@@ -105,23 +89,18 @@ internal sealed class RegisterUserCommandHandler(
         RegisterUserCommand command,
         CancellationToken cancellationToken)
     {
-        // Hashed before the transaction, so the registration lock is held for
-        // a few statements rather than for an Argon2 run.
+        // Hashed before the transaction so the registration lock is held for a few statements, not an Argon2 run.
         var user = User.Register(
             account.Email,
             account.DisplayName,
             await passwordHasher.HashAsync(account.Password, cancellationToken).ConfigureAwait(false),
             dependencies.Time.GetUtcNow());
 
-        // The account and the household it lands in are one atomic step: an
-        // account with neither a household nor a way to get one is a dead end,
-        // and a consumed invitation with no account behind it is worse.
+        // Account and household are one atomic step: neither a dead-end account nor a consumed invitation without one.
         return await unitOfWork.InTransactionAsync(
             async token =>
             {
-                // Counted under the lock: otherwise every registration that
-                // arrives on an empty instance sees it empty and becomes an
-                // administrator, and a race for the last place fills several.
+                // Counted under the lock, or every registration on an empty instance would become an administrator.
                 var existing = await users.CountForRegistrationAsync(token).ConfigureAwait(false);
 
                 var admitted = await MayRegister(existing, command.InvitationCode).Match(
@@ -135,14 +114,8 @@ internal sealed class RegisterUserCommandHandler(
             cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Settles where the account will go before it is written.
-    /// </summary>
-    /// <remarks>
-    /// Writing the account is what reports an address that is already
-    /// registered, so an invitation that does not work is refused first: that
-    /// answer only ever reaches somebody this instance would let in.
-    /// </remarks>
+    // Writing the account reports an already-registered address, so a bad invitation is refused first:
+    // that answer only reaches somebody this instance would let in.
     private async Task<Result<Admission>> AdmitAsync(
         bool isFirstAccount,
         string? invitationCode,
@@ -173,10 +146,7 @@ internal sealed class RegisterUserCommandHandler(
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Gives the new account somewhere to cook: its own household for the very
-    /// first user, or the household the invitation admits to.
-    /// </summary>
+    // Gives the new account its own household (first user) or the one the invitation admits to.
     private async Task<Result<Response>> PlaceAsync(
         User user,
         Admission admission,
@@ -193,9 +163,7 @@ internal sealed class RegisterUserCommandHandler(
 
         if (admission.Invitation is null)
         {
-            // Admitted without a code only when the policy does not demand
-            // one; the account then starts with no household and the client
-            // offers to create one.
+            // No code needed by policy: the account starts with no household and the client offers to create one.
             return user.ToRegisterResponse(isAdmin: false, householdId: null);
         }
 
@@ -236,9 +204,7 @@ internal sealed class RegisterUserCommandHandler(
         string? householdName,
         CancellationToken cancellationToken)
     {
-        // A blank or over-long household name is not worth failing a
-        // registration over: a household can be renamed, a failed sign-up
-        // cannot be undone.
+        // A bad household name is not worth failing registration over: it can be renamed.
         var name = HouseholdName.Create(householdName)
             .Match(value => value, _ => DefaultHouseholdName(user));
 
@@ -252,15 +218,11 @@ internal sealed class RegisterUserCommandHandler(
     private static HouseholdName DefaultHouseholdName(User user) =>
         HouseholdName.Create($"{user.DisplayName.Value}'s kitchen").Match(
             value => value,
-            // The display name is already bounded, so the fallback is always
-            // valid; a fixed name keeps this total rather than throwing.
+            // The display name is already bounded, so the fixed fallback is always valid.
             _ => HouseholdName.Create("Kitchen").Match(value => value, _ => throw new InvalidOperationException(
                 "The constant fallback household name failed validation.")));
 
-    /// <summary>
-    /// Re-labels a value object's failure with the request field it came from,
-    /// so the client can mark the right input.
-    /// </summary>
+    // Re-labels a value object's failure with the request field it came from.
     private static Result Labelled<TValue>(Result<TValue> result, string field)
         where TValue : notnull =>
         result.Match(_ => Result.Success(), error => Result.Failure(Label(error, field)));
@@ -271,11 +233,8 @@ internal sealed class RegisterUserCommandHandler(
     private static FieldError Label(Error error, string field) =>
         new FieldError(field, error.Code, error.Description);
 
-    /// <summary>The validated inputs, so nothing downstream re-parses them.</summary>
     private sealed record NewAccount(Email Email, DisplayName DisplayName, string Password);
 
-    /// <summary>What the policy decided, before anything was written.</summary>
-    /// <param name="IsFirstAccount">Whether this is the instance's administrator.</param>
-    /// <param name="Invitation">The working invitation it joins with, if any.</param>
+    // What the policy decided, before anything was written.
     private sealed record Admission(bool IsFirstAccount, HouseholdInvitation? Invitation);
 }

@@ -3,14 +3,7 @@ using Domain.Shopping;
 
 namespace Infrastructure.Persistence.Shopping;
 
-/// <summary>
-/// How shopping values are spelled in the database.
-/// </summary>
-/// <remarks>
-/// Stored as text rather than as an integer, so a migration that inserts a new
-/// section in the middle cannot silently reassign every row — and so a person
-/// reading the table can see what it says.
-/// </remarks>
+/// <summary>How shopping values are spelled in the database: text, so a migration inserting a section cannot reassign rows.</summary>
 internal static class ShoppingWords
 {
     internal static string Of(ShoppingSection section) => section switch
@@ -44,19 +37,10 @@ internal static class ShoppingWords
         _ => null
     };
 
-    /// <summary>
-    /// A unit is stored as the code it carries. One vocabulary spans a recipe
-    /// and a shopping list, and there is nothing to translate between them.
-    /// </summary>
+    /// <summary>A unit is stored as its code; recipes and shopping lists share one vocabulary.</summary>
     internal static string? Of(Unit? unit) => unit?.Code;
 
-    /// <summary>
-    /// A stored unit, or null when the row has none.
-    /// </summary>
-    /// <remarks>
-    /// A row whose unit no longer parses is read as unmeasured rather than
-    /// crashing the read: a list that mostly renders beats an error.
-    /// </remarks>
+    /// <summary>A stored unit, or null; an unparseable unit reads as unmeasured rather than failing the read.</summary>
     internal static Unit? ToUnit(string? value) =>
         string.IsNullOrEmpty(value) ? null : Unit.Create(value).Match<Unit?>(one => one, _ => null);
 }

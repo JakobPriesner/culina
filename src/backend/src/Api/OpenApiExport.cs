@@ -5,22 +5,9 @@ using Microsoft.OpenApi;
 namespace Api;
 
 /// <summary>
-/// Writes the OpenAPI document to disk and exits.
+/// Writes the OpenAPI document to disk and exits (<c>make openapi</c>). The document comes from the endpoints of a started host,
+/// so it needs the app's configuration and database; no request is served.
 /// </summary>
-/// <remarks>
-/// <para>
-/// An explicit step (<c>make openapi</c>) rather than an MSBuild target,
-/// because the document is produced by enumerating the endpoints of a
-/// <em>started</em> host — building one is not enough, and neither is
-/// constructing the pipeline by hand.
-/// </para>
-/// <para>
-/// Starting the host means the export needs the same configuration and the same
-/// database the app needs, which is why <c>make openapi</c> brings the database
-/// up first. The app starts, the document is read, the app stops, and no
-/// request is ever served.
-/// </para>
-/// </remarks>
 internal static class OpenApiExport
 {
     internal const string Flag = "--export-openapi";
@@ -37,8 +24,7 @@ internal static class OpenApiExport
 
         await app.StartAsync().ConfigureAwait(false);
 
-        // Registered per document name, so the key is the version this
-        // application exposes.
+        // Registered per document name; the key is the exposed version.
         var provider = app.Services.GetRequiredKeyedService<IOpenApiDocumentProvider>(DocumentName);
         var document = await provider.GetOpenApiDocumentAsync().ConfigureAwait(false);
 
@@ -53,9 +39,7 @@ internal static class OpenApiExport
             {
                 document.SerializeAsV3(new OpenApiJsonWriter(writer));
 
-                // .editorconfig asks every file to end in a newline, and an
-                // editor that saves the document adds one. Written here too, or
-                // that save is a diff the contract check fails on.
+                // Ends in a newline per .editorconfig, or an editor's save becomes a diff the contract check fails on.
                 await writer.WriteAsync('\n').ConfigureAwait(false);
                 await writer.FlushAsync().ConfigureAwait(false);
             }

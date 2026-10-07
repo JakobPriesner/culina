@@ -7,15 +7,7 @@ using Api.Endpoints.RecipeSources.Watch.V1;
 
 namespace Api.Endpoints.RecipeSources;
 
-/// <summary>
-/// The connected-library endpoints, registered explicitly.
-/// </summary>
-/// <remarks>
-/// A resource of their own rather than a corner of <c>/recipes</c>, because a
-/// connection is a thing with a lifetime: it is created, listed, used and
-/// disconnected. The one-off import of a single pasted link stays where it is,
-/// at <c>/recipe-imports</c>, because it creates nothing to come back to.
-/// </remarks>
+/// <summary>The connected-library endpoints: a resource with a lifetime, unlike the one-off <c>/recipe-imports</c> of a pasted link.</summary>
 internal static class RecipeSourcesEndpoints
 {
     internal static IServiceCollection AddRecipeSourcesEndpoints(this IServiceCollection services) =>

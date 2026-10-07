@@ -4,33 +4,16 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Suggestions.Replay;
 
-/// <summary>
-/// Two years of a two-person kitchen, simulated, for the replay to predict.
-/// </summary>
+/// <summary>Two years of a simulated two-person kitchen, for the replay to predict.</summary>
 /// <remarks>
-/// <para>
-/// <b>This proves the harness measures something, not that the weights are
-/// right.</b> The habits below are a guess at an ordinary household — a weekday
-/// rotation, soups in winter and salads in summer, a project at the weekend, a
-/// new recipe that gets made a few times and then settles down — and a ranker
-/// tuned to them is tuned to this file. A weight change is defended with a
-/// replay of a real cook log; this kitchen is what the harness is tested on,
-/// and what a calibration runs on when there is no real one to hand.
-/// </para>
-/// <para>
-/// The history is deterministic — a fixed seed and fixed dates, so the same
-/// code cooks the same meals on every machine, on every day it runs. The recipe
-/// ids are not, and the ranker's exploration jitter is seeded by them, so two
-/// runs differ in the third decimal of recall. Two weight vectors replayed in
-/// the same run see the same ids, which is the comparison that matters.
-/// </para>
+/// This proves the harness measures something, not that the weights are right: a ranker tuned to these
+/// guessed habits is tuned to this file. History is deterministic, but recipe ids are not and seed the
+/// ranker's jitter, so runs differ in the third decimal; compare weight vectors within one run.
 /// </remarks>
 internal static class ReplayKitchen
 {
-    /// <summary>The first day anything is cooked.</summary>
     internal static readonly DateTimeOffset Opens = new(2024, 9, 1, 0, 0, 0, TimeSpan.Zero);
 
-    /// <summary>The day after the last day anything is cooked.</summary>
     internal static readonly DateTimeOffset Closes = new(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
 
     private const int Seed = 20240901;
@@ -52,8 +35,6 @@ internal static class ReplayKitchen
         Bob
     }
 
-    /// <param name="ArrivesOnDay">Days after <see cref="Opens"/> the recipe is written down.</param>
-    /// <param name="FavouriteOf">Whose rotation it is in, when it is in one person's more than the other's.</param>
     private sealed record Dish(
         string Title,
         Kind Kind,
@@ -124,10 +105,7 @@ internal static class ReplayKitchen
         new("Szechuan-Tofu", Kind.Untouched, ["tofu", "szechuanpfeffer", "chili", "hackfleisch"], ["schnell"], 30),
     ];
 
-    /// <summary>
-    /// Writes the kitchen through the API, backdates the recipes to when they
-    /// arrived, and records every meal.
-    /// </summary>
+    /// <summary>Writes the kitchen through the API, backdates the recipes and records every meal.</summary>
     /// <returns>The household, for the replay to ask about.</returns>
     internal static async Task<Guid> BuildAsync(PostgresFixture postgres, CancellationToken cancellationToken)
     {
@@ -147,9 +125,7 @@ internal static class ReplayKitchen
                 steps: dish.Steps);
         }
 
-        // The API writes a recipe as of now, which is the right thing for it to
-        // do and the one fact about this history it cannot express. Reaching
-        // past it for the date is the only way to have a book that grew.
+        // The API stamps recipes as of now; backdating is the only way to have a book that grew.
         await postgres.ExecuteAsync(BackdateSql(ids), cancellationToken);
 
         foreach (var meal in History())
@@ -157,10 +133,8 @@ internal static class ReplayKitchen
             await world.CookedAtAsync(ids[meal.Dish], meal.At, meal.By == Cook.Bob ? bob : null);
         }
 
-        // Statistics, as autovacuum would have gathered them on a kitchen this
-        // old. Without them every scoring CTE is estimated at one row, the
-        // planner nests loops over all of them, and a shortlist that takes a
-        // few milliseconds in a real household takes seventy here.
+        // Statistics as autovacuum would have gathered them; without them the planner estimates every
+        // scoring CTE at one row and a few-millisecond shortlist takes seventy.
         await postgres.ExecuteAsync("analyze;", cancellationToken);
 
         return world.HouseholdId;
@@ -187,7 +161,6 @@ internal static class ReplayKitchen
     }
 
 #pragma warning disable CA5394 // A seeded simulation, not a secret: the same history every run is the point.
-    /// <summary>Every dinner, in order.</summary>
     private static List<Cooked> History()
     {
         var random = new Random(Seed);
@@ -196,8 +169,7 @@ internal static class ReplayKitchen
 
         for (var day = Opens; day < Closes; day = day.AddDays(1))
         {
-            // Not every evening is a recipe from the book: leftovers, a take-away,
-            // somebody else's kitchen.
+            // Not every evening is from the book (leftovers, take-away).
             if (random.NextDouble() > 0.6)
             {
                 continue;
@@ -234,7 +206,6 @@ internal static class ReplayKitchen
 
 #pragma warning restore CA5394
 
-    /// <summary>How much this person feels like this dish tonight. Relative, in no unit.</summary>
     private static double Appetite(Dish dish, DateTimeOffset day, Cook by, Dictionary<Dish, DateTimeOffset> last)
     {
         var weekend = day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
@@ -262,7 +233,6 @@ internal static class ReplayKitchen
         return appetite * Weariness(dish, day, last);
     }
 
-    /// <summary>Nobody wants Tuesday's dinner on Wednesday, and not much on Saturday either.</summary>
     private static double Weariness(Dish dish, DateTimeOffset day, Dictionary<Dish, DateTimeOffset> last)
     {
         if (!last.TryGetValue(dish, out var cooked))

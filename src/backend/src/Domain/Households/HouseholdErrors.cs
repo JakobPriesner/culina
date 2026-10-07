@@ -5,14 +5,7 @@ namespace Domain.Households;
 /// <summary>Every failure the households module can return.</summary>
 public static class HouseholdErrors
 {
-    /// <summary>
-    /// No such household — or one the caller cannot see.
-    /// </summary>
-    /// <remarks>
-    /// A non-member gets this rather than a 403, deliberately. Answering
-    /// "forbidden" would confirm the household exists, which is exactly the
-    /// fact a caller who is not a member has no business learning.
-    /// </remarks>
+    /// <summary>No such household, or one the caller cannot see. Not a 403, which would confirm it exists.</summary>
     public static Error NotFound(Guid householdId) => new(
         "households.not_found",
         $"No household with id '{householdId}' exists.",
@@ -42,13 +35,7 @@ public static class HouseholdErrors
         "That person is not in this household.",
         ErrorType.NotFound);
 
-    /// <summary>
-    /// The invitation code is unknown, expired or already used.
-    /// </summary>
-    /// <remarks>
-    /// One error for all three cases on purpose: distinguishing them would let
-    /// someone probe codes for validity.
-    /// </remarks>
+    /// <summary>The invitation code is unknown, expired or already used: one error so codes cannot be probed.</summary>
     public static readonly Error InvitationInvalid = new(
         "households.invitation_invalid",
         "That invitation is not valid. Ask for a new one.",
@@ -60,10 +47,7 @@ public static class HouseholdErrors
         "A member is either an owner or a member.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// The household to inherit from already sees this one's recipes, or is
-    /// this one.
-    /// </summary>
+    /// <summary>The household to inherit from already sees this one's recipes, or is this one.</summary>
     public static readonly Error InheritanceCycle = new(
         "households.inheritance_cycle",
         "A household cannot inherit from itself, or from a household that already inherits from it.",

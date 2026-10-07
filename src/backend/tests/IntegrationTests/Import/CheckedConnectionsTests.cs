@@ -4,22 +4,10 @@ using Infrastructure.Import;
 
 namespace IntegrationTests.Import;
 
-/// <summary>
-/// The checked handler with a proxy configured, which it must ignore.
-/// </summary>
+/// <summary>The checked handler with a proxy configured, which it must ignore.</summary>
 /// <remarks>
-/// <para>
-/// A proxy is what <c>HTTP_PROXY</c> or <c>HTTPS_PROXY</c> in the environment
-/// becomes: <see cref="HttpClient.DefaultProxy"/> reads them, and a handler
-/// left at <c>UseProxy = true</c> uses that proxy unless it was given one of
-/// its own. These tests give it one of its own rather than setting the
-/// variables, because the default proxy is read once per process and is shared
-/// by every test running beside these.
-/// </para>
-/// <para>
-/// Both servers are on loopback. One plays the target, the other the proxy,
-/// and each counts the connections it was sent.
-/// </para>
+/// The tests set a handler proxy instead of <c>HTTP_PROXY</c>, as <see cref="HttpClient.DefaultProxy"/> is
+/// read once per process and shared with other tests.
 /// </remarks>
 public class CheckedConnectionsTests
 {
@@ -48,10 +36,8 @@ public class CheckedConnectionsTests
     public async Task Handler_ShouldConnectToTheTargetItself_WhenAProxyIsConfigured()
     {
         // Arrange
-        // A rule that admits loopback, so the only thing that can decide where
-        // the connection goes is whether the proxy is used. Through the proxy,
-        // the check would be made against the proxy's address and the target's
-        // would never be looked at.
+        // Admits loopback, so only proxy use decides where the connection goes; through a proxy the
+        // check would see the proxy's address, never the target's.
         using var proxy = new LoopbackServer("proxied");
         using var target = new LoopbackServer("<html></html>");
         using var handler = CheckedConnections.Handler(admits: _ => true);

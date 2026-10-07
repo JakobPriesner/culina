@@ -3,22 +3,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.LogRecords;
 
-/// <summary>
-/// What the web app reported. Event ids 1700-1799.
-/// </summary>
+/// <summary>What the web app reported. Event ids 1700-1799.</summary>
 /// <remarks>
-/// <para>
-/// Its own category, so an operator can tell the browser's lines from the
-/// server's on the console with one filter, and so the host can export them
-/// under a service of their own.
-/// </para>
-/// <para>
-/// Anybody can send one, signed in or not, so every word of it is a claim
-/// rather than a fact: the category and the event name say so, every field is
-/// named for the client that supplied it, and the level is never above
-/// <c>Warning</c>. An <c>Error</c> is a defect in this server, and a stranger
-/// must not be able to write one, or page whoever is on call.
-/// </para>
+/// Its own category, so the browser's lines filter apart and export as their own service. Anybody
+/// can send one, so every field is a client claim and the level never exceeds <c>Warning</c>: a
+/// stranger must not write an <c>Error</c> or page on-call.
 /// </remarks>
 internal static partial class WebAppLogs
 {

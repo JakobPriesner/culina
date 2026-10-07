@@ -15,8 +15,6 @@ public class RecipeSourceTests
         var source = Connect(label: null);
 
         // Assert
-        // What it is, and what tells two of them apart — which is more than an
-        // empty name or a generic "Tandoor" would do.
         Assert.Equal("recipes.example.com", source.Label);
     }
 
@@ -27,8 +25,7 @@ public class RecipeSourceTests
         var source = Connect();
 
         // Assert
-        // The difference between "connected" and "used": one is worth offering
-        // again, the other is something somebody set up and forgot.
+        // "Connected" differs from "used": only a used one is worth offering again.
         Assert.Null(source.LastUsedAt);
     }
 
@@ -78,8 +75,7 @@ public class RecipeSourceTests
     public void Create_ShouldRefuse_AKindNobodyCanConnectTo()
     {
         // Act
-        // A web page is a kind an origin can have, not a kind a source can be:
-        // there is nothing there to connect to.
+        // A web page is an origin kind, not a source kind: nothing to connect to.
         var source = Create(kind: SourceKind.Web);
 
         // Assert

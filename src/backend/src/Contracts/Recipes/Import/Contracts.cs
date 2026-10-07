@@ -7,13 +7,9 @@ public sealed record Request
     public required string Url { get; init; }
 }
 
-/// <summary>
-/// What a page turned out to say.
-/// </summary>
+/// <summary>What a page turned out to say: a draft, never a recipe.</summary>
 /// <remarks>
-/// A draft, never a recipe. Nothing is created: this is shown back for
-/// correction, and the person decides what to keep — which is what keeps an
-/// import an import rather than a scraper.
+/// Nothing is created; it is shown back for correction and the person decides what to keep.
 /// </remarks>
 public sealed record Response
 {
@@ -35,13 +31,10 @@ public sealed record Response
     /// <summary>How long it takes, when the page said.</summary>
     public int? TotalMinutes { get; init; }
 
-    /// <summary>
-    /// The page's words, when it published no structured data.
-    /// </summary>
+    /// <summary>The page's words, when it published no structured data.</summary>
     /// <remarks>
-    /// The fallback. The client reads this with the same parser it uses for a
-    /// pasted recipe, so there is one set of heuristics rather than two — and
-    /// it lives on the client, where the person correcting it is.
+    /// The fallback: the client reads it with the same parser as a pasted recipe, so there is one
+    /// set of heuristics, on the side of whoever is correcting it.
     /// </remarks>
     public string? Text { get; init; }
 

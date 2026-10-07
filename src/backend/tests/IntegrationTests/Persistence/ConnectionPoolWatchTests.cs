@@ -29,10 +29,8 @@ public sealed class ConnectionPoolWatchTests : IDisposable
     [Fact]
     public void Acquired_ShouldWarn_WhenGettingAConnectionTookLong()
     {
-        // Act
         Acquire(waiting: TimeSpan.FromMilliseconds(800));
 
-        // Assert
         var line = Assert.Single(logs.Lines);
         Assert.Equal(SlowConnection, line.EventId);
         Assert.Equal(LogLevel.Warning, line.Level);
@@ -42,29 +40,24 @@ public sealed class ConnectionPoolWatchTests : IDisposable
     [Fact]
     public void Watch_ShouldStayQuiet_WhileThePoolKeepsUp()
     {
-        // Act
         var acquiredAt = Acquire(waiting: TimeSpan.FromMilliseconds(3));
         Return(acquiredAt, holding: TimeSpan.FromMilliseconds(40));
 
-        // Assert
         Assert.Empty(logs.Lines);
     }
 
     [Fact]
     public void Acquired_ShouldWarnOnceAMinute_AndCountTheWaitsInBetween()
     {
-        // Arrange
         // A pool that has run dry makes every request wait; one line each
         // would bury the log in the very moment somebody reads it.
         Acquire(waiting: TimeSpan.FromSeconds(1));
         Acquire(waiting: TimeSpan.FromSeconds(1));
         Acquire(waiting: TimeSpan.FromSeconds(1));
 
-        // Act
         time.Advance(ConnectionPoolWatch.ReportEvery);
         Acquire(waiting: TimeSpan.FromSeconds(1));
 
-        // Assert
         Assert.Collection(
             logs.Lines,
             first => Assert.Equal("0", first["Unreported"]),
@@ -74,15 +67,12 @@ public sealed class ConnectionPoolWatchTests : IDisposable
     [Fact]
     public void Returned_ShouldNameTheUseCase_WhenAConnectionWasHeldLong()
     {
-        // Arrange
         using var listener = ListenToCulina();
         using var useCase = CulinaTelemetry.ActivitySource.StartActivity("Recipes.Import");
         var acquiredAt = Acquire(waiting: TimeSpan.Zero);
 
-        // Act
         Return(acquiredAt, holding: TimeSpan.FromSeconds(30));
 
-        // Assert
         // The use case points at the code that kept the connection; the request
         // or the SQL would only point at where it happened to be noticed.
         var line = Assert.Single(logs.Lines);
@@ -94,13 +84,10 @@ public sealed class ConnectionPoolWatchTests : IDisposable
     [Fact]
     public void Throttle_ShouldKeepTheTwoWarningsApart()
     {
-        // Arrange
         var acquiredAt = Acquire(waiting: TimeSpan.FromSeconds(1));
 
-        // Act
         Return(acquiredAt, holding: TimeSpan.FromSeconds(10));
 
-        // Assert
         // A slow wait just reported says nothing about why: the hold that
         // caused it is reported in its own right.
         Assert.Equal([SlowConnection, ConnectionHeldLong], logs.Lines.Select(line => line.EventId));

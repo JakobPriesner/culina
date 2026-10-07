@@ -1930,6 +1930,26 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -8198,7 +8218,7 @@
           },
           "householdId": {
             "type": "string",
-            "description": "The household it is being cooked in, for a recipe that household\ninherits. Left out, the recipe's own household.",
+            "description": "The household it is cooked in, for an inherited recipe; left out, the recipe's own\nhousehold.",
             "format": "uuid",
             "nullable": true
           }
@@ -8353,7 +8373,7 @@
             "description": "Every recipe on it."
           }
         },
-        "description": "Which recipes are on a cookbook, by id."
+        "description": "Which recipes are on a cookbook, by id. Not paged: it answers \"is it already on?\" for a whole picker."
       },
       "CookbooksCookbookRulesContract": {
         "type": "object",
@@ -8379,7 +8399,7 @@
             "nullable": true
           }
         },
-        "description": "What a cookbook that fills itself asks for."
+        "description": "What a cookbook that fills itself asks for. Every rule must hold."
       },
       "CookbooksCookbookSummary": {
         "required": [
@@ -8435,14 +8455,14 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Up to four photographed recipes for the cover, oldest first."
+            "description": "Up to four photographed recipes for the cover, oldest first so the cover stops moving."
           },
           "coverPictures": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CookbooksCookbookCoverPicture"
             },
-            "description": "The same pictures, with which picture each recipe has now."
+            "description": "The same pictures, with each recipe's current image id so a replaced picture gets a new address."
           },
           "updatedAt": {
             "type": "string",
@@ -8450,7 +8470,7 @@
             "format": "date-time"
           }
         },
-        "description": "A cookbook as it appears on a shelf."
+        "description": "A cookbook as it appears on a shelf. Its recipes are read through `GET /recipes?cookbookId=…`."
       },
       "CookbooksCookbooksResponse": {
         "required": [
@@ -8477,7 +8497,7 @@
             "format": "int32"
           }
         },
-        "description": "A page of a household's cookbooks."
+        "description": "A page of a household's cookbooks, wrapped so paging metadata can grow."
       },
       "CookbooksCreateCookbookRequest": {
         "required": [
@@ -8549,7 +8569,7 @@
             "description": "The cookbooks containing it, by name."
           }
         },
-        "description": "Which cookbooks a recipe is on."
+        "description": "Which cookbooks a recipe is on. Not paged: a recipe is on a handful of shelves."
       },
       "CookbooksUpdateCookbookRequest": {
         "required": [
@@ -8580,7 +8600,7 @@
             ]
           }
         },
-        "description": "Renames a cookbook, and rewrites what it is for."
+        "description": "Renames a cookbook, and rewrites what it is for. Both fields together: they are one form."
       },
       "HouseholdsChangeMemberRoleRequest": {
         "required": [
@@ -8628,7 +8648,7 @@
           },
           "code": {
             "type": "string",
-            "description": "The code to share. Shown exactly once — only its digest is stored, so\nthis value cannot be recovered afterwards."
+            "description": "The code to share; shown once, as only its digest is stored."
           },
           "expiresAt": {
             "type": "string",
@@ -8802,7 +8822,7 @@
           },
           "inheritsFrom": {
             "type": "string",
-            "description": "The household it inherits from directly. The one asked about for a\ndirect heir — the only kind its owners can cut loose — or the heir it\ninherits through.",
+            "description": "The household it inherits from directly: the one asked about for a direct heir (whose owners\ncan cut it loose), else the heir it inherits through.",
             "format": "uuid"
           }
         },
@@ -8835,7 +8855,7 @@
             "description": "The name of the household the code admits to."
           }
         },
-        "description": "What an invitation code leads to, before it is used."
+        "description": "What an invitation code leads to, before it is used: the name only, enough to recognise whose\nkitchen it is and nothing a code holder could not learn by joining."
       },
       "HouseholdsGetInvitationsInvitationSummary": {
         "required": [
@@ -9004,7 +9024,7 @@
             "nullable": true
           }
         },
-        "description": "A household as it appears in a list."
+        "description": "A household as it appears in a list. Extended by inheritance, so a field added for one response cannot alter another."
       },
       "HouseholdsInheritedHousehold": {
         "required": [
@@ -9148,7 +9168,7 @@
         "properties": {
           "householdId": {
             "type": "string",
-            "description": "The household whose recipes this one should see, or null to inherit\nnothing. Required either way, so a missing field is never mistaken for\n\"stop inheriting\".",
+            "description": "The household whose recipes this one should see, or null to inherit nothing. Required either way, so a missing field is never read as \"stop inheriting\".",
             "format": "uuid",
             "nullable": true
           }
@@ -9171,7 +9191,7 @@
             "items": {
               "$ref": "#/components/schemas/HouseholdsInheritedHousehold"
             },
-            "description": "Whose recipes it now sees, nearest first: the household it inherits\nfrom, then the one that household inherits from, and so on. Empty when\nit inherits nothing."
+            "description": "Whose recipes it now sees, nearest first (the household it inherits from, then that one's\nparent, and so on); empty when none."
           },
           "householdId": {
             "type": "string",
@@ -9412,7 +9432,7 @@
           },
           "route": {
             "type": "string",
-            "description": "The route it happened on, as the router names it — `/recipes/[recipeId]`,\nnever the address with the id in it. At most 200 characters.",
+            "description": "The route as the router names it (`/recipes/[recipeId]`), never with the id. At most 200 characters.",
             "nullable": true
           },
           "occurredAt": {
@@ -9500,7 +9520,7 @@
           },
           "code": {
             "type": "string",
-            "description": "One of the account's saved recovery codes, or one the administrator\nissued. Case, spaces and dashes do not matter."
+            "description": "One of the account's saved recovery codes, or one the administrator issued. Case, spaces and dashes do not matter."
           },
           "password": {
             "type": "string",
@@ -9544,12 +9564,12 @@
           },
           "slot": {
             "type": "string",
-            "description": "`breakfast`, `lunch` or `dinner`. Omit to keep the slot\n        it already had.",
+            "description": "`breakfast`, `lunch` or `dinner`. Omit to keep the current slot, as dragging does.",
             "nullable": true
           },
           "position": {
             "type": "integer",
-            "description": "Which gap in the day it was dropped into, counted from zero. Omit to put\nit last.",
+            "description": "Which gap in the day it was dropped into, counted from zero on the day as shown (the moved meal still in it); omit to\nput it last. Only a request: the day is read in slot order, and the whole week comes back.",
             "format": "int32",
             "nullable": true
           }
@@ -9764,7 +9784,7 @@
           },
           "draftId": {
             "type": "string",
-            "description": "The assistant draft this recipe is being made from, when it is.",
+            "description": "The assistant draft this recipe is made from, recorded as provenance beside an imported\nrecipe's source; omitted by every other caller.",
             "format": "uuid",
             "nullable": true
           },
@@ -9774,7 +9794,7 @@
             "nullable": true
           }
         },
-        "description": "A new recipe."
+        "description": "A new recipe; only the household and title are required, so a bare recipe can be a placeholder\nto write up later."
       },
       "RecipesDraftsDraftGroupContract": {
         "required": [
@@ -9811,7 +9831,7 @@
           },
           "unit": {
             "type": "string",
-            "description": "In what, or null.",
+            "description": "In what, or null. Already checked against what the app can store; impossible units are dropped.",
             "nullable": true
           },
           "name": {
@@ -9861,7 +9881,7 @@
           },
           "finished": {
             "type": "boolean",
-            "description": "Whether this is the last one."
+            "description": "Whether this is the last one. Explicit because a proxy dropping the connection also closes the stream."
           },
           "problem": {
             "oneOf": [
@@ -9897,7 +9917,7 @@
           },
           "material": {
             "type": "string",
-            "description": "The material, for `idea` and `text`.",
+            "description": "The material for `idea` and `text`: words the person supplied, never treated as an instruction.",
             "nullable": true
           },
           "transcript": {
@@ -9913,11 +9933,11 @@
           },
           "language": {
             "type": "string",
-            "description": "The language to answer in: `en` or `de`.",
+            "description": "The language to answer in: `en` or `de`. Sent, not inferred; ignored for a revision, which keeps its language.",
             "nullable": true
           }
         },
-        "description": "Asks the assistant for a recipe."
+        "description": "Asks the assistant for a recipe. One request with a `kind` rather than three endpoints."
       },
       "RecipesDraftsResponse": {
         "required": [
@@ -9930,7 +9950,7 @@
         "properties": {
           "draftId": {
             "type": "string",
-            "description": "This draft's own id.",
+            "description": "This draft's own id, sent back when the draft becomes a recipe so provenance can be recorded.",
             "format": "uuid"
           },
           "title": {
@@ -9988,7 +10008,7 @@
             "description": "What to file it under."
           }
         },
-        "description": "A recipe the assistant wrote. Not saved, and not a recipe yet."
+        "description": "A recipe the assistant wrote. Not saved: it is read beside the original and accepted field by field."
       },
       "RecipesDrawingEvent": {
         "required": [
@@ -10434,7 +10454,7 @@
             "nullable": true
           }
         },
-        "description": "One thing a half-typed query could become."
+        "description": "One thing a half-typed query could become: a `recipe` (destination), an `ingredient` or `tag` (filter) or a `refinement` (completes the query)."
       },
       "RecipesGetCompletionsResponse": {
         "required": [
@@ -10483,7 +10503,7 @@
           },
           "hasPhoto": {
             "type": "boolean",
-            "description": "Whether there is a picture of how this one turned out."
+            "description": "Whether there is a picture of how this one turned out; a flag, not a URL, since the client\nalready knows both halves of `/recipes/{recipeId}/cook-log/{entryId}/photo`."
           }
         },
         "description": "One time you cooked it."
@@ -10604,14 +10624,14 @@
         "properties": {
           "kind": {
             "type": "string",
-            "description": "`kinds` when what they are is what they share most — both pasta\n        bakes, both Italian — or `ingredients` when it is what they are\n        made from."
+            "description": "`kinds` when what they are is what they share most (both pasta bakes), or `ingredients` when it is what they are made from."
           },
           "shared": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "At most three things they share, the most telling first, worded in the\nlanguage of the recipe being read."
+            "description": "At most three things they share, most telling first, in the language of the recipe being read."
           }
         },
         "description": "Why two recipes are related, in words a person can disagree with."
@@ -10637,7 +10657,7 @@
           },
           "householdId": {
             "type": "string",
-            "description": "The household it belongs to. Another than the one asked about when that\none inherits it, which is what a card says \"from\" about.",
+            "description": "The household it belongs to; another than the one asked about when that one inherits it.",
             "format": "uuid"
           },
           "title": {
@@ -10788,7 +10808,7 @@
           },
           "hasImage": {
             "type": "boolean",
-            "description": "Whether there is a photograph to fetch."
+            "description": "Whether there is a photograph to fetch; a flag, not an id, since the picture is served under\nthe same token and an id would reveal household storage."
           },
           "groups": {
             "type": "array",
@@ -10813,7 +10833,7 @@
           },
           "sourceUrl": {
             "type": "string",
-            "description": "The address it was imported from, when it was imported.",
+            "description": "The address it was imported from, when it was.",
             "nullable": true
           }
         },
@@ -10843,11 +10863,11 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "What to show and, when added, what to save: the household's own name for\nit where it has one, or the lexicon's word in the recipe's language."
+            "description": "What to show and, when added, save: the household's own name where it has one, else the\nlexicon's word in the recipe's language."
           },
           "slug": {
             "type": "string",
-            "description": "The household's tag, when it already uses one for this; null for a tag\nthat adding would create.",
+            "description": "The household's tag when it already uses one for this; null for a tag that adding would\ncreate.",
             "nullable": true
           }
         },
@@ -10887,7 +10907,7 @@
           },
           "recipeCount": {
             "type": "integer",
-            "description": "How many recipes carry it.",
+            "description": "How many recipes carry it, shown beside each tag since a tag on two recipes and on forty are\ndifferent offers.",
             "format": "int32"
           }
         },
@@ -11004,7 +11024,7 @@
             "nullable": true
           }
         },
-        "description": "What a page turned out to say."
+        "description": "What a page turned out to say: a draft, never a recipe."
       },
       "RecipesIngredientContract": {
         "required": [
@@ -11014,7 +11034,7 @@
         "properties": {
           "ingredientId": {
             "type": "string",
-            "description": "The line's id, as the recipe gave it; steps refer to it. Omit to create\na new line. An id the recipe does not have creates one too, with an id\nof the server's choosing, and a step in the same request that refers to\nthe id sent is pointed at that new line — so read the ids back from the\nresponse rather than keeping the ones sent.",
+            "description": "The line's id, which steps refer to. Omit it, or send an unknown one, to create a line with\na server-chosen id: read ids back from the response, since steps are re-pointed at the new\none.",
             "format": "uuid",
             "nullable": true
           },
@@ -11049,13 +11069,13 @@
         "properties": {
           "groupId": {
             "type": "string",
-            "description": "The group's id, as the recipe gave it. Omit to create a new one; an id\nthe recipe does not have creates a new one too, with an id of the\nserver's choosing.",
+            "description": "The group's id; omit it, or send one the recipe does not have, to create a group with a\nserver-chosen id.",
             "format": "uuid",
             "nullable": true
           },
           "name": {
             "type": "string",
-            "description": "The heading, or null for the implicit first group. A recipe with one\nunnamed group renders as a plain list.",
+            "description": "The heading, or null for the implicit first group; a recipe with one unnamed group renders\nas a plain list.",
             "nullable": true
           },
           "ingredients": {
@@ -11359,7 +11379,7 @@
             "format": "date-time"
           }
         },
-        "description": "Where an imported recipe came from."
+        "description": "Where an imported recipe came from. Quiet on purpose: an imported recipe is an ordinary recipe."
       },
       "RecipesRecordCookedRequest": {
         "type": "object",
@@ -11383,7 +11403,7 @@
           },
           "householdId": {
             "type": "string",
-            "description": "The household it was cooked in, for a recipe that household inherits.\nLeft out, the recipe's own household.",
+            "description": "The household it was cooked in, for a recipe that household inherits; left out, the recipe's\nown.",
             "format": "uuid",
             "nullable": true
           }
@@ -11475,21 +11495,21 @@
           },
           "address": {
             "type": "string",
-            "description": "Where it is: `https://recipes.example.com`."
+            "description": "Where it is, such as `https://recipes.example.com`. Anything after the host is dropped."
           },
           "token": {
             "type": "string",
-            "description": "The API token from that app.",
+            "description": "The app's API token. Never returned. Send this or a username and password, not both.",
             "nullable": true
           },
           "username": {
             "type": "string",
-            "description": "The name that account signs in with over there.",
+            "description": "The account name over there; the alternative to string? ConnectSourceRequest.Token.",
             "nullable": true
           },
           "password": {
             "type": "string",
-            "description": "The password for that account.",
+            "description": "Used once to obtain a token, then dropped. Never stored, logged or returned.",
             "nullable": true
           },
           "label": {
@@ -11536,7 +11556,7 @@
             "description": "True on the last event, and only then."
           }
         },
-        "description": "One line of an import's progress, as the stream sends it."
+        "description": "One line of an import's progress: one per finished recipe, then a last one with no recipe.\nEach carries the running count, so a late joiner is still right."
       },
       "RecipesSourcesImportFromSourceRequest": {
         "required": [
@@ -11549,11 +11569,11 @@
             "items": {
               "type": "string"
             },
-            "description": "Which of their recipes, by the id the browse gave back."
+            "description": "The whole selection, by the ids the browse gave back. Answered once the import is named; recipes follow over the stream."
           },
           "allowLookalikes": {
             "type": "boolean",
-            "description": "Bring them over even where one looks like a recipe already here."
+            "description": "Bring them over even where one looks like a recipe already here. Only set after the person confirmed it."
           },
           "cookbookId": {
             "type": "string",
@@ -11587,7 +11607,7 @@
             "format": "int32"
           }
         },
-        "description": "A recipe already here that an imported one looks like — \"Sieht aus wie\n„Spaghetti Bolognese“ (12× gekocht, 4 gleiche Zutaten)\"."
+        "description": "A recipe already here that an imported one looks like."
       },
       "RecipesSourcesImportStartedResponse": {
         "required": [
@@ -11605,7 +11625,7 @@
           },
           "cookbookId": {
             "type": "string",
-            "description": "The cookbook everything from this import is going onto.",
+            "description": "The cookbook everything from this import is going onto; known before the first recipe is fetched.",
             "format": "uuid"
           },
           "cookbookName": {
@@ -11633,11 +11653,11 @@
           },
           "outcome": {
             "type": "string",
-            "description": "`imported`, `already_here`, `looks_like` or `failed`."
+            "description": "`imported`, `already_here`, `looks_like` or `failed`.\n        Only `failed` is an error; `looks_like` is held back for a person to decide."
           },
           "recipeId": {
             "type": "string",
-            "description": "The recipe here, when there is one: the one it became, the one it\nalready was, or the one it looks like.",
+            "description": "The recipe here, when there is one: the one it became, the one it already was, or the one it looks like.",
             "format": "uuid",
             "nullable": true
           },
@@ -11689,7 +11709,7 @@
           },
           "imageUrl": {
             "type": "string",
-            "description": "A picture of it, over there.",
+            "description": "A picture of it, over there. Not drawn in the picker (a browser has no token for that server);\nthis server fetches it on import.",
             "nullable": true
           },
           "totalMinutes": {
@@ -11700,7 +11720,7 @@
           },
           "alreadyHere": {
             "type": "string",
-            "description": "The recipe this one already is here, when it has been brought over\nbefore.",
+            "description": "The recipe here that this one was already imported as, if any.",
             "format": "uuid",
             "nullable": true
           }
@@ -11799,13 +11819,13 @@
         "properties": {
           "stepId": {
             "type": "string",
-            "description": "The step's id, as the recipe gave it. Omit to create a new one; an id\nthe recipe does not have creates a new one too, with an id of the\nserver's choosing.",
+            "description": "The step's id; omit it, or send one the recipe does not have, to create a step with a\nserver-chosen id.",
             "format": "uuid",
             "nullable": true
           },
           "title": {
             "type": "string",
-            "description": "What this step is called — \"Prepare the base\".",
+            "description": "What this step is called, e.g. \"Prepare the base\"; null for most steps, which a client\nlabels by position. A name for this step, not a heading over the following ones.",
             "nullable": true
           },
           "segments": {
@@ -11827,7 +11847,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Everything the step needs, as ingredient ids: what to get out before\nstarting it.",
+            "description": "Everything the step needs, as ingredient ids: what to get out before starting it.",
             "nullable": true
           }
         },
@@ -11921,7 +11941,7 @@
           },
           "yieldLabel": {
             "type": "string",
-            "description": "The recipe's own word for what it makes — \"Cake\", \"Gläser\", \"Blech\".",
+            "description": "The recipe's own word for what it makes (\"Cake\", \"Gläser\"). Null for most; then the client words it from `yieldKind`. Shown as written, never pluralised or translated.",
             "nullable": true
           },
           "prepMinutes": {
@@ -11958,7 +11978,7 @@
             "description": "Its tags."
           }
         },
-        "description": "The recipe's complete new state."
+        "description": "The recipe's complete new state: a replacement, not a patch, since the editor saves the whole recipe."
       },
       "RecoveryCodesIssueRequest": {
         "required": [
@@ -11982,7 +12002,7 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "The code. Shown exactly once — only its digest is stored, so it cannot\nbe shown again."
+            "description": "The code. Shown exactly once; only its digest is stored."
           },
           "expiresAt": {
             "type": "string",
@@ -12124,11 +12144,11 @@
           },
           "sort": {
             "type": "string",
-            "description": "The order to read in, or omit for whatever the library would choose.",
+            "description": "The order to read in, or omit for the default. One of `relevance`, `suggested`, `-updatedAt`,\n`title`, `totalMinutes` or `-cookCount` (not `cookbookOrder`, which needs a cookbook).",
             "nullable": true
           }
         },
-        "description": "What a saved search asks the library for."
+        "description": "What a saved search asks for: the `query`, `tag`, `maxMinutes` and `sort` of `GET /recipes`."
       },
       "SearchesUpdateSavedSearchRequest": {
         "required": [
@@ -12302,7 +12322,7 @@
           },
           "canDraw": {
             "type": "boolean",
-            "description": "Whether it makes pictures."
+            "description": "Whether it makes pictures; read from the model's name by the adapter, as no provider states\nit."
           }
         },
         "description": "One model."
@@ -12325,7 +12345,7 @@
           },
           "problem": {
             "type": "string",
-            "description": "Why it did not, when it did not.",
+            "description": "Why the provider did not answer, as an error code (the client has the words); a wrong key\nand an unreachable address both land here.",
             "nullable": true
           },
           "models": {
@@ -12497,7 +12517,7 @@
           },
           "unpriced": {
             "type": "integer",
-            "description": "How many calls used a model this app has no price for.",
+            "description": "How many calls used a model with no known price; reported so a total that is missing something says so.",
             "format": "int32"
           },
           "byPerson": {
@@ -12641,7 +12661,7 @@
         "properties": {
           "remoteAddress": {
             "type": "string",
-            "description": "The address the connection came from, as Culina sees it — the proxy's,\nwhen there is one it does not trust yet.",
+            "description": "The address the connection came from as Culina sees it: the proxy's, if not yet trusted.",
             "nullable": true
           },
           "forwarded": {
@@ -12810,14 +12830,14 @@
             "items": {
               "type": "string"
             },
-            "description": "The settings the deployment fixes, by the environment variable that sets\nthem — `Cookies__Secure`. Saving cannot change these."
+            "description": "The settings the deployment fixes, by environment variable (`Cookies__Secure`); saving\ncannot change them."
           },
           "writable": {
             "type": "boolean",
             "description": "Whether changes can be saved at all."
           }
         },
-        "description": "The server settings an administrator can change from the app, as the\nrunning process uses them."
+        "description": "The server settings an administrator can change from the app, as the running process uses them."
       },
       "SettingsGetServerTelemetryContract": {
         "required": [
@@ -12860,7 +12880,7 @@
           },
           "usable": {
             "type": "boolean",
-            "description": "Whether this connection has everything its provider needs."
+            "description": "Whether this connection has everything its provider needs: a local model needs an address but no key."
           }
         },
         "description": "One provider, and whether it is ready to be used."
@@ -12878,7 +12898,7 @@
           },
           "apiKey": {
             "type": "string",
-            "description": "A new API key, or null to keep the one already stored — for the address\nit was stored with only: null with a different `baseUrl` is refused\nwith `assistance.api_key_required`, because a stored key is only\never sent to the address it was saved for.",
+            "description": "A new API key, or null to keep the stored one. An empty string removes it.",
             "nullable": true
           },
           "baseUrl": {
@@ -12927,7 +12947,7 @@
             "nullable": true
           }
         },
-        "description": "The assistant configuration to apply."
+        "description": "The assistant configuration to apply, all at once: one screen with one Save, so no half-applied state."
       },
       "SettingsUpdateAssistanceResponse": {
         "required": [
@@ -12968,7 +12988,7 @@
             "nullable": true
           }
         },
-        "description": "The models this instance can talk to, and which of them does what."
+        "description": "The models this instance can talk to, and which does what. An API key goes in and `apiKeyConfigured` comes out, never the value."
       },
       "SettingsUpdateAssistanceUseContract": {
         "required": [
@@ -12998,7 +13018,7 @@
           },
           "defaultModel": {
             "type": "string",
-            "description": "The model that will actually be used when none is chosen."
+            "description": "The model used when none is chosen; the server decides, so the form can show it as a placeholder."
           }
         },
         "description": "What does one job."
@@ -13061,7 +13081,7 @@
           },
           "password": {
             "type": "string",
-            "description": "A new password, or null to keep the one already set. Write-only: no\nresponse ever carries it back. Kept only for the same server: null\nwith a different host, port, name or username is refused with\n`settings.database_password_required`, because the stored password\nis only ever sent to the server it was saved for.",
+            "description": "A new password, or null to keep the stored one. Write-only. Null with a different host, port, name or username is refused with `settings.database_password_required`: the password is only sent to the server it was saved for.",
             "nullable": true
           },
           "requireSsl": {
@@ -13122,7 +13142,7 @@
             "format": "int32"
           }
         },
-        "description": "Who may create an account on this instance."
+        "description": "Who may create an account on this instance, as a contract type rather than the settings record serialised directly."
       },
       "SettingsUpdateServerCookiesContract": {
         "required": [
@@ -13298,11 +13318,11 @@
         "properties": {
           "stage": {
             "type": "string",
-            "description": "`database` when there is none yet, `account` when there is and\n        nobody has an account in it, `complete` once somebody administers\n        the instance."
+            "description": "`database` when there is none yet, `account` when nobody has an account,\n        `complete` once somebody administers it."
           },
           "startedAt": {
             "type": "string",
-            "description": "When the running host started. Changes whenever the server restarts to\napply a setting, which is how a client that asked for one knows it is\nover.",
+            "description": "When the running host started; it changes when the server restarts to apply a setting, so a\nclient can tell the restart is over.",
             "format": "date-time"
           }
         },
@@ -13388,7 +13408,7 @@
           },
           "quantity": {
             "type": "number",
-            "description": "How much, unrounded.",
+            "description": "How much, unrounded: summing rounded amounts compounds error, and display is the client's\nbusiness.",
             "format": "double",
             "nullable": true
           },
@@ -13546,7 +13566,7 @@
             "description": "A sentence for a person, where the client has nothing better."
           }
         },
-        "description": "A failure that happened after the answer had already started."
+        "description": "A failure after the response had already started (a 200 in flight), so it travels as an event on the stream.\nClients branch on string Problem.Code, never on string Problem.Detail, which is reworded."
       },
       "SuggestionsGetAllResponse": {
         "required": [
@@ -13584,7 +13604,7 @@
           },
           "householdId": {
             "type": "string",
-            "description": "The household it belongs to. Another than the one asked about when that\none inherits it, which is what a card says \"from\" about.",
+            "description": "The household it belongs to; not the one asked about when that one inherits it.",
             "format": "uuid"
           },
           "title": {
@@ -13614,7 +13634,7 @@
           },
           "yieldLabel": {
             "type": "string",
-            "description": "The recipe's own word for what it makes — \"Cake\", \"Gläser\", \"Blech\".",
+            "description": "The recipe's own word for what it makes, such as \"Cake\". Null for most; when set it is shown\nas written, otherwise the client words the yield from `yieldKind`.",
             "nullable": true
           },
           "tags": {
@@ -13664,11 +13684,11 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "One of `affinity`, `rediscovery`, `tag`,\n`ingredient`, `season`, `slot`, `household`,\n`fresh`, `similar`. Branch on it."
+            "description": "One of `affinity`, `rediscovery`, `tag`, `ingredient`, `season`, `slot`,\n`household`, `fresh`, `similar`."
           },
           "subject": {
             "type": "string",
-            "description": "What the reason is about — a tag, an ingredient name, or a member's\ndisplay name — when it is about something nameable.",
+            "description": "What the reason is about (a tag, ingredient or member name), when nameable.",
             "nullable": true
           }
         },
@@ -13717,7 +13737,7 @@
             "items": {
               "type": "string"
             },
-            "description": "The codes, each good for one password reset. Shown exactly once — only\ntheir digests are stored, so they cannot be shown again."
+            "description": "The codes, each good for one password reset; shown exactly once, as only their digests are\nstored."
           },
           "createdAt": {
             "type": "string",
@@ -13935,12 +13955,12 @@
           },
           "householdName": {
             "type": "string",
-            "description": "What to call the household created alongside the first account on an\ninstance. Ignored otherwise.",
+            "description": "What to call the household created with the instance's first account; ignored otherwise.",
             "nullable": true
           },
           "invitationCode": {
             "type": "string",
-            "description": "An invitation code, which joins the new account to that household.\nRequired when the instance's registration policy says so.",
+            "description": "An invitation code that joins the new account to its household; required when the registration policy says so.",
             "nullable": true
           }
         },
@@ -13974,7 +13994,7 @@
           },
           "householdId": {
             "type": "string",
-            "description": "The household created with the account, when one was. Null means the\nclient should offer to create one or redeem an invitation.",
+            "description": "The household created with the account; null means the client should offer to create one or\nredeem an invitation.",
             "format": "uuid",
             "nullable": true
           }
@@ -14045,7 +14065,7 @@
             "description": "`metric` or `imperial`."
           }
         },
-        "description": "The preferences to store."
+        "description": "The preferences to store, as a complete replacement rather than a patch."
       },
       "UsersUpdatePreferencesResponse": {
         "required": [

@@ -1,61 +1,34 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// Which proxies the app trusts to tell it the real client address.
-/// </summary>
+/// <summary>Which proxies the app trusts to tell it the real client address.</summary>
 /// <remarks>
-/// This matters more than it looks: without it the app sees the reverse proxy's
-/// address as every client's, so per-IP rate limiting protects nothing and
-/// security logs name the wrong host. Trusting <em>every</em> proxy would be
-/// worse — any client could then forge its own address.
+/// Without it every client looks like the proxy (per-IP limits and logs break); trusting every proxy would let any client forge its address.
 /// </remarks>
 public sealed record ForwardedHeadersSettings
 {
     /// <summary>The configuration section these values are read from.</summary>
     public const string SectionName = "ForwardedHeaders";
 
-    /// <summary>
-    /// The proxy addresses whose <c>X-Forwarded-*</c> headers are honoured.
-    /// Empty means the app is not behind a proxy and reads the socket address
-    /// directly.
-    /// </summary>
+    /// <summary>The proxy addresses whose <c>X-Forwarded-*</c> headers are honoured. Empty means no proxy.</summary>
     public IReadOnlyList<string> KnownProxies { get; init; } = [];
 
-    /// <summary>
-    /// Proxy <em>networks</em>, in CIDR form, whose headers are honoured.
-    /// </summary>
+    /// <summary>Proxy <em>networks</em> (CIDR) whose headers are honoured; a container proxy's address is not known in advance.</summary>
     /// <remarks>
-    /// Not a convenience. A reverse proxy in a container network has no address
-    /// anyone can know in advance — it is whatever the bridge hands out this
-    /// time — so a deployment that can only name addresses cannot name its own
-    /// proxy at all. Keep the network as small as it can be: this is a trust
-    /// boundary, and <c>0.0.0.0/0</c> means every client may forge its own
-    /// address. So nothing wider than a <c>/8</c> (IPv4) or a <c>/32</c>
-    /// (IPv6) is accepted without <see cref="DangerouslyTrustWideNetworks"/>.
+    /// A trust boundary, so keep it small: nothing wider than a <c>/8</c> (IPv4) or <c>/32</c> (IPv6) without <see cref="DangerouslyTrustWideNetworks"/>.
     /// </remarks>
     public IReadOnlyList<string> KnownNetworks { get; init; } = [];
 
-    /// <summary>
-    /// Accepts a <see cref="KnownNetworks"/> entry wider than a <c>/8</c>
-    /// (IPv4) or a <c>/32</c> (IPv6).
-    /// </summary>
+    /// <summary>Accepts a <see cref="KnownNetworks"/> entry wider than a <c>/8</c> (IPv4) or <c>/32</c> (IPv6).</summary>
     /// <remarks>
-    /// Named to be noticed, and never offered on the settings screen. A network
-    /// that wide is almost never a proxy's own; it is "make it work", and it
-    /// lets every client inside it claim any address, which turns the
-    /// per-address rate limits and the security log into whatever a client
-    /// says. A container network is a <c>/12</c> at its widest
-    /// (<c>172.16.0.0/12</c>) and needs no override.
+    /// Never offered on the settings screen: such a network lets every client in it claim any address, voiding rate limits and the security log.
+    /// A container network needs no override (<c>172.16.0.0/12</c> at widest).
     /// </remarks>
     public bool DangerouslyTrustWideNetworks { get; init; }
 
     private const int NarrowestIPv4Prefix = 8;
     private const int NarrowestIPv6Prefix = 32;
 
-    /// <summary>
-    /// The first of <see cref="KnownNetworks"/> too wide to trust, or null when
-    /// none is — or when trusting one was asked for by name.
-    /// </summary>
+    /// <summary>The first of <see cref="KnownNetworks"/> too wide to trust, or null when none is or trusting one was asked for by name.</summary>
     public string? TooWideNetwork() =>
         DangerouslyTrustWideNetworks ? null : KnownNetworks.FirstOrDefault(IsTooWide);
 

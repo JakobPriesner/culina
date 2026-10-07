@@ -1,11 +1,6 @@
 namespace Contracts.Cookbooks;
 
-/// <summary>A page of a household's cookbooks.</summary>
-/// <remarks>
-/// Wrapped, never a bare array, for the same reason every other collection here
-/// is: an array has nowhere to grow paging metadata, and adding it later would
-/// break every client.
-/// </remarks>
+/// <summary>A page of a household's cookbooks, wrapped so paging metadata can grow.</summary>
 public sealed record CookbooksResponse
 {
     /// <summary>The cookbooks on this page, most recently changed first.</summary>
@@ -18,15 +13,7 @@ public sealed record CookbooksResponse
     public required int Total { get; init; }
 }
 
-/// <summary>
-/// A cookbook as it appears on a shelf.
-/// </summary>
-/// <remarks>
-/// Carries what the card draws and nothing else. The recipes themselves are
-/// read through <c>GET /recipes?cookbookId=…</c>, which is what gives a
-/// cookbook search, filters and paging without a second implementation of any
-/// of them.
-/// </remarks>
+/// <summary>A cookbook as it appears on a shelf. Its recipes are read through <c>GET /recipes?cookbookId=…</c>.</summary>
 public sealed record CookbookSummary
 {
     /// <summary>The cookbook's id.</summary>
@@ -47,28 +34,11 @@ public sealed record CookbookSummary
     /// <summary>How many recipes are on it.</summary>
     public required int RecipeCount { get; init; }
 
-    /// <summary>
-    /// Up to four photographed recipes for the cover, oldest first.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Recipes and not images, because a recipe's picture is served from the
-    /// recipe's own address — there is no route that takes an image id.
-    /// </para>
-    /// <para>
-    /// Oldest first, and not newest, so a cover stops moving once four
-    /// photographed recipes are on the shelf. A face that changed every time
-    /// something was added is not one anybody would learn to recognise.
-    /// </para>
-    /// </remarks>
+    /// <summary>Up to four photographed recipes for the cover, oldest first so the cover stops moving.</summary>
+    /// <remarks>Recipes, not images: a recipe's picture is served from the recipe's own address.</remarks>
     public required IReadOnlyList<Guid> CoverRecipeIds { get; init; }
 
-    /// <summary>The same pictures, with which picture each recipe has now.</summary>
-    /// <remarks>
-    /// The image id belongs in the picture's address, as it does on a recipe
-    /// card: a replaced picture is then a new address, and an unchanged one can
-    /// be kept without asking the server again.
-    /// </remarks>
+    /// <summary>The same pictures, with each recipe's current image id so a replaced picture gets a new address.</summary>
     public required IReadOnlyList<CookbookCoverPicture> CoverPictures { get; init; }
 
     /// <summary>When it, or what is on it, last changed.</summary>
@@ -86,13 +56,7 @@ public sealed record CookbookCoverPicture
 }
 
 
-/// <summary>
-/// What a cookbook that fills itself asks for.
-/// </summary>
-/// <remarks>
-/// Every rule must hold. A shelf asking for chicken and a main course means
-/// both, because the shelves worth having are the narrow ones.
-/// </remarks>
+/// <summary>What a cookbook that fills itself asks for. Every rule must hold.</summary>
 public sealed record CookbookRulesContract
 {
     /// <summary>Tag slugs a recipe must all carry.</summary>
@@ -160,23 +124,11 @@ public sealed record CreateCookbookRequest
     /// <summary>What it is for, or omit.</summary>
     public string? Description { get; init; }
 
-    /// <summary>
-    /// What it should ask for.
-    /// </summary>
-    /// <remarks>
-    /// Supplying this makes a cookbook that fills itself; omitting it makes one
-    /// you put recipes on yourself. There is no third setting, and the choice
-    /// cannot be changed afterwards — the two answer "why is this recipe here?"
-    /// differently, and a shelf that was both could not answer at all.
-    /// </remarks>
+    /// <summary>What it should ask for. Supplying it makes a smart cookbook, omitting it a manual one; this cannot change later.</summary>
     public CookbookRulesContract? Rules { get; init; }
 }
 
-/// <summary>Renames a cookbook, and rewrites what it is for.</summary>
-/// <remarks>
-/// Both fields together rather than one patch per field: they are edited in one
-/// form, and two requests for one form is two ways for half of it to fail.
-/// </remarks>
+/// <summary>Renames a cookbook, and rewrites what it is for. Both fields together: they are one form.</summary>
 public sealed record UpdateCookbookRequest
 {
     /// <summary>The new name.</summary>
@@ -185,31 +137,18 @@ public sealed record UpdateCookbookRequest
     /// <summary>The new description, or null to clear it.</summary>
     public string? Description { get; init; }
 
-    /// <summary>
-    /// What it should now ask for. Required for a cookbook that fills itself,
-    /// refused for one you fill yourself.
-    /// </summary>
+    /// <summary>What it should now ask for. Required for a smart cookbook, refused for a manual one.</summary>
     public CookbookRulesContract? Rules { get; init; }
 }
 
-/// <summary>Which recipes are on a cookbook, by id.</summary>
-/// <remarks>
-/// Not paged, and not the recipes: this answers "is it already on?" for every
-/// row of a picker at once. The recipes themselves are
-/// <c>GET /recipes?cookbookId=…</c>, one screen at a time.
-/// </remarks>
+/// <summary>Which recipes are on a cookbook, by id. Not paged: it answers "is it already on?" for a whole picker.</summary>
 public sealed record CookbookRecipesResponse
 {
     /// <summary>Every recipe on it.</summary>
     public required IReadOnlyList<Guid> RecipeIds { get; init; }
 }
 
-/// <summary>Which cookbooks a recipe is on.</summary>
-/// <remarks>
-/// Not paged. A recipe is on a handful of shelves or none, and this answers the
-/// tick marks in a sheet — a cursor would be machinery for a list that fits on
-/// one screen.
-/// </remarks>
+/// <summary>Which cookbooks a recipe is on. Not paged: a recipe is on a handful of shelves.</summary>
 public sealed record RecipeCookbooksResponse
 {
     /// <summary>The cookbooks containing it, by name.</summary>

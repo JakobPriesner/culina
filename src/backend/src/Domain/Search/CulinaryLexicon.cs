@@ -3,50 +3,18 @@ using System.Collections.Frozen;
 namespace Domain.Search;
 
 /// <summary>
-/// What else a word means, to a cook: a curated, bilingual table of culinary
-/// concepts.
+/// A curated, bilingual table of culinary concepts: what else a word means to a cook.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The third of a family. <c>CommonIngredients</c> answers "what might they be
-/// typing?" and <c>SectionKeywords</c> answers "which aisle?"; this answers
-/// "what else means this?" — that <em>Hähnchen</em> is <em>chicken</em>, that
-/// chicken is poultry and poultry is meat, that <em>Waffeln</em> are a dessert
-/// somebody searching for <em>Nachtisch</em> would want to see. Three
-/// questions, three tables, because merging them would make each answer worse
-/// at its own job.
-/// </para>
-/// <para>
-/// Not an ontology. A flat list of concepts, each a handful of surface forms in
-/// each language and a parent or two, closed into full ancestor lists once at
-/// startup. No reasoner and nothing walked at query time.
-/// </para>
-/// <para>
-/// Bounded on purpose, for the reason <c>CommonIngredients</c> gives for
-/// staying short: a table of three hundred entries can be read and argued
-/// with; three thousand would be a liability whose long tail is exactly where
-/// it is most likely to be wrong. When it is wrong, the damage is contained by
-/// where its matches land — the concept lane is the bottom tier, below
-/// everything a query actually names.
-/// </para>
-/// <para>
-/// One rule for writing an entry, and it is what keeps compounds honest: a
-/// compound earns a form of its own only when it means something its parts do
-/// not. <em>Kokosmilch</em> is not milk and <em>Zwiebelkuchen</em> is not a
-/// cake, so both are listed and win over their parts. <em>Schweinebraten</em>
-/// is pork and a roast, and is left for its parts to find.
-/// </para>
-/// <para>
-/// Changing anything here changes what is indexed, so it changes
-/// <see cref="Version"/> too: every document carries the version it was built
-/// with, and the ones left behind are rebuilt when the container starts.
-/// </para>
+/// Deliberately small and flat (no reasoner, nothing walked at query time): its long tail is where
+/// it would be wrong, and concept matches sit in the bottom tier. A compound gets its own form only
+/// when it means something its parts do not (<em>Kokosmilch</em> is not milk). Any change here must
+/// raise <see cref="Version"/>, so stale documents are rebuilt at startup.
 /// </remarks>
 public static class CulinaryLexicon
 {
     /// <summary>
-    /// The version of this table. Raise it with any change to an entry or to
-    /// how text is matched against them.
+    /// The table's version; raise it with any change to an entry or to how text is matched.
     /// </summary>
     public const int Version = 4;
 
@@ -59,68 +27,34 @@ public static class CulinaryLexicon
     public static Concept? Find(string key) =>
         Index.ByKey.GetValueOrDefault(key);
 
-    /// <summary>
-    /// The concept and everything it is a kind of, nearest first.
-    /// </summary>
+    /// <summary>The concept and everything it is a kind of, nearest first.</summary>
     public static IReadOnlyList<string> Lineage(string key) =>
         Index.Closure.TryGetValue(key, out var lineage) ? lineage : [];
 
-    /// <summary>
-    /// The concepts a query names, and nothing they imply.
-    /// </summary>
+    /// <summary>The concepts a query names, and nothing they imply.</summary>
     /// <remarks>
-    /// <para>
-    /// Somebody typing <em>Hähnchen</em> means chicken, not everything that is
-    /// meat — so no ancestors here.
-    /// </para>
-    /// <para>
-    /// And a query word names a concept only when one of its forms is the
-    /// whole word, give or take a short ending: <em>italienische</em> is
-    /// Italian, but <em>Ofengemüse</em> is not "baked" and "vegetable". A
-    /// compound somebody types is almost always the name of the thing they
-    /// want, and splitting it would answer a known-item search with half the
-    /// library. A recipe is read the generous way instead (see
-    /// <see cref="Describe"/>), because a recipe <em>is</em> everything it
-    /// contains; the asymmetry is what lets a whole word in a query find a
-    /// part of a compound in a recipe, and never the reverse.
-    /// </para>
+    /// A query word names a concept only when a form is the whole word, give or take a short
+    /// ending, so a typed compound is not split. A recipe is read the generous way (see
+    /// <see cref="Describe"/>).
     /// </remarks>
     public static IReadOnlySet<string> Recognise(string query) => Read(query, whole: true);
 
     /// <summary>
-    /// What a recipe may be to answer a query that names this concept: the
-    /// concept itself, and for a dish, the dishes it is a kind of.
+    /// What a recipe may be to answer a query naming this concept: itself and, for a dish, its
+    /// parent dishes.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// A goulash is a stew, so a stew is a fair answer to <em>Gulasch</em>, and
-    /// a Bolognese is a fair answer to <em>Tomatensoße</em> because both are
-    /// sauces. One level up and no further: <em>Bolognese</em> may be answered
-    /// by a pasta sauce, but not by every sauce a pasta sauce is a kind of.
-    /// </para>
-    /// <para>
-    /// Only a dish, and only through another dish. An ingredient's parent is a
-    /// family — tomato is a vegetable — and nobody searching for
-    /// <em>Tomaten</em> wants every vegetable. A dish's ingredient parent is
-    /// what it is made from, not what it is: <em>Risotto</em> does not want
-    /// every rice dish. And its cuisine or character — Italian, warm — is
-    /// nothing it could be swapped for.
-    /// </para>
+    /// One level up and dish-to-dish only: an ingredient's parent is a family, not a substitute.
     /// </remarks>
     public static IReadOnlyList<string> AnsweredBy(string key) =>
         Find(key) is { Kind: ConceptKind.Dish } dish
             ? [key, .. dish.Parents.Where(parent => Find(parent)?.Kind == ConceptKind.Dish)]
             : [key];
 
-    /// <summary>
-    /// The concept this text is a name of, or null.
-    /// </summary>
+    /// <summary>The concept this text is a name of, or null.</summary>
     /// <remarks>
-    /// Stricter than <see cref="Recognise"/>: one form has to account for the
-    /// whole of the text, give or take a short ending. "ohne Fleisch" is a name
-    /// of vegetarian; "leckeres Abendessen" is not a name of dinner, however
-    /// much it mentions one. It is what lets a parser consume exactly the words
-    /// a concept was found in, and no others.
+    /// Stricter than <see cref="Recognise"/>: one form must account for the whole text, give or
+    /// take a short ending.
     /// </remarks>
     public static Concept? Name(string text)
     {
@@ -144,15 +78,10 @@ public static class CulinaryLexicon
     }
 
     /// <summary>
-    /// Everything a recipe is, as concepts with their ancestors: what its
-    /// document is indexed under.
+    /// Everything a recipe is, as concepts with their ancestors: what its document is indexed
+    /// under.
     /// </summary>
-    /// <remarks>
-    /// A diet is taken from the title and the tags and never from an
-    /// ingredient. "Vegane Lasagne" and a <c>vegan</c> tag are somebody saying
-    /// so; "pflanzliche Sahne" in an ingredient list says only that one
-    /// ingredient is.
-    /// </remarks>
+    /// <remarks>A diet comes from the title and tags only, never from an ingredient.</remarks>
     /// <param name="title">The recipe's title.</param>
     /// <param name="tags">Its tag names.</param>
     /// <param name="ingredients">Its ingredient names.</param>
@@ -180,9 +109,6 @@ public static class CulinaryLexicon
         return [.. named.SelectMany(Lineage).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
     }
 
-    /// <summary>
-    /// The table, compiled into what matching needs.
-    /// </summary>
     private sealed class Compiled
     {
         internal Compiled(IReadOnlyList<Concept> concepts)
@@ -246,35 +172,12 @@ public static class CulinaryLexicon
 
         private int[] Lengths { get; }
 
-        /// <summary>
-        /// Finds the concepts in one folded text.
-        /// </summary>
+        /// <summary>Finds the concepts in one folded text.</summary>
         /// <remarks>
-        /// <para>
-        /// Phrases first, then words, and within a word the longest form
-        /// first: the form that is found consumes its letters, so
-        /// <em>Kokosmilch</em> is coconut milk and never also milk.
-        /// </para>
-        /// <para>
-        /// Where in a word a form may be found depends on how long it is,
-        /// because a short form found anywhere is found everywhere. Five
-        /// letters or more may sit anywhere in a compound — <em>Hähnchen</em>
-        /// in <em>Hähnchenbrustfilet</em>, <em>Tomate</em> in
-        /// <em>Kirschtomaten</em>. Four may begin or end one — <em>Reis</em> in
-        /// <em>Basmatireis</em>, <em>Rind</em> in <em>Rinderhack</em> — but not
-        /// sit inside it, which is what stops <em>Ente</em> being found in
-        /// <em>Studentenfutter</em>. Three or fewer must be the whole word:
-        /// <em>Eis</em> is ice cream, <em>Eisbein</em> is not.
-        /// </para>
-        /// <para>
-        /// The last word of a phrase may carry an ending, so
-        /// <em>sweet potatoes</em> is still a sweet potato.
-        /// </para>
-        /// <para>
-        /// <paramref name="whole"/> is how a query is read: a word names a
-        /// concept only when a form begins it and leaves at most
-        /// <see cref="Ending"/> letters over.
-        /// </para>
+        /// Phrases first, then words, longest form first; a found form consumes its letters. Where
+        /// a form may match depends on its length: 5+ letters anywhere in a compound, 4 at either
+        /// end, 3 or fewer only as the whole word. <paramref name="whole"/> reads a query: a form
+        /// must begin the word, leaving at most <see cref="Ending"/> letters.
         /// </remarks>
         internal void Match(string folded, HashSet<string> found, bool whole)
         {
@@ -362,8 +265,7 @@ public static class CulinaryLexicon
         }
 
         /// <summary>
-        /// How many letters a query word may carry past a form and still be
-        /// that form: <em>italienisch</em>+<em>en</em>, <em>Tomate</em>+<em>n</em>.
+        /// How many letters a query word may carry past a form and still be that form.
         /// </summary>
         private const int Ending = 2;
 
@@ -481,8 +383,8 @@ public static class CulinaryLexicon
         Ingredient("veal", ["Kalb", "Kalbfleisch"], ["veal"], "meat"),
         Ingredient("game", ["Wild", "Wildschwein", "Hirsch", "Rehrücken", "Rehkeule", "Wildbret"],
             ["venison", "game"], "meat"),
-        // "Gockel" and "Hahn" are what some people call it, not a kind of it:
-        // as a concept beneath chicken, nothing ever answered to them.
+        // "Gockel" and "Hahn" are what some people call it, not a kind of it: as a concept beneath
+        // chicken, nothing ever answered to them.
         Ingredient("chicken",
             ["Hähnchen", "Hühnchen", "Huhn", "Hühner", "Hendl", "Poulet", "Poularde", "Suppenhuhn", "Gockel", "Hahn"],
             ["chicken", "drumsticks", "rooster", "cockerel"], "poultry"),
@@ -689,8 +591,8 @@ public static class CulinaryLexicon
         Ingredient("gelatine", ["Gelatine", "Blattgelatine"], ["gelatine", "gelatin"], "animal_product"),
         Ingredient("stock", ["Brühe", "Fond", "Bouillon"], ["stock", "broth", "bouillon"]),
         Ingredient("soy_sauce", ["Sojasauce", "Sojasoße", "Shoyu", "Tamari"], ["soy sauce", "tamari"], "soy"),
-        // Condiments, not sauces a cook makes: listed so that the fish is still
-        // found, and a Pad Thai is not a sauce.
+        // Condiments, not sauces a cook makes: listed so that the fish is still found, and a Pad
+        // Thai is not a sauce.
         Ingredient("fish_sauce", ["Fischsauce", "Fischsoße"], ["fish sauce"], "fish"),
         Ingredient("oyster_sauce", ["Austernsauce", "Austernsoße"], ["oyster sauce"], "seafood"),
         Ingredient("vinegar", ["Essig", "Balsamico"], ["vinegar", "balsamic"]),
@@ -863,17 +765,14 @@ public static class CulinaryLexicon
         Diet("gluten_free", ["glutenfrei", "ohne Gluten"], ["gluten free", "coeliac"]),
         Diet("lactose_free", ["laktosefrei", "ohne Laktose", "milchfrei"], ["lactose free", "dairy free"]),
         Diet("low_carb", ["Low Carb", "kohlenhydratarm", "Keto"], ["low carb", "keto"]),
-        // What a household answers when asked whether a presumed-vegetarian
-        // recipe is one: a tag that refutes the diet the name could not.
+        // What a household answers when asked whether a presumed-vegetarian recipe is one: a tag
+        // that refutes the diet the name could not.
         Diet("not_vegetarian", ["nicht vegetarisch"], ["not vegetarian", "non vegetarian"]),
         Diet("not_vegan", ["nicht vegan"], ["not vegan", "non vegan"]),
 
         // ── Character: what vague queries resolve to ─────────────────────────
-        // Written on the dishes rather than here: a stew is warm, hearty,
-        // comfort food and wintry, and a salad is light and summery. Nobody tags
-        // a recipe "comfort food", so a character only finds anything through
-        // the dishes that have it. A claim about cooking, not about the
-        // calendar — which month kale grows in is not modelled.
+        // Written on the dishes: nobody tags a recipe "comfort food", so a character only finds
+        // anything through the dishes that have it.
         Character("warm", ["warm", "warme Mahlzeit", "warmes Essen"], ["hot meal", "warm meal"]),
         Character("cold", ["kalt", "kalte Küche"], ["cold", "chilled"]),
         Character("light", ["leicht", "leichte Küche"], ["light"]),

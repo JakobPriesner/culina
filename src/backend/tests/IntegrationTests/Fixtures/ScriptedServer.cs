@@ -5,21 +5,14 @@ using System.Net.Sockets;
 namespace IntegrationTests.Fixtures;
 
 /// <summary>
-/// Something listening on a loopback port that is not PostgreSQL: it reads the
-/// client's startup message, answers with fixed bytes, and keeps whatever the
-/// client sends after that.
+/// Something listening on a loopback port that is not PostgreSQL: it reads the client's startup
+/// message, answers with fixed bytes and keeps what the client sends after that.
 /// </summary>
-/// <remarks>
-/// For proving what the connection check tells a caller about a server that
-/// is not a database, and what it hands to a server that only pretends to be
-/// one.
-/// </remarks>
 public sealed class ScriptedServer : IDisposable
 {
     private readonly TcpListener listener = new(IPAddress.Loopback, 0);
     private readonly Task<byte[]> conversation;
 
-    /// <param name="reply">What to answer the startup message with.</param>
     public ScriptedServer(byte[] reply)
     {
         listener.Start();

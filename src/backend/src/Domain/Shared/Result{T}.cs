@@ -1,21 +1,12 @@
 namespace Domain.Shared;
 
 /// <summary>
-/// The outcome of an operation that either produced a <typeparamref name="TValue"/>
-/// or failed with an <see cref="Error"/>.
+/// The outcome of an operation that either produced a <typeparamref name="TValue"/> or failed with
+/// an <see cref="Error"/>.
 /// </summary>
-/// <typeparam name="TValue">What a successful outcome carries.</typeparam>
 /// <remarks>
-/// <para>
-/// <see cref="Match{TOut}"/> is the only way to observe the outcome, so the
-/// value is reachable exactly when it exists.
-/// </para>
-/// <para>
-/// <typeparamref name="TValue"/> is constrained to be non-nullable, which turns
-/// a recurring mistake into a compile error: modelling "absent" as a null
-/// inside a success gives the type two ways to say nothing, and callers then
-/// have to check both.
-/// </para>
+/// <see cref="Match{TOut}"/> is the only way to observe it. <typeparamref name="TValue"/> is
+/// non-nullable, so "absent" cannot be a null inside a success.
 /// </remarks>
 public readonly struct Result<TValue>
     where TValue : notnull
@@ -32,7 +23,6 @@ public readonly struct Result<TValue>
     }
 
     /// <summary>A successful outcome carrying <paramref name="value"/>.</summary>
-    /// <param name="value">The produced value. Must not be null.</param>
     public static Result<TValue> Success(TValue value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -41,7 +31,6 @@ public readonly struct Result<TValue>
     }
 
     /// <summary>A failed outcome.</summary>
-    /// <param name="error">The failure. Must not be null.</param>
     public static Result<TValue> Failure(Error error)
     {
         ArgumentNullException.ThrowIfNull(error);
@@ -50,17 +39,12 @@ public readonly struct Result<TValue>
     }
 
     /// <summary>Lets a handler return the value directly.</summary>
-    /// <param name="value">The produced value.</param>
     public static implicit operator Result<TValue>(TValue value) => Success(value);
 
     /// <summary>Lets a handler return an error directly.</summary>
-    /// <param name="error">The failure to wrap.</param>
     public static implicit operator Result<TValue>(Error error) => Failure(error);
 
     /// <summary>Observes the outcome, producing a value from whichever branch ran.</summary>
-    /// <typeparam name="TOut">What both branches produce.</typeparam>
-    /// <param name="onSuccess">Runs with the value when the operation succeeded.</param>
-    /// <param name="onFailure">Runs with the error when the operation failed.</param>
     public TOut Match<TOut>(Func<TValue, TOut> onSuccess, Func<Error, TOut> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);
@@ -71,8 +55,6 @@ public readonly struct Result<TValue>
     }
 
     /// <summary>Observes the outcome without producing a value.</summary>
-    /// <param name="onSuccess">Runs with the value when the operation succeeded.</param>
-    /// <param name="onFailure">Runs with the error when the operation failed.</param>
     public void Match(Action<TValue> onSuccess, Action<Error> onFailure)
     {
         ArgumentNullException.ThrowIfNull(onSuccess);

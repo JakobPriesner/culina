@@ -1,14 +1,9 @@
 namespace Domain.Shared;
 
 /// <summary>
-/// The languages Culina supports.
+/// The languages Culina supports: one enum for the interface and for a recipe's text, which are the
+/// same question, so a third language is added once.
 /// </summary>
-/// <remarks>
-/// One enum for two uses that are genuinely the same question — which language
-/// is this text in. A person reads the interface in one; a recipe's title and
-/// steps are written in one. Two enums with the same members would be two
-/// places to add the third language to.
-/// </remarks>
 public enum Language
 {
     /// <summary>English.</summary>

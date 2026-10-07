@@ -2,14 +2,8 @@ using Domain.Shared;
 
 namespace Domain.Recipes;
 
-/// <summary>
-/// One line of a recipe's ingredient list.
-/// </summary>
-/// <remarks>
-/// <see cref="Note"/> is separate from <see cref="Name"/> on purpose. "butter,
-/// finely chopped" and "butter" have to merge into one shopping-list line, and
-/// they never will if the preparation lives in the name.
-/// </remarks>
+/// <summary>One line of a recipe's ingredient list.</summary>
+/// <remarks><see cref="Note"/> is kept out of <see cref="Name"/> so "butter, chopped" and "butter" merge on a shopping list.</remarks>
 public sealed class RecipeIngredient
 {
     /// <summary>The longest ingredient name the database column accepts.</summary>

@@ -7,15 +7,7 @@ public sealed record Response
     public required IReadOnlyList<Completion> Items { get; init; }
 }
 
-/// <summary>
-/// One thing a half-typed query could become.
-/// </summary>
-/// <remarks>
-/// Four kinds, and they do four different things, which is why they are told
-/// apart rather than mixed into one list: a <c>recipe</c> is a destination, an
-/// <c>ingredient</c> and a <c>tag</c> are filters, and a <c>refinement</c>
-/// completes the query. Mixing them makes Enter mean four things.
-/// </remarks>
+/// <summary>One thing a half-typed query could become: a <c>recipe</c> (destination), an <c>ingredient</c> or <c>tag</c> (filter) or a <c>refinement</c> (completes the query).</summary>
 public sealed record Completion
 {
     /// <summary><c>recipe</c>, <c>ingredient</c>, <c>tag</c> or <c>refinement</c>.</summary>

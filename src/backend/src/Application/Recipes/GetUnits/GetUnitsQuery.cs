@@ -9,8 +9,6 @@ using Domain.Shared;
 namespace Application.Recipes.GetUnits;
 
 /// <summary>Reads the units a household can offer when writing a recipe.</summary>
-/// <param name="HouseholdId">Whose kitchen.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record GetUnitsQuery(Guid HouseholdId, Guid UserId);
 
 internal sealed class GetUnitsQueryHandler(
@@ -33,8 +31,7 @@ internal sealed class GetUnitsQueryHandler(
         var result = await allowed.Match(
             async () =>
             {
-                // Inherited recipes are read here too, and their units have to
-                // be ones this kitchen can name.
+                // Inherited recipes are read too, so their units must be ones this kitchen can name.
                 var library = await HouseholdAccess
                     .LibraryAsync(households, query.HouseholdId, cancellationToken)
                     .ConfigureAwait(false);

@@ -6,46 +6,18 @@ using Domain.Shared;
 namespace Application.Recipes.Sources;
 
 /// <summary>
-/// One import, while it runs and for a while after it has stopped.
+/// One import, owned by the server rather than the watching tab. Outcomes are kept in order, so
+/// <see cref="WatchAsync"/> replays from where a caller left off: a reconnect loses and repeats nothing.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The import belongs to the server, not to the tab that asked for it. That is
-/// the whole point of this type: the person who started four hundred recipes
-/// can close the laptop, come back, and the recipes are there — because nothing
-/// about the work depends on somebody watching it.
-/// </para>
-/// <para>
-/// So a watcher is a reader of what has already happened, not a subscriber that
-/// has to be present when it does. Every outcome is kept in order, and
-/// <see cref="WatchAsync"/> replays from wherever the caller left off before it
-/// waits for anything new. A reconnect loses nothing and repeats nothing.
-/// </para>
-/// </remarks>
 public sealed class ImportRun
 {
-    /// <summary>
-    /// How long a stream may say nothing before it says nothing out loud.
-    /// </summary>
-    /// <remarks>
-    /// A recipe can take a while — somebody else's server, then a photo — and a
-    /// connection that is silent for minutes is a connection a proxy will close
-    /// out from under both ends. A tick costs one line and keeps it open.
-    /// </remarks>
+    // A silent connection gets closed by proxies; a tick keeps it open.
     private static readonly TimeSpan Heartbeat = TimeSpan.FromSeconds(15);
 
     private readonly Lock gate = new();
     private readonly List<ImportedRecipe> outcomes = [];
 
-    /// <summary>
-    /// Completed whenever something is recorded, and replaced immediately.
-    /// </summary>
-    /// <remarks>
-    /// Handed out under the same lock that takes the snapshot of what has
-    /// happened so far, which is what makes a watcher impossible to wake up
-    /// late: anything recorded after the snapshot completes the very task the
-    /// watcher is about to await.
-    /// </remarks>
+    // Replaced on every wake. Handed out under the same lock as the outcomes snapshot, so a watcher cannot miss a wake.
     private TaskCompletionSource changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private bool finished;
@@ -94,19 +66,10 @@ public sealed class ImportRun
     /// <summary>When it was asked for. Used to forget it later.</summary>
     public DateTimeOffset StartedAt { get; }
 
-    /// <summary>
-    /// Whether a recipe that looks like one already here is written anyway.
-    /// </summary>
-    /// <remarks>
-    /// Only ever true for a run somebody started after being shown what each
-    /// of its recipes looks like.
-    /// </remarks>
+    /// <summary>Whether a recipe that looks like one already here is written anyway.</summary>
     public bool AllowLookalikes { get; init; }
 
-    /// <summary>
-    /// The language of the device that asked, which the recipes land in when
-    /// the person asking reads in whatever their device reads.
-    /// </summary>
+    /// <summary>The asking device's language, used when the person's own reads "as the device".</summary>
     public Language DeviceLanguage { get; init; }
 
     /// <summary>How many recipes were asked for.</summary>
@@ -155,10 +118,7 @@ public sealed class ImportRun
         }
     }
 
-    /// <summary>
-    /// Everything that has happened since <paramref name="from"/>, and then
-    /// everything that happens next.
-    /// </summary>
+    /// <summary>Everything that has happened since <paramref name="from"/>, then everything that happens next.</summary>
     /// <param name="from">How many outcomes the caller already has.</param>
     /// <param name="cancellationToken">Ends the watch. Never the run.</param>
     /// <returns>One event per recipe, then one final event with no recipe on it.</returns>
@@ -214,8 +174,7 @@ public sealed class ImportRun
 
             if (silent)
             {
-                // Nothing to report, said out loud so the connection survives to
-                // report something later.
+                // Heartbeat: keeps the connection alive.
                 yield return new ImportEvent { Done = sent, Total = Total, Finished = false };
             }
         }
@@ -233,33 +192,12 @@ public sealed class ImportRun
 
 /// <summary>
 /// The imports this instance is running, and the queue the worker reads.
+/// In memory by design: a lost run is recovered by re-requesting, since arrived recipes have an origin row.
 /// </summary>
-/// <remarks>
-/// <para>
-/// One type rather than two, because a registry of runs and a queue of work are
-/// the same fact here: a run exists from the moment it is accepted, and the
-/// worker's job is to pick up the ones nobody has started yet.
-/// </para>
-/// <para>
-/// In memory, deliberately. An import is minutes of work against somebody
-/// else's server, not days, and the property that makes it safe to lose is the
-/// one the database already gives: a recipe that arrived has an origin row, so
-/// asking for the same selection again brings over exactly what is missing. A
-/// job table would buy resumption across a restart and cost a schema, a poller
-/// and a new way for the system to be half-finished.
-/// </para>
-/// </remarks>
 /// <param name="time">The injected clock, for forgetting old runs.</param>
 public sealed class ImportRuns(TimeProvider time)
 {
-    /// <summary>
-    /// How long a finished run stays readable.
-    /// </summary>
-    /// <remarks>
-    /// Long enough that somebody who lost their connection at the end can
-    /// reconnect and see how it went; short enough that a busy instance is not
-    /// remembering last week.
-    /// </remarks>
+    // Long enough to reconnect and see the result, short enough not to hoard.
     private static readonly TimeSpan Remembered = TimeSpan.FromMinutes(30);
 
     private readonly Dictionary<Guid, ImportRun> runs = [];

@@ -7,9 +7,8 @@ namespace Api.Endpoints.Recipes.CreateShare.V1;
 
 /// <summary>Publishes a recipe behind a link.</summary>
 /// <remarks>
-/// <c>PUT</c> and not <c>POST</c>, because it is idempotent and has to be:
-/// pressing share a second time must hand back the address that was already
-/// sent to somebody, never a new one that quietly orphans the old.
+/// <c>PUT</c>, not <c>POST</c>: idempotent by necessity, so a second press returns the address
+/// already sent rather than orphaning it.
 /// </remarks>
 internal sealed class CreateRecipeShareEndpoint : IEndpoint
 {

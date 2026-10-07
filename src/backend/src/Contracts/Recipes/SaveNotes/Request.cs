@@ -2,13 +2,10 @@ using Contracts.Recipes.GetNotes;
 
 namespace Contracts.Recipes.SaveNotes;
 
-/// <summary>
-/// Your notes on one recipe, in full.
-/// </summary>
+/// <summary>Your notes on one recipe, in full.</summary>
 /// <remarks>
-/// A replacement: an omitted step note is deleted, and an empty body means the
-/// same thing. Storing a blank note would make the UI show an empty box nobody
-/// asked for.
+/// A replacement: an omitted step note is deleted, as is an empty body; a stored blank note would
+/// show an empty box nobody asked for.
 /// </remarks>
 public sealed record Request
 {

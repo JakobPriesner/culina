@@ -63,9 +63,8 @@ internal sealed class RecipeOriginRepository(DbExecutor executor) : IRecipeOrigi
         }
         catch (PostgresException failure) when (failure.ConstraintName == OncePerHousehold)
         {
-            // Two imports of the same recipe racing each other. The loser rolls
-            // back its recipe with the transaction it is inside, which is
-            // exactly right: the winner's copy is already there.
+            // Two imports of the same recipe raced; the loser's recipe rolls back with its
+            // transaction.
             return ImportErrors.AlreadyImported;
         }
     }
@@ -81,8 +80,7 @@ internal sealed class RecipeOriginRepository(DbExecutor executor) : IRecipeOrigi
             .ConfigureAwait(false);
 
         return row is null
-            // Not a failure worth a message: most recipes were written here,
-            // and having no origin is the ordinary case.
+            // Not worth a message: most recipes were written here, so no origin is ordinary.
             ? ImportErrors.NoOrigin
             : row.ToDomain();
     }
@@ -112,8 +110,7 @@ internal sealed class RecipeOriginRepository(DbExecutor executor) : IRecipeOrigi
                 cancellationToken)
             .ConfigureAwait(false);
 
-        // Last one wins on a duplicate, which cannot happen: the unique index
-        // is on exactly this triple.
+        // Last one wins on a duplicate, which cannot happen: the unique index covers this triple.
         return rows.ToDictionary(row => row.ExternalId, row => row.RecipeId, StringComparer.Ordinal);
     }
 }
@@ -128,9 +125,8 @@ internal static class RecipeOriginRowMappings
         var kind = SourceKind.Parse(row.Kind)
             ?? throw new InvalidOperationException($"Stored origin kind '{row.Kind}' is not known.");
 
-        // Read through the same rule it is written through, because rows from
-        // before the rule existed were stored as they arrived: one that is not
-        // an http or https address simply has no link.
+        // Read through the write-time rule: older rows were stored as they arrived, and a
+        // non-http(s) one has no link.
         return new RecipeOrigin(
             row.RecipeId,
             row.HouseholdId,

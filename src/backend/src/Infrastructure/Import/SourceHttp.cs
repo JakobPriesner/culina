@@ -10,53 +10,19 @@ using Domain.Shared;
 namespace Infrastructure.Import;
 
 /// <summary>
-/// The one way this app talks to somebody else's recipe server.
+/// The one way this app talks to somebody else's recipe server: shared limits, deadline and read cap.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Shared by every library reader, so the limits are written once rather than
-/// once per source: the same checked connections, the same deadline, the same
-/// cap on how much of an answer is read, and the same rule about what a failure
-/// is allowed to say.
-/// </para>
-/// <para>
-/// Two things here are not details. Redirects are not followed at all — unlike
-/// the pasted-link path, where a redirect is the ordinary shape of the web,
-/// nothing legitimate redirects an API call, and a redirect that was followed
-/// would carry an <c>Authorization</c> header to wherever it pointed. And the
-/// token goes on each request rather than onto the client, because one client
-/// serves every household's connections.
-/// </para>
+/// Redirects are never followed (nothing legitimate redirects an API call, and one would carry the
+/// <c>Authorization</c> header elsewhere); the token goes on each request because one client serves every household.
 /// </remarks>
 internal sealed class SourceHttp : IDisposable
 {
-    /// <summary>
-    /// How long one call to the other app may take, reading its answer
-    /// included.
-    /// </summary>
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(20);
 
-    /// <summary>
-    /// How much of an answer is read.
-    /// </summary>
-    /// <remarks>
-    /// A page of fifty recipe summaries is a few hundred kilobytes and one
-    /// recipe is a few. Four megabytes is far above both and far below what an
-    /// unbounded read costs when the thing on the other end is not what it
-    /// claimed to be.
-    /// </remarks>
     private const int MaxBytes = 4 * 1024 * 1024;
 
-    /// <summary>
-    /// How long one picture may take.
-    /// </summary>
-    /// <remarks>
-    /// Shorter than <see cref="Deadline"/>, and deliberately. A batch fetches
-    /// up to twenty-five recipes and then up to twenty-five pictures, and a
-    /// picture is the part nobody is waiting for: a recipe with no photo is
-    /// still the recipe, so a slow image gives up long before a slow recipe
-    /// would.
-    /// </remarks>
+    // Shorter than Deadline: a slow picture should give up long before a slow recipe, which is what the user waits for.
     private static readonly TimeSpan PictureDeadline = TimeSpan.FromSeconds(8);
 
     private readonly SocketsHttpHandler handler;
@@ -64,16 +30,8 @@ internal sealed class SourceHttp : IDisposable
     private readonly int maxPictureBytes;
     private readonly TimeSpan deadline;
 
-    /// <summary>
-    /// Every server, as host and port, that this has dialled at an address
-    /// off the public internet.
-    /// </summary>
-    /// <remarks>
-    /// Remembered when the connection is made and never forgotten. That is what
-    /// makes it hold against a name that resolves publicly once and privately
-    /// the next time: every answer from a private address arrived over a
-    /// connection that was remembered before anything was sent on it.
-    /// </remarks>
+    // Servers (host:port) ever dialled at a non-public address, remembered at connect time so a name that
+    // resolves publicly once and privately later cannot slip through.
     private readonly ConcurrentDictionary<string, bool> privateServers =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -82,52 +40,28 @@ internal sealed class SourceHttp : IDisposable
     {
     }
 
-    /// <summary>A client that connects to whatever <paramref name="admits"/> allows.</summary>
-    /// <remarks>
-    /// Separate from the public constructor for the tests, whose recipe servers
-    /// are on loopback — which no setting lets a deployment reach — and which
-    /// would rather not wait twenty seconds to see a deadline pass.
-    /// </remarks>
+    /// <summary>Separate from the public constructor so tests can reach loopback servers and use short deadlines.</summary>
     internal SourceHttp(StorageSettings storage, Func<IPAddress, bool> admits, TimeSpan? deadline = null)
     {
         ArgumentNullException.ThrowIfNull(storage);
 
         this.deadline = deadline ?? Deadline;
 
-        // The same ceiling an upload gets. A picture that arrives from another
-        // app is stored by exactly the same code that stores one somebody
-        // chose from their phone, so it may as well be bounded by the same
-        // number rather than a second one that can drift away from it.
+        // Same ceiling as an upload: the same code stores both.
         maxPictureBytes = storage.MaxImageBytes;
 
-        // Redirects are never followed: nothing legitimate redirects an API
-        // call, and a followed redirect would hand the token to whatever it
-        // pointed at.
+        // Redirects are never followed: a followed one would hand the token to wherever it pointed.
         handler = CheckedConnections.Handler(admits, dialling: Remember);
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = this.deadline };
 
-        // Said plainly, as the page fetcher does. This is one person moving
-        // their own recipes, not a crawler, and pretending to be a browser
-        // would only be making it harder for a server to say no.
+        // Said plainly: this is one person moving their own recipes, not a crawler.
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Culina/1.0 (self-hosted recipe import)");
         client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
     }
 
-    /// <summary>
-    /// Reads JSON from the other app, or says — vaguely — why it could not.
-    /// </summary>
-    /// <typeparam name="TBody">The shape expected back.</typeparam>
-    /// <param name="url">What to ask for.</param>
-    /// <param name="authorization">The <c>Authorization</c> header to send.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
-    /// <remarks>
-    /// A refused token is the one failure reported specifically, because it is
-    /// the one thing the person can actually fix and the one thing they are
-    /// most likely to have got wrong. Everything else is "could not fetch",
-    /// deliberately: this endpoint must not become a way to ask which addresses
-    /// answer and which merely time out. See <see cref="VagueAsync{T}"/>.
-    /// </remarks>
+    // A refused token is the only failure reported specifically; everything else is "could not fetch" so
+    // this cannot be used to probe which addresses answer. See VagueAsync.
     internal Task<Result<TBody>> GetAsync<TBody>(
         Uri url,
         AuthenticationHeaderValue authorization,
@@ -135,26 +69,8 @@ internal sealed class SourceHttp : IDisposable
         where TBody : notnull =>
         VagueAsync(url, deadline, token => SendAsync<TBody>(url, authorization, token), cancellationToken);
 
-    /// <summary>
-    /// Posts a form and reads JSON back, without an <c>Authorization</c> header.
-    /// </summary>
-    /// <typeparam name="TBody">The shape expected back.</typeparam>
-    /// <param name="url">What to post to.</param>
-    /// <param name="form">The fields to send.</param>
-    /// <param name="cancellationToken">Cancels the call.</param>
-    /// <remarks>
-    /// <para>
-    /// The one call in this class that carries somebody's password, and the
-    /// reason it is written separately rather than folded into
-    /// <see cref="GetAsync{TBody}"/>: there is exactly one of it, and a reader
-    /// asking "where does the password go" should find one answer.
-    /// </para>
-    /// <para>
-    /// A form rather than JSON, because that is what the endpoints this exists
-    /// for accept. Nothing about what is posted is logged — not the fields, not
-    /// their names, and not the body on a failure.
-    /// </para>
-    /// </remarks>
+    // The one call that carries a password, kept apart so there is one answer to "where does it go".
+    // Nothing posted is ever logged.
     internal Task<Result<TBody>> PostFormAsync<TBody>(
         Uri url,
         IReadOnlyDictionary<string, string> form,
@@ -162,60 +78,18 @@ internal sealed class SourceHttp : IDisposable
         where TBody : notnull =>
         VagueAsync(url, deadline, token => PostAsync<TBody>(url, form, token), cancellationToken);
 
-    /// <summary>
-    /// Reads a picture, and refuses anything that is not one.
-    /// </summary>
-    /// <param name="url">Where the picture is.</param>
-    /// <param name="authorization">The <c>Authorization</c> header to send.</param>
-    /// <param name="cancellationToken">Cancels the read.</param>
-    /// <remarks>
-    /// <para>
-    /// Bytes, not a decoded image: what comes back goes straight to
-    /// <see cref="Application.Abstractions.IImageStore"/>, which decides what
-    /// the file actually is by decoding it and stores its own re-encoding.
-    /// Nothing here trusts the content type — it is checked only to avoid
-    /// pulling ten megabytes of HTML down before the store rejects it.
-    /// </para>
-    /// <para>
-    /// Capped while reading rather than after, for the same reason every other
-    /// read here is: a <c>Content-Length</c> is a claim, and a response with no
-    /// end must not be the end of the process.
-    /// </para>
-    /// </remarks>
+    // Bytes, not a decoded image: IImageStore decodes and re-encodes. The content type is checked only to
+    // avoid downloading large non-images; the read is capped while reading, since Content-Length is a claim.
     internal Task<Result<Stream>> GetPictureAsync(
         Uri url,
         AuthenticationHeaderValue authorization,
         CancellationToken cancellationToken) =>
         VagueAsync(url, PictureDeadline, token => ReadPictureAsync(url, authorization, token), cancellationToken);
 
-    /// <summary>
-    /// Makes one call within a deadline, and says no more than "could not
-    /// fetch" when it fails.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The deadline covers the whole call, the answer's body included. The
-    /// client's own timeout stops counting once the headers arrive, and every
-    /// call here asks for the headers first — so without this, a server that
-    /// sends them and then a byte a minute would hold the call until the host
-    /// shut down, and a background import with it.
-    /// </para>
-    /// <para>
-    /// Never with the host or the reason attached. Telling a caller that one
-    /// address was refused and another merely timed out is how this would
-    /// become a port scanner with a friendly error message.
-    /// </para>
-    /// <para>
-    /// And nothing more specific at all about a server on a private network,
-    /// which only an operator who allowed private addresses can have reached.
-    /// There, "refused", "not understood", "too large" and "could not fetch"
-    /// would together tell whoever set up a connection which services run
-    /// inside the network and what they speak — so all four are one answer.
-    /// The cost is that a wrong token for a recipe server on the LAN reads as
-    /// "could not fetch" rather than "refused", which is a price worth paying
-    /// for not mapping the network.
-    /// </para>
-    /// </remarks>
+    // The deadline covers the body too, since HttpClient.Timeout stops at the headers and a trickling
+    // server would hold the call forever. Failures never name the host or reason (port-scanner risk), and
+    // for a private-network server even "refused" and "too large" collapse to "could not fetch", so a
+    // connection cannot map the internal network.
     private async Task<Result<T>> VagueAsync<T>(
         Uri url,
         TimeSpan limit,
@@ -244,10 +118,6 @@ internal sealed class SourceHttp : IDisposable
             : answer;
     }
 
-    /// <summary>
-    /// What a connected source may be: the internet, and the household's own
-    /// network only when the operator has said so.
-    /// </summary>
     private static Func<IPAddress, bool> Reach(ImportSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -265,10 +135,7 @@ internal sealed class SourceHttp : IDisposable
         }
     }
 
-    /// <remarks>
-    /// Without brackets, because an IPv6 literal is written with them in a URL
-    /// and may arrive without them as the name a connection is asked for.
-    /// </remarks>
+    // Without brackets: an IPv6 literal may arrive with or without them.
     private static string ServerKey(string host, int port) =>
         $"{host.Trim('[', ']')}:{port.ToString(CultureInfo.InvariantCulture)}";
 
@@ -375,9 +242,7 @@ internal sealed class SourceHttp : IDisposable
         CancellationToken cancellationToken)
         where TBody : notnull
     {
-        // 400 as well as 401: an obtain-token endpoint answers a wrong password
-        // with a validation failure, and reporting that as "could not fetch"
-        // would send somebody to check an address that was right.
+        // 400 too: an obtain-token endpoint answers a wrong password with a validation failure.
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
             or HttpStatusCode.BadRequest)
         {
@@ -398,8 +263,7 @@ internal sealed class SourceHttp : IDisposable
 
         await using (body.ConfigureAwait(false))
         {
-            // Capped while reading and not after: a Content-Length is a claim,
-            // and an answer with no end must not be the end of the process.
+            // Capped while reading: Content-Length is a claim.
             using var capped = new CappedStream(body, MaxBytes);
 
             try
@@ -408,9 +272,7 @@ internal sealed class SourceHttp : IDisposable
                     .DeserializeAsync<TBody>(capped, Json, cancellationToken)
                     .ConfigureAwait(false);
 
-                // Asked even on success: a truncated document can still parse
-                // when it happens to end on a boundary, and what it parses to
-                // is half an answer.
+                // Asked even on success: a truncated document can parse when it ends on a boundary.
                 if (capped.Overflowed)
                 {
                     return ImportErrors.TooLarge;
@@ -441,16 +303,7 @@ internal sealed class SourceHttp : IDisposable
         handler.Dispose();
     }
 
-    /// <summary>
-    /// A stream that stops at a limit and says that it did.
-    /// </summary>
-    /// <remarks>
-    /// It ends rather than throwing, and reports <see cref="Overflowed"/>
-    /// afterwards. An exception would have to be a type of its own to be caught
-    /// precisely, a public one to satisfy the analyzers, and documented — all
-    /// for a signal that never leaves this class. Ending is also what a reader
-    /// already copes with, so neither caller needs a second path.
-    /// </remarks>
+    // Ends rather than throwing and reports Overflowed, so callers need no second path.
     private sealed class CappedStream(Stream inner, int limit) : Stream
     {
         private long read;
@@ -500,9 +353,7 @@ internal sealed class SourceHttp : IDisposable
 
             Overflowed = true;
 
-            // Ends here. What has been read is not handed on: a document cut in
-            // half is not a smaller document, and both callers ask about
-            // Overflowed before they trust what they got.
+            // Ends here: a document cut in half is not a smaller document; callers check Overflowed.
             return 0;
         }
     }

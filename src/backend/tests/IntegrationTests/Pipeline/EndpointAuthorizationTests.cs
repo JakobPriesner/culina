@@ -7,23 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace IntegrationTests.Pipeline;
 
 /// <summary>
-/// Every route is signed-in only, or anonymous on purpose.
+/// Every route is signed-in only, or anonymous on purpose. There is no fallback policy (each endpoint opts in), so the real host's routes are
+/// walked and every one that lets an anonymous request through must be named below.
 /// </summary>
-/// <remarks>
-/// There is no fallback authorization policy: each endpoint opts in with its
-/// own <c>RequireAuthorization()</c> or <c>AllowAnonymous()</c>. That keeps the
-/// decision visible on the endpoint, and it means an endpoint that forgets both
-/// is open to anybody — the cheapest way to lose the household boundary. So
-/// the real host's routes are walked, and every one that would let an
-/// anonymous request through has to be named below.
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class EndpointAuthorizationTests(PostgresFixture postgres)
 {
-    /// <summary>
-    /// What anybody may call, signed in or not, and why. A route added here is
-    /// a decision, and the review of it should read the reason.
-    /// </summary>
+    /// <summary>What anybody may call, signed in or not, and why; a route added here is a decision whose reason is reviewed.</summary>
     private static readonly HashSet<string> Anonymous =
     [
         // Probes: a load balancer has no account.
@@ -54,10 +44,8 @@ public class EndpointAuthorizationTests(PostgresFixture postgres)
     [Fact]
     public void EveryEndpoint_ShouldRequireASignedInCaller_UnlessItIsAnonymousOnPurpose()
     {
-        // Arrange
         var endpoints = postgres.Api.Services.GetRequiredService<EndpointDataSource>().Endpoints;
 
-        // Act
         var open = endpoints
             .OfType<RouteEndpoint>()
             .Where(endpoint => !RequiresAuthorization(endpoint))
@@ -65,32 +53,24 @@ public class EndpointAuthorizationTests(PostgresFixture postgres)
             .Where(name => !Anonymous.Contains(name))
             .Order(StringComparer.Ordinal);
 
-        // Assert
-        // Each one named here forgot RequireAuthorization(), or is anonymous
-        // on purpose and belongs in the list above with its reason.
+        // Each one named here forgot RequireAuthorization(), or is anonymous on purpose and belongs in the list above.
         Assert.Empty(open);
     }
 
     [Fact]
     public void TheWalk_ShouldSeeTheRealHostsRoutes_SoTheRuleAboveIsNotVacuous()
     {
-        // Arrange
-        // Act
         var names = postgres.Api.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .OfType<RouteEndpoint>()
             .Select(Name)
             .ToList();
 
-        // Assert
         Assert.Contains("GET /api/v1/users/me", names);
         Assert.Contains("POST /api/v1/sessions", names);
         Assert.True(names.Count > 100, $"Only {names.Count} routes were found.");
     }
 
-    /// <summary>
-    /// Signed in only: an authorization requirement, and nothing that lets an
-    /// anonymous caller past it — <c>AllowAnonymous</c> wins wherever it is.
-    /// </summary>
+    /// <summary>Signed in only: an authorization requirement, with nothing letting an anonymous caller past it (<c>AllowAnonymous</c> wins).</summary>
     private static bool RequiresAuthorization(RouteEndpoint endpoint) =>
         endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null
         && (endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>().Count > 0

@@ -28,8 +28,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
         // Assert
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         Assert.NotEmpty(created.Json!.Value.GetProperty("code").GetString()!);
-        // Listing must not hand out a code: only the digest is stored, so a
-        // leaked screenshot of this list is harmless.
+        // Only the digest is stored, so listing cannot hand out a code.
         var summary = listed.Json!.Value.GetProperty("items")[0];
         Assert.False(summary.TryGetProperty("code", out _));
     }
@@ -90,7 +89,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Distinguishing them would let someone probe codes for validity.
+        // Distinguishing them would let someone probe codes.
         Assert.Equal(used.StatusCode, unknown.StatusCode);
         Assert.Equal(used.ProblemCode, unknown.ProblemCode);
         Assert.Equal(
@@ -139,8 +138,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Not-found rather than forbidden, for the same reason every other
-        // household read gives a non-member a 404.
+        // Not-found rather than forbidden, like every household read for a non-member.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -148,9 +146,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
     public async Task Redeem_ShouldRecogniseAMember_AndLeaveTheCodeForSomebodyElse()
     {
         // Arrange
-        // The owner opening the link they are about to send — the commonest way
-        // anybody meets their own invitation. It is not an error, and it must
-        // not use the code up.
+        // The owner opening their own link is not an error and must not use the code up.
         var (owner, joiner) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var joinerClient = joiner;
@@ -174,8 +170,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
     public async Task Redeem_ShouldStillSayInvalid_ToAMemberHoldingAUsedCode()
     {
         // Arrange
-        // Recognising a member is only for a code that works. A used one says
-        // what it says to everybody.
+        // Recognising a member applies only to a working code.
         var (owner, joiner) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var joinerClient = joiner;
@@ -230,7 +225,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
         var read = await joiner.GetAsync($"/api/v1/invitations/{code}", Token);
 
         // Assert
-        // The name and nothing else: no id, no members, nobody's address.
+        // The name and nothing else.
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         var property = Assert.Single(read.Json!.Value.EnumerateObject());
         Assert.Equal("householdName", property.Name);
@@ -275,8 +270,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
         };
 
         // Assert
-        // Distinguishing them would make reading a way to probe codes that
-        // redeeming deliberately is not.
+        // Distinguishing them would make reading a way to probe codes.
         Assert.All(answers, answer =>
         {
             Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
@@ -289,7 +283,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
     public async Task Read_ShouldBeLimitedPerAddress_WithoutSpendingARedemption()
     {
         // Arrange
-        // A host of its own, so a ceiling of two touches nothing else.
+        // Own host, so the ceiling of two touches no other test.
         await postgres.ResetAsync(Token);
         using var factory = new CulinaApiFactory(
             postgres,
@@ -315,8 +309,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
     public async Task Read_ShouldNameNothing_ToSomebodySignedOut()
     {
         // Arrange
-        // A code is a bearer token: whoever holds the link learns whose kitchen
-        // it opens only once they have an account to decide with.
+        // A code is a bearer token: the kitchen's name is shown only once signed in.
         var (owner, _) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var anonymous = postgres.Api.NewApiClient();
@@ -343,9 +336,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
     public async Task Redeem_ShouldRefuseACodeThatHasExpired()
     {
         // Arrange
-        // A link in a message somebody scrolls past for a year is not consent
-        // given a year later. Aged in the database because the API has no way
-        // to produce an expired code, which is the point.
+        // Aged in the database: the API cannot produce an expired code.
         var (owner, other) = await TwoUsersAsync();
         using var ownerClient = owner;
         using var otherClient = other;
@@ -369,8 +360,7 @@ public class InvitationEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // The same answer an unknown code gets: a code that is refused for a
-        // reason tells whoever is guessing which guesses were close.
+        // Same answer as an unknown code, so guessers learn nothing.
         Assert.Equal(HttpStatusCode.NotFound, redeemed.StatusCode);
     }
 

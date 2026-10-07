@@ -6,16 +6,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Archive;
 
-/// <summary>
-/// Taking your recipes with you, and bringing them back.
-/// </summary>
-/// <remarks>
-/// A backup nobody has restored is not a backup, so this does the whole
-/// journey: write a recipe, export it, restore it into an empty kitchen, and
-/// read it back. The assertion inside that journey is the one that matters —
-/// a restored step still names the right ingredient, because the archive
-/// carries positions and ids are assigned by whichever database it lands in.
-/// </remarks>
+/// <summary>Export, restore into an empty kitchen and read back: a restored step must still name the right ingredient (the archive carries positions, not ids).</summary>
 [Collection(RequiresDatabase.Name)]
 public class ArchiveRoundTripTests(PostgresFixture postgres)
 {
@@ -26,25 +17,21 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     [Fact]
     public async Task AnArchive_ShouldRestoreIntoARecipeThatStillPointsAtItsIngredients()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await FirstHouseholdIdAsync(client);
         await WriteLemonOrzoAsync(client, householdId);
 
-        // Act
         var exported = await client.GetAsync($"/api/v1/households/{householdId}/archive", Token);
         var archive = exported.Body;
 
         var restored = await UploadAsync(client, householdId, archive);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, exported.StatusCode);
         Assert.Equal(HttpStatusCode.OK, restored.StatusCode);
         Assert.Equal(1, restored.Json!.Value.GetProperty("restored").GetInt32());
         Assert.Equal(0, restored.Json!.Value.GetProperty("skipped").GetInt32());
 
-        // Two of them now: a restore adds, it never replaces. A restore that
-        // emptied your kitchen first would be the worst reading of the word.
+        // A restore adds, it never replaces.
         var all = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&limit=24",
             Token);
@@ -54,8 +41,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
 
         Assert.Equal(2, titles.Count(title => title == "Lemon orzo"));
 
-        // And the copy's step still names its own ingredients, by the ids the
-        // restore assigned rather than the ids the archive was written with.
+        // The copy's steps reference the ids the restore assigned, not the archive's.
         var copy = await ReadTheRestoredOneAsync(client, householdId);
         var ingredients = copy.GetProperty("groups").EnumerateArray()
             .SelectMany(group => group.GetProperty("ingredients").EnumerateArray())
@@ -73,21 +59,17 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
         Assert.All(referenced, id =>
             Assert.Contains(ingredients, one => one.GetProperty("ingredientId").GetGuid() == id));
 
-        // The words, in order, are the ones that were written.
         Assert.Equal("Boil ", segments[0].GetProperty("value").GetString());
         Assert.Equal("orzo", segments[1].GetProperty("name").GetString());
         Assert.Equal("olive oil", segments[3].GetProperty("name").GetString());
 
-        // And so does what a step needs but never names, which the words alone
-        // could not have carried across.
+        // Also what a step needs but never names.
         var seasoning = copy.GetProperty("steps").EnumerateArray().Last();
         var needed = Assert.Single(seasoning.GetProperty("uses").EnumerateArray()).GetGuid();
         var oil = ingredients.Single(one => one.GetProperty("name").GetString() == "olive oil");
 
         Assert.Equal(oil.GetProperty("ingredientId").GetGuid(), needed);
 
-        // Everything the recipe called by its own name it is still called: a
-        // kitchen that leaves with its archive leaves with its own words too.
         Assert.Equal("bowls", copy.GetProperty("yieldLabel").GetString());
         Assert.Equal(
             "Boil the orzo",
@@ -97,19 +79,15 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     [Fact]
     public async Task Restore_ShouldRefuse_AnArchiveFromAVersionItDoesNotKnow()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await FirstHouseholdIdAsync(client);
 
-        // Act
         var response = await UploadAsync(
             client,
             householdId,
             """{ "culina": 99, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [] }""");
 
-        // Assert
-        // Refused rather than half-read: a half-restored recipe is worse than a
-        // failed restore, because nobody can tell which half is wrong.
+        // Refused rather than half-read.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("archive.unknown_version", response.Json!.Value.GetProperty("code").GetString());
     }
@@ -117,20 +95,17 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     [Fact]
     public async Task Restore_ShouldRefuse_AnArchiveWithMoreRecipesThanOneRestoreWrites()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await FirstHouseholdIdAsync(client);
         var recipes = string.Join(",", Enumerable.Repeat(
             """{ "title": "T", "language": "en", "yieldAmount": 1, "yieldKind": "servings", "tags": [], "groups": [], "steps": [], "cooked": [] }""",
             2_001));
 
-        // Act
         var response = await UploadAsync(
             client,
             householdId,
             $$"""{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{{recipes}}] }""");
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("archive.too_many_recipes", response.Json!.Value.GetProperty("code").GetString());
     }
@@ -138,14 +113,11 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     [Fact]
     public async Task Restore_ShouldRefuse_AFileThatIsNotAnArchive()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await FirstHouseholdIdAsync(client);
 
-        // Act
         var response = await UploadAsync(client, householdId, "not json at all");
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("archive.not_an_archive", response.Json!.Value.GetProperty("code").GetString());
     }
@@ -153,18 +125,14 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     [Fact]
     public async Task Export_ShouldBeRefused_ForAKitchenTheCallerIsNotIn()
     {
-        // Arrange
-        // Ada's real kitchen, not an invented id: a check that only ever met
-        // a household that does not exist proves nothing about one that does.
+        // A real household: checking only a nonexistent one proves nothing.
         using var ada = await SignedInAsync();
         var householdId = await FirstHouseholdIdAsync(ada);
         await WriteLemonOrzoAsync(ada, householdId);
         using var stranger = await Kitchen.StrangerAsync(postgres);
 
-        // Act
         var response = await stranger.GetAsync($"/api/v1/households/{householdId}/archive", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.DoesNotContain("Lemon orzo", response.Body, StringComparison.Ordinal);
     }
@@ -181,9 +149,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
         var groups = read.Json!.Value.GetProperty("groups").EnumerateArray().ToList();
         var groupId = groups[0].GetProperty("groupId").GetGuid();
 
-        // Saved once to give the ingredients ids, then again to point the step
-        // at them — which is how the editor does it, and the only way a step
-        // can reference a line the server has seen.
+        // Saved once to give the ingredients ids, then again to point the step at them, as the editor does.
         await SaveAsync(
             client,
             recipeId,
@@ -255,8 +221,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
                     },
                     new
                     {
-                        // Needs the oil and never says so — the kind of step
-                        // whose ingredients an archive used to lose.
+                        // Needs the oil without naming it: the kind of step an archive used to lose.
                         segments = new object[]
                         {
                             new { type = "text", value = "Season and serve." }
@@ -268,7 +233,6 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
             });
     }
 
-    /// <summary>A write that carries the version it is replacing.</summary>
     private static Task<ApiResponse> SaveAsync<TBody>(
         ApiClient client,
         Guid recipeId,
@@ -285,7 +249,6 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
         return client.SendAsync(request, Token);
     }
 
-    /// <summary>The copy, which is the one that is not the original.</summary>
     private static async Task<JsonElement> ReadTheRestoredOneAsync(ApiClient client, Guid householdId)
     {
         var all = await client.GetAsync(
@@ -297,8 +260,7 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
             .Select(one => one.GetProperty("recipeId").GetGuid())
             .ToList();
 
-        // Either will do: both must have working references, and asserting on
-        // one of two identical recipes is asserting on the restore.
+        // Either will do: both must have working references.
         var read = await client.GetAsync($"/api/v1/recipes/{ids[0]}", Token);
 
         return read.Json!.Value;

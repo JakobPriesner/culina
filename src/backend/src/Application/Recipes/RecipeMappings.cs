@@ -6,15 +6,7 @@ using SharedRecipe = Contracts.Recipes.GetShared.Response;
 
 namespace Application.Recipes;
 
-/// <summary>
-/// Turns a recipe into its wire shape, and a wire shape back into domain
-/// objects.
-/// </summary>
-/// <remarks>
-/// Shared by every recipe operation because a recipe has exactly one detailed
-/// representation, and five copies of a twenty-field projection is how two of
-/// them drift apart.
-/// </remarks>
+/// <summary>Turns a recipe into its wire shape, and back. Shared so a recipe's one detailed representation cannot drift between copies.</summary>
 internal static class RecipeMappings
 {
     internal const string TextSegmentType = "text";
@@ -30,9 +22,7 @@ internal static class RecipeMappings
 
         var names = recipe.Ingredients.ToDictionary(ingredient => ingredient.Id);
 
-        // Group order, then order within the group: the order the ingredient
-        // list is already shown in, and so the only one a step's needs can be
-        // read in without looking like a shuffle.
+        // Group order, then order within the group: the order the list is shown in, so step needs do not look shuffled.
         var order = recipe.Ingredients.Select(ingredient => ingredient.Id).ToList();
 
         return new RecipeDetail
@@ -70,12 +60,7 @@ internal static class RecipeMappings
     /// <summary>Describes a recipe for whoever follows its link.</summary>
     /// <param name="recipe">The recipe to describe.</param>
     /// <param name="origin">Where it came from, when it was not written here.</param>
-    /// <remarks>
-    /// Projected from <c>Describe</c> rather than built beside it. The
-    /// two readings must agree about every amount and every word of every step,
-    /// and the only way to guarantee that is for one of them to be the other
-    /// with the private fields taken off.
-    /// </remarks>
+    /// <remarks>Projected from <c>Describe</c> so the two cannot disagree about any amount or step.</remarks>
     internal static SharedRecipe Publish(this Recipe recipe, RecipeOrigin? origin = null)
     {
         var detail = recipe.Describe(origin);
@@ -125,17 +110,11 @@ internal static class RecipeMappings
             DurationSeconds = step.DurationSeconds,
             Segments = [.. step.Segments.Select(segment => segment.ToContract(ingredients))],
 
-            // Filtering the recipe's order by the step's set rather than
-            // sorting the set by a lookup: one pass, no dictionary, and an id
-            // the recipe somehow lacks drops out instead of throwing.
+            // Filtering the recipe's order by the step's set: one pass, and an id the recipe lacks drops out instead of throwing.
             Uses = [.. order.Where(step.Uses.Contains)]
         };
 
-    /// <summary>
-    /// An ingredient segment carries the name and the <b>base</b> amount, so the
-    /// client renders the step without a lookup and scales it without a round
-    /// trip.
-    /// </summary>
+    // An ingredient segment carries the name and the base amount, so the client renders and scales a step without a lookup.
     private static StepSegmentContract ToContract(
         this StepSegment segment,
         IReadOnlyDictionary<Guid, RecipeIngredient> ingredients) => segment switch

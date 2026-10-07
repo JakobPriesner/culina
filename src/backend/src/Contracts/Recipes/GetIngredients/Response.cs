@@ -8,10 +8,8 @@ public sealed record IngredientSuggestion(string Name, string Section, bool Own)
 
 /// <summary>What a kitchen could be cooking with.</summary>
 /// <remarks>
-/// The household's own words first, then the seeded ones. After a few recipes
-/// a kitchen's own vocabulary is the better suggestion — it is how these people
-/// actually talk — and the seeded list is the floor rather than the limit.
-/// Nothing has to be chosen from either.
+/// The household's own words first, then the seeded list, which is a floor rather than a limit;
+/// nothing has to be chosen from either.
 /// </remarks>
 public sealed record Response
 {

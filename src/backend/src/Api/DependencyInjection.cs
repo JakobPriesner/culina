@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace Api;
 
-/// <summary>
-/// Registers the presentation layer's own services.
-/// </summary>
+/// <summary>Registers the presentation layer's own services.</summary>
 internal static class DependencyInjection
 {
     private static IServiceCollection AddCulinaAuthentication(this IServiceCollection services)
@@ -33,10 +31,7 @@ internal static class DependencyInjection
             .Services;
     }
 
-    /// <summary>
-    /// The policy guarding server and database settings, and the handler that
-    /// lets setup through.
-    /// </summary>
+    // The policy guarding server and database settings, and the handler that lets setup through.
     private static IServiceCollection AddSetupAuthorization(this IServiceCollection services) =>
         services
             .AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, SetupRequirementHandler>()
@@ -44,7 +39,7 @@ internal static class DependencyInjection
             .AddAdminOrSetupPolicy()
             .Services;
 
-    /// <summary>Knows when this host started, and can start it again.</summary>
+    // Knows when this host started, and can start it again.
     private static IServiceCollection AddHostRestart(this IServiceCollection services) =>
         services
             .AddSingleton<HostRestart>()
@@ -55,9 +50,7 @@ internal static class DependencyInjection
         ArgumentNullException.ThrowIfNull(services);
 
         return services
-            // ProblemDetails is required by the exception-handler middleware;
-            // the body itself is written by CustomResults, so the shape stays
-            // identical to every other error response.
+            // Required by the exception-handler middleware; CustomResults writes the body so the shape matches every other error.
             .AddProblemDetails()
             .AddExceptionHandler<GlobalExceptionHandler>()
             .AddCulinaRateLimiter()
@@ -69,13 +62,8 @@ internal static class DependencyInjection
     }
 
     /// <summary>
-    /// The presentation layer of the host that runs before there is a
-    /// database: problem documents, request logging, the setup policy, and a
-    /// rate limiter with no settings of its own — the one limit it enforces is
-    /// the fixed <see cref="DatabaseCheckLimit"/> the database endpoint carries.
-    /// No authentication and no OpenAPI document — there are no sessions to
-    /// authenticate, and the document is exported from the real host, which
-    /// maps the same setup routes.
+    /// The presentation layer of the host that runs before there is a database: no authentication or OpenAPI document,
+    /// and a rate limiter whose one limit is the fixed <see cref="DatabaseCheckLimit"/> of the database endpoint.
     /// </summary>
     internal static IServiceCollection AddSetupPresentation(this IServiceCollection services)
     {

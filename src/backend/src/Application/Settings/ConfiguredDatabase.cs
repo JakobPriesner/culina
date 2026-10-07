@@ -3,15 +3,7 @@ using Application.Abstractions.Settings;
 
 namespace Application.Settings;
 
-/// <summary>
-/// The database settings as configured, whether or not they are complete.
-/// </summary>
-/// <remarks>
-/// Read key by key rather than injected, because the host that asks for them
-/// first is the one that runs <em>because</em> they are incomplete: it has no
-/// validated <see cref="DatabaseSettings"/> to inject. A missing part reads as
-/// empty, and nothing here validates — that is what saving does.
-/// </remarks>
+/// <summary>The database settings as configured, complete or not: read key by key because the host that asks runs <em>because</em> they are incomplete. Nothing here validates; saving does.</summary>
 internal static class ConfiguredDatabase
 {
     internal static DatabaseSettings Read(IServerConfiguration configuration) => new()

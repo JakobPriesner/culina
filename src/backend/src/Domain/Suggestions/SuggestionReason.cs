@@ -1,20 +1,10 @@
 namespace Domain.Suggestions;
 
-/// <summary>
-/// Why one recipe was suggested, named after the term that actually decided it.
-/// </summary>
+/// <summary>Why one recipe was suggested, named after the term that actually decided it.</summary>
 /// <remarks>
-/// <para>
-/// A reason is never composed after the fact. The ranker returns a score broken
-/// into its terms and the reason is whichever term dominated — so "you haven't
-/// made this since April" means the rediscovery term was large, not that a
-/// sentence was written to fit a recipe picked for other reasons.
-/// </para>
-/// <para>
-/// When no single term dominates there is <see cref="None"/> and the card shows
-/// its ordinary meta line. An unexplained good suggestion is fine; an invented
-/// explanation is a lie, and catching one discredits every reason that was true.
-/// </para>
+/// A reason is never composed after the fact: it is whichever scored term dominated, or
+/// <see cref="None"/> and the card shows its ordinary meta line. An invented explanation is a lie
+/// that discredits every true reason.
 /// </remarks>
 public enum SuggestionReason
 {

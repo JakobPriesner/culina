@@ -1,12 +1,6 @@
 namespace Contracts.Settings.UpdateAssistance;
 
-/// <summary>The assistant configuration to apply.</summary>
-/// <remarks>
-/// The whole thing at once rather than a route per connection: it is one
-/// screen with one Save, and a half-applied configuration — a use pointing at a
-/// provider whose connection did not save — is a state nobody should be able to
-/// reach.
-/// </remarks>
+/// <summary>The assistant configuration to apply, all at once: one screen with one Save, so no half-applied state.</summary>
 public sealed record Request
 {
     /// <summary>Whether the assistant is on at all.</summary>
@@ -31,18 +25,9 @@ public sealed record ConnectionRequest
     /// <summary><c>gemini</c>, <c>openai</c> or <c>ollama</c>.</summary>
     public required string Provider { get; init; }
 
-    /// <summary>
-    /// A new API key, or null to keep the one already stored — for the address
-    /// it was stored with only: null with a different <c>baseUrl</c> is refused
-    /// with <c>assistance.api_key_required</c>, because a stored key is only
-    /// ever sent to the address it was saved for.
-    /// </summary>
+    /// <summary>A new API key, or null to keep the stored one. An empty string removes it.</summary>
     /// <remarks>
-    /// Three states rather than two, because a settings form that is saved for
-    /// an unrelated reason must not wipe a key. Null — the field left out —
-    /// means leave it alone, which is what a form sends when its key box is
-    /// empty because there was nothing to show in it. An empty string means
-    /// take it away. Anything else replaces it.
+    /// Null with a different <c>baseUrl</c> is refused with <c>assistance.api_key_required</c>: a stored key is only sent to the address it was saved for.
     /// </remarks>
     public string? ApiKey { get; init; }
 

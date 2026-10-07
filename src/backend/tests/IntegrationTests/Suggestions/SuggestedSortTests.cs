@@ -4,19 +4,9 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Suggestions;
 
 /// <summary>
-/// The other door onto the same scoring: the library, ranked.
+/// <c>GET /recipes?sort=suggested</c>: the library ranked by the suggestion score. It composes with every filter,
+/// and pages on a score, a worse cursor key than a timestamp.
 /// </summary>
-/// <remarks>
-/// <c>GET /recipes?sort=suggested</c> is where most of the value is, because it
-/// costs no new screen and composes with every filter the collection already
-/// has — so "what should I cook?" and "I have twenty-five minutes and some
-/// chicken" are one feature rather than two that can disagree.
-/// <para>
-/// It also carries the one risk the bounded endpoint does not: it pages, and a
-/// score is a much worse cursor key than a timestamp. These tests exist mostly
-/// to hold that.
-/// </para>
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class SuggestedSortTests(PostgresFixture postgres)
 {
@@ -26,10 +16,8 @@ public class SuggestedSortTests(PostgresFixture postgres)
     public async Task SuggestedSort_ShouldPageWithoutRepeatingOrSkipping_OneAtATime()
     {
         // Arrange
-        // The reason the score is computed against the DAY and not the instant.
-        // Every decayed term is a function of it, so the second page resumes the
-        // same order the first was cut from; against a clock, the scores drift
-        // between requests and a recipe can appear on two pages or on none.
+        // The score is computed against the day, not the instant; against a clock, scores drift
+        // between requests and a recipe can appear on two pages or none.
         var world = await SuggestionWorld.NewAsync(postgres);
 
         List<Guid> written = [];
@@ -73,9 +61,6 @@ public class SuggestedSortTests(PostgresFixture postgres)
     public async Task SuggestedSort_ShouldComposeWithEveryOtherFilter()
     {
         // Arrange
-        // The whole argument for a sort rather than a second collection. A
-        // separate suggestions screen would have to re-implement the search, the
-        // tag filter and the time ceiling, and the two would drift.
         var world = await SuggestionWorld.NewAsync(postgres);
 
         await world.WriteAsync("Quick soup", ingredients: ["stock"], tags: ["suppe"], prep: 5, cook: 15);
@@ -99,10 +84,7 @@ public class SuggestedSortTests(PostgresFixture postgres)
     public async Task SuggestedSort_ShouldHideWhatThisPersonDismissed_ButLeaveTheRecipeAlone()
     {
         // Arrange
-        // A dismissal hides a recipe from suggestions. It must not remove it
-        // from the collection: the recipe is still the household's, still
-        // searchable, still on its shelves. "Stop suggesting this" and "delete
-        // this" are not the same sentence.
+        // A dismissal hides a recipe from suggestions only, not from the collection or search.
         var world = await SuggestionWorld.NewAsync(postgres);
 
         await world.WriteAsync("Kept");
@@ -130,10 +112,7 @@ public class SuggestedSortTests(PostgresFixture postgres)
     public async Task SuggestedSort_ShouldCountWhatItReturns()
     {
         // Arrange
-        // The count and the page come out of one statement precisely so they
-        // cannot disagree — a "showing 20 of 19" is the kind of small wrongness
-        // people notice. Adding a scoring join is exactly the change that could
-        // have broken it, by multiplying rows.
+        // Count and page come from one statement so they cannot disagree; a scoring join that multiplies rows would break it.
         var world = await SuggestionWorld.NewAsync(postgres);
 
         for (var index = 0; index < 7; index++)
@@ -181,22 +160,9 @@ public class SuggestedSortTests(PostgresFixture postgres)
     public async Task SuggestedSort_ShouldStayCorrect_OnALibraryLargerThanAnyHousehold()
     {
         // Arrange
-        // Two hundred recipes with history, which is several times a realistic
-        // household, against ninety lines of common table expressions with
-        // nothing materialised behind them.
-        //
-        // The assertions are about row counts rather than about a clock, and
-        // deliberately. A wall-clock bound in a suite that shares one container
-        // with four hundred other tests is a coin flip, not a guard — and the
-        // regression it would be a proxy for is a join that multiplies rows,
-        // which shows up here as a wrong count and a repeated recipe. Those are
-        // exact.
-        //
-        // The measurement itself, taken separately with the container quiet in
-        // September 2026: ~25 ms end to end, through HTTP and the session and
-        // CSRF middleware. That number is the evidence behind not caching or
-        // precomputing anything; re-take it before believing it still holds, by
-        // running this class on its own and timing the request.
+        // Two hundred recipes with history, several times a realistic household.
+        // Asserts row counts, not a wall clock (flaky in a shared container); the regression to catch
+        // is a join that multiplies rows. Measured separately in September 2026: ~25 ms end to end.
         var world = await SuggestionWorld.NewAsync(postgres);
 
         for (var index = 0; index < 200; index++)
@@ -214,12 +180,8 @@ public class SuggestedSortTests(PostgresFixture postgres)
             }
         }
 
-        // Statistics, as autovacuum would have gathered them within a minute of
-        // an import this size. The suite seeds two hundred recipes in seconds on
-        // top of whatever an earlier analyze saw — possibly one household with
-        // one recipe — so the planner estimates this library at a row or two
-        // and nests loops over every scoring CTE: 3 s instead of 40 ms on a
-        // laptop, and past the 30 s command timeout on a CI runner.
+        // Gather statistics as autovacuum would; otherwise the planner sees a row or two and nests loops
+        // over every scoring CTE (3 s instead of 40 ms, past the command timeout on CI).
         await postgres.ExecuteAsync("analyze;", Token);
 
         // Act
@@ -236,8 +198,6 @@ public class SuggestedSortTests(PostgresFixture postgres)
             .Select(item => item.GetProperty("recipeId").GetGuid())
             .ToList();
 
-        // A scoring CTE that produced two rows for one recipe would inflate the
-        // count, repeat a card, and quietly break every page after the first.
         Assert.Equal(200, listed.Json!.Value.GetProperty("total").GetInt32());
         Assert.Equal(24, page.Count);
         Assert.Equal(page.Count, page.Distinct().Count());

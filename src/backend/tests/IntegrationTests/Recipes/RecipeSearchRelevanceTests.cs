@@ -12,38 +12,12 @@ using Microsoft.Extensions.Hosting;
 namespace IntegrationTests.Recipes;
 
 /// <summary>
-/// What search is supposed to find, stated as queries somebody would type.
+/// A hand-written golden set of queries and the recipes they must find, over a deliberately awkward library.
 /// </summary>
-/// <remarks>
-/// <para>
-/// A curated relevance set rather than a learned one. Eight users produce a few
-/// hundred noisy clicks a month, most of them for the same twenty recipes and
-/// all of them confounded by position bias; forty queries whose answers a
-/// person wrote down are a better instrument, because they fail by name and
-/// they fail in CI.
-/// </para>
-/// <para>
-/// The library below is deliberately awkward. It holds three recipes that all
-/// answer to "Bolognese", compounds that no stemmer will ever split, a recipe
-/// that says <em>Tomate</em> where the query says <em>Tomaten</em>, and one
-/// title carrying an umlaut that people spell three different ways. Every one
-/// of those is a query the old <c>ilike '%q%'</c> search returned nothing for.
-/// </para>
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 {
-    /// <summary>
-    /// One case: a query, and what a person said it should find.
-    /// </summary>
-    /// <param name="Query">What is typed.</param>
-    /// <param name="Class">Which kind of query this is, for the report.</param>
-    /// <param name="Top">Titles that must be the first results, in this order.</param>
-    /// <param name="TopSet">Titles that must be the first results, in any order.</param>
-    /// <param name="Contains">Titles that must appear somewhere.</param>
-    /// <param name="Excludes">Titles that must not appear at all.</param>
-    /// <param name="NotInTop">Titles that must not be among the first three.</param>
-    /// <param name="Count">The exact number of results, when that is the point.</param>
+    /// <summary>One query and what it must (and must not) return; <c>Top</c> is ordered, <c>TopSet</c> is not.</summary>
     private sealed record Golden(
         string Query,
         string Class,
@@ -56,7 +30,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 
     private static readonly Golden[] GoldenSet =
     [
-        // ── Known item, exact and partial ───────────────────────────────────
         new("Spaghetti Bolognese", "known-item exact", Top: ["Spaghetti Bolognese"]),
         new("Kartoffelgratin", "known-item exact", Top: ["Kartoffelgratin"]),
         new("spaghetti bolognese", "known-item exact", Top: ["Spaghetti Bolognese"]),
@@ -67,26 +40,21 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         new("Curry", "known-item partial",
             Contains: ["Süßkartoffelcurry", "Chicken Curry"]),
 
-        // ── Misspelled: a genuine typo, and the same word spelt differently ──
         new("Bolgnese", "typo", Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
         new("Bolognäse", "typo", Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
         new("Kartoffelgratn", "typo", Contains: ["Kartoffelgratin"]),
 
-        // ── The same word, written the three ways German writes it ──────────
         new("Müsliriegel", "spelling variant", Top: ["Müsliriegel"]),
         new("Muesliriegel", "spelling variant", Top: ["Müsliriegel"]),
         new("Musliriegel", "spelling variant", Top: ["Müsliriegel"]),
         new("Süßkartoffelcurry", "spelling variant", Top: ["Süßkartoffelcurry"]),
         new("Suesskartoffelcurry", "spelling variant", Top: ["Süßkartoffelcurry"]),
 
-        // ── Morphology: what the stemmer is for, in both directions ─────────
         new("Tomaten", "morphology", Top: ["Tomatensuppe"]),
-        // Tomatensuppe's ingredient list says "Tomate", singular. The old
-        // search could only find a substring, so the plural found nothing.
+        // Tomatensuppe's ingredient list says "Tomate", singular.
         new("Tomate", "morphology", Contains: ["Tomatensuppe", "Spaghetti Bolognese"]),
         new("Zwiebeln", "morphology", Contains: ["Zwiebelkuchen", "Tomatensuppe"]),
 
-        // ── Compounds: what the stemmer will never do, and trigram does ─────
         new("Hähnchen", "compound", Contains: ["Hähnchenbrustfilet mit Reis"]),
         new("Haehnchen", "compound", Contains: ["Hähnchenbrustfilet mit Reis"]),
         new("Hahnchen", "compound", Contains: ["Hähnchenbrustfilet mit Reis"]),
@@ -96,7 +64,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             Contains: ["Gemüselasagne"]),
         new("Müsli", "compound", Contains: ["Müsliriegel"]),
 
-        // ── Where a word is decides how much it counts ──────────────────────
         // Zwiebelkuchen is named after it; Tomatensuppe merely contains one.
         new("Zwiebel", "field weighting",
             Top: ["Zwiebelkuchen"],
@@ -104,7 +71,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         new("Reis", "field weighting", Top: ["Hähnchenbrustfilet mit Reis"]),
         new("Sauce", "field weighting", Top: ["Bolognese-Sauce auf Vorrat"]),
 
-        // ── Ingredients and tags are searched, and rank below titles ────────
         new("Hackfleisch", "ingredient",
             Contains: ["Spaghetti Bolognese", "Lasagne Bolognese", "Bolognese-Sauce auf Vorrat"]),
         new("Kokosmilch", "ingredient", Contains: ["Süßkartoffelcurry"]),
@@ -114,9 +80,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         new("italienisch", "tag",
             Contains: ["Spaghetti Bolognese", "Lasagne Bolognese"]),
 
-        // ── What a recipe is, not only what it says: the lexicon ────────────
-        // Chicken Curry is written in English and never says Hähnchen; the
-        // German recipe never says chicken. One concept, both languages.
+        // Chicken Curry never says Hähnchen; the German recipe never says chicken.
         new("chicken", "cross-language",
             Top: ["Chicken Curry"],
             Contains: ["Hähnchenbrustfilet mit Reis"]),
@@ -128,7 +92,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             Contains: ["Spaghetti Bolognese", "Lasagne Bolognese", "Gemüselasagne"],
             Excludes: ["Kartoffelgratin"]),
 
-        // ── Understood: a diet, a time, what to use and what to leave out ──
         new("vegetarisch unter 30 Minuten", "constraint",
             Contains: ["Tomatensuppe", "Müsliriegel"],
             Excludes: ["Hähnchenbrustfilet mit Reis", "Kartoffelgratin", "Gemüselasagne"]),
@@ -141,13 +104,10 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         new("Hähnchen ohne Reis", "negation",
             Contains: ["Chicken Curry"],
             Excludes: ["Hähnchenbrustfilet mit Reis"]),
-        // Contradictory, and nothing is invented to paper over it.
         new("vegetarisch mit Lachs", "conflict", Count: 0),
 
-        // ── Steps are searched, which they never used to be ─────────────────
         new("abgelöscht", "step text", Contains: ["Spaghetti Bolognese"]),
 
-        // ── Nothing matches, and nothing is invented ────────────────────────
         new("Schnitzel", "no result", Count: 0),
         new("qwertzuiop", "no result", Count: 0)
     ];
@@ -190,16 +150,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         Assert.True(failures == 0, $"{failures} of {GoldenSet.Length} golden queries failed:{report}");
     }
 
-    /// <summary>
-    /// The invariant that makes the ranking explainable: an exact title is
-    /// never outranked by something that merely resembles the query.
-    /// </summary>
-    /// <remarks>
-    /// Asserted over every query in the set rather than case by case, because
-    /// it is a property of the ordering and not of any one query. It is what
-    /// stops a future weight change from quietly letting three weak signals
-    /// outvote one strong one.
-    /// </remarks>
+    /// <summary>An exact title is never outranked by something that merely resembles the query, over every query in the set.</summary>
     [Fact]
     public async Task Search_ShouldNeverRankAResemblanceAboveTheRecipeThatIsNamed()
     {
@@ -225,9 +176,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var world = await SeedAsync();
 
         // Act
-        // No sort parameter at all. Asking a question is asking to be answered
-        // best first; before this, a search fell back to "most recently edited"
-        // and typing "Bolognese" returned whichever one had last been touched.
+        // No sort parameter: a query defaults to best first.
         var titles = Titles(await SearchAsync(world, "Bolognese"));
 
         // Assert
@@ -239,10 +188,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Search_ShouldFindARecipe_InTheSameBreathAsSavingIt()
     {
         // Arrange
-        // The search document is written inside the recipe's own transaction,
-        // so there is no window in which a recipe exists and cannot be found.
-        // An index that lags its source is an index that is occasionally wrong
-        // with nothing to say so.
+        // The search document is written in the recipe's own transaction, so the index never lags.
         var world = await SeedAsync();
 
         // Act
@@ -266,9 +212,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         await RenameAsync(world, recipeId, "Kaiserschmarrn");
 
         // Assert
-        // A document that only ever grew would keep answering to a name the
-        // recipe no longer has, which is the failure mode of every index that
-        // is appended to rather than replaced.
         Assert.Empty(Titles(await SearchAsync(world, "Pfannkuchen")));
         Assert.Equal(["Kaiserschmarrn"], Titles(await SearchAsync(world, "Kaiserschmarrn")));
     }
@@ -277,9 +220,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Search_ShouldFindADessert_WhenAskedForNachtisch()
     {
         // Arrange
-        // What a household reported (culina-v2-dku9): nothing about Waffeln
-        // says "Nachtisch", and the search found nothing. The lexicon knows
-        // waffles are a dessert.
+        // culina-v2-dku9: nothing about Waffeln says "Nachtisch"; the lexicon knows waffles are a dessert.
         var world = await SeedAsync();
         await world.SaveAsync("Waffeln", "de", 10, 15,
             [("Mehl", "g"), ("Eier", null), ("Milch", "ml"), ("Zucker", "g")], [], "Ausbacken.");
@@ -301,9 +242,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var titles = Titles(await SearchAsync(world, "Hähnchen"));
 
         // Assert
-        // Chicken Curry is found only by what "Hähnchen" means, and so comes
-        // after the recipe that actually says it. The lexicon's guess is never
-        // allowed to outrank a fact about the text.
+        // Chicken Curry is found only by meaning, so it comes after the recipe that says the word.
         var said = titles.IndexOf("Hähnchenbrustfilet mit Reis");
         var meant = titles.IndexOf("Chicken Curry");
 
@@ -314,8 +253,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Startup_ShouldRebuildTheConcepts_ThatAnotherLexiconIndexed()
     {
         // Arrange
-        // As a container that has just been upgraded to a new lexicon finds
-        // its documents: built by a version it no longer is.
+        // Documents built by an older lexicon version, as after an upgrade.
         var world = await SeedAsync();
         await postgres.ExecuteAsync(
             "update recipe_search_documents set concepts = '{}', lexicon_version = 0;",
@@ -352,8 +290,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Fold_ShouldAgreeWithTheDatabase_CharacterForCharacter(string text)
     {
         // Arrange
-        // The lexicon reads text in C# and the lanes read it in SQL; a letter
-        // they fold differently is a word the two halves disagree about.
+        // The lexicon folds text in C# and the lanes in SQL; the two must agree.
         var session = postgres.NewSession();
         await using var _ = session.ConfigureAwait(false);
         var executor = new DbExecutor(session);
@@ -378,9 +315,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var withoutMeat = Titles(await SearchAsync(world, "Gericht ohne Fleisch"));
 
         // Assert
-        // Zwiebelkuchen has Speck in it. Nobody tagged it either way, and the
-        // ingredient says enough: a vegetarian shown bacon has been failed in
-        // a way a missing result never fails them.
+        // Zwiebelkuchen has Speck in it; untagged, but the ingredient is enough to exclude it.
         Assert.DoesNotContain("Zwiebelkuchen", vegetarian);
         Assert.DoesNotContain("Chicken Curry", vegetarian);
         // Presumed vegetarian, because nothing in it says otherwise.
@@ -425,18 +360,14 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var browse = await world.Client.GetAsync($"/api/v1/recipes?householdId={world.HouseholdId}", Token);
 
         // Assert
-        // "mit" joins two foods in a dish's name here. Showing no chips is as
-        // much the design as showing four: a parser that invents a reading of
-        // every query teaches people to distrust the readings it means.
+        // "mit" joins two foods in a dish's name here, so no chips are inferred.
         Assert.Empty(Chips(dish));
-        // Nothing in this library is pasta in tomato sauce, so the words may be
-        // corrected to ones it has — but that is a recovery, said as one, and
-        // never a reading of the sentence.
+        // The words may be corrected to ones the library has, but that is a recovery, not a reading.
         var interpretation = dish.Json!.Value.GetProperty("interpretation");
         Assert.True(
             interpretation.GetProperty("freeText").GetString() == "Nudeln mit Tomatensoße"
             || interpretation.GetProperty("correctedFrom").GetString() == "Nudeln mit Tomatensoße");
-        // And the plain library listing is exactly what it was.
+        // A plain listing carries no interpretation.
         Assert.False(browse.Json!.Value.TryGetProperty("interpretation", out var none)
                      && none.ValueKind != System.Text.Json.JsonValueKind.Null);
     }
@@ -448,8 +379,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var world = await SeedAsync();
 
         // Act
-        // Nothing is called "Kokosmlich". The household's own ingredients say
-        // Kokosmilch, which is a better dictionary than any word list.
+        // Corrected against the household's own ingredients ("Kokosmilch").
         var corrected = await SearchAsync(world, "Kokosmlich");
         var asTyped = await world.Client.GetAsync(
             $"/api/v1/recipes?householdId={world.HouseholdId}&query=Kokosmlich&asTyped=true",
@@ -472,8 +402,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var world = await SeedAsync();
 
         // Act
-        // Nothing in the library is a dinner. The meal is the weaker guess, so
-        // it goes, and the response says it went.
+        // Nothing in the library is a dinner; the weaker meal reading is dropped and reported.
         var response = await SearchAsync(world, "schnelles Abendessen");
 
         // Assert
@@ -485,8 +414,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Search_ShouldKeepAMealItSetAside_AsAPreference()
     {
         // Arrange
-        // Both quick, neither a dinner. The yoghurt says it is breakfast; the
-        // soup is something warm, which is what a dinner usually is.
+        // Both quick, neither a dinner; the yoghurt is breakfast, the soup is warm like a dinner.
         var world = await SeedAsync();
         await world.SaveAsync("Joghurt mit Honig", "de", 5, null,
             [("Joghurt", "g"), ("Honig", "EL")], ["frühstück"], "Verrühren.");
@@ -507,8 +435,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Search_ShouldAnswerADish_ByTheDishItIsAKindOf()
     {
         // Arrange
-        // A household with no goulash has a stew, which is the next best thing;
-        // one with no risotto does not want every rice dish instead.
+        // No goulash falls back to a stew; no risotto does not fall back to every rice dish.
         var world = await SeedAsync();
         await world.SaveAsync("Beef Stew", "en", 20, 150,
             [("beef", "g"), ("potatoes", "g"), ("red wine", "ml")], [], "Braise slowly.");
@@ -519,7 +446,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal(["Beef Stew"], Titles(goulash));
-        // Named as what it is, not as what was asked for.
         Assert.Equal("concept:stew", Reasons(goulash)["Beef Stew"]);
         Assert.DoesNotContain("Hähnchenbrustfilet mit Reis", risotto);
     }
@@ -528,8 +454,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Search_ShouldPreferTheHouseholdsOwnTag_ToWhatTheLexiconInfers()
     {
         // Arrange
-        // Both are summer dishes to the lexicon, because a salad is. Only one
-        // is to the household, which said so.
+        // Both are summer dishes to the lexicon; only one is tagged so by the household.
         var world = await SeedAsync();
         await world.SaveAsync("Gurkensalat", "de", 10, null,
             [("Gurke", null), ("Dill", null)], [], "Hobeln.");
@@ -550,10 +475,8 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     public async Task Search_ShouldSayWhichDietIsOnlyPresumed_AndTakeATagForAnAnswer()
     {
         // Arrange
-        // Nothing in the Müsliriegel says meat, and nobody has said it is
-        // vegetarian either; the Gemüselasagne is tagged. The Kichererbsen-Eintopf
-        // was cooked in chicken stock nobody wrote down, and the household
-        // answered the question with a tag.
+        // Müsliriegel is only presumed vegetarian, Gemüselasagne is tagged, and the household
+        // answered for Kichererbsen-Eintopf (chicken stock) with a "nicht vegetarisch" tag.
         var world = await SeedAsync();
         await world.SaveAsync("Kichererbsen-Eintopf", "de", 10, 30,
             [("Kichererbsen", "g"), ("Tomaten", "g")], ["nicht vegetarisch"], "Köcheln.");
@@ -586,7 +509,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         Assert.Contains("Süßkartoffelcurry", Titles(quick));
         Assert.DoesNotContain("Kartoffelgratin", Titles(quick));
         Assert.DoesNotContain("Hähnchenbrustfilet mit Reis", Titles(quick));
-        // Nothing vegan is chicken, and nothing is invented to say otherwise.
         Assert.Empty(Titles(chicken));
         Assert.Empty(Relaxed(chicken));
     }
@@ -623,11 +545,11 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal("ingredient:Kokosmilch", coconut["Süßkartoffelcurry"]);
-        // Through the lexicon alone, named in the recipe's own language.
+        // Found through the lexicon alone, named in the recipe's own language.
         Assert.Equal("concept:Geflügel", poultry["Hähnchenbrustfilet mit Reis"]);
         Assert.Equal("concept:poultry", poultry["Chicken Curry"]);
         Assert.Equal("text:", step["Spaghetti Bolognese"]);
-        // "It is called that" is not worth a line.
+        // A title match needs no reason.
         Assert.Null(title["Spaghetti Bolognese"]);
     }
 
@@ -642,12 +564,9 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var bechamel = FacetTags(await SearchAsync(world, "Béchamel"));
 
         // Assert
-        // Two of the three Bolognese are Italian: a chip worth a tap.
         Assert.Contains("italienisch", bolognese);
-        // Both lasagnes are pasta: a chip that removes nothing is not offered.
-        // Asked by their sauce rather than by name, because "Lasagne" also
-        // finds the gratin — a lasagne is a casserole, and a casserole is the
-        // next best thing to one.
+        // Both lasagnes are pasta, so that chip would remove nothing. Queried by sauce, not "Lasagne",
+        // because "Lasagne" also finds the gratin.
         Assert.DoesNotContain("pasta", bechamel);
     }
 
@@ -664,7 +583,6 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var items = await CompletionsAsync(world, typed);
 
         // Assert
-        // A recipe to go to comes first, then what to filter by.
         Assert.Equal("recipe:Hähnchenbrustfilet mit Reis", items[0]);
         Assert.Contains("ingredient:Hähnchenbrust:1", items);
     }
@@ -683,9 +601,8 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         // Assert
         Assert.Contains("tag:vegetarisch:3", tags);
         Assert.Contains("tag:vegan:1", tags);
-        // The diet has been understood; "Kar" has not.
+        // The diet is already understood; only "Kar" is completed.
         Assert.Equal("recipe:Kartoffelgratin", afterADiet[0]);
-        // One letter is a prefix of half the library.
         Assert.Empty(oneLetter);
     }
 
@@ -721,15 +638,8 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
     }
 
     /// <summary>
-    /// The budget a completion has: it is asked on every pause in typing, so
-    /// it has to be back before the next keystroke is.
+    /// Completion latency budget. Explicit because it is a measurement; run after changing the completion queries.
     /// </summary>
-    /// <remarks>
-    /// Explicit, because seeding two thousand recipes is a measurement rather
-    /// than a check. Run it after changing the completion queries:
-    /// <c>dotnet test --filter-method *TwoThousandRecipes*</c> with the
-    /// explicit tests included.
-    /// </remarks>
     [Fact(Explicit = true)]
     public async Task Completions_ShouldAnswerWithinFortyMilliseconds_OverTwoThousandRecipes()
     {
@@ -799,8 +709,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         }
 
         // Assert
-        // The first round warms the connection and the plans; what is measured
-        // is what somebody typing meets.
+        // The first round warms the connection and plans.
         var steady = timings.Skip(prefixes.Length).Order().ToList();
         var p95 = steady[(int)Math.Ceiling(steady.Count * 0.95) - 1];
 
@@ -815,11 +724,8 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var world = await SeedAsync();
 
         // Act
-        // The lanes build LIKE patterns by concatenation, so a query carrying a
-        // metacharacter would otherwise be a wildcard nobody asked for. They are
-        // removed by the fold that every string already passes through, rather
-        // than escaped at each call site, which is the version that gets
-        // forgotten once and is then a way to read the whole library.
+        // The lanes build LIKE patterns by concatenation; the fold strips metacharacters
+        // instead of escaping them at each call site.
         var plain = Titles(await SearchAsync(world, "Bolognese"));
         var withPercent = Titles(await SearchAsync(world, "Bolognese%"));
         var withUnderscore = Titles(await SearchAsync(world, "Bolo_nese"));
@@ -827,8 +733,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         // Assert
         Assert.NotEmpty(plain);
         Assert.Equal(plain, withPercent);
-        // "Bolo_nese" folds to two words and finds less, never more: the
-        // underscore is a separator, never a single-character wildcard.
+        // The underscore is a separator, never a single-character wildcard.
         Assert.True(withUnderscore.Count <= plain.Count);
         Assert.DoesNotContain("Gemüselasagne", withUnderscore, StringComparer.Ordinal);
     }
@@ -840,11 +745,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var world = await SeedAsync();
 
         // Act
-        // "%" and "..." carry nothing to search for once folded, and an empty
-        // string is a prefix of every title. Rather than let that fall out of
-        // the LIKE by accident — or return nothing, which would be a different
-        // answer to the same non-question — a query with no content behaves
-        // exactly like an empty search box.
+        // "%" and "..." fold to nothing and must behave exactly like an empty search box.
         var everything = Titles(await SearchAsync(world, string.Empty));
         var punctuation = Titles(await SearchAsync(world, "%"));
         var dots = Titles(await SearchAsync(world, "..."));
@@ -870,10 +771,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var titles = Titles(response);
 
         // Assert
-        // The minus used to be a full-text operator, which only the full-text
-        // lane understood: the substring lane still found the rice dish by
-        // "Tomaten", so it was demoted rather than removed. Read as an
-        // exclusion it is removed, and says so as a chip that can be undone.
+        // The minus is an exclusion in every lane, reported as an undoable chip.
         Assert.Contains("Tomaten mit Nudeln", titles);
         Assert.DoesNotContain("Tomaten mit Reis", titles);
         Assert.DoesNotContain("Hähnchenbrustfilet mit Reis", titles);
@@ -896,8 +794,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // The relevance cursor carries the tier and the score, so the second
-        // page resumes exactly where the first ended rather than re-ranking.
+        // The relevance cursor carries tier and score, so page two resumes rather than re-ranks.
         var page1 = Titles(first);
         var page2 = Titles(second);
 
@@ -917,11 +814,8 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var executor = new DbExecutor(session);
 
         // Act
-        // recipe_search_input is the one definition of what is searchable about
-        // a recipe: the per-recipe write, the migration's backfill and every
-        // future re-index are the same INSERT over it. If it produced nothing
-        // for some shape of recipe, an upgrade would leave that recipe
-        // permanently unfindable and nothing would have said so.
+        // recipe_search_input is the single definition of what is searchable; if it yielded nothing
+        // for some recipe shape, an upgrade would leave that recipe unfindable.
         var recipes = await executor.ExecuteScalarAsync<long>(
             "select count(*) from recipes;", null, Token);
 
@@ -969,15 +863,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
         var byWord = Titles(await SearchAsync(world, "Zwiebelkuchen"));
 
         // Assert
-        // A document that has somehow gone missing costs the recipe its words,
-        // never its place in the library. The join is a left join for exactly
-        // this: a recipe vanishing from the collection is a far worse failure
-        // than one that cannot be found by typing, and "this cannot happen" is
-        // a poor reason to let it.
-        //
-        // The other onion recipes still answer, which is the fuzzy lane doing
-        // its job — and they answer from the bottom, because a recipe reached
-        // only by resemblance is two tiers below one the query names.
+        // A missing document costs the recipe its words, never its place in the library (left join).
         Assert.Contains("Zwiebelkuchen", all, StringComparer.Ordinal);
         Assert.DoesNotContain("Zwiebelkuchen", byWord, StringComparer.Ordinal);
     }
@@ -1125,7 +1011,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             ["snack"],
             "Pressen und backen.");
 
-        // Singular, on purpose: the query people type is "Tomaten".
+        // Singular on purpose: the typed query is "Tomaten".
         await world.SaveAsync("Tomatensuppe", "de", 10, 20,
             [("Tomate", null), ("Zwiebel", null), ("Brühe", "ml")],
             ["vegetarisch", "suppe"],
@@ -1136,7 +1022,7 @@ public class RecipeSearchRelevanceTests(PostgresFixture postgres)
             ["ofen"],
             "Belegen und backen.");
 
-        // English, in a German library: a household writes both.
+        // English in a German library: households write both.
         await world.SaveAsync("Chicken Curry", "en", 15, 25,
             [("chicken breast", "g"), ("coconut milk", "ml")],
             ["asian"],

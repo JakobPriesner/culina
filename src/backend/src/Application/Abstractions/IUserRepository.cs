@@ -7,27 +7,15 @@ namespace Application.Abstractions;
 public interface IUserRepository
 {
     /// <summary>Finds a user by id.</summary>
-    /// <param name="userId">Who to look for.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<User>> FindAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>Finds a user by the address they sign in with.</summary>
-    /// <param name="email">The normalised address.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<User>> FindByEmailAsync(Email email, CancellationToken cancellationToken);
 
     /// <summary>How many accounts exist, for the instance user limit.</summary>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<int> CountAsync(CancellationToken cancellationToken);
 
-    /// <summary>
-    /// How many accounts exist, read under a lock that holds every other
-    /// registration back until the surrounding transaction ends.
-    /// </summary>
-    /// <remarks>
-    /// Only meaningful inside a unit of work: outside one the lock is released
-    /// as soon as the statement ends, and decides nothing.
-    /// </remarks>
+    /// <summary>How many accounts exist, read under a lock that holds other registrations back until the transaction ends; only meaningful inside a unit of work.</summary>
     /// <param name="cancellationToken">Cancels the wait and the query.</param>
     Task<int> CountForRegistrationAsync(CancellationToken cancellationToken);
 
@@ -46,7 +34,5 @@ public interface IUserRepository
     Task<Result<long>> UpdateAsync(User user, long expectedVersion, CancellationToken cancellationToken);
 
     /// <summary>Whether this account administers the instance.</summary>
-    /// <param name="userId">Who to check.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<bool> IsAdminAsync(Guid userId, CancellationToken cancellationToken);
 }

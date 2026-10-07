@@ -7,12 +7,7 @@ namespace Api.Endpoints.Settings.GetServer.V1;
 /// <summary>Reads, from the request itself, how it reached the server.</summary>
 internal static class GetServerSettingsRequestExtensions
 {
-    /// <remarks>
-    /// Read after the forwarded-headers middleware has had its say. When it
-    /// trusted the proxy it replaced the address and left the proxy's in
-    /// <c>X-Original-For</c>; when it did not, the address is still the
-    /// proxy's and <c>X-Forwarded-For</c> is still there.
-    /// </remarks>
+    /// <remarks>Read after the forwarded-headers middleware: a trusted proxy's address moves to <c>X-Original-For</c>, otherwise <c>X-Forwarded-For</c> remains.</remarks>
     internal static GetServerSettingsQuery ToQuery(this HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -26,10 +21,7 @@ internal static class GetServerSettingsRequestExtensions
             trusted);
     }
 
-    /// <summary>
-    /// A dual-stack listener reports an IPv4 client as <c>::ffff:172.18.0.5</c>.
-    /// The proxy list compares it as IPv4 too, so that is the form to offer.
-    /// </summary>
+    // A dual-stack listener reports an IPv4 client as <c>::ffff:172.18.0.5</c>; the proxy list compares IPv4, so that is the form to offer.
     private static string? Readable(IPAddress? address) =>
         address is null ? null : (address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address).ToString();
 }

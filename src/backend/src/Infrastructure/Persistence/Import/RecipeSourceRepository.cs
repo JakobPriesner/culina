@@ -35,16 +35,11 @@ internal sealed record RecipeSourceRow
 
 /// <summary>Stores the libraries a household has connected.</summary>
 /// <param name="executor">Runs the SQL.</param>
-/// <param name="tokens">
-/// Encrypts each connection's API token on the way in and decrypts it on the
-/// way out, under a purpose of its own, so a database dump holds no working
-/// credential for anybody's other app.
-/// </param>
+/// <param name="tokens">Encrypts each connection's API token under its own purpose, so a database dump holds no working credential.</param>
 internal sealed class RecipeSourceRepository(
     DbExecutor executor,
     [FromKeyedServices(SecretProtector.SourceTokens)] ISecretProtector tokens) : IRecipeSourceRepository
 {
-    /// <summary>The index that makes connecting the same instance twice a conflict.</summary>
     private const string OnePerAddress = "recipe_sources_one_per_address_idx";
 
     private const string Columns =
@@ -84,8 +79,7 @@ internal sealed class RecipeSourceRepository(
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // A connection is only ever made with a token in hand; one without is
-        // something read back from storage, and that is never inserted again.
+        // A source read back from storage has no token and is never inserted again.
         var secret = source.Secret
             ?? throw new InvalidOperationException("A connection is added with the token it was made with.");
 
@@ -120,9 +114,7 @@ internal sealed class RecipeSourceRepository(
         }
         catch (PostgresException failure) when (failure.ConstraintName == OnePerAddress)
         {
-            // Decided by the database rather than by a read before the write:
-            // two people connecting the same instance at the same moment would
-            // both pass a check and one would still have to lose.
+            // Decided by the index, not a prior read, which two concurrent connects would both pass.
             return ImportErrors.SourceAlreadyConnected;
         }
     }
@@ -131,9 +123,7 @@ internal sealed class RecipeSourceRepository(
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        // The token is not written here. It never changes after a connection is
-        // made — connecting again is a new row — and leaving it alone means a
-        // save can never overwrite a token with one it failed to read.
+        // The token is never rewritten, so a save cannot overwrite it with one that failed to read.
         await executor.ExecuteAsync(
                 """
                 update recipe_sources
@@ -150,9 +140,7 @@ internal sealed class RecipeSourceRepository(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        // No version check. The only thing that writes here after the insert is
-        // "these recipes came from you, just now" — which is a fact, not an
-        // edit two people can lose each other's work over.
+        // No version check: the only later write is "used just now", not an edit anyone can lose.
         return Result.Success();
     }
 
@@ -171,10 +159,7 @@ internal static class RecipeSourceRowMappings
         ArgumentNullException.ThrowIfNull(row);
         ArgumentNullException.ThrowIfNull(tokens);
 
-        // A row this cannot read is a defect rather than an outcome: the check
-        // constraint and the address rule are both enforced on the way in, so
-        // anything here that fails them was written by something other than
-        // this code.
+        // Kind and address are enforced on the way in, so a row failing them is a defect.
         var kind = SourceKind.Parse(row.Kind)
             ?? throw new InvalidOperationException($"Stored source kind '{row.Kind}' is not known.");
 
@@ -183,12 +168,8 @@ internal static class RecipeSourceRowMappings
             error => throw new InvalidOperationException(
                 $"Stored source address '{row.BaseUrl}' is not usable: {error.Code}."));
 
-        // An unreadable token is the exception to that: it is an outcome, and
-        // an ordinary one — the key ring was lost and restored empty. The
-        // connection comes back without a token and asks to be made again,
-        // rather than failing every screen that lists it. A plain one is a row
-        // written before tokens were encrypted, between the migration that
-        // marked it and the startup step that encrypts it.
+        // An unreadable token (lost key ring) is an ordinary outcome: the connection comes back without
+        // one and asks to be remade. An unprotected one predates token encryption.
         var secret = row.SecretProtected ? tokens.Unprotect(row.Secret) : row.Secret;
 
         return RecipeSource.Restore(

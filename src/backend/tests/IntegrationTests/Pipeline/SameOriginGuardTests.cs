@@ -6,10 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace IntegrationTests.Pipeline;
 
-/// <summary>
-/// The cheap check that runs before the CSRF token comparison, so a foreign
-/// origin never reaches it.
-/// </summary>
+/// <summary>The cheap origin check that runs before the CSRF token comparison.</summary>
 public class SameOriginGuardTests
 {
     private const string OurOrigin = "https://culina.example";
@@ -20,56 +17,42 @@ public class SameOriginGuardTests
     [InlineData("OPTIONS")]
     public async Task SafeMethods_ShouldPassThrough_EvenFromAForeignOrigin(string method)
     {
-        // Arrange
         var context = Request(method, origin: "https://evil.example", withSession: true);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
-        // Exempting safe methods is only sound because no GET endpoint in
-        // Culina changes state.
+        // Sound only because no GET endpoint in Culina changes state.
         Assert.True(reached);
     }
 
     [Fact]
     public async Task UnsafeRequest_ShouldPassThrough_WhenItCarriesNoSessionCookie()
     {
-        // Arrange
         var context = Request("POST", origin: null, withSession: false);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
-        // Without the cookie there is no ambient credential to abuse, so there
-        // is nothing for a cross-site request to exploit.
+        // Without the cookie there is no ambient credential to abuse.
         Assert.True(reached);
     }
 
     [Fact]
     public async Task UnsafeRequest_ShouldBeAccepted_WhenTheOriginIsOurs()
     {
-        // Arrange
         var context = Request("POST", origin: OurOrigin, withSession: true);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         Assert.True(reached);
     }
 
     [Fact]
     public async Task UnsafeRequest_ShouldBeRejected_WhenTheOriginIsForeign()
     {
-        // Arrange
         var context = Request("POST", origin: "https://evil.example", withSession: true);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         Assert.False(reached);
         Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
         Assert.Equal("auth.foreign_origin", await CodeAsync(context));
@@ -78,31 +61,23 @@ public class SameOriginGuardTests
     [Fact]
     public async Task UnsafeRequest_ShouldBeAccepted_WhenOnlyRefererIsPresentAndMatches()
     {
-        // Arrange
         var context = Request("POST", origin: null, withSession: true);
         context.Request.Headers.Referer = $"{OurOrigin}/recipes/new";
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
-        // Some browsers omit Origin on same-origin navigations, so Referer is
-        // the documented fallback.
+        // Some browsers omit Origin on same-origin navigations, so Referer is the fallback.
         Assert.True(reached);
     }
 
     [Fact]
     public async Task UnsafeRequest_ShouldBeRejected_WhenItStatesNoOriginAtAll()
     {
-        // Arrange
         var context = Request("POST", origin: null, withSession: true);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
-        // An unsafe cookie-authenticated request that will not say where it
-        // came from does not get the benefit of the doubt.
+        // An unsafe cookie-authenticated request that will not say where it came from gets no benefit of the doubt.
         Assert.False(reached);
         Assert.Equal("auth.foreign_origin", await CodeAsync(context));
     }
@@ -110,18 +85,11 @@ public class SameOriginGuardTests
     [Fact]
     public async Task Request_ShouldBeRejected_WhenCookiesAreNotSecureAndTheOriginIsForeign()
     {
-        // Arrange
-        // Local development drops the `__Host-` prefix, because a browser
-        // refuses that cookie over plain HTTP. This guard used to look for the
-        // production name only, so in development it saw no session and let
-        // every foreign origin through — a security check behaving differently
-        // from the one that ships is the one thing it must never do.
+        // Development drops the `__Host-` prefix; the guard once missed that cookie name and let foreign origins through.
         var context = Request("POST", "https://not-culina.example", withSession: true, secureCookies: false);
 
-        // Act
         var reached = await InvokeAsync(context, secureCookies: false);
 
-        // Assert
         Assert.False(reached);
         Assert.Equal("auth.foreign_origin", await CodeAsync(context));
     }

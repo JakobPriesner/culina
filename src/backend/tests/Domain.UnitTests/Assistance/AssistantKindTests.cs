@@ -2,7 +2,6 @@ using Domain.Assistance;
 
 namespace Domain.UnitTests.Assistance;
 
-/// <summary>What a provider name will and will not be read as.</summary>
 public class AssistantKindTests
 {
     [Theory]
@@ -15,8 +14,6 @@ public class AssistantKindTests
         var kind = AssistantKind.Parse(code);
 
         // Assert
-        // Case and whitespace are what a settings row collects over the years
-        // of being edited by hand; neither is a different provider.
         Assert.Equal(AssistantKind.Gemini, kind);
     }
 
@@ -38,9 +35,7 @@ public class AssistantKindTests
         var kind = AssistantKind.Parse(code);
 
         // Assert
-        // Null rather than a default. A settings row naming a provider this
-        // cannot talk to is a configuration mistake, and quietly picking one
-        // would send somebody's key to a company they did not choose.
+        // Null, not a default: guessing would send the key to a provider nobody chose.
         Assert.Null(kind);
     }
 
@@ -62,8 +57,6 @@ public class AssistantKindTests
     public void Ollama_ShouldNeedAnAddressAndNoKey_BecauseItIsYourOwnMachine()
     {
         // Assert
-        // There is nobody to authenticate to, and no address that could be
-        // right by default — which is the exact inverse of the hosted two.
         Assert.False(AssistantKind.Ollama.NeedsApiKey);
         Assert.True(AssistantKind.Ollama.NeedsAddress);
     }
@@ -72,9 +65,7 @@ public class AssistantKindTests
     public void Ollama_ShouldNotDraw_BecauseItServesLanguageAndVisionModels()
     {
         // Assert
-        // It will read a photograph of a cookbook page quite happily. It does
-        // not make pictures, and the settings screen has to know that before it
-        // offers the switch rather than after the call fails.
+        // The settings screen must know before offering the switch, not after the call fails.
         Assert.False(AssistantKind.Ollama.CanDraw);
     }
 
@@ -93,8 +84,6 @@ public class AssistantKindTests
     public void All_ShouldRoundTripThroughParse_SoNothingIsOfferedThatCannotBeRead()
     {
         // Assert
-        // The list the settings screen offers and the list this can read back
-        // are the same list, which is the one way they can disagree.
         Assert.All(AssistantKind.All, kind => Assert.Equal(kind, AssistantKind.Parse(kind.Code)));
     }
 }

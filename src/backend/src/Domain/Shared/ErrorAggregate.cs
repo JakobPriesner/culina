@@ -1,8 +1,6 @@
 namespace Domain.Shared;
 
-/// <summary>
-/// Collapses several failures into the one error a caller should see.
-/// </summary>
+/// <summary>Collapses several failures into the one error a caller should see.</summary>
 internal static class ErrorAggregate
 {
     /// <summary>
@@ -10,10 +8,8 @@ internal static class ErrorAggregate
     /// <see cref="ValidationError"/>.
     /// </summary>
     /// <remarks>
-    /// A lone failure is passed through so that combining one check cannot turn
-    /// a <see cref="ErrorType.Conflict"/> or <see cref="ErrorType.NotFound"/>
-    /// into a 400. Nested aggregates are flattened, so combining combined
-    /// results still yields one flat list for the problem document.
+    /// A lone failure passes through so it cannot turn a Conflict or NotFound into a 400; nested
+    /// aggregates are flattened.
     /// </remarks>
     internal static Error Of(IReadOnlyList<Error> errors)
     {

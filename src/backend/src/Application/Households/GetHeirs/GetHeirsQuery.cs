@@ -10,8 +10,8 @@ namespace Application.Households.GetHeirs;
 /// <param name="HouseholdId">Which household.</param>
 /// <param name="UserId">Who is asking.</param>
 /// <remarks>
-/// Any member may ask. Everybody in a kitchen is entitled to know who else
-/// reads its recipes, even though only an owner can do anything about it.
+/// Any member may ask: everybody in a kitchen may know who reads its recipes, though only an owner
+/// can act.
 /// </remarks>
 public sealed record GetHeirsQuery(Guid HouseholdId, Guid UserId);
 

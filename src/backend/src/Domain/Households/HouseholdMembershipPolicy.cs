@@ -3,22 +3,15 @@ using Domain.Shared;
 namespace Domain.Households;
 
 /// <summary>
-/// Every rule about who may do what in a household.
+/// Every rule about who may do what in a household, in one place so no two endpoints disagree.
 /// </summary>
-/// <remarks>
-/// They live here, in one place, so no handler re-derives them and no two
-/// endpoints can disagree about whether the last owner may leave.
-/// </remarks>
 public static class HouseholdMembershipPolicy
 {
     /// <summary>The caller must be a member to see anything at all.</summary>
-    /// <param name="household">The household in question.</param>
-    /// <param name="actingUserId">Who is asking.</param>
-    /// <returns>
-    /// <c>households.not_found</c> for a non-member, never
-    /// <c>households.not_owner</c>: answering "forbidden" would confirm the
+    /// <remarks>
+    /// A non-member gets <c>households.not_found</c>, never "forbidden", which would confirm the
     /// household exists.
-    /// </returns>
+    /// </remarks>
     public static Result CanView(Household household, Guid actingUserId)
     {
         ArgumentNullException.ThrowIfNull(household);
@@ -29,8 +22,6 @@ public static class HouseholdMembershipPolicy
     }
 
     /// <summary>Inviting, removing, renaming and deleting need an owner.</summary>
-    /// <param name="household">The household in question.</param>
-    /// <param name="actingUserId">Who is asking.</param>
     public static Result CanAdminister(Household household, Guid actingUserId)
     {
         ArgumentNullException.ThrowIfNull(household);
@@ -42,20 +33,18 @@ public static class HouseholdMembershipPolicy
     }
 
     /// <summary>
-    /// Inheriting is an owner's decision about their own household, made with
-    /// recipes they can already see.
+    /// Inheriting is an owner's decision about their own household, made with recipes they can
+    /// already see.
     /// </summary>
     /// <param name="household">The household that would inherit.</param>
     /// <param name="parent">The household it would inherit from.</param>
-    /// <param name="parentLibrary">Every household whose recipes the parent sees, itself included.</param>
+    /// <param name="parentLibrary">
+    /// Every household whose recipes the parent sees, itself included.
+    /// </param>
     /// <param name="actingUserId">Who is asking.</param>
     /// <remarks>
-    /// The caller must be in the parent, because inheriting shows its recipes
-    /// to everybody in the heir: a stranger to the parent could otherwise open
-    /// somebody else's kitchen to their own friends. A non-member of the parent
-    /// is told it does not exist, as everywhere else. A parent that already
-    /// sees this household's recipes would close a loop, and a loop has no
-    /// answer to "whose recipe is this".
+    /// The caller must be in the parent (else it "does not exist"), and a loop is refused: it has
+    /// no answer to "whose recipe is this".
     /// </remarks>
     public static Result CanInherit(
         Household household,
@@ -75,16 +64,13 @@ public static class HouseholdMembershipPolicy
     }
 
     /// <summary>
-    /// An owner of the household being inherited from may cut an heir loose.
+    /// An owner of the household being inherited from may cut a direct heir loose.
     /// </summary>
     /// <param name="heir">The household that inherits.</param>
     /// <param name="parent">The household it inherits from.</param>
     /// <param name="actingUserId">Who is asking.</param>
     /// <remarks>
-    /// Only a direct heir: one that inherits through another household is that
-    /// household's to cut, and cutting the one in between cuts it too. An heir
-    /// that does not inherit from this household is not found, like anything
-    /// else the caller has no say over.
+    /// An indirect heir is that household's to cut, and is reported as not found.
     /// </remarks>
     public static Result CanCutInheritance(Household heir, Household parent, Guid actingUserId)
     {
@@ -98,17 +84,11 @@ public static class HouseholdMembershipPolicy
     }
 
     /// <summary>
-    /// An owner may remove anyone; anyone may remove themselves. Neither may
-    /// leave the household without an owner.
+    /// An owner may remove anyone; anyone may remove themselves; neither may leave no owner.
     /// </summary>
-    /// <param name="household">The household in question.</param>
-    /// <param name="userId">Who is being removed.</param>
-    /// <param name="actingUserId">Who is asking.</param>
     /// <remarks>
-    /// The caller's own standing is checked before anything is said about the
-    /// target: answering "not a member" to a stranger would tell them the
-    /// household exists, and answering it only for some ids would tell them
-    /// who is in it.
+    /// The caller's standing is checked before the target's, so a stranger learns nothing about the
+    /// household or its members.
     /// </remarks>
     public static Result CanRemove(Household household, Guid userId, Guid actingUserId)
     {
@@ -132,17 +112,8 @@ public static class HouseholdMembershipPolicy
         });
     }
 
-    /// <summary>
-    /// Only an owner changes roles, and not if it would leave no owner behind.
-    /// </summary>
-    /// <param name="household">The household in question.</param>
-    /// <param name="userId">Whose role changes.</param>
-    /// <param name="role">The new role.</param>
-    /// <param name="actingUserId">Who is asking.</param>
-    /// <remarks>
-    /// The caller first, as in <see cref="CanRemove"/>, so a stranger learns
-    /// nothing about the household or who is in it.
-    /// </remarks>
+    /// <summary>Only an owner changes roles, and not if it would leave no owner behind.</summary>
+    /// <remarks>The caller is checked first, as in <see cref="CanRemove"/>.</remarks>
     public static Result CanChangeRole(
         Household household,
         Guid userId,

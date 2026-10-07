@@ -1,10 +1,6 @@
 namespace Domain.Households;
 
-/// <summary>What a member may do in a household.</summary>
-/// <remarks>
-/// Two roles, not a permission matrix. A household is the people you cook
-/// with; anything finer would be configuration nobody wants to maintain.
-/// </remarks>
+/// <summary>What a member may do in a household: two roles, not a permission matrix.</summary>
 public enum HouseholdRole
 {
     /// <summary>Sees and edits everything the household owns.</summary>

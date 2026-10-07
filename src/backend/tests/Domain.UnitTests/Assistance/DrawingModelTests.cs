@@ -2,14 +2,10 @@ using Domain.Assistance;
 
 namespace Domain.UnitTests.Assistance;
 
-/// <summary>
-/// Which models a writing job may be offered, and which a drawing job may.
-/// </summary>
+/// <summary>Which models a writing job may be offered, and which a drawing job may.</summary>
 /// <remarks>
-/// The two lists are each other's complement, so every case here is really two:
-/// a name read wrongly does not merely go missing from one picker, it turns up
-/// in the other. A drawing model offered for "improve a recipe" is a choice
-/// that can only fail.
+/// The two lists are each other's complement: a name read wrongly does not just go missing from one
+/// picker, it turns up in the other.
 /// </remarks>
 public class DrawingModelTests
 {

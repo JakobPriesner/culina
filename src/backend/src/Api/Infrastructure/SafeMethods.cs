@@ -1,14 +1,9 @@
 namespace Api.Infrastructure;
 
-/// <summary>
-/// The HTTP methods the request guards let past without checking.
-/// </summary>
+/// <summary>The HTTP methods the request guards let past without checking.</summary>
 /// <remarks>
-/// Both the CSRF check and the same-origin check exempt these, and they are
-/// only sound in doing so because no <c>GET</c> endpoint in Culina changes
-/// state. One definition, so the two gates cannot disagree — a method added to
-/// one copy and not the other would leave the weaker check as the only one a
-/// request meets.
+/// Both the CSRF and same-origin checks exempt these, sound only because no <c>GET</c> changes
+/// state. One definition, so the gates cannot disagree.
 /// </remarks>
 internal static class SafeMethods
 {

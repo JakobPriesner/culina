@@ -9,10 +9,6 @@ namespace Api.Endpoints.Recipes.GetRelated.V1;
 /// <summary>Says which recipes of the same household are most like this one.</summary>
 internal sealed class GetRelatedRecipesEndpoint : IEndpoint
 {
-    /// <summary>
-    /// Three: the shelf under a recipe is a few ideas for what to cook
-    /// instead, and a row of them on a wide screen.
-    /// </summary>
     private const int DefaultLimit = 3;
 
     private const int MaxLimit = 12;

@@ -6,18 +6,11 @@ namespace Application.Abstractions;
 /// <summary>Stores what a household means to cook.</summary>
 public interface IMealPlanRepository
 {
-    /// <summary>
-    /// A week of the plan, with enough of each recipe to draw a card.
-    /// </summary>
+    /// <summary>A week of the plan, with each recipe's card data.</summary>
     /// <param name="householdId">Whose plan.</param>
     /// <param name="from">The day the week starts on.</param>
     /// <param name="days">How many days it runs for.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    /// <remarks>
-    /// The recipe's title and picture come back with it. A week view showing
-    /// seven cards would otherwise be seven more requests, and a plan whose
-    /// cards arrive one at a time is a plan that flickers.
-    /// </remarks>
     Task<IReadOnlyList<PlannedRecipe>> ForWeekAsync(
         Guid householdId,
         DateOnly from,
@@ -39,40 +32,21 @@ public interface IMealPlanRepository
     /// <param name="entryId">Which entry.</param>
     /// <param name="householdId">Whose plan it must be.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
-    /// <remarks>
-    /// Moving a meal needs the slot it already has, because a move that leaves
-    /// the slot out keeps it — and ownership is proved by the same read rather
-    /// than by a second one.
-    /// </remarks>
     Task<Result<MealPlanEntry>> FindAsync(
         Guid entryId,
         Guid householdId,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Puts an entry on its new day, and closes the gaps that leaves.
-    /// </summary>
+    /// <summary>Puts an entry on its new day.</summary>
     /// <param name="moved">The entry as it should now be.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    /// <remarks>
-    /// The day it lands on is renumbered from zero afterwards, so a position
-    /// is always an index and never a number a client has to guess between.
-    /// The day it left keeps its gaps: order survives them, and renumbering a
-    /// day nobody is looking at is a write for nothing.
-    /// </remarks>
+    /// <remarks>The destination day is renumbered from zero; the day it left keeps its gaps.</remarks>
     Task<Result> MoveAsync(MealPlanEntry moved, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Takes a planned meal off, and says which day it was on.
-    /// </summary>
+    /// <summary>Takes a planned meal off and returns the day it was on.</summary>
     /// <param name="entryId">Which entry.</param>
     /// <param name="householdId">Whose plan it must be.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    /// <remarks>
-    /// The day comes back because the caller has to read that week again, and
-    /// asking for the entry first only to delete it is a round trip to learn
-    /// something the delete already knows.
-    /// </remarks>
     Task<Result<DateOnly>> RemoveAsync(
         Guid entryId,
         Guid householdId,

@@ -2,25 +2,8 @@ using Domain.Shared;
 
 namespace Domain.Cooking;
 
-/// <summary>
-/// Somebody is cooking something, right now.
-/// </summary>
-/// <remarks>
-/// <para>
-/// Person-owned, and at most one is active per person: the phone propped
-/// against the mixing bowl and the laptop on the counter are the same cook, and
-/// "where was I" has to have one answer.
-/// </para>
-/// <para>
-/// It holds the scaling in force, because coming back to a recipe you had
-/// scaled to six and finding it at four is worse than not remembering at all.
-/// </para>
-/// <para>
-/// <strong>Timers are not here.</strong> A timer is device-bound and must keep
-/// ticking while the app is closed, so it lives in the browser keyed by session
-/// id. A cooking session is a fact worth persisting; a timer is local ephemera.
-/// </para>
-/// </remarks>
+/// <summary>A person cooking a recipe right now; at most one is active per person.</summary>
+/// <remarks>Timers are not stored here: they are device-bound and live in the browser, keyed by session id.</remarks>
 public sealed class CookSession
 {
     private CookSession(
@@ -150,12 +133,7 @@ public sealed class CookSession
     /// <summary>Moves to a step.</summary>
     /// <param name="index">Which step, from zero.</param>
     /// <param name="now">The injected clock's reading.</param>
-    /// <remarks>
-    /// Deliberately does not bump the version. This happens on every step, and
-    /// making each advance a concurrency event would mean a second device is
-    /// permanently stale for no benefit — the last tap genuinely is the truth
-    /// about where the cook is.
-    /// </remarks>
+    /// <remarks>Deliberately does not bump the version: the last tap is the truth, and a second device must not go stale.</remarks>
     public Result MoveTo(int index, DateTimeOffset now)
     {
         if (!IsActive)
@@ -203,15 +181,9 @@ public sealed class CookSession
         return Result.Success();
     }
 
-    /// <summary>
-    /// Gives up on it.
-    /// </summary>
+    /// <summary>Gives up on it.</summary>
     /// <param name="now">The injected clock's reading.</param>
-    /// <remarks>
-    /// Abandoning an already-finished session is not an error: starting a new
-    /// session abandons whatever was active, and a race between two devices
-    /// doing that must not fail the one that arrives second.
-    /// </remarks>
+    /// <remarks>Abandoning a finished session is a no-op, so a race between two devices does not fail the second.</remarks>
     public void Abandon(DateTimeOffset now)
     {
         if (!IsActive)

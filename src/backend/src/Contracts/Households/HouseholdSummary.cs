@@ -1,13 +1,6 @@
 namespace Contracts.Households;
 
-/// <summary>
-/// A household as it appears in a list.
-/// </summary>
-/// <remarks>
-/// Shared by inheritance rather than by reuse: an operation that needs an extra
-/// field derives from this instead of adding one here, so a change for one
-/// response cannot alter another.
-/// </remarks>
+/// <summary>A household as it appears in a list. Extended by inheritance, so a field added for one response cannot alter another.</summary>
 public record HouseholdSummary
 {
     /// <summary>The household's id.</summary>

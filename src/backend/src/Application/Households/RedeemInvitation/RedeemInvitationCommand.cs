@@ -33,8 +33,7 @@ internal sealed class RedeemInvitationCommandHandler(
 
         var result = await found.Match(
             invitation => JoinAsync(invitation, command.UserId, cancellationToken),
-            // Unknown, expired and already-used all arrive here as the same
-            // error, so a code cannot be probed for validity.
+            // Unknown, expired and used all arrive as one error, so a code cannot be probed.
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
@@ -74,15 +73,8 @@ internal sealed class RedeemInvitationCommandHandler(
             .ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Somebody opening a link to a household they are already in.
-    /// </summary>
-    /// <remarks>
-    /// Usually its owner, checking the link they are about to send. Not an
-    /// error, and the code is not used up: it is still meant for somebody else.
-    /// Only asked once the code is known to be good, so it tells a caller
-    /// nothing about a code they could not already use.
-    /// </remarks>
+    // Somebody opening a link to a household they are already in (usually its owner): not an error, and the code is not used up.
+    // Only asked once the code is known good, so it reveals nothing.
     private async Task<Result<Response>> AlreadyInAsync(
         HouseholdInvitation invitation,
         CancellationToken cancellationToken)
@@ -105,9 +97,7 @@ internal sealed class RedeemInvitationCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Marked used first: the update only matches a row that is still
-        // unredeemed, so two requests presenting the same code race in SQL and
-        // exactly one of them proceeds to add a member.
+        // Marked used first: the update only matches an unredeemed row, so racing requests settle in SQL and one proceeds.
         var marked = await invitations
             .MarkRedeemedAsync(invitation, cancellationToken)
             .ConfigureAwait(false);

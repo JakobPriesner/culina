@@ -38,14 +38,9 @@ public sealed class ShoppingListItem
     public ItemName Name { get; }
 
     /// <summary>
-    /// How much, stored unrounded.
+    /// How much, stored unrounded: rounding first and summing second compounds error, and rounding
+    /// is presentation.
     /// </summary>
-    /// <remarks>
-    /// Load-bearing: rounding first and summing second compounds error, and
-    /// three recipes each contributing a rounded 135 g produce a number nobody
-    /// asked for. Rounding is presentation, and presentation belongs to the
-    /// client.
-    /// </remarks>
     public Quantity Quantity { get; private set; }
 
     /// <summary>Where in the shop it is found.</summary>
@@ -67,10 +62,6 @@ public sealed class ShoppingListItem
     public IReadOnlyList<ShoppingItemSource> Sources => sources;
 
     /// <summary>Adds a line a person typed.</summary>
-    /// <param name="name">What to buy.</param>
-    /// <param name="quantity">How much, if they said.</param>
-    /// <param name="section">Where in the shop it is found.</param>
-    /// <param name="sortOrder">Its place in its section.</param>
     public static ShoppingListItem Typed(
         ItemName name,
         Quantity quantity,
@@ -79,10 +70,6 @@ public sealed class ShoppingListItem
         new(CulinaId.New(), name, quantity, section, false, null, sortOrder, isManual: true, []);
 
     /// <summary>Adds a line a recipe asked for.</summary>
-    /// <param name="name">What to buy.</param>
-    /// <param name="source">Which recipe, and how much of it.</param>
-    /// <param name="section">Where in the shop it is found.</param>
-    /// <param name="sortOrder">Its place in its section.</param>
     public static ShoppingListItem Asked(
         ItemName name,
         ShoppingItemSource source,
@@ -95,15 +82,6 @@ public sealed class ShoppingListItem
     }
 
     /// <summary>Rebuilds one that was stored.</summary>
-    /// <param name="id">Its id.</param>
-    /// <param name="name">What to buy.</param>
-    /// <param name="quantity">How much.</param>
-    /// <param name="section">Where in the shop.</param>
-    /// <param name="isChecked">Whether it is in the trolley.</param>
-    /// <param name="checkedAt">When it was ticked off.</param>
-    /// <param name="sortOrder">Its place in its section.</param>
-    /// <param name="isManual">Whether a person typed it.</param>
-    /// <param name="sources">Which recipes asked for it.</param>
     public static ShoppingListItem Rehydrate(
         Guid id,
         ItemName name,
@@ -117,8 +95,6 @@ public sealed class ShoppingListItem
         new(id, name, quantity, section, isChecked, checkedAt, sortOrder, isManual, [.. sources]);
 
     /// <summary>Ticks it off, or puts it back.</summary>
-    /// <param name="isChecked">Whether it is now in the trolley.</param>
-    /// <param name="now">The injected clock's reading.</param>
     public void Check(bool isChecked, DateTimeOffset now)
     {
         IsChecked = isChecked;
@@ -126,16 +102,12 @@ public sealed class ShoppingListItem
     }
 
     /// <summary>Corrects where a thing is found, for this household.</summary>
-    /// <param name="section">The section it actually belongs to.</param>
     public void MoveTo(ShoppingSection section) => Section = section;
 
     /// <summary>Adds what another recipe asks for of the same thing.</summary>
-    /// <param name="source">Which recipe, and how much of it.</param>
     /// <remarks>
-    /// Only ever called after <see cref="ItemMergePolicy"/> has said the two can
-    /// combine, so the units are known to be compatible. An unmeasured source —
-    /// "salt" — adds nothing to the amount, but it is still one more recipe that
-    /// asked for it.
+    /// Only called after <see cref="ItemMergePolicy"/> says the two combine. An unmeasured source
+    /// ("salt") adds no amount but still counts as one more recipe that asked.
     /// </remarks>
     public Result Receive(ShoppingItemSource source)
     {
@@ -160,18 +132,12 @@ public sealed class ShoppingListItem
     }
 
     /// <summary>Whether this planned meal asked for any of it.</summary>
-    /// <param name="planEntryId">The planned meal.</param>
     public bool IsFor(Guid planEntryId) => sources.Exists(source => source.PlanEntryId == planEntryId);
 
     /// <summary>
-    /// Counts what a recipe added by itself as the shopping for a planned meal
-    /// of that recipe.
+    /// Counts what a recipe added by itself as the shopping for a planned meal of that recipe;
+    /// returns whether anything was counted.
     /// </summary>
-    /// <param name="recipeId">The recipe.</param>
-    /// <param name="planEntryId">The planned meal it is now for.</param>
-    /// <param name="plannedDate">The day the meal is planned for.</param>
-    /// <param name="plannedSlot">The meal of that day.</param>
-    /// <returns>Whether anything was counted.</returns>
     public bool CountFor(
         Guid recipeId,
         Guid planEntryId,
@@ -197,12 +163,10 @@ public sealed class ShoppingListItem
         return counted;
     }
 
-    /// <summary>Takes back exactly what a planned meal asked for.</summary>
-    /// <param name="planEntryId">The planned meal.</param>
-    /// <returns>
-    /// Whether anything is still left to buy: something another recipe asks
-    /// for, something a person typed, or an amount the meal did not use up.
-    /// </returns>
+    /// <summary>
+    /// Takes back exactly what a planned meal asked for; returns whether anything is still left to
+    /// buy (another recipe, typed, or unused amount).
+    /// </summary>
     public bool Withdraw(Guid planEntryId)
     {
         var usedUp = false;
@@ -232,6 +196,5 @@ public sealed class ShoppingListItem
     }
 
     /// <summary>Changes the amount outright, when a person edits the line.</summary>
-    /// <param name="quantity">The new amount.</param>
     public void SetQuantity(Quantity quantity) => Quantity = quantity;
 }

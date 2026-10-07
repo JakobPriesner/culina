@@ -5,23 +5,9 @@ using Domain.Recipes;
 namespace Application.Assistance;
 
 /// <summary>
-/// Writes a stored recipe out as plain text, to be read back to a model.
+/// Writes a stored recipe as plain text for a model. Text, not JSON, so untrusted material does not
+/// resemble the trusted schema; ids are left out because the returned draft has none.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Text rather than the JSON the rest of the app moves recipes around as, and
-/// the reason is the one thing this file is really about: what goes in here is
-/// <em>material</em>, not instruction. JSON with field names in it reads, to a
-/// model, uncomfortably like the structure it was also handed in the schema —
-/// and the closer the untrusted half looks to the trusted half, the more room
-/// there is for the untrusted half to be mistaken for it.
-/// </para>
-/// <para>
-/// Ids are left out for the same reason, and for a second one: the draft that
-/// comes back has no ids either, so anything the model repeated back would be
-/// noise the mapper had to ignore.
-/// </para>
-/// </remarks>
 internal static class RecipeAsText
 {
     /// <summary>Renders it the way a person would write it down.</summary>
@@ -58,9 +44,7 @@ internal static class RecipeAsText
 
         if (recipe.Steps.Count > 0)
         {
-            // Built once: a step names its ingredients by id, and a sentence
-            // read back with the names missing would be a sentence the model
-            // was asked to improve without being shown half of it.
+            // A step names its ingredients by id, so their names are needed to render it.
             var named = recipe.Ingredients.ToDictionary(line => line.Id, line => line.Name);
 
             written.AppendLine();
@@ -101,13 +85,6 @@ internal static class RecipeAsText
         return $"- {string.Join(' ', new[] { amount, unit, line.Name }.OfType<string>())}{note}";
     }
 
-    /// <summary>
-    /// One step, with its ingredient references written back as plain words.
-    /// </summary>
-    /// <remarks>
-    /// A step is stored as segments so the app can scale the amounts inside a
-    /// sentence. A model has no use for that: it is being shown the sentence.
-    /// </remarks>
     private static string Step(Step step, int number, IReadOnlyDictionary<Guid, string> named)
     {
         var title = string.IsNullOrWhiteSpace(step.Title) ? null : $" ({step.Title})";
@@ -122,13 +99,7 @@ internal static class RecipeAsText
         return $"{number}.{title} {words}";
     }
 
-    /// <summary>
-    /// A number without a trailing run of zeroes.
-    /// </summary>
-    /// <remarks>
-    /// "2" rather than "2.000". Invariant, because this is being read by a
-    /// model rather than by the person whose locale it is.
-    /// </remarks>
+    // Without trailing zeroes ("2", not "2.000"); invariant because a model reads it.
     private static string Number(decimal value) =>
         value.Normalize().ToString(CultureInfo.InvariantCulture);
 

@@ -2,21 +2,11 @@ using System.Globalization;
 
 namespace Api;
 
-/// <summary>
-/// Asks the running container whether it is ready, and exits saying so.
-/// </summary>
+/// <summary>Asks the running container whether it is ready, and exits saying so.</summary>
 /// <remarks>
-/// <para>
-/// Docker's <c>HEALTHCHECK</c> runs a command inside the container, and the
-/// image that ships has no shell and no curl — that is the point of a chiseled
-/// runtime. So the app answers the question about itself: the same binary,
-/// invoked with a flag, makes one request to its own port and exits 0 or 1.
-/// </para>
-/// <para>
-/// It asks <c>/health/ready</c> rather than <c>/health/live</c> on purpose.
-/// "A process exists" is not the question a load balancer is asking; "can this
-/// container serve a request that needs the database" is.
-/// </para>
+/// The chiseled image has no shell or curl for Docker's <c>HEALTHCHECK</c>, so the same binary,
+/// given a flag, requests its own port and exits 0 or 1. It asks <c>/health/ready</c>, not live: a
+/// load balancer needs "can this serve a request that needs the database".
 /// </remarks>
 internal static class HealthCheckProbe
 {
@@ -45,20 +35,15 @@ internal static class HealthCheckProbe
         }
         catch (Exception failure) when (failure is HttpRequestException or TaskCanceledException)
         {
-            // Refused, reset or too slow. All of them mean "not ready", and
-            // none of them is worth a stack trace in the health log.
+            // Refused, reset or too slow all mean "not ready" and deserve no stack trace.
             return 1;
         }
     }
 
     /// <summary>
-    /// The port the app is actually listening on.
+    /// The port the app is actually listening on, read from the host's configuration so a changed
+    /// port cannot leave the check probing the old one.
     /// </summary>
-    /// <remarks>
-    /// Read from the same configuration the host reads, so a deployment that
-    /// changes the port does not silently leave the health check probing the
-    /// old one — which would report a healthy container as unhealthy forever.
-    /// </remarks>
     private static int Port(IConfiguration configuration)
     {
         var ports = configuration["ASPNETCORE_HTTP_PORTS"];

@@ -13,17 +13,13 @@ public enum SetupStage
     Complete,
 }
 
-/// <summary>
-/// Answers how far this instance has got in being set up.
-/// </summary>
+/// <summary>Answers how far this instance has got in being set up.</summary>
 /// <remarks>
-/// A port because the answer comes from two different places: a host with no
-/// database knows it is at the first step without asking anything, and a host
-/// with one has to count accounts.
+/// A port because the answer comes from two places: a host without a database is at the first step,
+/// one with a database counts accounts.
 /// </remarks>
 public interface ISetupProgress
 {
     /// <summary>The current stage.</summary>
-    /// <param name="cancellationToken">Cancels the lookup.</param>
     Task<SetupStage> CurrentAsync(CancellationToken cancellationToken);
 }

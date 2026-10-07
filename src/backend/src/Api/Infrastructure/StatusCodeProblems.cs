@@ -4,25 +4,9 @@ using Domain.Shared;
 namespace Api.Infrastructure;
 
 /// <summary>
-/// Gives framework-generated statuses a problem document body.
+/// Gives framework-generated statuses (404, 405, 401 challenges) a problem document body.
+/// The original status is preserved, and non-API paths are left to the app shell.
 /// </summary>
-/// <remarks>
-/// <para>
-/// A 404 from an unmatched route, a 405 from a wrong method and a 401 from an
-/// authentication challenge are produced by the framework, not by a handler, so
-/// they would otherwise be the only API responses with an empty body. The
-/// frontend parses one error format, so they get one too.
-/// </para>
-/// <para>
-/// The original status is always preserved. Deriving it from the error type
-/// here would rewrite every one of them — a 401 challenge would arrive as a
-/// 500 — which is exactly the bug this comment exists to prevent recurring.
-/// </para>
-/// <para>
-/// Non-API paths are left alone: the app shell owns those, and a browser asking
-/// for a client route should not be handed JSON it would render as text.
-/// </para>
-/// </remarks>
 internal static class StatusCodeProblems
 {
     private static readonly Error NoSuchEndpoint = new(

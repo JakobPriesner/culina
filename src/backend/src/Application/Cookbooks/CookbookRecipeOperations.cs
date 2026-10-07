@@ -10,21 +10,12 @@ using Domain.Shared;
 namespace Application.Cookbooks;
 
 /// <summary>Puts a recipe on a shelf.</summary>
-/// <param name="CookbookId">Which shelf.</param>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record AddRecipeToCookbookCommand(Guid CookbookId, Guid RecipeId, Guid UserId);
 
 /// <summary>Takes a recipe off a shelf.</summary>
-/// <param name="CookbookId">Which shelf.</param>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record RemoveRecipeFromCookbookCommand(Guid CookbookId, Guid RecipeId, Guid UserId);
 
 /// <summary>Which cookbooks a recipe is on.</summary>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="HouseholdId">Whose shelves to look on, or null for the recipe's own household.</param>
 public sealed record GetRecipeCookbooksQuery(Guid RecipeId, Guid UserId, Guid? HouseholdId);
 
 internal sealed class AddRecipeToCookbookCommandHandler(
@@ -49,9 +40,7 @@ internal sealed class AddRecipeToCookbookCommandHandler(
 
         var result = await shelf.Match(
             found => found.Cookbook.Kind == CookbookKind.Smart
-                // Its rules are its whole membership. Accepting a row here
-                // would create a recipe on the shelf that nothing could
-                // explain and the next read would not return.
+                // Its rules are its whole membership; accepting a row would put a recipe on it that nothing explains.
                 ? Task.FromResult(Result.Failure(CookbookErrors.RulesDecideMembership))
                 : AddAsync(command, found, cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
@@ -64,9 +53,7 @@ internal sealed class AddRecipeToCookbookCommandHandler(
         CookbookOnAShelf shelf,
         CancellationToken cancellationToken)
     {
-        // Through the recipe, the way a planned meal is checked: one step
-        // proves both that the caller can see it and that the shelf's
-        // household holds it, as its own or by inheritance.
+        // Through the recipe: one step proves the caller can see it and the shelf's household holds it (own or inherited).
         var recipe = await RecipeAccess
             .VisibleInAsync(
                 recipes, households, command.RecipeId, shelf.Cookbook.HouseholdId, command.UserId, cancellationToken)
@@ -89,9 +76,7 @@ internal sealed class AddRecipeToCookbookCommandHandler(
             .AddRecipeAsync(command.CookbookId, command.RecipeId, command.UserId, now, cancellationToken)
             .ConfigureAwait(false);
 
-        // Only when something actually went on. A recipe already on the shelf
-        // is a success that changed nothing, and bumping the version for it
-        // would throw away every cached copy of the cookbook to say so.
+        // Only when something went on: a recipe already there changed nothing, and a bump would drop cached copies.
         if (written)
         {
             await cookbooks.TouchAsync(command.CookbookId, now, cancellationToken).ConfigureAwait(false);
@@ -137,9 +122,7 @@ internal sealed class RemoveRecipeFromCookbookCommandHandler(
                         await cookbooks.TouchAsync(command.CookbookId, now, token).ConfigureAwait(false);
                     }
 
-                    // Taking off something that was never on is the outcome the
-                    // caller wanted, so it succeeds rather than reporting a
-                    // recipe nobody asked about.
+                    // Taking off something never on is the outcome wanted, so it succeeds.
                     return Result.Success();
                 },
                 cancellationToken),
@@ -170,8 +153,7 @@ internal sealed class GetRecipeCookbooksQueryHandler(
         var result = await recipe.Match(
             async found =>
             {
-                // The shelves of the household asking: an inherited recipe
-                // is on this kitchen's shelves, not on the ones it came from.
+                // The asking household's shelves: an inherited recipe is on this kitchen's shelves.
                 var shelves = await cookbooks
                     .ContainingAsync(found.Id, query.HouseholdId ?? found.HouseholdId, cancellationToken)
                     .ConfigureAwait(false);

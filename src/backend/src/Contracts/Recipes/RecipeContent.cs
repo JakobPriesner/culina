@@ -4,15 +4,14 @@ namespace Contracts.Recipes;
 public sealed record IngredientGroupContract
 {
     /// <summary>
-    /// The group's id, as the recipe gave it. Omit to create a new one; an id
-    /// the recipe does not have creates a new one too, with an id of the
-    /// server's choosing.
+    /// The group's id; omit it, or send one the recipe does not have, to create a group with a
+    /// server-chosen id.
     /// </summary>
     public Guid? GroupId { get; init; }
 
     /// <summary>
-    /// The heading, or null for the implicit first group. A recipe with one
-    /// unnamed group renders as a plain list.
+    /// The heading, or null for the implicit first group; a recipe with one unnamed group renders
+    /// as a plain list.
     /// </summary>
     public string? Name { get; init; }
 
@@ -24,11 +23,9 @@ public sealed record IngredientGroupContract
 public sealed record IngredientContract
 {
     /// <summary>
-    /// The line's id, as the recipe gave it; steps refer to it. Omit to create
-    /// a new line. An id the recipe does not have creates one too, with an id
-    /// of the server's choosing, and a step in the same request that refers to
-    /// the id sent is pointed at that new line — so read the ids back from the
-    /// response rather than keeping the ones sent.
+    /// The line's id, which steps refer to. Omit it, or send an unknown one, to create a line with
+    /// a server-chosen id: read ids back from the response, since steps are re-pointed at the new
+    /// one.
     /// </summary>
     public Guid? IngredientId { get; init; }
 
@@ -49,20 +46,15 @@ public sealed record IngredientContract
 public sealed record StepContract
 {
     /// <summary>
-    /// The step's id, as the recipe gave it. Omit to create a new one; an id
-    /// the recipe does not have creates a new one too, with an id of the
-    /// server's choosing.
+    /// The step's id; omit it, or send one the recipe does not have, to create a step with a
+    /// server-chosen id.
     /// </summary>
     public Guid? StepId { get; init; }
 
     /// <summary>
-    /// What this step is called — "Prepare the base".
+    /// What this step is called, e.g. "Prepare the base"; null for most steps, which a client
+    /// labels by position. A name for this step, not a heading over the following ones.
     /// </summary>
-    /// <remarks>
-    /// Null for most steps, and a client must then label the step by its
-    /// position. It is a name for this one step, not a heading over the ones
-    /// that follow it.
-    /// </remarks>
     public string? Title { get; init; }
 
     /// <summary>Its text, split into words and ingredient references.</summary>
@@ -72,40 +64,21 @@ public sealed record StepContract
     public int? DurationSeconds { get; init; }
 
     /// <summary>
-    /// Everything the step needs, as ingredient ids: what to get out before
-    /// starting it.
+    /// Everything the step needs, as ingredient ids: what to get out before starting it.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// An ingredient the text mentions is always included, listed here or not,
-    /// so omitting this field writes exactly what the sentence names — which is
-    /// what a client that has never heard of it was already sending.
-    /// </para>
-    /// <para>
-    /// Read back in the recipe's own ingredient order. Order within a step is
-    /// not stored: the only order a reader can follow is the one the ingredient
-    /// list shows.
-    /// </para>
+    /// An ingredient the text mentions is always included, so omitting this writes exactly what the
+    /// sentence names. Read back in the recipe's ingredient order.
     /// </remarks>
     public IReadOnlyList<Guid>? Uses { get; init; }
 }
 
-/// <summary>
-/// One piece of a step: either words, or a reference to an ingredient.
-/// </summary>
+/// <summary>One piece of a step: either words, or a reference to an ingredient.</summary>
 /// <remarks>
-/// <para>
-/// One record with a <c>type</c> discriminator rather than a polymorphic union.
-/// A union would generate as a TypeScript discriminated union that every client
-/// has to narrow before touching a field, and it needs serializer configuration
-/// on both sides; this shape reads the same and generates cleanly.
-/// </para>
-/// <para>
-/// On a read, an ingredient segment carries the ingredient's name and
-/// <b>base</b> amount, so the client can render the step without a lookup and
-/// scale it without a round trip. On a write, only <c>type</c> and
+/// One record with a <c>type</c> discriminator, not a polymorphic union, which would generate a
+/// TypeScript union every client must narrow. On a read an ingredient segment carries name and base
+/// amount, so clients render and scale without a lookup; on a write only <c>type</c> and
 /// <c>recipeIngredientId</c> are read.
-/// </para>
 /// </remarks>
 public sealed record StepSegmentContract
 {

@@ -6,8 +6,8 @@ using TestSupport;
 namespace Application.UnitTests.Settings;
 
 /// <summary>
-/// Pointing the instance at a database: tried first, saved second, applied by
-/// a restart — and nothing at all when any step says no.
+/// Pointing the instance at a database: tried first, saved second, applied by a restart, and
+/// nothing at all when any step says no.
 /// </summary>
 public class UpdateDatabaseSettingsCommandHandlerTests
 {
@@ -16,13 +16,10 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldSaveOnlyWhatChanged_AndRestart_WhenTheConnectionWorks()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var change = (await world.Handle(Command(host: "db.internal"))).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.Restarting, change);
         Assert.Equal(1, world.Restart.Scheduled);
         Assert.Equal(new Dictionary<string, string> { ["Database:Host"] = "db.internal" }, world.Configuration.Saved);
@@ -31,13 +28,10 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldTryTheCurrentPassword_WhenNoNewOneIsGivenForTheSameServer()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         await world.Handle(Command(password: null, maxPoolSize: 40));
 
-        // Assert
         // Write-only: the form never has the password to send back, so leaving
         // the field empty has to mean "keep it", not "clear it".
         Assert.Equal("secret", world.Check.Tried!.Password);
@@ -55,14 +49,11 @@ public class UpdateDatabaseSettingsCommandHandlerTests
         string name,
         string username)
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var result = await world.Handle(
             new UpdateDatabaseSettingsCommand(host, port, name, username, null, RequireSsl: false, MaxPoolSize: 20));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabasePasswordRequired);
         Assert.Null(world.Check.Tried);
         Assert.Null(world.Configuration.Saved);
@@ -71,13 +62,10 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldTryTheNewServer_WhenThePasswordIsEnteredAgain()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var change = (await world.Handle(Command(host: "db.internal", password: "secret"))).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.Restarting, change);
         Assert.Equal("db.internal", world.Check.Tried!.Host);
     }
@@ -85,13 +73,10 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldTryWhatTheDeploymentPins_RatherThanWhatWasSent()
     {
-        // Arrange
         var world = new World(pinned: ["Database:Host", "Database:Password"]);
 
-        // Act
         await world.Handle(Command(host: "attacker.example", password: "typed", maxPoolSize: 40));
 
-        // Assert
         // The next start uses the pinned values, so those are what is tried —
         // and the pinned password never leaves for the address sent instead.
         Assert.Equal("localhost", world.Check.Tried!.Host);
@@ -101,14 +86,11 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldSaveNothing_WhenTheDatabaseCannotBeReached()
     {
-        // Arrange
         var world = new World();
         world.Check.FailWith = SettingsErrors.DatabaseUnreachable;
 
-        // Act
         var result = await world.Handle(Command(host: "db.internal"));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.DatabaseUnreachable);
         Assert.Null(world.Configuration.Saved);
         Assert.Equal(0, world.Restart.Scheduled);
@@ -117,14 +99,11 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldNotTryTheConnection_WhenTheSettingsCouldNeverBeSaved()
     {
-        // Arrange
         var world = new World();
         world.Configuration.Writable = false;
 
-        // Act
         var result = await world.Handle(Command(host: "db.internal"));
 
-        // Assert
         result.ShouldBeFailure(SettingsErrors.NotWritable);
         Assert.Null(world.Check.Tried);
     }
@@ -132,13 +111,10 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldDoNothing_WhenEveryValueIsWhatItRunsWith()
     {
-        // Arrange
         var world = new World();
 
-        // Act
         var change = (await world.Handle(Command())).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(ServerChange.None, change);
         Assert.Null(world.Check.Tried);
         Assert.Equal(0, world.Restart.Scheduled);
@@ -147,13 +123,10 @@ public class UpdateDatabaseSettingsCommandHandlerTests
     [Fact]
     public async Task Handle_ShouldRefuse_WhenThereIsNoPasswordAtAll()
     {
-        // Arrange
         var world = new World(new Dictionary<string, string>());
 
-        // Act
         var result = await world.Handle(Command(password: null));
 
-        // Assert
         Assert.Equal("settings.invalid_value", result.ShouldBeFailure().Code);
     }
 

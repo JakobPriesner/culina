@@ -5,13 +5,9 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Suggestions.Replay;
 
 /// <summary>
-/// A database of its own for the kitchen a calibration replays.
+/// A database of its own for a calibration's kitchen: every ordering rule empties its database,
+/// which would wipe the history the next replay needs.
 /// </summary>
-/// <remarks>
-/// A calibration checks every vector it is about to keep against the ordering
-/// rules, and every rule starts by emptying the database it runs in. Sharing one
-/// would have the first check wipe the history the next replay needs.
-/// </remarks>
 public sealed class CalibrationDatabase : IAsyncLifetime
 {
     internal PostgresFixture Postgres { get; } = new();
@@ -22,13 +18,9 @@ public sealed class CalibrationDatabase : IAsyncLifetime
 }
 
 /// <summary>
-/// Proposes a weight vector from a replay, guarded by the ordering rules. See
-/// <see cref="WeightCalibration"/>.
+/// Proposes a weight vector from a replay, guarded by the ordering rules (see
+/// <see cref="WeightCalibration"/>); explicit because a descent takes minutes.
 /// </summary>
-/// <remarks>
-/// Both explicit: a descent is minutes of replay, and what it prints is an
-/// argument for a commit, not a pass or a fail for a build.
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class WeightCalibrationTests(PostgresFixture postgres, CalibrationDatabase kitchen)
     : IClassFixture<CalibrationDatabase>
@@ -36,30 +28,27 @@ public class WeightCalibrationTests(PostgresFixture postgres, CalibrationDatabas
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     /// <summary>
-    /// Calibrates against the simulated kitchen. It says what the harness can
-    /// find, never what the weights should be: a vector tuned here is tuned to
-    /// <see cref="ReplayKitchen"/>.
+    /// Calibrates against the simulated kitchen: shows what the harness can find, never what the
+    /// weights should be.
     /// </summary>
     [Fact(Explicit = true)]
     public async Task Calibrate_ShouldOnlyProposeWeightsThatKeepEveryRule_OnTheSimulatedKitchen()
     {
-        // Arrange
         var householdId = await ReplayKitchen.BuildAsync(kitchen.Postgres, Token);
 
         await using var session = kitchen.Postgres.NewSession();
 
-        // Act
         var result = await CalibrateAsync(session, [householdId]);
 
-        // Assert
         await AssertProposalKeepsEveryRuleAsync(result);
     }
 
-    /// <summary>Calibrates against a real cook log: the run whose numbers a weight change ships with.</summary>
+    /// <summary>
+    /// Calibrates against a real cook log: the run whose numbers a weight change ships with.
+    /// </summary>
     [Fact(Explicit = true)]
     public async Task Calibrate_ShouldOnlyProposeWeightsThatKeepEveryRule_OnARestoredDatabase()
     {
-        // Arrange
         var connectionString = RestoredDatabase.ConnectionString;
 
         Assert.SkipWhen(connectionString is null, $"Set {RestoredDatabase.Variable} to a restored copy of a Culina database.");
@@ -67,10 +56,8 @@ public class WeightCalibrationTests(PostgresFixture postgres, CalibrationDatabas
         await using var dataSource = RestoredDatabase.Open(connectionString!);
         await using var session = PostgresFixture.SessionOn(dataSource);
 
-        // Act
         var result = await CalibrateAsync(session, await RestoredDatabase.HouseholdsAsync(session, Token));
 
-        // Assert
         await AssertProposalKeepsEveryRuleAsync(result);
     }
 
@@ -98,13 +85,12 @@ public class WeightCalibrationTests(PostgresFixture postgres, CalibrationDatabas
     }
 
     /// <summary>
-    /// Asked once more at the end, of the vector actually proposed, so the claim
-    /// the proposal makes is checked rather than inherited from the steps.
+    /// Asked again of the vector actually proposed, so the claim is checked rather than inherited
+    /// from the steps.
     /// </summary>
     private async Task AssertProposalKeepsEveryRuleAsync(CalibrationResult result) =>
         Assert.Empty(await BrokenRulesAsync(result.After));
 
-    /// <summary>Which ordering rules these weights break, checked through hosts built with them.</summary>
     private async Task<IReadOnlyList<string>> BrokenRulesAsync(RankingWeights weights)
     {
         using var steady = new CulinaApiFactory(postgres, weights: weights with { Exploration = 0m });

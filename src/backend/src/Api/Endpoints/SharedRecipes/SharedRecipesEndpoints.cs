@@ -4,10 +4,7 @@ using Api.Endpoints.SharedRecipes.GetImage.V1;
 namespace Api.Endpoints.SharedRecipes;
 
 /// <summary>The shared-recipes endpoints, registered explicitly.</summary>
-/// <remarks>
-/// Two reads and nothing else, deliberately. Everything a stranger holding a
-/// link may do is listed here, on one screen.
-/// </remarks>
+/// <remarks>Two reads and nothing else: everything a stranger holding a link may do, on one screen.</remarks>
 internal static class SharedRecipesEndpoints
 {
     internal static IServiceCollection AddSharedRecipesEndpoints(this IServiceCollection services) =>

@@ -15,9 +15,7 @@ namespace Application.Recipes.GetAll;
 
 /// <summary>Finds recipes in one household.</summary>
 /// <param name="Search">What to look for.</param>
-/// <param name="AsTyped">
-/// Search the words exactly as typed: the reader has turned a correction down.
-/// </param>
+/// <param name="AsTyped">Search the words exactly as typed (a correction was declined).</param>
 public sealed record GetRecipesQuery(RecipeSearch Search, bool AsTyped = false);
 
 internal sealed class GetRecipesQueryHandler(
@@ -41,22 +39,18 @@ internal sealed class GetRecipesQueryHandler(
 
         if (!member)
         {
-            // Not-found rather than forbidden, for the same reason every other
-            // household read gives a non-member a 404.
+            // Not-found rather than forbidden, like every household read for a non-member.
             return tracked.Record(
                 Result<Response>.Failure(HouseholdErrors.NotFound(query.Search.HouseholdId)));
         }
 
-        // The household's own recipes and every one it inherits, searched as
-        // one library.
+        // The household's own recipes plus every inherited one form one library.
         var ancestors = await households
             .AncestorsAsync(query.Search.HouseholdId, cancellationToken)
             .ConfigureAwait(false);
 
-        // Reading inside a cookbook means one of two things, and only the
-        // cookbook knows which: a shelf somebody filled names rows, and one
-        // that fills itself names conditions. Resolved here so the searcher
-        // never has to know what a cookbook is.
+        // A cookbook names either rows (filled by hand) or conditions (fills itself); resolved here
+        // so the searcher never knows what a cookbook is.
         var scope = await CookbookScope
             .ResolveAsync(
                 cookbooks,
@@ -65,9 +59,7 @@ internal sealed class GetRecipesQueryHandler(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        // What the words ask for beyond themselves — a diet, a time, a meal,
-        // what to use and what to leave out — read before the search runs, so
-        // the lanes are handed only the words still to be found.
+        // Parsed first so the search lanes get only the words still to be found.
         var intent = QueryUnderstanding.Parse(query.Search.Query);
 
         var search = query.Search with
@@ -79,9 +71,7 @@ internal sealed class GetRecipesQueryHandler(
             Constraints = intent.ToConstraints(),
             CookbookId = scope.Membership,
             Rules = scope.Rules,
-            // A shelf that fills itself was never put in an order, so it falls
-            // back to the default rather than ordering by a column that is null
-            // for every row on it.
+            // A self-filling cookbook has no order; its position column is null.
             Sort = query.Search.Sort == RecipeSort.CookbookOrder && !scope.Ordered
                 ? RecipeSort.RecentFirst
                 : query.Search.Sort
@@ -98,9 +88,7 @@ internal sealed class GetRecipesQueryHandler(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        // Counted over every result rather than the page, and only for a
-        // question on its first page: a refinement is offered once, where the
-        // results begin.
+        // Counted over all results, and only on the first page of a question.
         var facets = page.Total > 0 && answered.Cursor is null && intent.Asked
             ? await recipes.FacetsAsync(answered, cancellationToken).ConfigureAwait(false)
             : null;
@@ -116,10 +104,7 @@ internal sealed class GetRecipesQueryHandler(
 /// <summary>Maps a page of search rows onto the shape this operation returns.</summary>
 internal static class RecipeListMappings
 {
-    /// <summary>
-    /// A refinement is worth offering when it leaves between a fifth and four
-    /// fifths of the results.
-    /// </summary>
+    // A refinement is worth offering when it leaves between a fifth and four fifths of the results.
     private const double NarrowestShare = 0.2;
 
     private const double WidestShare = 0.8;
@@ -141,8 +126,7 @@ internal static class RecipeListMappings
             Items = [.. page.Items.Select(row => row.ToSummary(search.Ingredients.Count))],
             NextCursor = page.NextCursor,
             Total = page.Total,
-            // Absent without a query, so the plain library listing is exactly
-            // what it always was.
+            // Absent without a query.
             Interpretation = !intent.Asked
                 ? null
                 : new Interpretation
@@ -157,11 +141,7 @@ internal static class RecipeListMappings
         };
     }
 
-    /// <summary>
-    /// The refinements worth a chip: not already applied, and neither
-    /// removing nothing nor everything — the ones that best halve the results
-    /// first.
-    /// </summary>
+    // The chips worth offering: not already applied, best at halving the results first.
     private static Facets? ToContract(this SearchFacets facets, RecipeSearch search)
     {
         bool Splits(Abstractions.Facet facet) =>
@@ -228,8 +208,7 @@ internal static class RecipeListMappings
         CookCount = row.CookCount,
         LastCookedAt = row.LastCookedAt,
         UpdatedAt = row.UpdatedAt,
-        // Omitted entirely when the caller named no ingredients, so a plain
-        // browse is not cluttered with "uses 0 of 0".
+        // Omitted when no ingredients were named.
         IngredientMatch = requestedIngredients == 0
             ? null
             : new IngredientMatch
@@ -242,8 +221,7 @@ internal static class RecipeListMappings
             ? new MatchReason
             {
                 Kind = reason.Kind,
-                // A concept is named in the recipe's own language, which is the
-                // one the rest of its card is in.
+                // A concept is named in the recipe's own language.
                 Term = reason.Kind == "concept" && reason.Term is { } key && CulinaryLexicon.Find(key) is { } concept
                     ? (reason.Language == "de" ? concept.De : concept.En)[0]
                     : reason.Term

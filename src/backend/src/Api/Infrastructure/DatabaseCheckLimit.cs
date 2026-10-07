@@ -5,24 +5,11 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Infrastructure;
 
-/// <summary>
-/// How often one address may have the database settings tried.
-/// </summary>
+/// <summary>How often one address may have the database settings tried: ten a minute.</summary>
 /// <remarks>
-/// <para>
-/// Trying them opens a connection to whatever host and port the request
-/// names, and while nobody has an account anybody may ask — on the setup
-/// host, and on the real one until the first account exists. Without a
-/// ceiling that is a port scanner and a password oracle for whoever finds a
-/// fresh instance first.
-/// </para>
-/// <para>
-/// Fixed, and carried by the endpoint rather than registered with a host's
-/// limiter: the setup host has no rate limit settings — they are part of what
-/// is being set up — so this cannot depend on them, and it answers a refusal
-/// itself for the same reason. Ten a minute is far more than anybody typing
-/// connection details needs.
-/// </para>
+/// Trying them connects to a caller-named host, and anybody may ask until the first account exists, so without a
+/// ceiling this is a port scanner and password oracle. Fixed and carried by the endpoint, because the setup host
+/// has no rate limit settings.
 /// </remarks>
 internal sealed class DatabaseCheckLimit : IRateLimiterPolicy<string>
 {

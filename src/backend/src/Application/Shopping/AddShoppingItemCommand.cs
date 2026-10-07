@@ -61,10 +61,7 @@ internal sealed class AddShoppingItemCommandHandler(
                     lists,
                     unitOfWork,
                     command.HouseholdId,
-                    // A hand-typed line is not merged: somebody typing "butter"
-                    // when butter is already on the list usually means they want
-                    // more of it noted separately, and merging silently would
-                    // hide that they added anything.
+                    // A hand-typed line is not merged, or the user would not see that they added anything.
                     (list, _) => Task.FromResult(
                         list.AddManual(pair.Name, pair.Quantity, SectionFor(pair.Name, overrides))
                             .Bind(_ => Result.Success())),
@@ -75,13 +72,7 @@ internal sealed class AddShoppingItemCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Where this household keeps a thing, or where a shop usually does.
-    /// </summary>
-    /// <remarks>
-    /// A correction always wins: the seeded guess is a default, and a person who
-    /// has moved an item once should not have to move it again.
-    /// </remarks>
+    // A household's own correction always wins over the keyword default.
     internal static ShoppingSection SectionFor(
         ItemName name,
         IReadOnlyDictionary<string, ShoppingSection> overrides) =>

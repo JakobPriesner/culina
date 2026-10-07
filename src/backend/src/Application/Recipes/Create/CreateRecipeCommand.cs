@@ -13,10 +13,7 @@ namespace Application.Recipes.Create;
 /// <param name="HouseholdId">Which household will own it.</param>
 /// <param name="Title">What to call it.</param>
 /// <param name="UserId">Who is writing it down.</param>
-/// <param name="DeviceLanguage">
-/// The language of the device they are writing on, for someone whose interface
-/// follows it.
-/// </param>
+/// <param name="DeviceLanguage">The writing device's language, for someone whose interface follows it.</param>
 /// <param name="DraftId">The assistant draft it came from, when it came from one.</param>
 public sealed record CreateRecipeCommand(
     Guid HouseholdId,
@@ -50,8 +47,7 @@ internal sealed class CreateRecipeCommandHandler(
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        // A link somebody sent is refused rather than dropped: they asked for
-        // it, and silently keeping the recipe without it would be a surprise.
+        // A given link is refused rather than silently dropped.
         var prepared = permitted.Bind(() =>
             command.SourceUrl is not null && SourceUrl.From(command.SourceUrl) is null
                 ? Result<RecipeTitle>.Failure(ImportErrors.UnreachableAddress)
@@ -64,31 +60,13 @@ internal sealed class CreateRecipeCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Writes the recipe, in the language the person who is writing it reads.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Their interface language rather than a field on the request, because it
-    /// is the one answer that is already true and cannot be forgotten: three
-    /// screens start a recipe here — a typed title, a pasted block, an
-    /// assistant's draft — and a field on the request is a field two of them
-    /// would eventually stop sending.
-    /// </para>
-    /// <para>
-    /// It is a guess, and the editor can correct it. It is a far better guess
-    /// than English, which is what this used to store for everybody: the
-    /// search index picks its stemmer from this field, and the ingredient
-    /// suggestions their language.
-    /// </para>
-    /// </remarks>
+    // Stored in the author's interface language (a guess the editor can correct): the search stemmer and
+    // ingredient suggestions follow it.
     private async Task<Result<RecipeDetail>> StoreAsync(
         CreateRecipeCommand command,
         RecipeTitle title,
         CancellationToken cancellationToken)
     {
-        // Nothing but a title. Everything else is optional and addable later,
-        // which is what makes the create form something people finish.
         var now = time.GetUtcNow();
         var theirs = await preferences.GetAsync(command.UserId, cancellationToken).ConfigureAwait(false);
         var recipe = Recipe.Create(
@@ -112,16 +90,7 @@ internal sealed class CreateRecipeCommandHandler(
             cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Records that this recipe started as something the assistant wrote.
-    /// </summary>
-    /// <remarks>
-    /// The same table and the same shape an imported recipe uses, because it is
-    /// the same fact: this recipe did not start here. The draft's own id is the
-    /// external id, so every ask is its own — which keeps the "once per
-    /// household" index meaningful rather than making a second drafted recipe
-    /// collide with the first.
-    /// </remarks>
+    // Same table as an imported recipe's origin; the draft id is the external id so each ask is its own.
     private async Task RememberDraftedAsync(
         CreateRecipeCommand command,
         Recipe recipe,

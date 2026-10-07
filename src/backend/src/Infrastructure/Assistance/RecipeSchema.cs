@@ -3,69 +3,22 @@ using Application.Abstractions;
 
 namespace Infrastructure.Assistance;
 
-/// <summary>
-/// The shape a model must answer in, and the reading of that answer.
-/// </summary>
+/// <summary>The shape a model must answer in, and the reading of that answer.</summary>
 /// <remarks>
-/// <para>
-/// One schema for both providers. Gemini calls it <c>responseSchema</c> and
-/// OpenAI calls it <c>json_schema</c>, but both take the same subset of JSON
-/// Schema and both enforce it on the way out — which is what makes asking a
-/// model for a recipe a parsing problem rather than a scraping one.
-/// </para>
-/// <para>
-/// Structured outputs rather than "please answer in JSON", which is the
-/// difference between a shape the provider enforces while it decodes and a
-/// shape it was asked about. It is what makes reading a half-written answer
-/// safe: the text arriving is known to be this schema, so the only question a
-/// partial parse has to answer is how much of it has arrived.
-/// </para>
-/// <para>
-/// That mode requires every property to be listed as required, and it is the
-/// reason every optional one is spelled as a union with <c>null</c>. Required
-/// without nullable would be the worst of the three states this could be in:
-/// the model may not omit <c>prepMinutes</c>, so it invents one — and an
-/// invented cooking time on a recipe read out of a photograph is the single
-/// failure of this feature nobody would catch. Spelled this way, "the recipe
-/// does not say" has a value the model can give, and every description below
-/// tells it to.
-/// </para>
-/// <para>
-/// The <c>required</c> lists are written out in full rather than left to the
-/// client library. It derives exactly these lists for a strict request anyway,
-/// and a schema that says one thing here and arrives saying another is a schema
-/// nobody can reason about from this file.
-/// </para>
-/// <para>
-/// Nothing here is believed. The schema stops a model answering with prose, and
-/// that is all it does — every value still has to survive
-/// <c>RecipeParsing</c> before it is a recipe.
-/// </para>
+/// One schema for both providers, enforced by structured outputs while they decode. Every property
+/// must be required, so each optional one is a union with <c>null</c>: otherwise the model invents
+/// a cooking time. Nothing here is believed: every value still has to survive <c>RecipeParsing</c>.
 /// </remarks>
 internal static class RecipeSchema
 {
     /// <summary>What to call it, where a provider wants a name.</summary>
     internal const string Name = "recipe";
 
-    /// <summary>
-    /// The same schema as a parsed document.
-    /// </summary>
+    /// <summary>The same schema as a parsed document, for <c>Microsoft.Extensions.AI</c>.</summary>
     /// <remarks>
-    /// <para>
-    /// What <c>Microsoft.Extensions.AI</c> takes, where the dictionary is what
-    /// Google's client takes. Built once: it is constant, and parsing it per
-    /// request would be parsing the same bytes for the life of the process.
-    /// </para>
-    /// <para>
-    /// Built lazily rather than in a field initialiser, and that is not a
-    /// style choice. Static initialisers run in the order they are written, so
-    /// one that read <see cref="Definition"/> from above it serialised a field
-    /// that was still null — and <c>null</c> is a perfectly good JSON document.
-    /// Nothing failed at startup; every OpenAI and Ollama request simply went
-    /// out asking for no particular shape, which the SDK refused with a message
-    /// about a schema nobody could see. Deferring the read makes the order it
-    /// is written in stop mattering.
-    /// </para>
+    /// Lazy, not a field initialiser: static initialisers run in written order, and reading
+    /// <see cref="Definition"/> from above it serialised a null, so OpenAI and Ollama asked for no
+    /// shape at all.
     /// </remarks>
     internal static JsonElement AsJson => Serialised.Value;
 
@@ -159,18 +112,9 @@ internal static class RecipeSchema
         new() { ["type"] = "string", ["description"] = description };
 
     /// <summary>
-    /// A value the recipe may simply not have.
+    /// A value the recipe may not have: a union with null, since every property is required. The
+    /// description must say what null means, or the model fills it in.
     /// </summary>
-    /// <param name="type">What it is when it is there.</param>
-    /// <param name="description">
-    /// What it means, and what null means. Both halves matter: a model told
-    /// only what the field is will fill it in.
-    /// </param>
-    /// <remarks>
-    /// A union rather than an absence, because a structured output lists every
-    /// property as required. This is how "there is no cooking time" is said in
-    /// a schema that does not let anything be left out.
-    /// </remarks>
     private static Dictionary<string, object> Maybe(string type, string description) =>
         new() { ["type"] = new[] { type, "null" }, ["description"] = description };
 
@@ -184,15 +128,10 @@ internal static class RecipeSchema
         Maybe("integer", description);
 }
 
-/// <summary>
-/// The answer as it arrives, before anything believes it.
-/// </summary>
+/// <summary>The answer as it arrives, before anything believes it.</summary>
 /// <remarks>
-/// Its own type rather than deserialising straight into
-/// <see cref="DraftedRecipe"/>, because the two have different jobs: this one
-/// tolerates whatever a model sent, and that one is what the rest of the
-/// application passes around. The mapping between them is where a missing array
-/// becomes an empty one.
+/// Its own type, not <see cref="DraftedRecipe"/>: this one tolerates whatever a model sent, and the
+/// mapping is where a missing array becomes an empty one.
 /// </remarks>
 internal sealed record RecipeAnswer
 {

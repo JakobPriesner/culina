@@ -12,20 +12,16 @@ internal sealed class TagRepository(DbExecutor executor) : ITagRepository
     {
         ArgumentNullException.ThrowIfNull(library);
 
-        // Most used first, then alphabetical. The words this kitchen reaches
-        // for are the ones worth offering, and ties have to break somewhere
-        // stable or the list reshuffles itself between two identical reads.
+        // Most used first, then alphabetical: stable tie-breaks stop the list reshuffling between identical reads.
         var rows = await executor.QueryAsync<TagUsage>(
             """
             select t.slug, min(t.name) as name, count(rt.recipe_id)::int as recipe_count
             from tags t
             join recipe_tags rt on rt.tag_id = t.id
-            -- The view, so a recipe in the bin neither counts towards a tag
-            -- nor keeps one on offer that would filter to nothing.
+            -- The view, so a binned recipe neither counts towards a tag nor keeps one on offer that filters to nothing.
             join recipes r on r.id = rt.recipe_id
             where t.household_id = any(@library)
-            -- By slug, not by row: a household and one it inherits from may
-            -- both carry "vegan", and a filter chip is for the word.
+            -- By slug: a household and one it inherits from may both carry "vegan", and a chip is for the word.
             group by t.slug
             order by count(rt.recipe_id) desc, t.slug;
             """,

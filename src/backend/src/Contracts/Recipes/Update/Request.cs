@@ -2,14 +2,7 @@ using Contracts.Recipes;
 
 namespace Contracts.Recipes.Update;
 
-/// <summary>
-/// The recipe's complete new state.
-/// </summary>
-/// <remarks>
-/// A replacement, not a patch. The editor holds the whole recipe on screen and
-/// saves the whole recipe, so a partial update would only add a second shape to
-/// get wrong.
-/// </remarks>
+/// <summary>The recipe's complete new state: a replacement, not a patch, since the editor saves the whole recipe.</summary>
 public sealed record Request
 {
     /// <summary>What to call it.</summary>
@@ -27,15 +20,7 @@ public sealed record Request
     /// <summary><c>servings</c> or <c>pieces</c>.</summary>
     public required string YieldKind { get; init; }
 
-    /// <summary>
-    /// The recipe's own word for what it makes — "Cake", "Gläser", "Blech".
-    /// </summary>
-    /// <remarks>
-    /// Null for nearly every recipe, and a client must then word the yield from
-    /// <c>yieldKind</c> in the reader's language. When it is set it replaces
-    /// that word and is shown exactly as written — it is one person's noun in
-    /// one person's language, so nothing here pluralises or translates it.
-    /// </remarks>
+    /// <summary>The recipe's own word for what it makes ("Cake", "Gläser"). Null for most; then the client words it from <c>yieldKind</c>. Shown as written, never pluralised or translated.</summary>
     public string? YieldLabel { get; init; }
 
     /// <summary>Hands-on time.</summary>

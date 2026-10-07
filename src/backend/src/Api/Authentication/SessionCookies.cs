@@ -3,26 +3,11 @@ using Application.Abstractions.Settings;
 namespace Api.Authentication;
 
 /// <summary>
-/// Writes, renews and clears the two cookies a session needs.
+/// Writes, renews and clears the session and CSRF cookies, always together with the same expiry.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The session cookie is <c>HttpOnly</c>, so a cross-site script cannot read
-/// it. The CSRF cookie deliberately is not: the client has to read it to echo
-/// the value in a header, and that echo is the whole point — an attacker's
-/// page can cause a request to be sent with our cookies, but cannot read them
-/// to build the matching header.
-/// </para>
-/// <para>
-/// The <c>__Host-</c> prefix pins the session cookie to this exact origin: the
-/// browser refuses it unless it is <c>Secure</c>, has <c>Path=/</c> and carries
-/// no <c>Domain</c>, so a subdomain cannot set or overwrite it.
-/// </para>
-/// <para>
-/// Both cookies always carry the same expiry, and both are re-issued together.
-/// A browser holding one and not the other is signed in but unable to change
-/// anything, which looks like a broken app rather than an expired session.
-/// </para>
+/// The session cookie is <c>HttpOnly</c> and <c>__Host-</c> prefixed (origin-pinned); the CSRF cookie is
+/// readable on purpose, since the client must echo it in a header an attacker's page cannot build.
 /// </remarks>
 internal static class SessionCookies
 {
@@ -41,15 +26,9 @@ internal static class SessionCookies
     }
 
     /// <summary>
-    /// Pushes the expiry of the cookies this request arrived with further out.
+    /// Slides the expiry of the cookies this request arrived with, so the browser does not drop them
+    /// before the server-side session expires. Values are reused; no token is minted.
     /// </summary>
-    /// <remarks>
-    /// The server's own record of the session slides whenever it is used, and
-    /// without this the browser would still drop the cookie a fixed number of
-    /// days after sign-in — which is the same thing to the person holding the
-    /// phone. The values are the ones already in the jar, so renewing costs no
-    /// new token and invalidates nothing.
-    /// </remarks>
     internal static void Renew(HttpContext context, CookieSettings settings, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -62,9 +41,7 @@ internal static class SessionCookies
 
         Append(context, settings, now, Name(settings), sessionToken, httpOnly: true);
 
-        // Renewed only if the browser still has it. Minting a replacement here
-        // would mean rotating the stored digest from inside authentication,
-        // and a request that raced it would be rejected as forged.
+        // Renewed only if the browser still has it: minting one here would rotate the stored digest mid-authentication.
         if (context.Request.Cookies.TryGetValue(CookieSettings.CsrfCookieName, out var csrfToken)
             && csrfToken.Length > 0)
         {
@@ -97,20 +74,12 @@ internal static class SessionCookies
         return context.Request.Cookies.TryGetValue(Name(settings), out var token) ? token : null;
     }
 
-    /// <summary>
-    /// Local development runs over plain HTTP, where the browser rejects a
-    /// <c>__Host-</c> cookie outright. The prefix is dropped only when
-    /// <c>Cookies__Secure</c> is false, which production never sets.
-    /// </summary>
+    // Plain-HTTP development rejects a __Host- cookie, so the prefix is dropped when Cookies__Secure is false.
     private const string DevelopmentSessionCookieName = "culina.session";
 
     internal static string Name(CookieSettings settings) =>
         settings.Secure ? CookieSettings.SessionCookieName : DevelopmentSessionCookieName;
 
-    /// <summary>
-    /// One place that decides a cookie's attributes, so the pair written at
-    /// sign-in and the pair written at renewal cannot drift apart.
-    /// </summary>
     private static void Append(
         HttpContext context,
         CookieSettings settings,

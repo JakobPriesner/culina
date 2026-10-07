@@ -83,13 +83,7 @@ internal sealed class UpdateShoppingItemCommandHandler(
         return changed;
     }
 
-    /// <summary>
-    /// Remembers the correction, so it is never made twice.
-    /// </summary>
-    /// <remarks>
-    /// This is what replaces a configuration screen: the guess is a default,
-    /// and moving an item once teaches the household where it lives.
-    /// </remarks>
+    // Remembers the correction so it is never made twice: moving an item once teaches the household where it lives, replacing a configuration screen.
     private async Task<Result> RememberAsync(
         ShoppingList list,
         UpdateShoppingItemCommand command,

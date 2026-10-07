@@ -13,23 +13,13 @@ namespace Application.Cooking.CookPhoto;
 /// <summary>
 /// A picture of one attempt: hung on it, taken off it, and served.
 /// </summary>
-/// <remarks>
-/// Personal, like the note and the log itself. Every one of these is scoped to
-/// the caller's own entries in the repository's SQL, so somebody else's Tuesday
-/// dinner is not found rather than forbidden — the same answer a recipe gives
-/// about a household you are not in.
-/// </remarks>
+/// <remarks>Personal like the note and the log: scoped to the caller's own entries in SQL, so another's attempt is not found rather than forbidden.</remarks>
 public sealed record SetCookPhotoCommand(Guid EntryId, Guid UserId, Stream Content);
 
 /// <summary>Takes the picture off an attempt.</summary>
-/// <param name="EntryId">Which attempt.</param>
-/// <param name="UserId">Whose it must be.</param>
 public sealed record RemoveCookPhotoCommand(Guid EntryId, Guid UserId);
 
 /// <summary>Finds an attempt's picture.</summary>
-/// <param name="EntryId">Which attempt.</param>
-/// <param name="UserId">Whose it must be.</param>
-/// <param name="Width">Which rendition.</param>
 public sealed record GetCookPhotoQuery(Guid EntryId, Guid UserId, int Width);
 
 internal sealed class SetCookPhotoCommandHandler(
@@ -62,9 +52,7 @@ internal sealed class SetCookPhotoCommandHandler(
         SetCookPhotoCommand command,
         CancellationToken cancellationToken)
     {
-        // Written to the volume before the row is touched. A file with no row
-        // is orphaned storage a sweep can reclaim; a row with no file is a
-        // broken image on the page.
+        // Written to the volume before the row: a file with no row is sweepable, a row with no file is a broken image.
         var stored = await images
             .StoreAsync(command.Content, cancellationToken)
             .ConfigureAwait(false);
@@ -87,13 +75,7 @@ internal sealed class SetCookPhotoCommandHandler(
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// The whole log, not just the entry that changed.
-    /// </summary>
-    /// <remarks>
-    /// It is what the screen shows — a strip of every attempt — so returning
-    /// one entry would make the client refetch the rest to draw anything.
-    /// </remarks>
+    // The whole log, since the screen shows a strip of every attempt.
     internal static async Task<Result<Response>> ReadBackAsync(
         ICookLogRepository log,
         CookLogEntry entry,
@@ -121,9 +103,7 @@ internal sealed class RemoveCookPhotoCommandHandler(ICookLogRepository log, IUni
             entry => unitOfWork.InTransactionAsync(
                 async token =>
                 {
-                    // The file itself is left alone. It is content-addressed and
-                    // may be another attempt's picture too; reclaiming it is a
-                    // sweep's job, not a delete's.
+                    // The file is left alone: it is content-addressed, may be another attempt's, and a sweep reclaims it.
                     var written = await log
                         .SetPhotoAsync(entry.Id, entry.UserId, photo: null, token)
                         .ConfigureAwait(false);

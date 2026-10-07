@@ -11,16 +11,7 @@ using Domain.Shopping;
 namespace Application.Shopping;
 
 /// <summary>Puts a planned week's shopping on the list — each meal once.</summary>
-/// <param name="HouseholdId">Whose plan and list.</param>
-/// <param name="UserId">Who is shopping.</param>
-/// <param name="From">The day the week starts on.</param>
-/// <remarks>
-/// Safe to repeat, which is the point. A meal already on the list is skipped,
-/// and a recipe that went on the list by itself counts as the shopping for a
-/// planned meal of it — so adding the week after adding the waffles from their
-/// recipe does not buy the waffles twice. Two planned meals of the same recipe
-/// are two meals, and each is shopped for.
-/// </remarks>
+/// <remarks>Safe to repeat: a meal already on the list is skipped, and a recipe added by itself counts as shopping for a planned meal of it. Two planned meals of one recipe are two meals.</remarks>
 public sealed record AddPlannedMealsToListCommand(Guid HouseholdId, Guid UserId, DateOnly From);
 
 internal sealed class AddPlannedMealsToListCommandHandler(

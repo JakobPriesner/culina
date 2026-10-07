@@ -1,12 +1,6 @@
 namespace Contracts.Users.GetCurrent;
 
 /// <summary>The signed-in user, and where they can cook.</summary>
-/// <remarks>
-/// Memberships are included because the app calls this on every boot to resolve
-/// the session, and it would otherwise immediately need a second request to
-/// know which households exist. One round trip on the critical path is worth a
-/// slightly larger response.
-/// </remarks>
 public sealed record Response
 {
     /// <summary>The user's id.</summary>
@@ -30,13 +24,6 @@ public sealed record Response
     /// <summary>
     /// What the assistant may be asked for on this instance.
     /// </summary>
-    /// <remarks>
-    /// Here, on the one request the app already makes at boot, rather than on
-    /// an endpoint of its own. Every screen that could offer an assistant
-    /// affordance needs this answer, and an extra request per page to learn
-    /// that the answer is "none" — which it is on most instances — would be a
-    /// round trip spent finding out there is nothing to show.
-    /// </remarks>
     public required AssistanceAvailability Assistance { get; init; }
 
     /// <summary>The entity version, for If-Match on an update.</summary>
@@ -46,11 +33,7 @@ public sealed record Response
 /// <summary>
 /// Which assistant capabilities are switched on.
 /// </summary>
-/// <remarks>
-/// All false on an instance nobody has configured, which is the point: the
-/// client renders no assistant affordance at all rather than a disabled one, so
-/// Culina without a model looks exactly like Culina did before there was one.
-/// </remarks>
+/// <remarks>All false on an unconfigured instance, so the client renders no assistant affordance at all.</remarks>
 public sealed record AssistanceAvailability
 {
     /// <summary>Rewriting a recipe somebody already has.</summary>

@@ -11,13 +11,10 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
 {
     private const string Columns = "id, email, display_name, password_hash, created_at, version";
 
-    /// <summary>The unique index the email column carries, named for the catch below.</summary>
+    // The unique index the email column carries, named for the catch below.
     private const string EmailUniqueConstraint = "users_email_key";
 
-    /// <summary>
-    /// An arbitrary but fixed key ("users"), so every registration competes
-    /// for the same lock. Distinct from the migration runner's.
-    /// </summary>
+    // An arbitrary fixed key ("users") so every registration competes for one lock; distinct from the migration runner's.
     private const long RegistrationLockKey = 0x7573657273;
 
     public async Task<Result<User>> FindAsync(Guid userId, CancellationToken cancellationToken)
@@ -47,11 +44,8 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
 
     public async Task<int> CountForRegistrationAsync(CancellationToken cancellationToken)
     {
-        // Held until the transaction ends, so the count and the insert that
-        // follows it are one step for each registration in turn. Two
-        // statements rather than one: under READ COMMITTED a statement sees
-        // what was committed when it started, and a count in the same
-        // statement as the lock would miss the registration it waited for.
+        // Held until the transaction ends, so count and insert are one step per registration. Two statements:
+        // under READ COMMITTED a count in the lock's own statement would miss the registration it waited for.
         await executor.ExecuteAsync(
             "select pg_advisory_xact_lock(@key);",
             new { key = RegistrationLockKey },
@@ -86,11 +80,8 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
         }
         catch (PostgresException failure) when (failure.ConstraintName == EmailUniqueConstraint)
         {
-            // The sanctioned exception to "never catch to return a failure": a
-            // second registration can commit between the existence check and
-            // this insert, and the database is the only place that can settle
-            // the race. The constraint name is named so a future rename fails
-            // loudly here instead of silently turning a conflict into a 500.
+            // The sanctioned exception to "never catch to return a failure": a second registration can commit between the
+            // existence check and this insert. The constraint is named so a rename fails loudly rather than becoming a 500.
             return UserErrors.EmailAlreadyUsed;
         }
     }
@@ -122,8 +113,7 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
             },
             cancellationToken).ConfigureAwait(false);
 
-        // No row matched, so either the user is gone or someone else wrote
-        // first. The version check lives in the WHERE, never in C#.
+        // No row matched: the user is gone or someone wrote first. The version check lives in the WHERE, never in C#.
         return version is null ? ConcurrencyErrors.VersionMismatch : version.Value;
     }
 

@@ -50,9 +50,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     public async Task Me_ShouldTagTwoAccountsDifferently_EvenAtTheSameVersion()
     {
         // Arrange
-        // `/users/me` names a different person for every session, and both are
-        // at version 1 on the day they sign up. A tag made of the version alone
-        // would be identical for the two of them.
+        // Both accounts are at version 1, so a version-only tag would be identical.
         await postgres.ResetAsync(Token);
 
         var first = await AccountAsync("ada@example.com", isFirst: true);
@@ -81,8 +79,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
         var ada = await first.GetAsync("/api/v1/users/me", Token);
 
         // Act
-        // Exactly what a browser does after two people sign in on one device:
-        // it still holds the first response and offers its tag for revalidation.
+        // A browser sharing one device still offers the first account's tag.
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me");
         request.Headers.IfNoneMatch.Add(EntityTagHeaderValue.Parse(ada.ETag!));
         var response = await second.SendAsync(request, Token);
@@ -122,9 +119,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     public async Task Me_ShouldChangeItsTag_WhenTheAccountJoinsAHousehold()
     {
         // Arrange
-        // Creating a household does not change the account, so a tag made only
-        // of the account's version would answer 304 to a client that is
-        // missing a kitchen it can now cook in.
+        // Creating a household does not bump the account version, so the tag must include households.
         await postgres.ResetAsync(Token);
 
         using var admin = await AccountAsync("ada@example.com", isFirst: true);
@@ -148,11 +143,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     public async Task Me_ShouldChangeItsTag_WhenAnAdministratorSwitchesTheAssistantOnOrOff()
     {
         // Arrange
-        // Switching the assistant on changes nobody's account, so a tag made
-        // of the account and its households answered 304 and the app kept an
-        // all-false snapshot: the admin saved, saw "Ready", and New recipe
-        // still offered no idea or photograph door — across reloads, because
-        // the service worker keeps the same stale copy.
+        // Switching the assistant changes no account, so a tag without it answered 304 and the app kept a stale all-false snapshot.
         using var client = await SignedInAsync();
         var before = await client.GetAsync("/api/v1/users/me", Token);
 
@@ -203,8 +194,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // 428, not 412: the client has not sent a stale version, it has sent
-        // none, and the fix is to read the resource first.
+        // 428, not 412: no version was sent at all.
         Assert.Equal(HttpStatusCode.PreconditionRequired, response.StatusCode);
         Assert.Equal("request.precondition_required", response.ProblemCode);
     }
@@ -245,11 +235,8 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
     public async Task Settings_ShouldChangeTheirTag_OnTheVeryFirstChange()
     {
         // Arrange
-        // The first save is the one that used to be lost. Nothing is stored for
-        // a new account, so the read is answered from the defaults — and while
-        // those claimed the same version as the row the first save creates, the
-        // tag did not move and the next read was a 304 carrying the values the
-        // person had just replaced. It took a second change to show the first.
+        // Defaults must not share a version with the row the first save creates, or the tag
+        // stays put and the next read is a 304 with the replaced values.
         using var client = await SignedInAsync();
         var before = await client.GetAsync("/api/v1/users/me/settings", Token);
 
@@ -266,8 +253,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
         var after = await client.SendAsync(request, Token);
 
         // Assert
-        // Not 304: what a conditional read must never do is answer "unchanged"
-        // about something that just changed.
+        // Not 304: something just changed.
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
         Assert.Equal("de", after.Json!.Value.GetProperty("locale").GetString());
         Assert.Equal("imperial", after.Json!.Value.GetProperty("measurementSystem").GetString());
@@ -284,8 +270,7 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
 
         // Assert
         var settings = response.Json!.Value;
-        // Follow the device, like the appearance: nobody should have to find a
-        // settings screen to read the app in the language their phone speaks.
+        // The default follows the device.
         Assert.Equal("system", settings.GetProperty("locale").GetString());
         Assert.Equal("warm-paper", settings.GetProperty("theme").GetString());
         Assert.Equal("system", settings.GetProperty("mode").GetString());
@@ -356,7 +341,6 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    /// <summary>One provider connected, and drafting and reading pointed at it.</summary>
     private static object Assistant(bool enabled) => new
     {
         enabled,
@@ -394,15 +378,13 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
         return await client.SendAsync(request, Token);
     }
 
-    /// <summary>Registers and signs in one account, on an already-reset database.</summary>
     private async Task<ApiClient> AccountAsync(string email, bool isFirst)
     {
         var client = postgres.Api.NewApiClient();
 
         if (!isFirst)
         {
-            // Only the first account may register on a closed instance, so the
-            // second needs the policy opened first.
+            // Only the first account may register on a closed instance.
             using var admin = postgres.Api.NewApiClient();
 
             await admin.PostAsync(

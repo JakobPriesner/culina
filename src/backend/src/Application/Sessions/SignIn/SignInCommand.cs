@@ -13,13 +13,11 @@ namespace Application.Sessions.SignIn;
 /// <param name="Email">The address they registered with.</param>
 /// <param name="Password">Their password.</param>
 /// <param name="IpAddress">
-/// The client address, for the devices screen and for whose attempt budget the
-/// guess is counted against.
+/// The client address, for the devices screen and the attempt budget.
 /// </param>
 /// <param name="UserAgent">The browser, for the devices screen.</param>
 /// <param name="PreviousSessionToken">
-/// The session cookie this browser already held, if any, which the new one
-/// replaces.
+/// The session cookie this browser already held, which the new one replaces.
 /// </param>
 public sealed record SignInCommand(
     string Email,
@@ -49,22 +47,19 @@ internal sealed class SignInCommandHandler(
         var now = dependencies.Time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
 
-        // Counted before the password is checked, so simultaneous guesses
-        // cannot all slip through before the first failure is written down.
+        // Counted before the password is checked, so simultaneous guesses cannot all pass before
+        // the first failure is recorded.
         if (!attempts.TryReserve(accountKey, command.IpAddress, now))
         {
-            // Reported as invalid credentials rather than "too many attempts":
-            // telling an attacker they found a real account and merely locked
-            // it out is the one thing this whole path exists to avoid.
+            // Reported as invalid credentials, not "too many attempts": that would tell an attacker
+            // they found a real account.
             return tracked.Record(Refused());
         }
 
         var user = await FindAsync(command.Email, cancellationToken).ConfigureAwait(false);
 
-        // Verified even when no account matched, against a decoy hash, so the
-        // response takes the same time either way. Skipping the work for an
-        // unknown address turns this endpoint into an enumeration oracle no
-        // matter how careful the error message is.
+        // Verified even when no account matched, against a decoy hash, so timing does not make this
+        // endpoint an enumeration oracle.
         var verification = await passwordHasher.VerifyAsync(
             command.Password,
             user?.PasswordHash ?? passwordHasher.DecoyHash,
@@ -94,8 +89,8 @@ internal sealed class SignInCommandHandler(
     }
 
     /// <summary>
-    /// Null for both "not an address" and "no such account", because the caller
-    /// must treat them identically.
+    /// Null for both "not an address" and "no such account": the caller must treat them
+    /// identically.
     /// </summary>
     private async Task<User?> FindAsync(string rawEmail, CancellationToken cancellationToken)
     {
@@ -115,13 +110,9 @@ internal sealed class SignInCommandHandler(
     }
 
     /// <summary>
-    /// Ends the session this browser held before signing in again.
+    /// Ends the session this browser held before signing in again; the new cookie overwrites the
+    /// old one, which would otherwise live on while somebody still used it.
     /// </summary>
-    /// <remarks>
-    /// The new cookie overwrites the old one, so nobody should be holding the
-    /// old session any more — and if somebody still is, it is not this
-    /// browser. Left alone it would live on for as long as it kept being used.
-    /// </remarks>
     private async Task EndReplacedSessionAsync(
         string? previousToken,
         DateTimeOffset now,
@@ -135,8 +126,7 @@ internal sealed class SignInCommandHandler(
         var previous = await sessions.FindActiveByTokenAsync(previousToken, now, cancellationToken)
             .ConfigureAwait(false);
 
-        // Nothing to report either way: a session that is already gone is
-        // what this wants.
+        // Nothing to report either way: a session that is already gone is what this wants.
         await previous.Match(
             session => sessions.RevokeAsync(session.Id, session.UserId, now, cancellationToken),
             _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
@@ -144,8 +134,8 @@ internal sealed class SignInCommandHandler(
 
     private async Task UpgradeHashAsync(User user, string password, CancellationToken cancellationToken)
     {
-        // The owner proved the password, so the stored hash can be replaced
-        // with one at the current cost — no reset email, no interruption.
+        // The owner proved the password, so the stored hash is replaced with one at the current
+        // cost, with no reset email.
         user.ChangePasswordHash(await passwordHasher.HashAsync(password, cancellationToken).ConfigureAwait(false));
 
         await users.UpdateAsync(user, user.Version, cancellationToken).ConfigureAwait(false);

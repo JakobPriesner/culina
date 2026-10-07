@@ -6,7 +6,6 @@ using Domain.Users;
 namespace Infrastructure.Persistence.Users;
 
 /// <summary>Stores recovery codes.</summary>
-/// <param name="executor">Runs the SQL inside the request's transaction.</param>
 internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCodeRepository
 {
     public async Task ReplaceSavedAsync(
@@ -16,8 +15,7 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
     {
         ArgumentNullException.ThrowIfNull(codes);
 
-        // Used codes of the old set go too: what is left of a set is its
-        // remaining count, and a new set starts that count again.
+        // Used codes of the old set go too: what is left of a set is its remaining count.
         await executor.ExecuteAsync(
             "delete from recovery_codes where user_id = @userId and issued_by is null;",
             new { userId },
@@ -92,9 +90,9 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
     {
         ArgumentNullException.ThrowIfNull(email);
 
-        // One statement for "this address, this code, still usable, now used",
-        // so the work is the same whether the address is registered or not,
-        // and two people racing the same code cannot both get through.
+        // One statement for "this address, this code, still usable, now used": the work is the same
+        // whether or not the address is registered, and two people racing one code cannot both get
+        // through.
         var userId = await executor.ExecuteScalarAsync<Guid?>(
             """
             update recovery_codes code

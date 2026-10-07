@@ -3,15 +3,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Cookbooks;
 
-/// <summary>
-/// Reading a cookbook through the recipe list.
-/// </summary>
-/// <remarks>
-/// The bet this feature is built on: a cookbook is a view of the collection,
-/// not a second collection. If that holds, a shelf gets the search, the tags,
-/// the time ceiling and the paging for the price of one filter clause — and
-/// these are the tests that say whether it holds.
-/// </remarks>
+/// <summary>Reading a cookbook through the recipe list: a cookbook is a view of the collection, so a shelf gets search, tags and paging for one filter clause.</summary>
 [Collection(RequiresDatabase.Name)]
 public class CookbookRecipeFilterTests(PostgresFixture postgres)
 {
@@ -22,7 +14,6 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
     [Fact]
     public async Task Filter_ShouldReturnOnlyWhatIsOnTheShelf()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Sonntags");
@@ -32,12 +23,10 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
 
         await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{onIt}", new { }, Token);
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&cookbookId={cookbookId}",
             Token);
 
-        // Assert
         var titles = Titles(response);
 
         Assert.Equal(["Braten"], titles);
@@ -47,9 +36,7 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
     [Fact]
     public async Task Filter_ShouldReadInTheOrderTheShelfWasBuilt()
     {
-        // Arrange
-        // Oldest first, like a table of contents. The order somebody built it
-        // in is the order they meant.
+        // Oldest first, like a table of contents: the order it was built in is the order meant.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Der Reihe nach");
@@ -61,21 +48,17 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
             await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
         }
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&cookbookId={cookbookId}",
             Token);
 
-        // Assert
         Assert.Equal(["Zuerst", "Dann", "Zuletzt"], Titles(response));
     }
 
     [Fact]
     public async Task Filter_ShouldStillHonourTheSearchBox()
     {
-        // Arrange
-        // This is the whole argument for reusing GET /recipes: searching inside
-        // a cookbook needed no code of its own.
+        // The argument for reusing GET /recipes: searching a cookbook needed no code of its own.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Alles");
@@ -87,19 +70,16 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
             await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
         }
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&cookbookId={cookbookId}&query=suppe",
             Token);
 
-        // Assert
         Assert.Equal(["Kartoffelsuppe", "Linsensuppe"], [.. Titles(response).Order()]);
     }
 
     [Fact]
     public async Task Filter_ShouldStillHonourAnExplicitSort()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Alphabetisch");
@@ -111,19 +91,16 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
             await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
         }
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&cookbookId={cookbookId}&sort=title",
             Token);
 
-        // Assert
         Assert.Equal(["Apfelkuchen", "Zwiebelkuchen"], Titles(response));
     }
 
     [Fact]
     public async Task Filter_ShouldPageWithoutRepeatingOrLosingARecipe()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cookbookId = await CookbookAsync(client, householdId, "Viele");
@@ -137,7 +114,6 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
             await client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
         }
 
-        // Act
         List<string> seen = [];
         string? cursor = null;
 
@@ -156,29 +132,22 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
         }
         while (cursor is not null);
 
-        // Assert
         Assert.Equal(expected, seen);
     }
 
     [Fact]
     public async Task Filter_ShouldBeAnEmptyPageForACookbookThatIsNotYours()
     {
-        // Arrange
-        // Deliberately not a 404. `cookbookId` is a filter value, not a
-        // resource named in the path, and an unknown tag slug already behaves
-        // exactly this way. The cookbook's own page reads GET /cookbooks/{id}
-        // for its header, and that does answer 404.
+        // Deliberately not a 404: `cookbookId` is a filter value, like an unknown tag slug. The cookbook's own header read answers 404.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         await RecipeAsync(client, householdId, "Meins");
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&cookbookId={Guid.NewGuid()}",
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(response.Json!.Value.GetProperty("items").EnumerateArray());
     }
@@ -186,34 +155,27 @@ public class CookbookRecipeFilterTests(PostgresFixture postgres)
     [Fact]
     public async Task Sort_ShouldRefuseCookbookOrderWithoutACookbook()
     {
-        // Arrange
-        // A filter that silently does nothing returns wrong data that looks
-        // right, which is the failure the query-parameter guard exists for.
+        // A silently ignored filter returns wrong data that looks right, which the query-parameter guard exists to stop.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&sort=cookbookOrder",
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
     public async Task Filter_ShouldRejectSomethingThatIsNotAnId()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/recipes?householdId={householdId}&cookbookId=irgendwas",
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 

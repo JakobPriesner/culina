@@ -9,9 +9,6 @@ using Domain.Shopping;
 namespace Application.Shopping;
 
 /// <summary>Takes a line off the list, or clears what has been bought.</summary>
-/// <param name="HouseholdId">Whose list.</param>
-/// <param name="UserId">Who is clearing it.</param>
-/// <param name="ItemId">Which line, or null to clear everything ticked.</param>
 public sealed record RemoveShoppingItemsCommand(Guid HouseholdId, Guid UserId, Guid? ItemId);
 
 internal sealed class RemoveShoppingItemsCommandHandler(
@@ -43,9 +40,7 @@ internal sealed class RemoveShoppingItemsCommandHandler(
                 lists,
                 unitOfWork,
                 command.HouseholdId,
-                // Clearing what is bought is the one bulk action worth having:
-                // after a shop, removing a dozen ticked lines one at a time is
-                // the tedium the list exists to avoid.
+                // Clearing what is bought is the one bulk action worth having.
                 (list, _) => Task.FromResult(
                     command.ItemId is { } id ? list.Remove(id) : Ok(list.ClearChecked())),
                 cancellationToken)

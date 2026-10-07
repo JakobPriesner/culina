@@ -3,33 +3,27 @@ using Domain.Search;
 namespace Domain.UnitTests.Search;
 
 /// <summary>
-/// The lexicon relates words; these hold it to relating the right ones, and to
-/// never being ambiguous about which.
+/// The lexicon relates words; these hold it to relating the right ones, and never ambiguously.
 /// </summary>
 public class CulinaryLexiconTests
 {
     [Fact]
     public void EnglishLabel_ShouldBeCapitalised_ForEveryCuisine()
     {
-        // Arrange
-        // "Also: italian" reads as a typo to an English reader. German labels
-        // are written as a person writes them already; English ones were
-        // matching forms, all lower case, until they doubled as labels.
+        // "Also: italian" reads as a typo to an English reader: labels are written as a person
+        // writes them; English ones were lower-case matching forms until they doubled as labels.
         var cuisines = CulinaryLexicon.All.Where(concept => concept.Kind == ConceptKind.Cuisine);
 
-        // Act
         var lowercase = cuisines.Select(concept => concept.En[0]).Where(label => !char.IsUpper(label[0])).ToList();
 
-        // Assert
         Assert.Empty(lowercase);
     }
 
     [Fact]
     public void Lexicon_ShouldHaveNoSurfaceFormInTwoConcepts()
     {
-        // Arrange
-        // Compared folded, both ways, because that is how text meets them: two
-        // forms that differ only by an umlaut are one form to the matcher.
+        // Compared folded, both ways, as text meets them: forms differing only by an umlaut are one
+        // form to the matcher.
         var owners = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
 
         foreach (var concept in CulinaryLexicon.All)
@@ -48,24 +42,20 @@ public class CulinaryLexiconTests
             }
         }
 
-        // Act
         var ambiguous = owners
             .Where(pair => pair.Value.Count > 1)
             .Select(pair => $"{pair.Key}: {string.Join(", ", pair.Value)}")
             .ToList();
 
-        // Assert
         Assert.Empty(ambiguous);
     }
 
     [Fact]
     public void Lexicon_ShouldGiveEveryConceptAUniqueKey_AndAWordInBothLanguages()
     {
-        // Act
         var duplicates = CulinaryLexicon.All.GroupBy(concept => concept.Key).Where(group => group.Count() > 1);
         var unnamed = CulinaryLexicon.All.Where(concept => concept.De.Count == 0 || concept.En.Count == 0);
 
-        // Assert
         Assert.Empty(duplicates);
         Assert.Empty(unnamed);
     }
@@ -73,20 +63,17 @@ public class CulinaryLexiconTests
     [Fact]
     public void Lexicon_ShouldOnlyNameParentsThatExist()
     {
-        // Act
         var orphans = CulinaryLexicon.All
             .SelectMany(concept => concept.Parents.Select(parent => (concept.Key, parent)))
             .Where(edge => CulinaryLexicon.Find(edge.parent) is null)
             .Select(edge => $"{edge.Key} → {edge.parent}");
 
-        // Assert
         Assert.Empty(orphans);
     }
 
     [Fact]
     public void Lexicon_ShouldHaveNoParentCycle()
     {
-        // Act
         // A concept that is its own ancestor would make everything under it
         // "a kind of" everything else in the loop.
         var cyclic = CulinaryLexicon.All
@@ -94,7 +81,6 @@ public class CulinaryLexiconTests
                 CulinaryLexicon.Lineage(parent).Contains(concept.Key, StringComparer.Ordinal)))
             .Select(concept => concept.Key);
 
-        // Assert
         Assert.Empty(cyclic);
     }
 
@@ -120,10 +106,8 @@ public class CulinaryLexiconTests
     [InlineData("comfort food", "comfort")]
     public void Recognise_ShouldFindTheConceptAQueryWordNames(string query, string expected)
     {
-        // Act
         var found = CulinaryLexicon.Recognise(query);
 
-        // Assert
         Assert.Contains(expected, found);
     }
 
@@ -135,17 +119,14 @@ public class CulinaryLexiconTests
     [InlineData("Tomatensuppe")]
     public void Recognise_ShouldNotSplitAQueryWord_IntoItsParts(string query)
     {
-        // Act & Assert
         Assert.Empty(CulinaryLexicon.Recognise(query));
     }
 
     [Fact]
     public void Recognise_ShouldNameWhatTheQueryNames_NotWhatThatIsAKindOf()
     {
-        // Act
         var found = CulinaryLexicon.Recognise("Hähnchen");
 
-        // Assert
         Assert.DoesNotContain("poultry", found);
         Assert.DoesNotContain("meat", found);
     }
@@ -160,7 +141,6 @@ public class CulinaryLexiconTests
     [InlineData("Schweinebraten", "roast")]
     public void Describe_ShouldFindTheConceptsInsideACompound(string ingredient, string expected)
     {
-        // Act & Assert
         Assert.Contains(expected, CulinaryLexicon.Describe(ingredient, [], []));
     }
 
@@ -181,14 +161,12 @@ public class CulinaryLexiconTests
     [InlineData("Fischsauce", "sauce")]
     public void Describe_ShouldNotFindWhatAWordMerelyContains(string text, string unexpected)
     {
-        // Act & Assert
         Assert.DoesNotContain(unexpected, CulinaryLexicon.Describe(text, [], []));
     }
 
     [Fact]
     public void Recognise_ShouldFindNothing_InTextThatIsNotAboutFood()
     {
-        // Act & Assert
         Assert.Empty(CulinaryLexicon.Recognise("qwertzuiop"));
         Assert.Empty(CulinaryLexicon.Recognise(string.Empty));
         Assert.Empty(CulinaryLexicon.Recognise("%%%"));
@@ -197,13 +175,11 @@ public class CulinaryLexiconTests
     [Fact]
     public void Describe_ShouldIndexARecipe_UnderWhatItIsAKindOf()
     {
-        // Act
         var concepts = CulinaryLexicon.Describe(
             "Hähnchenbrustfilet mit Reis",
             ["schnell"],
             ["Hähnchenbrust", "Reis", "Zitrone"]);
 
-        // Assert
         Assert.Contains("chicken", concepts);
         Assert.Contains("poultry", concepts);
         Assert.Contains("meat", concepts);
@@ -215,11 +191,9 @@ public class CulinaryLexiconTests
     [Fact]
     public void Describe_ShouldMakeWaffles_ADessert()
     {
-        // Act
         // The case a household reported: "Nachtisch" should find Waffeln.
         var concepts = CulinaryLexicon.Describe("Waffeln", [], ["Mehl", "Eier", "Milch", "Zucker"]);
 
-        // Assert
         Assert.Contains("dessert", concepts);
         Assert.Contains("sweet", concepts);
         Assert.Contains("egg", concepts);
@@ -228,12 +202,10 @@ public class CulinaryLexiconTests
     [Fact]
     public void Describe_ShouldTakeADiet_FromTheTitleAndTags_NeverFromAnIngredient()
     {
-        // Act
         var fromIngredient = CulinaryLexicon.Describe("Kartoffelsuppe", [], ["pflanzliche Sahne"]);
         var fromTag = CulinaryLexicon.Describe("Kartoffelsuppe", ["vegan"], []);
         var fromTitle = CulinaryLexicon.Describe("Vegane Lasagne", [], []);
 
-        // Assert
         Assert.DoesNotContain("vegan", fromIngredient);
         Assert.Contains("vegan", fromTag);
         Assert.Contains("vegetarian", fromTag);
@@ -253,12 +225,10 @@ public class CulinaryLexiconTests
     [InlineData("Austernsauce")]
     public void Describe_ShouldKnowWhatIsAnAnimal(string ingredient)
     {
-        // Act
-        // What a vegetarian search will exclude on: these must all reach one
-        // of the families, or the exclusion quietly lets them through.
+        // What a vegetarian search excludes on: these must reach a family, or the exclusion lets
+        // them through.
         var concepts = CulinaryLexicon.Describe("Gericht", [], [ingredient]);
 
-        // Assert
         Assert.True(
             concepts.Contains("meat") || concepts.Contains("fish") || concepts.Contains("seafood"),
             $"{ingredient}: {string.Join(", ", concepts)}");
@@ -276,18 +246,15 @@ public class CulinaryLexiconTests
     [InlineData("tomato", new[] { "tomato" })]
     public void AnsweredBy_ShouldLetADishStandInForTheDishItIsAKindOf(string key, string[] expected)
     {
-        // Act & Assert
         Assert.Equal(expected, CulinaryLexicon.AnsweredBy(key));
     }
 
     [Fact]
     public void MealRules_ShouldTellWhatADinnerLooksLike_AndWhatItIsNot()
     {
-        // Act
         var like = MealRules.LookLike("dinner");
         var unlike = MealRules.Unlike("dinner");
 
-        // Assert
         Assert.Contains("lunch", like);
         Assert.Contains("warm", like);
         Assert.Contains("breakfast", unlike);
@@ -306,19 +273,16 @@ public class CulinaryLexiconTests
     [InlineData("Gurkensalat", "summer")]
     public void Describe_ShouldGiveADish_TheCharacterItHas(string title, string expected)
     {
-        // Act & Assert
         Assert.Contains(expected, CulinaryLexicon.Describe(title, [], []));
     }
 
     [Fact]
     public void Describe_ShouldReadANegativeAnswer_AsNoDiet()
     {
-        // Act
         // The answer "Nein" to "Ist das vegetarisch?" is a tag, and a tag that
         // mentions a diet must not be read as keeping it.
         var concepts = CulinaryLexicon.Describe("Kichererbsen-Eintopf", ["nicht vegetarisch"], []);
 
-        // Assert
         Assert.Contains("not_vegetarian", concepts);
         Assert.DoesNotContain("vegetarian", concepts);
         Assert.Contains("not_vegetarian", DietRules.RefutedBy("vegetarian")!);

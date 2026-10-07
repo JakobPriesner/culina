@@ -1,14 +1,6 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// How to reach PostgreSQL.
-/// </summary>
-/// <remarks>
-/// Configured as parts rather than as one connection string, so every part can
-/// be validated on its own and the password can be sourced separately from the
-/// host — a Docker secret for the password, plain environment variables for the
-/// rest.
-/// </remarks>
+/// <summary>How to reach PostgreSQL, as validated parts so the password can be sourced separately (a Docker secret).</summary>
 public sealed record DatabaseSettings
 {
     /// <summary>The configuration section these values are read from.</summary>
@@ -38,9 +30,7 @@ public sealed record DatabaseSettings
     /// <summary>Enough for a household's evening, and far below PostgreSQL's own ceiling.</summary>
     public const int DefaultMaxPoolSize = 20;
 
-    /// <summary>
-    /// Whether TLS is required. Only a local, non-TLS server justifies false.
-    /// </summary>
+    /// <summary>Whether TLS is required. Only a local, non-TLS server justifies false.</summary>
     public bool RequireSsl { get; init; } = DefaultRequireSsl;
 
     /// <summary>The largest number of pooled connections.</summary>

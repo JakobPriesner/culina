@@ -93,9 +93,7 @@ internal sealed class InvitationRepository(DbExecutor executor, ISecretTokens to
     {
         ArgumentNullException.ThrowIfNull(invitation);
 
-        // `redeemed_at is null` in the WHERE is what makes an invitation
-        // single-use under concurrency: two requests presenting the same code
-        // race here, and the database picks one.
+        // `redeemed_at is null` makes an invitation single-use under concurrency.
         var affected = await executor.ExecuteAsync(
             """
             update household_invitations

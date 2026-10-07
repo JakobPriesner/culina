@@ -25,9 +25,7 @@ internal sealed class GetRecipeImageQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.GetImage");
 
-        // Membership is checked on every image read: an image is exactly as
-        // private as the recipe it belongs to, and serving it from a path that
-        // skipped the check would make the recipe public by accident.
+        // Checked on every read: an image is exactly as private as its recipe.
         var visible = await RecipeAccess
             .VisibleHouseholdAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
@@ -41,17 +39,9 @@ internal sealed class GetRecipeImageQueryHandler(
 }
 
 /// <summary>An image the caller may see, not yet read.</summary>
-/// <param name="ContentHash">
-/// The image's address, which is also its ETag: content-addressed storage means
-/// the bytes can never change under the same hash.
-/// </param>
+/// <param name="ContentHash">The image's address, also its ETag: the bytes never change under one hash.</param>
 /// <param name="WriteToAsync">Writes the rendition that was asked for.</param>
-/// <remarks>
-/// The access check and the hash lookup are done by the time this exists; the
-/// file is not. Most image reads are a browser revalidating a picture it
-/// already has, and answering those with 304 needs only the hash — reading the
-/// file first, as this used to, paid a full disk read to throw it away.
-/// </remarks>
+/// <remarks>The file is read lazily, so a 304 revalidation needs only the hash.</remarks>
 public sealed record ImageDelivery(
     string ContentHash,
     Func<Stream, CancellationToken, Task<Result>> WriteToAsync)

@@ -6,14 +6,9 @@ using Microsoft.Extensions.Primitives;
 namespace Api.Middleware;
 
 /// <summary>
-/// Puts the authenticated user on the logging scope and the current span.
+/// Puts the authenticated user on the logging scope and the current span (position 12: after authentication),
+/// so signed-in log lines are attributable.
 /// </summary>
-/// <remarks>
-/// Position 12: after authentication has produced a principal and before
-/// anything that needs to know who is calling. Without it, every log line from
-/// a signed-in request would be correlated by request id but anonymous, and
-/// "what was this user doing" would be unanswerable from the telemetry.
-/// </remarks>
 /// <param name="next">The rest of the pipeline.</param>
 internal sealed class SessionContextMiddleware(RequestDelegate next)
 {
@@ -29,9 +24,7 @@ internal sealed class SessionContextMiddleware(RequestDelegate next)
             return;
         }
 
-        // A user id is an acceptable span tag: it is low cardinality relative
-        // to an instance's traffic and it is what an operator searches by. An
-        // email or a search query would not be.
+        // A user id is low cardinality and what an operator searches by; an email or search query would not be acceptable.
         Activity.Current?.SetTag("culina.user_id", userId);
 
         using var scope = logger.BeginScope(new LogScope(new KeyValuePair<string, object?>("UserId", userId)));

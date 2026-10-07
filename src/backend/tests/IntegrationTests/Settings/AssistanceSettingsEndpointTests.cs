@@ -4,8 +4,7 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Settings;
 
 /// <summary>
-/// Connecting a model over the wire — and the one value that must never come
-/// back over it.
+/// Connecting a model over the wire, and the one value that must never come back over it.
 /// </summary>
 [Collection(RequiresDatabase.Name)]
 public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
@@ -16,20 +15,15 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Read_ShouldShowAnInstanceWithNoAssistant_OnAFreshInstall()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
-        // Off and empty by default. An instance nobody configures behaves
-        // exactly as Culina behaved before any of this existed.
+        // Off and empty by default: an unconfigured instance behaves as before the feature existed.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(response.Json!.Value.GetProperty("enabled").GetBoolean());
 
-        // Every provider this build knows is listed, none of them connected —
-        // so adding one is filling a row in rather than finding a button.
+        // Every known provider is listed, none connected, so adding one fills a row in.
         Assert.Equal(3, response.Json!.Value.GetProperty("connections").GetArrayLength());
         Assert.All(
             response.Json!.Value.GetProperty("connections").EnumerateArray(),
@@ -39,17 +33,12 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task TheKey_ShouldNeverAppearInAnyResponse_OnlyThatThereIsOne()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var written = await admin.PutAsync("/api/v1/settings/assistance", Configured(), Token);
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
-        // Asserted against the raw body rather than a parsed field, because the
-        // thing being proved is that no field carries it — a test that read a
-        // named property could only prove the property it thought to name.
+        // Asserted against the raw body: a parsed named property could only prove the one it named.
         Assert.DoesNotContain(Key, written.Body ?? string.Empty, StringComparison.Ordinal);
         Assert.DoesNotContain(Key, read.Body ?? string.Empty, StringComparison.Ordinal);
         Assert.True(ConnectionFor(read, "openai").GetProperty("apiKeyConfigured").GetBoolean());
@@ -58,12 +47,10 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldKeepTheKey_WhenTheFieldIsOmitted()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync("/api/v1/settings/assistance", Configured(), Token);
 
-        // Act
-        // The same form saved again to change a budget, with no key in it.
+        // Saved again to change a budget, with no key in it.
         await admin.PutAsync(
             "/api/v1/settings/assistance",
             Configured(apiKey: null, monthlyBudget: 25m),
@@ -71,7 +58,6 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
 
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
         Assert.True(ConnectionFor(read, "openai").GetProperty("apiKeyConfigured").GetBoolean());
         Assert.Equal(25m, read.Json!.Value.GetProperty("monthlyBudget").GetDecimal());
     }
@@ -79,17 +65,13 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldTakeTheKeyAway_WhenAnEmptyOneIsSent()
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync("/api/v1/settings/assistance", Configured(), Token);
 
-        // Act
         await admin.PutAsync("/api/v1/settings/assistance", Configured(apiKey: ""), Token);
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
-        // Disconnecting, which is the one thing an empty string means and the
-        // omitted field does not.
+        // Disconnecting: the one thing an empty string means and an omitted field does not.
         Assert.False(ConnectionFor(read, "openai").GetProperty("apiKeyConfigured").GetBoolean());
         Assert.False(read.Json!.Value.GetProperty("enabled").GetBoolean());
     }
@@ -97,10 +79,8 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldSurviveAReload_BecauseItIsPersistedNotJustMutated()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         await admin.PutAsync(
             "/api/v1/settings/assistance",
             Configured(composeModel: "gemini-2.5-flash", provider: "gemini"),
@@ -108,7 +88,6 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
 
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
         Assert.True(ConnectionFor(read, "gemini").GetProperty("usable").GetBoolean());
         Assert.Equal(
             "gemini-2.5-flash",
@@ -120,19 +99,15 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldRejectAProviderThisCannotTalkTo_NamingTheField()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.PutAsync(
             "/api/v1/settings/assistance",
             Configured(provider: "anthropic"),
             Token);
 
-        // Assert
-        // An unknown provider is wrong in two places at once — the connection
-        // and every job pointed at it — so the answer is the aggregate, with
-        // the reason on each field.
+        // Wrong in two places (the connection and every job pointed at it), so the answer is the
+        // aggregate.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("request.validation_failed", response.ProblemCode);
         Assert.Contains("assistance.unknown_provider", response.Body, StringComparison.Ordinal);
@@ -141,10 +116,8 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Ollama_ShouldConnectWithAnAddressAndNoKey()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         await admin.PutAsync(
             "/api/v1/settings/assistance",
             Configured(provider: "ollama", apiKey: null, composeModel: "llama3.2", baseUrl: Local),
@@ -152,10 +125,8 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
 
         var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
-        // The whole point of supporting it: a household that already runs a
-        // model gets the assistant for nothing, sends nothing anywhere, and
-        // never enters a credential.
+        // A household that already runs a model gets the assistant for free and enters no
+        // credential.
         Assert.True(read.Json!.Value.GetProperty("enabled").GetBoolean());
         Assert.True(ConnectionFor(read, "ollama").GetProperty("usable").GetBoolean());
         Assert.False(ConnectionFor(read, "ollama").GetProperty("apiKeyConfigured").GetBoolean());
@@ -164,18 +135,15 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Ollama_ShouldNotConnect_WithoutAnAddress()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.PutAsync(
             "/api/v1/settings/assistance",
             Configured(provider: "ollama", apiKey: null, composeModel: "llama3.2"),
             Token);
 
-        // Assert
-        // Saved, and not connected. A blank row is a provider nobody set up
-        // rather than a mistake — this screen sends all three every time.
+        // Saved and not connected: a blank row is a provider nobody set up, and the screen sends
+        // all three.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(ConnectionFor(response, "ollama").GetProperty("usable").GetBoolean());
         Assert.False(response.Json!.Value.GetProperty("enabled").GetBoolean());
@@ -184,15 +152,11 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Models_ShouldListNothing_WhenNoProviderIsConnected()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.GetAsync("/api/v1/settings/assistance/models", Token);
 
-        // Assert
-        // Only connected providers appear at all, so an unconfigured instance
-        // asks nobody anything.
+        // Only connected providers appear, so an unconfigured instance asks nobody anything.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(0, response.Json!.Value.GetProperty("providers").GetArrayLength());
     }
@@ -200,21 +164,17 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Models_ShouldSayAProviderIsUnreachable_RatherThanFailing()
     {
-        // Arrange
-        // A key that will not work, pointed at an address that will not answer.
+        // A key that will not work, at an address that will not answer.
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/assistance",
             Configured(provider: "ollama", apiKey: null, baseUrl: "http://127.0.0.1:9"),
             Token);
 
-        // Act
         var response = await admin.GetAsync("/api/v1/settings/assistance/models", Token);
 
-        // Assert
-        // A row saying so, with the reason — not a failure. One provider that
-        // is down must not cost the other two, and this is where a wrong key
-        // first shows up.
+        // A row with the reason, not a failure: one provider being down must not cost the other
+        // two.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var ollama = response.Json!.Value.GetProperty("providers")
@@ -228,13 +188,10 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Usage_ShouldBeEmpty_BeforeAnybodyHasAskedForAnything()
     {
-        // Arrange
         using var admin = await AdminAsync();
 
-        // Act
         var response = await admin.GetAsync("/api/v1/settings/assistance/usage", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(0m, response.Json!.Value.GetProperty("totalCost").GetDecimal());
         Assert.Equal(0, response.Json!.Value.GetProperty("byPerson").GetArrayLength());
@@ -246,7 +203,6 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
     [InlineData("/api/v1/settings/assistance/models")]
     public async Task Settings_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator(string path)
     {
-        // Arrange
         using var admin = await AdminAsync();
         await admin.PutAsync(
             "/api/v1/settings/registration",
@@ -263,32 +219,26 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
             new { email = "grace@example.com", password = Password },
             Token);
 
-        // Act
         var response = await ordinary.GetAsync(path, Token);
 
-        // Assert
-        // The connection is the instance's, not a household's: one key, one
-        // bill, and one person who may change either.
+        // The connection is the instance's, not a household's: one key, one bill, one person who
+        // may change it.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
     public async Task Settings_ShouldBeRefused_ForSomebodyWhoIsNotSignedInAtAll()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var stranger = postgres.Api.NewApiClient();
 
-        // Act
         var response = await stranger.GetAsync("/api/v1/settings/assistance", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     private const string Local = "http://localhost:11434";
 
-    /// <summary>One provider connected, and every job pointed at it.</summary>
     private static object Configured(
         string provider = "openai",
         string? apiKey = Key,
@@ -308,7 +258,6 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
             personalBudget = (decimal?)null
         };
 
-    /// <summary>A named connection out of the response, whatever order they came in.</summary>
     private static System.Text.Json.JsonElement ConnectionFor(ApiResponse response, string provider) =>
         response.Json!.Value.GetProperty("connections")
             .EnumerateArray()

@@ -8,13 +8,10 @@ using Testcontainers.PostgreSql;
 
 namespace IntegrationTests.Fixtures;
 
-/// <summary>
-/// One real PostgreSQL server for the whole test run.
-/// </summary>
+/// <summary>One real PostgreSQL server for the whole test run.</summary>
 /// <remarks>
-/// A container rather than a shared developer database: the schema is built
-/// from the actual migrations, the tests cannot disturb anyone's local data,
-/// and CI needs nothing installed but Docker.
+/// A container, not a shared developer database: the schema comes from the actual migrations, tests
+/// cannot disturb local data, and CI needs only Docker.
 /// </remarks>
 public sealed class PostgresFixture : IAsyncLifetime
 {
@@ -58,10 +55,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     {
         await container.StartAsync();
 
-        // What scripts/db-init.sh does in production, and nothing more: an
-        // ordinary role that owns the schema. The migrations then run as that
-        // role, extensions included, so a migration that quietly needs a
-        // superuser fails here rather than on someone's server.
+        // What scripts/db-init.sh does in production: an ordinary role that owns the schema, so a
+        // migration that quietly needs a superuser fails here, not on someone's server.
         await ExecuteAsSuperuserAsync(
             $"""
             CREATE ROLE {RoleName} LOGIN PASSWORD '{RolePassword}';
@@ -72,8 +67,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Runs SQL as the server's superuser, for arranging what the application
-    /// role may not do itself — creating a database, say.
+    /// Runs SQL as the server's superuser, for arranging what the application role may not do
+    /// itself, such as creating a database.
     /// </summary>
     public async Task ExecuteAsSuperuserAsync(string sql, CancellationToken cancellationToken)
     {
@@ -86,48 +81,38 @@ public sealed class PostgresFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// The API host, created once and shared. Starting it runs the migrations,
-    /// so the schema is built once per run rather than once per test class.
+    /// The API host, created once and shared; starting it runs the migrations, so the schema is
+    /// built once per run.
     /// </summary>
     public CulinaApiFactory Api => api ??= new CulinaApiFactory(this);
 
-    /// <summary>
-    /// The same host, ranking without its exploration jitter.
-    /// </summary>
+    /// <summary>The same host, ranking without its exploration jitter.</summary>
     /// <remarks>
-    /// The jitter is deliberate and worth having in the product: it is what
-    /// keeps a list from being the same five recipes forever. It is also, by
-    /// construction, a reason a recipe moves that has nothing to do with any
-    /// ordering rule — and a rule asserted against noise larger than the rule's
-    /// own signal is a test that passes most of the time. Turning it off is how
-    /// a weight gets proven, which is what <c>RankingWeights</c> being a record
-    /// is for.
+    /// The jitter moves a recipe for reasons unrelated to any ordering rule, and a rule asserted
+    /// against noise larger than its signal passes most of the time. Turning it off is how a weight
+    /// gets proven.
     /// </remarks>
     public CulinaApiFactory SteadyRanking => steadyRanking ??= new CulinaApiFactory(
         this,
         weights: RankingWeights.Default with { Exploration = 0m });
 
     /// <summary>
-    /// A connection for a test, from the one pool this fixture owns. Building a
-    /// data source per test would leak a pool per test.
+    /// A connection for a test, from the one pool this fixture owns; a data source per test would
+    /// leak a pool per test.
     /// </summary>
     internal DbSession NewSession() => SessionOn(DataSource);
 
     /// <summary>
-    /// A session on a pool the test chose, built as the app builds one but
-    /// reporting how it uses the pool to nobody.
+    /// A session on a pool the test chose, built as the app builds one but reporting its pool use
+    /// to nobody.
     /// </summary>
     internal static DbSession SessionOn(NpgsqlDataSource pool) =>
         new(pool, new ConnectionPoolWatch(TimeProvider.System, NullLogger<ConnectionPoolWatch>.Instance));
 
-    /// <summary>
-    /// Runs one statement against the instance's database.
-    /// </summary>
+    /// <summary>Runs one statement against the instance's database.</summary>
     /// <remarks>
-    /// For arranging a state the API deliberately has no way to produce — an
-    /// invitation that has already expired, a membership row removed under a
-    /// live session. Reaching past the API to set those up is the only way to
-    /// test what happens when they are true.
+    /// For arranging states the API has no way to produce (an expired invitation, a membership
+    /// removed under a live session).
     /// </remarks>
     public async Task ExecuteAsync(string sql, CancellationToken cancellationToken)
     {
@@ -139,8 +124,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
             await using (command.ConfigureAwait(false))
             {
-                // The SQL here is written in test source, never composed from
-                // anything a caller supplied.
+                // Test source only: the SQL is never composed from anything a caller supplied.
 #pragma warning disable CA2100
                 command.CommandText = sql;
 #pragma warning restore CA2100
@@ -151,9 +135,8 @@ public sealed class PostgresFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Built only once the host has migrated: a pool learns the server's types
-    /// on its first connection, and one opened before the first migration
-    /// installed citext cannot read a citext column.
+    /// Built only once the host has migrated: a pool opened earlier learns the server's types too
+    /// soon and cannot read a citext column.
     /// </summary>
     private NpgsqlDataSource DataSource
     {
@@ -169,10 +152,9 @@ public sealed class PostgresFixture : IAsyncLifetime
         }
     }
 
-    /// <summary>Reads one value straight from the database, for asserting on what the API hides.</summary>
-    /// <typeparam name="TValue">The column's type.</typeparam>
-    /// <param name="sql">A statement selecting one value, written in test source.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
+    /// <summary>
+    /// Reads one value straight from the database, for asserting on what the API hides.
+    /// </summary>
     public async Task<TValue> QuerySingleAsync<TValue>(string sql, CancellationToken cancellationToken)
     {
         var connection = await DataSource.OpenConnectionAsync(cancellationToken);
@@ -193,13 +175,12 @@ public sealed class PostgresFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Returns the instance to a clean state: every table empty, and every
-    /// instance-settings group back at its compiled-in defaults.
+    /// Returns the instance to a clean state: every table empty, every settings group at its
+    /// compiled-in defaults.
     /// </summary>
     /// <remarks>
-    /// Settings are deliberately a process-wide mutable singleton, so a test
-    /// that opens registration would otherwise leak that into every test that
-    /// runs afterwards. Resetting them here means no test has to remember.
+    /// Settings are a process-wide mutable singleton, so a test that opens registration would leak
+    /// it into every later test.
     /// </remarks>
     public async Task ResetAsync(CancellationToken cancellationToken)
     {

@@ -2,14 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Users;
 
-/// <summary>
-/// Every failure the users module can return.
-/// </summary>
-/// <remarks>
-/// The codes are part of the API contract: clients branch on them, so adding
-/// one is safe and renaming one is a breaking change. Errors are declared here
-/// once and never constructed inline at a call site.
-/// </remarks>
+/// <summary>Every failure the users module can return. Codes are API contract: adding one is safe, renaming is breaking.</summary>
 public static class UserErrors
 {
     /// <summary>No user with that id exists, or none the caller may see.</summary>
@@ -67,10 +60,7 @@ public static class UserErrors
         ErrorType.Validation);
 
     /// <summary>The current password given to confirm a change did not match.</summary>
-    /// <remarks>
-    /// A validation failure, not a 401: the caller is signed in, and an
-    /// unauthorised answer would make the client sign them out for a typo.
-    /// </remarks>
+    /// <summary>The current password given to confirm a change did not match. Validation, not a 401, which would sign the user out for a typo.</summary>
     public static readonly Error IncorrectPassword = new(
         "users.incorrect_password",
         "That is not your current password.",

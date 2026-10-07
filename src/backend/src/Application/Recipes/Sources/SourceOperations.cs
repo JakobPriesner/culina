@@ -57,16 +57,7 @@ internal sealed class ConnectSourceCommandHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>
-    /// Works out what to connect with, then connects.
-    /// </summary>
-    /// <remarks>
-    /// Two ways in, and the split is not a convenience. A token is the thing
-    /// this actually stores, but "go and make an API token first" is a task
-    /// somebody has to go and learn before they can begin, and it is where most
-    /// attempts to move a recipe library stop. So a name and password are
-    /// traded for a token here, and only the token is kept.
-    /// </remarks>
+    // Works out what to connect with. A name and password are traded for a token, because "make an API token first" is where most attempts stop; only the token is kept.
     private async Task<Result<SourceSummary>> BuildThenStoreAsync(
         ConnectSourceCommand command,
         CancellationToken cancellationToken)
@@ -108,14 +99,7 @@ internal sealed class ConnectSourceCommandHandler(
             error => Task.FromResult(Result<SourceSummary>.Failure(error))).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// The token to store: the one that was given, or one signed in for.
-    /// </summary>
-    /// <remarks>
-    /// Exactly one of the two, never both. Accepting both and preferring one
-    /// would mean a request that says two different things gets a silent answer
-    /// about which was believed.
-    /// </remarks>
+    // The token to store: the one given or one signed in for. Exactly one, so a request cannot say two things and get a silent answer.
     private static async Task<Result<string>> TokenAsync(
         ConnectSourceCommand command,
         SourceAddress address,
@@ -141,31 +125,19 @@ internal sealed class ConnectSourceCommandHandler(
             return ImportErrors.InvalidSourceToken;
         }
 
-        // The password goes no further than this call. What comes back is the
-        // token, and the token is the only thing that is ever written down.
+        // The password goes no further than this call; only the token is ever written down.
         return await reader
             .SignInAsync(address, command.Draft.Username!, command.Draft.Password!, cancellationToken)
             .ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Talks to the other app before writing anything down.
-    /// </summary>
-    /// <remarks>
-    /// The order is the feature. A connection that is stored first and tested
-    /// later looks fine on the settings screen and fails the first time
-    /// somebody tries to use it — by which point they have forgotten which of
-    /// the address and the token they got wrong. Tested here, the answer
-    /// arrives while the form is still open.
-    /// </remarks>
+    // Talks to the other app before writing anything down, so a wrong address or token shows while the form is open.
     private async Task<Result<SourceSummary>> ProveThenStoreAsync(
         RecipeSource source,
         IRecipeLibrary reader,
         CancellationToken cancellationToken)
     {
-        // Still tested even when a sign-in just succeeded: signing in proves the
-        // account, and this proves the token can actually read recipes, which is
-        // the thing the connection is for.
+        // Tested even after a sign-in: that proves the account, this proves the token can read recipes.
         var reachable = await reader.TestAsync(source, cancellationToken).ConfigureAwait(false);
 
         return await reachable.Match(
@@ -236,9 +208,7 @@ internal sealed class DisconnectSourceCommandHandler(
         var result = await found.Match(
             async source =>
             {
-                // The recipes it brought over are not touched, and neither is
-                // the fact that they came from it. Disconnecting is putting the
-                // token away, not undoing the move.
+                // The recipes it brought over, and their origin, stay: disconnecting puts the token away, not undoes the move.
                 await unitOfWork.InTransactionAsync(
                         async token =>
                         {
@@ -297,9 +267,7 @@ internal sealed class BrowseSourceQueryHandler(
         return await page.Match(
             async read =>
             {
-                // Asked once for the whole page rather than once per row. This
-                // runs on every scroll of somebody's two-thousand-recipe
-                // library, and fifty queries per screen would be felt.
+                // Once for the whole page, not per row: this runs on every scroll of a large library.
                 var here = await origins
                     .AlreadyHereAsync(
                         source.HouseholdId,

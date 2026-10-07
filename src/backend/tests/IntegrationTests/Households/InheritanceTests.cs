@@ -7,15 +7,9 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Households;
 
 /// <summary>
-/// A household that inherits another sees that one's recipes and changes none
-/// of them.
+/// A household that inherits another sees its recipes and changes none of them. Ada owns the parent
+/// kitchen; Grace is only in the inheriting flat, so rules are tested from her side.
 /// </summary>
-/// <remarks>
-/// The cast is always the same: Ada owns her kitchen and the flat that
-/// inherits it, and Grace is in the flat and nowhere near Ada's kitchen. What
-/// Grace can reach is exactly what inheriting hands out, so every rule is
-/// tested from her side.
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class InheritanceTests(PostgresFixture postgres)
 {
@@ -53,7 +47,7 @@ public class InheritanceTests(PostgresFixture postgres)
         // Assert
         var found = Assert.Single(Items(library));
         Assert.Equal(bolognese, found.GetProperty("recipeId").GetGuid());
-        // Says whose it is, so the card can say it cannot be changed here.
+        // Carries the owning household so the card can say it cannot be changed here.
         Assert.Equal(ada.HouseholdId, found.GetProperty("householdId").GetGuid());
         Assert.Contains(Items(search), item => item.GetProperty("recipeId").GetGuid() == bolognese);
         Assert.Contains(Items(tags), tag => tag.GetProperty("slug").GetString() == "pasta");
@@ -80,8 +74,7 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NotFound, rename.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, share.StatusCode);
 
-        // Deleting answers the way it answers for a recipe that is not there,
-        // and deletes nothing, which is the part that matters.
+        // Delete deletes nothing, whatever status it answers with.
         Assert.NotEqual(HttpStatusCode.InternalServerError, delete.StatusCode);
         var stillThere = await ada.Client.GetAsync($"/api/v1/recipes/{bolognese}", Token);
         Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
@@ -125,8 +118,7 @@ public class InheritanceTests(PostgresFixture postgres)
         var onShelf = await grace.GetAsync($"/api/v1/recipes/{bolognese}/cookbooks?householdId={flat}", Token);
         Assert.Contains(Items(onShelf), item => item.GetProperty("cookbookId").GetGuid() == shelf);
 
-        // The flat's history, not Ada's kitchen's: stamping the recipe's own
-        // household would put Grace into Ada's suggestions by name.
+        // Logged against the flat, not the recipe's household, or Grace would leak into Ada's suggestions.
         Assert.Equal(flat, await CookedInAsync(bolognese));
     }
 
@@ -198,9 +190,7 @@ public class InheritanceTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // Inheriting shows a kitchen's recipes to everybody in the heir, so only
-        // somebody already in that kitchen may do it — and a stranger learns
-        // nothing about whether it exists.
+        // Only someone already in the kitchen may inherit it; a stranger learns nothing about whether it exists.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("households.not_found", response.ProblemCode);
         var library = await grace.GetAsync($"/api/v1/recipes?householdId={gracesKitchen}", Token);
@@ -243,8 +233,7 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NotFound, (await grace.GetAsync($"/api/v1/recipes/{bolognese}", Token)).StatusCode);
         Assert.Empty(Items(await grace.GetAsync($"/api/v1/recipes?householdId={flat}", Token)));
 
-        // The session's own read has to notice, or the app would go on naming
-        // a kitchen it no longer inherits from.
+        // The session's own read must change too, or the app keeps naming the old kitchen.
         var after = await grace.GetAsync("/api/v1/users/me", Token);
         Assert.NotEqual(before.ETag, after.ETag);
     }
@@ -282,8 +271,7 @@ public class InheritanceTests(PostgresFixture postgres)
         var stranger = await grace.GetAsync($"/api/v1/households/{ada.HouseholdId}/heirs", Token);
 
         // Assert
-        // Through the flat too: Grace's kitchen reads Ada's recipes, so Ada's
-        // kitchen is told about it.
+        // Includes indirect heirs: Grace's kitchen reads Ada's recipes through the flat.
         var items = Items(heirs);
         Assert.Equal([flat, gracesKitchen], items.Select(item => item.GetProperty("householdId").GetGuid()));
         Assert.Equal(ada.HouseholdId, items[0].GetProperty("inheritsFrom").GetGuid());
@@ -299,7 +287,6 @@ public class InheritanceTests(PostgresFixture postgres)
         var gracesKitchen = await GracesKitchenInheritingAsync(grace, flat);
 
         // Act
-        // Ada owns the flat and is nowhere near Grace's kitchen.
         var response = await ada.Client.DeleteAsync($"/api/v1/households/{flat}/heirs/{gracesKitchen}", Token);
 
         // Assert
@@ -338,7 +325,7 @@ public class InheritanceTests(PostgresFixture postgres)
             Token);
 
         // Assert
-        // That link is the flat's to cut; cutting the flat would take it too.
+        // That link is the flat's to cut.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("households.not_found", response.ProblemCode);
     }
@@ -347,8 +334,7 @@ public class InheritanceTests(PostgresFixture postgres)
     public async Task RemovingAMember_ShouldEndTheInheritanceTheySetUp_AndNoOtherOne()
     {
         // Arrange
-        // Grace was a plain member of Ada's kitchen and pointed a household of
-        // her own at it. Ada's flat inherits it too, by Ada's own choice.
+        // Grace is a plain member of Ada's kitchen and pointed her own household at it; Ada's flat inherits it too.
         var (ada, grace, graceId, gracesKitchen, bolognese) = await GraceInheritingAdasKitchenAsync();
         var flat = await CreateAsync(ada.Client, "Flat", inheritsFrom: ada.HouseholdId);
         var whileInside = await grace.GetAsync($"/api/v1/recipes/{bolognese}/image", Token);
@@ -361,7 +347,7 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NoContent, removed.StatusCode);
         await AssertCutOffAsync(grace, gracesKitchen, bolognese);
 
-        // Ada is still in her kitchen, so the flat she pointed at it keeps it.
+        // Ada's own flat keeps the inheritance.
         var flatLibrary = await ada.Client.GetAsync($"/api/v1/recipes?householdId={flat}", Token);
         Assert.Contains(Items(flatLibrary), item => item.GetProperty("recipeId").GetGuid() == bolognese);
     }
@@ -397,7 +383,7 @@ public class InheritanceTests(PostgresFixture postgres)
         var moved = await grace.PatchAsync($"/api/v1/cook-sessions/{sessionId}", new { currentStepIndex = 0 }, Token);
 
         // Assert
-        // Revoked access takes effect at once, the resume bar's title included.
+        // Revoked access takes effect at once, including the resume bar's title.
         Assert.Equal(HttpStatusCode.Created, started.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, current.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, moved.StatusCode);
@@ -453,7 +439,7 @@ public class InheritanceTests(PostgresFixture postgres)
             new { title = "Grace's Bolognese", language = "en", yieldAmount = 4, yieldKind = "servings", groups = Array.Empty<object>(), steps = Array.Empty<object>(), tags = Array.Empty<string>() });
         Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
 
-        // The original is Ada's, and is exactly as she wrote it.
+        // The original is untouched.
         var original = await ada.Client.GetAsync($"/api/v1/recipes/{bolognese}", Token);
         Assert.Equal("Bolognese", original.Json!.Value.GetProperty("title").GetString());
     }
@@ -510,10 +496,7 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(ada.HouseholdId, suggested.GetProperty("householdId").GetGuid());
     }
 
-    /// <summary>
-    /// Ada's kitchen with a Bolognese in it, the flat that inherits it, and
-    /// Grace in the flat and in a kitchen of her own.
-    /// </summary>
+    /// <summary>Ada's kitchen with a Bolognese, the flat inheriting it, and Grace in the flat and her own kitchen.</summary>
     private async Task<(Kitchen Ada, ApiClient Grace, Guid Flat, Guid Bolognese)> FlatAsync()
     {
         var ada = await Kitchen.OpenAsync(postgres);
@@ -534,10 +517,7 @@ public class InheritanceTests(PostgresFixture postgres)
         return (ada, grace, flat, bolognese);
     }
 
-    /// <summary>
-    /// Ada's kitchen with a photographed Bolognese in it, Grace as a plain
-    /// member of it, and a kitchen of Grace's own that she made inherit it.
-    /// </summary>
+    /// <summary>Ada's kitchen with a photographed Bolognese, Grace as a plain member, and Grace's own kitchen inheriting it.</summary>
     private async Task<(Kitchen Ada, ApiClient Grace, Guid GraceId, Guid GracesKitchen, Guid Bolognese)>
         GraceInheritingAdasKitchenAsync()
     {
@@ -552,10 +532,7 @@ public class InheritanceTests(PostgresFixture postgres)
         return (ada, grace, graceId, gracesKitchen, bolognese);
     }
 
-    /// <summary>
-    /// Nothing of the recipe reaches Grace any more: not in her kitchen's
-    /// library, not by id, not its picture, and not as a copy of her own.
-    /// </summary>
+    /// <summary>The recipe no longer reaches Grace: not in the library, by id, as an image, or as a copy.</summary>
     private static async Task AssertCutOffAsync(ApiClient grace, Guid gracesKitchen, Guid recipeId)
     {
         var library = await grace.GetAsync($"/api/v1/recipes?householdId={gracesKitchen}", Token);
@@ -571,7 +548,6 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(0, Membership(me, gracesKitchen).GetProperty("inheritsFrom").GetArrayLength());
     }
 
-    /// <summary>Grace's own kitchen, made to inherit the flat.</summary>
     private static async Task<Guid> GracesKitchenInheritingAsync(ApiClient grace, Guid flat)
     {
         var kitchen = await FirstHouseholdIdAsync(grace, except: flat);
@@ -619,7 +595,7 @@ public class InheritanceTests(PostgresFixture postgres)
         return await client.SendAsync(request, Token);
     }
 
-    /// <summary>Arranged directly: invitations are tested on their own.</summary>
+    /// <summary>Inserts the membership directly; invitations are tested elsewhere.</summary>
     private async Task<Guid> JoinAsync(Guid householdId, ApiClient member)
     {
         var memberId = (await member.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();

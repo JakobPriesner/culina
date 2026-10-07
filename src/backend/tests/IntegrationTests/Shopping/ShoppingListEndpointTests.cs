@@ -6,12 +6,8 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Shopping;
 
 /// <summary>
-/// The merge rule, end to end.
+/// The merge rule, end to end: three recipes must not give three lines of butter.
 /// </summary>
-/// <remarks>
-/// Adding three recipes and getting three lines of butter is how a shopping
-/// list stops being worth carrying into a shop.
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public class ShoppingListEndpointTests(PostgresFixture postgres)
 {
@@ -22,16 +18,13 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Get_ShouldCreateTheListOnFirstLook()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
         var response = await client.GetAsync(
             $"/api/v1/households/{householdId}/shopping-list",
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(response.Json!.Value.GetProperty("items").EnumerateArray());
     }
@@ -39,18 +32,15 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Get_ShouldNotExistForSomebodyElsesHousehold()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         using var stranger = await SecondAccountAsync();
 
-        // Act
         var response = await stranger.GetAsync(
             $"/api/v1/households/{householdId}/shopping-list",
             Token);
 
-        // Assert
         // 404, not 403: a stranger learns nothing about which households exist.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -58,14 +48,12 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddRecipe_ShouldMergeTheSameIngredientAcrossRecipes()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         var first = await RecipeWithButterAsync(client, householdId, "Cake", 200);
         var second = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
 
-        // Act
         await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/recipes",
             new { recipeId = first, servings = 4 },
@@ -76,7 +64,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { recipeId = second, servings = 4 },
             Token);
 
-        // Assert
         var items = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
         var butter = Assert.Single(items, item => item.GetProperty("name").GetString() == "Butter");
 
@@ -87,9 +74,7 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddPlannedMeals_ShouldExposeEveryRecipesAmountAndDay()
     {
-        // Arrange
-        // One line in the shop, two reasons for it. The response has to retain
-        // both reasons or a merged amount cannot answer what it is for.
+        // One line, two reasons: the response keeps both so a merged amount can say what it is for.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -98,13 +83,11 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         await PlanAsync(client, householdId, cake, Monday);
         await PlanAsync(client, householdId, biscuits, Monday.AddDays(1));
 
-        // Act
         await AddWeekAsync(client, householdId);
         var response = await client.GetAsync(
             $"/api/v1/households/{householdId}/shopping-list",
             Token);
 
-        // Assert
         var sources = Butter(response).GetProperty("sources").EnumerateArray()
             .OrderBy(source => source.GetProperty("recipeTitle").GetString())
             .ToList();
@@ -132,17 +115,12 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddRecipe_Twice_ShouldContributeTwice()
     {
-        // Arrange
-        // A recipe put on the list by itself twice is somebody making it twice
-        // — a double batch, or a second shelf of the same cookbook. Two asks is
-        // twice the shopping; a list that answered with one would send somebody
-        // home short. (A planned week is not repeated this way: it knows which
-        // of its meals are already here.)
+        // A recipe added twice is made twice (double batch), so two asks mean twice the shopping. A
+        // planned week is different: it knows which meals are already on the list.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
 
-        // Act
         await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/recipes",
             new { recipeId, servings = 4 },
@@ -153,7 +131,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { recipeId, servings = 4 },
             Token);
 
-        // Assert
         var items = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
         var butter = Assert.Single(items, item => item.GetProperty("name").GetString() == "Butter");
 
@@ -163,13 +140,10 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddRecipe_Twice_AtDifferentServings_ShouldSumBoth()
     {
-        // Arrange
-        // Monday for four, Thursday for six.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
 
-        // Act
         await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/recipes",
             new { recipeId, servings = 4 },
@@ -180,20 +154,17 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { recipeId, servings = 6 },
             Token);
 
-        // Assert
         var items = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
         var butter = Assert.Single(items, item => item.GetProperty("name").GetString() == "Butter");
 
-        // 200 for four, 300 for six.
         Assert.Equal(500m, butter.GetProperty("quantity").GetDecimal());
     }
 
     [Fact]
     public async Task AddRecipe_ShouldNotTouchALineAlreadyInTheTrolley()
     {
-        // Arrange
-        // A ticked line is bought. Adding to it would change an amount somebody
-        // has already picked up, so the second add starts a new line instead.
+        // A ticked line is bought: a second add starts a new line rather than change a picked-up
+        // amount.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -210,13 +181,11 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { isChecked = true },
             Token);
 
-        // Act
         var response = await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/recipes",
             new { recipeId, servings = 4 },
             Token);
 
-        // Assert
         var butter = response.Json!.Value.GetProperty("items").EnumerateArray()
             .Where(item => item.GetProperty("name").GetString() == "Butter")
             .ToList();
@@ -231,19 +200,15 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddRecipe_ShouldScaleToWhatIsBeingCooked()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
 
-        // Act
-        // The recipe is for four; this is being made for six.
         var response = await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/recipes",
             new { recipeId, servings = 6 },
             Token);
 
-        // Assert
         var butter = response.Json!.Value.GetProperty("items")[0];
 
         // Unrounded on purpose: rounding here and summing later compounds error.
@@ -253,24 +218,20 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddItem_ShouldGuessWhereItIsFound()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
-        // Act
         var response = await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/items",
             new { name = "Tomaten" },
             Token);
 
-        // Assert
         Assert.Equal("produce", response.Json!.Value.GetProperty("items")[0].GetProperty("section").GetString());
     }
 
     [Fact]
     public async Task UpdateItem_ShouldRememberACorrectedSection()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -286,16 +247,12 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { section = "spices_baking" },
             Token);
 
-        // Act
-        // The same thing, added again after the correction.
         var again = await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/items",
             new { name = "wunderpulver" },
             Token);
 
-        // Assert
-        // Moving an item once teaches the household where it lives, which is
-        // what replaces a configuration screen.
+        // Moving an item once teaches the household where it lives.
         var sections = again.Json!.Value.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("section").GetString())
             .ToList();
@@ -306,7 +263,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task RemoveItems_ShouldClearOnlyWhatIsBought()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -327,12 +283,10 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { isChecked = true },
             Token);
 
-        // Act
         var response = await client.DeleteAsync(
             $"/api/v1/households/{householdId}/shopping-list/items",
             Token);
 
-        // Assert
         var remaining = response.Json!.Value.GetProperty("items").EnumerateArray().ToList();
 
         Assert.Single(remaining);
@@ -344,7 +298,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [InlineData("")]
     public async Task RemoveItems_ShouldRefuseAMalformedItemId_AndKeepWhatIsBought(string itemId)
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
@@ -360,12 +313,10 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             new { isChecked = true },
             Token);
 
-        // Act
         var response = await client.DeleteAsync(
             $"/api/v1/households/{householdId}/shopping-list/items?itemId={itemId}",
             Token);
 
-        // Assert
         // Read as "no id", a bad one cleared every ticked line instead of one.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -379,22 +330,17 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddRecipe_ShouldKeepTheAmountSomebodyScaledTo()
     {
-        // Arrange
-        // Scaling to an amount you have produces a yield that is not a round
-        // number — 370 g of flour in a recipe built on 200 g for four is 7.4
-        // servings — and the whole point of that control is that 370 is what
-        // comes out. A yield rounded on the way here would put 380 on the list.
+        // Scaling to 370 g gives a non-round yield (7.4 servings); rounding it would put 380 on the
+        // list.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Bread", 200);
 
-        // Act
         var response = await client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/recipes",
             new { recipeId, servings = 7.4m },
             Token);
 
-        // Assert
         var butter = response.Json!.Value.GetProperty("items")[0];
 
         Assert.Equal(370m, butter.GetProperty("quantity").GetDecimal());
@@ -403,23 +349,18 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddItem_ShouldNotRejectSomebodyElseAddingAtTheSameMoment()
     {
-        // Arrange
-        // Two people in the same kitchen, one list, one row, one version. This
-        // is the ordinary case — one is at the fridge and the other in the
-        // cupboard — and it used to mean the second one got a 412 and their
-        // item was simply not on the list.
+        // Concurrent adds to one list row used to 412 the second writer and silently lose their
+        // item.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
 
         var names = new[] { "Butter", "Mehl", "Zucker", "Eier", "Milch" };
 
-        // Act
         var responses = await Task.WhenAll(names.Select(name => client.PostAsync(
             $"/api/v1/households/{householdId}/shopping-list/items",
             new { name },
             Token)));
 
-        // Assert
         Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
 
         var stored = await client.GetAsync(
@@ -431,7 +372,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             .Select(item => item.GetProperty("name").GetString())
             .ToList();
 
-        // Every one of them, not four out of five.
         Assert.Equal(names.Length, onTheList.Count);
         Assert.All(names, name => Assert.Contains(name, onTheList));
     }
@@ -439,18 +379,15 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddPlannedMeals_Twice_ShouldShopForTheWeekOnce()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
 
         await PlanAsync(client, householdId, recipeId, Monday);
 
-        // Act
         await AddWeekAsync(client, householdId);
         var response = await AddWeekAsync(client, householdId);
 
-        // Assert
         // Pressing the button again is checking, not shopping twice.
         Assert.Equal(200m, Butter(response).GetProperty("quantity").GetDecimal());
     }
@@ -458,8 +395,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddPlannedMeals_ShouldCountARecipeAlreadyAddedFromItsPage()
     {
-        // Arrange
-        // The waffles went on the list from their recipe, then onto Monday.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Waffles", 200);
@@ -470,12 +405,9 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             Token);
         await PlanAsync(client, householdId, recipeId, Monday);
 
-        // Act
         var response = await AddWeekAsync(client, householdId);
 
-        // Assert
-        // Monday is shopped for once. Doubling every ingredient here was the
-        // bug: silent, and only found out at the till.
+        // Monday is shopped for once; doubling every ingredient was a silent bug.
         Assert.Equal(200m, Butter(response).GetProperty("quantity").GetDecimal());
         Assert.True(Assert.Single(await WeekAsync(client, householdId)).GetProperty("isOnShoppingList").GetBoolean());
     }
@@ -483,8 +415,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task AddPlannedMeals_ShouldShopForEveryMealOfARecipePlannedTwice()
     {
-        // Arrange
-        // Monday for four, Thursday for six.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -492,31 +422,26 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         await PlanAsync(client, householdId, recipeId, Monday);
         await PlanAsync(client, householdId, recipeId, Monday.AddDays(3), servings: 6);
 
-        // Act
         var response = await AddWeekAsync(client, householdId);
 
-        // Assert
         Assert.Equal(500m, Butter(response).GetProperty("quantity").GetDecimal());
     }
 
     [Fact]
     public async Task AddPlannedMeals_ShouldSayWhichMealsAreOnTheList()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
 
         await PlanAsync(client, householdId, recipeId, Monday);
 
-        // Act
         var before = Assert.Single(await WeekAsync(client, householdId));
 
         await AddWeekAsync(client, householdId);
 
         var after = Assert.Single(await WeekAsync(client, householdId));
 
-        // Assert
         Assert.False(before.GetProperty("isOnShoppingList").GetBoolean());
         Assert.True(after.GetProperty("isOnShoppingList").GetBoolean());
     }
@@ -524,7 +449,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task WithdrawPlannedMeal_ShouldTakeBackExactlyWhatThatMealAdded()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -536,13 +460,10 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
 
         await client.DeleteAsync($"/api/v1/households/{householdId}/meal-plan/{monday}", Token);
 
-        // Act
         var response = await client.DeleteAsync(
             $"/api/v1/households/{householdId}/shopping-list/meals/{monday}",
             Token);
 
-        // Assert
-        // The biscuits still need their 50 g; the cake no longer needs its 200.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(50m, Butter(response).GetProperty("quantity").GetDecimal());
     }
@@ -550,7 +471,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task WithdrawPlannedMeal_ShouldKeepWhatSomebodyTyped()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -563,12 +483,10 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         var entryId = await PlanAsync(client, householdId, recipeId, Monday);
         await AddWeekAsync(client, householdId);
 
-        // Act
         var response = await client.DeleteAsync(
             $"/api/v1/households/{householdId}/shopping-list/meals/{entryId}",
             Token);
 
-        // Assert
         var names = response.Json!.Value.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("name").GetString());
 
@@ -578,9 +496,8 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Get_ShouldNotAnswerNotModifiedOverARenamedRecipe()
     {
-        // Arrange
-        // The title is read from the recipe, and renaming it is not a write to
-        // the list, so the list's version alone cannot say it has changed.
+        // Renaming a recipe does not write to the list, so the list's version alone cannot show the
+        // change.
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -591,11 +508,9 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             Token);
         var before = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
 
-        // Act
         await SaveWithButterAsync(client, recipeId, "Birthday cake", 200);
         var after = await RevalidateAsync(client, householdId, before);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
         Assert.Equal(
             "Birthday cake",
@@ -605,7 +520,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Get_ShouldNotAnswerNotModifiedOverAMovedMeal()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -614,14 +528,12 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         await AddWeekAsync(client, householdId);
         var before = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
 
-        // Act
         await client.PatchAsync(
             $"/api/v1/households/{householdId}/meal-plan/{entryId}",
             new { date = Monday.AddDays(2) },
             Token);
         var after = await RevalidateAsync(client, householdId, before);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, after.StatusCode);
         Assert.Equal(
             "2026-09-16",
@@ -631,7 +543,6 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Get_ShouldAnswerNotModifiedWhenNothingChanged()
     {
-        // Arrange
         using var client = await SignedInAsync();
         var householdId = await HouseholdAsync(client);
         var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
@@ -642,10 +553,8 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
             Token);
         var before = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
 
-        // Act
         var after = await RevalidateAsync(client, householdId, before);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotModified, after.StatusCode);
     }
 

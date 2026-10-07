@@ -4,10 +4,7 @@ using Domain.Shared;
 
 namespace Application.UnitTests.Recipes;
 
-/// <summary>
-/// Which tags a recipe is offered: what it is, in the household's own words
-/// where it has them, and nothing it already says.
-/// </summary>
+/// <summary>Which tags a recipe is offered: what it is, in the household's words where it has them, nothing it already says.</summary>
 public class TagSuggestionTests
 {
     private static readonly TagUsage[] PastaKitchen =
@@ -19,7 +16,6 @@ public class TagSuggestionTests
     [Fact]
     public void Suggest_ShouldOfferWhatARecipeIs_AndNotWhatItsTagsAlreadySay()
     {
-        // Act
         var offered = Names(GetTagSuggestionsQueryHandler.Suggest(
             new Suggesting(
                 "Lasagne Bolognese",
@@ -28,9 +24,7 @@ public class TagSuggestionTests
                 Language.De),
             PastaKitchen));
 
-        // Assert
-        // A Lasagne is a pasta bake: the tag somebody filtering for one would
-        // want it to carry.
+        // A Lasagne is a pasta bake: the tag somebody filtering for one would expect.
         Assert.Contains("Auflauf", offered);
         Assert.DoesNotContain("Italienisch", offered, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("pasta", offered, StringComparer.OrdinalIgnoreCase);
@@ -39,14 +33,11 @@ public class TagSuggestionTests
     [Fact]
     public void Suggest_ShouldOfferTheHouseholdsOwnTag_WhereItHasOneForTheThing()
     {
-        // Act
         var offered = GetTagSuggestionsQueryHandler.Suggest(
             new Suggesting("Pizza Margherita", [], ["Mehl", "Tomaten", "Mozzarella"], Language.De),
             PastaKitchen);
 
-        // Assert
-        // Its "italienisch", lower-case and all, rather than the lexicon's
-        // "Italienisch" beside it: one kitchen, one word for it.
+        // The household's own "italienisch" wins over the lexicon's "Italienisch": one kitchen, one word.
         var first = offered[0];
         Assert.Equal("italienisch", first.Name);
         Assert.Equal("italienisch", first.Slug);
@@ -56,12 +47,10 @@ public class TagSuggestionTests
     [Fact]
     public void Suggest_ShouldNeverOfferAnIngredient_OrSomethingTrueOfHalfOfEverything()
     {
-        // Act
         var offered = Names(GetTagSuggestionsQueryHandler.Suggest(
             new Suggesting("Hähnchen-Curry", [], ["Hähnchenschenkel", "Kokosmilch", "Currypaste", "Reis"], Language.De),
             []));
 
-        // Assert
         Assert.Contains("Curry", offered);
         Assert.Contains("Asiatisch", offered);
         Assert.DoesNotContain("Hähnchen", offered);
@@ -72,7 +61,6 @@ public class TagSuggestionTests
     [Fact]
     public void Suggest_ShouldWordANewTagInTheRecipesLanguage_AndOfferAtMostFive()
     {
-        // Act
         var offered = GetTagSuggestionsQueryHandler.Suggest(
             new Suggesting(
                 "Vegetarian Lasagne Casserole with Pesto for Dinner",
@@ -81,7 +69,6 @@ public class TagSuggestionTests
                 Language.En),
             []);
 
-        // Assert
         Assert.InRange(offered.Count, 1, 5);
         Assert.Contains("vegetarian", Names(offered));
         Assert.All(offered, one => Assert.Null(one.Slug));

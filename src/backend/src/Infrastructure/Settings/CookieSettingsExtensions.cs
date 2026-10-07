@@ -11,10 +11,7 @@ public static class CookieSettingsExtensions
     /// <summary>Binds the section, validates it, and registers it as a singleton.</summary>
     /// <param name="services">The container to register into.</param>
     /// <param name="configuration">The configuration to read from.</param>
-    /// <param name="environment">
-    /// Where the process runs: only Development may turn secure cookies off
-    /// without saying so.
-    /// </param>
+    /// <param name="environment">Where the process runs: only Development may turn secure cookies off without saying so.</param>
     public static IServiceCollection AddCookieSettings(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -32,9 +29,7 @@ public static class CookieSettingsExtensions
                 || section.Bool(CookieSettings.AllowInsecureKey, fallback: false),
             SessionDays = sessionDays,
             RenewAfterHours = section.Int(nameof(CookieSettings.RenewAfterHours), 24),
-            // Ninety days, or the idle lifetime when that is longer: a
-            // deployment that set a long SessionDays before the ceiling
-            // existed must still start.
+            // Ninety days or the idle lifetime if longer, so a deployment that set a long SessionDays before the ceiling existed still starts.
             MaxSessionDays = section.Int(nameof(CookieSettings.MaxSessionDays), Math.Max(90, sessionDays))
         };
 

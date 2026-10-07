@@ -4,35 +4,21 @@ using Microsoft.Extensions.Configuration;
 namespace Infrastructure.Settings;
 
 /// <summary>
-/// Reads one configuration section key by key.
+/// Reads one configuration section key by key. Explicit reads, not reflection binding: a mistyped key is not silently defaulted
+/// and every message names the environment variable.
 /// </summary>
-/// <remarks>
-/// Explicit reads rather than <c>GetSection(...).Get&lt;T&gt;()</c>: binding by
-/// reflection needs a binder in the startup path, silently leaves a mistyped
-/// key at its default, and reports "could not bind" instead of naming the key
-/// that is wrong. Every message here names the environment variable, so the fix
-/// is obvious from the log line.
-/// </remarks>
 /// <param name="configuration">The configuration to read from.</param>
 /// <param name="sectionName">The section prefix, for example <c>Database</c>.</param>
 internal sealed class SettingsSection(IConfiguration configuration, string sectionName)
 {
-    /// <summary>Reads a value that has no safe default.</summary>
-    /// <param name="key">The key within the section.</param>
     internal string RequiredString(string key) =>
         configuration[Path(key)] is { Length: > 0 } value
             ? value
             : throw Missing(key);
 
-    /// <summary>Reads a value, falling back when it is absent.</summary>
-    /// <param name="key">The key within the section.</param>
-    /// <param name="fallback">Used when the key is absent or empty.</param>
     internal string String(string key, string fallback) =>
         configuration[Path(key)] is { Length: > 0 } value ? value : fallback;
 
-    /// <summary>Reads an integer, falling back when it is absent.</summary>
-    /// <param name="key">The key within the section.</param>
-    /// <param name="fallback">Used when the key is absent or empty.</param>
     internal int Int(string key, int fallback)
     {
         if (configuration[Path(key)] is not { Length: > 0 } raw)
@@ -45,9 +31,6 @@ internal sealed class SettingsSection(IConfiguration configuration, string secti
             : throw NotA(key, raw, "whole number");
     }
 
-    /// <summary>Reads a boolean, falling back when it is absent.</summary>
-    /// <param name="key">The key within the section.</param>
-    /// <param name="fallback">Used when the key is absent or empty.</param>
     internal bool Bool(string key, bool fallback)
     {
         if (configuration[Path(key)] is not { Length: > 0 } raw)
@@ -60,8 +43,6 @@ internal sealed class SettingsSection(IConfiguration configuration, string secti
             : throw NotA(key, raw, "boolean (true or false)");
     }
 
-    /// <summary>Reads a comma-separated list, trimming and dropping blanks.</summary>
-    /// <param name="key">The key within the section.</param>
     internal IReadOnlyList<string> CommaSeparated(string key) =>
         configuration[Path(key)] is not { Length: > 0 } raw
             ? []

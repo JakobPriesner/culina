@@ -10,10 +10,8 @@ namespace Application.Households.GetInvitationByCode;
 /// <summary>Names the household an invitation code admits to, without using it.</summary>
 /// <param name="Code">The code the caller was given.</param>
 /// <remarks>
-/// So the join page can say whose kitchen a link is for before anybody presses
-/// Join. Only a code that would still work is answered; an unknown, used or
-/// expired one gets the same <c>households.invitation_invalid</c> redeeming
-/// gives, so reading is no better than redeeming for probing codes.
+/// Lets the join page name the kitchen before anybody presses Join; an unknown, used or expired
+/// code gets redeeming's error, so probing is no easier.
 /// </remarks>
 public sealed record GetInvitationByCodeQuery(string Code);
 
@@ -48,8 +46,7 @@ internal sealed class GetInvitationByCodeQueryHandler(
     {
         var household = await households.FindAsync(householdId, cancellationToken).ConfigureAwait(false);
 
-        // A household in the bin can no more be joined than a used code can,
-        // and says so the same way.
+        // A household in the bin cannot be joined, and says so the same way.
         return household.Match(
             found => Result<Response>.Success(new Response { HouseholdName = found.Name.Value }),
             _ => Result<Response>.Failure(HouseholdErrors.InvitationInvalid));

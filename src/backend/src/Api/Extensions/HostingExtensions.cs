@@ -8,20 +8,10 @@ using Microsoft.Net.Http.Headers;
 
 namespace Api.Extensions;
 
-/// <summary>
-/// Host-level wiring: forwarded headers, request logging, and serving the
-/// single-page app.
-/// </summary>
+/// <summary>Host-level wiring: forwarded headers, request logging and serving the single-page app.</summary>
 internal static class HostingExtensions
 {
-    /// <summary>
-    /// One combined line per API request: method, path, route, status,
-    /// duration and the error code of a failure.
-    /// </summary>
-    /// <remarks>
-    /// Request and response bodies are never logged, in any environment. A
-    /// recipe body is personal content and a login body is a credential.
-    /// </remarks>
+    /// <summary>One combined line per API request. Bodies are never logged (recipes are personal, logins are credentials).</summary>
     internal static IServiceCollection AddRequestLogging(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -40,22 +30,13 @@ internal static class HostingExtensions
         });
     }
 
-    /// <summary>
-    /// Serves the built single-page app from the same origin as the API.
-    /// </summary>
-    /// <remarks>
-    /// Hashed build assets are immutable for a year; unhashed static files get
-    /// a short lifetime so a fix reaches clients the same day; and the shell
-    /// itself is <c>no-cache</c>, because a cached shell means a deploy never
-    /// reaches anyone.
-    /// </remarks>
+    /// <summary>Serves the built single-page app from the API's origin.</summary>
+    /// <remarks>Hashed assets are immutable for a year, other static files short-lived, and the shell <c>no-cache</c> so deploys reach everyone.</remarks>
     internal static WebApplication UseSinglePageApp(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        // The shell is never served as a static file: it carries a per-response
-        // CSP nonce, so it has to be rendered. Asking for it by name lands on
-        // the same rendered document as asking for the route.
+        // The shell carries a per-response CSP nonce, so it is rendered, never served as a static file.
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.Equals("/index.html", StringComparison.OrdinalIgnoreCase))
@@ -66,8 +47,7 @@ internal static class HostingExtensions
             await next(context).ConfigureAwait(false);
         });
 
-        // The copies the frontend build compressed, for clients that can read
-        // them. Picks a file; compresses nothing. See PrecompressedAssets.
+        // Precompressed copies for clients that can read them. See PrecompressedAssets.
         var webRoot = app.Environment.WebRootFileProvider;
 
         app.Use(async (context, next) =>
@@ -89,14 +69,10 @@ internal static class HostingExtensions
                     context.Context.Response.Headers.ContentEncoding = coding;
                 }
 
-                // Decided from the file that was asked for, not the copy of it
-                // on its way out: the service worker is still the service
-                // worker when what is sent is service-worker.js.br.
+                // Decided from the requested file, not the copy on its way out.
                 var asked = Infrastructure.PrecompressedAssets.Unencoded(context.Context.Request.Path);
 
-                // The service worker decides what every later request is
-                // answered with, so a stale copy of it is a stale copy of the
-                // whole app. It is revalidated every time, never reused blind.
+                // The service worker decides how every later request is answered, so it is revalidated every time.
                 if (IsServiceWorker(asked))
                 {
                     headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
@@ -119,13 +95,7 @@ internal static class HostingExtensions
     }
 
     /// <summary>Sends any unmatched non-API route to the app shell.</summary>
-    /// <remarks>
-    /// The shell is rendered rather than sent from disk so the inline
-    /// theme-before-paint script can carry this response's CSP nonce, and it is
-    /// <c>no-store</c> for the same reason: a cached copy would carry a nonce
-    /// the next response's policy does not name, and the script would silently
-    /// stop running.
-    /// </remarks>
+    /// <remarks>Rendered and <c>no-store</c> so the inline script can carry this response's CSP nonce; a cached copy would stop running.</remarks>
     internal static WebApplication MapSinglePageAppFallback(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -162,15 +132,7 @@ internal static class HostingExtensions
         return app;
     }
 
-    /// <summary>
-    /// Answers every API route the setup host does not serve with a
-    /// <c>503</c> that says why.
-    /// </summary>
-    /// <remarks>
-    /// Rather than a <c>404</c>: the routes exist, they are unavailable until
-    /// there is a database, and the client — asking who is signed in, say —
-    /// should learn that setup is the reason rather than that the API is gone.
-    /// </remarks>
+    /// <summary>Answers every API route the setup host does not serve with a <c>503</c> rather than a <c>404</c>, so clients learn setup is the reason.</summary>
     internal static WebApplication MapSetupRequired(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -187,21 +149,11 @@ internal static class HostingExtensions
         path.Equals("/service-worker.js", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsImmutable(string fileName, PathString path) =>
-        // SvelteKit puts content-hashed assets under /_app/immutable/, which is
-        // the only reliable signal that a file's contents can never change.
+        // SvelteKit puts content-hashed assets under /_app/immutable/, the only reliable immutability signal.
         path.StartsWithSegments("/_app/immutable")
         || fileName.Contains(".immutable.", StringComparison.Ordinal);
 
-    /// <summary>
-    /// Trusts <c>X-Forwarded-*</c> from the configured proxies only.
-    /// </summary>
-    /// <remarks>
-    /// Trusting every proxy would let any client forge its own address, which
-    /// would make per-IP rate limiting useless and every security log line
-    /// name the wrong host. The framework default trusts loopback; the
-    /// configured list replaces that entirely, so nothing is trusted by
-    /// accident.
-    /// </remarks>
+    /// <summary>Trusts <c>X-Forwarded-*</c> from the configured proxies only, replacing the framework's loopback default.</summary>
     internal static WebApplication UseCulinaForwardedHeaders(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -222,8 +174,7 @@ internal static class HostingExtensions
 
         foreach (var network in settings.KnownNetworks)
         {
-            // Fully qualified: `Microsoft.AspNetCore.HttpOverrides` has a type of
-            // the same name, and the one this option wants is the framework's.
+            // Fully qualified: Microsoft.AspNetCore.HttpOverrides has a type of the same name.
             options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
         }
 

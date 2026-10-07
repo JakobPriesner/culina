@@ -6,11 +6,7 @@ using Response = Contracts.Households.RedeemInvitation.Response;
 
 namespace Api.Endpoints.Invitations.Redeem.V1;
 
-/// <summary>Joins a household with an invitation code.</summary>
-/// <remarks>
-/// Redeeming <em>creates a redemption</em>, which is why this is a POST to a
-/// sub-resource rather than a verb in the path.
-/// </remarks>
+/// <summary>Joins a household with an invitation code. A POST to a sub-resource: redeeming creates a redemption.</summary>
 internal sealed class RedeemInvitationEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

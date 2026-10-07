@@ -3,40 +3,17 @@ using System.Text.Json.Serialization;
 
 namespace Application.Archive;
 
-/// <summary>
-/// Everything a household would want to leave with.
-/// </summary>
+/// <summary>Everything a household would want to leave with, as plain readable JSON.</summary>
 /// <remarks>
-/// <para>
-/// The right answer to "what if I stop using this", and a self-hosted app owes
-/// its users one. It is plain JSON and it is readable: somebody with no Culina
-/// at all can open it and find their recipes written out in words.
-/// </para>
-/// <para>
-/// The household's recipes, and the <em>asking person's</em> notes and cooking
-/// history. Notes are personal — two people in one kitchen keep separate ones —
-/// so an archive carrying everybody's would be one member handing out another's
-/// private writing.
-/// </para>
+/// The household's recipes plus the <em>asking person's</em> notes and cooking history; notes are
+/// personal, so an archive must not carry other members' private writing.
 /// </remarks>
 public static class RecipeArchive
 {
-    /// <summary>
-    /// The archive format's version.
-    /// </summary>
-    /// <remarks>
-    /// Written first and read first. A file with a version this does not know
-    /// is refused rather than half-read, because a half-restored recipe is
-    /// worse than a failed restore.
-    /// </remarks>
+    /// <summary>The archive format's version; a file with an unknown version is refused, not half-read.</summary>
     public const int Version = 1;
 
-    /// <summary>How JSON is written and read here.</summary>
-    /// <remarks>
-    /// Indented, because a person is meant to be able to open it. Nulls are
-    /// dropped, because an archive full of `"note": null` is an archive nobody
-    /// reads twice.
-    /// </remarks>
+    /// <summary>How JSON is written and read: indented for people, nulls dropped.</summary>
     public static readonly JsonSerializerOptions Format = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -78,14 +55,7 @@ public sealed record ArchivedRecipe
     /// <summary><c>servings</c> or <c>pieces</c>.</summary>
     public required string YieldKind { get; init; }
 
-    /// <summary>
-    /// The recipe's own word for what it makes, when it has one.
-    /// </summary>
-    /// <remarks>
-    /// Absent from an archive written before a recipe could say so, and such a
-    /// file must still restore — so it is neither required nor a new format
-    /// version, for the same reason <see cref="ArchivedStep.Uses"/> is not.
-    /// </remarks>
+    /// <summary>The recipe's own word for what it makes. Optional, so older archives still restore.</summary>
     public string? YieldLabel { get; init; }
 
     /// <summary>Hands-on minutes.</summary>
@@ -114,31 +84,15 @@ public sealed record ArchivedRecipe
 }
 
 /// <summary>A named part of an ingredient list.</summary>
-/// <param name="Name">Its heading, or null for the implicit first group.</param>
-/// <param name="Ingredients">Its lines, in order.</param>
 public sealed record ArchivedGroup(string? Name, IReadOnlyList<ArchivedIngredient> Ingredients);
 
 /// <summary>One ingredient line.</summary>
-/// <param name="Quantity">How much, or null.</param>
-/// <param name="Unit">In what, or null.</param>
-/// <param name="Name">The shoppable noun.</param>
-/// <param name="Note">The preparation.</param>
 public sealed record ArchivedIngredient(decimal? Quantity, string? Unit, string Name, string? Note);
 
 /// <summary>One step.</summary>
-/// <param name="Segments">Its text, split into words and ingredient references.</param>
-/// <param name="DurationSeconds">How long it takes, when it waits.</param>
-/// <param name="Uses">
-/// Everything the step needs, as positions in the recipe's ingredients read in
-/// order — the same positions <see cref="ArchivedSegment"/> uses, and for the
-/// same reason.
-/// </param>
-/// <param name="Title">What the step is called, or null to be called by number.</param>
 /// <remarks>
-/// <c>Uses</c> and <c>Title</c> have defaults because an archive written before
-/// either existed simply omits it, and such a file must still restore. For the
-/// same reason neither warranted a new format version: a reader that does not
-/// know the field ignores it, and one that does gets null.
+/// <c>Uses</c> (positions in the recipe's ingredients, as in <see cref="ArchivedSegment"/>) and
+/// <c>Title</c> default to null so older archives restore without a new format version.
 /// </remarks>
 public sealed record ArchivedStep(
     IReadOnlyList<ArchivedSegment> Segments,
@@ -146,27 +100,13 @@ public sealed record ArchivedStep(
     IReadOnlyList<int>? Uses = null,
     string? Title = null);
 
-/// <summary>
-/// A piece of a step.
-/// </summary>
-/// <param name="Text">The words, for a text segment.</param>
-/// <param name="Ingredient">
-/// Which ingredient, as its position in the recipe's ingredients read in order.
-/// </param>
+/// <summary>A piece of a step: text, or an ingredient given by position.</summary>
 /// <remarks>
-/// A <em>position</em>, never an id. Ids are assigned by whichever database the
-/// recipe lands in, so an archive that carried them would restore into steps
-/// pointing at nothing — and a step whose amounts have come loose is exactly
-/// the failure this app is built to prevent.
+/// A <em>position</em>, never an id: ids are assigned by the receiving database, so carried ids would
+/// restore as dangling references.
 /// </remarks>
 public sealed record ArchivedSegment(string? Text, int? Ingredient);
 
 /// <summary>A recipe's photograph, carried in the file itself.</summary>
-/// <param name="ContentType">What it is.</param>
-/// <param name="Data">Its bytes, base64.</param>
-/// <remarks>
-/// Inline rather than by reference, because a reference into a server you have
-/// stopped running is a broken image. It is most of the size of an archive, and
-/// worth it: a recipe book with no pictures is a worse thing to be left with.
-/// </remarks>
+/// <remarks>Inline rather than by reference, since a reference into a stopped server is a broken image.</remarks>
 public sealed record ArchivedImage(string ContentType, string Data);

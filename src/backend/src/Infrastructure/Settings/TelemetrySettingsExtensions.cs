@@ -7,13 +7,13 @@ namespace Infrastructure.Settings;
 /// <summary>Reads and registers <see cref="TelemetrySettings"/>.</summary>
 public static class TelemetrySettingsExtensions
 {
-    /// <summary>Reads the two OpenTelemetry keys, validates them, and registers them as a singleton.</summary>
-    /// <param name="services">The container to register into.</param>
-    /// <param name="configuration">The configuration to read from.</param>
-    /// <remarks>
-    /// The exporter reads these keys itself; this record is what the app knows
-    /// about them, so the settings screen can show and change them.
-    /// </remarks>
+    /// <summary>
+    /// Reads the two OpenTelemetry keys, validates them, and registers them as a singleton.
+    /// </summary>
+    /// <summary>
+    /// Reads the two OpenTelemetry keys (which the exporter reads itself), validates them, and
+    /// registers them as a singleton.
+    /// </summary>
     public static IServiceCollection AddTelemetrySettings(
         this IServiceCollection services,
         IConfiguration configuration)

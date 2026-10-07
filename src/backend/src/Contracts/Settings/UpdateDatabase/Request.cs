@@ -15,13 +15,7 @@ public sealed record Request
     /// <summary>The role to connect as. Never a superuser.</summary>
     public required string Username { get; init; }
 
-    /// <summary>
-    /// A new password, or null to keep the one already set. Write-only: no
-    /// response ever carries it back. Kept only for the same server: null
-    /// with a different host, port, name or username is refused with
-    /// <c>settings.database_password_required</c>, because the stored password
-    /// is only ever sent to the server it was saved for.
-    /// </summary>
+    /// <summary>A new password, or null to keep the stored one. Write-only. Null with a different host, port, name or username is refused with <c>settings.database_password_required</c>: the password is only sent to the server it was saved for.</summary>
     public string? Password { get; init; }
 
     /// <summary>Whether the connection must use TLS.</summary>

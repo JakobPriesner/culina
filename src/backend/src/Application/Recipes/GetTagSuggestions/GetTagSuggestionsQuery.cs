@@ -12,26 +12,10 @@ namespace Application.Recipes.GetTagSuggestions;
 /// <param name="UserId">Who is asking.</param>
 public sealed record GetTagSuggestionsQuery(Guid RecipeId, Guid UserId);
 
-/// <summary>
-/// Offers the tags the lexicon reads a recipe as, where the recipe does not
-/// already carry them.
-/// </summary>
+/// <summary>Offers the tags the lexicon reads a recipe as, where it does not carry them.</summary>
 /// <remarks>
-/// <para>
-/// Offered, never applied. The household's tags stay the household's: if the
-/// lexicon wrote them, "household vocabulary beats the lexicon" would be the
-/// lexicon beating itself. And where the household already has a word for a
-/// thing — its own "italienisch", its own "Ofengericht" — that word is the one
-/// offered, so a suggestion adds to the vocabulary it has rather than starting
-/// a second one beside it.
-/// </para>
-/// <para>
-/// Only what a recipe <em>is</em>: its dish, cuisine, meal, method and diet.
-/// Ingredients are already found by the search without a tag, and "warm" or
-/// "süß" are true of too much to sort anything by. And only what the recipe
-/// names and one step above it — a Lasagne is offered "Lasagne", "Auflauf" and
-/// "Italienisch", not everything a Lasagne is ultimately a kind of.
-/// </para>
+/// Offered, never applied, and the household's own word for a concept wins. Only what a recipe is (dish, cuisine, meal, method, diet),
+/// and only what it names plus one step up: a Lasagne gets "Lasagne", "Auflauf", "Italienisch".
 /// </remarks>
 internal sealed class GetTagSuggestionsQueryHandler(
     IRecipeRepository recipes,
@@ -39,10 +23,10 @@ internal sealed class GetTagSuggestionsQueryHandler(
     ITagRepository tags)
     : IQueryHandler<GetTagSuggestionsQuery, Response>
 {
-    /// <summary>A row of a few, read at a glance beside the tags themselves.</summary>
+    // A row of a few, read at a glance beside the tags.
     private const int Limit = 5;
 
-    /// <summary>The kinds offered, in the order they are offered.</summary>
+    // The kinds offered, in order.
     private static readonly ConceptKind[] Offered =
     [
         ConceptKind.Cuisine,
@@ -83,20 +67,19 @@ internal sealed class GetTagSuggestionsQueryHandler(
         return tracked.Record(result);
     }
 
-    /// <summary>The tags worth offering one recipe, given the household's vocabulary.</summary>
+    // The tags worth offering one recipe, given the household's vocabulary.
     internal static IReadOnlyList<TagSuggestion> Suggest(Suggesting recipe, IReadOnlyList<TagUsage> household)
     {
         ArgumentNullException.ThrowIfNull(recipe);
         ArgumentNullException.ThrowIfNull(household);
 
-        // Its tags by the words somebody typed, which is what the lexicon reads
-        // — and what its search document was built from.
+        // Its tags by the words somebody typed: what the lexicon reads and its search document was built from.
         var names = household.ToDictionary(tag => tag.Slug, tag => tag.Name, StringComparer.Ordinal);
         var carried = recipe.Tags.Select(slug => names.GetValueOrDefault(slug, slug)).ToList();
 
         var described = CulinaryLexicon.Describe(recipe.Title, carried, recipe.Ingredients);
 
-        // What it names, rather than what that is a kind of, and one step up.
+        // What it names, not what that is a kind of, and one step up.
         var named = described
             .Where(key => !described.Any(other => other != key && CulinaryLexicon.Lineage(other).Skip(1).Contains(key)))
             .ToList();
@@ -106,8 +89,7 @@ internal sealed class GetTagSuggestionsQueryHandler(
 
         var covered = carried.SelectMany(CulinaryLexicon.Recognise).ToHashSet(StringComparer.Ordinal);
 
-        // The household's own word for a concept: the most used tag that is a
-        // name of it, and one this recipe does not carry already.
+        // The household's own word for a concept: its most used tag naming it that this recipe does not already carry.
         var theirs = household
             .Where(tag => !recipe.Tags.Contains(tag.Slug, StringComparer.Ordinal))
             .Select(tag => (Concept: CulinaryLexicon.Name(tag.Name)?.Key, Tag: tag))

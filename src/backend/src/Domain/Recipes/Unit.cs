@@ -3,27 +3,10 @@ using Domain.Shared;
 
 namespace Domain.Recipes;
 
-/// <summary>
-/// What an ingredient amount is measured in.
-/// </summary>
+/// <summary>What an ingredient amount is measured in.</summary>
 /// <remarks>
-/// <para>
-/// A code rather than an enum, because the vocabulary is open. Thirteen units
-/// are built in and every household starts with them; a cook who measures in
-/// <c>Schuss</c>, <c>Handvoll</c> or <c>Becher</c> adds one by writing it, and
-/// that is the whole of adding a unit. No screen, no list to maintain, and no
-/// way for a catalogue to disagree with what the recipes actually say.
-/// </para>
-/// <para>
-/// What a household adds is a <see cref="UnitFamily.Count"/> unit: it scales
-/// with the portions and it sums with itself, but it never converts to grams or
-/// millilitres. Nobody knows how much a Schuss is, and a shopping list that
-/// claimed to would be inventing the number. See <see cref="Units"/>.
-/// </para>
-/// <para>
-/// Compared case-insensitively so <c>Schuss</c> and <c>schuss</c> are one unit,
-/// and stored as it was written so a German noun keeps its capital letter.
-/// </para>
+/// A code, not an enum: the vocabulary is open, and a household adds a unit by writing it. Added units are
+/// <see cref="UnitFamily.Count"/> (scale and sum, never convert). Compared case-insensitively, stored as written. See <see cref="Units"/>.
 /// </remarks>
 public sealed record Unit
 {
@@ -74,29 +57,15 @@ public sealed record Unit
     /// <summary>A pinch. Deliberately never scaled.</summary>
     public static Unit Pinch { get; } = new("pinch");
 
-    /// <summary>
-    /// The units every household starts with, in the order a picker offers
-    /// them.
-    /// </summary>
+    /// <summary>The units every household starts with, in picker order.</summary>
     public static IReadOnlyList<Unit> BuiltIn { get; } =
     [
         Gram, Kilogram, Millilitre, Litre, Teaspoon, Tablespoon,
         Piece, Clove, Bunch, Slice, Can, Pack, Pinch
     ];
 
-    /// <summary>Creates a unit from what somebody wrote.</summary>
+    /// <summary>Creates a unit from what somebody wrote: letters and single spaces, so <c>200g</c> is a mistake. A spelt-out built-in (<c>EL</c>) is that built-in; see <see cref="UnitSpellings"/>.</summary>
     /// <param name="code">The unit, built in or not.</param>
-    /// <remarks>
-    /// <para>
-    /// Letters and single spaces, so <c>Schuss</c> and <c>fl oz</c> are units
-    /// and <c>200g</c> is a mistake — an amount that lost its space, which
-    /// would otherwise become a unit nobody could ever match again.
-    /// </para>
-    /// <para>
-    /// A built-in written out — <c>Milliliter</c>, <c>EL</c> — is that built-in,
-    /// not a new unit. See <see cref="UnitSpellings"/>.
-    /// </para>
-    /// </remarks>
     public static Result<Unit> Create(string? code)
     {
         var trimmed = Collapse(code);
@@ -106,9 +75,7 @@ public sealed record Unit
             return RecipeErrors.InvalidUnit;
         }
 
-        // A built-in is returned as itself, however it was spelt, so the
-        // built-ins stay reference-equal and a `switch` over them in a test
-        // reads the way it looks.
+        // A built-in is returned as itself, so built-ins stay reference-equal.
         return UnitSpellings.Resolve(trimmed) ?? new Unit(trimmed);
     }
 
@@ -125,13 +92,7 @@ public sealed record Unit
     private static bool IsAllowed(char character) =>
         char.IsLetter(character) || character == ' ' || character == '.';
 
-    /// <summary>
-    /// Trims, and makes any run of whitespace one space.
-    /// </summary>
-    /// <remarks>
-    /// "fl  oz" and "fl oz" have to be the same unit, or a shopping list ends
-    /// up with two lines whose difference nobody can see.
-    /// </remarks>
+    // Trims and collapses whitespace runs, so "fl  oz" and "fl oz" are one unit.
     private static string Collapse(string? code) =>
         string.Join(
             ' ',
@@ -140,9 +101,7 @@ public sealed record Unit
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 }
 
-/// <summary>
-/// The family a unit belongs to, which decides what it can be added to.
-/// </summary>
+/// <summary>The family a unit belongs to, which decides what it can be added to.</summary>
 public enum UnitFamily
 {
     /// <summary>No unit at all: "salt", "a little oil".</summary>
@@ -154,14 +113,9 @@ public enum UnitFamily
     /// <summary>Millilitres and litres.</summary>
     Volume = 2,
 
-    /// <summary>
-    /// Teaspoons and tablespoons, which are deliberately their own family.
-    /// </summary>
+    /// <summary>Teaspoons and tablespoons, deliberately their own family.</summary>
     Spoon = 3,
 
-    /// <summary>
-    /// Countable things, and everything a household added itself. They only
-    /// add to the identical unit.
-    /// </summary>
+    /// <summary>Countable things and everything a household added; they only add to the identical unit.</summary>
     Count = 4
 }

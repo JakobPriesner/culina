@@ -13,10 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace IntegrationTests.Identity;
 
-/// <summary>
-/// The moment between reading a session and renewing it, which no request
-/// through the pipeline can be made to stop at.
-/// </summary>
+/// <summary>The moment between reading a session and renewing it, which no pipeline request can be made to stop at.</summary>
 public class SessionAuthenticationHandlerTests
 {
     private const string SessionToken = "the-cookie-value";
@@ -27,28 +24,21 @@ public class SessionAuthenticationHandlerTests
     [Fact]
     public async Task Authenticate_ShouldLetTheRequestIn_WhenTheRenewalIsWritten()
     {
-        // Arrange
         var (handler, _) = await HandlerAsync(renewal: Result.Success());
 
-        // Act
         var result = await handler.AuthenticateAsync();
 
-        // Assert
         Assert.True(result.Succeeded);
     }
 
     [Fact]
     public async Task Authenticate_ShouldLeaveTheSessionsCsrfDigest_WhenItLetsTheRequestIn()
     {
-        // Arrange
         var (handler, context) = await HandlerAsync(renewal: Result.Success());
 
-        // Act
         await handler.AuthenticateAsync();
 
-        // Assert
-        // CsrfMiddleware compares against this instead of reading the session
-        // a second time.
+        // CsrfMiddleware compares against this instead of reading the session again.
         var digest = RequestContext.CsrfTokenHash(context);
         Assert.NotNull(digest);
         Assert.True(new SecretTokens().Matches(CsrfToken, digest.Value));
@@ -57,15 +47,11 @@ public class SessionAuthenticationHandlerTests
     [Fact]
     public async Task Authenticate_ShouldRefuse_WhenTheSessionWasRevokedBeforeItsRenewal()
     {
-        // Arrange
-        // The store reports what it does when the revocation landed between
-        // the read and the renewal: it refuses to touch the row.
+        // What the store does when a revocation lands between read and renewal: it refuses to touch the row.
         var (handler, context) = await HandlerAsync(renewal: SessionErrors.NotAuthenticated);
 
-        // Act
         var result = await handler.AuthenticateAsync();
 
-        // Assert
         Assert.False(result.Succeeded);
         Assert.Equal(0, context.Response.Headers.SetCookie.Count);
         Assert.Null(RequestContext.CsrfTokenHash(context));
@@ -117,7 +103,6 @@ public class SessionAuthenticationHandlerTests
         public IDisposable? OnChange(Action<AuthenticationSchemeOptions, string?> listener) => null;
     }
 
-    /// <summary>Finds the one session, and answers its renewal as told.</summary>
     private sealed class RenewingStore(Session session, Result renewal) : ISessionStore
     {
         public Task<Result<Session>> FindActiveByTokenAsync(

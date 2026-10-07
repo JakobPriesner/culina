@@ -1,21 +1,9 @@
 namespace Domain.Shared;
 
 /// <summary>
-/// The outcome of an operation that either succeeded or failed with an
-/// <see cref="Error"/>, and which carries no value on success.
+/// The outcome of an operation that succeeded or failed with an <see cref="Error"/>, with no value on success.
+/// Expected failures are returned, defects thrown; <see cref="Match{TOut}"/> is the only way to observe it.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Expected failure is a <c>Result</c>; a defect is an exception. "That recipe
-/// does not exist" is an ordinary outcome of a working system and is returned,
-/// never thrown.
-/// </para>
-/// <para>
-/// <see cref="Match{TOut}"/> is the only way to observe the outcome. There is no
-/// public <c>IsSuccess</c> or <c>Error</c> to branch on, which makes it
-/// impossible to read an error that is not there.
-/// </para>
-/// </remarks>
 public readonly struct Result
 {
     private readonly Error? error;
@@ -39,18 +27,11 @@ public readonly struct Result
         return new Result(error);
     }
 
-    /// <summary>
-    /// Lets a handler write <c>return UserErrors.NotFound(id);</c> without
-    /// naming <see cref="Failure"/>.
-    /// </summary>
+    /// <summary>Lets a handler <c>return UserErrors.NotFound(id);</c> without naming <see cref="Failure"/>.</summary>
     /// <param name="error">The failure to wrap.</param>
     public static implicit operator Result(Error error) => Failure(error);
 
-    /// <summary>
-    /// Runs every check and reports all of their failures, so one round trip
-    /// tells the caller everything that is wrong instead of one thing per
-    /// submit.
-    /// </summary>
+    /// <summary>Runs every check and reports all failures at once.</summary>
     /// <param name="results">The checks to combine.</param>
     /// <returns>
     /// Success when every check passed; the single failure when exactly one

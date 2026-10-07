@@ -5,14 +5,9 @@ using Domain.Households;
 namespace Application.Households;
 
 /// <summary>
-/// The shapes every household operation shares.
+/// The shapes every household operation shares: only what has one meaning everywhere; each
+/// operation builds its own response.
 /// </summary>
-/// <remarks>
-/// Only what genuinely has one meaning across every operation: how a role is
-/// spelled on the wire, and how a member view becomes a contract. Each
-/// operation still builds its own response explicitly, so adding a field to one
-/// cannot silently change another.
-/// </remarks>
 internal static class HouseholdMappings
 {
     internal const string OwnerRole = "owner";

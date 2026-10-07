@@ -2,15 +2,7 @@ using System.Collections;
 
 namespace Api.Infrastructure;
 
-/// <summary>
-/// Named values for a logging scope that also read well as text.
-/// </summary>
-/// <remarks>
-/// A console formatter writes each scope's <c>ToString()</c> beside its
-/// values. A dictionary's is its type name, which put
-/// <c>System.Collections.Generic.Dictionary`2[...]</c> on every production
-/// line; this one is <c>TraceId:… ClientAddress:…</c>.
-/// </remarks>
+/// <summary>Named logging-scope values whose <c>ToString()</c> reads as <c>Key:Value</c> pairs, not a type name.</summary>
 /// <param name="values">The names and values, in the order they are printed.</param>
 internal sealed class LogScope(params KeyValuePair<string, object?>[] values)
     : IReadOnlyList<KeyValuePair<string, object?>>

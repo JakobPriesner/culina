@@ -4,14 +4,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Recipes;
 
-/// <summary>
-/// Asking the assistant over the wire, on an instance that has none.
-/// </summary>
-/// <remarks>
-/// The state nearly every Culina runs in, and the one the whole feature
-/// promises to be invisible in — so it is the one worth proving at the wire
-/// rather than only in a handler test.
-/// </remarks>
+/// <summary>Asking the assistant over the wire on an instance that has none, the state nearly every instance runs in.</summary>
 [Collection(RequiresDatabase.Name)]
 public class RecipeDraftEndpointTests(PostgresFixture postgres)
 {
@@ -20,10 +13,8 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldSayThereIsNothingHere_WhenNoAssistantIsConnected()
     {
-        // Arrange
         var world = await SignedInAsync();
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -35,10 +26,7 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // Not found rather than forbidden: an instance with no assistant is one
-        // where the thing does not exist, and the affordance that would have
-        // asked is not on screen either.
+        // Not found rather than forbidden: with no assistant the feature does not exist.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("assistance.not_configured", response.ProblemCode);
     }
@@ -46,10 +34,8 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldRefuseAKitchenTheCallerIsNotIn_BeforeSpendingAnything()
     {
-        // Arrange
         var world = await SignedInAsync();
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new
@@ -61,21 +47,14 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
-        // The access check runs before the assistant is consulted, so a
-        // stranger cannot make this instance spend money by asking about a
-        // household that is not theirs.
+        // The access check runs before the assistant, so strangers cannot make the instance spend money.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Revision_ShouldBeRefused_WhenBilledToAnotherOfTheCallersKitchens()
     {
-        // Arrange
-        // A cook in two households, rewriting a recipe from one of them and
-        // asking for the other to pay. They may edit the recipe and they may
-        // spend in both kitchens, but not one kitchen's money on the other's
-        // recipe.
+        // A cook in two households may edit the recipe and spend in both, but not one kitchen's money on the other's recipe.
         var world = await SignedInAsync();
         var recipeId = await RecipeAsync(world);
         var holidayFlat = (await world.Client.PostAsync(
@@ -84,16 +63,12 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
                 Token))
             .Json!.Value.GetProperty("householdId").GetGuid();
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new { kind = "revision", householdId = holidayFlat, recipeId },
             Token);
 
-        // Assert
-        // Not found, as for any recipe the caller cannot use here — and decided
-        // before the assistant is consulted, or this would answer "not
-        // configured" instead.
+        // Decided before the assistant is consulted, or this would answer "not configured".
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("recipes.not_found", response.ProblemCode);
     }
@@ -101,18 +76,14 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Revision_ShouldGetPastTheRecipeCheck_WhenBilledToTheRecipesOwnKitchen()
     {
-        // Arrange
         var world = await SignedInAsync();
         var recipeId = await RecipeAsync(world);
 
-        // Act
         var response = await world.Client.PostAsync(
             "/api/v1/recipe-drafts",
             new { kind = "revision", householdId = world.HouseholdId, recipeId },
             Token);
 
-        // Assert
-        // As far as an instance with no assistant lets it go.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("assistance.not_configured", response.ProblemCode);
     }
@@ -120,33 +91,25 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Draft_ShouldBeRefused_ForSomebodyWhoIsNotSignedIn()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
         using var stranger = postgres.Api.NewApiClient();
 
-        // Act
         var response = await stranger.PostAsync(
             "/api/v1/recipe-drafts",
             new { kind = "idea", householdId = Guid.CreateVersion7(), language = "en" },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
     public async Task CurrentUser_ShouldSayNoCapabilityIsAvailable_OnAFreshInstance()
     {
-        // Arrange
         var world = await SignedInAsync();
 
-        // Act
         var me = await world.Client.GetAsync("/api/v1/users/me", Token);
 
-        // Assert
-        // What every screen reads to decide whether to draw an assistant
-        // button. All false means the app looks exactly as it did before any of
-        // this existed.
+        // What every screen reads to decide whether to draw an assistant button.
         var assistance = me.Json!.Value.GetProperty("assistance");
         Assert.False(assistance.GetProperty("improve").GetBoolean());
         Assert.False(assistance.GetProperty("draft").GetBoolean());
@@ -157,19 +120,15 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Create_ShouldRecordThatARecipeWasDrafted_WhenItCarriesADraftId()
     {
-        // Arrange
         var world = await SignedInAsync();
         var draftId = Guid.CreateVersion7();
 
-        // Act
         var created = await world.Client.PostAsync(
             "/api/v1/recipes",
             new { householdId = world.HouseholdId, title = "Aubergine bake", draftId },
             Token);
 
-        // Assert
-        // The same provenance an imported recipe carries, in the same table:
-        // "this did not start here" is one fact with one shape.
+        // The same provenance an imported recipe carries, in the same table.
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
         var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
@@ -183,10 +142,8 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Create_ShouldRecordNothing_ForARecipeSomebodyTyped()
     {
-        // Arrange
         var world = await SignedInAsync();
 
-        // Act
         var created = await world.Client.PostAsync(
             "/api/v1/recipes",
             new { householdId = world.HouseholdId, title = "Aubergine bake" },
@@ -195,9 +152,7 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
         var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
         var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
-        // Assert
-        // A recipe written here has no origin at all, which is what makes the
-        // presence of one mean something.
+        // A recipe written here has no origin at all.
         Assert.False(read.Json!.Value.TryGetProperty("origin", out var origin) && origin.ValueKind is not JsonValueKind.Null);
     }
 
@@ -227,9 +182,7 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task ImportedRecipe_ShouldShowNoLink_WhenTheStoredOriginalIsNotAWebAddress()
     {
-        // Arrange
-        // A row from before the rule, exactly as a connected Tandoor could have
-        // sent it: a script, labelled with a host somebody would trust.
+        // A row from before the rule, as a connected Tandoor could have sent it: a script labelled with a trusted host.
         using var world = await SignedInAsync();
         var created = await world.Client.PostAsync("/api/v1/recipes",
             new { householdId = world.HouseholdId, title = "Beans", sourceUrl = "https://chefkoch.de/beans" }, Token);
@@ -238,10 +191,8 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
             $"update recipe_origins set source_url = 'javascript://chefkoch.de/%0aalert(1)' where recipe_id = '{recipeId}';",
             Token);
 
-        // Act
         var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
 
-        // Assert
         var origin = read.Json!.Value.GetProperty("origin");
         Assert.Equal("web", origin.GetProperty("kind").GetString());
         Assert.False(origin.TryGetProperty("sourceUrl", out var link) && link.ValueKind is not JsonValueKind.Null);

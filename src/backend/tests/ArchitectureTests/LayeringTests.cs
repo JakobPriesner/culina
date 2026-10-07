@@ -2,10 +2,7 @@ using System.Reflection;
 
 namespace ArchitectureTests;
 
-/// <summary>
-/// The layering table in <c>dotnet-project-setup</c>: the direction never
-/// reverses. A ProjectReference that breaks it fails the build, not review.
-/// </summary>
+/// <summary>The layering table in <c>dotnet-project-setup</c>: the dependency direction never reverses.</summary>
 public class LayeringTests
 {
     [Fact]
@@ -25,9 +22,7 @@ public class LayeringTests
     public void Contracts_ShouldReferenceNothing_WhenItIsALeaf()
     {
         // Arrange
-        // Contracts is a leaf on purpose: an Application handler returns the
-        // API-shaped response directly, which only works if both can see the
-        // DTOs without either depending on the other.
+        // A leaf on purpose: Application and Api both see the DTOs without depending on each other.
         var assembly = CulinaAssemblies.Contracts;
 
         // Act
@@ -47,9 +42,7 @@ public class LayeringTests
         var forbidden = CulinaReferencesOf(assembly).Except(["Domain", "Contracts"], StringComparer.Ordinal);
 
         // Assert
-        // A subset rather than an exact match: the compiler elides a reference
-        // no type actually uses, so absence is not a violation and asserting it
-        // would make the rule fail for the wrong reason.
+        // A subset, not an exact match: the compiler elides unused references.
         Assert.Empty(forbidden);
     }
 

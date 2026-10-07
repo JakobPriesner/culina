@@ -6,11 +6,7 @@ using Request = Contracts.LogRecords.Create.Request;
 namespace Api.Endpoints.LogRecords.Create.V1;
 
 /// <summary>Turns the request body and its browser into the command.</summary>
-/// <remarks>
-/// The browser's details become the attribute names an operator queries, so
-/// those names are as stable as an API field: OpenTelemetry's own where one
-/// exists, <c>culina.web.*</c> where none does.
-/// </remarks>
+/// <remarks>Attribute names are queried by operators, so they are as stable as an API field: OpenTelemetry's where one exists, else <c>culina.web.*</c>.</remarks>
 internal static class CreateLogRecordsRequestExtensions
 {
     internal static CreateLogRecordsCommand ToCommand(this Request request, HttpContext context)
@@ -67,7 +63,6 @@ internal static class CreateLogRecordsRequestExtensions
             ("culina.web.heap.used", record.HeapUsed),
             ("culina.web.heap.limit", record.HeapLimit));
 
-    /// <summary>Only what the browser said; an absent value is no attribute at all.</summary>
     private static List<KeyValuePair<string, object>> Present(params (string Name, object? Value)[] attributes) =>
         [.. attributes
             .Where(attribute => attribute.Value is not null)

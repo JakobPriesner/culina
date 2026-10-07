@@ -7,11 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Households;
 
-/// <summary>
-/// Deleting puts things in a bin: gone from every list, search and export,
-/// back exactly as they were on a restore, and gone for good once the bin is
-/// purged — photographs included.
-/// </summary>
+/// <summary>Deleting puts things in a bin: gone from every list, search and export, back as they were on restore, gone for good once purged (photographs included).</summary>
 [Collection(RequiresDatabase.Name)]
 public class TrashEndpointTests(PostgresFixture postgres)
 {
@@ -22,14 +18,11 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task DeletedRecipe_ShouldAppearInNoListSearchSuggestionOrExport()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var (recipeId, cookbookId, token) = await EverywhereAsync(kitchen);
 
-        // Act
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/recipes/{recipeId}", Token);
 
-        // Assert
         var client = kitchen.Client;
         var household = kitchen.HouseholdId;
 
@@ -55,21 +48,17 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task RestoredRecipe_ShouldBeBackEverywhere_SearchIncluded()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var (recipeId, cookbookId, token) = await EverywhereAsync(kitchen);
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/recipes/{recipeId}", Token);
 
-        // Act
         var restored = await kitchen.Client.PostAsync($"/api/v1/recipes/{recipeId}/restorations", new { }, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, restored.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await kitchen.Client.GetAsync($"/api/v1/shared-recipes/{token}", Token)).StatusCode);
 
-        // The search document was dropped on delete; finding it by an
-        // ingredient proves it was written again.
+        // The search document was dropped on delete; finding it by an ingredient proves it was rewritten.
         Assert.Contains(recipeId.ToString(), (await kitchen.SearchAsync("Rhabarber")).Body, StringComparison.Ordinal);
 
         var onShelf = await kitchen.Client.GetAsync(
@@ -86,17 +75,14 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Trash_ShouldListWhatWasDeleted_ByWhomAndUntilWhen()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
         var cookbookId = await CookbookAsync(kitchen, "Sommer");
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/recipes/{recipeId}", Token);
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/cookbooks/{cookbookId}", Token);
 
-        // Act
         var trash = await kitchen.Client.GetAsync($"/api/v1/households/{kitchen.HouseholdId}/trash", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, trash.StatusCode);
         var items = trash.Json!.Value.GetProperty("items").EnumerateArray().ToList();
         Assert.Equal(2, items.Count);
@@ -116,17 +102,14 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Trash_ShouldBeInvisible_ToSomebodyOutsideTheHousehold()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/recipes/{recipeId}", Token);
         using var stranger = await Kitchen.StrangerAsync(postgres);
 
-        // Act
         var trash = await stranger.GetAsync($"/api/v1/households/{kitchen.HouseholdId}/trash", Token);
         var restored = await stranger.PostAsync($"/api/v1/recipes/{recipeId}/restorations", new { }, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, trash.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, restored.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token)).StatusCode);
@@ -135,31 +118,25 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldStillAnswer204_ForARecipeAlreadyInTheBin()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
         var read = await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
         await kitchen.Client.DeleteAsync($"/api/v1/recipes/{recipeId}", read.ETag!, Token);
 
-        // Act
         var again = await kitchen.Client.DeleteAsync($"/api/v1/recipes/{recipeId}", read.ETag!, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, again.StatusCode);
     }
 
     [Fact]
     public async Task Restore_ShouldAnswer404_ForARecipeThatIsNotInTheBin()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
 
-        // Act
         var live = await kitchen.Client.PostAsync($"/api/v1/recipes/{recipeId}/restorations", new { }, Token);
         var unknown = await kitchen.Client.PostAsync($"/api/v1/recipes/{Guid.NewGuid()}/restorations", new { }, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, live.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
     }
@@ -167,18 +144,15 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task DeletedCookbook_ShouldDisappear_AndComeBackWithItsRecipes()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
         var cookbookId = await CookbookAsync(kitchen, "Sommer");
         await kitchen.Client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token);
 
-        // Act
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/cookbooks/{cookbookId}", Token);
         var whileDeleted = await kitchen.Client.GetAsync($"/api/v1/cookbooks?householdId={kitchen.HouseholdId}", Token);
         var restored = await kitchen.Client.PostAsync($"/api/v1/cookbooks/{cookbookId}/restorations", new { }, Token);
 
-        // Assert
         Assert.DoesNotContain(cookbookId.ToString(), whileDeleted.Body, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NoContent, restored.StatusCode);
         var cookbook = await kitchen.Client.GetAsync($"/api/v1/cookbooks/{cookbookId}", Token);
@@ -188,16 +162,13 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task DeletedHousehold_ShouldShutEveryMemberOut_UntilAnOwnerRestoresIt()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
         using var grace = await MemberAsync(kitchen);
         var household = kitchen.HouseholdId;
 
-        // Act
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/households/{household}", Token);
 
-        // Assert
         foreach (var client in new[] { kitchen.Client, grace })
         {
             Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/households/{household}", Token)).StatusCode);
@@ -226,17 +197,14 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task RestoringAHousehold_ShouldNotBringBackWhatWasDeletedInsideItEarlier()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var kept = await RecipeAsync(kitchen);
         var binned = await kitchen.SaveAsync("Alter Eintopf", "de", 10, 60, [("Kartoffeln", "g")], [], "Kochen.");
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/recipes/{binned}", Token);
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/households/{kitchen.HouseholdId}", Token);
 
-        // Act
         await kitchen.Client.PostAsync($"/api/v1/households/{kitchen.HouseholdId}/restorations", new { }, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, (await kitchen.Client.GetAsync($"/api/v1/recipes/{kept}", Token)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await kitchen.Client.GetAsync($"/api/v1/recipes/{binned}", Token)).StatusCode);
     }
@@ -244,7 +212,6 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Purge_ShouldRemoveWhatIsOlderThanTheRetention_WithItsPicture()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var old = await RecipeAsync(kitchen);
         var recent = await kitchen.SaveAsync("Frischer Salat", "de", 10, null, [("Gurke", null)], [], "Schneiden.");
@@ -257,10 +224,8 @@ public class TrashEndpointTests(PostgresFixture postgres)
             $"update recipes_with_deleted set deleted_at = now() - interval '31 days' where id = '{old}';",
             Token);
 
-        // Act
         var removed = await PurgeAsync();
 
-        // Assert
         Assert.Equal(1, removed);
         Assert.Equal(0, await CountAsync($"select count(*) from recipes_with_deleted where id = '{old}';"));
         Assert.Equal(1, await CountAsync($"select count(*) from recipes_with_deleted where id = '{recent}';"));
@@ -271,7 +236,6 @@ public class TrashEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Purge_ShouldKeepAPicture_ThatAnotherRecipeStillUses()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var gone = await RecipeAsync(kitchen);
         var stays = await kitchen.SaveAsync("Frischer Salat", "de", 10, null, [("Gurke", null)], [], "Schneiden.");
@@ -283,26 +247,21 @@ public class TrashEndpointTests(PostgresFixture postgres)
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/recipes/{gone}", Token);
         await postgres.ExecuteAsync("update recipes_with_deleted set deleted_at = now() - interval '31 days' where deleted_at is not null;", Token);
 
-        // Act
         await PurgeAsync();
 
-        // Assert
         Assert.True(await ImageExistsAsync(hash), "A picture another recipe shows was deleted with the purged one.");
     }
 
     [Fact]
     public async Task Purge_ShouldRemoveADeletedHousehold_AndEverythingInIt()
     {
-        // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
         var recipeId = await RecipeAsync(kitchen);
         await kitchen.Client.DeleteCurrentAsync($"/api/v1/households/{kitchen.HouseholdId}", Token);
         await postgres.ExecuteAsync("update households_with_deleted set deleted_at = now() - interval '31 days';", Token);
 
-        // Act
         await PurgeAsync();
 
-        // Assert
         Assert.Equal(0, await CountAsync($"select count(*) from households_with_deleted where id = '{kitchen.HouseholdId}';"));
         Assert.Equal(0, await CountAsync($"select count(*) from recipes_with_deleted where id = '{recipeId}';"));
     }

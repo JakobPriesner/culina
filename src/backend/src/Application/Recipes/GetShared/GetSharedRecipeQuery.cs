@@ -7,16 +7,11 @@ using Response = Contracts.Recipes.GetShared.Response;
 
 namespace Application.Recipes.GetShared;
 
-/// <summary>
-/// Reads a published recipe, for somebody who has nothing but the link.
-/// </summary>
+/// <summary>Reads a published recipe, for somebody who has nothing but the link.</summary>
 /// <remarks>
-/// The one read in Culina with no user behind it. There is deliberately no
-/// <c>UserId</c> to forget to check: possession of the token is the whole of
-/// the authorisation, so the shape of this query is the reason the check cannot
-/// be skipped by accident.
+/// The one read with no user behind it: there is deliberately no <c>UserId</c> to forget to check,
+/// as possession of the token is the whole authorisation.
 /// </remarks>
-/// <param name="Token">The secret out of the link.</param>
 public sealed record GetSharedRecipeQuery(string Token);
 
 internal sealed class GetSharedRecipeQueryHandler(

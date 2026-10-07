@@ -1,12 +1,9 @@
 namespace Api.Endpoints;
 
 /// <summary>
-/// The OpenAPI tags endpoints are grouped under.
+/// The OpenAPI tags endpoints are grouped under, one per resource and matching the first path
+/// segment, so the generated client groups methods like the routes.
 /// </summary>
-/// <remarks>
-/// One tag per API resource, matching the first path segment, so the generated
-/// client groups its methods the same way the routes are organised.
-/// </remarks>
 internal static class Tags
 {
     internal const string Users = "Users";
@@ -22,13 +19,9 @@ internal static class Tags
     internal const string Recipes = "Recipes";
 
     /// <summary>
-    /// What a link hands a stranger, kept apart from <see cref="Recipes"/>.
+    /// What a link hands a stranger, kept apart from <see cref="Recipes"/>: everything under
+    /// Recipes needs a session, and these two reads are the only ones that do not.
     /// </summary>
-    /// <remarks>
-    /// A tag of its own because the distinction is worth seeing in the
-    /// generated client: everything under <c>Recipes</c> needs a session, and
-    /// these two reads are the only ones that do not.
-    /// </remarks>
     internal const string SharedRecipes = "SharedRecipes";
 
     internal const string Planning = "Planning";
@@ -36,8 +29,8 @@ internal static class Tags
     internal const string Settings = "Settings";
 
     /// <summary>
-    /// How far a fresh instance has got — the one read that both hosts serve,
-    /// the one with a database and the one waiting for it.
+    /// How far a fresh instance has got: the one read both hosts serve, the one with a database and
+    /// the one waiting for it.
     /// </summary>
     internal const string Setup = "Setup";
 

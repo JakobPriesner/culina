@@ -61,8 +61,7 @@ public class UserTests
         var result = User.EnsureAcceptablePassword(password);
 
         // Assert
-        // Length is the only rule: composition rules push people toward
-        // predictable substitutions and away from passphrases.
+        // Length is the only rule; composition rules discourage passphrases.
         result.ShouldBeFailure(UserErrors.WeakPassword);
     }
 

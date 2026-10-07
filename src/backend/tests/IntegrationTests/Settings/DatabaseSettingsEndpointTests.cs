@@ -12,14 +12,11 @@ public class DatabaseSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Read_ShouldSayAPasswordIsSet_WithoutEverReturningIt()
     {
-        // Arrange
         using var factory = new CulinaApiFactory(postgres);
         using var admin = await AdminAsync(factory);
 
-        // Act
         var response = await admin.GetAsync("/api/v1/settings/database", Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Json!.Value.GetProperty("passwordConfigured").GetBoolean());
         Assert.False(response.Json!.Value.TryGetProperty("password", out _));
@@ -32,12 +29,10 @@ public class DatabaseSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldChangeNothing_WhenEveryValueIsPinnedByTheEnvironment()
     {
-        // Arrange
         using var factory = new CulinaApiFactory(postgres);
         using var admin = await AdminAsync(factory);
         var settings = postgres.Settings;
 
-        // Act
         var response = await admin.PutAsync(
             "/api/v1/settings/database",
             new
@@ -52,7 +47,6 @@ public class DatabaseSettingsEndpointTests(PostgresFixture postgres)
             },
             Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(0, factory.Restarts.Scheduled);
     }
@@ -60,7 +54,6 @@ public class DatabaseSettingsEndpointTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldBeRefusedWith429_OnceOneAddressHasTriedTenTimesInAMinute()
     {
-        // Arrange
         // Nobody has an account yet, so anybody may ask — and the limit does not
         // come from the rate limit settings, which are themselves editable here.
         await postgres.ResetAsync(Token);
@@ -84,10 +77,8 @@ public class DatabaseSettingsEndpointTests(PostgresFixture postgres)
             Assert.Equal(HttpStatusCode.NoContent, tried.StatusCode);
         }
 
-        // Act
         var response = await stranger.PutAsync("/api/v1/settings/database", same, Token);
 
-        // Assert
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
         Assert.Equal("request.rate_limited", response.ProblemCode);
     }

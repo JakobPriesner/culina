@@ -9,14 +9,10 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Extensions;
 
-/// <summary>
-/// The rate limit policies, and the rejection they share.
-/// </summary>
+/// <summary>The rate limit policies, and the rejection they share.</summary>
 /// <remarks>
-/// The limiter runs before authentication, so brute force costs nothing to
-/// reject: an attacker's request is refused before a password hash is computed
-/// or a database connection is taken. Only the limits that belong to a person
-/// rather than an address are counted later, once it is known who is asking
+/// The limiter runs before authentication, so brute force is refused before any password hash or
+/// database connection. Limits that belong to a person rather than an address are counted later
 /// (see <see cref="Personal"/>).
 /// </remarks>
 internal static class RateLimitExtensions
@@ -26,111 +22,75 @@ internal static class RateLimitExtensions
 
     /// <summary>Redeeming an invitation code.</summary>
     /// <remarks>
-    /// Per address rather than per person, unlike the other signed-in limits:
-    /// what it stops is somebody guessing codes, and where registration is
-    /// open an account costs nothing to make, while an address does.
+    /// Per address, not per person: it stops code guessing, and where registration is open an
+    /// account costs nothing but an address does.
     /// </remarks>
     internal const string Invitation = "auth-invitation";
 
-    /// <summary>
-    /// Reading which household an invitation code is for, before joining.
-    /// </summary>
+    /// <summary>Reading which household an invitation code is for, before joining.</summary>
     /// <remarks>
-    /// Per address, like redeeming and for the same reason: it answers whether
-    /// a code is good, so it is guarded against guessing the way redeeming is,
-    /// with the same ceiling. A bucket of its own, though, so opening the join
-    /// page never spends a redemption.
+    /// Per address with the same ceiling as redeeming, since it also answers whether a code is
+    /// good; a bucket of its own so opening the join page spends no redemption.
     /// </remarks>
     internal const string InvitationLookup = "invitation-lookup";
 
     /// <summary>
-    /// Reading a recipe someone published behind a link.
+    /// Reading a recipe someone published behind a link: the only anonymous read of household
+    /// content, so it has its own ceiling.
     /// </summary>
-    /// <remarks>
-    /// The only anonymous read of a household's content, so it gets a ceiling
-    /// of its own rather than sharing the global one with signed-in traffic.
-    /// </remarks>
     internal const string SharedRecipe = "shared-recipe";
 
     /// <summary>
-    /// Importing, which is the one thing that makes the server fetch.
+    /// Importing, the one thing that makes the server fetch; limited hard and separately because
+    /// opening connections quickly is itself abuse.
     /// </summary>
-    /// <remarks>
-    /// Limited hard and separately from everything else. Even with every
-    /// address checked, a person who can ask the server to open connections
-    /// quickly can use it to make a great many of them.
-    /// </remarks>
     internal const string Import = "recipe-import";
 
-    /// <summary>
-    /// Reading and importing from a library this household has connected.
-    /// </summary>
+    /// <summary>Reading and importing from a library this household has connected.</summary>
     /// <remarks>
-    /// Its own policy rather than <see cref="Import"/>, because the thing being
-    /// guarded against is different. That one stops an account aiming this
-    /// server at addresses it chooses; this is one fixed address a member set
-    /// up with a credential. Sharing the tighter limit made the advertised
-    /// feature impossible — eighty batches to move two thousand recipes does
-    /// not fit in thirty requests an hour — and a ceiling that forbids the
-    /// feature is not a safety measure.
+    /// Its own policy: <see cref="Import"/> stops aiming the server at arbitrary addresses, this is
+    /// one fixed address a member set up, and the tighter limit made moving a 2,000-recipe library
+    /// impossible.
     /// </remarks>
     internal const string Source = "recipe-source";
 
-    /// <summary>
-    /// Asking the assistant for anything.
-    /// </summary>
+    /// <summary>Asking the assistant, the one endpoint where a request costs real money.</summary>
     /// <remarks>
-    /// The only endpoint in Culina where one request costs real money, so it is
-    /// the only one where a ceiling is about the bill rather than about the
-    /// server. The budget in settings is the backstop; this is what stops
-    /// somebody reaching it in a minute by holding down a button.
+    /// The budget in settings is the backstop; this stops reaching it in a minute by holding a
+    /// button.
     /// </remarks>
     internal const string Assistance = "assistance";
 
     /// <summary>
-    /// Taking a household's archive, the heaviest read. Restoring one shares the
-    /// budget, being the heaviest write.
+    /// Taking a household's archive, the heaviest read; restoring one shares the budget, being the
+    /// heaviest write.
     /// </summary>
     internal const string Archive = "archive-export";
 
-    /// <summary>
-    /// The limits counted per person rather than per address.
-    /// </summary>
+    /// <summary>The limits counted per person rather than per address.</summary>
     /// <remarks>
-    /// The limiter middleware runs before authentication, where nobody is known
-    /// yet, so there these could only follow the session cookie — and signing
-    /// in again bought a fresh budget. Their endpoints all require a session, so
-    /// <see cref="PersonalRateLimitMiddleware"/> counts them after authorization
-    /// instead, against the user id (see <see cref="PerPerson"/>). The limiter
-    /// middleware knows them by name only, and lets them through under the
-    /// per-address ceiling every request has.
+    /// The limiter middleware runs before authentication and knows these by name only;
+    /// <see cref="PersonalRateLimitMiddleware"/> counts them after authorization against the user
+    /// id (see <see cref="PerPerson"/>), so signing in again buys no fresh budget.
     /// </remarks>
     private static readonly string[] Personal = [Import, Source, Assistance, Archive];
 
-    /// <summary>
-    /// The web app reporting what went wrong in it.
-    /// </summary>
+    /// <summary>The web app reporting what went wrong in it.</summary>
     /// <remarks>
-    /// Anonymous, because a sign-in page can break too, and every request
-    /// becomes up to ten log lines — so without a ceiling of its own, anybody
-    /// could fill the operator's disk through it — per address, and for every
-    /// address together (see <see cref="SharedByEveryone"/>). Fixed rather than a setting:
-    /// the app sends at most one batch every few seconds, so this is a limit on
-    /// misuse, never on the app, and nobody has a reason to tune it.
+    /// Anonymous (a sign-in page can break too) and each request becomes up to ten log lines, so it
+    /// is limited per address and for everyone together (see <see cref="SharedByEveryone"/>). Fixed
+    /// rather than a setting: it limits misuse, never the app.
     /// </remarks>
     internal const string LogRecords = "log-records";
 
     private const int LogRecordBatchesPerMinute = 20;
 
     /// <summary>
-    /// What every caller together may send to <see cref="LogRecords"/> in a
-    /// minute.
+    /// What every caller together may send to <see cref="LogRecords"/> in a minute.
     /// </summary>
     /// <remarks>
-    /// A limit per address means little to many addresses, or behind a proxy
-    /// trusted too widely, and the endpoint is anonymous. Ten browsers each
-    /// reporting as fast as the app ever sends fit; past that, reports are
-    /// dropped rather than the operator's disk filled.
+    /// A per-address limit means little against many addresses or an over-trusted proxy; past this,
+    /// reports are dropped rather than filling the operator's disk.
     /// </remarks>
     private const int LogRecordBatchesPerMinuteFromEveryone = 120;
 
@@ -138,8 +98,7 @@ internal static class RateLimitExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // The per-person budgets, kept for the life of the host and disposed
-        // with it. See PersonalRateLimitMiddleware.
+        // Per-person budgets live as long as the host (see PersonalRateLimitMiddleware).
         services.AddSingleton(provider =>
         {
             var limits = provider.GetRequiredService<RateLimitSettings>();
@@ -174,11 +133,10 @@ internal static class RateLimitExtensions
             options.AddPolicy(LogRecords, context =>
                 PerAddress(context, LogRecordBatchesPerMinute, TimeSpan.FromMinutes(1)));
 
-            // A generous ceiling on everything else, so one misbehaving client
-            // cannot exhaust the connection pool. Per address, so a made-up
-            // session cookie cannot buy a fresh budget. Then the ceilings every
-            // caller of one endpoint shares, which an endpoint's own policy
-            // cannot add: it has one partition, and that is per address.
+            // A generous per-address ceiling so one client cannot exhaust the connection pool
+            // (keyed on address, not cookie, so a made-up cookie buys nothing). Then the ceilings
+            // every caller of one endpoint shares, which an endpoint's own per-address policy
+            // cannot add.
             options.GlobalLimiter = PartitionedRateLimiter.CreateChained(
                 PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     PerAddress(context, limits.RequestsPerSessionPerMinute, TimeSpan.FromMinutes(1))),
@@ -189,8 +147,8 @@ internal static class RateLimitExtensions
     }
 
     /// <summary>
-    /// Refuses a request over a limit: counted, logged, told when to try again,
-    /// and answered with the problem document every refusal has.
+    /// Refuses a request over a limit: counted, logged, told when to retry, and answered with the
+    /// usual problem document.
     /// </summary>
     internal static Task RejectAsync(HttpContext context, RateLimitLease lease)
     {
@@ -213,13 +171,9 @@ internal static class RateLimitExtensions
     }
 
     /// <summary>
-    /// The budget a request to a <see cref="Personal"/> endpoint draws on: the
-    /// signed-in person's, whichever session or address they use.
+    /// The budget a <see cref="Personal"/> endpoint draws on: the signed-in person's, whichever
+    /// session or address they use.
     /// </summary>
-    /// <remarks>
-    /// Asked after authorization, so the user id is always there; the address
-    /// is only a floor for a request that somehow arrives without one.
-    /// </remarks>
     private static RateLimitPartition<string> PerPerson(HttpContext context, RateLimitSettings limits)
     {
         var policy = context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
@@ -245,19 +199,14 @@ internal static class RateLimitExtensions
     }
 
     /// <summary>
-    /// Partitions by client address alone, whatever cookie the request carries.
+    /// Partitions by client address alone, whatever cookie the request carries; for everything
+    /// anonymous.
     /// </summary>
-    /// <remarks>
-    /// For everything anonymous: an unchecked cookie is whatever the caller
-    /// chose to send, and keying on it would give a script a fresh budget with
-    /// every request.
-    /// </remarks>
     private static RateLimitPartition<string> PerAddress(HttpContext context, int permit, TimeSpan window) =>
         FixedWindow($"ip:{context.Connection.RemoteIpAddress}", permit, window);
 
     /// <summary>
-    /// One budget for every caller of an endpoint that needs one, whoever and
-    /// wherever they are.
+    /// One budget for every caller of an endpoint, whoever and wherever they are.
     /// </summary>
     private static RateLimitPartition<string> SharedByEveryone(HttpContext context) =>
         context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == LogRecords

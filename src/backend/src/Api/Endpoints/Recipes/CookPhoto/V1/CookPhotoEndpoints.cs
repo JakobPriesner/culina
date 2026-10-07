@@ -9,14 +9,7 @@ using Response = Contracts.Recipes.GetCookLog.Response;
 
 namespace Api.Endpoints.Recipes.CookPhoto.V1;
 
-/// <summary>
-/// The picture of one attempt: put there, taken away, and served.
-/// </summary>
-/// <remarks>
-/// Hung off the cook-log entry rather than the recipe, because that is what it
-/// is a picture of — a Tuesday, not a dish. Personal, like the entry: two people
-/// in one household keep separate histories and separate photographs of them.
-/// </remarks>
+/// <summary>The picture of one attempt: put there, taken away, and served. Hung off the cook-log entry, so personal like the entry.</summary>
 internal sealed class SetCookPhotoEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

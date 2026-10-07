@@ -2,14 +2,10 @@ using Domain.Shared;
 
 namespace Application.Abstractions;
 
-/// <summary>
-/// The widths Culina keeps of every image.
-/// </summary>
+/// <summary>The widths Culina keeps of every image.</summary>
 /// <remarks>
-/// Three fixed sizes, not a resize-on-demand parameter: an arbitrary width is a
-/// denial-of-service lever and a cache that never warms. A card, a detail
-/// header and a retina detail header are the sizes the app actually asks for.
-/// Constants rather than an enum, because the values are the widths.
+/// Three fixed sizes, not resize-on-demand: an arbitrary width is a denial-of-service lever and a
+/// cold cache.
 /// </remarks>
 public static class ImageWidths
 {
@@ -26,50 +22,31 @@ public static class ImageWidths
     public static IReadOnlyList<int> All { get; } = [Card, Detail, Retina];
 
     /// <summary>Whether a requested width is one that exists.</summary>
-    /// <param name="width">The width the caller asked for.</param>
     public static bool Exists(int width) => All.Contains(width);
 }
 
 /// <summary>Stores and serves recipe images.</summary>
 public interface IImageStore
 {
-    /// <summary>
-    /// Validates, re-encodes and stores an uploaded image.
-    /// </summary>
-    /// <param name="content">The uploaded bytes.</param>
-    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <summary>Validates, re-encodes and stores an uploaded image.</summary>
     /// <remarks>
-    /// The implementation decides what the file is by decoding it, never by
-    /// trusting a content type or an extension, and the bytes it stores are its
-    /// own re-encoding — which is what strips EXIF and neutralises a file that
-    /// is valid in two formats at once.
+    /// The file is identified by decoding, never by content type or extension; stored bytes are the
+    /// re-encoding, which strips EXIF and defuses polyglot files.
     /// </remarks>
     Task<Result<StoredImage>> StoreAsync(Stream content, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Re-encodes a picture for an assistant to read, and keeps nothing.
-    /// </summary>
-    /// <param name="content">The uploaded bytes.</param>
-    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <summary>Re-encodes a picture for an assistant to read, and keeps nothing.</summary>
     /// <remarks>
-    /// The same decoding an upload gets, ending in a JPEG of the pixels and
-    /// nothing else, no bigger than a model reads text at. A photograph of a
-    /// cookbook page says where the kitchen is as surely as a photograph of
-    /// dinner, and this one leaves the instance for somebody else's servers.
+    /// Ends in a JPEG of the pixels only: the picture leaves the instance, and a cookbook photo can
+    /// reveal where the kitchen is.
     /// </remarks>
     Task<Result<RecipePicture>> ReEncodeForReadingAsync(
         ReadOnlyMemory<byte> content,
         CancellationToken cancellationToken);
 
     /// <summary>Writes one rendition to a destination.</summary>
-    /// <param name="contentHash">Which image.</param>
-    /// <param name="width">Which rendition, from <see cref="ImageWidths"/>.</param>
-    /// <param name="destination">Where to write it, usually the response body.</param>
-    /// <param name="cancellationToken">Cancels the work.</param>
     /// <remarks>
-    /// The store writes rather than handing back an open stream, so it keeps
-    /// ownership of the file handle and closes it. A returned stream would
-    /// transfer that ownership to a caller who has no reason to know it exists.
+    /// The store writes rather than returning a stream, so it keeps ownership of the file handle.
     /// </remarks>
     Task<Result> CopyToAsync(
         string contentHash,
@@ -78,22 +55,13 @@ public interface IImageStore
         CancellationToken cancellationToken);
 
     /// <summary>Deletes every rendition of an image.</summary>
-    /// <param name="contentHash">Which image.</param>
-    /// <param name="cancellationToken">Cancels the work.</param>
     Task<Result> DeleteAsync(string contentHash, CancellationToken cancellationToken);
 }
 
-/// <summary>
-/// What an image write displaced.
-/// </summary>
+/// <summary>What an image write displaced.</summary>
 /// <param name="PreviousContentHash">
 /// The image that was replaced, or null when there was none.
 /// </param>
-/// <remarks>
-/// A named record rather than a nullable string inside a result, because a
-/// result carries a value or an error and "there was nothing to replace" is
-/// neither — it is an ordinary, expected part of the answer.
-/// </remarks>
 public sealed record ImageReplacement(string? PreviousContentHash);
 
 /// <summary>What was stored.</summary>

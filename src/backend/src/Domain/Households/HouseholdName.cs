@@ -14,7 +14,6 @@ public sealed record HouseholdName
     public string Value { get; }
 
     /// <summary>Parses a name, returning a failure rather than throwing.</summary>
-    /// <param name="value">What the caller supplied.</param>
     public static Result<HouseholdName> Create(string? value)
     {
         var trimmed = value?.Trim();

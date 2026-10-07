@@ -4,59 +4,45 @@ using Domain.Shared;
 
 namespace ArchitectureTests;
 
-/// <summary>
-/// Error codes are part of the API contract: clients branch on them, so
-/// renaming one is a breaking change and the format must not drift.
-/// </summary>
+/// <summary>Error codes are API contract: clients branch on them, so the format must not drift and renaming is breaking.</summary>
 public partial class ErrorCodeTests
 {
     [Fact]
     public void EveryErrorCode_ShouldBeModuleDotReason_WhereverItIsDeclared()
     {
-        // Arrange
         var declared = DeclaredErrors().ToList();
 
-        // Act
         var offenders = declared
             .Where(entry => !CodeFormat().IsMatch(entry.Error.Code))
             .Select(entry => $"{entry.Owner}: '{entry.Error.Code}'");
 
-        // Assert
         Assert.Empty(offenders);
     }
 
     [Fact]
     public void EveryErrorDescription_ShouldReadAsASentence_BecauseItIsShownToPeople()
     {
-        // Arrange
         var declared = DeclaredErrors().ToList();
 
-        // Act
         var offenders = declared
             .Where(entry => entry.Error.Description.Length < 8
                 || !StartsCapitalised(entry.Error.Description)
                 || !entry.Error.Description.EndsWith('.'))
             .Select(entry => $"{entry.Owner}: '{entry.Error.Description}'");
 
-        // Assert
         Assert.Empty(offenders);
     }
 
     [Fact]
     public void ErrorsClasses_ShouldExist_SoTheRuleIsActuallyBeingChecked()
     {
-        // Arrange & Act
         var declared = DeclaredErrors().ToList();
 
-        // Assert
         // Guards against the rules above passing because they found nothing.
         Assert.NotEmpty(declared);
     }
 
-    /// <summary>
-    /// The first letter, ignoring a leading quote: several descriptions open by
-    /// quoting the offending value.
-    /// </summary>
+    /// <summary>The first letter, ignoring a leading quote (descriptions often open by quoting the value).</summary>
     private static bool StartsCapitalised(string description) =>
         description.FirstOrDefault(char.IsLetter) is var first && char.IsUpper(first);
 
@@ -92,10 +78,7 @@ public partial class ErrorCodeTests
         }
     }
 
-    /// <summary>
-    /// Error factories take the ids they describe, so they are called with
-    /// harmless defaults purely to read the code they produce.
-    /// </summary>
+    /// <summary>Error factories take ids, so they are called with harmless defaults just to read their code.</summary>
     private static Error? Invoke(MethodInfo method)
     {
         var arguments = method.GetParameters()

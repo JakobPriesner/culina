@@ -6,10 +6,7 @@ public sealed record Response
     /// <summary>The invitation's id, for revoking it.</summary>
     public required Guid InvitationId { get; init; }
 
-    /// <summary>
-    /// The code to share. Shown exactly once — only its digest is stored, so
-    /// this value cannot be recovered afterwards.
-    /// </summary>
+    /// <summary>The code to share; shown once, as only its digest is stored.</summary>
     public required string Code { get; init; }
 
     /// <summary>When it stops working.</summary>

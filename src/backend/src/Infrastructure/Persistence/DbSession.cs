@@ -2,27 +2,11 @@ using Npgsql;
 
 namespace Infrastructure.Persistence;
 
-/// <summary>
-/// The database connection a request is using, and the transaction it is
-/// currently enlisted in.
-/// </summary>
+/// <summary>The database connection a request is using, and the transaction it is currently enlisted in.</summary>
 /// <remarks>
-/// <para>
-/// Scoped, opened lazily, and handed back to the pool as soon as nothing needs
-/// it: after each statement outside a transaction, and when a transaction
-/// ends. A request that streams for minutes after reading its session — an
-/// import being watched, a draft being written — then holds no connection
-/// while it waits, so the pool has to be as large as the statements running
-/// at once rather than the requests open at once.
-/// </para>
-/// <para>
-/// Repositories ask for a connection and stay unaware of transactions. Whether
-/// their statements are atomic is decided by the handler through
-/// <see cref="UnitOfWork"/>, which is the only thing that opens or closes one.
-/// </para>
+/// Scoped and opened lazily, and returned to the pool as soon as nothing needs it, so long-streaming requests
+/// hold no connection while waiting. Repositories are unaware of transactions; <see cref="UnitOfWork"/> alone opens and closes one.
 /// </remarks>
-/// <param name="dataSource">The pooled data source.</param>
-/// <param name="watch">Warns when getting a connection is slow, or one is held too long.</param>
 internal sealed class DbSession(NpgsqlDataSource dataSource, ConnectionPoolWatch watch) : IAsyncDisposable
 {
     private NpgsqlConnection? connection;
@@ -73,12 +57,7 @@ internal sealed class DbSession(NpgsqlDataSource dataSource, ConnectionPoolWatch
         await ReleaseAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Keeps the connection out of the pool until the returned scope ends, for
-    /// state that lives on the connection rather than in a transaction — a
-    /// session-level advisory lock. Released, the connection is reset before
-    /// anyone uses it again, and that state goes with it.
-    /// </summary>
+    /// <summary>Keeps the connection out of the pool until the scope ends, for connection-level state such as a session advisory lock.</summary>
     internal async ValueTask<IAsyncDisposable> PinAsync(CancellationToken cancellationToken)
     {
         await ConnectionAsync(cancellationToken).ConfigureAwait(false);
@@ -106,8 +85,7 @@ internal sealed class DbSession(NpgsqlDataSource dataSource, ConnectionPoolWatch
     {
         pinned = false;
 
-        // Ending a transaction releases its connection; without one, there may
-        // still be a connection to release.
+        // Ending a transaction releases its connection; without one there may still be one to release.
         await EndTransactionAsync().ConfigureAwait(false);
         await ReleaseAsync().ConfigureAwait(false);
     }
@@ -116,8 +94,7 @@ internal sealed class DbSession(NpgsqlDataSource dataSource, ConnectionPoolWatch
     {
         pinned = false;
 
-        // Held on purpose, for as long as its owner needed, so not reported as
-        // held too long.
+        // Held on purpose, so not reported as held too long.
         acquiredAt = watch.Timestamp();
 
         return ReleaseAsync();

@@ -4,19 +4,14 @@ using System.Text.RegularExpressions;
 
 namespace Domain.Import;
 
-/// <summary>
-/// Pulls the two things an import needs out of a page's markup.
-/// </summary>
+/// <summary>Pulls the two things an import needs out of a page's markup.</summary>
 /// <remarks>
-/// Regular expressions, and deliberately. A parser would be a dependency, an
-/// attack surface and a great deal of code for two jobs that are both "find
-/// this and take the text": neither of them has to be right about malformed
-/// markup, because what comes out is shown back for correction.
+/// Regular expressions on purpose: a parser is a dependency and attack surface, and the output is
+/// shown back for correction.
 /// </remarks>
 public static partial class HtmlText
 {
     /// <summary>Every JSON-LD block a page carries.</summary>
-    /// <param name="html">The page's markup.</param>
     public static IReadOnlyList<string> JsonLdBlocks(string? html)
     {
         if (string.IsNullOrEmpty(html))
@@ -33,14 +28,10 @@ public static partial class HtmlText
         ];
     }
 
-    /// <summary>
-    /// The words of a page, as somebody reading it would see them.
-    /// </summary>
-    /// <param name="html">The page's markup.</param>
+    /// <summary>The words of a page, as somebody reading it would see them.</summary>
     /// <remarks>
-    /// The fallback for a site that publishes no structured data: the client
-    /// reads these with the same parser it uses for a pasted recipe, so there
-    /// is one set of heuristics rather than two.
+    /// The fallback for sites without structured data; the client reads it with the same parser as
+    /// a pasted recipe.
     /// </remarks>
     public static string ReadableText(string? html)
     {
@@ -49,12 +40,10 @@ public static partial class HtmlText
             return string.Empty;
         }
 
-        // Script and style first: their contents are text to a regular
-        // expression and gibberish to a reader.
+        // Script and style first: their contents are text to a regex and gibberish to a reader.
         var stripped = NonContent().Replace(html, " ");
 
-        // Block elements become line breaks, because the line is what the
-        // paste parser reads — a page flattened to one line is one paragraph.
+        // Block elements become line breaks: the paste parser reads lines.
         stripped = LineBreaks().Replace(stripped, "\n");
         stripped = Tags().Replace(stripped, " ");
 

@@ -8,8 +8,6 @@ using Domain.Shared;
 namespace Application.Recipes.GetById;
 
 /// <summary>Reads one recipe in full.</summary>
-/// <param name="RecipeId">Which recipe.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record GetRecipeQuery(Guid RecipeId, Guid UserId);
 
 internal sealed class GetRecipeQueryHandler(
@@ -33,9 +31,7 @@ internal sealed class GetRecipeQueryHandler(
         var described = await found.Match(
             async recipe =>
             {
-                // Read here and not in the repository: provenance belongs to a
-                // minority of recipes, and folding it into the aggregate would
-                // make every recipe carry a table most of them have no row in.
+                // Read here, not in the repository: provenance belongs to a minority of recipes.
                 var origin = await origins
                     .FindAsync(recipe.Id, cancellationToken)
                     .ConfigureAwait(false);

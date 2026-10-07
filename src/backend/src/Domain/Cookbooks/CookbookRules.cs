@@ -3,21 +3,9 @@ using Domain.Shared;
 namespace Domain.Cookbooks;
 
 /// <summary>
-/// What a smart cookbook asks for.
+/// What a smart cookbook asks for: a saved question, evaluated whenever the shelf is read.
+/// Every rule must hold (AND).
 /// </summary>
-/// <remarks>
-/// <para>
-/// A saved question rather than a saved answer. Nothing here records which
-/// recipes match — that is worked out whenever the shelf is read, which is what
-/// makes a recipe written this evening appear on it immediately, with no job to
-/// run and nothing to backfill when a rule changes.
-/// </para>
-/// <para>
-/// Every rule must hold: a shelf asking for chicken and a main course means
-/// both, because the useful shelves are the narrow ones. "Either of these" is a
-/// different question and a much harder editor, and nobody has asked it yet.
-/// </para>
-/// </remarks>
 public sealed record CookbookRules
 {
     /// <summary>More conditions than anybody could hold in their head.</summary>
@@ -94,14 +82,6 @@ public sealed record CookbookRules
         int? maxMinutes) =>
         new(tags, ingredients, maxMinutes);
 
-    /// <summary>
-    /// Trimmed, emptied of blanks and nulls, and deduplicated case-insensitively.
-    /// </summary>
-    /// <remarks>
-    /// The same term twice is one condition written twice, and a shelf that
-    /// reported "2 rules" for it would be counting the typing rather than the
-    /// question.
-    /// </remarks>
     private static IReadOnlyList<string> Clean(IReadOnlyList<string>? terms)
     {
         if (terms is null)
@@ -120,11 +100,7 @@ public sealed record CookbookRules
 }
 
 /// <summary>Which kind of shelf a cookbook is.</summary>
-/// <remarks>
-/// Chosen when it is made and never changed, because the two answer "why is
-/// this recipe here?" differently — one says "somebody put it there" and the
-/// other "it matches". A shelf that was both could not answer at all.
-/// </remarks>
+/// <remarks>Fixed at creation: the two answer "why is this recipe here?" differently.</remarks>
 public enum CookbookKind
 {
     /// <summary>Somebody chose what is on it.</summary>

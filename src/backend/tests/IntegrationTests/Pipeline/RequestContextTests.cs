@@ -11,15 +11,12 @@ public class RequestContextTests(PostgresFixture postgres)
     [Fact]
     public async Task EveryResponse_ShouldCarryARequestId_WhenTheRequestIsHandled()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.True(response.Headers.TryGetValues("X-Request-Id", out var ids));
         Assert.NotEmpty(Assert.Single(ids));
     }
@@ -27,15 +24,12 @@ public class RequestContextTests(PostgresFixture postgres)
     [Fact]
     public async Task UnmatchedRoute_ShouldReturnAProblemDocument_RatherThanAnEmptyBody()
     {
-        // Arrange
         using var client = postgres.Api.CreateClient();
 
-        // Act
         using var response = await client.GetAsync(
             new Uri("/api/v1/nothing-here", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
 
@@ -50,14 +44,11 @@ public class RequestContextTests(PostgresFixture postgres)
     [Fact]
     public async Task Migrations_ShouldHaveRun_WhenTheHostStarted()
     {
-        // Arrange
-        // Act
         using var client = postgres.Api.CreateClient();
         using var response = await client.GetAsync(
             new Uri("/health/live", UriKind.Relative),
             TestContext.Current.CancellationToken);
 
-        // Assert
         // Starting the host runs the migration hosted service, so a schema
         // failure would have prevented this response entirely.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

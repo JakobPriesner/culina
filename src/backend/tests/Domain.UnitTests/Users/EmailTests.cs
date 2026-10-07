@@ -11,10 +11,8 @@ public class EmailTests
     [InlineData("a@b.co")]
     public void Create_ShouldSucceed_WhenTheAddressLooksLikeOne(string value)
     {
-        // Arrange & Act
         var result = Email.Create(value);
 
-        // Assert
         Assert.Equal(value, result.ShouldBeSuccess().Value);
     }
 
@@ -23,10 +21,8 @@ public class EmailTests
     [InlineData("ADA@EXAMPLE.COM", "ada@example.com")]
     public void Create_ShouldNormalise_SoComparisonIsUnambiguous(string input, string expected)
     {
-        // Arrange & Act
         var result = Email.Create(input);
 
-        // Assert
         Assert.Equal(expected, result.ShouldBeSuccess().Value);
     }
 
@@ -42,36 +38,28 @@ public class EmailTests
     [InlineData("ada lovelace@example.com")]
     public void Create_ShouldFail_WhenTheAddressIsObviouslyWrong(string? value)
     {
-        // Arrange & Act
         var result = Email.Create(value);
 
-        // Assert
         result.ShouldBeFailure(UserErrors.InvalidEmail);
     }
 
     [Fact]
     public void Create_ShouldFail_WhenTheAddressExceedsTheColumnLength()
     {
-        // Arrange
         var tooLong = new string('a', Email.MaxLength) + "@example.com";
 
-        // Act
         var result = Email.Create(tooLong);
 
-        // Assert
         result.ShouldBeFailure(UserErrors.InvalidEmail);
     }
 
     [Fact]
     public void Domain_ShouldReturnOnlyTheHost_SoALogLineCarriesNoPersonalData()
     {
-        // Arrange
         var email = Email.Create("ada@example.com").ShouldBeSuccess();
 
-        // Act
         var domain = email.Domain;
 
-        // Assert
         Assert.Equal("example.com", domain);
     }
 }

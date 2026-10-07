@@ -6,11 +6,7 @@ using Domain.Shared;
 namespace Api.Endpoints.Recipes.GetAll.V1;
 
 /// <summary>Reads the search criteria out of the query string.</summary>
-/// <remarks>
-/// Every value is validated rather than coerced. A <c>limit</c> of "twenty" is
-/// a client bug, and silently treating it as the default would hide it — the
-/// same reasoning as the query-parameter guard.
-/// </remarks>
+/// <remarks>Every value is validated rather than coerced, so a client bug such as <c>limit=twenty</c> is not hidden.</remarks>
 internal static class GetRecipesRequestExtensions
 {
     private const int DefaultLimit = 24;
@@ -44,10 +40,7 @@ internal static class GetRecipesRequestExtensions
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .ToArray();
 
-        // Asking a question is asking to be answered best first. Without this a
-        // search fell back to "most recently edited", so typing "Bolognese"
-        // into a library with three of them returned whichever one somebody had
-        // last fixed a typo in.
+        // Asking a question means being answered best first, not by most recently edited.
         var ranked = !string.IsNullOrWhiteSpace(text) || ingredients.Length > 0;
 
         return ToSort(query["sort"], cookbookId is not null, ranked).Map(sort => new RecipeSearch(
@@ -58,35 +51,16 @@ internal static class GetRecipesRequestExtensions
             ingredients!,
             maxMinutes,
             cookbookId,
-            // Resolved by the handler, which is the only thing that can read a
-            // cookbook to find out whether it has rules.
+            // Resolved by the handler, the only thing that can read a cookbook's rules.
             Rules: null,
             sort,
             query["cursor"],
             limit ?? DefaultLimit));
     }
 
-    /// <summary>
-    /// How to order the page.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// An explicit sort always wins. Where none is given the question decides:
-    /// words or ingredients are a request to be ranked by them, a cookbook with
-    /// no question is read in the order somebody built it, and everything else
-    /// is the collection, most recently touched first.
-    /// </para>
-    /// <para>
-    /// Relevance is checked before the cookbook default on purpose. Searching
-    /// inside a shelf and being handed its table of contents is the wrong
-    /// answer to a question that was plainly asked.
-    /// </para>
-    /// <para>
-    /// Asking for cookbook order without naming a cookbook is rejected rather
-    /// than quietly ignored: a filter that does nothing returns the wrong data
-    /// looking right.
-    /// </para>
-    /// </remarks>
+    // An explicit sort wins; otherwise words or ingredients rank, a cookbook with no question reads in built
+    // order, and the rest is most recently touched. Relevance precedes the cookbook default (searching inside a
+    // shelf should not return its table of contents). Cookbook order without a cookbook is rejected, not ignored.
     private static Result<RecipeSort> ToSort(string? value, bool inACookbook, bool ranked) =>
         (value, inACookbook, ranked) switch
         {
@@ -110,10 +84,7 @@ internal static class GetRecipesRequestExtensions
                 + "'suggested', 'cookbookOrder'.")
         };
 
-    /// <summary>
-    /// Whether the reader turned a correction down: <c>asTyped=true</c>, or
-    /// absent.
-    /// </summary>
+    // Whether the reader turned a correction down: asTyped=true, or absent.
     internal static Result<bool> ReadAsTyped(this IQueryCollection query)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -126,7 +97,6 @@ internal static class GetRecipesRequestExtensions
         };
     }
 
-    /// <summary>Reads an optional cookbook to read inside.</summary>
     private static bool TryReadCookbook(IQueryCollection query, out Guid? value, out Error? failure)
     {
         var raw = query["cookbookId"].ToString();
@@ -153,11 +123,7 @@ internal static class GetRecipesRequestExtensions
         return false;
     }
 
-    /// <summary>
-    /// Reads an optional whole number. Absence is expressed by the out
-    /// parameter rather than inside a result, because a result carries a value
-    /// or an error and "nothing was asked for" is neither.
-    /// </summary>
+    // Absence is expressed by the out parameter: a result carries a value or an error, and "nothing asked" is neither.
     private static bool TryReadNumber(
         IQueryCollection query,
         string name,

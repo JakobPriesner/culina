@@ -6,21 +6,9 @@ using IntegrationTests.Fixtures;
 namespace IntegrationTests.Infrastructure;
 
 /// <summary>
-/// Which of a static file's copies is sent, and what the response says about it.
+/// Which of a static file's copies is sent and what the response says about it, through the whole pipeline against a web root laid out as the
+/// frontend build leaves it (the client does not decompress, so bodies are the host's exact bytes).
 /// </summary>
-/// <remarks>
-/// <para>
-/// Through the whole pipeline, against a web root laid out the way the frontend
-/// build leaves it. The ways this goes wrong are all in the seams — a copy sent
-/// with the wrong type, a header that describes a body that was not sent, a
-/// service worker cached for a year because its name grew a suffix — and none
-/// of them shows up testing a method on its own.
-/// </para>
-/// <para>
-/// The client here does not decompress anything, so every body is exactly the
-/// bytes the host sent.
-/// </para>
-/// </remarks>
 [Collection(RequiresDatabase.Name)]
 public sealed class PrecompressedAssetTests : IDisposable
 {
@@ -46,10 +34,8 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldSendBrotli_WhenTheClientAcceptsIt()
     {
-        // Act
         using var response = await GetAsync(Chunk, "gzip, deflate, br");
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(["br"], response.Content.Headers.ContentEncoding);
         Assert.Equal(Script, await DecodeAsync(response, "br"));
@@ -58,22 +44,17 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldStillNameTheFilesOwnType_WhenSendingACopy()
     {
-        // Act
         using var response = await GetAsync(Chunk, "br");
 
-        // Assert
-        // Unregistered, a ".br" file is refused outright; registered by its
-        // last extension it is an octet stream no browser would run.
+        // Unregistered, a ".br" file is refused outright; by its last extension it would be an octet stream no browser runs.
         Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]
     public async Task Get_ShouldSendGzip_WhenThatIsAllTheClientAccepts()
     {
-        // Act
         using var response = await GetAsync(Chunk, "gzip");
 
-        // Assert
         Assert.Equal(["gzip"], response.Content.Headers.ContentEncoding);
         Assert.Equal(Script, await DecodeAsync(response, "gzip"));
     }
@@ -81,10 +62,8 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldSendTheFileAsBuilt_WhenTheClientAcceptsNeither()
     {
-        // Act
         using var response = await GetAsync(Chunk, acceptEncoding: null);
 
-        // Assert
         Assert.Empty(response.Content.Headers.ContentEncoding);
         Assert.Equal(Script, await response.Content.ReadAsStringAsync(Token));
     }
@@ -92,24 +71,19 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldTakeNoForAnAnswer_WhenACodingIsRefusedByName()
     {
-        // Act
-        // "br;q=0" is somebody saying no to Brotli, not a preference for it.
+        // "br;q=0" is a refusal of Brotli, not a preference for it.
         using var response = await GetAsync(Chunk, "br;q=0, gzip");
 
-        // Assert
         Assert.Equal(["gzip"], response.Content.Headers.ContentEncoding);
     }
 
     [Fact]
     public async Task Get_ShouldVaryOnAcceptEncoding_WhicheverCopyIsSent()
     {
-        // Act
         using var compressed = await GetAsync(Chunk, "br");
         using var plain = await GetAsync(Chunk, acceptEncoding: null);
 
-        // Assert
-        // Both, or a shared proxy keeps the Brotli answer and gives it to a
-        // client that cannot read it.
+        // Both, or a shared proxy keeps the Brotli answer and serves it to a client that cannot read it.
         Assert.Contains("Accept-Encoding", compressed.Headers.Vary);
         Assert.Contains("Accept-Encoding", plain.Headers.Vary);
     }
@@ -117,10 +91,8 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldKeepAHashedAssetImmutable_WhenSendingItsCopy()
     {
-        // Act
         using var response = await GetAsync(Chunk, "br");
 
-        // Assert
         var caching = response.Headers.CacheControl!;
 
         Assert.True(caching.Public);
@@ -130,13 +102,9 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldStillRevalidateTheServiceWorker_WhenSendingItsCopy()
     {
-        // Act
         using var response = await GetAsync("/service-worker.js", "br");
 
-        // Assert
-        // Decided from the name that was asked for. Decided from the file on
-        // its way out, this was a year of a stale service worker — a stale copy
-        // of the whole app.
+        // Decided from the requested name, not the file on its way out (that once cached a stale service worker for a year).
         Assert.Equal(["br"], response.Content.Headers.ContentEncoding);
         Assert.True(response.Headers.CacheControl!.NoCache);
         Assert.Null(response.Headers.CacheControl.MaxAge);
@@ -145,10 +113,8 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldLeaveAFileWithNoCopiesAlone()
     {
-        // Act
         using var response = await GetAsync("/robots.txt", "br, gzip");
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(response.Content.Headers.ContentEncoding);
         Assert.DoesNotContain("Accept-Encoding", response.Headers.Vary);
@@ -157,12 +123,9 @@ public sealed class PrecompressedAssetTests : IDisposable
     [Fact]
     public async Task Get_ShouldNeverCompressAnApiResponse()
     {
-        // Act
         using var response = await GetAsync("/api/v1/registration/policy", "br, gzip");
 
-        // Assert
-        // The rule this whole arrangement is built not to break: nothing the
-        // server generates is compressed.
+        // Nothing the server generates is compressed.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(response.Content.Headers.ContentEncoding);
     }

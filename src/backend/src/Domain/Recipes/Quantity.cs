@@ -3,14 +3,9 @@ using Domain.Shared;
 namespace Domain.Recipes;
 
 /// <summary>
-/// How much of an ingredient a recipe calls for.
+/// How much of an ingredient a recipe calls for; amount and unit are each optional, and amounts are
+/// <c>decimal</c>, never <c>double</c>.
 /// </summary>
-/// <remarks>
-/// Both parts are optional, because both absences are real: "salt" has no
-/// amount and no unit, and "2 eggs" has an amount but no unit. Amounts are
-/// <c>decimal</c> and never <c>double</c> — 0.1 litres is an ordinary thing for
-/// a recipe to ask for and binary floating point cannot represent it.
-/// </remarks>
 public sealed record Quantity
 {
     /// <summary>The largest amount a recipe may plausibly call for.</summary>
@@ -32,14 +27,11 @@ public sealed record Quantity
     public static Quantity Unmeasured { get; } = new(amount: null, unit: null);
 
     /// <summary>Creates a quantity.</summary>
-    /// <param name="amount">How much, or null.</param>
-    /// <param name="unit">In what, or null.</param>
     public static Result<Quantity> Create(decimal? amount, Unit? unit)
     {
         if (amount is null)
         {
-            // A unit without an amount would render as "g of butter", so the
-            // unit is dropped rather than kept as a half-measurement.
+            // A unit without an amount would render as "g of butter", so it is dropped.
             return Unmeasured;
         }
 
@@ -55,7 +47,6 @@ public sealed record Quantity
     public bool Scales => IsMeasured && Units.Scales(Unit);
 
     /// <summary>Whether this and <paramref name="other"/> can be added.</summary>
-    /// <param name="other">The amount to add.</param>
     public bool CanCombineWith(Quantity other)
     {
         ArgumentNullException.ThrowIfNull(other);
@@ -64,14 +55,9 @@ public sealed record Quantity
     }
 
     /// <summary>
-    /// Adds another amount, in the family's canonical unit.
+    /// Adds another amount, in the family's canonical unit; the sum is left unrounded so errors do
+    /// not compound.
     /// </summary>
-    /// <param name="other">The amount to add.</param>
-    /// <remarks>
-    /// The sum is deliberately left unrounded. Rounding on the way in and then
-    /// summing compounds the error, and a shopping list that adds five recipes
-    /// would drift visibly.
-    /// </remarks>
     public Result<Quantity> Add(Quantity other)
     {
         ArgumentNullException.ThrowIfNull(other);
@@ -89,13 +75,11 @@ public sealed record Quantity
     }
 
     /// <summary>
-    /// What is left after taking <paramref name="other"/> away, in the family's
-    /// canonical unit, or null when nothing is.
+    /// What is left after taking <paramref name="other"/> away, in the canonical unit, or null when
+    /// nothing is.
     /// </summary>
-    /// <param name="other">The amount to take away.</param>
     /// <remarks>
-    /// An amount that cannot be combined with this one was never part of it,
-    /// so taking it away leaves this as it was.
+    /// An amount that cannot be combined was never part of this one, so this is returned unchanged.
     /// </remarks>
     public Quantity? Without(Quantity other)
     {

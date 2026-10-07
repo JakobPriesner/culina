@@ -1,10 +1,6 @@
 namespace Contracts.Recipes.GetAll;
 
 /// <summary>A page of recipes.</summary>
-/// <remarks>
-/// Always a wrapped object, never a bare array: an array has nowhere to grow
-/// paging metadata, and adding it later would be a breaking change.
-/// </remarks>
 public sealed record Response
 {
     /// <summary>The recipes on this page, in the requested order.</summary>
@@ -31,10 +27,7 @@ public sealed record Response
 /// <summary>
 /// Refinements worth offering, computed from the results rather than curated.
 /// </summary>
-/// <remarks>
-/// Each one leaves between a fifth and four fifths of the results: a
-/// refinement that removes nothing, or everything, is a tap wasted.
-/// </remarks>
+/// <remarks>Each one leaves between a fifth and four fifths of the results; anything else is a wasted tap.</remarks>
 public sealed record Facets
 {
     /// <summary>Tags, by slug, with the household's own name for each.</summary>
@@ -63,12 +56,7 @@ public sealed record Facet
 /// <summary>
 /// A query, as the server read it.
 /// </summary>
-/// <remarks>
-/// Every applied entry is something the client can draw as a removable chip.
-/// Removing one is deleting its <c>start</c>–<c>end</c> span from the query and
-/// asking again, so there is one parser, here, and the client never has to be
-/// a second one.
-/// </remarks>
+/// <remarks>Removing a chip deletes its <c>start</c>–<c>end</c> span from the query and asks again, so only the server parses.</remarks>
 public sealed record Interpretation
 {
     /// <summary>The words that were searched for, once everything below was taken out.</summary>
@@ -134,11 +122,6 @@ public sealed record AppliedInference
 /// <summary>
 /// A recipe as it appears in a list.
 /// </summary>
-/// <remarks>
-/// Deliberately not the full recipe: a grid of thirty cards has no use for
-/// thirty ingredient lists, and sending them would make the first screen the
-/// slowest.
-/// </remarks>
 public sealed record RecipeSummary
 {
     /// <summary>The recipe's id.</summary>
@@ -169,12 +152,7 @@ public sealed record RecipeSummary
     /// <summary>
     /// The recipe's own word for what it makes — "Cake", "Gläser", "Blech".
     /// </summary>
-    /// <remarks>
-    /// Null for nearly every recipe, and a client must then word the yield from
-    /// <c>yieldKind</c> in the reader's language. When it is set it replaces
-    /// that word and is shown exactly as written — it is one person's noun in
-    /// one person's language, so nothing here pluralises or translates it.
-    /// </remarks>
+    /// <remarks>Null for nearly every recipe; shown exactly as written, never pluralised or translated.</remarks>
     public string? YieldLabel { get; init; }
 
     /// <summary>Its tags.</summary>
@@ -186,12 +164,6 @@ public sealed record RecipeSummary
     /// <summary>
     /// When the caller last made it, or null if they never have.
     /// </summary>
-    /// <remarks>
-    /// Read in the same scan as the count, which the cook log's index already
-    /// serves, so it costs nothing. It is what lets a card say "last in March"
-    /// rather than only "7 times" — and what a suggestion's rediscovery reason
-    /// is rendered from, instead of the server sending prose.
-    /// </remarks>
     public DateTimeOffset? LastCookedAt { get; init; }
 
     /// <summary>When it last changed.</summary>
@@ -214,10 +186,6 @@ public sealed record RecipeSummary
     /// nothing in it says otherwise — <c>vegetarian</c> or <c>vegan</c>; null
     /// when somebody said so, and whenever no diet was asked for.
     /// </summary>
-    /// <remarks>
-    /// What lets the client ask once, "Ist das vegetarisch?", and turn the
-    /// answer into a tag that makes the presumption a fact.
-    /// </remarks>
     public string? PresumedDiet { get; init; }
 }
 
@@ -240,10 +208,6 @@ public sealed record MatchReason
 /// <summary>
 /// How well a recipe fits what you have.
 /// </summary>
-/// <remarks>
-/// Rendered as "uses 3 of 3 · 2 more needed". This is the whole of Culina's
-/// answer to "what can I cook?": no pantry to maintain, so nothing to go stale.
-/// </remarks>
 public sealed record IngredientMatch
 {
     /// <summary>How many of the named ingredients this recipe uses.</summary>

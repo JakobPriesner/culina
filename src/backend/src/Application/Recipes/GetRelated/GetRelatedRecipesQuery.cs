@@ -23,7 +23,9 @@ internal sealed class GetRelatedRecipesQueryHandler(
     IRelatedRecipes related)
     : IQueryHandler<GetRelatedRecipesQuery, Response>
 {
-    /// <summary>How many shared things a reason names: enough to be a reason, few enough to read.</summary>
+    /// <summary>
+    /// How many shared things a reason names: enough to be a reason, few enough to read.
+    /// </summary>
     private const int Named = 3;
 
     public async Task<Result<Response>> Handle(GetRelatedRecipesQuery query, CancellationToken cancellationToken)
@@ -39,16 +41,13 @@ internal sealed class GetRelatedRecipesQueryHandler(
         var result = await visible.Match(
             async recipe =>
             {
-                // The recipe's own library, which anybody who can see it can
-                // see all of: an heir sees everything its parent does.
+                // The recipe's own library, all of which anybody who can see the recipe can see.
                 var library = await HouseholdAccess
                     .LibraryAsync(households, recipe.HouseholdId, cancellationToken)
                     .ConfigureAwait(false);
 
-                // Read on until the page is full or the kitchen runs out. A
-                // related recipe with nothing to say for itself is left out, and
-                // a page left short by that would read as the end of the shelf
-                // when it is not.
+                // Read on until the page is full or the kitchen runs out: related recipes with
+                // nothing to say are left out, and a short page would read as the end of the shelf.
                 List<RelatedRecipe> items = [];
                 var cursor = query.Cursor;
 
@@ -71,17 +70,16 @@ internal sealed class GetRelatedRecipesQueryHandler(
     }
 
     /// <summary>
-    /// A related recipe with the reason it is related, or null when there is
-    /// nothing telling to say — a suggestion with no reason is not offered.
+    /// A related recipe with the reason it is related, or null when there is nothing telling to
+    /// say.
     /// </summary>
     private static RelatedRecipe? Describe(Found found, Language language)
     {
         var kinds = Words(found.Kinds, language);
         var stuff = Words(found.Stuff, language);
 
-        // Named for whichever of the two explains more of the score: two
-        // pasta bakes are related because of what they are, a Chili and a
-        // Bolognese because of what is in them.
+        // Named for whichever explains more of the score: two pasta bakes are related by what they
+        // are, a Chili and a Bolognese by what is in them.
         var byKind = kinds.Count > 0 && (stuff.Count == 0 || 0.6 * found.KindScore >= 0.4 * found.StuffScore);
         var shared = byKind ? kinds : stuff;
 
@@ -106,13 +104,9 @@ internal sealed class GetRelatedRecipesQueryHandler(
     }
 
     /// <summary>
-    /// The shared concepts worth saying, in the recipe's own language.
+    /// The shared concepts worth saying, in the recipe's language; one that is only there as what
+    /// another is a kind of is left out (not "chicken, poultry, meat").
     /// </summary>
-    /// <remarks>
-    /// A concept is left out when it is only there as what another one is a
-    /// kind of: two chicken recipes share chicken, and saying "chicken,
-    /// poultry, meat" is saying one thing three times.
-    /// </remarks>
     internal static IReadOnlyList<string> Words(IReadOnlyList<string> shared, Language language) =>
     [
         .. shared

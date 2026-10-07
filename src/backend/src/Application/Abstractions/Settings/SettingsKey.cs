@@ -1,13 +1,6 @@
 namespace Application.Abstractions.Settings;
 
-/// <summary>
-/// The two spellings of a configuration key.
-/// </summary>
-/// <remarks>
-/// Built from a record's <c>SectionName</c> and a property name, the same way
-/// the settings extensions read them, so the key a handler writes is the key
-/// the next startup reads.
-/// </remarks>
+/// <summary>The two spellings of a configuration key, built as the settings extensions read them so a handler's key is the next startup's key.</summary>
 public static class SettingsKey
 {
     /// <summary>The configuration's own form: <c>Cookies:Secure</c>.</summary>
@@ -16,10 +9,7 @@ public static class SettingsKey
     public static string Of(string section, string key) =>
         string.IsNullOrEmpty(section) ? key : $"{section}:{key}";
 
-    /// <summary>
-    /// The environment variable that sets it: <c>Cookies__Secure</c>. What a
-    /// person has to find in their deployment, so what the screen names.
-    /// </summary>
+    /// <summary>The environment variable that sets it (<c>Cookies__Secure</c>): what a person finds in their deployment.</summary>
     /// <param name="key">A key in the configuration's own form.</param>
     public static string Variable(string key)
     {

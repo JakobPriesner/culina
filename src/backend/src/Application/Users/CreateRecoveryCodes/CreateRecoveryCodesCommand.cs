@@ -8,9 +8,6 @@ using Response = Contracts.Users.CreateRecoveryCodes.Response;
 namespace Application.Users.CreateRecoveryCodes;
 
 /// <summary>Makes a new set of recovery codes, replacing any earlier set.</summary>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="Password">Their password, to prove it is them.</param>
-/// <param name="IpAddress">The client address, which decides whose attempt budget is used.</param>
 public sealed record CreateRecoveryCodesCommand(Guid UserId, string Password, string? IpAddress);
 
 internal sealed class CreateRecoveryCodesCommandHandler(
@@ -63,8 +60,8 @@ internal sealed class CreateRecoveryCodesCommandHandler(
             },
             cancellationToken).ConfigureAwait(false);
 
-        // The codes leave here and are never recoverable: only their digests
-        // are stored, so this response is the one chance to show them.
+        // The codes leave here and are never recoverable (only digests are stored): this response
+        // is the one chance to show them.
         return new Response { Codes = codes, CreatedAt = now };
     }
 }

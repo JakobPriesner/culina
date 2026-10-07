@@ -8,8 +8,6 @@ namespace Infrastructure.Settings;
 public static class DatabaseSettingsExtensions
 {
     /// <summary>Binds the section, validates it, and registers it as a singleton.</summary>
-    /// <param name="services">The container to register into.</param>
-    /// <param name="configuration">The configuration to read from.</param>
     public static IServiceCollection AddDatabaseSettings(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -33,16 +31,12 @@ public static class DatabaseSettingsExtensions
     }
 
     /// <summary>
-    /// Whether every part without a default has been given, from anywhere.
+    /// Whether every part without a default has been given, from anywhere; this decides which host
+    /// runs.
     /// </summary>
-    /// <param name="configuration">The configuration to read from.</param>
     /// <remarks>
-    /// The question that decides which host runs. With all four, the app starts
-    /// and <see cref="AddDatabaseSettings"/> validates them as it always did —
-    /// a wrong one is still a failed start, not a setup screen, because a
-    /// database that is down for a minute must not hand the instance to whoever
-    /// opens it next. With any missing, nobody ever configured one, and the
-    /// setup host asks for it.
+    /// With all four, a wrong one is still a failed start, not a setup screen: a brief outage must
+    /// not hand the instance to whoever opens it next.
     /// </remarks>
     public static bool IsDatabaseConfigured(this IConfiguration configuration)
     {

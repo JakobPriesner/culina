@@ -29,9 +29,7 @@ internal sealed class RecipeRepository(
     {
         ArgumentNullException.ThrowIfNull(library);
 
-        // The built-ins are excluded here rather than in C# so the query does
-        // the counting: a household with four hundred recipes should not send
-        // four hundred rows back to have thirteen of them filtered out.
+        // Built-ins are excluded in SQL so the database does the filtering.
         var written = await executor.QueryAsync<string>(
             """
             select distinct i.unit
@@ -57,9 +55,7 @@ internal sealed class RecipeRepository(
     {
         ArgumentNullException.ThrowIfNull(library);
 
-        // The most-used spelling of each name wins, which is what stops one
-        // stray "Olivenoel" from displacing the "Olivenöl" written forty times.
-        // The trigram index on the name column is what makes the LIKE cheap.
+        // Most-used spelling wins, so a stray "Olivenoel" does not displace "Olivenöl". The trigram index makes the LIKE cheap.
         var names = await executor.QueryAsync<string>(
             """
             select i.name
@@ -106,7 +102,6 @@ internal sealed class RecipeRepository(
             return new Dictionary<Guid, Recipe>();
         }
 
-        // One round trip for the whole aggregates, however many are wanted.
         return await executor.QueryMultipleAsync<IReadOnlyDictionary<Guid, Recipe>>(
             """
             select id, household_id, title, description, language as recipe_language,
@@ -241,9 +236,7 @@ internal sealed class RecipeRepository(
         var previous = await PreviousHashAsync(recipeId, cancellationToken).ConfigureAwait(false);
         var imageId = CulinaId.New();
 
-        // The row is replaced rather than accumulated: a recipe has one hero
-        // image, and keeping the old row would leave nothing to tell which one
-        // is current.
+        // Replaced, not accumulated: a recipe has one hero image.
         await executor.ExecuteAsync(
             """
             delete from recipe_images where recipe_id = @recipeId;
@@ -276,9 +269,7 @@ internal sealed class RecipeRepository(
         Guid toRecipeId,
         DateTimeOffset now,
         CancellationToken cancellationToken) =>
-        // Without touching the version: this runs in the transaction that
-        // creates the recipe, so no version of it has been seen yet that this
-        // could be newer than.
+        // Leaves the version alone: this runs in the transaction that creates the recipe.
         executor.ExecuteAsync(
             """
             insert into recipe_images
@@ -350,11 +341,8 @@ internal sealed class RecipeRepository(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Into the bin: the recipes view stops showing it. Its search document
-        // goes now rather than at the purge, because search, completions, the
-        // spelling hints, related recipes and the import's look-alikes all read
-        // documents — dropping the one row keeps a binned recipe out of every
-        // one of them. Restoring writes it again.
+        // Into the bin. The search document is dropped now, not at purge, because search, completions,
+        // related recipes and look-alikes all read it; restoring writes it again.
         var deleted = await executor.ExecuteAsync(
             """
             update recipes
@@ -396,19 +384,8 @@ internal sealed class RecipeRepository(
         expectedVersion
     };
 
-    /// <summary>
-    /// Rewrites the ingredient list and the tag links wholesale, and the steps
-    /// in place.
-    /// </summary>
-    /// <remarks>
-    /// Replacing rather than diffing: a recipe has tens of rows, not thousands,
-    /// and a diff has to be right about identity, ordering and removal all at
-    /// once. Steps are the exception, because people's personal notes hang off
-    /// them and a deleted step takes its notes with it — so a step that is kept
-    /// is updated, and only a step that is gone is deleted. This runs inside the
-    /// caller's transaction, so the deletes and the writes are never observed
-    /// apart.
-    /// </remarks>
+    // Replaces ingredients and tag links wholesale (a recipe has tens of rows). Steps are updated in place
+    // because personal notes hang off them and a deleted step takes its notes along.
     private async Task<Result> ReplaceContentsAsync(Recipe recipe, CancellationToken cancellationToken)
     {
         try
@@ -419,11 +396,7 @@ internal sealed class RecipeRepository(
         }
         catch (PostgresException failure) when (TakenId(failure.ConstraintName) is { } error)
         {
-            // The ids are the client's, and the recipe has already checked
-            // them against each other — but not against every other recipe's
-            // rows, which only the primary key can see. An id taken there is
-            // the same mistake as one used twice here, and the transaction
-            // this runs in rolls back with the failure.
+            // Ids are the client's; the recipe checked them against each other, only the primary key sees other recipes' rows.
             return error;
         }
     }
@@ -523,20 +496,12 @@ internal sealed class RecipeRepository(
 
         await tags.LinkAsync(recipe, cancellationToken).ConfigureAwait(false);
 
-        // Last, and inside this same transaction: the document is built by the
-        // database from the rows above, so it has to be built after they are
-        // there and before anybody else can see them. Both write paths reach
-        // this method, which is why the index cannot be forgotten on one of
-        // them — and an architecture test says so.
+        // Last, in the same transaction: the database builds the document from the rows above.
+        // Both write paths reach here, so the index cannot be skipped (an architecture test checks).
         await documents.WriteAsync(recipe.Id, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Updates a step the recipe already has, or adds a new one.</summary>
-    /// <remarks>
-    /// The update is limited to this recipe's own steps, so an id that belongs
-    /// to another recipe falls through to the insert and fails on the primary
-    /// key instead of moving that step over.
-    /// </remarks>
+    // Updates are limited to this recipe's steps, so another recipe's id fails on the primary key instead of moving that step.
     private async Task WriteStepAsync(Guid recipeId, Step step, CancellationToken cancellationToken)
     {
         var parameters = new

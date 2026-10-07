@@ -2,9 +2,8 @@ namespace Api.Authentication;
 
 /// <summary>The claims a Culina principal carries.</summary>
 /// <remarks>
-/// Deliberately two. Everything else about a user is read from the database
-/// when it is needed, so a change of name, role or membership takes effect on
-/// the next request rather than on the next sign-in.
+/// Deliberately two: everything else is read from the database when needed, so a change of name,
+/// role or membership applies on the next request, not the next sign-in.
 /// </remarks>
 internal static class CulinaClaims
 {

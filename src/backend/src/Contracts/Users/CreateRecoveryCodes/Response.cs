@@ -4,8 +4,8 @@ namespace Contracts.Users.CreateRecoveryCodes;
 public sealed record Response
 {
     /// <summary>
-    /// The codes, each good for one password reset. Shown exactly once — only
-    /// their digests are stored, so they cannot be shown again.
+    /// The codes, each good for one password reset; shown exactly once, as only their digests are
+    /// stored.
     /// </summary>
     public required IReadOnlyList<string> Codes { get; init; }
 

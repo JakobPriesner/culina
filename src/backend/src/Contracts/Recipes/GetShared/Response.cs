@@ -1,21 +1,10 @@
 namespace Contracts.Recipes.GetShared;
 
-/// <summary>
-/// A recipe as whoever follows the link sees it.
-/// </summary>
+/// <summary>A recipe as whoever follows the link sees it.</summary>
 /// <remarks>
-/// <para>
-/// Its own type rather than <see cref="RecipeDetail"/>, and this is the case
-/// that type's own remarks describe: the reader here must not have fields the
-/// household's own reader does. A stranger holding a link learns the recipe and
-/// nothing about who keeps it — no household id, no author, no version to write
-/// back against.
-/// </para>
-/// <para>
-/// What it does carry is everything the page draws, ingredient references
-/// included, because the point of sharing a Culina recipe rather than a
-/// screenshot is that the amounts still scale.
-/// </para>
+/// Its own type, not <see cref="RecipeDetail"/>: a stranger learns the recipe and nothing about who
+/// keeps it (no household id, author or version), but gets everything the page draws, ingredient
+/// references included, so amounts still scale.
 /// </remarks>
 public sealed record Response
 {
@@ -47,13 +36,9 @@ public sealed record Response
     public int? TotalMinutes { get; init; }
 
     /// <summary>
-    /// Whether there is a photograph to fetch.
+    /// Whether there is a photograph to fetch; a flag, not an id, since the picture is served under
+    /// the same token and an id would reveal household storage.
     /// </summary>
-    /// <remarks>
-    /// A yes or no and not the image's id: the picture is served under the same
-    /// token as the recipe, so its id would be a fact about a household's
-    /// storage that answers no question the page asks.
-    /// </remarks>
     public required bool HasImage { get; init; }
 
     /// <summary>Its ingredient groups, in order.</summary>
@@ -65,14 +50,10 @@ public sealed record Response
     /// <summary>Its tags.</summary>
     public required IReadOnlyList<string> Tags { get; init; }
 
-    /// <summary>
-    /// The address it was imported from, when it was imported.
-    /// </summary>
+    /// <summary>The address it was imported from, when it was.</summary>
     /// <remarks>
-    /// The address only, not the whole of <see cref="RecipeProvenance"/>: which
-    /// connected library it came from and when it was fetched are facts about
-    /// the household's setup. Where a recipe was originally published is a
-    /// credit, and a page that shows somebody else's recipe should carry it.
+    /// Only the address, not the whole <see cref="RecipeProvenance"/>: library and fetch time are
+    /// household setup, but where it was first published is a credit the page should carry.
     /// </remarks>
     public string? SourceUrl { get; init; }
 }

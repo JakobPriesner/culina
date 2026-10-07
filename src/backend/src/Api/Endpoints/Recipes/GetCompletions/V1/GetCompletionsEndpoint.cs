@@ -7,12 +7,7 @@ using Response = Contracts.Recipes.GetCompletions.Response;
 namespace Api.Endpoints.Recipes.GetCompletions.V1;
 
 /// <summary>Completes a half-typed search.</summary>
-/// <remarks>
-/// A household sub-resource, beside <c>/households/{householdId}/ingredients</c>,
-/// and deliberately not <c>/suggestions</c>: that is the "what should I cook?"
-/// ranking, and a completion is an answer to what somebody is typing, not to
-/// what they might like.
-/// </remarks>
+/// <remarks>A household sub-resource, not <c>/suggestions</c>: that is the "what should I cook?" ranking.</remarks>
 internal sealed class GetCompletionsEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

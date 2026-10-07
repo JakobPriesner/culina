@@ -27,8 +27,7 @@ internal sealed class RemoveMemberCommandHandler(
 
         var found = await households.FindAsync(command.HouseholdId, cancellationToken).ConfigureAwait(false);
 
-        // Every rule about who may remove whom, and whether the household
-        // would be left without an owner, lives in the aggregate.
+        // Who may remove whom, and the last-owner rule, live in the aggregate.
         var removed = found.Bind(household => household
             .Remove(command.MemberId, command.UserId)
             .Map(() => household));
@@ -37,10 +36,7 @@ internal sealed class RemoveMemberCommandHandler(
             household => unitOfWork.InTransactionAsync(
                 async token =>
                 {
-                    // The version the aggregate was loaded with: this is a
-                    // membership change within one request, not a client
-                    // replacing an entity it read minutes ago, so there is no
-                    // If-Match to honour.
+                    // The loaded version: this is a same-request membership change, so there is no If-Match.
                     var saved = await households
                         .UpdateAsync(household, household.Version, token)
                         .ConfigureAwait(false);

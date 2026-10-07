@@ -4,24 +4,9 @@ using Domain.Shared;
 namespace Domain.Users;
 
 /// <summary>
-/// A one-time code that sets a new password for one account.
+/// A one-time credential that sets a new password; only its digest is stored. A <em>saved</em> code is one of a
+/// set the holder keeps and never expires; an <em>issued</em> code comes from the administrator and expires within a day.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Culina has no mail transport, so "forgot password" cannot mean "we sent you
-/// a link". It means one of two things a person can hold instead. A
-/// <em>saved</em> code is one of a set the account holder printed or stored
-/// while they still knew their password; it does not expire, because it is
-/// for the day — perhaps years later — the password is gone. An
-/// <em>issued</em> code is one the instance administrator created for them
-/// and passed on in person or by message; it expires within a day, because it
-/// travelled through somebody else's hands.
-/// </para>
-/// <para>
-/// Either way it is a credential: only its digest is stored, and it works
-/// once.
-/// </para>
-/// </remarks>
 public sealed class RecoveryCode
 {
     /// <summary>How many codes a saved set holds.</summary>
@@ -84,13 +69,9 @@ public sealed class RecoveryCode
         new(CulinaId.New(), userId, codeHash, issuedBy, now, now.Add(IssuedLifetime));
 
     /// <summary>
-    /// The form a code is hashed in, whatever way a person typed it.
+    /// The form a code is hashed in. Codes are typed from paper, so case, spaces and dashes are ignored
+    /// and look-alike letters (O, I, L) read as digits.
     /// </summary>
-    /// <remarks>
-    /// Codes are read off paper and typed on a phone, so case, spaces and
-    /// dashes carry no meaning, and the letters the alphabet leaves out
-    /// because they look like digits are read as those digits.
-    /// </remarks>
     /// <param name="typed">What was entered.</param>
     public static string Normalise(string? typed)
     {

@@ -3,15 +3,10 @@ using Npgsql;
 
 namespace IntegrationTests.Fixtures;
 
-/// <summary>
-/// Returns the database to an empty-but-migrated state between tests.
-/// </summary>
+/// <summary>Returns the database to an empty-but-migrated state between tests.</summary>
 /// <remarks>
-/// A truncate rather than a transaction rollback. Wrapping each test in a
-/// transaction is faster, but it hides everything that only happens at commit —
-/// deferred constraints, unique violations that race, and the trigger-free
-/// behaviour of <c>on delete cascade</c>. Those are exactly the things an
-/// integration test is for.
+/// A truncate rather than a rollback: a wrapping transaction would hide everything that happens at commit
+/// (deferred constraints, racing unique violations, cascade behaviour).
 /// </remarks>
 internal static class DatabaseReset
 {
@@ -41,9 +36,8 @@ internal static class DatabaseReset
 
         var list = string.Join(", ", names.Select(name => $"public.{name}"));
 
-        // A hosted notification reader can acquire these tables in another
-        // order. PostgreSQL rolls the entire TRUNCATE back on a deadlock, so
-        // retry that statement alone; other failures must still fail the test.
+        // A hosted notification reader can lock these tables in another order; PostgreSQL rolls the whole
+        // TRUNCATE back on deadlock, so retry that statement only.
         for (var attempt = 0; ; attempt++)
         {
             try

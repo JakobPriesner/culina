@@ -6,13 +6,7 @@ using Contracts.Recipes.Import;
 
 namespace Api.Endpoints.Recipes.Import.V1;
 
-/// <summary>Reads a recipe from a web page.</summary>
-/// <remarks>
-/// The one endpoint that makes the server open a connection somewhere a user
-/// chose, which is why it is signed in, rate limited hard, and backed by a
-/// fetcher that refuses every address that is not the open internet. See
-/// <c>SafeWebPageFetcher</c>.
-/// </remarks>
+/// <summary>Reads a recipe from a web page. The one endpoint that connects where a user chose, so it is signed in, tightly rate limited and guarded by <c>SafeWebPageFetcher</c>.</summary>
 internal sealed class ImportRecipeEndpoint : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)

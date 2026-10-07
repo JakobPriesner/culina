@@ -5,52 +5,20 @@ using Infrastructure.Persistence.Planning;
 
 namespace Infrastructure.Persistence.Suggestions;
 
-/// <summary>
-/// The arithmetic behind "what should I cook?", as one block of common table
-/// expressions ending in <c>suggestion_scores</c>.
-/// </summary>
+/// <summary>The arithmetic behind "what should I cook?", as CTEs ending in <c>suggestion_scores</c>.</summary>
 /// <remarks>
-/// <para>
-/// Kept apart from the two queries that use it — the recipe search, when it is
-/// asked for <c>sort=suggested</c>, and the suggestion ranker — for the same
-/// reason <see cref="Recipes.RecipeSearchSql"/> is kept apart from the searcher:
-/// the ordering is a thing you read on its own, and two copies of ninety lines
-/// of scoring would be two rankings that quietly disagree about the same recipe.
-/// </para>
-/// <para>
-/// <b>Every term is a score and no term is a threshold.</b> A recipe the
-/// household ate yesterday sinks to the bottom; it is never removed. That is
-/// what makes the ranker's guarantee — it returns everything eligible, ranked —
-/// hold on a saturated household as well as on an empty one.
-/// </para>
-/// <para>
-/// <b>Nothing is materialised.</b> The scores are worked out whenever somebody
-/// looks, which is the same decision smart cookbooks made: a recipe written this
-/// evening is ranked correctly this evening, there is no job to run, nothing to
-/// backfill when a weight changes, and no stored ranking that can drift out of
-/// step with the recipes it claims to describe. For a household's few hundred
-/// recipes and few hundred cook-log entries this is a few milliseconds;
-/// <c>culina.usecase.duration</c> is what says when that stops being true.
-/// </para>
+/// Kept apart so the search and the ranker share one ordering. Every term is a score and none a threshold:
+/// a recipe eaten yesterday sinks, it is never removed, so the ranker returns everything eligible. Nothing
+/// is materialised; scores are computed on read (a few ms per household), so there is no job or backfill.
 /// </remarks>
 internal static class SuggestionScoringSql
 {
-    /// <summary>
-    /// The CTE block, without the leading <c>with</c> and with a trailing comma
-    /// so a caller can append its own.
-    /// </summary>
-    /// <remarks>
-    /// Reads <c>@householdId</c>, <c>@library</c> and <c>@userId</c>, which
-    /// both callers already pass, plus the <c>sc*</c> and <c>w*</c> parameters from
-    /// <see cref="Parameters"/>.
-    /// </remarks>
+    /// <summary>The CTE block without the leading <c>with</c> and with a trailing comma.</summary>
+    /// <remarks>Reads <c>@householdId</c>, <c>@library</c> and <c>@userId</c> plus the <c>sc*</c> and <c>w*</c> parameters from <see cref="Parameters"/>.</remarks>
     internal const string Ctes = """
-        -- Every interaction that says something, in one shape, so that
-        -- weighting and decay are expressed once instead of per table.
+        -- Every interaction that says something, in one shape, so weighting and decay are expressed once.
         sc_signals as (
-            -- Cooking it is the unit every other weight is measured against.
-            -- Photographing the result is rarer and means more: nobody takes a
-            -- picture of a dinner that disappointed them.
+            -- Cooking is the unit every other weight is measured against; photographing the result means more.
             select c.recipe_id,
                    c.user_id,
                    (case when c.image_hash is null then 1.0 else 1.3 end)::numeric as weight,
@@ -61,18 +29,15 @@ internal static class SuggestionScoringSql
 
             union all
 
-            -- Planning it is intent rather than completion, and it belongs to
-            -- the household rather than to whoever typed it. A null user is
-            -- what lets it feed household popularity and the slot prior without
-            -- becoming one person's personal taste.
+            -- Planning is intent, and belongs to the household; a null user feeds household popularity without
+            -- becoming one person's taste.
             select m.recipe_id, null::uuid, 0.6, m.on_date::timestamptz, true
             from meal_plan_entries m
             where m.household_id = @householdId::uuid
 
             union all
 
-            -- A shelf is a standing statement, not an event, so it does not
-            -- decay. Decaying it would be saying the curation expired.
+            -- A shelf is a standing statement, not an event, so it does not decay.
             select cr.recipe_id, cr.added_by, 0.8, cr.added_at, false
             from cookbook_recipes cr
             join cookbooks cb on cb.id = cr.cookbook_id
@@ -80,9 +45,7 @@ internal static class SuggestionScoringSql
 
             union all
 
-            -- Nobody annotates a recipe they are indifferent to. On an
-            -- inherited recipe only this household's own people count: the
-            -- other kitchen's notes are that kitchen's history.
+            -- Nobody annotates a recipe they are indifferent to. On an inherited recipe only this household's notes count.
             select n.recipe_id, n.user_id, 0.4, n.updated_at, true
             from personal_notes n
             join recipes nr on nr.id = n.recipe_id
@@ -94,15 +57,8 @@ internal static class SuggestionScoringSql
 
             union all
 
-            -- Finishing what you started.
-            --
-            -- Abandonment is deliberately absent. Starting a session abandons
-            -- the previous one — a partial unique index enforces exactly one
-            -- active session per person — so an abandoned session is
-            -- overwhelmingly a consequence of cooking something else, not a
-            -- judgement. Reading it as dislike would systematically punish the
-            -- recipes people cook most often, because those are the ones they
-            -- start again.
+            -- Finishing what you started. Abandonment is deliberately absent: starting a session abandons the previous
+            -- one, so it mostly reflects cooking something else and would punish the most-cooked recipes.
             select k.recipe_id, k.user_id, 0.3, k.completed_at, true
             from cook_sessions k
             where k.household_id = @householdId::uuid and k.completed_at is not null
@@ -118,16 +74,10 @@ internal static class SuggestionScoringSql
                        else 1
                    end as w
             from sc_signals s
-            -- greatest(..., 0) rather than a filter: a meal planned for Thursday
-            -- has not happened, but it is still a statement of intent, and
-            -- without the floor its "negative age" would make it worth more than
-            -- something somebody actually cooked.
+            -- greatest(..., 0) rather than a filter: a planned meal is still intent, and a negative age would outrank cooking.
         ),
 
-        -- What this person has done with each recipe. log1p, because the
-        -- difference between cooked once and cooked twice is large and the
-        -- difference between eleven and twelve is nothing — and linear
-        -- weighting lets one weekly staple own every list forever.
+        -- What this person has done with each recipe. log1p: once vs twice is large, eleven vs twelve is nothing.
         sc_affinity as (
             select recipe_id, ln(1 + sum(w)) as value
             from sc_weighted
@@ -135,9 +85,7 @@ internal static class SuggestionScoringSql
             group by recipe_id
         ),
 
-        -- What everybody else has. The honest residue of collaborative
-        -- filtering at two to eight users: not a model, just "your partner
-        -- cooks this".
+        -- What everybody else has: just "your partner cooks this", not collaborative filtering.
         sc_household as (
             select recipe_id, ln(1 + sum(w)) as value
             from sc_weighted
@@ -145,7 +93,7 @@ internal static class SuggestionScoringSql
             group by recipe_id
         ),
 
-        -- Who, so the reason can say a name instead of "somebody".
+        -- Who, so the reason can name a person.
         sc_household_top as (
             select distinct on (c.recipe_id) c.recipe_id, u.display_name
             from cook_log_entries c
@@ -155,11 +103,8 @@ internal static class SuggestionScoringSql
             order by c.recipe_id, count(*) desc, u.display_name
         ),
 
-        -- When anyone in the household last made it. Household-wide on purpose:
-        -- if your partner made the lasagne on Tuesday then you ate it, and it
-        -- should not be suggested to you on Wednesday even though your own cook
-        -- log is silent. No general-purpose recommender expresses this, and it
-        -- is the most product-specific line in the file.
+        -- When anyone in the household last made it. Household-wide on purpose: if your partner made it Tuesday,
+        -- it should not be suggested to you Wednesday.
         sc_last_cooked as (
             select recipe_id, max(made_at) as at
             from cook_log_entries
@@ -167,10 +112,7 @@ internal static class SuggestionScoringSql
             group by recipe_id
         ),
 
-        -- The only content features Culina has: household-authored tags and the
-        -- ingredient names somebody typed. That is enough precisely because the
-        -- model is household-local too — "vegetarisch" does not have to mean
-        -- anything outside this kitchen.
+        -- The only content features: household-authored tags and typed ingredient names.
         sc_features as (
             select r.id as recipe_id, 'tag' as kind, t.slug as feature
             from recipes r
@@ -180,9 +122,7 @@ internal static class SuggestionScoringSql
 
             union
 
-            -- Folded the way the shopping list folds a name, and no further:
-            -- stemming or a synonym table would be a third ingredient
-            -- vocabulary to keep in step with the two that already exist.
+            -- Folded as the shopping list folds a name and no further (stemming would be a third ingredient vocabulary).
             select r.id, 'ingredient', lower(unaccent(btrim(i.name)))
             from recipes r
             join ingredient_groups g on g.recipe_id = r.id
@@ -190,10 +130,7 @@ internal static class SuggestionScoringSql
             where r.household_id = any(@library::uuid[]) and btrim(i.name) <> ''
         ),
 
-        -- Inverse document frequency, and it matters more here than anywhere
-        -- else: in a kitchen where nine recipes in ten contain salt, salt has to
-        -- carry no information at all. A feature on every recipe scores exactly
-        -- zero.
+        -- Inverse document frequency: a feature on every recipe (salt) scores exactly zero.
         sc_idf as (
             select f.kind,
                    f.feature,
@@ -222,9 +159,7 @@ internal static class SuggestionScoringSql
             group by f.recipe_id
         ),
 
-        -- Cosine between the two. This is the term that carries a recipe nobody
-        -- has ever touched, which is why the app is useful in week one instead
-        -- of in year four.
+        -- Cosine between the two: the term that carries a recipe nobody has touched, so the app is useful in week one.
         sc_content as (
             select f.recipe_id, sum(t.weight * i.idf) / nullif(tn.n * rn.n, 0) as value
             from sc_features f
@@ -235,8 +170,7 @@ internal static class SuggestionScoringSql
             group by f.recipe_id, tn.n, rn.n
         ),
 
-        -- Which single feature carried it, so an explanation can name one
-        -- rather than describe a vector.
+        -- Which single feature carried it, so an explanation can name one.
         sc_content_top as (
             select distinct on (f.recipe_id, f.kind) f.recipe_id, f.kind, f.feature
             from sc_features f
@@ -245,15 +179,8 @@ internal static class SuggestionScoringSql
             order by f.recipe_id, f.kind, (t.weight * i.idf) desc, f.feature
         ),
 
-        -- Seasonality, learned and never curated.
-        --
-        -- A curated ingredient-to-season table was rejected for this project
-        -- for the same reason a pantry inventory was: nobody maintains it, so
-        -- it goes stale and poisons what is built on it. This asks the
-        -- household's own cook log instead, per tag rather than per recipe,
-        -- because at a few hundred entries a year a per-recipe month
-        -- distribution is one observation and a hope, while every soup entry
-        -- informs "soup".
+        -- Seasonality, learned and never curated: a curated table goes stale. Per tag rather than per recipe, since
+        -- a few hundred entries a year make a per-recipe month distribution one observation.
         sc_tag_season as (
             select t.slug,
                    count(*) filter (where extract(month from c.made_at) = @scMonth::int)::numeric
@@ -263,15 +190,12 @@ internal static class SuggestionScoringSql
             join tags t on t.id = rt.tag_id
             where c.household_id = @householdId::uuid and c.made_at <= @scAsOf::timestamptz
             group by t.slug
-            -- The evidence gate. Below it there is no seasonal term and no
-            -- seasonal reason, so a fresh installation says nothing about
-            -- seasons rather than something confident and wrong.
+            -- The evidence gate: below it there is no seasonal term or reason, rather than something confidently wrong.
             having count(*) >= @scSeasonMinObservations::bigint
         ),
 
         sc_season as (
-            -- Zero at an even spread, one at three times it. A claim about this
-            -- kitchen, which the people in it can check.
+            -- Zero at an even spread, one at three times it.
             select rt.recipe_id, max(least((ts.share * 12 - 1) / 2, 1)) as value
             from sc_tag_season ts
             join tags t on t.household_id = any(@library::uuid[]) and t.slug = ts.slug
@@ -280,9 +204,7 @@ internal static class SuggestionScoringSql
             group by rt.recipe_id
         ),
 
-        -- Meal type, which recipes do not have and the plan does. Laplace
-        -- smoothed toward "no opinion", so one stray breakfast entry does not
-        -- turn a curry into a breakfast recipe.
+        -- Meal type, which the plan has and recipes do not. Laplace smoothed toward "no opinion".
         sc_slot as (
             select m.recipe_id,
                    (count(*) filter (where m.slot = @scSlot::text) + 1.0) / (count(*) + 2.0) as p
@@ -291,10 +213,7 @@ internal static class SuggestionScoringSql
             group by m.recipe_id
         ),
 
-        -- A proxy for how much of a project it is, used to rank and never
-        -- shown. A displayed difficulty score would be a number invented about
-        -- somebody's cooking, which is a different thing from ordering two
-        -- recipes by how long they take.
+        -- A proxy for how much of a project it is: used to rank, never shown.
         sc_effort as (
             select r.id as recipe_id,
                    least(
@@ -308,17 +227,12 @@ internal static class SuggestionScoringSql
             where r.household_id = any(@library::uuid[])
         ),
 
-        -- The features of the one recipe somebody is looking at, for "more like
-        -- this". Empty, and therefore harmless, when nobody asked.
+        -- The features of the one recipe on screen, for "more like this". Empty when nobody asked.
         sc_like_features as (
             select kind, feature from sc_features where recipe_id = @scLikeRecipeId::uuid
         ),
 
-        -- Jaccard over tags and ingredients. Content similarity rather than
-        -- co-occurrence in user histories: with this many people the modal
-        -- co-occurrence between two recipes is zero, and the non-zero ones are
-        -- one person, one month and one coincidence. "Uses eleven of the same
-        -- twelve ingredients" has content, and can be explained.
+        -- Jaccard over tags and ingredients: content similarity, since co-occurrence in a few users' histories is mostly coincidence.
         sc_similarity as (
             select f.recipe_id,
                    count(*) filter (where lf.feature is not null)::numeric
@@ -333,8 +247,7 @@ internal static class SuggestionScoringSql
             group by f.recipe_id
         ),
 
-        -- "Not tonight", which expires, so that hiding something once does not
-        -- quietly become hiding it forever.
+        -- "Not tonight" expires, so hiding something once does not become hiding it forever.
         sc_dismissed as (
             select recipe_id
             from suggestion_dismissals
@@ -350,21 +263,15 @@ internal static class SuggestionScoringSql
 
                 @wContent::numeric * coalesce(c.value, 0) as content,
 
-                -- Smooth, not a cliff: roughly -1 the same day, half that after
-                -- a week, a quarter after a fortnight, nothing after two months.
-                -- Weighted above affinity on purpose, so that the household's
-                -- favourite is net negative the day after it was made and
-                -- itself again a month later.
+                -- Smooth, not a cliff: about -1 the same day, half after a week, nothing after two months. Weighted above
+                -- affinity so the household favourite is net negative the day after and itself again a month later.
                 -@wRepetition::numeric * case
                     when lc.at is null then 0
                     else exp(-(greatest(extract(epoch from (@scAsOf::timestamptz - lc.at)), 0) / 86400.0
                                / @scRepetitionDecay::numeric)::numeric)
                 end as repetition,
 
-                -- Only for something they actually liked: you cannot
-                -- rediscover a recipe you never made, and scaling by affinity
-                -- is what surfaces the ones that were loved and forgotten
-                -- rather than the ones tried once and abandoned.
+                -- Only for something they liked: scaling by affinity surfaces loved-and-forgotten recipes, not tried-once ones.
                 @wRediscovery::numeric * case
                     when coalesce(a.value, 0) <= 0 or lc.at is null then 0
                     else least(
@@ -390,10 +297,7 @@ internal static class SuggestionScoringSql
 
                 case when lc.at is null then @wNovelty::numeric else 0 end as novelty,
 
-                -- Culina's version of reserving slots for new items. A
-                -- household that imports two hundred recipes has two hundred
-                -- with no history at all, and a ranking made only of relevance
-                -- would never show a single one of them.
+                -- Reserved slots for new items: a household that imports two hundred recipes has two hundred with no history.
                 @wFreshness::numeric * power(
                     0.5::numeric,
                     (greatest(extract(epoch from (@scAsOf::timestamptz - coalesce(o.imported_at, r.created_at))), 0)
@@ -403,12 +307,7 @@ internal static class SuggestionScoringSql
 
                 @wSimilarity::numeric * coalesce(sim.value, 0) as similarity,
 
-                -- Deterministic, and seeded by the day rather than by chance.
-                -- That is the whole point: the list is the same all evening, on
-                -- both devices and after a refresh, and different tomorrow. A
-                -- list that reshuffles under your thumb is worse than a
-                -- slightly worse list that stays put, and a shuffle button
-                -- would teach people the first answer was arbitrary.
+                -- Seeded by the day, so the list stays the same all evening across devices and refreshes and changes tomorrow.
                 @wExploration::numeric
                     * (get_byte(decode(md5(@scSeed::text || r.id::text), 'hex'), 0)::numeric / 255.0 - 0.5)
                     as exploration,
@@ -435,16 +334,8 @@ internal static class SuggestionScoringSql
             where r.household_id = any(@library::uuid[])
         ),
 
-        -- Rounded, and not as a tidiness measure.
-        --
-        -- exp() and power() over numeric return arbitrary precision: a recipe
-        -- nobody has cooked for three years gives a repetition penalty with
-        -- several hundred decimal places, and summing twelve of those produces a
-        -- value that is perfectly ordinary in magnitude and does not fit in a
-        -- System.Decimal at all. Six places is far past anything that could
-        -- change an order, and it is also what lets a cursor key round-trip
-        -- exactly: a page boundary that re-serialised to a different number
-        -- would return one recipe on two pages.
+        -- Rounded: exp() and power() over numeric return arbitrary precision that can overflow System.Decimal, and six
+        -- places lets a cursor key round-trip exactly without returning one recipe on two pages.
         suggestion_scores as (
             select s.recipe_id,
                    round(s.affinity, 6) as affinity,
@@ -472,16 +363,7 @@ internal static class SuggestionScoringSql
         )
         """;
 
-    /// <summary>
-    /// The occasion and the weights, as parameters.
-    /// </summary>
-    /// <remarks>
-    /// Does <b>not</b> include <c>householdId</c>, <c>library</c> or
-    /// <c>userId</c>: both callers already pass those for their own filtering, and a second copy under a
-    /// different name is two values that can disagree.
-    /// </remarks>
-    /// <param name="context">The occasion.</param>
-    /// <param name="weights">What each term is worth.</param>
+    /// <summary>The occasion and the weights, as parameters; not <c>householdId</c>, <c>library</c> or <c>userId</c>, which callers already pass.</summary>
     internal static DynamicParameters Parameters(SuggestionContext context, RankingWeights weights)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -493,9 +375,7 @@ internal static class SuggestionScoringSql
         parameters.Add("scAsOf", asOf);
         parameters.Add("scMonth", asOf.Month);
         parameters.Add("scIsWeekend", asOf.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday);
-        // The plan's own encoding, reused rather than respelled: a scoring query
-        // with its own opinion about what meal_plan_entries.slot contains is a
-        // second opinion waiting to disagree.
+        // The plan's own encoding, reused so there is no second opinion on meal_plan_entries.slot.
         parameters.Add("scSlot", context.Slot is { } slot ? PlanningCodes.Of(slot) : null);
         parameters.Add("scLikeRecipeId", context.LikeRecipeId);
         parameters.Add("scSeed", Seed(context));
@@ -509,12 +389,8 @@ internal static class SuggestionScoringSql
         parameters.Add("scSeasonMinObservations", weights.SeasonMinimumObservations);
         parameters.Add("scSeasonMinShare", weights.SeasonMinimumShare);
 
-        // "More like this" is a question about the recipe on screen, not about
-        // the person asking — so everything that is about them is turned down
-        // rather than off. Left at full strength, a recipe they cook often
-        // outscores one that genuinely resembles what they are reading, and the
-        // strip fills with their favourites under a heading that promises
-        // something else. Taste still breaks ties; it no longer decides.
+        // "More like this" asks about the recipe on screen, not the person, so personal terms are turned down
+        // rather than off: at full strength their favourites would outscore genuine resemblance.
         var personal = context.Purpose == SuggestionPurpose.Like ? 0.25m : 1m;
 
         parameters.Add("wAffinity", weights.Affinity * personal);
@@ -528,14 +404,12 @@ internal static class SuggestionScoringSql
         parameters.Add("wFreshness", weights.Freshness * personal);
         parameters.Add("wSeason", weights.Season);
 
-        // "More like this" is a different question from "what should I cook",
-        // so similarity only carries weight when somebody actually asked it.
+        // Similarity only carries weight when somebody actually asked "more like this".
         parameters.Add(
             "wSimilarity",
             context.Purpose == SuggestionPurpose.Like ? weights.Similarity : 0m);
 
-        // Never while paging: a cursor resumes an order, and an order that is
-        // jittered per request is not one order.
+        // Never while paging: a cursor resumes one order.
         parameters.Add(
             "wExploration",
             context.Purpose == SuggestionPurpose.Browse ? 0m : weights.Exploration);
@@ -543,10 +417,7 @@ internal static class SuggestionScoringSql
         return parameters;
     }
 
-    /// <summary>
-    /// What the exploration jitter is seeded with: this person, this day, this
-    /// question. Not the clock, so the answer settles for the evening.
-    /// </summary>
+    // Seeded by person, day and question, not the clock, so the answer settles for the evening.
     private static string Seed(SuggestionContext context) =>
         $"{context.UserId:N}:{context.AsOf.UtcDateTime:yyyyMMdd}:{(int)context.Purpose}:";
 }

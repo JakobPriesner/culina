@@ -21,8 +21,8 @@ internal sealed class RevokeSessionCommandHandler(ISessionStore sessions, TimePr
 
         using var tracked = UseCaseActivity.Start("Sessions.Revoke");
 
-        // The store scopes the update to the caller's own sessions in SQL, so
-        // revoking someone else's is not merely refused — it is unexpressible.
+        // The store scopes the update to the caller's own sessions in SQL, so revoking someone
+        // else's is unexpressible.
         var result = await sessions
             .RevokeAsync(command.SessionId, command.UserId, time.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);

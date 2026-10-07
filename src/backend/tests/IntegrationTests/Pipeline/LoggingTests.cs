@@ -7,19 +7,14 @@ using Microsoft.Extensions.Options;
 namespace IntegrationTests.Pipeline;
 
 /// <summary>
-/// What a log line is allowed to contain.
-/// </summary>
-/// <remarks>
-/// An operator reads these; so does anybody who ends up with the file. A
-/// request body is either somebody's recipe or somebody's password, and
+/// What a log line is allowed to contain: a request body is somebody's recipe or password, and
 /// neither belongs in a line that outlives the request.
-/// </remarks>
+/// </summary>
 public class LoggingTests
 {
     [Fact]
     public void RequestLogging_ShouldRecordNoBody_InAnyEnvironment()
     {
-        // Arrange
         var services = new ServiceCollection();
 
         services.AddLogging();
@@ -27,10 +22,8 @@ public class LoggingTests
 
         using var provider = services.BuildServiceProvider();
 
-        // Act
         var options = provider.GetRequiredService<IOptions<HttpLoggingOptions>>().Value;
 
-        // Assert
         Assert.False(options.LoggingFields.HasFlag(HttpLoggingFields.RequestBody));
         Assert.False(options.LoggingFields.HasFlag(HttpLoggingFields.ResponseBody));
 
@@ -47,13 +40,10 @@ public class LoggingTests
     [Fact]
     public void Scope_ShouldReadAsItsValues_WhereAConsoleFormatterPrintsIt()
     {
-        // Arrange
         var scope = new LogScope(new("TraceId", "4bf92f35"), new("ClientAddress", "203.0.113.7"));
 
-        // Act
         var printed = scope.ToString();
 
-        // Assert
         // A dictionary printed its type name here, on every production line.
         Assert.Equal("TraceId:4bf92f35 ClientAddress:203.0.113.7", printed);
         Assert.Equal(["TraceId", "ClientAddress"], scope.Select(value => value.Key));

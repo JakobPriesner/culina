@@ -2,9 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Users;
 
-/// <summary>
-/// What a person is called in the app.
-/// </summary>
+/// <summary>What a person is called in the app.</summary>
 public sealed record DisplayName
 {
     /// <summary>The longest name the database column accepts.</summary>

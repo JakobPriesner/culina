@@ -10,32 +10,18 @@ using Domain.Shared;
 namespace Application.Cookbooks;
 
 /// <summary>A page of a household's cookbooks.</summary>
-/// <param name="HouseholdId">Whose shelves.</param>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="Cursor">Where to resume, or null for the first page.</param>
-/// <param name="Limit">How many at most.</param>
 public sealed record GetCookbooksQuery(Guid HouseholdId, Guid UserId, string? Cursor, int Limit);
 
 /// <summary>One cookbook.</summary>
-/// <param name="CookbookId">Which one.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record GetCookbookQuery(Guid CookbookId, Guid UserId);
 
 /// <summary>Which recipes are on one cookbook.</summary>
-/// <param name="CookbookId">Which one.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record GetCookbookRecipesQuery(Guid CookbookId, Guid UserId);
 
 /// <summary>Starts a cookbook.</summary>
-/// <param name="UserId">Whose idea it is.</param>
-/// <param name="Draft">What to call it, and what it is for.</param>
 public sealed record CreateCookbookCommand(Guid UserId, CreateCookbookRequest Draft);
 
 /// <summary>Renames a cookbook.</summary>
-/// <param name="CookbookId">Which one.</param>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="ExpectedVersion">The version the caller was holding.</param>
-/// <param name="Draft">What it should now say.</param>
 public sealed record UpdateCookbookCommand(
     Guid CookbookId,
     Guid UserId,
@@ -43,9 +29,6 @@ public sealed record UpdateCookbookCommand(
     UpdateCookbookRequest Draft);
 
 /// <summary>Removes a cookbook, leaving every recipe that was on it.</summary>
-/// <param name="CookbookId">Which one.</param>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="ExpectedVersion">The version the caller was holding.</param>
 public sealed record DeleteCookbookCommand(Guid CookbookId, Guid UserId, long ExpectedVersion);
 
 internal sealed class GetCookbooksQueryHandler(
@@ -151,8 +134,7 @@ internal sealed class CreateCookbookCommandHandler(
             .MemberOfAsync(households, command.Draft.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        // Rules in the request are what makes a shelf that fills itself. There
-        // is no separate flag to disagree with them.
+        // Rules in the request make a shelf that fills itself; there is no separate flag.
         var prepared = allowed
             .Bind(() => CookbookName.Create(command.Draft.Name))
             .Bind(name => CookbookWords
@@ -179,10 +161,7 @@ internal sealed class CreateCookbookCommandHandler(
                     var written = await cookbooks.AddAsync(cookbook, token).ConfigureAwait(false);
 
                     return await written.Match(
-                        // A shelf somebody fills starts empty, and saying so
-                        // costs nothing. One that fills itself is already full
-                        // the moment it exists — that is the entire point of it
-                        // — so it has to be read back to find out how full.
+                        // A manual shelf starts empty; a smart one is full on creation, so read it back.
                         async () => cookbook.Kind == CookbookKind.Manual
                             ? Result<CookbookDetail>.Success(
                                 new CookbookOnAShelf(cookbook, 0, []).ToDetail())
@@ -282,9 +261,7 @@ internal sealed class DeleteCookbookCommandHandler(
 
         var result = await found.Match(
             shelf => unitOfWork.InTransactionAsync(
-                // Only the shelf. Every recipe that was on it stays exactly
-                // where it was — a cookbook is a pointer, and deleting one
-                // deletes no food.
+                // Only the shelf: a cookbook is a pointer, and deleting one deletes no recipes.
                 token => cookbooks.DeleteAsync(
                     shelf.Cookbook.Id, command.ExpectedVersion, command.UserId, time.GetUtcNow(), token),
                 cancellationToken),

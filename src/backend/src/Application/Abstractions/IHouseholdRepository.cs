@@ -7,87 +7,50 @@ namespace Application.Abstractions;
 public interface IHouseholdRepository
 {
     /// <summary>Loads a household with its members, in one round trip.</summary>
-    /// <param name="householdId">Which household.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<Result<Household>> FindAsync(Guid householdId, CancellationToken cancellationToken);
 
     /// <summary>The households a user belongs to.</summary>
-    /// <param name="userId">Whose memberships.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyList<Household>> ForUserAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>Stores a new household and its first owner.</summary>
-    /// <param name="household">The household to store.</param>
-    /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result> AddAsync(Household household, CancellationToken cancellationToken);
 
     /// <summary>Saves the name, what it inherits from, and the full membership list.</summary>
-    /// <param name="household">The changed household.</param>
-    /// <param name="expectedVersion">The version the caller last saw.</param>
-    /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result<long>> UpdateAsync(
         Household household,
         long expectedVersion,
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Whether a user belongs to a household.
+    /// Whether a user belongs to a household: one indexed lookup, without loading the members.
     /// </summary>
-    /// <param name="householdId">Which household.</param>
-    /// <param name="userId">Who to check.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
-    /// <remarks>
-    /// One indexed lookup, for the many operations that only need to know
-    /// whether the caller may see something. Loading the whole household to ask
-    /// would make every recipe read pay for a members list nobody wanted.
-    /// </remarks>
     Task<bool> IsMemberAsync(Guid householdId, Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Whether a user may see a household's recipes: they are in it, or in a
-    /// household that inherits from it, however indirectly.
+    /// Whether a user may see a household's recipes: they are in it, or in a household inheriting
+    /// from it, however indirectly.
     /// </summary>
-    /// <param name="householdId">The household that owns the recipes.</param>
-    /// <param name="userId">Who is asking.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
-    /// <remarks>
-    /// Seeing, never changing: editing a recipe still needs
-    /// <see cref="IsMemberAsync"/> on the household it belongs to.
-    /// </remarks>
+    /// <remarks>Seeing, never changing: editing still needs <see cref="IsMemberAsync"/>.</remarks>
     Task<bool> CanSeeRecipesAsync(Guid householdId, Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// The households this one inherits recipes from, nearest first: the one it
-    /// inherits from, then the one that inherits from, and so on.
+    /// The households this one inherits recipes from, nearest first; empty if none.
     /// </summary>
-    /// <param name="householdId">Which household.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
-    /// <remarks>Empty for a household that inherits nothing.</remarks>
     Task<IReadOnlyList<InheritedHousehold>> AncestorsAsync(
         Guid householdId,
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Every household that sees this one's recipes: those that inherit from
-    /// it, and those that inherit from them, nearest first.
+    /// Every household that sees this one's recipes, directly or through others, nearest first.
     /// </summary>
-    /// <param name="householdId">Which household.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyList<Heir>> HeirsAsync(Guid householdId, CancellationToken cancellationToken);
 
     /// <summary>The household's members, with their names, for the members screen.</summary>
-    /// <param name="householdId">Which household.</param>
-    /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyList<HouseholdMemberView>> MembersAsync(
         Guid householdId,
         CancellationToken cancellationToken);
 
     /// <summary>Puts a household, and everything it owns, in the bin.</summary>
-    /// <param name="householdId">Which household.</param>
-    /// <param name="expectedVersion">The version the caller saw; any other is a conflict.</param>
-    /// <param name="deletedBy">Who is deleting it.</param>
-    /// <param name="now">The injected current time; the purge counts from it.</param>
-    /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result> DeleteAsync(
         Guid householdId,
         long expectedVersion,

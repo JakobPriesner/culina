@@ -3,34 +3,13 @@ using Application.Abstractions;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>
-/// Corrects a search against the words one household's recipes use.
+/// Corrects a search against the words one household's recipes use (titles, ingredients, tags) by trigram similarity,
+/// so it offers "bolognese" rather than a dictionary's "Bologneser". Built on the fly: only asked when a search found nothing.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The dictionary is the household's titles, ingredient names and tags, folded
-/// the way the search folds them, and a word is corrected to the nearest of
-/// them by trigram similarity. A German word list would offer "Bologneser"
-/// for "Bolgnese"; this offers "bolognese", because that is what is actually
-/// there — and for a word nothing in the kitchen resembles, it offers nothing,
-/// which is right.
-/// </para>
-/// <para>
-/// Only ever asked when a search found nothing, so the cost of building the
-/// vocabulary on the fly is paid by the rare query that needs it rather than
-/// stored for every recipe.
-/// </para>
-/// </remarks>
 /// <param name="executor">Runs the SQL.</param>
 internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
 {
-    /// <summary>
-    /// How alike two words must be for one to be taken as the other misspelt.
-    /// </summary>
-    /// <remarks>
-    /// Lower than the typo lane's half, because this only runs once nothing
-    /// matched at all — and the correction is always shown, with the original
-    /// one tap away.
-    /// </remarks>
+    // Lower than the typo lane's half: this only runs once nothing matched, and the correction is always shown.
     internal const double Threshold = 0.4d;
 
     public async Task<IReadOnlyDictionary<string, string>> SpellingsAsync(
@@ -64,8 +43,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             from unnest(@words::text[]) as typed
             cross join vocabulary v
             where similarity(typed, v.word) >= @threshold
-              -- A word the kitchen already uses is not a misspelling of
-              -- another one, however alike the two look.
+              -- A word the kitchen already uses is not a misspelling of another.
               and not exists (select 1 from vocabulary known where known.word = typed)
             order by typed, similarity(typed, v.word) desc, v.word;
             """,
@@ -85,9 +63,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
 
         var parameters = new { library = library.ToArray(), typed, perKind };
 
-        // A word of the name that begins with what was typed, in either fold:
-        // "häh" finds Hähnchen-Curry and Brathähnchen alike, and "haeh" and
-        // "hah" find them too.
+        // A word of the name beginning with what was typed, in either fold ("häh", "haeh", "hah" all find Hähnchen).
         var recipes = await executor.QueryAsync<RecipeCompletion>(
             $"""
             with {Typed}
@@ -98,8 +74,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             join recipes r on r.id = d.recipe_id
             where d.household_id = any(@library)
               and ({Begins("d.title_ae", "d.title_a")})
-            -- A title that starts with the word, then the shortest: the one
-            -- most nearly called what was typed.
+            -- Title starting with the word first, then the shortest.
             order by (d.title_ae like t.ae || '%' or d.title_a like t.a || '%') desc,
                      length(d.title_ae), d.title_ae
             limit @perKind;
@@ -136,8 +111,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             left join recipe_tags rt on rt.tag_id = tg.id
             where tg.household_id = any(@library)
               and ({Begins("culina_fold_ae(tg.name)", "culina_fold_a(tg.name)")})
-            -- By slug, not by row: an inherited household may carry the same
-            -- tag, and it is one word to filter by, not two.
+            -- By slug: an inherited household may carry the same tag, and it is one word to filter by.
             group by tg.slug
             order by recipe_count desc, name
             limit @perKind;

@@ -12,18 +12,14 @@ using OpenTelemetry.Logs;
 namespace IntegrationTests.Pipeline;
 
 /// <summary>
-/// What the server says about the machine it runs on.
+/// What the server says about its machine, so an operator with only telemetry can tell where a line
+/// came from and whether memory or disk ran out.
 /// </summary>
-/// <remarks>
-/// An operator with only the telemetry has to be able to tell which machine a
-/// line came from and whether it was running out of memory or disk.
-/// </remarks>
 public class MachineTelemetryTests
 {
     [Fact]
     public void ApiTelemetry_ShouldNameTheMachineAndProcess()
     {
-        // Arrange
         var exported = new Exported();
         var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
 
@@ -32,10 +28,8 @@ public class MachineTelemetryTests
 
         using var host = builder.Build();
 
-        // Act
         host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Api.Anything").LogError("The server broke");
 
-        // Assert
         Assert.Contains("host.name", exported.Attributes);
         Assert.Contains("os.type", exported.Attributes);
         Assert.Contains("process.pid", exported.Attributes);
@@ -45,7 +39,6 @@ public class MachineTelemetryTests
     [Fact]
     public void MachineMetrics_ShouldReportMemoryAndTheRoomLeftOnEachVolume()
     {
-        // Arrange
         var directory = Directory.CreateTempSubdirectory().FullName;
         var storage = new StorageSettings
         {
@@ -78,16 +71,13 @@ public class MachineTelemetryTests
         });
         listener.Start();
 
-        // Act
         listener.RecordObservableInstruments();
 
-        // Assert
         Assert.Contains(measured, measure => measure is { Instrument: "system.memory.limit", Value: > 0 });
         Assert.Contains(measured, measure => measure is { Instrument: "culina.storage.limit", Directory: "images", Value: > 0 });
         Assert.Equal(2, measured.Count(measure => measure is { Instrument: "culina.storage.usage", Directory: "keys" }));
 
-        // A directory that does not exist is left out rather than failing the
-        // whole collection.
+        // A directory that does not exist is left out rather than failing the collection.
         Assert.DoesNotContain(measured, measure => measure.Directory == "config");
     }
 

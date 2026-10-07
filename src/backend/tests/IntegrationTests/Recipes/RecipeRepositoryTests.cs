@@ -21,15 +21,12 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task AddAndFind_ShouldRoundTripTheWholeAggregate()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
         var butter = recipe.Ingredients.First();
 
-        // Act
         var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal("Bolognese", found.Title.Value);
         Assert.Equal(4m, found.Yield.Amount);
         Assert.Equal(2, found.Ingredients.Count());
@@ -41,14 +38,11 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Find_ShouldPreserveQuantitiesExactly_IncludingThreeDecimalPlaces()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
-        // Act
         var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
 
-        // Assert
         var butter = found.Ingredients.Single(ingredient => ingredient.Name == "butter");
         Assert.Equal(200.5m, butter.Quantity.Amount);
         Assert.Equal(Unit.Gram, butter.Quantity.Unit);
@@ -57,7 +51,6 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldReplaceContents_AndLeaveNoOrphans()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
@@ -69,10 +62,8 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             [Step.Create(null, 0, [new TextSegment("Chop.")], [], null).ShouldBeSuccess()],
             Now).ShouldBeSuccess();
 
-        // Act
         var version = (await scope.Recipes.UpdateAsync(recipe, 1, Token)).ShouldBeSuccess();
 
-        // Assert
         Assert.Equal(2, version);
         var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
         Assert.Equal("onions", Assert.Single(found.Ingredients).Name);
@@ -86,7 +77,6 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Find_ShouldReadBackAnIngredientAStepNeedsButDoesNotName()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
         var butter = recipe.Ingredients.First();
@@ -106,14 +96,10 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
 
         (await scope.Recipes.UpdateAsync(recipe, 1, Token)).ShouldBeSuccess();
 
-        // Act
         var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
 
-        // Assert
-        // The one the sentence names and the one it does not, both stored and
-        // both read back — which is the whole point of the table being read.
-        // Membership, not order: a step's needs are a set, and the order a
-        // reader sees is put on them where the recipe is described.
+        // The step needs one the sentence names and one it does not, both stored and read back.
+        // Membership, not order: a step's needs are a set, ordered where the recipe is described.
         var uses = Assert.Single(found.Steps).Uses;
 
         Assert.Equal(2, uses.Count);
@@ -124,22 +110,18 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Update_ShouldFailThePrecondition_WhenSomeoneElseWroteFirst()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
         await scope.Recipes.UpdateAsync(recipe, 1, Token);
 
-        // Act
         var result = await scope.Recipes.UpdateAsync(recipe, 1, Token);
 
-        // Assert
         result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);
     }
 
     [Fact]
     public async Task Add_ShouldRefuse_WhenAStepIdBelongsToAnotherRecipe()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var first = await scope.SeedRecipeAsync();
         var second = Recipe.Create(
@@ -153,24 +135,19 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             [Step.Create(first.Steps[0].Id, 0, [new TextSegment("Stir.")], [], null).ShouldBeSuccess()],
             Now).ShouldBeSuccess();
 
-        // Act
         var result = await scope.Recipes.AddAsync(second, Token);
 
-        // Assert
         result.ShouldBeFailure(RecipeErrors.DuplicateStep);
     }
 
     [Fact]
     public async Task Delete_ShouldHideTheRecipe_ButKeepEverythingUnderItForARestore()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
-        // Act
         var result = await scope.Recipes.DeleteAsync(recipe.Id, recipe.Version, recipe.CreatedBy, Now, Token);
 
-        // Assert
         result.ShouldBeSuccess();
         (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeFailure(RecipeErrors.NotFound(recipe.Id));
         Assert.NotEqual(0, await scope.CountAsync("select count(*) from recipe_ingredients;"));
@@ -182,16 +159,13 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Delete_ShouldKeepTheRecipe_WhenTheVersionIsStale()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
         var seen = recipe.Version;
         await scope.Recipes.UpdateAsync(recipe, seen, Token);
 
-        // Act
         var result = await scope.Recipes.DeleteAsync(recipe.Id, seen, recipe.CreatedBy, Now, Token);
 
-        // Assert
         result.ShouldBeFailure(ConcurrencyErrors.VersionMismatch);
         (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
     }
@@ -199,16 +173,13 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task Tags_ShouldBeCreatedOnDemand_AndRemovedWhenNothingUsesThem()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
         Assert.Equal(2, await scope.CountAsync("select count(*) from tags;"));
 
-        // Act
         recipe.Describe(RecipeScope.Details(recipe, tags: ["quick"]), Now).ShouldBeSuccess();
         await scope.Recipes.UpdateAsync(recipe, 1, Token);
 
-        // Assert
         // Tags have no management screen because nobody wants one: they appear
         // when used and disappear when unused.
         Assert.Equal(1, await scope.CountAsync("select count(*) from tags;"));
@@ -220,17 +191,14 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [InlineData("Crème brûlée", "creme-brulee")]
     public void Slugify_ShouldFoldTwoSpellingsOfAWordOntoOneTag(string name, string expected)
     {
-        // Arrange & Act
         var slug = TagWriter.Slugify(name);
 
-        // Assert
         Assert.Equal(expected, slug);
     }
 
     [Fact]
     public async Task OwnUnitsAsync_ShouldReturnOnlyWhatTheHouseholdAddedItself()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
@@ -251,20 +219,16 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             Now).ShouldBeSuccess();
         (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
 
-        // Act
         var own = await scope.Recipes.OwnUnitsAsync([recipe.HouseholdId], Token);
 
-        // Assert
-        // The built-ins are excluded in the query, not afterwards: a household
-        // with four hundred recipes must not send four hundred rows back to
-        // have thirteen of them filtered out.
+        // The built-ins are excluded in the query, not afterwards: four hundred recipes must not
+        // send four hundred rows back to filter out thirteen.
         Assert.Equal(["Schuss"], own);
     }
 
     [Fact]
     public async Task OwnIngredientNamesAsync_ShouldRankAPrefixAboveAMereContains()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
@@ -282,10 +246,8 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             Now).ShouldBeSuccess();
         (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
 
-        // Act
         var found = await scope.Recipes.OwnIngredientNamesAsync([recipe.HouseholdId], "butter", 10, Token);
 
-        // Assert
         // Somebody typing "butter" means the butter, not the peanut butter that
         // happens to contain the word.
         Assert.Equal(["butter", "peanut butter"], found);
@@ -294,15 +256,12 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     [Fact]
     public async Task OwnIngredientNamesAsync_ShouldNotReachIntoAnotherHouseholdsKitchen()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var recipe = await scope.SeedRecipeAsync();
 
-        // Act
         var found = await scope.Recipes
             .OwnIngredientNamesAsync([CulinaId.New()], "butter", 10, Token);
 
-        // Assert
         Assert.Empty(found);
         Assert.NotEmpty(await scope.Recipes
             .OwnIngredientNamesAsync([recipe.HouseholdId], "butter", 10, Token));

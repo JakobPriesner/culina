@@ -11,10 +11,8 @@ namespace Api.Endpoints.SharedRecipes.GetImage.V1;
 
 /// <summary>Serves a shared recipe's photograph.</summary>
 /// <remarks>
-/// Under the token and not under the recipe's own image address, for the same
-/// reason the recipe is: whoever follows a link holds the token and knows no
-/// recipe id, and the id-addressed image stays behind the membership check it
-/// has always had.
+/// Under the token, as the recipe is: a link holder knows no recipe id, and the id-addressed image
+/// keeps its membership check.
 /// </remarks>
 internal sealed class GetSharedRecipeImageEndpoint : IEndpoint
 {

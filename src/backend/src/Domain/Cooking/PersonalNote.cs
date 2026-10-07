@@ -2,16 +2,8 @@ using Domain.Shared;
 
 namespace Domain.Cooking;
 
-/// <summary>
-/// What one person thinks about a recipe, or about one of its steps.
-/// </summary>
-/// <remarks>
-/// Person-owned, never household-owned. "I use half the sugar" is a note, not
-/// an edit: the recipe stays canonical and shared, and two people in one
-/// household can disagree about it without fighting over a field. This
-/// separation is a product decision, not a modelling detail — do not simplify
-/// it into a recipe column.
-/// </remarks>
+/// <summary>What one person thinks about a recipe or one of its steps.</summary>
+/// <remarks>Person-owned, never household-owned: a note is not an edit, and the recipe stays canonical. A product decision; do not turn it into a recipe column.</remarks>
 public sealed class PersonalNote
 {
     /// <summary>The longest note the database column accepts.</summary>
@@ -52,11 +44,6 @@ public sealed class PersonalNote
     public DateTimeOffset UpdatedAt { get; }
 
     /// <summary>Writes a note.</summary>
-    /// <param name="recipeId">Which recipe.</param>
-    /// <param name="userId">Whose note.</param>
-    /// <param name="stepId">Which step, or null.</param>
-    /// <param name="body">What it says.</param>
-    /// <param name="now">The injected current time.</param>
     public static Result<PersonalNote> Write(
         Guid recipeId,
         Guid userId,
@@ -75,12 +62,6 @@ public sealed class PersonalNote
     }
 
     /// <summary>Rebuilds a note from storage.</summary>
-    /// <param name="id">Its id.</param>
-    /// <param name="recipeId">Which recipe.</param>
-    /// <param name="userId">Whose note.</param>
-    /// <param name="stepId">Which step, or null.</param>
-    /// <param name="body">What it says.</param>
-    /// <param name="updatedAt">When it was written.</param>
     public static PersonalNote Restore(
         Guid id,
         Guid recipeId,

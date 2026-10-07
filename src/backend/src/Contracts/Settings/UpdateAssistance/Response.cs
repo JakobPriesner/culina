@@ -1,14 +1,6 @@
 namespace Contracts.Settings.UpdateAssistance;
 
-/// <summary>
-/// The models this instance can talk to, and which of them does what.
-/// </summary>
-/// <remarks>
-/// A contract type rather than the settings record serialised directly, and
-/// this is the case that was anticipated when the registration settings said
-/// so: an API key goes in and <c>apiKeyConfigured</c> comes back out, never the
-/// value. No field on any of these types could carry one.
-/// </remarks>
+/// <summary>The models this instance can talk to, and which does what. An API key goes in and <c>apiKeyConfigured</c> comes out, never the value.</summary>
 public sealed record Response
 {
     /// <summary>Whether the assistant is on at all.</summary>
@@ -39,14 +31,7 @@ public sealed record ConnectionContract
     /// <summary>Where the provider is, or empty for its own address.</summary>
     public required string BaseUrl { get; init; }
 
-    /// <summary>
-    /// Whether this connection has everything its provider needs.
-    /// </summary>
-    /// <remarks>
-    /// Not the same question as <see cref="ApiKeyConfigured"/>: a model on your
-    /// own hardware needs an address and no key, so it is usable with no key at
-    /// all and unusable without an address.
-    /// </remarks>
+    /// <summary>Whether this connection has everything its provider needs: a local model needs an address but no key.</summary>
     public required bool Usable { get; init; }
 }
 
@@ -65,13 +50,6 @@ public sealed record UseContract
     /// <summary>Which of its models, or empty for the current default.</summary>
     public required string Model { get; init; }
 
-    /// <summary>
-    /// The model that will actually be used when none is chosen.
-    /// </summary>
-    /// <remarks>
-    /// Sent so the form can show it as a placeholder rather than hard-coding a
-    /// name the server might not agree with any more. It is the server that
-    /// decides what the default is, so it is the server that says so.
-    /// </remarks>
+    /// <summary>The model used when none is chosen; the server decides, so the form can show it as a placeholder.</summary>
     public required string DefaultModel { get; init; }
 }

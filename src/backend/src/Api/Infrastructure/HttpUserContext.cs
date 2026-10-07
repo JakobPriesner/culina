@@ -6,14 +6,9 @@ using Application.Abstractions;
 namespace Api.Infrastructure;
 
 /// <summary>
-/// The <see cref="IUserContext"/> port, over the current HTTP request.
+/// The <see cref="IUserContext"/> port over the current HTTP request, the reason no handler ever
+/// sees <c>HttpContext</c>.
 /// </summary>
-/// <remarks>
-/// This wrapper is the reason no handler ever sees <c>HttpContext</c>: the port
-/// says exactly what Application may know about the caller, and a unit test
-/// satisfies it with a constructor argument.
-/// </remarks>
-/// <param name="accessor">The current request.</param>
 internal sealed class HttpUserContext(IHttpContextAccessor accessor) : IUserContext
 {
     public bool IsAuthenticated => Claim(CulinaClaims.UserId) is not null;

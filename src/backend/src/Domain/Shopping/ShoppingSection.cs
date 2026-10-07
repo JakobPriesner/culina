@@ -1,15 +1,6 @@
 namespace Domain.Shopping;
 
-/// <summary>
-/// Where in a shop a thing is found.
-/// </summary>
-/// <remarks>
-/// Ordered the way a shop is walked, so a list read top to bottom is a route
-/// rather than a scavenger hunt. That order is the entire value of sections;
-/// getting one item slightly wrong costs nothing, and there is no configuration
-/// screen because a sensible default that can be corrected in one tap beats a
-/// settings page nobody opens.
-/// </remarks>
+/// <summary>Where in a shop a thing is found, ordered the way a shop is walked so a list reads as a route.</summary>
 public enum ShoppingSection
 {
     /// <summary>Fruit and vegetables.</summary>

@@ -18,48 +18,39 @@ public class SessionStoreTests(PostgresFixture postgres)
     [Fact]
     public async Task FindActiveByToken_ShouldReturnTheSession_WhenTheCookieValueIsCorrect()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
 
-        // Act
         var found = await scope.Sessions.FindActiveByTokenAsync(token, Now, Token);
 
-        // Assert
         Assert.Equal(session.Id, found.ShouldBeSuccess().Id);
     }
 
     [Fact]
     public async Task FindActiveByToken_ShouldFindNothing_WhenTheTokenIsWrong()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, _) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
 
-        // Act
         var found = await scope.Sessions.FindActiveByTokenAsync(scope.Tokens.NewToken(), Now, Token);
 
-        // Assert
         found.ShouldBeFailure(SessionErrors.NotAuthenticated);
     }
 
     [Fact]
     public async Task Revoke_ShouldEndTheSession_WhenItBelongsToTheCaller()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
 
-        // Act
         var result = await scope.Sessions.RevokeAsync(session.Id, userId, Now, Token);
 
-        // Assert
         result.ShouldBeSuccess();
         var found = await scope.Sessions.FindActiveByTokenAsync(token, Now, Token);
         found.ShouldBeFailure(SessionErrors.NotAuthenticated);
@@ -68,62 +59,49 @@ public class SessionStoreTests(PostgresFixture postgres)
     [Fact]
     public async Task FindActiveByToken_ShouldFindNothing_WhenTheSessionWasRevoked()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
         await scope.Sessions.RevokeAsync(session.Id, userId, Now, Token);
 
-        // Act
         var found = await scope.Sessions.FindActiveByTokenAsync(token, Now.AddMinutes(1), Token);
 
-        // Assert
-        // The CSRF guard looks sessions up by this method too and does not
-        // ask again whether they are active; a revoked session's token must
-        // not pass it.
+        // The CSRF guard also looks sessions up here without re-checking they are active, so a revoked token must not pass.
         found.ShouldBeFailure(SessionErrors.NotAuthenticated);
     }
 
     [Fact]
     public async Task FindActiveByToken_ShouldFindNothing_WhenTheSessionHasExpired()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId, lifetime: TimeSpan.FromMinutes(1));
         await scope.Sessions.AddAsync(session, Token);
 
-        // Act
         var found = await scope.Sessions.FindActiveByTokenAsync(token, Now.AddMinutes(1), Token);
 
-        // Assert
         found.ShouldBeFailure(SessionErrors.NotAuthenticated);
     }
 
     [Fact]
     public async Task Revoke_ShouldRefuse_WhenTheSessionBelongsToSomeoneElse()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var owner = await scope.AddUserAsync("ada@example.com");
         var stranger = await scope.AddUserAsync("mallory@example.com");
         var (session, _) = scope.NewSession(owner);
         await scope.Sessions.AddAsync(session, Token);
 
-        // Act
         var result = await scope.Sessions.RevokeAsync(session.Id, stranger, Now, Token);
 
-        // Assert
-        // Ownership is part of the SQL WHERE, so it cannot be forgotten at a
-        // second call site.
+        // Ownership is in the SQL WHERE so no second call site can forget it.
         result.ShouldBeFailure(SessionErrors.SessionNotFound);
     }
 
     [Fact]
     public async Task ForUser_ShouldListOnlyLiveSessions_SoTheDevicesScreenIsUseful()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (live, _) = scope.NewSession(userId);
@@ -132,27 +110,22 @@ public class SessionStoreTests(PostgresFixture postgres)
         await scope.Sessions.AddAsync(revoked, Token);
         await scope.Sessions.RevokeAsync(revoked.Id, userId, Now, Token);
 
-        // Act
         var sessions = await scope.Sessions.ForUserAsync(userId, Token);
 
-        // Assert
         Assert.Equal(live.Id, Assert.Single(sessions).Id);
     }
 
     [Fact]
     public async Task Renew_ShouldMoveTheExpiry_WhenTheSessionIsStillActive()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
         session.Touch(Now.AddDays(20), Lifetime, TimeSpan.FromDays(90));
 
-        // Act
         var renewed = await scope.Sessions.RenewAsync(session, Token);
 
-        // Assert
         renewed.ShouldBeSuccess();
         (await scope.Sessions.FindActiveByTokenAsync(token, Now.AddDays(40), Token)).ShouldBeSuccess();
     }
@@ -160,24 +133,19 @@ public class SessionStoreTests(PostgresFixture postgres)
     [Fact]
     public async Task Renew_ShouldLeaveTheSessionRevoked_WhenItWasRevokedAfterBeingRead()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (session, token) = scope.NewSession(userId);
         await scope.Sessions.AddAsync(session, Token);
 
-        // A request on a stolen cookie reads the session, then the owner
-        // revokes that device before the request gets round to renewing it.
+        // A stolen-cookie request reads the session, then the owner revokes that device before it renews.
         var read = (await scope.Sessions.FindActiveByTokenAsync(token, Now, Token)).ShouldBeSuccess();
         await scope.Sessions.RevokeAsync(session.Id, userId, Now.AddSeconds(1), Token);
         read.Touch(Now.AddSeconds(2), Lifetime, TimeSpan.FromDays(90));
 
-        // Act
         var renewed = await scope.Sessions.RenewAsync(read, Token);
 
-        // Assert
-        // Renewal used to write the stale copy's revoked_at (null) back, and
-        // the revoked session worked again.
+        // Renewal once wrote the stale copy's revoked_at (null) back, reviving the revoked session.
         renewed.ShouldBeFailure(SessionErrors.NotAuthenticated);
         (await scope.Sessions.FindActiveByTokenAsync(token, Now.AddMinutes(1), Token))
             .ShouldBeFailure(SessionErrors.NotAuthenticated);
@@ -186,7 +154,6 @@ public class SessionStoreTests(PostgresFixture postgres)
     [Fact]
     public async Task DeleteExpired_ShouldRemoveLapsedSessions_ButKeepLiveOnes()
     {
-        // Arrange
         await using var scope = await NewScopeAsync();
         var userId = await scope.AddUserAsync("ada@example.com");
         var (live, liveToken) = scope.NewSession(userId);
@@ -194,10 +161,8 @@ public class SessionStoreTests(PostgresFixture postgres)
         await scope.Sessions.AddAsync(live, Token);
         await scope.Sessions.AddAsync(lapsed, Token);
 
-        // Act
         var removed = await scope.Sessions.DeleteExpiredAsync(Now.AddHours(1), Token);
 
-        // Assert
         Assert.Equal(1, removed);
         (await scope.Sessions.FindActiveByTokenAsync(liveToken, Now, Token)).ShouldBeSuccess();
     }

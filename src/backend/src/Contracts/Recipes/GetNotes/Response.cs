@@ -1,10 +1,7 @@
 namespace Contracts.Recipes.GetNotes;
 
 /// <summary>Your notes on one recipe.</summary>
-/// <remarks>
-/// The recipe-level note and every step note in one document, because the notes
-/// panel reads and writes them together.
-/// </remarks>
+/// <remarks>The recipe note and every step note together, as the notes panel reads and writes them together.</remarks>
 public sealed record Response
 {
     /// <summary>A note about the recipe as a whole, if there is one.</summary>

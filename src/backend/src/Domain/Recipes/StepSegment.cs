@@ -1,12 +1,7 @@
 namespace Domain.Recipes;
 
 /// <summary>One piece of a step's text.</summary>
-/// <remarks>
-/// A step is a sequence of plain text and references to the recipe's own
-/// ingredients. Storing it this way is what lets an amount inside a step scale
-/// with the servings — the step says "melt <i>this ingredient</i>", not "melt
-/// 120 g butter".
-/// </remarks>
+/// <remarks>A step is plain text plus ingredient references, so amounts inside a step scale with the servings.</remarks>
 public abstract record StepSegment;
 
 /// <summary>Literal words.</summary>

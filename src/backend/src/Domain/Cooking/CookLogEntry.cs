@@ -2,15 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Cooking;
 
-/// <summary>
-/// A record that someone cooked this.
-/// </summary>
-/// <remarks>
-/// One tap, with a date. Later it becomes "you've made this 7 times, last in
-/// March", and it is why Culina has no star ratings: what someone actually
-/// cooked is a better signal than what they once claimed to like, and a rating
-/// nobody maintains is worse than none.
-/// </remarks>
+/// <summary>A record that someone cooked this: one tap with a date. Culina has no star ratings; what was cooked is the better signal.</summary>
 public sealed class CookLogEntry
 {
     /// <summary>The longest note an entry may carry.</summary>
@@ -57,14 +49,7 @@ public sealed class CookLogEntry
     /// <summary>Anything they wanted to remember.</summary>
     public string? Note { get; }
 
-    /// <summary>
-    /// A picture of how it actually turned out, if they took one.
-    /// </summary>
-    /// <remarks>
-    /// Theirs, not the household's. The recipe's own photograph is what the
-    /// dish is supposed to look like; this is what it looked like on a Tuesday,
-    /// and the two are not the same claim.
-    /// </remarks>
+    /// <summary>A picture of how it turned out, if they took one. Theirs, not the recipe's own photograph.</summary>
     public CookPhoto? Photo { get; private set; }
 
     /// <summary>Hangs a photo on this attempt, replacing any it had.</summary>
@@ -130,9 +115,7 @@ public sealed class CookLogEntry
         new(id, recipeId, userId, householdId, madeAt, servings, note, photo);
 }
 
-/// <summary>
-/// A picture of one attempt.
-/// </summary>
+/// <summary>A picture of one attempt.</summary>
 /// <param name="ContentHash">Where the bytes are, in the image store.</param>
 /// <param name="Width">The stored width, for reserving the space it will take.</param>
 /// <param name="Height">The stored height.</param>

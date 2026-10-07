@@ -1,12 +1,7 @@
 namespace Contracts.Suggestions.GetAll;
 
 /// <summary>A handful of recipes for one occasion.</summary>
-/// <remarks>
-/// Wrapped like every other collection, but deliberately without a cursor: this
-/// is bounded on purpose. The paging envelope exists for collections that page,
-/// and a thing with no next page should not claim one. Ranking the whole
-/// library is <c>GET /recipes?sort=suggested</c>, which does page.
-/// </remarks>
+/// <remarks>Deliberately without a cursor: this is bounded. Ranking the whole library is <c>GET /recipes?sort=suggested</c>.</remarks>
 public sealed record Response
 {
     /// <summary>The suggestions, best first.</summary>
@@ -19,10 +14,7 @@ public sealed record Suggestion
     /// <summary>The recipe's id.</summary>
     public required Guid RecipeId { get; init; }
 
-    /// <summary>
-    /// The household it belongs to. Another than the one asked about when that
-    /// one inherits it, which is what a card says "from" about.
-    /// </summary>
+    /// <summary>The household it belongs to; not the one asked about when that one inherits it.</summary>
     public required Guid HouseholdId { get; init; }
 
     /// <summary>What it is called.</summary>
@@ -41,14 +33,9 @@ public sealed record Suggestion
     public required string YieldKind { get; init; }
 
     /// <summary>
-    /// The recipe's own word for what it makes — "Cake", "Gläser", "Blech".
+    /// The recipe's own word for what it makes, such as "Cake". Null for most; when set it is shown
+    /// as written, otherwise the client words the yield from <c>yieldKind</c>.
     /// </summary>
-    /// <remarks>
-    /// Null for nearly every recipe, and a client must then word the yield from
-    /// <c>yieldKind</c> in the reader's language. When it is set it replaces
-    /// that word and is shown exactly as written — it is one person's noun in
-    /// one person's language, so nothing here pluralises or translates it.
-    /// </remarks>
     public string? YieldLabel { get; init; }
 
     /// <summary>Its tags.</summary>
@@ -60,45 +47,23 @@ public sealed record Suggestion
     /// <summary>When the caller last made it, or null.</summary>
     public DateTimeOffset? LastCookedAt { get; init; }
 
-    /// <summary>
-    /// When the recipe last changed.
-    /// </summary>
-    /// <remarks>
-    /// Carried so a suggestion is a complete recipe card and the client needs no
-    /// second shape for one. A card that had to invent a missing field would be
-    /// inventing it on every screen that renders a suggestion.
-    /// </remarks>
+    /// <summary>When the recipe last changed.</summary>
     public required DateTimeOffset UpdatedAt { get; init; }
 
-    /// <summary>
-    /// Why this one, or null when no single term decided it.
-    /// </summary>
-    /// <remarks>
-    /// Null is an ordinary answer and the client must render it as nothing. A
-    /// good suggestion with no explanation is fine; an invented explanation is
-    /// a lie, and catching one discredits every reason that was true.
-    /// </remarks>
+    /// <summary>Why this one, or null when no single term decided it. Null renders as nothing; never invent a reason.</summary>
     public SuggestionReasonView? Reason { get; init; }
 }
 
 /// <summary>Why a recipe was suggested.</summary>
-/// <remarks>
-/// A code and at most a subject, never a sentence. The wording is the client's,
-/// because it is the client that knows which of two languages the person reads
-/// — and because prose on the wire cannot be translated after it arrives.
-/// </remarks>
+/// <remarks>A code and at most a subject, never a sentence: the client words it in the reader's language.</remarks>
 public sealed record SuggestionReasonView
 {
     /// <summary>
-    /// One of <c>affinity</c>, <c>rediscovery</c>, <c>tag</c>,
-    /// <c>ingredient</c>, <c>season</c>, <c>slot</c>, <c>household</c>,
-    /// <c>fresh</c>, <c>similar</c>. Branch on it.
+    /// One of <c>affinity</c>, <c>rediscovery</c>, <c>tag</c>, <c>ingredient</c>, <c>season</c>, <c>slot</c>,
+    /// <c>household</c>, <c>fresh</c>, <c>similar</c>.
     /// </summary>
     public required string Code { get; init; }
 
-    /// <summary>
-    /// What the reason is about — a tag, an ingredient name, or a member's
-    /// display name — when it is about something nameable.
-    /// </summary>
+    /// <summary>What the reason is about (a tag, ingredient or member name), when nameable.</summary>
     public string? Subject { get; init; }
 }

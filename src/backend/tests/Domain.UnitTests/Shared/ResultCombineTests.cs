@@ -16,26 +16,20 @@ public class ResultCombineTests
     [Fact]
     public void Combine_ShouldSucceed_WhenEveryCheckPassed()
     {
-        // Arrange
         var checks = new[] { Result.Success(), Result.Success() };
 
-        // Act
         var combined = Result.Combine(checks);
 
-        // Assert
         Assert.True(combined.Match(() => true, _ => false));
     }
 
     [Fact]
     public void Combine_ShouldReportEveryFailure_WhenSeveralChecksFailed()
     {
-        // Arrange
         var checks = new[] { Result.Failure(Title), Result.Success(), Result.Failure(Yield) };
 
-        // Act
         var combined = Result.Combine(checks);
 
-        // Assert
         var aggregate = combined.Match(() => null, error => error as ValidationError);
         Assert.NotNull(aggregate);
         Assert.Equal(["title", "yield"], aggregate.Errors.OfType<FieldError>().Select(e => e.Field));
@@ -44,15 +38,11 @@ public class ResultCombineTests
     [Fact]
     public void Combine_ShouldReturnTheFailureUnchanged_WhenExactlyOneCheckFailed()
     {
-        // Arrange
         var checks = new[] { Result.Success(), Result.Failure(Conflict) };
 
-        // Act
         var combined = Result.Combine(checks);
 
-        // Assert
-        // A lone failure is passed through so combining one check cannot turn a
-        // 409 into a 400.
+        // A lone failure is passed through so combining one check cannot turn a 409 into a 400.
         var type = combined.Match(() => ErrorType.Failure, error => error.Type);
         Assert.Equal(ErrorType.Conflict, type);
     }
@@ -60,14 +50,11 @@ public class ResultCombineTests
     [Fact]
     public void Combine_ShouldFlattenNestedAggregates_WhenCombiningCombinedResults()
     {
-        // Arrange
         var inner = Result.Combine([Result.Failure(Title), Result.Failure(Yield)]);
         var checks = new[] { inner, Result.Failure(Conflict) };
 
-        // Act
         var combined = Result.Combine(checks);
 
-        // Assert
         var aggregate = combined.Match(() => null, error => error as ValidationError);
         Assert.NotNull(aggregate);
         Assert.Equal(3, aggregate.Errors.Count);

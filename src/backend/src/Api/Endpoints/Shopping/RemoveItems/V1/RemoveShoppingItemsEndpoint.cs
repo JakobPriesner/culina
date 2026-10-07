@@ -21,14 +21,11 @@ internal sealed class RemoveShoppingItemsEndpoint : IEndpoint
                 ICommandHandler<RemoveShoppingItemsCommand, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                // No id clears everything ticked, which is the one bulk action
-                // worth having: after a shop, removing a dozen lines one at a
-                // time is the tedium the list exists to avoid.
+                // No id clears everything ticked: the one bulk action worth having after a shop.
                 var raw = context.Request.Query["itemId"];
                 Guid? itemId = null;
 
-                // A bad id is refused rather than read as "no id": a request
-                // meant to take off one line must not clear every ticked one.
+                // A bad id is refused, not read as "no id", which would clear every ticked line.
                 if (raw.Count > 0)
                 {
                     if (!Guid.TryParse(raw, CultureInfo.InvariantCulture, out var parsed))

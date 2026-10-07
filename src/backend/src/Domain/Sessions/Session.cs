@@ -2,14 +2,10 @@ using Domain.Shared;
 
 namespace Domain.Sessions;
 
-/// <summary>
-/// One signed-in browser.
-/// </summary>
+/// <summary>One signed-in browser.</summary>
 /// <remarks>
-/// The row is the truth, not the cookie. Because the cookie carries nothing but
-/// an opaque reference, signing out, revoking a device and a change of
-/// privileges all take effect immediately — none of which is possible with a
-/// self-contained token that the server cannot withdraw.
+/// The row is the truth, not the cookie: the cookie is an opaque reference, so sign-out, revocation
+/// and privilege changes take effect immediately.
 /// </remarks>
 public sealed class Session
 {
@@ -44,8 +40,7 @@ public sealed class Session
     public Guid UserId { get; }
 
     /// <summary>
-    /// The digest of the cookie value. Read-only memory rather than an array,
-    /// so a caller cannot alter a stored digest in place.
+    /// The digest of the cookie value; read-only so a caller cannot alter it in place.
     /// </summary>
     public ReadOnlyMemory<byte> TokenHash { get; }
 
@@ -71,13 +66,6 @@ public sealed class Session
     public DateTimeOffset? RevokedAt { get; private set; }
 
     /// <summary>Starts a new session.</summary>
-    /// <param name="userId">Who signed in.</param>
-    /// <param name="tokenHash">The digest of the cookie value.</param>
-    /// <param name="csrfTokenHash">The digest of the CSRF token.</param>
-    /// <param name="now">The injected current time.</param>
-    /// <param name="lifetime">How long it may live without activity.</param>
-    /// <param name="ipAddress">The client address, for the devices screen.</param>
-    /// <param name="userAgent">The browser, for the devices screen.</param>
     public static Session Start(
         Guid userId,
         ReadOnlyMemory<byte> tokenHash,
@@ -99,16 +87,6 @@ public sealed class Session
             revokedAt: null);
 
     /// <summary>Rebuilds a session from storage.</summary>
-    /// <param name="id">Its identifier.</param>
-    /// <param name="userId">Whose it is.</param>
-    /// <param name="tokenHash">The digest of the cookie value.</param>
-    /// <param name="csrfTokenHash">The digest of the CSRF token.</param>
-    /// <param name="createdAt">When it began.</param>
-    /// <param name="lastSeenAt">When it was last used.</param>
-    /// <param name="expiresAt">When it lapses.</param>
-    /// <param name="ipAddress">Where it came from.</param>
-    /// <param name="userAgent">What browser created it.</param>
-    /// <param name="revokedAt">When it was revoked, if it was.</param>
     public static Session Restore(
         Guid id,
         Guid userId,
@@ -123,32 +101,18 @@ public sealed class Session
         new(id, userId, tokenHash, csrfTokenHash, createdAt, lastSeenAt, expiresAt, ipAddress, userAgent, revokedAt);
 
     /// <summary>Whether this session may still authenticate a request.</summary>
-    /// <param name="now">The injected current time.</param>
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;
 
-    /// <summary>
-    /// Whether the session has sat unused long enough to be worth extending.
-    /// </summary>
+    /// <summary>Whether the session has sat unused long enough to be worth extending.</summary>
     /// <remarks>
-    /// The expiry slides, but not on every request: the row would then be
-    /// written once per page view for no gain, because a session used twice in
-    /// a minute is no more alive than one used once. Asking this first is what
-    /// keeps an authenticated request at a single indexed read.
+    /// Sliding the expiry on every request would write the row once per page view; asking first
+    /// keeps a request at one indexed read.
     /// </remarks>
-    /// <param name="now">The injected current time.</param>
-    /// <param name="idleFor">How long unused is long enough.</param>
     public bool IsDueForRenewal(DateTimeOffset now, TimeSpan idleFor) =>
         now - LastSeenAt >= idleFor;
 
     /// <summary>Extends the session because it was used, but never past its ceiling.</summary>
-    /// <remarks>
-    /// Without the ceiling a stolen cookie that is used now and then never
-    /// expires. With it, a session ends a fixed time after signing in however
-    /// busy it is, and the next sign-in starts a new one.
-    /// </remarks>
-    /// <param name="now">The injected current time.</param>
-    /// <param name="lifetime">How long it may live without further activity.</param>
-    /// <param name="maxLifetime">How long after it began it ends regardless.</param>
+    /// <remarks>Without the ceiling a stolen cookie used now and then never expires.</remarks>
     public void Touch(DateTimeOffset now, TimeSpan lifetime, TimeSpan maxLifetime)
     {
         var idleExpiry = now.Add(lifetime);
@@ -159,19 +123,14 @@ public sealed class Session
     }
 
     /// <summary>Ends the session immediately.</summary>
-    /// <param name="now">The injected current time.</param>
     public void Revoke(DateTimeOffset now) => RevokedAt ??= now;
 
-    /// <summary>
-    /// Replaces the CSRF token, which happens on sign-in and whenever
-    /// privileges change.
-    /// </summary>
-    /// <param name="csrfTokenHash">The digest of the new token.</param>
+    /// <summary>Replaces the CSRF token, on sign-in and whenever privileges change.</summary>
     public void RotateCsrfToken(ReadOnlyMemory<byte> csrfTokenHash) => CsrfTokenHash = csrfTokenHash;
 
     /// <summary>
-    /// User agents are attacker-controlled and unbounded; the devices screen
-    /// only needs enough to recognise a browser.
+    /// User agents are attacker-controlled and unbounded; the devices screen needs only enough to
+    /// recognise a browser.
     /// </summary>
     private static string? Truncate(string? userAgent) =>
         userAgent is null ? null : userAgent[..Math.Min(userAgent.Length, 400)];

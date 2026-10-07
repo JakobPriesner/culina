@@ -2,13 +2,9 @@ using Domain.Shared;
 
 namespace Domain.Recipes;
 
-/// <summary>
-/// A named part of the ingredient list: "For the dough", "For the sauce".
-/// </summary>
+/// <summary>A named part of the ingredient list: "For the dough", "For the sauce".</summary>
 /// <remarks>
-/// Every recipe has one group whose name is null. That is what makes grouping
-/// invisible until it is used: a recipe with one unnamed group renders as a
-/// plain list, and the UI shows no grouping affordance until a second group
+/// Every recipe has one group whose name is null, so grouping stays invisible until a second group
 /// exists.
 /// </remarks>
 public sealed class IngredientGroup
@@ -36,11 +32,7 @@ public sealed class IngredientGroup
     /// <summary>Its ingredient lines, in order.</summary>
     public IReadOnlyList<RecipeIngredient> Ingredients { get; }
 
-    /// <summary>Creates a group.</summary>
-    /// <param name="id">Its id, or null for a new one.</param>
-    /// <param name="name">Its heading, or null.</param>
-    /// <param name="sortOrder">Where it appears.</param>
-    /// <param name="ingredients">Its ingredient lines.</param>
+    /// <summary>Creates a group; a null <c>id</c> makes a new one.</summary>
     public static Result<IngredientGroup> Create(
         Guid? id,
         string? name,

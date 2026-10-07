@@ -1,39 +1,20 @@
 namespace Api.Infrastructure;
 
 /// <summary>
-/// The single-page app's HTML document, with a place for the per-response CSP
-/// nonce.
+/// The single-page app's HTML document, with a place for the per-response CSP nonce.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The shell carries two inline scripts: the few lines that stamp the stored
-/// theme on the document before the first paint, and the one SvelteKit writes
-/// to start the app. Under <c>script-src 'self' 'nonce-…'</c> each only runs if
-/// it carries the nonce this response was issued, so the document cannot be a
-/// static file.
-/// </para>
-/// <para>
-/// The theme script is given its slot in <c>app.html</c>. SvelteKit's is not
-/// ours to write — it arrives as a bare <c>&lt;script&gt;</c> — so every bare
-/// one is given a slot here. Without that the app never starts behind the
-/// policy, and nothing short of the real image shows it: the dev server and
-/// <c>vite preview</c> set no policy at all.
-/// </para>
-/// <para>
-/// Read once at startup rather than per request. The container ships a built
-/// frontend and never changes it, and in development the Vite server serves the
-/// app instead — so a rebuild is a restart either way.
-/// </para>
+/// Its two inline scripts (theme stamp, SvelteKit start-up) run only with this response's nonce, so
+/// the document cannot be a static file. Every bare <c>&lt;script&gt;</c> gets a slot, as
+/// SvelteKit's is not ours to write; without it the app never starts behind the policy, which only
+/// the real image shows. Read once at startup.
 /// </remarks>
 internal sealed class AppShell
 {
-    /// <summary>
-    /// The token <c>app.html</c> writes in place of a nonce.
-    /// </summary>
+    /// <summary>The token <c>app.html</c> writes in place of a nonce.</summary>
     /// <remarks>
-    /// Deliberately not SvelteKit's own <c>%sveltekit.nonce%</c>: that one is
-    /// substituted during the build, which is exactly when the value is not yet
-    /// known.
+    /// Not SvelteKit's <c>%sveltekit.nonce%</c>, which is substituted during the build, before the
+    /// value is known.
     /// </remarks>
     internal const string NoncePlaceholder = "__CULINA_NONCE__";
 

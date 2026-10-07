@@ -3,18 +3,7 @@ namespace Contracts.Recipes;
 /// <summary>
 /// A recipe in full.
 /// </summary>
-/// <remarks>
-/// <para>
-/// One type, returned by reading, creating and updating a recipe alike, because
-/// all three answer the identical question: what does this recipe look like
-/// now. Splitting them pre-emptively would be three copies of a twenty-field
-/// projection with nothing to distinguish them.
-/// </para>
-/// <para>
-/// The moment one of them needs a field the others must not have, it gets its
-/// own type — the operation folders already exist for exactly that.
-/// </para>
-/// </remarks>
+/// <remarks>One type for read, create and update, since all answer "what does this recipe look like now".</remarks>
 public sealed record RecipeDetail
 {
     /// <summary>The recipe's id.</summary>
@@ -41,12 +30,7 @@ public sealed record RecipeDetail
     /// <summary>
     /// The recipe's own word for what it makes — "Cake", "Gläser", "Blech".
     /// </summary>
-    /// <remarks>
-    /// Null for nearly every recipe, and a client must then word the yield from
-    /// <c>yieldKind</c> in the reader's language. When it is set it replaces
-    /// that word and is shown exactly as written — it is one person's noun in
-    /// one person's language, so nothing here pluralises or translates it.
-    /// </remarks>
+    /// <remarks>Null for nearly every recipe; shown exactly as written, never pluralised or translated.</remarks>
     public string? YieldLabel { get; init; }
 
     /// <summary>Hands-on time.</summary>
@@ -73,12 +57,6 @@ public sealed record RecipeDetail
     /// <summary>
     /// Where it came from, when it was not written here.
     /// </summary>
-    /// <remarks>
-    /// Null for most recipes, which is the ordinary case. It is part of the
-    /// recipe rather than a second request because it is one line of text under
-    /// a title, and a page that had to ask twice to draw one line would ask
-    /// once and skip it.
-    /// </remarks>
     public RecipeProvenance? Origin { get; init; }
 
     /// <summary>Who wrote it down.</summary>

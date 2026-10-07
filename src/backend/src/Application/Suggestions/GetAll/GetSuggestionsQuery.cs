@@ -11,7 +11,6 @@ using Domain.Suggestions;
 namespace Application.Suggestions.GetAll;
 
 /// <summary>What to suggest, and for what occasion.</summary>
-/// <param name="Context">Who is asking, and about what.</param>
 public sealed record GetSuggestionsQuery(SuggestionContext Context);
 
 internal sealed class GetSuggestionsQueryHandler(
@@ -39,8 +38,7 @@ internal sealed class GetSuggestionsQueryHandler(
 
         if (!member)
         {
-            // Not-found rather than forbidden, for the same reason every other
-            // household read gives a non-member a 404.
+            // Not-found, not forbidden, as every household read gives a non-member.
             return tracked.Record(
                 Result<Response>.Failure(HouseholdErrors.NotFound(context.HouseholdId)));
         }
@@ -52,17 +50,10 @@ internal sealed class GetSuggestionsQueryHandler(
         // Ranked over everything this household sees, inherited recipes too.
         context = context with { InheritedFrom = [.. library.Skip(1)] };
 
-        // "Recipes like this one" needs the one, and it has to be one of THIS
-        // household's — its own or one it inherits.
-        //
-        // Membership alone is not enough, because a person may belong to
-        // several households: naming a recipe from their other kitchen would
-        // pass a visibility check, find no features inside this one, and return
-        // an ordinary ranking that silently claims to resemble something. A
-        // wrong answer that looks right is worse than a 404.
-        //
-        // Answered as not-found rather than forbidden either way, so naming a
-        // stranger's recipe cannot be used to learn that it exists.
+        // "Recipes like this one" needs a recipe of THIS household (own or inherited): a person in
+        // several households naming one from another kitchen would pass visibility, find no
+        // features here and get an ordinary ranking claiming to resemble something. Not-found
+        // either way, so a stranger's recipe cannot be probed.
         if (context.LikeRecipeId is { } likeId)
         {
             var found = await recipes.FindAsync(likeId, cancellationToken).ConfigureAwait(false);

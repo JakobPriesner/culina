@@ -8,10 +8,7 @@ namespace Application.Recipes.UndoCooked;
 /// <summary>Takes back a "made it".</summary>
 /// <param name="EntryId">Which entry.</param>
 /// <param name="UserId">Whose it must be.</param>
-/// <remarks>
-/// This is the undo behind the confirmation toast, which is how Culina avoids
-/// asking "are you sure?" before a one-tap action that was never dangerous.
-/// </remarks>
+/// <remarks>The undo behind the confirmation toast, in place of an "are you sure?" prompt.</remarks>
 public sealed record UndoCookedCommand(Guid EntryId, Guid UserId);
 
 internal sealed class UndoCookedCommandHandler(ICookLogRepository entries)

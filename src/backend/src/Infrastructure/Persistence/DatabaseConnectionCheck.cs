@@ -7,24 +7,16 @@ using Npgsql;
 namespace Infrastructure.Persistence;
 
 /// <summary>
-/// Connects with a proposed set of details, on a pool of its own that is
-/// thrown away afterwards, and checks the things the migrations will need.
+/// Connects with proposed details on a throwaway pool and checks what the migrations need.
 /// </summary>
 /// <param name="logger">Where the reason a connection failed is written.</param>
 /// <remarks>
-/// It connects to whatever host and port it is given, during setup for anyone
-/// at all. So the caller learns only which kind of failure it was, never the
-/// socket's or the server's own words — those would answer "is anything
-/// listening there, and what" for any address — and the words go to the log,
-/// with the address, for the operator.
+/// Callers learn only the kind of failure, never the socket's or server's words: those would let anyone
+/// probe arbitrary hosts during setup. The details go to the log.
 /// </remarks>
 internal sealed class DatabaseConnectionCheck(ILogger<DatabaseConnectionCheck> logger) : IDatabaseConnectionCheck
 {
-    /// <summary>
-    /// What the schema is built on. They are trusted extensions, so the first
-    /// migration installs them as the application role — provided it may
-    /// create things in the database.
-    /// </summary>
+    // Trusted extensions the first migration installs as the application role, if it may create them.
     private static readonly string[] Extensions = ["citext", "pg_trgm", "unaccent"];
 
     public async Task<Result> CheckAsync(DatabaseSettings settings, CancellationToken cancellationToken)
@@ -47,9 +39,7 @@ internal sealed class DatabaseConnectionCheck(ILogger<DatabaseConnectionCheck> l
             }
             catch (NpgsqlException failure)
             {
-                // The answer this check exists to give, not a defect: a wrong
-                // password, a host that does not resolve, a server that is not
-                // listening.
+                // The expected answer, not a defect.
                 var error = Category(failure, settings);
 
                 logger.CheckFailed(settings.Host, settings.Port, error.Code, Reason(failure));
@@ -90,8 +80,7 @@ internal sealed class DatabaseConnectionCheck(ILogger<DatabaseConnectionCheck> l
                 var mayCreate = await reader.GetFieldValueAsync<bool>(3, cancellationToken).ConfigureAwait(false);
                 var missing = Extensions.Except(installed).ToList();
 
-                // First: a superuser may do everything below, which is exactly
-                // why it is refused. See SettingsErrors.DatabaseSuperuser.
+                // Checked first: a superuser can do everything below, which is why it is refused.
                 if (superuser)
                 {
                     logger.CheckFailed(
@@ -121,12 +110,7 @@ internal sealed class DatabaseConnectionCheck(ILogger<DatabaseConnectionCheck> l
     }
 
     /// <summary>Which kind of failure it was, and nothing more.</summary>
-    /// <remarks>
-    /// A refused sign-in method and TLS are told apart by Npgsql's own
-    /// message, since neither carries a type of its own. Should that wording
-    /// change, the failure falls through to "not a usable server" — less
-    /// helpful, never more revealing.
-    /// </remarks>
+    /// <remarks>Auth method and TLS are told apart by Npgsql's message text; if that changes it falls through to "not a usable server".</remarks>
     private static Error Category(NpgsqlException failure, DatabaseSettings settings) => failure switch
     {
         PostgresException { SqlState: PostgresErrorCodes.InvalidPassword }

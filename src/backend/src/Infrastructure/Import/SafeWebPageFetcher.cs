@@ -6,56 +6,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Import;
 
-/// <summary>
-/// Fetches a public web page, and nothing else.
-/// </summary>
+/// <summary>Fetches a public web page, and nothing else.</summary>
 /// <remarks>
-/// <para>
-/// Every limit here exists because the server does the fetching. Without them
-/// anyone with an account can aim this at the cloud metadata service, at the
-/// database on the next container, or at an address whose <em>timing</em> tells
-/// them what is listening on the private network.
-/// </para>
-/// <para>
-/// Five controls, and all five are load-bearing:
-/// </para>
-/// <list type="number">
-/// <item>Only <c>http</c> and <c>https</c>. <c>file:</c> reads the disk,
-/// <c>gopher:</c> writes arbitrary bytes to an arbitrary port.</item>
-/// <item>Every connection goes to an address that has been checked, because the
-/// connection is made to the address this resolved — not to the name. A name
-/// that resolves publicly when it is validated and to 127.0.0.1 when it is
-/// dialled is the whole of DNS rebinding, and checking the name closes nothing.
-/// </item>
-/// <item>Redirects are followed by hand, a few at most, each one validated
-/// again. Automatic redirects would take the second hop without any of this.
-/// </item>
-/// <item>A deadline on the whole exchange, so a server that answers one byte a
-/// minute cannot hold a connection open.</item>
-/// <item>A cap on what is read, enforced while reading rather than after, so a
-/// response with no end cannot be the end of the process.</item>
-/// </list>
-/// <para>
-/// What it reports is deliberately vague. "That address cannot be fetched" for
-/// every refusal: telling a caller which address was blocked and which merely
-/// timed out turns this into a port scanner with a friendly error message.
-/// </para>
+/// The server does the fetching, so: http(s) only; connect to the checked address, not the name
+/// (DNS rebinding); follow redirects by hand, revalidating each; deadline on the whole exchange;
+/// size cap enforced while reading. Failures are vague on purpose, or this becomes a port scanner.
 /// </remarks>
 internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
 {
-    /// <summary>How long the whole exchange may take.</summary>
     private static readonly TimeSpan Deadline = TimeSpan.FromSeconds(10);
 
-    /// <summary>How much of a page is read. A recipe page is a fraction of it.</summary>
     private const int MaxBytes = 2 * 1024 * 1024;
 
     /// <summary>
-    /// How many redirects are followed.
+    /// How many redirects are followed: enough for http to https to www, far short of a loop.
     /// </summary>
-    /// <remarks>
-    /// Enough for the ordinary http → https → www chain, and far short of a
-    /// loop. Each one is validated again from scratch.
-    /// </remarks>
     private const int MaxHops = 5;
 
     private readonly SocketsHttpHandler handler;
@@ -66,16 +31,13 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
     {
         this.logger = logger;
 
-        // Never private, whatever the operator allows for a connected source:
-        // this address came from a text box anyone can type in. Redirects are
-        // followed by hand below, so every hop is validated.
+        // Never private, whatever the operator allows for a connected source: the address came from
+        // a text box.
         handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
 
-        // Said plainly. A fetcher that pretended to be a browser would be
-        // making it harder for a site to say no, and this is an import for one
-        // person's own use rather than a crawler.
+        // Said plainly: pretending to be a browser would make it harder for a site to say no.
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Culina/1.0 (self-hosted recipe import)");
         client.DefaultRequestHeaders.Accept.ParseAdd("text/html, application/xhtml+xml");
     }
@@ -102,8 +64,7 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
         catch (Exception failure) when (failure is HttpRequestException or OperationCanceledException
                                             or InvalidOperationException or IOException)
         {
-            // Logged with the host, never returned with it. The operator can
-            // see what happened; the caller learns only that it did not work.
+            // Logged with the host, never returned with it: the caller learns only that it failed.
             LogFetchFailed(logger, url.Host, failure);
 
             return ImportErrors.CouldNotFetch;
@@ -133,9 +94,8 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
                 return ImportErrors.CouldNotFetch;
             }
 
-            // Resolved against the page it came from, because a Location header
-            // is allowed to be relative — and a relative one that is not
-            // resolved would be fetched as a path on this server.
+            // Resolved against the current page: a relative Location would otherwise hit this
+            // server.
             var next = new Uri(current, location);
 
             if (!IsFetchableScheme(next))
@@ -167,8 +127,8 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
             return ImportErrors.NotAWebPage;
         }
 
-        // Checked before reading when the server says, and again while reading
-        // when it does not: a Content-Length is a claim, not a limit.
+        // Checked before reading when the server says, and again while reading: Content-Length is a
+        // claim.
         if (response.Content.Headers.ContentLength > MaxBytes)
         {
             return ImportErrors.TooLarge;
@@ -220,10 +180,7 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
         Message = "Could not fetch {Host} for an import")]
     private static partial void LogFetchFailed(ILogger logger, string host, Exception failure);
 
-    /// <remarks>
-    /// The host and not the address: a path or a query can carry a token, and
-    /// one line per hop is enough to see where a redirect chain went.
-    /// </remarks>
+    /// <remarks>The host, not the address: a path or query can carry a token.</remarks>
     [LoggerMessage(
         EventId = 1202,
         Level = LogLevel.Debug,

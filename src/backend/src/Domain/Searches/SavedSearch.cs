@@ -3,26 +3,9 @@ using Domain.Shared;
 namespace Domain.Searches;
 
 /// <summary>
-/// A search somebody wants back, owned by a household.
+/// A household-owned, named copy of the library toolbar's search.
+/// Unversioned on purpose: re-saving over it is a deliberate overwrite, not a clash.
 /// </summary>
-/// <remarks>
-/// <para>
-/// A name over the four things the library's toolbar holds. Saving is a copy
-/// rather than a translation, which is the only reason a saved search can be
-/// trusted to reopen as the search that was saved.
-/// </para>
-/// <para>
-/// Household-owned, like the recipes it finds. A private view of shared recipes
-/// breaks the moment somebody leaves the household, and the axis this model
-/// keeps apart is "what everyone here edits" from "what one person thinks".
-/// </para>
-/// <para>
-/// No version, unlike a cookbook or a recipe. The one edit anybody makes is
-/// "save what I am looking at now over what I saved before", and that is a
-/// deliberate overwrite rather than a clash — a precondition here would exist
-/// only so that the answer to it could be to overwrite anyway.
-/// </para>
-/// </remarks>
 public sealed class SavedSearch
 {
     private SavedSearch(
@@ -106,14 +89,7 @@ public sealed class SavedSearch
         return new SavedSearch(id, householdId, name, criteria, createdBy, createdAt, updatedAt);
     }
 
-    /// <summary>
-    /// Renames it, and rewrites what it asks for.
-    /// </summary>
-    /// <remarks>
-    /// One method, because renaming a search and pointing it at what you are
-    /// looking at now are the same gesture from the same sheet, and an
-    /// invariant checked in one place is an invariant that holds.
-    /// </remarks>
+    /// <summary>Renames it and rewrites what it asks for, as one gesture.</summary>
     /// <param name="name">The new name.</param>
     /// <param name="criteria">What it should now ask for.</param>
     /// <param name="now">When.</param>

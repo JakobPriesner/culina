@@ -4,32 +4,16 @@ using Application.Abstractions.Settings;
 namespace Api.Infrastructure;
 
 /// <summary>
-/// What the machine has left: memory, and room on the volumes Culina writes to.
+/// What the machine has left: memory, and room on the volumes Culina writes to (self-hosted instances die of full disks and memory limits).
+/// Memory comes from the garbage collector, which knows the container's limit; CPU, network and disk throughput are left to the collector's host metrics.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The runtime and process instrumentation say what this process uses; neither
-/// says how close the machine is to running out. A self-hosted instance most
-/// often dies of a full disk or a container memory limit, and both are cheap
-/// to read on every collection.
-/// </para>
-/// <para>
-/// Memory comes from the garbage collector, which already knows the container's
-/// limit and the load at its last collection, so no platform-specific reading
-/// is needed. Machine-wide CPU, network and disk throughput are left to a
-/// collector's host metrics receiver, which reads them properly on every
-/// platform.
-/// </para>
-/// </remarks>
 internal sealed class MachineMetrics : IDisposable
 {
     internal const string MeterName = "Culina.Machine";
 
     private readonly Meter meter = new(MeterName);
 
-    /// <param name="storage">
-    /// The volumes to watch; absent on the setup host, which writes nowhere.
-    /// </param>
+    /// <param name="storage">The volumes to watch; absent on the setup host, which writes nowhere.</param>
     internal MachineMetrics(StorageSettings? storage)
     {
         meter.CreateObservableUpDownCounter(
@@ -92,11 +76,7 @@ internal sealed class MachineMetrics : IDisposable
         }
     }
 
-    /// <summary>
-    /// The space on the volume a directory is on, or nothing when it cannot be
-    /// read — the configuration directory is optional, and a collection must
-    /// never throw.
-    /// </summary>
+    // The space on the volume a directory is on, or nothing when unreadable: the config directory is optional and a collection must never throw.
     private static Space? SpaceOf(string path)
     {
         try

@@ -10,27 +10,18 @@ using Domain.Shared;
 namespace Application.Searches;
 
 /// <summary>Every search a household has saved.</summary>
-/// <param name="HouseholdId">Whose searches.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record GetSavedSearchesQuery(Guid HouseholdId, Guid UserId);
 
 /// <summary>Saves a search.</summary>
-/// <param name="UserId">Whose search it is.</param>
-/// <param name="Draft">What to call it, and what it asks for.</param>
 public sealed record CreateSavedSearchCommand(Guid UserId, CreateSavedSearchRequest Draft);
 
 /// <summary>Renames a saved search, and rewrites what it asks for.</summary>
-/// <param name="SearchId">Which one.</param>
-/// <param name="UserId">Who is asking.</param>
-/// <param name="Draft">What it should now say.</param>
 public sealed record UpdateSavedSearchCommand(
     Guid SearchId,
     Guid UserId,
     UpdateSavedSearchRequest Draft);
 
 /// <summary>Forgets a saved search.</summary>
-/// <param name="SearchId">Which one.</param>
-/// <param name="UserId">Who is asking.</param>
 public sealed record DeleteSavedSearchCommand(Guid SearchId, Guid UserId);
 
 internal sealed class GetSavedSearchesQueryHandler(
@@ -195,14 +186,7 @@ internal sealed class DeleteSavedSearchCommandHandler(
     }
 }
 
-/// <summary>
-/// Answers whether the caller may see or change a saved search.
-/// </summary>
-/// <remarks>
-/// The same rule cookbooks follow: a saved search belongs to a household, so
-/// the question is only "are you in it" — and somebody who is not is told it
-/// does not exist, never that it exists and is forbidden.
-/// </remarks>
+/// <summary>Whether the caller may see or change a saved search: household membership only, and a non-member is told it does not exist.</summary>
 internal static class SavedSearchAccess
 {
     internal static async Task<Result<SavedSearch>> VisibleAsync(

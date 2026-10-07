@@ -33,18 +33,14 @@ internal static class SuggestionMappings
             CookCount = scored.Recipe.CookCount,
             LastCookedAt = scored.Recipe.LastCookedAt,
             UpdatedAt = scored.Recipe.UpdatedAt,
-            // Null rather than a "none" code, so a client that forgets to
-            // branch renders nothing instead of the word "none".
+            // Null, not a "none" code, so a client that forgets to branch renders nothing.
             Reason = reason.Reason == SuggestionReason.None
                 ? null
                 : new SuggestionReasonView { Code = ReasonCodes.Of(reason.Reason), Subject = reason.Subject }
         };
     }
 
-    // The score itself never crosses the wire. It is an ordering and nothing
-    // else — no unit, no scale, not comparable between two households — and
-    // publishing one would invite somebody to compare two numbers that mean
-    // nothing apart.
+    // The score never crosses the wire: it is an ordering, with no unit or scale, not comparable between households.
     private static class ReasonCodes
     {
         internal static string Of(SuggestionReason reason) => reason switch

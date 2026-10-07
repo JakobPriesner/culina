@@ -27,10 +27,7 @@ public sealed record LoggedLine(
         : null;
 }
 
-/// <summary>
-/// Keeps every line the host logs, after the configured level filters, so a
-/// test can say what an operator would read.
-/// </summary>
+/// <summary>Keeps every line the host logs, after level filters, so a test can say what an operator would read.</summary>
 public sealed class RecordingLogs : ILoggerProvider, ISupportExternalScope
 {
     private readonly ConcurrentQueue<LoggedLine> lines = new();
@@ -39,11 +36,7 @@ public sealed class RecordingLogs : ILoggerProvider, ISupportExternalScope
     /// <summary>Everything logged so far, oldest first.</summary>
     public IReadOnlyList<LoggedLine> Lines => [.. lines];
 
-    /// <summary>
-    /// The first line that matches, waiting briefly for it: the request line is
-    /// written as the pipeline unwinds, which can be after the client already
-    /// has its response.
-    /// </summary>
+    /// <summary>The first line that matches, waiting briefly: the request line can be written after the response.</summary>
     public async Task<LoggedLine?> WaitForAsync(Func<LoggedLine, bool> match)
     {
         for (var attempt = 0; attempt < 40; attempt++)

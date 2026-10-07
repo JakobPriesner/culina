@@ -7,12 +7,9 @@ namespace Infrastructure.Persistence.Trash;
 
 /// <summary>Reads and empties the bin.</summary>
 /// <remarks>
-/// The one place that reads the <c>*_with_deleted</c> tables rather than the
-/// views every other repository uses. Writes that restore go to the tables too,
-/// since the views cannot see the rows being restored.
+/// The one place that reads the <c>*_with_deleted</c> tables rather than the views; restoring
+/// writes go to the tables too, since the views cannot see those rows.
 /// </remarks>
-/// <param name="executor">Runs the SQL inside the request's transaction.</param>
-/// <param name="documents">Makes a restored recipe findable again.</param>
 internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter documents) : ITrashRepository
 {
     public async Task<IReadOnlyList<TrashedItem>> ForHouseholdAsync(
@@ -96,8 +93,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
             cancellationToken).ConfigureAwait(false);
     }
 
-    // Joined to the households view: a recipe in the bin of a household that
-    // is itself in the bin comes back with the household, not on its own.
+    // Joined to the households view: a recipe in the bin of a deleted household comes back with the
+    // household, not alone.
     public Task<Guid?> HouseholdOfDeletedRecipeAsync(Guid recipeId, CancellationToken cancellationToken) =>
         executor.ExecuteScalarAsync<Guid?>(
             """
@@ -124,8 +121,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
 
         if (restored)
         {
-            // Deleting dropped the document; nothing finds the recipe until it
-            // is written again.
+            // Deleting dropped the search document; nothing finds the recipe until it is written
+            // again.
             await documents.WriteAsync(recipeId, cancellationToken).ConfigureAwait(false);
         }
 
@@ -140,9 +137,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
 
     public async Task<PurgedTrash> PurgeAsync(DateTimeOffset cutoff, CancellationToken cancellationToken)
     {
-        // The pictures first, while the rows that point at them still exist:
-        // the recipes about to go, whether binned themselves or with their
-        // household, and the photos of the times they were cooked.
+        // Pictures first, while the rows that point at them still exist: recipes about to go
+        // (binned alone or with their household) and cook photos.
         var candidates = await executor.QueryAsync<string>(
             """
             with doomed as (
@@ -157,8 +153,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
             new { cutoff },
             cancellationToken).ConfigureAwait(false);
 
-        // Households first, so their recipes and cookbooks go by cascade, then
-        // whatever was binned on its own inside a household that stayed.
+        // Households first, so their recipes and cookbooks go by cascade, then whatever was binned
+        // alone in a household that stayed.
         var removed = 0;
 
         foreach (var table in (string[])["households_with_deleted", "recipes_with_deleted", "cookbooks_with_deleted"])
@@ -169,8 +165,8 @@ internal sealed class TrashRepository(DbExecutor executor, SearchDocumentWriter 
                 cancellationToken).ConfigureAwait(false);
         }
 
-        // Storage is content-addressed, so another recipe — or a recipe still
-        // in the bin — may share a file. Only the ones nobody points at go.
+        // Content-addressed storage: another recipe, or one still in the bin, may share a file.
+        // Only files nobody points at go.
         var released = await executor.QueryAsync<string>(
             $"""
              select hash from unnest(@candidates::text[]) as hash

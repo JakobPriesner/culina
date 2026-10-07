@@ -31,8 +31,7 @@ internal sealed class GetShoppingListQueryHandler(
 
         if (!member)
         {
-            // 404 rather than 403: a stranger learns nothing about which
-            // households exist.
+            // 404 rather than 403: a stranger learns nothing about which households exist.
             return tracked.Record(Result<Response>.Failure(HouseholdErrors.NotFound(query.HouseholdId)));
         }
 

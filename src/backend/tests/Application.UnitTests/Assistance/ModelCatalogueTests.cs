@@ -4,9 +4,7 @@ using Application.Assistance;
 
 namespace Application.UnitTests.Assistance;
 
-/// <summary>
-/// That narrowing a catalogue never leaves an administrator with nothing.
-/// </summary>
+/// <summary>Narrowing a catalogue never leaves an administrator with nothing.</summary>
 public class ModelCatalogueTests
 {
     private static ModelInfo Model(string id) => new(id, id, CanDraw: false);
@@ -14,50 +12,38 @@ public class ModelCatalogueTests
     [Fact]
     public void Narrow_ShouldDropWhatCannotWriteARecipe()
     {
-        // Arrange
         IReadOnlyList<ModelInfo> offered =
             [Model("gpt-5.5"), Model("text-embedding-3-large"), Model("tts-1")];
 
-        // Act
         var kept = ModelCatalogue.Narrow(offered, model => !model.Id.Contains("tts") &&
             !model.Id.Contains("embedding"));
 
-        // Assert
         Assert.Equal(["gpt-5.5"], kept.Select(model => model.Id));
     }
 
     [Fact]
     public void Narrow_ShouldKeepEverything_WhenTheRuleWouldKeepNothing()
     {
-        // Arrange
-        // A real key, whose project could reach the speech models and nothing
-        // else. Filtered to nothing, the screen said the provider had listed
-        // no models at all — which sent the administrator to look at the wrong
-        // thing. These six on screen say what is wrong in one glance.
+        // A key whose project reached only speech models: filtering to nothing sent the admin
+        // looking at the wrong thing.
         IReadOnlyList<ModelInfo> offered =
             [Model("tts-1"), Model("tts-1-hd"), Model("gpt-4o-mini-tts")];
 
-        // Act
         var kept = ModelCatalogue.Narrow(offered, model => !model.Id.Contains("tts"));
 
-        // Assert
         Assert.Equal(offered, kept);
     }
 
     [Fact]
     public void Narrow_ShouldLeaveAnEmptyCatalogueEmpty()
     {
-        // Nothing offered is nothing to show, and no rule changes that.
         Assert.Empty(ModelCatalogue.Narrow([], _ => true));
     }
 
     [Fact]
     public void Newest_ShouldPutTheMostRecentlyPublishedFirst()
     {
-        // Arrange
-        // Alphabetical buries the thing somebody came for: gpt-image-2.5 sorts
-        // above gpt-6, and a dated snapshot sorts beside its family whether it
-        // is a year old or a day.
+        // Alphabetical buries what somebody came for: gpt-image-2.5 sorts above gpt-6.
         IReadOnlyList<ModelInfo> offered =
         [
             Dated("gpt-4o-mini", "2024-07-18"),
@@ -65,10 +51,8 @@ public class ModelCatalogueTests
             Dated("gpt-6-astra", "2026-08-11")
         ];
 
-        // Act
         var ordered = ModelCatalogue.Newest(offered);
 
-        // Assert
         Assert.Equal(
             ["gpt-6-astra", "gpt-image-2.5-flare", "gpt-4o-mini"],
             ordered.Select(model => model.Id));
@@ -77,16 +61,12 @@ public class ModelCatalogueTests
     [Fact]
     public void Newest_ShouldKeepNameOrder_ForAProviderThatDatesNothing()
     {
-        // Arrange
-        // Google's listing carries no date. An order that looked meaningful
-        // here would be one this app had made up.
+        // Google's listing carries no date; an order that looked meaningful would be made up.
         IReadOnlyList<ModelInfo> offered =
             [Model("gemini-3-pro"), Model("gemini-2.5-flash"), Model("gemma-4-31b-it")];
 
-        // Act
         var ordered = ModelCatalogue.Newest(offered);
 
-        // Assert
         Assert.Equal(
             ["gemini-2.5-flash", "gemini-3-pro", "gemma-4-31b-it"],
             ordered.Select(model => model.Id));
@@ -95,16 +75,12 @@ public class ModelCatalogueTests
     [Fact]
     public void Newest_ShouldPutADatedModelAboveAnUndatedOne()
     {
-        // Arrange
-        // Not a case any single provider produces — a listing either carries
-        // dates or does not — but the rule should be stated rather than left
-        // to whichever comparer happens to run.
+        // Not a case any provider produces, but the rule should be stated rather than left to the
+        // comparer.
         IReadOnlyList<ModelInfo> offered = [Model("aaa-no-date"), Dated("zzz-dated", "2020-01-01")];
 
-        // Act
         var ordered = ModelCatalogue.Newest(offered);
 
-        // Assert
         Assert.Equal(["zzz-dated", "aaa-no-date"], ordered.Select(model => model.Id));
     }
 

@@ -1,20 +1,15 @@
 namespace Application.Abstractions;
 
-/// <summary>
-/// When this host started, and the way to start it again.
-/// </summary>
+/// <summary>When this host started, and the way to start it again.</summary>
 /// <remarks>
-/// Bootstrap settings are read once, into immutable records, so a saved change
-/// applies when the host is built again. That happens inside the same process
-/// — the listener closes, a new host is built from fresh configuration, and it
-/// listens again a second or two later — rather than by exiting and hoping
-/// something restarts the container.
+/// Bootstrap settings are read once, so a saved change applies when the host is built again: in the
+/// same process (close listener, build from fresh configuration, listen again), not by exiting and
+/// hoping something restarts the container.
 /// </remarks>
 public interface IHostRestart
 {
     /// <summary>
-    /// When this host was built. A client that asked for a restart waits for a
-    /// different value.
+    /// When this host was built; a client that asked for a restart waits for a different value.
     /// </summary>
     DateTimeOffset StartedAt { get; }
 

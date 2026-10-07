@@ -2,14 +2,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Assistance;
 
-/// <summary>
-/// Assistant log lines. Event ids 1500-1509; listing models uses 1510-1519.
-/// </summary>
+/// <summary>Assistant log lines. Event ids 1500-1509; listing models uses 1510-1519.</summary>
 /// <remarks>
-/// Nothing here carries a prompt, an answer, a recipe or a key. What is worth
-/// recording is that a provider refused and what it said about why — the
-/// content is the person's, and an operator reading the logs has no business
-/// with it.
+/// Nothing here carries a prompt, answer, recipe or key: the content is the person's. What is worth
+/// recording is that a provider refused, and why.
 /// </remarks>
 internal static partial class AssistanceLogs
 {
@@ -20,9 +16,8 @@ internal static partial class AssistanceLogs
     internal static partial void EmptyAnswer(ILogger logger, string provider, string? finishReason);
 
     /// <remarks>
-    /// The exception goes with it: the provider's status and its own words are
-    /// what tell a revoked key from a content filter from a model that was
-    /// renamed, and the error code the person sees cannot.
+    /// The exception goes with it: the provider's status and words tell a revoked key from a
+    /// content filter from a renamed model, which the person's error code cannot.
     /// </remarks>
     [LoggerMessage(
         EventId = 1501,

@@ -8,22 +8,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace IntegrationTests.Pipeline;
 
-/// <summary>
-/// The guard exists so a mistyped filter fails loudly: silently ignoring it
-/// would return everything while the caller believes it filtered.
-/// </summary>
+/// <summary>The guard makes a mistyped filter fail loudly instead of silently returning everything.</summary>
 public class QueryParameterGuardTests
 {
     [Fact]
     public async Task Request_ShouldBeRejected_WhenItCarriesAnUndeclaredParameter()
     {
-        // Arrange
         var context = Request("?unexpected=1", single: ["query"], repeatable: []);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         Assert.False(reached);
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
         Assert.Equal("request.unknown_parameter", await CodeAsync(context));
@@ -32,13 +26,10 @@ public class QueryParameterGuardTests
     [Fact]
     public async Task Request_ShouldBeRejected_WhenASingleValuedParameterIsRepeated()
     {
-        // Arrange
         var context = Request("?query=a&query=b", single: ["query"], repeatable: []);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         Assert.False(reached);
         Assert.Equal("request.repeated_parameter", await CodeAsync(context));
     }
@@ -46,55 +37,42 @@ public class QueryParameterGuardTests
     [Fact]
     public async Task Request_ShouldBeAccepted_WhenARepeatableParameterIsRepeated()
     {
-        // Arrange
         // Repeating a tag means "both", so it is declared repeatable.
         var context = Request("?tag=vegan&tag=quick", single: [], repeatable: ["tag"]);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         Assert.True(reached);
     }
 
     [Fact]
     public async Task Request_ShouldBeAccepted_WhenEveryParameterIsDeclared()
     {
-        // Arrange
         var context = Request("?query=pasta&tag=vegan", single: ["query"], repeatable: ["tag"]);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         Assert.True(reached);
     }
 
     [Fact]
     public async Task Request_ShouldPassThrough_WhenNoEndpointMatchedThePath()
     {
-        // Arrange
         var context = Request("?anything=1", single: [], repeatable: [], withEndpoint: false);
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
-        // Routing's own 404 is more useful than blaming a parameter on an
-        // address that does not exist.
+        // Routing's own 404 beats blaming a parameter on an address that does not exist.
         Assert.True(reached);
     }
 
     [Fact]
     public async Task Request_ShouldPassThrough_WhenThePathIsNotAnApiPath()
     {
-        // Arrange
         var context = Request("?anything=1", single: [], repeatable: [], path: "/recipes");
 
-        // Act
         var reached = await InvokeAsync(context);
 
-        // Assert
         // The SPA's own routes carry whatever query the app puts there.
         Assert.True(reached);
     }

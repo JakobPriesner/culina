@@ -3,12 +3,9 @@ using Domain.Shared;
 namespace Api.Infrastructure;
 
 /// <summary>
-/// Maps an <see cref="ErrorType"/> to its HTTP status code.
+/// Maps an <see cref="ErrorType"/> to its HTTP status code, the only such translation, so no new
+/// type reaches a client as an accidental 500.
 /// </summary>
-/// <remarks>
-/// The only place in the application where this translation happens, so a new
-/// error type cannot reach a client as an accidental 500.
-/// </remarks>
 internal static class ErrorStatusCodes
 {
     internal static int Of(ErrorType type) => type switch

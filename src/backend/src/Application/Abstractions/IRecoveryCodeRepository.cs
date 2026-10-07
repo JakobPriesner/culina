@@ -6,10 +6,7 @@ namespace Application.Abstractions;
 /// <summary>Reads and writes recovery codes.</summary>
 public interface IRecoveryCodeRepository
 {
-    /// <summary>
-    /// Replaces the account's saved set: every code of the old set stops
-    /// working, used or not.
-    /// </summary>
+    /// <summary>Replaces the account's saved set; every old code stops working.</summary>
     /// <param name="userId">Whose set.</param>
     /// <param name="codes">The new set.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
@@ -25,10 +22,7 @@ public interface IRecoveryCodeRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<SavedRecoveryCodes> SavedAsync(Guid userId, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Uses up the code, if it belongs to the account with that address and is
-    /// still usable, in one statement.
-    /// </summary>
+    /// <summary>Atomically uses up the code if it belongs to that address and is still usable.</summary>
     /// <param name="email">The address the person gave.</param>
     /// <param name="codeHash">The digest of the normalised code.</param>
     /// <param name="now">The injected current time.</param>

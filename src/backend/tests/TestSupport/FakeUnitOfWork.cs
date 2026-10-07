@@ -4,13 +4,9 @@ using Domain.Shared;
 namespace TestSupport;
 
 /// <summary>
-/// Runs the work without a database.
+/// Runs the work without a database, recording whether a handler asked for a transaction and
+/// letting a test make it fail.
 /// </summary>
-/// <remarks>
-/// Records whether a handler asked for a transaction, which is a behaviour
-/// worth asserting for a multi-statement write, and lets a test make the
-/// transaction fail to check the handler's own error path.
-/// </remarks>
 public sealed class FakeUnitOfWork : IUnitOfWork
 {
     /// <summary>How many times a handler wrapped work in a transaction.</summary>

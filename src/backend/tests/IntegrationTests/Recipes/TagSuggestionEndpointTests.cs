@@ -3,14 +3,7 @@ using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Recipes;
 
-/// <summary>
-/// The tags a recipe is offered, as the editor asks for them.
-/// </summary>
-/// <remarks>
-/// Which tags are chosen is proved in <c>TagSuggestionTests</c>; this proves the
-/// parts only the running API has: the household's tags read by their saved
-/// names, and a recipe of another kitchen being none of the caller's business.
-/// </remarks>
+/// <summary>The API-level parts of tag suggestions; which tags are chosen is covered in <c>TagSuggestionTests</c>.</summary>
 [Collection(RequiresDatabase.Name)]
 public class TagSuggestionEndpointTests(PostgresFixture postgres)
 {

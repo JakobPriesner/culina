@@ -8,13 +8,6 @@ using Domain.Shared;
 namespace Application.Recipes.Sources;
 
 /// <summary>Where one recipe is being brought from, and to.</summary>
-/// <param name="Source">The connection, with the credential to read it.</param>
-/// <param name="Reader">The app-specific client that knows how to ask.</param>
-/// <param name="CookbookId">The shelf this import lands on.</param>
-/// <param name="UserId">Who asked for it.</param>
-/// <param name="Language">The language they read, which every recipe lands in.</param>
-/// <param name="AllowLookalikes">Whether a recipe like one already here is written anyway.</param>
-/// <param name="AlreadyHere">Already-imported recipes by external id, looked up once per run.</param>
 /// <remarks>What is the same for every recipe in one import, so it is read once per run.</remarks>
 public sealed record ImportInto(
     RecipeSource Source,
@@ -25,21 +18,10 @@ public sealed record ImportInto(
     bool AllowLookalikes = false,
     IReadOnlyDictionary<string, Guid>? AlreadyHere = null);
 
-/// <summary>
-/// One recipe: fetched, translated, written, and remembered.
-/// </summary>
+/// <summary>One recipe: fetched, translated, written and remembered. Never returns a failure; every outcome is a line to show.</summary>
 /// <remarks>
-/// <para>
-/// Its own service rather than a method on the import handler, because an
-/// import runs its recipes in parallel and each one needs a scope of its own —
-/// a unit of work is a database connection, and a connection is not something
-/// two recipes may share. The runner opens a scope per recipe and resolves this.
-/// </para>
-/// <para>
-/// Never returns a failure. Every outcome is a line the caller can show,
-/// because somebody importing four hundred recipes needs to know which twelve
-/// did not work — not to be told that the whole thing did not.
-/// </para>
+/// Its own service because an import runs recipes in parallel and each needs its own scope (a unit of work
+/// is a database connection).
 /// </remarks>
 internal sealed class RecipeImporter(
     IRecipeOriginRepository origins,
@@ -50,7 +32,6 @@ internal sealed class RecipeImporter(
     IUnitOfWork unitOfWork,
     TimeProvider time)
 {
-    /// <summary>What the image store writes, and so what a recipe row records.</summary>
     private const string PictureContentType = "image/webp";
 
     internal const string Imported = "imported";
@@ -58,10 +39,6 @@ internal sealed class RecipeImporter(
     private const string LooksLike = "looks_like";
     internal const string Failed = "failed";
 
-    /// <summary>Brings one of their recipes over.</summary>
-    /// <param name="into">Which connection, which shelf, whose import.</param>
-    /// <param name="externalId">Which of their recipes.</param>
-    /// <param name="cancellationToken">Cancels the fetch and the write.</param>
     public async Task<ImportedRecipe> ImportAsync(
         ImportInto into,
         string externalId,
@@ -69,8 +46,8 @@ internal sealed class RecipeImporter(
     {
         ArgumentNullException.ThrowIfNull(into);
 
-        // The run answers for the whole selection in one query; alone, a recipe asks for itself.
-        // The unique index on the origin is what really prevents duplicates.
+        // The run answers for the whole selection in one query; alone, a recipe asks for itself. The unique
+        // index on the origin is what really prevents duplicates.
         var here = into.AlreadyHere
             ?? await origins
                 .AlreadyHereAsync(into.Source.HouseholdId, into.Source.Kind, [externalId], cancellationToken)
@@ -78,8 +55,7 @@ internal sealed class RecipeImporter(
 
         if (here.TryGetValue(externalId, out var mine))
         {
-            // Not a failure, and it must not be counted as one. Re-running an
-            // import is the ordinary way to catch up on what is new.
+            // Not a failure: re-running an import is the ordinary way to catch up.
             return new ImportedRecipe
             {
                 ExternalId = externalId,
@@ -139,14 +115,7 @@ internal sealed class RecipeImporter(
             })).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Writes the recipe, unless the household has one it looks like.
-    /// </summary>
-    /// <remarks>
-    /// Held back rather than written, and never dropped: nothing about it is
-    /// stored, not even its origin, so asking for it again — this time saying
-    /// "anyway" — brings it over exactly as it would have come.
-    /// </remarks>
+    // Held back, never dropped: nothing is stored, so asking again with "anyway" brings it over as it would have come.
     private async Task<ImportedRecipe> UnlessAlikeAsync(
         ImportInto into,
         SourceRecipe theirs,
@@ -191,10 +160,8 @@ internal sealed class RecipeImporter(
     {
         var now = time.GetUtcNow();
 
-        // One transaction per recipe, on purpose. One recipe that cannot be
-        // read must not undo the forty that could — and the recipe, where it
-        // came from, and the shelf it is on are one fact: a recipe that existed
-        // without its origin would be imported again on the next run.
+        // One transaction per recipe: one unreadable recipe must not undo the rest, and recipe, origin and
+        // shelf are one fact (a recipe without its origin would be imported again).
         var written = await unitOfWork.InTransactionAsync(
                 async token =>
                 {
@@ -256,24 +223,8 @@ internal sealed class RecipeImporter(
             })).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Brings the recipe's photo over, if it can be had.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// After the recipe, outside its transaction, and returning nothing. A
-    /// photo is the one part of a recipe that is genuinely optional — a recipe
-    /// without one is the ordinary state of most recipes somebody typed — so
-    /// nothing about it may cost the recipe. A picture that is missing, too
-    /// large, slow, behind a sign-in this cannot pass, or simply not a picture
-    /// leaves a recipe that is complete in every other way.
-    /// </para>
-    /// <para>
-    /// Stored by exactly the same code an upload goes through, which decides
-    /// what the file is by decoding it and keeps its own re-encoding. Nothing
-    /// from another server is trusted about what it sent.
-    /// </para>
-    /// </remarks>
+    // After the recipe and outside its transaction: a photo is optional, so nothing about it may cost the
+    // recipe. Stored by the same code as uploads, which decodes and re-encodes; nothing from the other server is trusted.
     private async Task PictureAsync(
         ImportInto into,
         SourceRecipe theirs,
@@ -309,8 +260,7 @@ internal sealed class RecipeImporter(
                         .SetImageAsync(recipeId, image, PictureContentType, time.GetUtcNow(), token)
                         .ConfigureAwait(false),
                     cancellationToken),
-                // A photo this could not decode is a photo the recipe does
-                // without. The file was never written, so nothing is orphaned.
+                // A photo this could not decode is one the recipe does without; nothing was written.
                 _ => Task.FromResult(Result<ImageReplacement>.Failure(ImportErrors.NotAPicture)))
                 .ConfigureAwait(false);
         }

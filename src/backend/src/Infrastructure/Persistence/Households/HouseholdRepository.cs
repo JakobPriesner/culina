@@ -5,13 +5,11 @@ using Domain.Shared;
 namespace Infrastructure.Persistence.Households;
 
 /// <summary>Stores households and their membership.</summary>
-/// <param name="executor">Runs the SQL inside the request's transaction.</param>
 internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepository
 {
     public async Task<Result<Household>> FindAsync(Guid householdId, CancellationToken cancellationToken)
     {
-        // One round trip for the aggregate rather than a query per collection:
-        // a household is never useful without its members.
+        // One round trip for the aggregate: a household is never useful without its members.
         return await executor.QueryMultipleAsync<Result<Household>>(
             """
             select id, name, created_at, version, inherits_from, inherits_set_by from households where id = @householdId;
@@ -131,9 +129,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
             """
             select exists (
                 select 1 from household_members m
-                -- The view, so a deleted household has no members as far as
-                -- anything that asks is concerned. The rows stay, because they
-                -- are who may restore it.
+                -- Through the view, so a deleted household has no members; the rows stay for restoring.
                 join households h on h.id = m.household_id
                 where m.household_id = @householdId and m.user_id = @userId);
             """,
@@ -144,9 +140,8 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         Guid householdId,
         Guid userId,
         CancellationToken cancellationToken) =>
-        // Downwards from the owner, through everything that inherits from it:
-        // the caller is in one of those or sees nothing. union rather than
-        // union all, so a repeated household ends the walk instead of looping.
+        // Downwards through everything that inherits from it: the caller is in one of those or sees
+        // nothing. union, not union all, so a repeated household ends the walk.
         await executor.ExecuteScalarAsync<bool>(
             """
             with recursive heirs (id) as (
@@ -166,9 +161,8 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // Upwards, one parent at a time. The cycle clause is belt and braces:
-        // the application refuses a loop, and this stops at a repeat anyway
-        // rather than walking one forever.
+        // Upwards, one parent at a time; the cycle clause stops at a repeat though the application
+        // refuses loops.
         var rows = await executor.QueryAsync<InheritedHouseholdRow>(
             """
             with recursive chain (id, name, inherits_from, depth) as (
@@ -195,8 +189,8 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // Downwards, the way CanSeeRecipesAsync walks: everybody listed here
-        // is somebody who can read this household's recipes.
+        // Downwards as CanSeeRecipesAsync walks: everybody listed can read this household's
+        // recipes.
         var rows = await executor.QueryAsync<HeirRow>(
             """
             with recursive heirs (id, name, inherits_from, depth) as (
@@ -222,9 +216,7 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // Joined in SQL rather than loading a user per member: the members
-        // screen is the only place a name is needed, and the domain has no
-        // business carrying one.
+        // Joined in SQL rather than loading a user per member: the domain should not carry a name.
         var rows = await executor.QueryAsync<HouseholdMemberViewRow>(
             """
             select m.user_id, u.display_name, m.role, m.joined_at
@@ -246,11 +238,9 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // Into the bin, not gone: the households view stops showing it, and
-        // its recipes and cookbooks with it, until it is restored or the
-        // purge removes it — and only then do recipes, tags and the shopping
-        // list cascade. Through the view, so a household already in the bin
-        // is not deleted twice.
+        // Into the bin, not gone: the households view hides it (and its recipes) until restored or
+        // purged, when recipes, tags and the shopping list cascade. Through the view, so it is not
+        // deleted twice.
         var deleted = await executor.ExecuteAsync(
             """
             update households
@@ -264,17 +254,12 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
     }
 
     /// <summary>
-    /// Writes the membership list: whoever left is deleted, everybody else is
-    /// inserted or has their role brought up to date.
+    /// Writes the membership list: whoever left is deleted, everybody else is inserted or has their
+    /// role updated.
     /// </summary>
     /// <remarks>
-    /// Not delete-everybody-and-insert-again, although a household has only a
-    /// handful of members: an heir's inheritance hangs off the membership of
-    /// whoever set it (0028), and deleting that row cuts the heir loose. So a
-    /// row is deleted only when that person has really gone — which is exactly
-    /// when the heirs they opened this household to must stop reading it. It
-    /// runs inside the caller's transaction, so the change is never observed
-    /// half made.
+    /// Not delete-and-reinsert: an heir's inheritance hangs off the setter's membership row (0028),
+    /// so a row is deleted only when that person really left.
     /// </remarks>
     private async Task SaveMembersAsync(Household household, CancellationToken cancellationToken)
     {

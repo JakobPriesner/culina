@@ -3,11 +3,7 @@ namespace Contracts.Settings.GetRegistration;
 /// <summary>
 /// Who may create an account on this instance.
 /// </summary>
-/// <remarks>
-/// A contract type rather than the settings record serialised directly. That is
-/// what will let a future secret be write-only — an api key going in, and
-/// <c>apiKeyConfigured: true</c> coming back out, never the value.
-/// </remarks>
+/// <remarks>A contract type, not the settings record, so a future secret can be write-only.</remarks>
 public sealed record Response
 {
     /// <summary>Whether anyone may create an account.</summary>

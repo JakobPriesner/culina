@@ -8,10 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Identity;
 
-/// <summary>
-/// What an authenticated request costs the sessions table, proven through the
-/// pipeline rather than by reading the middleware.
-/// </summary>
+/// <summary>What an authenticated request costs the sessions table, proven through the pipeline.</summary>
 [Collection(RequiresDatabase.Name)]
 public class SessionLookupTests(PostgresFixture postgres)
 {
@@ -20,7 +17,6 @@ public class SessionLookupTests(PostgresFixture postgres)
     [Fact]
     public async Task AnUnsafeRequest_ShouldReadItsSessionOnce()
     {
-        // Arrange
         await postgres.ResetAsync(Token);
 
         var lookups = new LookupCounter();
@@ -37,12 +33,9 @@ public class SessionLookupTests(PostgresFixture postgres)
         await client.PostAsync("/api/v1/sessions", new { email = "ada@example.com", password = Password }, Token);
         lookups.Reset();
 
-        // Act
         var response = await client.PostAsync("/api/v1/households", new { name = "Cabin" }, Token);
 
-        // Assert
-        // Authentication reads the session; the CSRF guard compares against
-        // what authentication read rather than reading it a second time.
+        // Authentication reads the session; the CSRF guard reuses that read.
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(1, lookups.Count);
     }
@@ -60,7 +53,6 @@ public class SessionLookupTests(PostgresFixture postgres)
         internal void Reset() => Volatile.Write(ref count, 0);
     }
 
-    /// <summary>The real store, counting how often a session is looked up by its cookie.</summary>
     private sealed class CountingStore(ISessionStore inner, LookupCounter lookups) : ISessionStore
     {
         public Task<Result<Session>> FindActiveByTokenAsync(

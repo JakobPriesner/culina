@@ -4,14 +4,7 @@ using Domain.Shared;
 
 namespace Domain.Shopping;
 
-/// <summary>
-/// One household's shopping list.
-/// </summary>
-/// <remarks>
-/// Exactly one per household, created the first time anyone looks at it. One
-/// list and not many: a second list is a planning feature, and planning is not
-/// what a shopping list is for.
-/// </remarks>
+/// <summary>One household's shopping list, created the first time anyone looks at it.</summary>
 public sealed class ShoppingList
 {
     private readonly List<ShoppingListItem> items;
@@ -37,15 +30,10 @@ public sealed class ShoppingList
     public long Version { get; private set; }
 
     /// <summary>Starts a household's list.</summary>
-    /// <param name="householdId">Whose list.</param>
     public static ShoppingList Create(Guid householdId) =>
         new(CulinaId.New(), householdId, [], version: 1);
 
     /// <summary>Rebuilds one that was stored.</summary>
-    /// <param name="id">Its id.</param>
-    /// <param name="householdId">Whose list.</param>
-    /// <param name="items">What is on it.</param>
-    /// <param name="version">The stored version.</param>
     public static ShoppingList Rehydrate(
         Guid id,
         Guid householdId,
@@ -53,19 +41,9 @@ public sealed class ShoppingList
         long version) =>
         new(id, householdId, [.. items], version);
 
-    /// <summary>
-    /// Puts what a recipe asks for on the list, merging it into a line that is
-    /// already there.
-    /// </summary>
-    /// <param name="name">What to buy.</param>
-    /// <param name="source">Which recipe asks for it, and how much.</param>
-    /// <param name="section">Where in the shop it is found.</param>
+    /// <summary>Puts what a recipe asks for on the list, merging into an existing line.</summary>
     /// <returns>The line it went onto, whether new or existing.</returns>
-    /// <remarks>
-    /// A line that has already been ticked off is not merged into: it is in the
-    /// trolley, and adding to it would quietly change an amount somebody has
-    /// already bought.
-    /// </remarks>
+    /// <remarks>A ticked-off line is never merged into: it is already bought.</remarks>
     public Result<ShoppingListItem> Add(
         ItemName name,
         ShoppingItemSource source,
@@ -92,9 +70,6 @@ public sealed class ShoppingList
     }
 
     /// <summary>Puts something on the list that a person typed.</summary>
-    /// <param name="name">What to buy.</param>
-    /// <param name="quantity">How much, if they said.</param>
-    /// <param name="section">Where in the shop it is found.</param>
     public Result<ShoppingListItem> AddManual(
         ItemName name,
         Quantity quantity,
@@ -111,9 +86,6 @@ public sealed class ShoppingList
     }
 
     /// <summary>Ticks a line off, or puts it back.</summary>
-    /// <param name="itemId">Which line.</param>
-    /// <param name="isChecked">Whether it is now in the trolley.</param>
-    /// <param name="now">The injected clock's reading.</param>
     public Result Check(Guid itemId, bool isChecked, DateTimeOffset now) =>
         Find(itemId).Match(
             item =>
@@ -126,8 +98,6 @@ public sealed class ShoppingList
             Result.Failure);
 
     /// <summary>Corrects where a thing is found.</summary>
-    /// <param name="itemId">Which line.</param>
-    /// <param name="section">The section it actually belongs to.</param>
     public Result MoveToSection(Guid itemId, ShoppingSection section) =>
         Find(itemId).Match(
             item =>
@@ -140,7 +110,6 @@ public sealed class ShoppingList
             Result.Failure);
 
     /// <summary>Takes a line off the list.</summary>
-    /// <param name="itemId">Which line.</param>
     public Result Remove(Guid itemId) =>
         Find(itemId).Match(
             item =>
@@ -152,14 +121,7 @@ public sealed class ShoppingList
             },
             Result.Failure);
 
-    /// <summary>
-    /// Clears what has already been bought.
-    /// </summary>
-    /// <remarks>
-    /// The one bulk action worth having: after a shop, everything ticked is
-    /// done with, and removing them one at a time is the tedium the list exists
-    /// to avoid.
-    /// </remarks>
+    /// <summary>Clears what has already been bought.</summary>
     public int ClearChecked()
     {
         var removed = items.RemoveAll(item => item.IsChecked);
@@ -173,24 +135,11 @@ public sealed class ShoppingList
     }
 
     /// <summary>Whether this planned meal's shopping is already on the list.</summary>
-    /// <param name="planEntryId">The planned meal.</param>
     public bool IsShoppedFor(Guid planEntryId) => items.Exists(item => item.IsFor(planEntryId));
 
-    /// <summary>
-    /// Counts a recipe that is already here, added by itself, as the shopping
-    /// for a planned meal of it.
-    /// </summary>
-    /// <param name="recipeId">The planned recipe.</param>
-    /// <param name="planEntryId">The planned meal.</param>
-    /// <param name="plannedDate">The day the meal is planned for.</param>
-    /// <param name="plannedSlot">The meal of that day.</param>
+    /// <summary>Counts a recipe already here, added by itself, as the shopping for a planned meal of it.</summary>
     /// <returns>Whether the recipe was here to count.</returns>
-    /// <remarks>
-    /// Somebody who put the waffles on the list from the recipe and then planned
-    /// them for Saturday has shopped for Saturday once. Adding the week again
-    /// would double every ingredient, silently, and the list would be wrong in
-    /// exactly the way nobody checks until the shop.
-    /// </remarks>
+    /// <remarks>Adding the week again would silently double every ingredient.</remarks>
     public bool CountFor(
         Guid recipeId,
         Guid planEntryId,
@@ -212,17 +161,9 @@ public sealed class ShoppingList
         return counted;
     }
 
-    /// <summary>
-    /// Takes back exactly what a planned meal put on the list.
-    /// </summary>
-    /// <param name="planEntryId">The planned meal.</param>
+    /// <summary>Takes back exactly what a planned meal put on the list.</summary>
     /// <returns>How many lines changed.</returns>
-    /// <remarks>
-    /// What is already in the trolley stays: it has been bought, and a list
-    /// that un-bought it would be arguing with the shop. A line somebody else
-    /// still wants keeps what they want; only a line nothing wants any more
-    /// goes.
-    /// </remarks>
+    /// <remarks>Ticked lines stay (already bought); lines other meals still want keep their share.</remarks>
     public int Withdraw(Guid planEntryId)
     {
         var changed = items.Where(item => !item.IsChecked && item.IsFor(planEntryId)).ToList();

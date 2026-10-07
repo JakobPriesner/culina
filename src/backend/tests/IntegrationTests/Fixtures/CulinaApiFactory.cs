@@ -11,42 +11,24 @@ using Microsoft.Extensions.Logging;
 using TestSupport;
 
 namespace IntegrationTests.Fixtures;
-
-/// <summary>
-/// The real API host, pointed at the test container.
-/// </summary>
+/// <summary>The real API host, pointed at the test container.</summary>
 /// <remarks>
-/// <para>
-/// The app starts exactly as it runs in production — same pipeline, same
-/// middleware order, same migrations — because the ordering of that pipeline is
-/// the thing these tests exist to prove.
-/// </para>
-/// <para>
-/// Values are supplied through <see cref="IWebHostBuilder.UseSetting"/> rather
-/// than <c>ConfigureAppConfiguration</c>. Under minimal hosting, Program reads
-/// <c>builder.Configuration</c> while building the host, which is before
-/// <c>ConfigureAppConfiguration</c> callbacks run; <c>UseSetting</c> lands in
-/// host configuration and is visible in time.
-/// </para>
+/// Starts exactly as in production (pipeline, middleware order, migrations), since that ordering is
+/// what the tests prove. Settings go through <see cref="IWebHostBuilder.UseSetting"/>: Program
+/// reads <c>builder.Configuration</c> before <c>ConfigureAppConfiguration</c> callbacks run.
 /// </remarks>
-/// <param name="postgres">The database the host should use.</param>
+/// <param name="postgres">The database the host uses.</param>
 /// <param name="overrides">
-/// Extra configuration for one test class. Rate limits in particular are
-/// deliberately generous here: sharing one client address across a suite would
-/// otherwise trip the production limits, and a test that fails because the
-/// limiter works is a test that teaches people to remove the limiter. The limit
-/// itself is proven by a test that lowers it on purpose.
+/// Extra configuration for one test class. Rate limits default generous, so a shared client address
+/// does not trip them; the limit itself is proven by a test that lowers it.
 /// </param>
 /// <param name="weights">
-/// The ranking weights this host should score with, when a test needs to hold
-/// some of them still. <c>RankingWeights</c> is a record for exactly this —
-/// a rule is proven by fixing nine terms and moving the tenth — and a weight
-/// is not configuration, so it is replaced in the container rather than set.
+/// Ranking weights to score with, to hold some still; replaced in the container, as a weight is not
+/// configuration.
 /// </param>
 /// <param name="replace">
-/// Services one test class swaps in after the app's own, for the rare thing no
-/// setting may change — such as a recipe-source client that can reach a fake
-/// server on loopback, which no deployment is allowed to reach.
+/// Services swapped in after the app's own, for what no setting may change (a source client that
+/// can reach loopback).
 /// </param>
 public sealed class CulinaApiFactory(
     PostgresFixture postgres,
@@ -63,7 +45,9 @@ public sealed class CulinaApiFactory(
     /// <summary>Every line the host logged, after the configured level filters.</summary>
     public RecordingLogs Logs { get; } = new();
 
-    /// <summary>The settings file this host reads at startup and writes when a server setting is saved.</summary>
+    /// <summary>
+    /// The settings file this host reads at startup and writes when a server setting is saved.
+    /// </summary>
     public string ServerSettingsFile => Path.Combine(dataRoot, "config", "culina.json");
 
     private int pushRequests;
@@ -99,9 +83,8 @@ public sealed class CulinaApiFactory(
         builder.UseSetting("Storage:ImagePath", Path.Combine(dataRoot, "images"));
         builder.UseSetting("Storage:DataProtectionKeyPath", Path.Combine(dataRoot, "keys"));
         builder.UseSetting("Storage:ConfigPath", Path.Combine(dataRoot, "config"));
-        // There is no TLS over the test client, so a __Host- cookie would be
-        // refused outright. Production refuses to start like that unless the
-        // deployment says so, and this one does.
+        // No TLS over the test client, so a __Host- cookie would be refused; production refuses to
+        // start like that unless the deployment says so, and this one does.
         builder.UseSetting("Cookies:Secure", "false");
         builder.UseSetting("Cookies:AllowInsecureOutsideDevelopment", "true");
 
@@ -134,8 +117,7 @@ public sealed class CulinaApiFactory(
     }
 
     /// <summary>
-    /// A client with its own cookie jar, so each test is an independent
-    /// browser session.
+    /// A client with its own cookie jar, so each test is an independent browser session.
     /// </summary>
     public ApiClient NewApiClient() =>
         new(CreateDefaultClient(new CookieHandler()));
@@ -152,9 +134,8 @@ public sealed class CulinaApiFactory(
 }
 
 /// <summary>
-/// Keeps cookies across requests, the way a browser does. The in-memory test
-/// server hands out an HttpClient with no cookie handling at all, so without
-/// this a session would be dropped after the response that created it.
+/// Keeps cookies across requests as a browser does; the in-memory test server's HttpClient has
+/// none, so a session would be dropped after the response that created it.
 /// </summary>
 internal sealed class CookieHandler : DelegatingHandler
 {
@@ -181,9 +162,8 @@ internal sealed class CookieHandler : DelegatingHandler
         {
             foreach (var setCookie in setCookies)
             {
-                // The __Host- prefix requires Secure, which the test server does
-                // not set, so the container is told about the cookie directly
-                // rather than through SetCookies' prefix validation.
+                // The __Host- prefix requires Secure, which the test server does not set, so the
+                // container is told directly, skipping the prefix validation.
                 cookies.SetCookies(uri, setCookie.Replace("; Secure", string.Empty, StringComparison.Ordinal));
             }
         }

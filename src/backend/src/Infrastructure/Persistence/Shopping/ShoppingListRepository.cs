@@ -66,9 +66,7 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // Created on first look, and idempotent: two devices opening the list at
-        // the same moment must not produce two lists, and the unique index on
-        // household_id is what guarantees it.
+        // Created on first look; the unique index on household_id keeps two devices from making two.
         var row = await executor.QuerySingleOrDefaultAsync<ShoppingListRow>(
             """
             insert into shopping_lists (id, household_id)
@@ -94,10 +92,8 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             new { listId = row.Id },
             cancellationToken).ConfigureAwait(false);
 
-        // Only recipes still in the household's library, as the meal plan reads
-        // them: a line keeps its amount when the inheritance behind one of its
-        // recipes is cut, but no longer names a recipe nobody here can read.
-        // A binned recipe has always dropped out the same way, through the view.
+        // Only recipes still in the household's library: a line keeps its amount when inheritance is
+        // cut, but no longer names a recipe nobody here can read.
         var sources = await executor.QueryAsync<ShoppingSourceRow>(
             """
             select s.item_id, s.recipe_id, r.title as recipe_title,
@@ -128,8 +124,7 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
     {
         ArgumentNullException.ThrowIfNull(list);
 
-        // The version is in the WHERE, so zero rows means somebody else changed
-        // the list first — never a read-then-write race.
+        // Version in the WHERE: zero rows means somebody else changed the list first.
         var changed = await executor.ExecuteAsync(
             """
             update shopping_lists set version = @version
@@ -143,9 +138,7 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             return ConcurrencyErrors.VersionMismatch;
         }
 
-        // Replaced wholesale. The list is small, it is always read and written
-        // whole, and a diff would be more code to get subtly wrong than it
-        // would ever save.
+        // Replaced wholesale: the list is small and always handled whole, so a diff is not worth it.
         await executor.ExecuteAsync(
             "delete from shopping_list_items where list_id = @listId;",
             new { listId = list.Id },

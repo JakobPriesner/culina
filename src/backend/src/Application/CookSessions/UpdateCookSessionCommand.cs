@@ -50,9 +50,7 @@ internal sealed class UpdateCookSessionCommandHandler(
         UpdateCookSessionCommand command,
         CancellationToken cancellationToken)
     {
-        // Access first, on every step: somebody who has lost the recipe since
-        // they began — left the household, or it stopped being inherited —
-        // has lost the session with it, title and all.
+        // Access first, on every step: a cook who lost the recipe (left the household, inheritance cut) loses the session too.
         var recipe = await RecipeAccess
             .VisibleInAsync(recipes, households, session.RecipeId, session.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
@@ -60,8 +58,7 @@ internal sealed class UpdateCookSessionCommandHandler(
         var now = time.GetUtcNow();
         var before = session.Version;
 
-        // Rescaling is worth a version; a step advance is not. Doing both in
-        // one call therefore takes the guarded path.
+        // Rescaling is worth a version, a step advance is not; doing both takes the guarded path.
         var rescaled = recipe.Bind(_ => command.Servings is { } servings
             ? session.Rescale(servings, now)
             : Result.Success());

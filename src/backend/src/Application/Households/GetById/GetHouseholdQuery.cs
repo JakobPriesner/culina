@@ -25,8 +25,7 @@ internal sealed class GetHouseholdQueryHandler(IHouseholdRepository households)
 
         var found = await households.FindAsync(query.HouseholdId, cancellationToken).ConfigureAwait(false);
 
-        // A non-member gets not-found, never forbidden: answering "forbidden"
-        // would confirm the household exists.
+        // A non-member gets not-found, never forbidden, which would confirm the household exists.
         var visible = found.Bind(household =>
             HouseholdMembershipPolicy.CanView(household, query.UserId).Map(() => household));
 

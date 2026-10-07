@@ -1,15 +1,13 @@
 namespace Api.Infrastructure;
 
 /// <summary>
-/// Setting the instance up, and restarting to apply server settings. Event ids
-/// 1600-1699.
+/// Setting the instance up, and restarting to apply server settings. Event ids 1600-1699.
 /// </summary>
 internal static partial class ServerLogs
 {
     /// <summary>
-    /// A warning rather than information: an operator who started the
-    /// container and sees nothing in the browser should find the reason as the
-    /// loudest line in the log.
+    /// A warning, not information: an operator who sees nothing in the browser should find the
+    /// reason as the loudest log line.
     /// </summary>
     [LoggerMessage(
         EventId = LogEvents.ServerBase,
@@ -24,8 +22,8 @@ internal static partial class ServerLogs
     internal static partial void Restarting(this ILogger logger);
 
     /// <summary>
-    /// One address asked for more database checks than anybody setting up
-    /// needs. The address is on the request's scope.
+    /// One address asked for more database checks than setup needs; the address is on the request's
+    /// scope.
     /// </summary>
     [LoggerMessage(
         EventId = LogEvents.ServerBase + 4,
@@ -34,9 +32,8 @@ internal static partial class ServerLogs
     internal static partial void DatabaseChecksLimited(this ILogger logger, int attemptsPerMinute);
 
     /// <summary>
-    /// What this instance is and where it keeps things, first in the log: the
-    /// questions behind most reports that something is wrong. No credentials,
-    /// and only the collector's host, since an address can carry a token.
+    /// What this instance is and where it keeps things, first in the log. No credentials, and only
+    /// the collector's host (an address can carry a token).
     /// </summary>
     [LoggerMessage(
         EventId = LogEvents.ServerBase + 2,
@@ -53,9 +50,8 @@ internal static partial class ServerLogs
         string telemetryExport);
 
     /// <summary>
-    /// Every start without secure cookies, Development included, so an
-    /// instance that runs this way says so in its log rather than only in its
-    /// configuration.
+    /// Every start without secure cookies, Development included, so such an instance says so in its
+    /// log.
     /// </summary>
     [LoggerMessage(
         EventId = LogEvents.ServerBase + 3,

@@ -12,10 +12,7 @@ public sealed record Record
     /// <summary>Where it was thrown, when there is a stack. At most 8,000 characters.</summary>
     public string? Stack { get; init; }
 
-    /// <summary>
-    /// The route it happened on, as the router names it — <c>/recipes/[recipeId]</c>,
-    /// never the address with the id in it. At most 200 characters.
-    /// </summary>
+    /// <summary>The route as the router names it (<c>/recipes/[recipeId]</c>), never with the id. At most 200 characters.</summary>
     public string? Route { get; init; }
 
     /// <summary>When it happened, by the device's clock.</summary>

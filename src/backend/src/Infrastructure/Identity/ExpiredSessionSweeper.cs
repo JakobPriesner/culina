@@ -6,17 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Identity;
 
-/// <summary>
-/// Deletes sessions that have lapsed or been revoked.
-/// </summary>
-/// <remarks>
-/// Housekeeping, not security: an expired session already fails to
-/// authenticate. Without it the table grows forever on a long-lived instance,
-/// and the "your devices" query slows down for no reason.
-/// </remarks>
-/// <param name="scopeFactory">Creates the scope the store lives in.</param>
-/// <param name="time">The injected clock.</param>
-/// <param name="logger">Records how many rows were removed.</param>
+/// <summary>Deletes sessions that have lapsed or been revoked. Housekeeping, not security: expired sessions already fail to authenticate.</summary>
 internal sealed class ExpiredSessionSweeper(
     IServiceScopeFactory scopeFactory,
     TimeProvider time,
@@ -28,9 +18,7 @@ internal sealed class ExpiredSessionSweeper(
     {
         using var timer = new PeriodicTimer(Interval, time);
 
-        // A first pass shortly after start, then daily. Waiting a full day
-        // before the first sweep would leave a restarted instance carrying
-        // whatever accumulated while it was down.
+        // A first pass shortly after start, then daily, so a restarted instance does not carry a day's backlog.
         do
         {
             await SweepAsync(stoppingToken).ConfigureAwait(false);
@@ -40,8 +28,7 @@ internal sealed class ExpiredSessionSweeper(
 
     private async Task SweepAsync(CancellationToken cancellationToken)
     {
-        // No request to hang off, so the sweep is a trace of its own rather
-        // than a scatter of parentless database spans.
+        // No request to hang off, so the sweep is a trace of its own.
         using var activity = CulinaTelemetry.ActivitySource.StartActivity("Sessions.Sweep");
 
         var scope = scopeFactory.CreateAsyncScope();

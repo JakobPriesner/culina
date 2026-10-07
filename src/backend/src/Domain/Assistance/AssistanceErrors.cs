@@ -6,19 +6,8 @@ namespace Domain.Assistance;
 /// What can go wrong when a model is asked for a recipe.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Two of these are <see cref="ErrorType.NotFound"/> where "forbidden" reads
-/// more naturally, and deliberately: an instance with no key and an instance
-/// whose owner switched a capability off are both instances where the thing
-/// does not exist, and a caller learns nothing from being told which.
-/// </para>
-/// <para>
-/// The rest are told apart from each other because each one has a different
-/// answer. A budget that is spent waits for a month or a larger cap; a provider
-/// that is down waits for the provider; an answer that could not be read is
-/// worth trying again straight away. "Something went wrong" would send every
-/// one of those to the same shrug.
-/// </para>
+/// Not-configured and disabled are <see cref="ErrorType.NotFound"/> on purpose: a caller learns nothing from which.
+/// The rest are distinct because each has a different remedy (wait, replace the key, retry).
 /// </remarks>
 public static class AssistanceErrors
 {
@@ -40,14 +29,7 @@ public static class AssistanceErrors
         "That is not a model provider this knows how to talk to.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// The month's budget is spent.
-    /// </summary>
-    /// <remarks>
-    /// Rate-limited rather than a plain refusal, because that is what it is:
-    /// the answer is to wait, and the status code that says so is the one that
-    /// carries a hint about how long.
-    /// </remarks>
+    /// <summary>The month's budget is spent. Rate-limited because the answer is to wait.</summary>
     public static readonly Error BudgetExhausted = new(
         "assistance.budget_exhausted",
         "This month's budget for the assistant is spent. It starts again next month.",
@@ -59,39 +41,16 @@ public static class AssistanceErrors
         "You have used your share of this month's assistant budget.",
         ErrorType.RateLimited);
 
-    /// <summary>The provider did not answer, or took too long.</summary>
-    /// <remarks>
-    /// One error for two causes on purpose. Both are somebody else's server
-    /// being unavailable to this one, neither is the caller's to fix, and the
-    /// administrator has the log line that tells them apart.
-    /// </remarks>
+    /// <summary>The provider did not answer, or took too long. One error for both: neither is the caller's to fix.</summary>
     public static readonly Error Unavailable = new(
         "assistance.unavailable",
         "The assistant could not be reached just now. Try again in a moment.",
         ErrorType.Unavailable);
 
-    /// <summary>
-    /// The provider answered, and would not accept the credential.
-    /// </summary>
+    /// <summary>The provider answered, and would not accept the credential.</summary>
     /// <remarks>
-    /// <para>
-    /// Told apart from <see cref="Unavailable"/> because the answer is a
-    /// different one: a provider that is down is waited for, and a key that is
-    /// refused is replaced. Nothing waiting will fix the second.
-    /// </para>
-    /// <para>
-    /// Worth its own error mostly because of what it is not. A key that signs
-    /// requests perfectly well can still be refused here: providers scope keys,
-    /// and listing the catalogue is a permission of its own that an inference
-    /// key need not carry. "Check the key" is then advice that sends somebody
-    /// to replace a key that was never wrong.
-    /// </para>
-    /// <para>
-    /// A cook never sees it — <c>AssistantRun</c> turns it back into
-    /// <see cref="Unavailable"/> before it leaves — because somebody in the
-    /// middle of cooking can do nothing with it. It is for the settings screen
-    /// and the ledger, where the person reading is the person with the key.
-    /// </para>
+    /// Apart from <see cref="Unavailable"/> because waiting will not fix it; also a key that signs fine may lack the catalogue permission.
+    /// A cook never sees it: <c>AssistantRun</c> maps it to <see cref="Unavailable"/>.
     /// </remarks>
     public static readonly Error Rejected = new(
         "assistance.rejected",
@@ -99,16 +58,9 @@ public static class AssistanceErrors
         + "permitted to do this.",
         ErrorType.Unavailable);
 
-    /// <summary>
-    /// The provider answered, and has no model by the name in the settings.
-    /// </summary>
+    /// <summary>The provider answered, and has no model by the name in the settings.</summary>
     /// <remarks>
-    /// Its own error because it used to be reported as <see cref="Refused"/>:
-    /// Ollama answers 404 for a model nobody has pulled, and "the assistant
-    /// would not answer that" sent people to reword a request that no wording
-    /// could have rescued. The fix is in the settings — pull the model, or pick
-    /// one that is there — and unlike a refused key it is worth saying to the
-    /// cook, who is so often the person who set it up.
+    /// Not <see cref="Refused"/>: Ollama answers 404 for an unpulled model, and rewording cannot fix that.
     /// </remarks>
     public static readonly Error ModelMissing = new(
         "assistance.model_missing",
@@ -127,15 +79,7 @@ public static class AssistanceErrors
         "The assistant would not answer that.",
         ErrorType.Problem);
 
-    /// <summary>
-    /// The model answered with something that is not a recipe.
-    /// </summary>
-    /// <remarks>
-    /// The expected failure of the whole feature, not an exceptional one. A
-    /// model asked for structured output still occasionally returns a unit
-    /// nobody uses or an amount that is not a number, and the honest thing is
-    /// to say so and let the person ask again.
-    /// </remarks>
+    /// <summary>The model answered with something that is not a recipe. The expected failure of the feature.</summary>
     public static readonly Error UnusableAnswer = new(
         "assistance.unusable_answer",
         "The assistant's answer could not be read as a recipe. Asking again usually works.",
@@ -159,14 +103,7 @@ public static class AssistanceErrors
         "That does not look like an API key.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// A stored key was to be kept for a different address.
-    /// </summary>
-    /// <remarks>
-    /// A key is only ever sent to the address it was saved with. Otherwise
-    /// whoever may change the address could have the key sent to a server of
-    /// their own.
-    /// </remarks>
+    /// <summary>A stored key was to be kept for a different address. A key is only ever sent to the address it was saved with.</summary>
     public static readonly Error ApiKeyRequired = new(
         "assistance.api_key_required",
         "Enter the key again. The address changed, and a stored key is only ever sent to the address it was saved for.",
@@ -184,14 +121,7 @@ public static class AssistanceErrors
         "That does not look like the name of a model.",
         ErrorType.Validation);
 
-    /// <summary>
-    /// This provider does not make pictures.
-    /// </summary>
-    /// <remarks>
-    /// Ollama, today. A fact about the provider rather than a failure of the
-    /// call, so the settings screen declines to offer the switch and this is
-    /// the backstop for a request that arrived anyway.
-    /// </remarks>
+    /// <summary>This provider does not make pictures (Ollama today). Backstop for a request the settings screen would not offer.</summary>
     public static readonly Error DrawingNotSupported = new(
         "assistance.drawing_not_supported",
         "The model connected to this kitchen does not draw pictures.",

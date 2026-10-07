@@ -25,11 +25,9 @@ internal sealed class GetHouseholdEndpoint : IEndpoint
                         cancellationToken)
                     .ConfigureAwait(false);
 
-                // Not the version alone. The body says which role the caller
-                // holds, and two members read the same URL at the same version;
-                // and it names every member, and renaming yourself is a write
-                // to your account, not to the household. A tag of the version
-                // alone answered 304 over both.
+                // Not the version alone: the body names the caller's role and every member, and two
+                // members read the same URL at the same version (renaming yourself writes your
+                // account, not the household). A version-only tag answered 304 over both.
                 return result.Match(
                     household => ETag.Ok(
                         context,

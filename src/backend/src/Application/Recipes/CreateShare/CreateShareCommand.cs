@@ -7,9 +7,7 @@ using Response = Contracts.Recipes.Share.Response;
 
 namespace Application.Recipes.CreateShare;
 
-/// <summary>
-/// Publishes a recipe behind a link, or hands back the link it already has.
-/// </summary>
+/// <summary>Publishes a recipe behind a link, or returns the link it already has.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is publishing it.</param>
 public sealed record CreateShareCommand(Guid RecipeId, Guid UserId);
@@ -47,10 +45,7 @@ internal sealed class CreateShareCommandHandler(
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Minted before the write and thrown away again when the recipe turns
-        // out to be published already. A token costs 32 bytes of randomness;
-        // reading first and writing second would cost a race in which two
-        // people are handed two different links to the same recipe.
+        // Minted up front and discarded if already published: read-then-write would race into two links.
         var share = new RecipeShare(recipeId, tokens.NewToken(), userId, time.GetUtcNow());
 
         var stored = await unitOfWork.InTransactionAsync(

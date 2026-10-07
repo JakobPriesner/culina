@@ -7,15 +7,7 @@ using TestSupport;
 
 namespace IntegrationTests.Fixtures;
 
-/// <summary>
-/// The app as a fresh container starts it: no database configured anywhere.
-/// </summary>
-/// <remarks>
-/// So <c>Program</c> builds the setup host rather than the real one, which is
-/// the thing under test. Storage points at a directory of its own, exactly as
-/// <see cref="CulinaApiFactory"/> does, so the settings file a test saves is
-/// one it can read and nobody else sees.
-/// </remarks>
+/// <summary>The app as a fresh container starts it, with no database configured, so <c>Program</c> builds the setup host.</summary>
 public sealed class SetupApiFactory : WebApplicationFactory<Program>
 {
     private readonly string dataRoot =
@@ -24,7 +16,6 @@ public sealed class SetupApiFactory : WebApplicationFactory<Program>
     /// <summary>Every restart a saved setting asked for, none of them performed.</summary>
     public RecordingRestart Restarts { get; } = new();
 
-    /// <summary>The settings file the database step writes.</summary>
     public string ServerSettingsFile => Path.Combine(dataRoot, "config", "culina.json");
 
     public ApiClient NewApiClient() => new(CreateDefaultClient(new CookieHandler()));

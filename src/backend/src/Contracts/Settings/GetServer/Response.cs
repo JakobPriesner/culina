@@ -1,8 +1,7 @@
 namespace Contracts.Settings.GetServer;
 
 /// <summary>
-/// The server settings an administrator can change from the app, as the
-/// running process uses them.
+/// The server settings an administrator can change from the app, as the running process uses them.
 /// </summary>
 public sealed record Response
 {
@@ -22,8 +21,8 @@ public sealed record Response
     public required ConnectionContract Connection { get; init; }
 
     /// <summary>
-    /// The settings the deployment fixes, by the environment variable that sets
-    /// them — <c>Cookies__Secure</c>. Saving cannot change these.
+    /// The settings the deployment fixes, by environment variable (<c>Cookies__Secure</c>); saving
+    /// cannot change them.
     /// </summary>
     public required IReadOnlyList<string> Pinned { get; init; }
 
@@ -101,20 +100,14 @@ public sealed record TelemetryContract
     public required string OtlpProtocol { get; init; }
 }
 
-/// <summary>
-/// How the request that asked for these settings reached the server.
-/// </summary>
+/// <summary>How the request that asked for these settings reached the server.</summary>
 /// <remarks>
-/// The one thing nobody setting up a proxy can see from the outside: which
-/// address the proxy connects from, and whether Culina already believes what it
-/// says. It turns "which address do I trust?" into a choice between the
-/// address on the screen and none.
+/// Shows which address the proxy connects from and whether Culina already trusts it.
 /// </remarks>
 public sealed record ConnectionContract
 {
     /// <summary>
-    /// The address the connection came from, as Culina sees it — the proxy's,
-    /// when there is one it does not trust yet.
+    /// The address the connection came from as Culina sees it: the proxy's, if not yet trusted.
     /// </summary>
     public string? RemoteAddress { get; init; }
 

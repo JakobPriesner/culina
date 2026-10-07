@@ -7,12 +7,7 @@ using Domain.Suggestions;
 
 namespace Api.Endpoints.Suggestions.GetAll.V1;
 
-/// <summary>Reads the occasion out of the query string.</summary>
-/// <remarks>
-/// Every value is validated rather than coerced, exactly as the recipe search
-/// reads its criteria: a <c>slot</c> of "brunch" is a client bug, and quietly
-/// ignoring it would answer with a dinner list that looks like a brunch list.
-/// </remarks>
+/// <summary>Reads the occasion out of the query string. Values are validated, not coerced: an ignored <c>slot</c> of "brunch" would answer with a dinner list.</summary>
 internal static class GetSuggestionsRequestExtensions
 {
     internal static Result<SuggestionContext> ToSuggestionContext(
@@ -71,20 +66,8 @@ internal static class GetSuggestionsRequestExtensions
             limit);
     }
 
-    /// <summary>
-    /// Which question is being asked.
-    /// </summary>
-    /// <remarks>
-    /// Naming a recipe to resemble <i>is</i> asking for "like", so a caller does
-    /// not have to say both — but asking for "like" without naming one is
-    /// refused rather than quietly answered with something else, because a list
-    /// that claims to resemble nothing in particular is worse than an error.
-    /// <para>
-    /// Browse is deliberately not nameable here. Ranking the whole collection is
-    /// a sort on the collection, and two ways to ask one question is how the two
-    /// end up giving different answers.
-    /// </para>
-    /// </remarks>
+    // Which question is being asked. A recipe to resemble implies "like", and "like" without one is refused. Browse is not nameable:
+    // ranking the whole collection is a sort, and two ways to ask one question drift apart.
     private static bool TryReadPurpose(
         string? value,
         Guid? likeRecipeId,
@@ -156,9 +139,7 @@ internal static class GetSuggestionsRequestExtensions
             return false;
         }
 
-        // Rejected rather than clamped. Asking for fifty is a client that thinks
-        // this is the recipe list, and quietly handing back twelve would leave
-        // that client believing the kitchen is nearly empty.
+        // Rejected, not clamped: a client asking for fifty thinks this is the recipe list and would read twelve as a nearly empty kitchen.
         if (parsed is < 1 or > SuggestionContext.MaxCount)
         {
             failure = SuggestionErrors.InvalidLimit;

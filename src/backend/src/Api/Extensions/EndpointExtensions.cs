@@ -22,14 +22,11 @@ using Api.Endpoints.Users;
 
 namespace Api.Extensions;
 
-/// <summary>
-/// Collects and maps every endpoint.
-/// </summary>
+/// <summary>Collects and maps every endpoint.</summary>
 internal static class EndpointExtensions
 {
     /// <summary>
-    /// Registers each domain's endpoints. One line per domain, in folder order;
-    /// nothing depends on the order itself.
+    /// Registers each domain's endpoints, one line per domain; nothing depends on the order.
     /// </summary>
     internal static IServiceCollection AddEndpoints(this IServiceCollection services)
     {

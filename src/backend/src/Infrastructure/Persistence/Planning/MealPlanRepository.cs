@@ -44,14 +44,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         int days,
         CancellationToken cancellationToken)
     {
-        // Joined, not fetched per card: a week view is seven cards, and seven
-        // round trips is a plan that flickers in one at a time.
-        //
-        // Only recipes still in the household's library. A meal planned from
-        // an inherited recipe drops off the week when the inheritance is cut,
-        // the way it drops off the shelves, rather than staying as a card that
-        // opens onto "not found" and shops for a recipe nobody here can read.
-        // The row is kept, so the meal comes back if the inheritance does.
+        // Joined, not fetched per card. Only recipes still in the library: a meal from a cut inheritance drops off
+        // the week but the row is kept, so it returns if the inheritance does.
         var rows = await executor.QueryAsync<PlannedRow>(
             """
             select p.id, p.household_id, p.on_date, p.recipe_id, p.servings, p.slot, p.sort_order,
@@ -116,9 +110,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // The household is in the where clause rather than checked afterwards:
-        // "not yours" and "not there" are the same answer, and answering them
-        // differently tells a stranger which entry ids exist.
+        // The household is in the where clause: "not yours" and "not there" must answer alike or entry ids leak.
         var row = await executor.QuerySingleOrDefaultAsync<PlannedRow>(
             """
             select id, household_id, on_date, recipe_id, servings, slot, sort_order
@@ -156,21 +148,13 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
                 householdId = moved.HouseholdId,
                 date = moved.Date,
                 slot = PlanningCodes.Of(moved.Slot),
-                // Doubled, so the moved entry can land between two neighbours
-                // without either of them being renumbered first. Every other
-                // entry on the day is doubled and offset by one below, which
-                // puts this exactly where the gap it was dropped into is.
+                // Doubled so the moved entry lands between two neighbours without renumbering them first.
                 key = moved.SortOrder * 2
             },
             cancellationToken).ConfigureAwait(false);
 
-        // Renumbered from zero, so the next thing dropped onto this day is
-        // aimed at gaps that are still where they look. Everything but the
-        // moved entry counts double and odd — the gap above the meal at index
-        // j is the even number 2j, which is the key the moved entry was just
-        // given, so it slots in there without a tie to break. The others are
-        // ranked before they are doubled, because a day can have gaps — the
-        // meal that left it, or one taken off — and j has to be an index.
+        // Renumbered from zero so later drops aim at gaps where they look. The others count double and odd (ranked before doubling,
+        // since a day can have gaps), so the moved entry's even key slots into its gap without a tie.
         await executor.ExecuteAsync(
             """
             with keyed as (
@@ -206,8 +190,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // The day comes back from the delete itself. Reading the entry first
-        // only to delete it is a round trip to learn what the delete knows.
+        // The day comes back from the delete itself, saving a read.
         var day = await executor.QuerySingleOrDefaultAsync<DateOnly?>(
             """
             delete from meal_plan_entries
@@ -231,19 +214,13 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
             row.SortOrder),
         row.Title,
         row.ImageId,
-        // Only when both are known: "45 minutes" for a recipe that never said
-        // how long it stands is a number somebody would plan an evening around.
+        // Only when both are known: a guessed total is a number somebody plans an evening around.
         row.PrepMinutes is { } prep && row.CookMinutes is { } cook ? prep + cook : null,
         row.YieldAmount,
         row.IsOnShoppingList);
 }
 
-/// <summary>How a slot is spelled in the database.</summary>
-/// <remarks>
-/// Text rather than an integer, so a migration that inserts a slot in the
-/// middle cannot silently reassign every row — and so a person reading the
-/// table can see what it says.
-/// </remarks>
+/// <summary>How a slot is spelled in the database: text, so inserting a slot cannot silently reassign rows.</summary>
 internal static class PlanningCodes
 {
     internal static string Of(MealSlot slot) => slot switch

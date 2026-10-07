@@ -2,15 +2,9 @@ namespace Contracts.Recipes.GetUnits;
 
 /// <summary>The units a household can measure in.</summary>
 /// <remarks>
-/// Two lists rather than one, because they mean different things. The built-in
-/// units are the ones that convert — a kilo is a thousand grams, everywhere,
-/// for everyone — and the document publishes them as a closed set so a
-/// generated client keeps the conversion table honest.
-///
-/// The household's own are whatever its recipes have used. They scale with the
-/// portions and they add to themselves, and they never convert to anything:
-/// nobody knows how much a Schuss is, and a shopping list that claimed to would
-/// be inventing the number.
+/// Two lists because they mean different things: the built-in ones convert (published as a closed
+/// set so clients keep the table honest); the household's own are whatever its recipes used: they
+/// scale and add up but never convert, as nobody knows how much a Schuss is.
 /// </remarks>
 public sealed record Response
 {

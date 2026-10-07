@@ -28,16 +28,8 @@ internal sealed class PushTransport : IDisposable
 
     public void Dispose() => http.Dispose();
 
-    /// <summary>
-    /// The connections a push goes out on: public addresses only, never
-    /// through a proxy, no redirects.
-    /// </summary>
-    /// <remarks>
-    /// The endpoint is an address a browser handed over, and the list of push
-    /// services it is checked against is a list of <em>names</em>. Where a name
-    /// resolves is checked here, at the moment of connecting, by the same
-    /// checked connections every other fetch made on a user's behalf uses.
-    /// </remarks>
+    // Public addresses only, no proxy, no redirects. The endpoint is browser-supplied and the allow list holds
+    // names, so where a name resolves is checked here at connect time.
     private static SocketsHttpHandler Handler()
     {
         var handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);

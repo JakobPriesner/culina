@@ -3,30 +3,10 @@ using Domain.Shared;
 
 namespace Application.Abstractions;
 
-/// <summary>
-/// One model provider, as the rest of the app needs it.
-/// </summary>
+/// <summary>One model provider, as the rest of the app needs it.</summary>
 /// <remarks>
-/// <para>
-/// Two methods for four capabilities, and that is the point. Drafting a recipe
-/// from an idea, improving one somebody wrote, and reading one out of a
-/// photograph are the same call — words and maybe a picture in, one structured
-/// recipe out. What differs between them is the instruction, and an instruction
-/// is this application's business rather than the provider's. Four methods here
-/// would be the same two adapters written twice to express a difference that
-/// lives one layer up.
-/// </para>
-/// <para>
-/// Drawing is the one that is genuinely different work, so it is the one that
-/// is genuinely a second method.
-/// </para>
-/// <para>
-/// Every call is told which connection and which model to use rather than
-/// reading them from the settings. An adapter that reached into the settings
-/// could serve exactly one connection, which is what stopped this instance
-/// having a cheap model for tidying wording and a good one for reading a
-/// photograph.
-/// </para>
+/// Instructions are this application's business, so compose, improve and read-from-photo share one method; drawing is a second.
+/// Each call is told its connection and model rather than reading settings, so one instance can use different models per job.
 /// </remarks>
 public interface IAssistant
 {
@@ -42,33 +22,13 @@ public interface IAssistant
         Composition request,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Asks for a recipe, and hands it over as it is written.
-    /// </summary>
+    /// <summary>Asks for a recipe and hands it over as it is written.</summary>
     /// <param name="using">Where to reach the provider, and which model.</param>
     /// <param name="request">What to do, and what to do it to.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
     /// <remarks>
-    /// <para>
-    /// Beside <see cref="ComposeAsync"/> rather than instead of it, because the
-    /// two answer different questions. Every caller who shows somebody a recipe
-    /// being written wants this one; anything that only needs the finished
-    /// article — a test, a future job with nobody watching — wants the other,
-    /// and would otherwise have to fold a stream back into one answer.
-    /// </para>
-    /// <para>
-    /// A model writes JSON from the first brace to the last, so what arrives
-    /// halfway through is not a recipe and cannot be parsed as one. Reading it
-    /// anyway is this layer's job rather than the caller's: each part carries
-    /// the recipe as far as it can currently be read, which grows a title, then
-    /// ingredients, then steps, exactly as the model writes them.
-    /// </para>
-    /// <para>
-    /// It never throws for a failure that belongs to the provider. The last
-    /// part is always the one with <see cref="Composing.Finished"/> on it, and
-    /// it carries either what the call cost or why it stopped — which is what
-    /// lets the ledger be settled the same way however the call went.
-    /// </para>
+    /// Each part carries the recipe as far as the half-written JSON can be read. Provider failures never throw:
+    /// the last part has <see cref="Composing.Finished"/> and carries the cost or the reason, so the ledger settles the same either way.
     /// </remarks>
     IAsyncEnumerable<Composing> ComposeStreamAsync(
         Connected @using,
@@ -84,17 +44,9 @@ public interface IAssistant
         Drawing request,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// What this provider currently offers.
-    /// </summary>
+    /// <summary>What this provider currently offers, so a model is chosen from a list instead of typed.</summary>
     /// <param name="using">Where to reach it. The model on it is ignored.</param>
     /// <param name="cancellationToken">Cancels the call.</param>
-    /// <remarks>
-    /// So that choosing a model is choosing from a list rather than typing a
-    /// name correctly. The alternative — a text box — asks an administrator to
-    /// know what their provider released this month, and silently does nothing
-    /// useful when they get a character wrong.
-    /// </remarks>
     Task<Result<IReadOnlyList<ModelInfo>>> ListModelsAsync(
         Connected @using,
         CancellationToken cancellationToken);
@@ -103,24 +55,11 @@ public interface IAssistant
 /// <summary>One model a provider offers.</summary>
 /// <param name="Id">What to send as the model name.</param>
 /// <param name="Label">What to show, where the provider says something nicer.</param>
-/// <param name="CanDraw">
-/// Whether it makes pictures.
-/// </param>
-/// <param name="Added">
-/// When the provider published it, where the provider says.
-/// </param>
+/// <param name="CanDraw">Whether it makes pictures.</param>
+/// <param name="Added">When the provider published it, where the provider says.</param>
 /// <remarks>
-/// <see cref="CanDraw"/> is the adapter's best reading rather than a fact the
-/// providers state plainly — none of the three has a field that says "this one
-/// draws". It decides which list a job's picker offers, and being wrong about
-/// it costs a failed call and a clear error, not a wrong recipe.
-/// </remarks>
-/// <remarks>
-/// <see cref="Added"/> is null for a provider that does not date its catalogue.
-/// Google is one: its listing carries a name, a display name, limits and
-/// capabilities, and nothing about when the model appeared. A date invented
-/// here would sort a list convincingly and wrongly, so the absence is carried
-/// as an absence and those listings stay in name order.
+/// <paramref name="CanDraw"/> is the adapter's best guess; no provider states it. <paramref name="Added"/> is null for providers
+/// (Google) that do not date their catalogue, rather than inventing a date.
 /// </remarks>
 public sealed record ModelInfo(
     string Id,
@@ -128,45 +67,22 @@ public sealed record ModelInfo(
     bool CanDraw,
     DateTimeOffset? Added = null);
 
-/// <summary>
-/// One provider, ready to be called.
-/// </summary>
-/// <remarks>
-/// Resolved before it gets here: the key is already decrypted, the address is
-/// already either the override or the provider's own, and the model is already
-/// either the chosen one or the current default. Adapters therefore know
-/// nothing about encryption, about settings, or about what a default is — they
-/// know how to talk to one provider.
-/// </remarks>
+/// <summary>One provider, ready to be called: key decrypted, address and model already resolved.</summary>
 /// <param name="ApiKey">The credential, in the clear. Empty where none is needed.</param>
 /// <param name="BaseUrl">Where to send the request.</param>
 /// <param name="Model">Which model to ask.</param>
 public sealed record Connected(string ApiKey, string BaseUrl, string Model);
 
-/// <summary>
-/// A request for a recipe, with the instruction kept apart from the material.
-/// </summary>
+/// <summary>A request for a recipe, with the instruction kept apart from the material.</summary>
 /// <remarks>
-/// The separation is the whole defence against prompt injection, so it is
-/// structural rather than a convention. <see cref="Instruction"/> is written by
-/// this application. <see cref="Material"/> and <see cref="Pictures"/> are
-/// whatever a person pasted, typed or photographed, which on a shared instance
-/// means whatever somebody else pasted, typed or photographed. An adapter puts
-/// them in different parts of the request and never concatenates them, and what
-/// comes back is only ever read as data.
+/// The separation is the prompt-injection defence: <see cref="Instruction"/> is ours, <see cref="Material"/> and
+/// <see cref="Pictures"/> are whatever somebody pasted. Adapters never concatenate them and only read the reply as data.
 /// </remarks>
 public sealed record Composition
 {
-    /// <summary>
-    /// The most a model may write in answer, thinking included where the
-    /// provider counts it.
-    /// </summary>
+    /// <summary>The most a model may write in answer, thinking included.</summary>
     /// <remarks>
-    /// Sent with every ask, because the reservation taken before a call is a
-    /// fixed sum and an answer with no ceiling can cost any amount past it. A
-    /// recipe, even a long one read off eight screenshots, is under two
-    /// thousand tokens of JSON; the rest is room for a model that thinks before
-    /// it writes. <c>AssistantRun</c>'s estimate is sized to this.
+    /// Sent with every ask because the pre-call reservation is a fixed sum; <c>AssistantRun</c>'s estimate is sized to this.
     /// </remarks>
     public const int MostOutputTokens = 8_192;
 
@@ -182,10 +98,7 @@ public sealed record Composition
     /// <summary>What to do it to. Untrusted.</summary>
     public string? Material { get; init; }
 
-    /// <summary>
-    /// Photographs or screenshots to read a recipe out of, in reading order.
-    /// Untrusted, and already re-encoded without their metadata.
-    /// </summary>
+    /// <summary>Photographs or screenshots to read a recipe out of, in reading order. Untrusted, metadata already stripped.</summary>
     public IReadOnlyList<RecipePicture> Pictures { get; init; } = [];
 }
 
@@ -194,15 +107,7 @@ public sealed record Composition
 /// <param name="Usage">What to write in the ledger.</param>
 public sealed record Composed(DraftedRecipe Recipe, ModelUsage Usage);
 
-/// <summary>
-/// A recipe part-written, or the moment one stopped being written.
-/// </summary>
-/// <remarks>
-/// One type for both because a stream has one shape, and a caller that had to
-/// tell three kinds of item apart would be a caller that forgot one. Every part
-/// carries the recipe so far; the last part says so, and says what it cost or
-/// what went wrong.
-/// </remarks>
+/// <summary>A recipe part-written, or the moment one stopped being written.</summary>
 public sealed record Composing
 {
     /// <summary>The recipe as far as it has been written. Never null, often thin.</summary>
@@ -214,15 +119,7 @@ public sealed record Composing
     /// <summary>What the call consumed, on the last part and nothing before it.</summary>
     public ModelUsage Usage { get; init; }
 
-    /// <summary>
-    /// Why it stopped, when it stopped badly.
-    /// </summary>
-    /// <remarks>
-    /// Returned rather than thrown, like every other expected failure in this
-    /// application — and on the item rather than around the sequence, because
-    /// an <c>IAsyncEnumerable</c> of results reads worse than a sequence that
-    /// ends by saying why.
-    /// </remarks>
+    /// <summary>Why it stopped, when it stopped badly. Returned on the item rather than thrown.</summary>
     public Error? Failure { get; init; }
 }
 
@@ -242,29 +139,13 @@ public sealed record Drawn(Stream Picture, ModelUsage Usage) : IDisposable
     public void Dispose() => Picture.Dispose();
 }
 
-/// <summary>
-/// What one call consumed.
-/// </summary>
-/// <remarks>
-/// Taken from the provider's own answer rather than counted here. A token count
-/// this app estimated would be a number that disagrees with the bill, and a
-/// number that disagrees with the bill is worse than no number.
-/// </remarks>
+/// <summary>What one call consumed, as the provider reported it, never estimated here.</summary>
 /// <param name="InputTokens">What was sent.</param>
 /// <param name="OutputTokens">What came back.</param>
 /// <param name="Pictures">How many images were made.</param>
 public readonly record struct ModelUsage(int InputTokens, int OutputTokens, int Pictures);
 
-/// <summary>
-/// A recipe as a model described it: plain values, none of them believed yet.
-/// </summary>
-/// <remarks>
-/// Deliberately loose — strings and nullable numbers, no value objects and no
-/// invariants. It is the shape of an answer, not the shape of a recipe, and
-/// every field still has to survive the domain before it becomes one. A model
-/// that says an ingredient is "2 sprinkles of salt" produces a perfectly valid
-/// instance of this and an ordinary failure one step later.
-/// </remarks>
+/// <summary>A recipe as a model described it: plain values, none believed until the domain accepts them.</summary>
 public sealed record DraftedRecipe
 {
     /// <summary>What it is called.</summary>
@@ -322,12 +203,7 @@ public sealed record DraftedIngredient
 }
 
 /// <summary>One instruction, as a model described it.</summary>
-/// <remarks>
-/// Plain text, not segments. Which words in a step name an ingredient is a
-/// question this app already answers, in <c>mentions</c> on the way in — asking
-/// a model to mark them up as well would be two sources of truth for the same
-/// fact, and the deterministic one is the one that can be tested.
-/// </remarks>
+/// <remarks>Plain text: which words name an ingredient is already answered deterministically by <c>mentions</c>.</remarks>
 public sealed record DraftedStep
 {
     /// <summary>What this step is called, when it is called anything.</summary>
