@@ -57,8 +57,10 @@ internal sealed class SignInEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .AllowAnonymous()
             // Signing in is the way out of a session whose CSRF token has been
-            // lost, so it cannot be the thing the missing token blocks. See
-            // CsrfExempt; the same-origin guard still covers it.
+            // lost, so it cannot be the thing the missing token blocks. What
+            // stops a cross-site form signing a browser in is that this
+            // endpoint reads only a JSON body, which such a form cannot send;
+            // see CsrfExempt.
             .WithMetadata(new CsrfExempt())
             .RequireRateLimiting(RateLimitExtensions.Login);
     }
