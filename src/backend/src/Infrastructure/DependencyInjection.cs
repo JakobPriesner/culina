@@ -183,7 +183,10 @@ public static class DependencyInjection
             // for the process.
             .AddSingleton(provider =>
                 CulinaDataSource.Build(provider.GetRequiredService<DatabaseSettings>()))
-            // One connection per request, opened lazily.
+            // Singleton: a minute between reports has to hold across requests.
+            .AddSingleton<ConnectionPoolWatch>()
+            // A request's connection, taken from the pool when a statement or
+            // transaction needs it and given back as soon as it is done.
             .AddScoped<DbSession>()
             .AddScoped<DbExecutor>()
             .AddScoped<IUnitOfWork, UnitOfWork>()

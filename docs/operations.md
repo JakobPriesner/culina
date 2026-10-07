@@ -343,6 +343,14 @@ previous release's dump.
   fail2ban or CrowdSec can ban on it. 1501 is an AI provider refusing a call,
   with the provider's own reason attached; 1502 is every settled assistant
   call with its tokens, cost and duration.
+- **The database pool running dry, before it does.** 1970 is a request that
+  waited longer than half a second for a database connection; 1971 is a
+  connection kept out of the pool for longer than five seconds, naming the use
+  case that kept it (`Recipes.Import`). Each is logged at most once a minute,
+  with a count of the ones in between, so a busy instance cannot flood its own
+  log. With a collector, Npgsql's metrics show the pool itself:
+  `db.client.connection.count` by state against `db.client.connection.max`,
+  and `db.client.connection.npgsql.pending_requests` for requests waiting.
 - **Telemetry.** Set a collector under Settings → Server, or
   `OTEL_EXPORTER_OTLP_ENDPOINT`, and traces, metrics and logs all export. Unset,
   nothing leaves the machine.
@@ -413,5 +421,6 @@ lid.
 | The app exits at boot with a configuration message | It is telling you exactly which value it cannot work with. Every setting is validated at startup on purpose. |
 | Sign-in works and then every action fails | Almost always `Cookies__Secure=true` behind a proxy that is not forwarding `X-Forwarded-Proto`. |
 | The app exits at boot naming `Cookies__AllowInsecureOutsideDevelopment` | Secure cookies were turned off, in `.env` or in an older `culina.json`. Reach Culina through your TLS proxy and unset `Cookies__Secure`; only an instance on plain `http://` in a network you trust should set the variable it names instead. |
+| Requests slow down together, or fail with `The connection pool has been exhausted` | Look for 1971 first: it names what kept connections out of the pool. Only 1970 on its own means the load outgrew the pool; raise `Database__MaxPoolSize`, keeping every instance's pools together under PostgreSQL's `max_connections`. |
 | Rate limits trigger for everyone at once | `ForwardedHeaders__KnownProxies`/`KnownNetworks` is not set, so every request looks like it comes from the proxy. |
 | Photographs vanished after a deploy | `/data/images` was not a volume. There is no recovering them without a backup. |

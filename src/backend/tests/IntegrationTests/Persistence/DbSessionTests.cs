@@ -1,6 +1,7 @@
 using Domain.Shared;
 using Infrastructure.Persistence;
 using IntegrationTests.Fixtures;
+using Npgsql;
 using TestSupport;
 
 namespace IntegrationTests.Persistence;
@@ -8,6 +9,9 @@ namespace IntegrationTests.Persistence;
 [Collection(RequiresDatabase.Name)]
 public class DbSessionTests(PostgresFixture postgres)
 {
+    /// <summary>Not the migration runner's key, so these tests never wait on a start-up.</summary>
+    private const long LockKey = 0x74657374; // "test"
+
     private static readonly Error ScratchFailure = new("tests.scratch", "The work declined.", ErrorType.Conflict);
 
     [Fact]
@@ -163,7 +167,90 @@ public class DbSessionTests(PostgresFixture postgres)
         Assert.Null(session.Transaction);
     }
 
-    private DbSession NewSession() => new(CulinaDataSource.Build(postgres.Settings));
+    [Fact]
+    public async Task Executor_ShouldGiveTheConnectionBack_AfterEachStatement()
+    {
+        // Arrange
+        // A pool of one: the second session can only run once the first has
+        // let go of the connection, though the first is still alive — as a
+        // request is while it streams.
+        await using var pool = OneConnectionPool();
+        await using var first = PostgresFixture.SessionOn(pool);
+        await using var second = PostgresFixture.SessionOn(pool);
+        await new DbExecutor(first).ExecuteScalarAsync<int>("select 1;", null, Token);
+
+        // Act
+        var answer = await new DbExecutor(second).ExecuteScalarAsync<int>("select 1;", null, Token);
+
+        // Assert
+        Assert.Equal(1, answer);
+    }
+
+    [Fact]
+    public async Task UnitOfWork_ShouldGiveTheConnectionBack_WhenTheTransactionEnds()
+    {
+        // Arrange
+        await using var pool = OneConnectionPool();
+        await using var first = PostgresFixture.SessionOn(pool);
+        await using var second = PostgresFixture.SessionOn(pool);
+        var executor = new DbExecutor(first);
+        await new UnitOfWork(first).InTransactionAsync(
+            async token => await executor.ExecuteScalarAsync<int>("select 1;", null, token),
+            Token);
+
+        // Act
+        var answer = await new DbExecutor(second).ExecuteScalarAsync<int>("select 1;", null, Token);
+
+        // Assert
+        Assert.Equal(1, answer);
+    }
+
+    [Fact]
+    public async Task Executor_ShouldLoseStateKeptOnTheConnection_OnceItIsGivenBack()
+    {
+        // Arrange
+        // Why a pin exists: a connection back in the pool is reset before its
+        // next statement, and a session-level lock goes with the reset.
+        await using var pool = OneConnectionPool();
+        await using var session = PostgresFixture.SessionOn(pool);
+        var executor = new DbExecutor(session);
+        await executor.ExecuteAsync("select pg_advisory_lock(@key);", new { key = LockKey }, Token);
+
+        // Act
+        var unlocked = await executor.ExecuteScalarAsync<bool>("select pg_advisory_unlock(@key);", new { key = LockKey }, Token);
+
+        // Assert
+        Assert.False(unlocked);
+    }
+
+    [Fact]
+    public async Task Pin_ShouldKeepStateKeptOnTheConnection_UntilItEnds()
+    {
+        // Arrange
+        await using var pool = OneConnectionPool();
+        await using var session = PostgresFixture.SessionOn(pool);
+        var executor = new DbExecutor(session);
+        bool unlocked;
+
+        // Act
+        await using (await session.PinAsync(Token))
+        {
+            await executor.ExecuteAsync("select pg_advisory_lock(@key);", new { key = LockKey }, Token);
+            unlocked = await executor.ExecuteScalarAsync<bool>("select pg_advisory_unlock(@key);", new { key = LockKey }, Token);
+        }
+
+        // Assert
+        // The migration runner's lock is held this way, across the separate
+        // transactions of the migrations it guards.
+        Assert.True(unlocked);
+    }
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+    private NpgsqlDataSource OneConnectionPool() =>
+        CulinaDataSource.Build(postgres.Settings with { MaxPoolSize = 1 });
+
+    private DbSession NewSession() => PostgresFixture.SessionOn(CulinaDataSource.Build(postgres.Settings));
 
     private static async Task<string> CreateScratchTableAsync(DbExecutor executor)
     {

@@ -65,7 +65,7 @@ public class WeightCalibrationTests(PostgresFixture postgres, CalibrationDatabas
         Assert.SkipWhen(connectionString is null, $"Set {RestoredDatabase.Variable} to a restored copy of a Culina database.");
 
         await using var dataSource = RestoredDatabase.Open(connectionString!);
-        await using var session = new DbSession(dataSource);
+        await using var session = PostgresFixture.SessionOn(dataSource);
 
         // Act
         var result = await CalibrateAsync(session, await RestoredDatabase.HouseholdsAsync(session, Token));
