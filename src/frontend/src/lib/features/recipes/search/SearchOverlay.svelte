@@ -3,24 +3,22 @@
 
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, Image, Sheet } from '$ds';
+  import { Button, Sheet } from '$ds';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
-  import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
-  import type { CookbookRules } from '$features/cookbooks/types';
   import { formatList, m } from '$shell/i18n';
-  import { toaster } from '$shell/toaster.svelte';
 
-  import { imageUrl } from '../recipeImage';
-  import { metaLineFor } from '../recipeMeta';
   import { createRecipeStore } from '../stores/recipes.svelte';
-  import type { Completion, RecipeSummary, SearchChip } from '../types';
+  import { createSearchSession } from './createSearchSession.svelte';
   import { recentSearches, rememberSearch } from './recentSearches';
+  import { searchKeydown } from './searchKeyboard';
   import SearchChips from './SearchChips.svelte';
   import SearchNotice from './SearchNotice.svelte';
+  import SearchRefine from './SearchRefine.svelte';
+  import SearchResultsList from './SearchResultsList.svelte';
+  import SearchStart from './SearchStart.svelte';
+  import { createShelving } from './shelving.svelte';
   import { shelfFrom, shelvable } from './shelf';
   import { createCompletionStore } from './stores/completions.svelte';
-  import Highlighted from './Highlighted.svelte';
-  import { cuisineLabel, reasonLine, withoutChip } from './wording';
 
   /**
    * Search, over whatever page is on screen.
@@ -48,89 +46,25 @@
   const completions = createCompletionStore();
   const id = $props.id();
 
-  /** What is in the box. */
-  let typed = $state('');
-  /** What was last searched for, which the chips' spans refer to. */
-  let applied = $state('');
-  /** Tag filters picked from a completion or a refinement, by slug. */
-  let tags = $state<{ slug: string; name: string }[]>([]);
-  /** The query whose correction the reader turned down. */
-  let asTypedFor = $state<string | null>(null);
-  let highlighted = $state(-1);
   let recent = $state<string[]>([]);
   let field = $state<HTMLInputElement>();
 
-  let suggesting: ReturnType<typeof setTimeout> | undefined;
-  let searching: ReturnType<typeof setTimeout> | undefined;
+  const session = createSearchSession({
+    recipes,
+    completions,
+    householdId: () => householdId,
+    focus: () => field?.focus(),
+    openRecipe: (recipeId, elsewhere) => void go(recipeId, elsewhere)
+  });
+  const shelving = createShelving(() => householdId);
 
-  const asking = $derived(applied.trim().length > 0 || tags.length > 0);
+  const interpretation = $derived(session.asking ? recipes.interpretation : null);
 
   /**
    * This search, as the cookbook that would ask the same question — offered
    * only when a shelf could ask any of it, and with what it could not named.
    */
-  const shelf = $derived(shelfFrom(asking ? recipes.interpretation : null, tags));
-
-  /** The shelf being made from this search, while its sheet is open. */
-  let shelving = $state<{ name: string; rules: CookbookRules } | null>(null);
-  let shelvingBusy = $state(false);
-
-  async function makeCookbook(
-    name: string,
-    description: string | null,
-    rules: CookbookRules | null
-  ) {
-    if (!rules) {
-      return;
-    }
-
-    shelvingBusy = true;
-
-    const made = await cookbooks.create(householdId, name, description ?? undefined, rules);
-
-    shelvingBusy = false;
-
-    if (made) {
-      shelving = null;
-      toaster.show({ message: () => m['saved.promoted']({ name }) });
-
-      return;
-    }
-
-    toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
-  }
-
-  type Option =
-    | { readonly key: string; readonly kind: 'completion'; readonly completion: Completion }
-    | { readonly key: string; readonly kind: 'result'; readonly recipe: RecipeSummary };
-
-  /** Everything the arrow keys walk through, in the order it is drawn. */
-  const options = $derived<Option[]>([
-    ...(typed.trim().length > 0 ? completions.items : []).map((completion, index): Option => ({
-      key: `c${index}`,
-      kind: 'completion',
-      completion
-    })),
-    ...(asking ? recipes.items : []).map((recipe): Option => ({
-      key: `r${recipe.id}`,
-      kind: 'result',
-      recipe
-    }))
-  ]);
-
-  const groups = $derived([
-    { kind: 'recipe', label: m['search.group.recipes']() },
-    { kind: 'ingredient', label: m['search.group.ingredients']() },
-    { kind: 'tag', label: m['search.group.tags']() },
-    { kind: 'refinement', label: m['search.group.refinements']() }
-  ] as const);
-
-  const quick = $derived([
-    m['search.quick.under30'](),
-    m['search.quick.vegetarian'](),
-    m['search.quick.breakfast'](),
-    m['search.quick.dessert']()
-  ]);
+  const shelf = $derived(shelfFrom(interpretation, session.tags));
 
   // Opened afresh each time: the recent list may have grown, and the field is
   // where the typing goes, not the close button the dialog would focus first.
@@ -139,194 +73,26 @@
       recent = recentSearches(userId);
       void tick().then(() => field?.focus());
     } else {
-      clearTimeout(suggesting);
-      clearTimeout(searching);
-      typed = '';
-      applied = '';
-      tags = [];
-      asTypedFor = null;
-      completions.clear();
+      session.reset();
     }
   });
 
-  $effect(() => () => {
-    clearTimeout(suggesting);
-    clearTimeout(searching);
-  });
-
-  /**
-   * Two debounces, because the two answers cost different amounts: a
-   * completion is a prefix over a few small tables and can keep up with the
-   * word, the results are four lanes and arrive as a thought finishes.
-   */
-  function type(value: string) {
-    typed = value;
-    highlighted = -1;
-    clearTimeout(suggesting);
-    clearTimeout(searching);
-    suggesting = setTimeout(() => void completions.complete(householdId, value), 120);
-    searching = setTimeout(() => search(value), 200);
-  }
-
-  function search(value: string) {
-    applied = value;
-
-    if (value.trim().length > 0 || tags.length > 0) {
-      void recipes.list(householdId, {
-        query: value,
-        tags: tags.map((tag) => tag.slug),
-        asTyped: asTypedFor !== null && asTypedFor === value
-      });
-    }
-  }
-
-  /** Puts something in the box and searches it now, as if it had been typed and waited for. */
-  function set(value: string) {
-    typed = value;
-    highlighted = -1;
-    clearTimeout(suggesting);
-    clearTimeout(searching);
-    void completions.complete(householdId, value);
-    search(value);
-    field?.focus();
-  }
-
-  /** The word being typed, replaced by what it was completed to. */
-  function completeWord(label: string): string {
-    const words = typed.trimEnd().split(/\s+/);
-
-    words[words.length - 1] = label;
-
-    return `${words.join(' ')} `;
-  }
-
-  function remove(chip: SearchChip) {
-    set(withoutChip(applied, chip));
-  }
-
-  function addTag(slug: string, name: string, dropWord: boolean) {
-    if (!tags.some((tag) => tag.slug === slug)) {
-      tags = [...tags, { slug, name }];
-    }
-
-    set(dropWord ? typed.trimEnd().split(/\s+/).slice(0, -1).join(' ') : typed);
-  }
-
-  function removeTag(slug: string) {
-    tags = tags.filter((tag) => tag.slug !== slug);
-    set(typed);
-  }
-
-  function hrefOf(recipeId: string): string {
-    return resolve('/(app)/recipes/[recipeId]', { recipeId });
-  }
+  $effect(() => session.dispose);
 
   async function go(recipeId: string, elsewhere = false) {
-    rememberSearch(userId, applied);
+    rememberSearch(userId, session.applied);
+
+    const href = resolve('/(app)/recipes/[recipeId]', { recipeId });
 
     if (elsewhere) {
-      window.open(hrefOf(recipeId), '_blank', 'noopener');
+      window.open(href, '_blank', 'noopener');
 
       return;
     }
 
     onclose();
-    await goto(resolve('/(app)/recipes/[recipeId]', { recipeId }));
+    await goto(href);
   }
-
-  function activate(option: Option, elsewhere = false) {
-    if (option.kind === 'result') {
-      void go(option.recipe.id, elsewhere);
-
-      return;
-    }
-
-    const completion = option.completion;
-
-    switch (completion.kind) {
-      case 'recipe':
-        void go(completion.recipeId, elsewhere);
-        break;
-      case 'ingredient':
-        set(completeWord(completion.label));
-        break;
-      case 'tag':
-        addTag(completion.slug, completion.label, true);
-        break;
-      case 'refinement':
-        set(
-          m['search.refinement.query']({ name: completion.label, minutes: completion.maxMinutes })
-        );
-        break;
-    }
-  }
-
-  /**
-   * A completion taken into the field without going anywhere: a recipe's
-   * name is typed out rather than opened, the rest do what choosing them does.
-   */
-  function accept(completion: Completion) {
-    if (completion.kind === 'recipe') {
-      set(completion.label);
-    } else {
-      activate({ key: '', kind: 'completion', completion });
-    }
-  }
-
-  function keydown(event: KeyboardEvent) {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-
-      if (options.length > 0) {
-        const step = event.key === 'ArrowDown' ? 1 : -1;
-        highlighted = (highlighted + step + options.length) % options.length;
-        document
-          .getElementById(`${id}-${options[highlighted]!.key}`)
-          ?.scrollIntoView({ block: 'nearest' });
-      }
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-
-      const option = options[highlighted];
-
-      if (option) {
-        activate(option, event.metaKey || event.ctrlKey);
-      } else {
-        recent = rememberSearch(userId, typed);
-        set(typed);
-      }
-    } else if (
-      event.key === 'Tab' &&
-      !event.shiftKey &&
-      typed.trim().length > 0 &&
-      completions.items.length > 0
-    ) {
-      // The highlighted completion, or the first one. Only when there is one
-      // to take: otherwise Tab leaves the field as it always does.
-      event.preventDefault();
-
-      const option = options[highlighted];
-
-      accept(option?.kind === 'completion' ? option.completion : completions.items[0]!);
-    } else if (event.key === 'Backspace' && typed.length === 0 && tags.length > 0) {
-      // Nothing left to delete in the field, so the chip beside it goes —
-      // what deleting one more character looks like it should do.
-      event.preventDefault();
-      removeTag(tags.at(-1)!.slug);
-    } else if (event.key === 'Escape' && typed.length > 0) {
-      // Clear first, close second — the same as every other search field here.
-      event.preventDefault();
-      set('');
-    }
-  }
-
-  function completionText(completion: Completion): string {
-    return completion.kind === 'refinement'
-      ? m['search.refinement']({ name: completion.label, minutes: completion.maxMinutes })
-      : completion.label;
-  }
-
-  const interpretation = $derived(asking ? recipes.interpretation : null);
 </script>
 
 <Sheet {open} title={m['search.title']()} hideTitle closeLabel={m['search.close']()} {onclose}>
@@ -348,31 +114,42 @@
         type="search"
         role="combobox"
         aria-label={m['search.title']()}
-        aria-expanded={options.length > 0}
+        aria-expanded={session.options.length > 0}
         aria-controls="{id}-list"
-        aria-activedescendant={highlighted >= 0 ? `${id}-${options[highlighted]?.key}` : undefined}
+        aria-activedescendant={session.highlighted >= 0
+          ? `${id}-${session.options[session.highlighted]?.key}`
+          : undefined}
         aria-autocomplete="list"
         autocomplete="off"
         enterkeyhint="search"
         placeholder={m['search.placeholder']()}
-        value={typed}
-        oninput={(event) => type(event.currentTarget.value)}
-        onkeydown={keydown}
+        value={session.typed}
+        oninput={(event) => session.type(event.currentTarget.value)}
+        onkeydown={(event) =>
+          searchKeydown(event, {
+            session,
+            completions: completions.items,
+            id,
+            submit: () => {
+              recent = rememberSearch(userId, session.typed);
+              session.set(session.typed);
+            }
+          })}
       />
     </div>
 
-    {#if interpretation || tags.length > 0}
+    {#if interpretation || session.tags.length > 0}
       <div class="understood">
-        <SearchChips chips={interpretation?.chips ?? []} onremove={remove} />
-        {#if tags.length > 0}
+        <SearchChips chips={interpretation?.chips ?? []} onremove={session.remove} />
+        {#if session.tags.length > 0}
           <ul class="tags">
-            {#each tags as tag (tag.slug)}
+            {#each session.tags as tag (tag.slug)}
               <li>
                 <button
                   type="button"
                   class="tag"
                   aria-label={m['search.chip.remove']({ label: tag.name })}
-                  onclick={() => removeTag(tag.slug)}
+                  onclick={() => session.removeTag(tag.slug)}
                 >
                   #{tag.name} <span aria-hidden="true">×</span>
                 </button>
@@ -383,26 +160,23 @@
       </div>
     {/if}
 
-    {#if asking && recipes.status === 'ready'}
+    {#if session.asking && recipes.status === 'ready'}
       <SearchNotice
         {interpretation}
         total={recipes.total}
-        query={applied}
-        onastyped={() => {
-          asTypedFor = applied;
-          search(applied);
-        }}
-        onremove={remove}
+        query={session.applied}
+        onastyped={session.searchAsTyped}
+        onremove={session.remove}
       />
     {/if}
 
     <p class="count" aria-live="polite" aria-atomic="true">
-      {#if asking && recipes.status === 'ready' && recipes.total > 0}
+      {#if session.asking && recipes.status === 'ready' && recipes.total > 0}
         {m['recipes.list.count']({ count: recipes.total })}
       {/if}
     </p>
 
-    {#if asking && recipes.status === 'ready' && recipes.total > 0 && shelvable(shelf)}
+    {#if session.asking && recipes.status === 'ready' && recipes.total > 0 && shelvable(shelf)}
       <!-- The one door from a search to a shelf. What a shelf cannot ask is
            said beside it rather than discovered on the cookbook later. -->
       <div class="shelf">
@@ -410,10 +184,10 @@
           size="sm"
           variant="ghost"
           onclick={() =>
-            (shelving = {
-              name: applied.trim() || tags.map((tag) => tag.name).join(', '),
-              rules: shelf.rules
-            })}
+            shelving.offer(
+              session.applied.trim() || session.tags.map((tag) => tag.name).join(', '),
+              shelf.rules
+            )}
         >
           {m['search.shelf.make']()}
         </Button>
@@ -427,153 +201,37 @@
       </div>
     {/if}
 
-    <ul class="list" id="{id}-list" role="listbox" aria-label={m['search.group.results']()}>
-      {#each groups as group (group.kind)}
-        {@const members = options.filter(
-          (option) => option.kind === 'completion' && option.completion.kind === group.kind
-        )}
-        {#if members.length > 0}
-          <li class="heading" role="presentation">{group.label}</li>
-          {#each members as option (option.key)}
-            {#if option.kind === 'completion'}
-              <li
-                id="{id}-{option.key}"
-                class="option completion"
-                role="option"
-                aria-selected={options.indexOf(option) === highlighted}
-              >
-                <button type="button" tabindex="-1" onclick={() => activate(option)}>
-                  <span class="label">{completionText(option.completion)}</span>
-                  {#if option.completion.kind !== 'recipe'}
-                    <span class="meta">
-                      {m['recipes.list.count']({ count: option.completion.recipeCount })}
-                    </span>
-                  {/if}
-                </button>
-              </li>
-            {/if}
-          {/each}
-        {/if}
-      {/each}
+    <SearchResultsList
+      {id}
+      options={session.options}
+      highlighted={session.highlighted}
+      applied={session.applied}
+      onactivate={(option) => session.activate(option)}
+      onopen={(recipeId) => void go(recipeId)}
+    />
 
-      {#if asking && recipes.items.length > 0}
-        <li class="heading" role="presentation">{m['search.group.results']()}</li>
-        {#each options as option (option.key)}
-          {#if option.kind === 'result'}
-            <li
-              id="{id}-{option.key}"
-              class="option result"
-              role="option"
-              aria-selected={options.indexOf(option) === highlighted}
-            >
-              <a
-                href={resolve('/(app)/recipes/[recipeId]', { recipeId: option.recipe.id })}
-                tabindex="-1"
-                onclick={(event) => {
-                  if (!event.metaKey && !event.ctrlKey) {
-                    event.preventDefault();
-                    void go(option.recipe.id);
-                  }
-                }}
-              >
-                <span class="thumb">
-                  <Image
-                    src={option.recipe.imageId
-                      ? imageUrl(option.recipe.id, 400, option.recipe.imageId)
-                      : undefined}
-                    alt=""
-                    ratio={1}
-                  />
-                </span>
-                <span class="text">
-                  <span class="label"
-                    ><Highlighted text={option.recipe.title} query={applied} /></span
-                  >
-                  <span class="meta">{metaLineFor(option.recipe)}</span>
-                  {#if option.recipe.matchReason}
-                    <span class="reason">
-                      <Highlighted text={reasonLine(option.recipe.matchReason)} query={applied} />
-                    </span>
-                  {/if}
-                </span>
-              </a>
-            </li>
-          {/if}
-        {/each}
-      {/if}
-    </ul>
-
-    {#if asking && recipes.facets}
-      {@const facets = recipes.facets}
-      <div class="refine" role="group" aria-label={m['search.refine']()}>
-        <span class="refine-label">{m['search.refine']()}</span>
-        {#each facets.tags as facet (facet.value)}
-          <button
-            type="button"
-            class="facet"
-            onclick={() => addTag(facet.value, facet.label ?? facet.value, false)}
-          >
-            {facet.label ?? facet.value} <span class="n">{facet.count}</span>
-          </button>
-        {/each}
-        {#each facets.times as facet (facet.value)}
-          <button
-            type="button"
-            class="facet"
-            onclick={() =>
-              set(`${typed.trim()} ${m['search.chip.time']({ minutes: facet.value })}`)}
-          >
-            {m['search.chip.time']({ minutes: facet.value })} <span class="n">{facet.count}</span>
-          </button>
-        {/each}
-        {#each facets.cuisines as facet (facet.value)}
-          <button
-            type="button"
-            class="facet"
-            onclick={() => set(`${typed.trim()} ${cuisineLabel(facet.value)}`)}
-          >
-            {cuisineLabel(facet.value)} <span class="n">{facet.count}</span>
-          </button>
-        {/each}
-      </div>
+    {#if session.asking && recipes.facets}
+      <SearchRefine
+        facets={recipes.facets}
+        typed={session.typed}
+        ontag={(slug, name) => session.addTag(slug, name, false)}
+        onquery={session.set}
+      />
     {/if}
 
-    {#if !asking && typed.trim().length === 0}
-      <div class="start">
-        {#if recent.length > 0}
-          <section>
-            <h3 class="heading">{m['search.recent']()}</h3>
-            <ul class="plain">
-              {#each recent as one (one)}
-                <li>
-                  <button type="button" class="again" onclick={() => set(one)}>↩ {one}</button>
-                </li>
-              {/each}
-            </ul>
-          </section>
-        {/if}
-        <!-- Four constant searches, not a personalised shelf: a panel whose
-             contents change before anything is typed is one nobody can learn. -->
-        <section>
-          <h3 class="heading">{m['search.quick']()}</h3>
-          <div class="quick">
-            {#each quick as one (one)}
-              <button type="button" class="facet" onclick={() => set(one)}>{one}</button>
-            {/each}
-          </div>
-        </section>
-      </div>
+    {#if !session.asking && session.typed.trim().length === 0}
+      <SearchStart {recent} onpick={session.set} />
     {/if}
   </div>
 </Sheet>
 
 <CookbookSheet
-  open={shelving !== null}
+  open={shelving.current !== null}
   {householdId}
-  preset={shelving}
-  saving={shelvingBusy}
-  onsave={(name, description, rules) => void makeCookbook(name, description, rules)}
-  onclose={() => (shelving = null)}
+  preset={shelving.current}
+  saving={shelving.busy}
+  onsave={(name, description, rules) => void shelving.make(name, description, rules)}
+  onclose={shelving.close}
 />
 
 <style>
@@ -638,17 +296,12 @@
     scrollbar-width: none;
   }
 
-  .tags,
-  .plain,
-  .list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
   .tags {
     display: flex;
     gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
   .tag {
@@ -668,116 +321,5 @@
     min-height: 1lh;
     color: var(--text-muted);
     font-size: var(--text-sm);
-  }
-
-  .heading {
-    padding-block: var(--space-3) var(--space-1);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .option > button,
-  .option > a {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: 100%;
-    min-height: 2.75rem;
-    padding: var(--space-2) var(--space-3);
-    border: 0;
-    border-radius: var(--radius-md);
-    background: none;
-    color: var(--text);
-    font: inherit;
-    text-align: start;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .option[aria-selected='true'] > button,
-  .option[aria-selected='true'] > a,
-  .option > button:hover,
-  .option > a:hover {
-    background: var(--surface-selected);
-  }
-
-  .completion .meta {
-    margin-inline-start: auto;
-  }
-
-  .thumb {
-    flex: 0 0 3rem;
-    width: 3rem;
-    overflow: hidden;
-    border-radius: var(--radius-md);
-  }
-
-  .text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  .label {
-    font-weight: var(--weight-medium);
-  }
-
-  .meta,
-  .reason {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-  }
-
-  .reason {
-    font-style: italic;
-  }
-
-  .refine,
-  .quick {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .refine-label {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .facet,
-  .again {
-    min-height: var(--control-sm);
-    padding: 0 var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    background: var(--surface-raised);
-    color: var(--text);
-    font: inherit;
-    font-size: var(--text-sm);
-    cursor: pointer;
-  }
-
-  .again {
-    border: 0;
-    background: none;
-    padding-inline: var(--space-1);
-  }
-
-  .n {
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .start {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
   }
 </style>

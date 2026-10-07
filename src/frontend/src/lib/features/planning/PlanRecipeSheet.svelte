@@ -7,6 +7,7 @@
   import { toaster } from '$shell/toaster.svelte';
 
   import { asDate, mealPlan, type MealSlot } from './mealPlan.svelte';
+  import { mealSlots, slotLabel } from './slots';
 
   /**
    * The short path from deciding on a recipe to putting it in the week.
@@ -75,9 +76,9 @@
   );
 
   const slotOptions = $derived<readonly RadioOption[]>(
-    (['breakfast', 'lunch', 'dinner'] as const).map((which) => ({
+    mealSlots.map((which) => ({
       value: which,
-      label: m[`plan.slot.${which}`]()
+      label: slotLabel[which]()
     }))
   );
 

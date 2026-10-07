@@ -5,6 +5,11 @@ export function dockCookingAction(anchor: HTMLElement) {
   const viewport = window.visualViewport;
   let frame = 0;
 
+  /** Writes a property only when it changed, so an idle scroll frame costs no style work. */
+  function set(name: string, value: string) {
+    if (anchor.style.getPropertyValue(name) !== value) anchor.style.setProperty(name, value);
+  }
+
   function update() {
     frame = 0;
 
@@ -14,17 +19,18 @@ export function dockCookingAction(anchor: HTMLElement) {
       return;
     }
 
+    // Everything is read before anything is written, so one frame forces one layout.
     const height = footer.getBoundingClientRect().height;
-    // Reserve the same space whether the footer is fixed or in the document.
-    anchor.style.setProperty('--action-height', `${height}px`);
     const place = anchor.getBoundingClientRect();
     const inset = parseFloat(getComputedStyle(anchor).getPropertyValue('--bottom-inset')) || 0;
     const visibleBottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight);
     const docked = place.top + height > visibleBottom - inset;
 
-    anchor.style.setProperty('--action-left', `${place.left}px`);
-    anchor.style.setProperty('--action-width', `${place.width}px`);
-    anchor.style.setProperty('--action-top', `${visibleBottom - inset - height}px`);
+    // Reserve the same space whether the footer is fixed or in the document.
+    set('--action-height', `${height}px`);
+    set('--action-left', `${place.left}px`);
+    set('--action-width', `${place.width}px`);
+    set('--action-top', `${visibleBottom - inset - height}px`);
     footer.classList.toggle('docked', docked);
   }
 

@@ -55,7 +55,7 @@ export interface RecipeFilters {
 const pageSize = 24;
 
 class RecipeStore {
-  #items = $state<RecipeSummary[]>([]);
+  #items = $state.raw<RecipeSummary[]>([]);
   #detail = $state<Recipe | null>(null);
   #status = $state<LoadStatus>('idle');
 

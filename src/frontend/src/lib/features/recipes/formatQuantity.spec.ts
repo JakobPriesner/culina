@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { formatQuantity, type QuantityLabels } from './formatQuantity';
 import { scaleQuantity } from './scaling';
@@ -31,6 +31,20 @@ describe('numbers', () => {
   it('trims a decimal that says nothing', () => {
     expect(show(1, 'kg')).toBe('1' + nbsp + 'kg');
     expect(show(1.5, 'kg')).toBe('1.5' + nbsp + 'kg');
+  });
+
+  it('builds one number format per locale, not one per amount', () => {
+    const made = vi.spyOn(Intl, 'NumberFormat');
+
+    try {
+      show(1.5, 'kg', 1, 'it');
+      show(2.25, 'kg', 1, 'it');
+      show(3.75, 'kg', 1, 'it');
+
+      expect(made).toHaveBeenCalledTimes(1);
+    } finally {
+      made.mockRestore();
+    }
   });
 
   it('uses the separator the reader expects', () => {

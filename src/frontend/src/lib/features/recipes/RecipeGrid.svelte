@@ -59,7 +59,7 @@
 {:else}
   <ul class="grid">
     {#each recipes as recipe (recipe.id)}
-      <li>
+      <li class="card">
         <RecipeCard
           {recipe}
           {query}
@@ -92,6 +92,16 @@
 
   li {
     min-width: 0;
+  }
+
+  /* Cards below the fold are not laid out or painted until they near the
+     screen. That clips to the box, so the padding (given back by the negative
+     margin) leaves room for the focus ring around the card's link. */
+  .card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 14rem;
+    padding: var(--space-2);
+    margin: calc(var(--space-2) * -1);
   }
 
   @media (min-width: 40rem) {

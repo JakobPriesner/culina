@@ -1,10 +1,9 @@
 <script lang="ts">
   import { FilePicker, Image, VisuallyHidden } from '$ds';
 
-  import { m } from '$shell/i18n';
+  import { formatDate, m } from '$shell/i18n';
   import { attemptSrcset, attemptUrl } from '$features/recipes/recipeImage';
   import { cookLog } from './stores/cookLog.svelte';
-  import { preferences } from '$shell/preferences.svelte';
 
   /**
    * Your own attempts, dated, newest first.
@@ -32,11 +31,8 @@
   /** Checked here so an obviously hopeless upload fails instantly. */
   const maxBytes = 10 * 1024 * 1024;
 
-  const dates = $derived(
-    new Intl.DateTimeFormat(preferences.locale, { day: 'numeric', month: 'short' })
-  );
-
-  const shownDate = (madeAt: string) => dates.format(new Date(madeAt));
+  const shownDate = (madeAt: string) =>
+    formatDate(new Date(madeAt), { day: 'numeric', month: 'short' });
 
   function pickFor(entryId: string) {
     target = entryId;
