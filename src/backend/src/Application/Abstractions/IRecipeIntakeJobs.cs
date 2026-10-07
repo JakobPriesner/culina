@@ -25,6 +25,8 @@ public interface IRecipeIntakeJobs
     Task<IntakeJob?> GetAsync(Guid id, Guid userId, CancellationToken token);
     /// <summary>Reads retained original material.</summary>
     Task<IntakeMaterial?> MaterialAsync(Guid id, Guid userId, CancellationToken token);
+    /// <summary>Reads one retained original photograph, by its position.</summary>
+    Task<IntakePhoto?> PhotoAsync(Guid id, Guid userId, int index, CancellationToken token);
     /// <summary>Retains the source fetched by the server for later comparison.</summary>
     Task SourceAsync(Guid id, IntakeMaterial material, CancellationToken token);
     /// <summary>Marks a ready recipe reviewed and releases its source images.</summary>
