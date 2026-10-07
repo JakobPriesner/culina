@@ -1528,5 +1528,6 @@
   "server.database.password.again": "Enter the password again: Culina only sends the stored one to the server it was saved for.",
   "ai.address.keyAgain": "Changing the address means entering the key again: Culina only sends a stored key to the address it was saved for.",
   "problem.import.source_needs_reconnecting": "This connection's token can no longer be read. Disconnect it and connect it again.",
-  "import.url.waiting": "This link hasn't been opened yet. Tap “{action}” to read it."
+  "import.url.waiting": "This link hasn't been opened yet. Tap “{action}” to read it.",
+  "auth.join.confirm.household": "You're invited to join {household}."
 }

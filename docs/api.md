@@ -57,6 +57,7 @@ served from the same origin.
 | `GET` | `/households/{householdId}/invitations` | Open invitations. Owner only. Returns metadata, **never** the code — the code is shown once, at creation. |
 | `POST` | `/households/{householdId}/invitations` | `201`. Response carries the one-time code. |
 | `DELETE` | `/households/{householdId}/invitations/{invitationId}` | Revoke. |
+| `GET` | `/invitations/{code}` | Signed in only. `{ householdName }` and nothing else, so the join page can say whose kitchen it is before anybody presses Join; the code is not used up. Expired / unknown / used (or a household in the bin) all return the identical `households.invitation_invalid`. Rate limited per address, separately from redeeming. |
 | `POST` | `/invitations/{code}/redemptions` | Join. `201` with the household. Expired / unknown / used all return the identical `households.invitation_invalid`, so codes cannot be probed. Rate limited. |
 
 `POST /invitations/{code}/redemptions` is the "non-CRUD action as a created

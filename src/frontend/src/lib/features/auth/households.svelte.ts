@@ -124,6 +124,18 @@ export async function restoreHousehold(householdId: string): Promise<AppError | 
   return result.ok ? null : result.error;
 }
 
+/** Whose household an invitation is for, read before anybody decides to join it. */
+export type Invitation = components['schemas']['HouseholdsGetInvitationByCodeResponse'];
+
+/**
+ * Names the household a code admits to, without using the code up. Signed in
+ * only: somebody signed out has nothing to decide yet, and a link is a bearer
+ * token whose holder should not learn whose kitchen it opens before then.
+ */
+export function readInvitation(code: string): Promise<Result<Invitation>> {
+  return request(() => http.GET('/api/v1/invitations/{code}', { params: { path: { code } } }));
+}
+
 export async function redeemInvitation(code: string): Promise<Redemption | AppError> {
   const result = await request(() =>
     http.POST('/api/v1/invitations/{code}/redemptions', { params: { path: { code } } })

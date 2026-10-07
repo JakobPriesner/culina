@@ -488,6 +488,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invitations/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an invitation
+         * @description The name of the household a code admits to, so the join page can show it before anybody presses Join. Nothing is used up. Unknown, expired and already-used codes all return the identical households.invitation_invalid, as redeeming does.
+         */
+        get: operations["getInvitationByCodeV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invitations/{code}/redemptions": {
         parameters: {
             query?: never;
@@ -2341,6 +2361,11 @@ export interface components {
         HouseholdsGetHeirsResponse: {
             /** @description Those inheriting from it first, then those inheriting from them. */
             items: components["schemas"]["HouseholdsGetHeirsHeir"][];
+        };
+        /** @description What an invitation code leads to, before it is used. */
+        HouseholdsGetInvitationByCodeResponse: {
+            /** @description The name of the household the code admits to. */
+            householdName: string;
         };
         /** @description An open invitation. */
         HouseholdsGetInvitationsInvitationSummary: {
@@ -6623,6 +6648,55 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getInvitationByCodeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdsGetInvitationByCodeResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

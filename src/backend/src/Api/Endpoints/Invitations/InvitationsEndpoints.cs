@@ -1,3 +1,4 @@
+using Api.Endpoints.Invitations.GetByCode.V1;
 using Api.Endpoints.Invitations.Redeem.V1;
 
 namespace Api.Endpoints.Invitations;
@@ -13,5 +14,7 @@ namespace Api.Endpoints.Invitations;
 internal static class InvitationsEndpoints
 {
     internal static IServiceCollection AddInvitationsEndpoints(this IServiceCollection services) =>
-        services.AddSingleton<IEndpoint, RedeemInvitationEndpoint>();
+        services
+            .AddSingleton<IEndpoint, GetInvitationEndpoint>()
+            .AddSingleton<IEndpoint, RedeemInvitationEndpoint>();
 }

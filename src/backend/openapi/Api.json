@@ -1934,6 +1934,68 @@
         }
       }
     },
+    "/api/v1/invitations/{code}": {
+      "get": {
+        "tags": [
+          "Households"
+        ],
+        "summary": "Read an invitation",
+        "description": "The name of the household a code admits to, so the join page can show it before anybody presses Join. Nothing is used up. Unknown, expired and already-used codes all return the identical households.invitation_invalid, as redeeming does.",
+        "operationId": "getInvitationByCodeV1",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdsGetInvitationByCodeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invitations/{code}/redemptions": {
       "post": {
         "tags": [
@@ -8761,6 +8823,19 @@
           }
         },
         "description": "The households that see this one's recipes."
+      },
+      "HouseholdsGetInvitationByCodeResponse": {
+        "required": [
+          "householdName"
+        ],
+        "type": "object",
+        "properties": {
+          "householdName": {
+            "type": "string",
+            "description": "The name of the household the code admits to."
+          }
+        },
+        "description": "What an invitation code leads to, before it is used."
       },
       "HouseholdsGetInvitationsInvitationSummary": {
         "required": [

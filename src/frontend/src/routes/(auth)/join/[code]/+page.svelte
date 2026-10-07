@@ -1,14 +1,19 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import type { AppError } from '$api';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button } from '$ds';
-  import { redeemInvitation, type Redemption } from '$features/auth/households.svelte';
+  import { Button, Skeleton } from '$ds';
+  import {
+    readInvitation,
+    redeemInvitation,
+    type Redemption
+  } from '$features/auth/households.svelte';
   import { session } from '$features/auth/session.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
+  import { createLoadingState } from '$shell/loadingState.svelte';
 
   /**
    * The page an invitation link opens.
@@ -30,6 +35,12 @@
    * kitchen, adding their recipes and lists there and showing them their name.
    * The owner checking the link before sending it is told they are already in,
    * and taken back to their kitchen.
+   *
+   * Asking is only fair if the question says whose kitchen it is, so once the
+   * session is known to be signed in the invitation is read — which uses
+   * nothing up — and the household's name is shown above the Join button. A
+   * code that no longer works says so straight away; any other failure leaves
+   * the question as it was, without a name, and pressing Join answers it.
    */
   const code = $derived(page.params.code ?? '');
 
@@ -40,10 +51,36 @@
 
   let answer = $state<Answer | null>(null);
   let joining = $state(false);
+  /** Whose kitchen the link is for, once read; null until then or if it could not be. */
+  let householdName = $state<string | null>(null);
+  let reading = $state(false);
+  const loading = createLoadingState();
 
   const invalidCode = 'households.invitation_invalid';
 
-  onMount(() => void session.resolve());
+  onMount(() => void open());
+  onDestroy(() => loading.dispose());
+
+  /** Resolves the session, and reads the invitation for somebody signed in. */
+  async function open() {
+    await session.resolve();
+
+    if (session.status !== 'authenticated') {
+      return;
+    }
+
+    reading = true;
+    loading.start();
+    const read = await readInvitation(code);
+    loading.stop();
+    reading = false;
+
+    if (read.ok) {
+      householdName = read.value.householdName;
+    } else if (read.error.code === invalidCode && answer === null && !joining) {
+      answer = { kind: 'invalid' };
+    }
+  }
 
   async function join() {
     answer = null;
@@ -128,6 +165,13 @@
     </div>
   {:else if session.status === 'authenticated'}
     <h1 class="title">{m['auth.join.title']()}</h1>
+    <div class="invited" aria-busy={reading} aria-live="polite">
+      {#if householdName}
+        <p class="household">{m['auth.join.confirm.household']({ household: householdName })}</p>
+      {:else if loading.showing}
+        <Skeleton width="16rem" height="1.5em" />
+      {/if}
+    </div>
     <p class="body">{m['auth.join.confirm.body']()}</p>
 
     <div class="actions">
@@ -155,6 +199,11 @@
 
   .body {
     color: var(--text-muted);
+  }
+
+  .household {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
   }
 
   .actions {
