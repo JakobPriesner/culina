@@ -214,6 +214,121 @@ public class InvitationEndpointTests(PostgresFixture postgres)
         Assert.Equal(2, theirs.Json!.Value.GetProperty("items").GetArrayLength());
     }
 
+    [Fact]
+    public async Task Read_ShouldNameTheHousehold_AndLeaveTheCodeUnused()
+    {
+        // Arrange
+        var (owner, joiner) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var joinerClient = joiner;
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var name = (await owner.GetAsync($"/api/v1/households/{householdId}", Token))
+            .Json!.Value.GetProperty("name").GetString();
+        var code = await IssueCodeAsync(owner, householdId);
+
+        // Act
+        var read = await joiner.GetAsync($"/api/v1/invitations/{code}", Token);
+
+        // Assert
+        // The name and nothing else: no id, no members, nobody's address.
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        var property = Assert.Single(read.Json!.Value.EnumerateObject());
+        Assert.Equal("householdName", property.Name);
+        Assert.Equal(name, property.Value.GetString());
+
+        // Reading is not joining, and the code still works for joining.
+        var members = await owner.GetAsync($"/api/v1/households/{householdId}/members", Token);
+        Assert.Equal(1, members.Json!.Value.GetProperty("items").GetArrayLength());
+        var redeemed = await joiner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+        Assert.Equal(HttpStatusCode.Created, redeemed.StatusCode);
+    }
+
+    [Fact]
+    public async Task Read_ShouldAnswerIdentically_ForUnknownUsedExpiredAndBinnedCodes()
+    {
+        // Arrange
+        var (owner, joiner) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var joinerClient = joiner;
+        var householdId = await FirstHouseholdIdAsync(owner);
+
+        var used = await IssueCodeAsync(owner, householdId);
+        await joiner.PostAsync($"/api/v1/invitations/{used}/redemptions", new { }, Token);
+
+        var expired = await IssueCodeAsync(owner, householdId);
+        await postgres.ExecuteAsync(
+            "update household_invitations set expires_at = now() - interval '1 day';",
+            Token);
+
+        var flat = (await owner.PostAsync("/api/v1/households", new { name = "Flat" }, Token))
+            .Json!.Value.GetProperty("householdId").GetGuid();
+        var binned = await IssueCodeAsync(owner, flat);
+        await owner.DeleteCurrentAsync($"/api/v1/households/{flat}", Token);
+
+        // Act
+        var answers = new[]
+        {
+            await joiner.GetAsync("/api/v1/invitations/definitely-not-a-real-code", Token),
+            await joiner.GetAsync($"/api/v1/invitations/{used}", Token),
+            await joiner.GetAsync($"/api/v1/invitations/{expired}", Token),
+            await joiner.GetAsync($"/api/v1/invitations/{binned}", Token)
+        };
+
+        // Assert
+        // Distinguishing them would make reading a way to probe codes that
+        // redeeming deliberately is not.
+        Assert.All(answers, answer =>
+        {
+            Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
+            Assert.Equal("households.invitation_invalid", answer.ProblemCode);
+        });
+        Assert.Single(answers.Select(answer => answer.Json!.Value.GetProperty("detail").GetString()).Distinct());
+    }
+
+    [Fact]
+    public async Task Read_ShouldBeLimitedPerAddress_WithoutSpendingARedemption()
+    {
+        // Arrange
+        // A host of its own, so a ceiling of two touches nothing else.
+        await postgres.ResetAsync(Token);
+        using var factory = new CulinaApiFactory(
+            postgres,
+            new Dictionary<string, string> { ["RateLimits:InvitationPerIpPerHour"] = "2" });
+        using var owner = factory.NewApiClient();
+        await owner.PostAsync("/api/v1/users", new { email = "ada@example.com", displayName = "Ada", password = Password }, Token);
+        await owner.PostAsync("/api/v1/sessions", new { email = "ada@example.com", password = Password }, Token);
+        var code = await IssueCodeAsync(owner, await FirstHouseholdIdAsync(owner));
+
+        await owner.GetAsync($"/api/v1/invitations/{code}", Token);
+        await owner.GetAsync($"/api/v1/invitations/{code}", Token);
+
+        // Act
+        var limited = await owner.GetAsync($"/api/v1/invitations/{code}", Token);
+        var redeemed = await owner.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, redeemed.StatusCode);
+    }
+
+    [Fact]
+    public async Task Read_ShouldNameNothing_ToSomebodySignedOut()
+    {
+        // Arrange
+        // A code is a bearer token: whoever holds the link learns whose kitchen
+        // it opens only once they have an account to decide with.
+        var (owner, _) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var anonymous = postgres.Api.NewApiClient();
+        var code = await IssueCodeAsync(owner, await FirstHouseholdIdAsync(owner));
+
+        // Act
+        var read = await anonymous.GetAsync($"/api/v1/invitations/{code}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static async Task<string> IssueCodeAsync(ApiClient owner, Guid householdId) =>

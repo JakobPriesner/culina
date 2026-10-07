@@ -182,7 +182,7 @@ All of these are in the app.
 | `RateLimits__LoginPerIpPerMinute` | `10` | |
 | `RateLimits__LoginPerAccountPerMinute` | `5` | |
 | `RateLimits__RegisterPerIpPerHour` | `5` | |
-| `RateLimits__InvitationPerIpPerHour` | `10` | |
+| `RateLimits__InvitationPerIpPerHour` | `10` | Redemptions per address; reading which household a code is for counts separately against the same number. |
 | `RateLimits__SharedRecipesPerIpPerMinute` | `120` | Reads of recipes shared behind a link. |
 | `RateLimits__ImportsPerHour` | `30` | Imports from a web page, per person. |
 | `RateLimits__SourceRequestsPerHour` | `1500` | Requests against a connected recipe library, per person. |

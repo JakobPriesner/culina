@@ -33,6 +33,17 @@ internal static class RateLimitExtensions
     internal const string Invitation = "auth-invitation";
 
     /// <summary>
+    /// Reading which household an invitation code is for, before joining.
+    /// </summary>
+    /// <remarks>
+    /// Per address, like redeeming and for the same reason: it answers whether
+    /// a code is good, so it is guarded against guessing the way redeeming is,
+    /// with the same ceiling. A bucket of its own, though, so opening the join
+    /// page never spends a redemption.
+    /// </remarks>
+    internal const string InvitationLookup = "invitation-lookup";
+
+    /// <summary>
     /// Reading a recipe someone published behind a link.
     /// </summary>
     /// <remarks>
@@ -147,6 +158,9 @@ internal static class RateLimitExtensions
                 PerAddress(context, limits.RegisterPerIpPerHour, TimeSpan.FromHours(1)));
 
             options.AddPolicy(Invitation, context =>
+                PerAddress(context, limits.InvitationPerIpPerHour, TimeSpan.FromHours(1)));
+
+            options.AddPolicy(InvitationLookup, context =>
                 PerAddress(context, limits.InvitationPerIpPerHour, TimeSpan.FromHours(1)));
 
             options.AddPolicy(SharedRecipe, context =>

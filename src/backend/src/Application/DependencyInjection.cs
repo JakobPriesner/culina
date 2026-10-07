@@ -11,6 +11,7 @@ using Application.Households.Delete;
 using Application.Households.GetAll;
 using Application.Households.GetById;
 using Application.Households.GetHeirs;
+using Application.Households.GetInvitationByCode;
 using Application.Households.GetInvitations;
 using Application.Households.GetMembers;
 using Application.Households.GetTrash;
@@ -182,6 +183,8 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RevokeInvitationCommand>, RevokeInvitationCommandHandler>()
             .AddScoped<ICommandHandler<RedeemInvitationCommand,
                 Contracts.Households.RedeemInvitation.Response>, RedeemInvitationCommandHandler>()
+            .AddScoped<IQueryHandler<GetInvitationByCodeQuery,
+                Contracts.Households.GetInvitationByCode.Response>, GetInvitationByCodeQueryHandler>()
 
             // Server settings, beyond what setting up needs
             .AddSetupHandlers()
