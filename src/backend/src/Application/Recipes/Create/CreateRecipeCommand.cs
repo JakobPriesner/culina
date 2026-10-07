@@ -50,10 +50,10 @@ internal sealed class CreateRecipeCommandHandler(
             .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
+        // A link somebody sent is refused rather than dropped: they asked for
+        // it, and silently keeping the recipe without it would be a surprise.
         var prepared = permitted.Bind(() =>
-            command.SourceUrl is { } url &&
-            (!Uri.TryCreate(url, UriKind.Absolute, out var address)
-                || address.Scheme is not ("http" or "https") || url.Length > 2048)
+            command.SourceUrl is not null && SourceUrl.From(command.SourceUrl) is null
                 ? Result<RecipeTitle>.Failure(ImportErrors.UnreachableAddress)
                 : RecipeTitle.Create(command.Title));
 
@@ -128,7 +128,9 @@ internal sealed class CreateRecipeCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        if (command.DraftId is null && command.SourceUrl is null)
+        var original = SourceUrl.From(command.SourceUrl);
+
+        if (command.DraftId is null && original is null)
         {
             return;
         }
@@ -137,10 +139,10 @@ internal sealed class CreateRecipeCommandHandler(
                 new RecipeOrigin(
                     recipe.Id,
                     recipe.HouseholdId,
-                    command.SourceUrl is null ? SourceKind.Assistant : SourceKind.Web,
+                    original is null ? SourceKind.Assistant : SourceKind.Web,
                     SourceId: null,
                     (command.DraftId ?? Guid.CreateVersion7()).ToString(),
-                    command.SourceUrl,
+                    original,
                     now),
                 cancellationToken)
             .ConfigureAwait(false);

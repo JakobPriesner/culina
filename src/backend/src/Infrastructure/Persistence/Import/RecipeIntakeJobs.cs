@@ -113,7 +113,8 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
             Draft = row.Draft is null ? null : JsonSerializer.Deserialize<Draft>(row.Draft, Json),
             Material = material.Text,
             Transcript = material.Transcript,
-            SourceUrl = material.SourceUrl,
+            // Shown as a link on the intake page, so only an address one may be.
+            SourceUrl = Domain.Import.SourceUrl.From(material.SourceUrl)?.Value,
             PhotoCount = row.PhotoCount,
             ErrorCode = row.ErrorCode
         };

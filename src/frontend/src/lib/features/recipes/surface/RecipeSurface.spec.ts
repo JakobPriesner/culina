@@ -147,6 +147,27 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('spinbutton', { name: 'Cake' })).toBeInTheDocument();
   });
 
+  it('links to where it came from, labelled with that host', () => {
+    render({ recipe: { ...recipe, sourceUrl: 'https://www.chefkoch.de/rezepte/123/orzo.html' } });
+
+    expect(screen.getByRole('link', { name: 'From chefkoch.de' })).toHaveAttribute(
+      'href',
+      'https://www.chefkoch.de/rezepte/123/orzo.html'
+    );
+  });
+
+  it.each(['javascript://chefkoch.de/%0aalert(1)', 'search-ms:query=orzo', 'data:text/html,hi'])(
+    'shows no link at all for an original at %s',
+    (sourceUrl) => {
+      // The address came from a connected app this one does not control, and
+      // the share page shows the same line to anyone with the link.
+      render({ recipe: { ...recipe, sourceUrl } });
+
+      expect(screen.queryByText(/^From /)).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /chefkoch/ })).not.toBeInTheDocument();
+    }
+  );
+
   it('offers to start cooking when the page says cooking is on offer', () => {
     render({ onstartcooking: () => {} });
 

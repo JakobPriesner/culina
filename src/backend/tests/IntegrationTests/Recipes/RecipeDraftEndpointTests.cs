@@ -224,6 +224,29 @@ public class RecipeDraftEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
     }
 
+    [Fact]
+    public async Task ImportedRecipe_ShouldShowNoLink_WhenTheStoredOriginalIsNotAWebAddress()
+    {
+        // Arrange
+        // A row from before the rule, exactly as a connected Tandoor could have
+        // sent it: a script, labelled with a host somebody would trust.
+        using var world = await SignedInAsync();
+        var created = await world.Client.PostAsync("/api/v1/recipes",
+            new { householdId = world.HouseholdId, title = "Beans", sourceUrl = "https://chefkoch.de/beans" }, Token);
+        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
+        await postgres.ExecuteAsync(
+            $"update recipe_origins set source_url = 'javascript://chefkoch.de/%0aalert(1)' where recipe_id = '{recipeId}';",
+            Token);
+
+        // Act
+        var read = await world.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+
+        // Assert
+        var origin = read.Json!.Value.GetProperty("origin");
+        Assert.Equal("web", origin.GetProperty("kind").GetString());
+        Assert.False(origin.TryGetProperty("sourceUrl", out var link) && link.ValueKind is not JsonValueKind.Null);
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static async Task<Guid> RecipeAsync(World world) =>
