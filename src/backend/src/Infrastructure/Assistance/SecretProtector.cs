@@ -17,24 +17,38 @@ namespace Infrastructure.Assistance;
 /// </para>
 /// <para>
 /// A purpose string, so a value encrypted for one thing cannot be decrypted as
-/// another. There is one caller today; the purpose is what keeps the second one
-/// from being able to read the first one's secrets by accident.
+/// another. The assistant's key has one, and connected-source tokens have
+/// their own, <see cref="SourceTokens"/>: a token cannot be read back as an
+/// API key, nor the other way round.
 /// </para>
 /// </remarks>
 internal sealed class SecretProtector : ISecretProtector
 {
-    /// <summary>What these secrets are for. Changing it invalidates every one.</summary>
-    private const string Purpose = "Culina.Assistance.ApiKey.v1";
+    /// <summary>
+    /// What a connected recipe source's API token is protected for, and the
+    /// key the protector for them is registered under. Changing it invalidates
+    /// every stored token.
+    /// </summary>
+    internal const string SourceTokens = "Culina.RecipeSources.Token.v1";
+
+    /// <summary>What the assistant's key is protected for. Changing it invalidates it.</summary>
+    private const string ApiKey = "Culina.Assistance.ApiKey.v1";
 
     private readonly IDataProtector protector;
 
     public SecretProtector(StorageSettings storage)
+        : this(storage, ApiKey)
+    {
+    }
+
+    /// <summary>A protector for secrets kept for <paramref name="purpose"/>.</summary>
+    internal SecretProtector(StorageSettings storage, string purpose)
     {
         ArgumentNullException.ThrowIfNull(storage);
 
         protector = DataProtectionProvider
             .Create(new DirectoryInfo(storage.DataProtectionKeyPath))
-            .CreateProtector(Purpose);
+            .CreateProtector(purpose);
     }
 
     public string Protect(string secret) => protector.Protect(secret);

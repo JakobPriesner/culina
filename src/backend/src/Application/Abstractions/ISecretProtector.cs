@@ -6,12 +6,13 @@ namespace Application.Abstractions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// One caller today: the model provider's API key, which sits in the
-/// <c>settings</c> table as part of an otherwise ordinary JSON payload. It is
-/// the first thing in Culina that is kept rather than hashed and is worth money
-/// to whoever reads it — a session token is hashed because nothing ever needs
-/// it back, and a password likewise. A key has to go out on a request, so it
-/// has to come back.
+/// The first caller was the model provider's API key, which sits in the
+/// <c>settings</c> table as part of an otherwise ordinary JSON payload; a
+/// connected recipe library's API token is kept the same way, under a purpose
+/// of its own. Both are kept rather than hashed and are worth something to
+/// whoever reads them — a session token is hashed because nothing ever needs
+/// it back, and a password likewise. A key or a token has to go out on a
+/// request, so it has to come back.
 /// </para>
 /// <para>
 /// Backed by the framework's data protection and the key ring at
