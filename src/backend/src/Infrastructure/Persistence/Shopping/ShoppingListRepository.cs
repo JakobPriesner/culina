@@ -94,6 +94,10 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             new { listId = row.Id },
             cancellationToken).ConfigureAwait(false);
 
+        // Only recipes still in the household's library, as the meal plan reads
+        // them: a line keeps its amount when the inheritance behind one of its
+        // recipes is cut, but no longer names a recipe nobody here can read.
+        // A binned recipe has always dropped out the same way, through the view.
         var sources = await executor.QueryAsync<ShoppingSourceRow>(
             """
             select s.item_id, s.recipe_id, r.title as recipe_title,
@@ -103,9 +107,10 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             join shopping_list_items i on i.id = s.item_id
             join recipes r on r.id = s.recipe_id
             left join meal_plan_entries p on p.id = s.plan_entry_id
-            where i.list_id = @listId;
+            where i.list_id = @listId
+              and r.household_id = any(array(select household_library(@householdId)));
             """,
-            new { listId = row.Id },
+            new { listId = row.Id, householdId },
             cancellationToken).ConfigureAwait(false);
 
         var sourcesByItem = sources.ToLookup(source => source.ItemId);
