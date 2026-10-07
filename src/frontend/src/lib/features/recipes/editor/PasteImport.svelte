@@ -2,7 +2,6 @@
   import { resolve } from '$app/paths';
   import { goto } from '$app/navigation';
   import { intakes } from '$features/import/intakes.svelte';
-  import { explain } from '$shell/explain';
   import { onDestroy, onMount } from 'svelte';
   import DraftReview from '$features/assistance/DraftReview.svelte';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
@@ -10,17 +9,20 @@
   import { intakeBaseline, intakeDraft } from '$features/import/intakeDraft';
   import { sharedAddress, validSharedPhotos } from '$features/import/sharedRecipe';
   import { session } from '$features/auth/session.svelte';
-  import { Button, Field, TextArea, TextInput } from '$ds';
+  import { Button, TextArea } from '$ds';
 
-  import { http, request, type AppError } from '$api';
+  import type { AppError } from '$api';
   import { m } from '$shell/i18n';
-  import { parseIngredientLine } from './parseIngredientLine';
+  import { readRecipePage } from './importedRecipe';
+  import { createAssistedIntake } from './assistedIntake';
+  import { canReadClipboard, readClipboardRecipe } from './clipboard';
+  import PasteActions from './PasteActions.svelte';
+  import PastePhotos from './PastePhotos.svelte';
+  import PastePreview from './PastePreview.svelte';
+  import PasteUrlField from './PasteUrlField.svelte';
+  import { createPhotoUrls } from './photoUrls.svelte';
   import { parseRecipeText, type ParsedRecipe } from './parseRecipeText';
-  import { formatQuantity } from '../formatQuantity';
-  import { quantityLabels } from '../quantityLabels';
-  import { scaleQuantity } from '../scaling';
   import { units } from '../stores/units.svelte';
-  import { preferences } from '$shell/preferences.svelte';
 
   /**
    * A recipe pasted in, read back before anything is made of it.
@@ -74,8 +76,7 @@
     onqueued
   }: Props = $props();
 
-  let submissionId: string | undefined;
-  let submissionSignature: string | undefined;
+  const submitToAssistant = createAssistedIntake();
   let text = $state('');
   let url = $state('');
   let sourceUrl = $state('');
@@ -87,46 +88,11 @@
   let reviewDraft = $state<Draft | null>(null);
   const current = $derived(intakeBaseline(householdId));
 
-  // One object URL per photo for as long as the photo is held: adding one
-  // photo does not re-read and re-decode the others.
-  const objectUrls = new WeakMap<File, string>();
-  let withUrls: File[] = [];
-  const photoUrls = $derived(
-    photos.map((file) => {
-      let url = objectUrls.get(file);
-
-      if (!url) {
-        url = URL.createObjectURL(file);
-        objectUrls.set(file, url);
-        withUrls.push(file);
-      }
-
-      return url;
-    })
-  );
-  const revoke = (kept: readonly File[]) => {
-    for (const file of withUrls) {
-      if (!kept.includes(file)) {
-        URL.revokeObjectURL(objectUrls.get(file)!);
-        objectUrls.delete(file);
-      }
-    }
-
-    withUrls = withUrls.filter((file) => kept.includes(file));
-  };
-  $effect(() => revoke(photos));
-  onDestroy(() => {
-    drafts.dismiss();
-    revoke([]);
-  });
+  const photoUrls = createPhotoUrls(() => photos);
+  onDestroy(() => drafts.dismiss());
   let reading = $state(false);
   let failure = $state<string | null>(null);
   let iphoneShareHelp = $state(false);
-
-  const canPasteClipboard =
-    typeof navigator !== 'undefined' &&
-    'clipboard' in navigator &&
-    typeof navigator.clipboard?.readText === 'function';
 
   /**
    * A link that arrived from outside, filled in and not yet read.
@@ -168,15 +134,16 @@
   let published = $state<ParsedRecipe | null>(null);
 
   const parsed = $derived(published ?? parseRecipeText(text, units.own));
+  /** Something is already in flight, so the inputs hold still. */
+  const locked = $derived(intakes.submitting || reading || drafts.asking);
+  const tooLong = $derived(text.length + transcript.length > 20000);
   const found = $derived(parsed.ingredients.length + parsed.steps.length);
 
   /**
    * Reads a recipe from a web page.
    *
-   * The server does the fetching — it has to, because a browser cannot read
-   * another site — which is why it refuses every address that is not an
-   * ordinary public page. What comes back is a draft, and it lands in the same
-   * preview a paste does: nothing is created until somebody looks at it.
+   * What comes back lands in the same preview a paste does: nothing is created
+   * until somebody looks at it.
    */
   async function read() {
     const address = url.trim();
@@ -189,47 +156,31 @@
     reading = true;
     failure = null;
 
-    const result = await request(() =>
-      http.POST('/api/v1/recipe-imports', { body: { url: address } })
-    );
+    const page = await readRecipePage(address, units.own);
 
     reading = false;
 
-    if (!result.ok) {
+    if (!page) {
       failure = m['import.url.failed']();
 
       return;
     }
 
-    const draft = result.value;
-    sourceUrl = draft.sourceUrl;
-    transcript = draft.transcript ?? '';
+    sourceUrl = page.sourceUrl;
+    transcript = page.transcript;
 
-    // A site that publishes nothing structured gives back its words, and those
-    // go through the same parser a paste does — one set of heuristics, on the
-    // side where the person correcting them is.
-    if (draft.text) {
+    if ('words' in page) {
       published = null;
       // Keep the words the person shared beside what the page publishes.
-      text = [...new Set([text.trim(), draft.text.trim()].filter(Boolean))].join('\n\n');
+      text = [...new Set([text.trim(), page.words.trim()].filter(Boolean))].join('\n\n');
 
       return;
     }
 
-    published = {
-      sourceUrl,
-      title: draft.title ?? '',
-      ingredients: draft.ingredientLines.map((line) => parseIngredientLine(line, units.own)),
-      steps: [...draft.steps],
-      ...(draft.servings === undefined || draft.servings === null
-        ? {}
-        : { servings: draft.servings }),
-      ...(draft.totalMinutes === undefined || draft.totalMinutes === null
-        ? {}
-        : { totalMinutes: draft.totalMinutes })
-    };
+    published = page.recipe;
+
     if (!text.trim()) {
-      text = [draft.title, ...draft.ingredientLines, ...draft.steps].filter(Boolean).join('\n');
+      text = page.outline;
     }
   }
 
@@ -247,39 +198,23 @@
       return;
     }
     failure = null;
-    const signature = JSON.stringify([
+    const outcome = await submitToAssistant({
       householdId,
-      preferences.locale,
       text,
       transcript,
       sourceUrl,
       url,
-      photos.map((photo) => [photo.name, photo.size, photo.lastModified])
-    ]);
-    if (signature !== submissionSignature) {
-      submissionSignature = signature;
-      submissionId = crypto.randomUUID();
-    }
-    const job = await intakes.start({
-      id: (submissionId ??= crypto.randomUUID()),
-      householdId,
-      language: preferences.locale,
-      material: text,
-      transcript,
-      sourceUrl: sourceUrl || sharedAddress(url, text) || undefined,
-      photos,
-      fetchSource: !sourceUrl && Boolean(sharedAddress(url, text))
+      photos
     });
-    if (!job) {
-      failure = intakes.error ? explain(intakes.error) : m['intake.failed']();
+    if ('failure' in outcome) {
+      failure = outcome.failure;
       return;
     }
     await onqueued?.();
-    await goto(resolve('/(app)/recipes/imports/[intakeId]', { intakeId: job.id }));
+    await goto(resolve('/(app)/recipes/imports/[intakeId]', { intakeId: outcome.jobId }));
   }
 
-  function pickPhotos(event: Event) {
-    const picked = Array.from((event.currentTarget as HTMLInputElement).files ?? []);
+  function pickPhotos(picked: File[]) {
     if (!validSharedPhotos(picked)) {
       failure = m['import.media.invalid']();
       return;
@@ -299,25 +234,19 @@
   }
 
   async function pasteFromClipboard() {
-    if (!canPasteClipboard) return;
-    try {
-      const clipboardText = await navigator.clipboard.readText();
-      const trimmed = clipboardText.trim();
-      const match = trimmed.match(/https?:\/\/[^\s]+/);
-      text = trimmed;
-      if (match) {
-        url = match[0];
-        void read();
-      } else if (trimmed) {
-        text = trimmed;
-      }
-    } catch {
-      // Clipboard access denied or unavailable
+    const copied = await readClipboardRecipe();
+
+    if (!copied) {
+      return;
+    }
+
+    text = copied.text;
+
+    if (copied.url) {
+      url = copied.url;
+      void read();
     }
   }
-
-  const shown = (quantity: Parameters<typeof scaleQuantity>[0]) =>
-    formatQuantity(scaleQuantity(quantity, 1), preferences.locale, quantityLabels).text;
 
   $effect(() => {
     if (open) {
@@ -332,38 +261,21 @@
     <p class="hint">{m['import.intake.hint']()}</p>
     {#if iphoneShareHelp}<p class="hint">{m['import.intake.iphone']()}</p>{/if}
 
-    <div class="from-url">
-      <Field label={m['import.url.label']()}>
-        {#snippet children({ id, describedBy, invalid })}
-          <TextInput
-            {id}
-            {describedBy}
-            {invalid}
-            type="url"
-            inputmode="url"
-            placeholder="https://"
-            bind:value={url}
-            disabled={intakes.submitting || reading || drafts.asking}
-            oninput={() => {
-              sourceUrl = '';
-              transcript = '';
-              published = null;
-              waiting = false;
-            }}
-          />
-        {/snippet}
-      </Field>
-
-      {#if !url.trim() && canPasteClipboard}
-        <Button variant="ghost" onclick={() => void pasteFromClipboard()}>
-          {m['import.url.pasteClipboard']()}
-        </Button>
-      {/if}
-
-      <Button loading={reading} disabled={!url.trim() || drafts.asking} onclick={() => void read()}>
-        {m['import.url.read']()}
-      </Button>
-    </div>
+    <PasteUrlField
+      bind:url
+      {locked}
+      {reading}
+      asking={drafts.asking}
+      canPasteClipboard={canReadClipboard}
+      onedit={() => {
+        sourceUrl = '';
+        transcript = '';
+        published = null;
+        waiting = false;
+      }}
+      onread={() => void read()}
+      onpasteclipboard={() => void pasteFromClipboard()}
+    />
 
     {#if waiting}
       <p class="hint" role="status">
@@ -379,7 +291,7 @@
       id="pasted"
       label={m['import.paste.label']()}
       bind:value={text}
-      disabled={intakes.submitting || reading || drafts.asking}
+      disabled={locked}
       rows={8}
       oninput={(next) => {
         text = next;
@@ -394,37 +306,18 @@
         label={m['import.review.transcript']()}
         bind:value={transcript}
         rows={4}
-        disabled={intakes.submitting || reading || drafts.asking}
+        disabled={locked}
       />
     {/if}
 
     {#if ondraft}
-      <div class="media">
-        <label for="recipe-screenshots">{m['import.media.label']()}</label>
-        <input
-          id="recipe-screenshots"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          disabled={intakes.submitting || reading || drafts.asking}
-          onchange={pickPhotos}
-        />
-        <p class="hint">{m['import.media.hint']()}</p>
-        {#if photos.length}
-          <div class="photos">
-            {#each photoUrls as photo, index (photo)}
-              <img
-                src={photo}
-                alt={photos[index]?.name ?? m['import.review.photo']()}
-                loading="lazy"
-                decoding="async"
-              />
-            {/each}
-          </div>
-          <Button variant="ghost" onclick={() => (photos = [])}>{m['import.media.remove']()}</Button
-          >
-        {/if}
-      </div>
+      <PastePhotos
+        {photos}
+        urls={photoUrls.urls}
+        disabled={locked}
+        onpick={pickPhotos}
+        onremove={() => (photos = [])}
+      />
     {/if}
 
     {#if text.trim() || published}
@@ -439,79 +332,28 @@
     {/if}
 
     {#if found > 0}
-      <div class="preview">
-        {#if parsed.title}
-          <p class="title">{parsed.title}</p>
-        {/if}
-
-        {#if parsed.ingredients.length > 0}
-          <h3 class="section">{m['editor.ingredients']()}</h3>
-          <ul class="list">
-            {#each parsed.ingredients as ingredient, index (index)}
-              <li class="row">
-                <span class="amount">{shown(ingredient.quantity)}</span>
-                <span
-                  >{ingredient.name}{#if ingredient.note}<span class="note"
-                      >, {ingredient.note}</span
-                    >{/if}</span
-                >
-              </li>
-            {/each}
-          </ul>
-        {/if}
-
-        {#if parsed.steps.length > 0}
-          <h3 class="section">{m['editor.steps']()}</h3>
-          <ol class="steps">
-            {#each parsed.steps as step, index (index)}
-              <li>{step}</li>
-            {/each}
-          </ol>
-        {/if}
-      </div>
+      <PastePreview {parsed} />
     {/if}
 
-    <div class="actions">
-      <Button
-        variant="primary"
-        loading={busy}
-        disabled={found === 0 || reading}
-        onclick={reviewParsed}
-      >
-        {m['import.review.preview']()}
-      </Button>
-
-      {#if ondraft && session.user?.assistance.read}
-        <Button
-          loading={intakes.submitting}
-          disabled={intakes.submitting ||
-            (!text.trim() && !transcript && !photos.length && !url.trim()) ||
-            text.length + transcript.length > 20000}
-          onclick={() => void readWithAssistant()}
-        >
-          {m['import.media.read']()}
-        </Button>
-      {/if}
-
-      <Button
-        variant="ghost"
-        onclick={() => {
-          open = false;
-          text = '';
-          photos = [];
-          drafts.dismiss();
-          oncancel?.();
-        }}
-      >
-        {m['import.paste.cancel']()}
-      </Button>
-    </div>
-    {#if photos.length && !session.user?.assistance.read}
-      <p class="hint">{m['import.media.unavailable']()}</p>
-    {/if}
-    {#if text.length + transcript.length > 20000}<p class="hint">
-        {m['import.media.tooLong']()}
-      </p>{/if}
+    <PasteActions
+      {busy}
+      nothingFound={found === 0}
+      {reading}
+      assistantAvailable={Boolean(ondraft && session.user?.assistance.read)}
+      assisting={intakes.submitting}
+      assistantDisabled={(!text.trim() && !transcript && !photos.length && !url.trim()) || tooLong}
+      photosUnreadable={photos.length > 0 && !session.user?.assistance.read}
+      {tooLong}
+      onpreview={reviewParsed}
+      onassist={() => void readWithAssistant()}
+      oncancel={() => {
+        open = false;
+        text = '';
+        photos = [];
+        drafts.dismiss();
+        oncancel?.();
+      }}
+    />
   </section>
 {:else}
   <div>
@@ -530,7 +372,7 @@
       text,
       transcript,
       url: sourceUrl || sharedAddress(url, text),
-      photos: photoUrls,
+      photos: photoUrls.urls,
       assisted
     }}
     saving={busy}
@@ -544,27 +386,6 @@
 {/if}
 
 <style>
-  .media {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  .media input {
-    max-width: 100%;
-    font: inherit;
-  }
-  .photos {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
-    gap: var(--space-2);
-  }
-  .photos img {
-    width: 100%;
-    max-height: 12rem;
-    object-fit: contain;
-    border-radius: var(--radius-md);
-  }
-
   .paste {
     display: flex;
     flex-direction: column;
@@ -583,18 +404,6 @@
     font-size: var(--text-sm);
   }
 
-  .from-url {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: var(--space-3);
-  }
-
-  .from-url :global(> :first-child) {
-    flex: 1 1 16rem;
-    min-width: 0;
-  }
-
   .or {
     color: var(--text-subtle);
     font-size: var(--text-xs);
@@ -610,67 +419,5 @@
   .count {
     color: var(--text-muted);
     font-size: var(--text-sm);
-  }
-
-  /* Sunken, so the preview reads as a quotation of what was pasted rather than
-     as a form that has already been filled in. */
-  .preview {
-    padding: var(--space-4);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
-  }
-
-  .title {
-    font-family: var(--font-editorial);
-    font-size: var(--text-lg);
-    margin-bottom: var(--space-3);
-  }
-
-  .section {
-    margin-top: var(--space-3);
-    color: var(--text-subtle);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .list {
-    margin: var(--space-2) 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns: minmax(4rem, auto) minmax(0, 1fr);
-    gap: var(--space-3);
-    padding-block: var(--space-1);
-  }
-
-  .amount {
-    font-variant-numeric: tabular-nums;
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
-  }
-
-  .note {
-    color: var(--text-muted);
-  }
-
-  .steps {
-    /* Numbers inside, so they line up with the headings above rather than
-       hanging into the panel's padding. */
-    list-style-position: inside;
-    margin: var(--space-2) 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
   }
 </style>

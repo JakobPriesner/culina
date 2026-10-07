@@ -4,47 +4,17 @@ import { registerStore, type LoadStatus } from '$shell/stores';
 import { toSuggestion } from '../mappers';
 import type { Suggestion } from '../types';
 
-export interface SuggestionQuery {
-  /** Which meal, when the caller knows. The plan always does. */
-  readonly slot?: 'breakfast' | 'lunch' | 'dinner';
-  /** A ceiling on total time. Honoured exactly, never treated as a preference. */
-  readonly maxMinutes?: number;
-  /** What the caller already has on screen or already planned. */
-  readonly exclude?: readonly string[];
-  readonly limit?: number;
-}
+import { LruCache } from './lruCache.svelte';
+import {
+  AnswersKept,
+  DefaultLimit,
+  keyOf,
+  Most,
+  type Answer,
+  type SuggestionQuery
+} from './suggestionQuery';
 
-/** One question, as a key, so the same one is never asked twice. */
-function keyOf(householdId: string, query: SuggestionQuery): string {
-  return [
-    householdId,
-    query.slot ?? '',
-    query.maxMinutes ?? '',
-    (query.exclude ?? []).join(','),
-    query.limit ?? ''
-  ].join('|');
-}
-
-/** How many the server answers with when nobody says. */
-const DefaultLimit = 5;
-
-/**
- * The most one question is walked to.
- *
- * The next page is asked for by naming everything already shown, so the list
- * cannot grow without the address growing with it. Sixty is twelve pages of
- * five and well inside what a request line may carry — and far past the point
- * where the answer to "what should I cook?" is still a shortlist.
- */
-const Most = 60;
-
-/** One question's answer, and how far along it is. */
-interface Answer {
-  readonly items: Suggestion[];
-  readonly status: LoadStatus;
-  /** Whether asking again, past what is shown, may find more. */
-  readonly more: boolean;
-}
+export type { SuggestionQuery };
 
 /**
  * What this person might want to cook, for one occasion.
@@ -55,14 +25,18 @@ interface Answer {
  */
 class SuggestionStore {
   /**
-   * One entry per question.
+   * One entry per question, the least recently used forgotten past
+   * {@link AnswersKept}.
    *
    * Status is per question rather than one flag for the store, because two
    * occasions are regularly in flight at once — the panel at the top of the
    * library and the plan's picker — and a shared flag would have each of them
    * reporting the other's progress.
+   *
+   * A forgotten question is also forgotten as asked, so coming back to it
+   * asks again rather than showing nothing for good.
    */
-  #answers = $state<Record<string, Answer>>({});
+  #answers = new LruCache<Answer>(AnswersKept, (key) => this.#asked.delete(key));
   #error = $state<AppError | null>(null);
 
   /**
@@ -89,11 +63,11 @@ class SuggestionStore {
 
   /** The answer to one question, or nothing until it has been asked. */
   for(householdId: string | null, query: SuggestionQuery = {}): readonly Suggestion[] {
-    return householdId ? (this.#answers[keyOf(householdId, query)]?.items ?? []) : [];
+    return householdId ? (this.#answers.get(keyOf(householdId, query))?.items ?? []) : [];
   }
 
   statusOf(householdId: string | null, query: SuggestionQuery = {}): LoadStatus {
-    return householdId ? (this.#answers[keyOf(householdId, query)]?.status ?? 'idle') : 'idle';
+    return householdId ? (this.#answers.get(keyOf(householdId, query))?.status ?? 'idle') : 'idle';
   }
 
   /**
@@ -112,7 +86,7 @@ class SuggestionStore {
 
   /** Whether the answer goes on past what is shown. */
   hasMore(householdId: string | null, query: SuggestionQuery = {}): boolean {
-    return householdId ? (this.#answers[keyOf(householdId, query)]?.more ?? false) : false;
+    return householdId ? (this.#answers.get(keyOf(householdId, query))?.more ?? false) : false;
   }
 
   /**
@@ -127,7 +101,7 @@ class SuggestionStore {
    */
   async more(householdId: string, query: SuggestionQuery = {}): Promise<void> {
     const key = keyOf(householdId, query);
-    const shown = this.#answers[key];
+    const shown = this.#answers.peek(key);
 
     if (!shown?.more || this.#fetchingMore.has(key)) {
       return;
@@ -143,7 +117,7 @@ class SuggestionStore {
 
     this.#fetchingMore.delete(key);
 
-    const answer = this.#answers[key];
+    const answer = this.#answers.peek(key);
 
     if (!answer) {
       return;
@@ -156,14 +130,11 @@ class SuggestionStore {
       : [];
     const items = [...answer.items, ...next];
 
-    this.#answers = {
-      ...this.#answers,
-      [key]: {
-        ...answer,
-        items,
-        more: result.ok && result.value.items.length >= size && items.length < Most
-      }
-    };
+    this.#answers.set(key, {
+      ...answer,
+      items,
+      more: result.ok && result.value.items.length >= size && items.length < Most
+    });
   }
 
   /** Asks a question once. Calling it again with the same one does nothing. */
@@ -193,9 +164,9 @@ class SuggestionStore {
    * list and stay in another is worse than not having dismissed it.
    */
   async dismiss(recipeId: string): Promise<AppError | null> {
-    const before = this.#answers;
+    const before = this.#answers.snapshot();
 
-    this.#answers = this.#without(recipeId);
+    this.#without(recipeId);
 
     const result = await request(() =>
       http.PUT('/api/v1/recipes/{recipeId}/suggestion-dismissal', {
@@ -204,7 +175,7 @@ class SuggestionStore {
     );
 
     if (!result.ok) {
-      this.#answers = before;
+      this.#answers.restore(before);
 
       return result.error;
     }
@@ -239,53 +210,48 @@ class SuggestionStore {
    * offering a recipe that opens onto nothing until the next reload.
    */
   forget(recipeId: string): void {
-    this.#answers = this.#without(recipeId);
+    this.#without(recipeId);
   }
 
-  /** Every answer, with one recipe taken out of all of them. */
-  #without(recipeId: string): Record<string, Answer> {
-    return Object.fromEntries(
-      Object.entries(this.#answers).map(([key, answer]) => [
-        key,
-        { ...answer, items: answer.items.filter((item) => item.id !== recipeId) }
-      ])
-    );
+  /** Takes one recipe out of every answer. */
+  #without(recipeId: string): void {
+    this.#answers.update((answer) => ({
+      ...answer,
+      items: answer.items.filter((item) => item.id !== recipeId)
+    }));
   }
 
   reset(): void {
-    this.#answers = {};
+    this.#answers.clear();
     this.#error = null;
     this.#asked.clear();
     this.#fetchingMore.clear();
   }
 
   async #fetch(householdId: string, query: SuggestionQuery, key: string): Promise<void> {
-    this.#answers = {
-      ...this.#answers,
-      [key]: { items: this.#answers[key]?.items ?? [], status: 'loading', more: false }
-    };
+    const items = this.#answers.peek(key)?.items ?? [];
+
+    this.#answers.set(key, { items, status: 'loading', more: false });
     this.#error = null;
 
     const result = await this.#request(householdId, query, query.exclude);
 
     if (result.ok) {
-      this.#answers = {
-        ...this.#answers,
-        [key]: {
-          items: result.value.items.map(toSuggestion),
-          status: 'ready',
-          more: result.value.items.length >= (query.limit ?? DefaultLimit)
-        }
-      };
+      this.#answers.set(key, {
+        items: result.value.items.map(toSuggestion),
+        status: 'ready',
+        more: result.value.items.length >= (query.limit ?? DefaultLimit)
+      });
 
       return;
     }
 
     this.#error = result.error;
-    this.#answers = {
-      ...this.#answers,
-      [key]: { items: this.#answers[key]?.items ?? [], status: 'failed', more: false }
-    };
+    this.#answers.set(key, {
+      items: this.#answers.peek(key)?.items ?? [],
+      status: 'failed',
+      more: false
+    });
   }
 
   #request(householdId: string, query: SuggestionQuery, exclude: readonly string[] | undefined) {
