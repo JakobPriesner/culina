@@ -251,7 +251,7 @@ public class CsrfGuardTests
         public Task<Result> AddAsync(Session value, CancellationToken cancellationToken) =>
             Task.FromResult(Result.Success());
 
-        public Task<Result> UpdateAsync(Session value, CancellationToken cancellationToken) =>
+        public Task<Result> RenewAsync(Session value, CancellationToken cancellationToken) =>
             Task.FromResult(Result.Success());
 
         public Task<Result> RevokeAsync(Guid sessionId, Guid userId, DateTimeOffset now, CancellationToken cancellationToken) =>
