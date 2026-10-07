@@ -1526,5 +1526,6 @@
   "problem.settings.database_insecure_auth": "The database server wants a sign-in method Culina doesn't use. Culina signs in only with SCRAM-SHA-256: set password_encryption to scram-sha-256, set the role's password again, and use scram-sha-256 in pg_hba.conf.",
   "problem.assistance.api_key_required": "Enter the key again. The address changed, and Culina only sends a stored key to the address it was saved for.",
   "server.database.password.again": "Enter the password again: Culina only sends the stored one to the server it was saved for.",
-  "ai.address.keyAgain": "Changing the address means entering the key again: Culina only sends a stored key to the address it was saved for."
+  "ai.address.keyAgain": "Changing the address means entering the key again: Culina only sends a stored key to the address it was saved for.",
+  "problem.import.source_needs_reconnecting": "This connection's token can no longer be read. Disconnect it and connect it again."
 }

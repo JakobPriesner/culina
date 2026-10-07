@@ -151,6 +151,13 @@ public static class DependencyInjection
     private static IServiceCollection AddRecipeImport(this IServiceCollection services) =>
         services
             .AddSingleton<SourceHttp>()
+            // The tokens connections are kept with, encrypted under a purpose
+            // of their own so they can never be read back as the assistant's
+            // key, nor it as one of them.
+            .AddKeyedSingleton<ISecretProtector>(
+                SecretProtector.SourceTokens,
+                (provider, _) => new SecretProtector(
+                    provider.GetRequiredService<StorageSettings>(), SecretProtector.SourceTokens))
             .AddSingleton<IRecipeLibrary, TandoorLibrary>()
             .AddSingleton<IRecipeLibraries, RecipeLibraries>()
             // The background process that actually brings the recipes over. The
@@ -220,6 +227,9 @@ public static class DependencyInjection
             // Hosted, so the schema is current before the first request and a
             // failed migration stops the process instead of serving traffic.
             .AddHostedService<MigrationHostedService>()
+            // After the migrations too, whose column marks what it encrypts:
+            // the source tokens stored before tokens were encrypted.
+            .AddHostedService<RecipeSourceTokenEncryption>()
             // After the migrations, whose column it writes: rebuilds whatever
             // an older lexicon indexed before the first request is served.
             .AddHostedService<LexiconReindexService>()

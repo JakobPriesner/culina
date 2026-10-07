@@ -86,6 +86,19 @@ public static class ImportErrors
         "That app refused the token. Check that it is current and has permission to read recipes.",
         ErrorType.Validation);
 
+    /// <summary>
+    /// The connection's stored token can no longer be decrypted.
+    /// </summary>
+    /// <remarks>
+    /// What an instance restored without its key ring finds. Nothing is wrong
+    /// with the other app and nothing here can recover the token, so the one
+    /// useful answer is the one thing that fixes it: connect it again.
+    /// </remarks>
+    public static readonly Error SourceNeedsReconnecting = new(
+        "import.source_needs_reconnecting",
+        "This connection's token can no longer be read. Disconnect it and connect it again.",
+        ErrorType.Conflict);
+
     /// <summary>The other app answered with something this could not read.</summary>
     public static readonly Error SourceNotUnderstood = new(
         "import.source_not_understood",
