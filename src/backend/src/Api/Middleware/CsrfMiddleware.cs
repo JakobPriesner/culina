@@ -55,7 +55,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
         }
 
         CulinaTelemetry.CsrfRejections.Add(1);
-        logger.Rejected(context.Request.Method, context.Request.Path, SessionErrors.CsrfInvalid.Code);
+        logger.Rejected(context.Request, SessionErrors.CsrfInvalid.Code);
 
         await CustomResults.WriteProblemAsync(context, SessionErrors.CsrfInvalid).ConfigureAwait(false);
     }

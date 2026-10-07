@@ -189,6 +189,13 @@ ciphertext, `Authorization` and `Cookie` header values, CSRF tokens, full email
 addresses (log a stable hash or the domain part), any personal free text
 (recipe notes, messages), and raw request/response bodies.
 
+A path can carry a bearer secret — a share token, an invitation code — so a
+path reaches a log line or a span only through `SecretPaths.Redact`: the
+request line, `PipelineLogs` (which take the request, not the path) and the
+ASP.NET Core span's `url.path` all use it, and the host's own `RequestPath`
+scope is switched off. A new route with a secret in its path is added to the
+pattern there.
+
 If a value is needed for support, log its shape instead: a hash, a length, a
 last-4, or a boolean.
 

@@ -140,10 +140,7 @@ internal static class RateLimitExtensions
                 context.HttpContext.RequestServices
                     .GetRequiredService<ILoggerFactory>()
                     .CreateLogger(typeof(RateLimitExtensions))
-                    .Rejected(
-                        context.HttpContext.Request.Method,
-                        context.HttpContext.Request.Path,
-                        RequestErrors.RateLimited.Code);
+                    .Rejected(context.HttpContext.Request, RequestErrors.RateLimited.Code);
 
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
                 {

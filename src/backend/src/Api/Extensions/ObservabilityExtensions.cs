@@ -101,6 +101,13 @@ internal static class ObservabilityExtensions
         builder.Logging.Configure(options =>
             options.ActivityTrackingOptions = ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId);
 
+        // The host opens a scope naming every request's raw path, and so put a
+        // share token or invitation code on every line a request to one wrote.
+        // It only opens it while this category logs at all; its own lines are
+        // the request start and finish the request line already covers, with
+        // the path redacted, and the trace id joins every other line to it.
+        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.None);
+
         if (builder.Environment.IsDevelopment())
         {
             builder.Logging.AddSimpleConsole(console =>
@@ -151,9 +158,16 @@ internal static class ObservabilityExtensions
         tracing
             .AddSource(CulinaTelemetry.Name)
             .AddAspNetCoreInstrumentation(options =>
+            {
                 // Health checks are most of the traffic and none of the
                 // information.
-                options.Filter = context => !context.Request.Path.StartsWithSegments("/health"))
+                options.Filter = context => !context.Request.Path.StartsWithSegments("/health");
+
+                // Without the share token or invitation code a path can carry:
+                // whoever reads the collector must not be handed what it opens.
+                options.EnrichWithHttpRequest = (activity, request) =>
+                    activity.SetTag("url.path", SecretPaths.Redact(request.PathBase.Add(request.Path)));
+            })
             .AddHttpClientInstrumentation()
             .AddNpgsql();
 
