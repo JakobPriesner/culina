@@ -70,10 +70,12 @@ internal static class DependencyInjection
 
     /// <summary>
     /// The presentation layer of the host that runs before there is a
-    /// database: problem documents, request logging and the setup policy. No
-    /// authentication, no rate limiter, no OpenAPI document — there are no
-    /// sessions to authenticate, and the document is exported from the real
-    /// host, which maps the same setup routes.
+    /// database: problem documents, request logging, the setup policy, and a
+    /// rate limiter with no settings of its own — the one limit it enforces is
+    /// the fixed <see cref="DatabaseCheckLimit"/> the database endpoint carries.
+    /// No authentication and no OpenAPI document — there are no sessions to
+    /// authenticate, and the document is exported from the real host, which
+    /// maps the same setup routes.
     /// </summary>
     internal static IServiceCollection AddSetupPresentation(this IServiceCollection services)
     {
@@ -82,6 +84,7 @@ internal static class DependencyInjection
         return services
             .AddProblemDetails()
             .AddExceptionHandler<GlobalExceptionHandler>()
+            .AddRateLimiter(_ => { })
             .AddRequestLogging()
             .AddCulinaJson()
             .AddSetupAuthorization()
