@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Threading.RateLimiting;
+using Api.Authentication;
 using Api.Infrastructure;
+using Api.Middleware;
 using Application.Abstractions.Settings;
 using Application.Telemetry;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,12 +15,21 @@ namespace Api.Extensions;
 /// <remarks>
 /// The limiter runs before authentication, so brute force costs nothing to
 /// reject: an attacker's request is refused before a password hash is computed
-/// or a database connection is taken.
+/// or a database connection is taken. Only the limits that belong to a person
+/// rather than an address are counted later, once it is known who is asking
+/// (see <see cref="Personal"/>).
 /// </remarks>
 internal static class RateLimitExtensions
 {
     internal const string Login = "auth-login";
     internal const string Register = "auth-register";
+
+    /// <summary>Redeeming an invitation code.</summary>
+    /// <remarks>
+    /// Per address rather than per person, unlike the other signed-in limits:
+    /// what it stops is somebody guessing codes, and where registration is
+    /// open an account costs nothing to make, while an address does.
+    /// </remarks>
     internal const string Invitation = "auth-invitation";
 
     /// <summary>
@@ -66,6 +77,26 @@ internal static class RateLimitExtensions
     internal const string Assistance = "assistance";
 
     /// <summary>
+    /// Taking a household's archive, which streams every recipe with every
+    /// photograph inline: the heaviest read there is.
+    /// </summary>
+    internal const string Archive = "archive-export";
+
+    /// <summary>
+    /// The limits counted per person rather than per address.
+    /// </summary>
+    /// <remarks>
+    /// The limiter middleware runs before authentication, where nobody is known
+    /// yet, so there these could only follow the session cookie — and signing
+    /// in again bought a fresh budget. Their endpoints all require a session, so
+    /// <see cref="PersonalRateLimitMiddleware"/> counts them after authorization
+    /// instead, against the user id (see <see cref="PerPerson"/>). The limiter
+    /// middleware knows them by name only, and lets them through under the
+    /// per-address ceiling every request has.
+    /// </remarks>
+    private static readonly string[] Personal = [Import, Source, Assistance, Archive];
+
+    /// <summary>
     /// The web app reporting what went wrong in it.
     /// </summary>
     /// <remarks>
@@ -96,6 +127,15 @@ internal static class RateLimitExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // The per-person budgets, kept for the life of the host and disposed
+        // with it. See PersonalRateLimitMiddleware.
+        services.AddSingleton(provider =>
+        {
+            var limits = provider.GetRequiredService<RateLimitSettings>();
+
+            return PartitionedRateLimiter.Create<HttpContext, string>(context => PerPerson(context, limits));
+        });
+
         return services.AddRateLimiter(options =>
         {
             var limits = Resolve(services);
@@ -112,14 +152,10 @@ internal static class RateLimitExtensions
             options.AddPolicy(SharedRecipe, context =>
                 PerAddress(context, limits.SharedRecipesPerIpPerMinute, TimeSpan.FromMinutes(1)));
 
-            options.AddPolicy(Import, context =>
-                PerClient(context, limits.ImportsPerHour, TimeSpan.FromHours(1)));
-
-            options.AddPolicy(Source, context =>
-                PerClient(context, limits.SourceRequestsPerHour, TimeSpan.FromHours(1)));
-
-            options.AddPolicy(Assistance, context =>
-                PerClient(context, limits.AssistantRequestsPerHour, TimeSpan.FromHours(1)));
+            foreach (var personal in Personal)
+            {
+                options.AddPolicy(personal, _ => RateLimitPartition.GetNoLimiter(string.Empty));
+            }
 
             options.AddPolicy(LogRecords, context =>
                 PerAddress(context, LogRecordBatchesPerMinute, TimeSpan.FromMinutes(1)));
@@ -134,49 +170,64 @@ internal static class RateLimitExtensions
                     PerAddress(context, limits.RequestsPerSessionPerMinute, TimeSpan.FromMinutes(1))),
                 PartitionedRateLimiter.Create<HttpContext, string>(SharedByEveryone));
 
-            options.OnRejected = async (context, cancellationToken) =>
-            {
-                CulinaTelemetry.RateLimitRejections.Add(1);
-                context.HttpContext.RequestServices
-                    .GetRequiredService<ILoggerFactory>()
-                    .CreateLogger(typeof(RateLimitExtensions))
-                    .Rejected(context.HttpContext.Request, RequestErrors.RateLimited.Code);
-
-                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
-                {
-                    context.HttpContext.Response.Headers.RetryAfter =
-                        ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
-                }
-
-                await CustomResults
-                    .WriteProblemAsync(context.HttpContext, RequestErrors.RateLimited)
-                    .ConfigureAwait(false);
-
-                _ = cancellationToken;
-            };
+            options.OnRejected = (context, _) => new ValueTask(RejectAsync(context.HttpContext, context.Lease));
         });
     }
 
     /// <summary>
-    /// Partitions by session when there is one and by client address otherwise,
-    /// so a signed-in user's budget follows them across addresses.
+    /// Refuses a request over a limit: counted, logged, told when to try again,
+    /// and answered with the problem document every refusal has.
+    /// </summary>
+    internal static Task RejectAsync(HttpContext context, RateLimitLease lease)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(lease);
+
+        CulinaTelemetry.RateLimitRejections.Add(1);
+        context.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(typeof(RateLimitExtensions))
+            .Rejected(context.Request, RequestErrors.RateLimited.Code);
+
+        if (lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        return CustomResults.WriteProblemAsync(context, RequestErrors.RateLimited);
+    }
+
+    /// <summary>
+    /// The budget a request to a <see cref="Personal"/> endpoint draws on: the
+    /// signed-in person's, whichever session or address they use.
     /// </summary>
     /// <remarks>
-    /// Only for endpoints that require a session. The limiter runs before the
-    /// cookie is checked, so a made-up cookie gets a budget of its own — which
-    /// buys nothing here but a 401, and the per-address global limiter bounds
-    /// how many of those can be asked for.
+    /// Asked after authorization, so the user id is always there; the address
+    /// is only a floor for a request that somehow arrives without one.
     /// </remarks>
-    private static RateLimitPartition<string> PerClient(HttpContext context, int permit, TimeSpan window)
+    private static RateLimitPartition<string> PerPerson(HttpContext context, RateLimitSettings limits)
     {
-        // The name, not the constant: it loses its `__Host-` prefix wherever
-        // cookies are not marked Secure, and a limiter keyed on a cookie that
-        // is never there is a limiter that only ever sees an address.
-        var cookies = context.RequestServices.GetRequiredService<CookieSettings>();
+        var policy = context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
 
-        return context.Request.Cookies.TryGetValue(Authentication.SessionCookies.Name(cookies), out var session)
-            ? FixedWindow($"session:{session}", permit, window)
-            : PerAddress(context, permit, window);
+        int? permit = policy switch
+        {
+            Import => limits.ImportsPerHour,
+            Source => limits.SourceRequestsPerHour,
+            Assistance => limits.AssistantRequestsPerHour,
+            Archive => limits.ArchiveExportsPerHour,
+            _ => null
+        };
+
+        if (permit is not { } perHour)
+        {
+            return RateLimitPartition.GetNoLimiter(string.Empty);
+        }
+
+        var person = context.User.FindFirst(CulinaClaims.UserId)?.Value
+            ?? $"ip:{context.Connection.RemoteIpAddress}";
+
+        return FixedWindow($"{policy}:{person}", perHour, TimeSpan.FromHours(1));
     }
 
     /// <summary>

@@ -4375,6 +4375,11 @@ export interface components {
             assistantRequestsPerHour: number;
             /**
              * Format: int32
+             * @description Archives one person may take per hour.
+             */
+            archiveExportsPerHour: number;
+            /**
+             * Format: int32
              * @description Requests per minute from one address, signed in or not.
              */
             requestsPerSessionPerMinute: number;
@@ -4605,6 +4610,11 @@ export interface components {
              * @description Requests to the assistant per hour from one person.
              */
             assistantRequestsPerHour: number;
+            /**
+             * Format: int32
+             * @description Archives one person may take per hour.
+             */
+            archiveExportsPerHour: number;
             /**
              * Format: int32
              * @description Requests per minute from one address, signed in or not.
@@ -6541,6 +6551,15 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

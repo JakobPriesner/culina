@@ -28,6 +28,7 @@ export const rateLimits: readonly RateLimit[] = [
   'importsPerHour',
   'sourceRequestsPerHour',
   'assistantRequestsPerHour',
+  'archiveExportsPerHour',
   'requestsPerSessionPerMinute'
 ];
 

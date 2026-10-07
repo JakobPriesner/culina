@@ -1841,6 +1841,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       },
@@ -12625,6 +12635,7 @@
           "sourceRequestsPerHour",
           "sharedRecipesPerIpPerMinute",
           "assistantRequestsPerHour",
+          "archiveExportsPerHour",
           "requestsPerSessionPerMinute"
         ],
         "type": "object",
@@ -12667,6 +12678,11 @@
           "assistantRequestsPerHour": {
             "type": "integer",
             "description": "Requests to the assistant per hour from one person.",
+            "format": "int32"
+          },
+          "archiveExportsPerHour": {
+            "type": "integer",
+            "description": "Archives one person may take per hour.",
             "format": "int32"
           },
           "requestsPerSessionPerMinute": {
@@ -13088,6 +13104,7 @@
           "sourceRequestsPerHour",
           "sharedRecipesPerIpPerMinute",
           "assistantRequestsPerHour",
+          "archiveExportsPerHour",
           "requestsPerSessionPerMinute"
         ],
         "type": "object",
@@ -13130,6 +13147,11 @@
           "assistantRequestsPerHour": {
             "type": "integer",
             "description": "Requests to the assistant per hour from one person.",
+            "format": "int32"
+          },
+          "archiveExportsPerHour": {
+            "type": "integer",
+            "description": "Archives one person may take per hour.",
             "format": "int32"
           },
           "requestsPerSessionPerMinute": {

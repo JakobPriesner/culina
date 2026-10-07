@@ -61,6 +61,14 @@ internal static class MiddlewareExtensions
         return app.UseMiddleware<CsrfMiddleware>();
     }
 
+    /// <summary>Counts the costly limits against the signed-in person, not the session.</summary>
+    internal static IApplicationBuilder UsePersonalRateLimits(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<PersonalRateLimitMiddleware>();
+    }
+
     /// <summary>Gives framework-generated statuses a problem document body.</summary>
     internal static IApplicationBuilder UseProblemStatusPages(this IApplicationBuilder app)
     {
