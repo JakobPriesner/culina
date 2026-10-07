@@ -74,6 +74,42 @@ public sealed class DatabaseConnectionCheckTests : IDisposable
         result.ShouldBeFailure(SettingsErrors.DatabaseNotPostgres);
     }
 
+    [Theory]
+    [InlineData(new byte[] { (byte)'R', 0, 0, 0, 8, 0, 0, 0, 3 })]
+    [InlineData(new byte[] { (byte)'R', 0, 0, 0, 12, 0, 0, 0, 5, 1, 2, 3, 4 })]
+    public async Task CheckAsync_ShouldNeverSendThePassword_WhenTheServerAsksForItInClearTextOrAsMd5(byte[] request)
+    {
+        // Arrange
+        // What a server that only pretends to be PostgreSQL asks for, so that
+        // it is handed the password: in clear text, or as an MD5 it can crack.
+        using var impostor = new ScriptedServer(request);
+        var settings = Loopback(impostor.Port);
+
+        // Act
+        var result = await Check(settings);
+
+        // Assert
+        result.ShouldBeFailure(SettingsErrors.DatabaseInsecureAuth);
+        var sent = Encoding.ASCII.GetString(await impostor.ReceivedAfterReply);
+        Assert.DoesNotContain(settings.Password, sent, StringComparison.Ordinal);
+        Assert.DoesNotContain("md5", sent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CheckAsync_ShouldRefuseAServer_ThatAsksForNoPasswordAtAll()
+    {
+        // Arrange
+        // "trust": anybody may sign in as anybody, which is not a database to
+        // keep a household's data in.
+        using var trusting = new ScriptedServer([(byte)'R', 0, 0, 0, 8, 0, 0, 0, 0]);
+
+        // Act
+        var result = await Check(Loopback(trusting.Port));
+
+        // Assert
+        result.ShouldBeFailure(SettingsErrors.DatabaseInsecureAuth);
+    }
+
     [Fact]
     public async Task CheckAsync_ShouldSayEncryptionFailed_WhenTlsIsRequiredAndTheServerOffersNone()
     {

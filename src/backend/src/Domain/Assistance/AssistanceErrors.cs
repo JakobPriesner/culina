@@ -159,6 +159,19 @@ public static class AssistanceErrors
         "That does not look like an API key.",
         ErrorType.Validation);
 
+    /// <summary>
+    /// A stored key was to be kept for a different address.
+    /// </summary>
+    /// <remarks>
+    /// A key is only ever sent to the address it was saved with. Otherwise
+    /// whoever may change the address could have the key sent to a server of
+    /// their own.
+    /// </remarks>
+    public static readonly Error ApiKeyRequired = new(
+        "assistance.api_key_required",
+        "Enter the key again. The address changed, and a stored key is only ever sent to the address it was saved for.",
+        ErrorType.Validation);
+
     /// <summary>A budget was given as a negative amount.</summary>
     public static readonly Error InvalidBudget = new(
         "assistance.invalid_budget",

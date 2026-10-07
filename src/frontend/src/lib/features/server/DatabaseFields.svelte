@@ -3,7 +3,13 @@
   import { m } from '$shell/i18n';
 
   import SettingField from './SettingField.svelte';
-  import { databaseVariable, wholeNumber, type DatabaseDraft, type DatabaseFacts } from './types';
+  import {
+    databaseVariable,
+    needsPasswordAgain,
+    wholeNumber,
+    type DatabaseDraft,
+    type DatabaseFacts
+  } from './types';
 
   /**
    * How to reach PostgreSQL.
@@ -11,7 +17,9 @@
    * The password is write-only, like an API key: no response carries it, so
    * the box starts empty and empty means "keep the one that is set". Rendered
    * as a box that looks unset, it would read as "no password" — and saving
-   * would look like it had cleared one.
+   * would look like it had cleared one. Kept only for the same server, though:
+   * once the address, database or user changes, the box says to type it again,
+   * because the server will not send the stored one anywhere new.
    */
   interface Props {
     draft: DatabaseDraft;
@@ -25,6 +33,14 @@
 
   const problem = (text: string) =>
     wholeNumber(text) === null ? m['server.number.invalid']() : undefined;
+
+  const passwordHint = $derived(
+    needsPasswordAgain(draft, facts)
+      ? m['server.database.password.again']()
+      : facts.passwordConfigured
+        ? m['server.database.password.keep']()
+        : undefined
+  );
 </script>
 
 <div class="pair">
@@ -70,7 +86,7 @@
 
 <SettingField
   label={m['server.database.password']()}
-  hint={facts.passwordConfigured ? m['server.database.password.keep']() : undefined}
+  hint={passwordHint}
   variable={databaseVariable('password')}
   pinned={pinned('password')}
   type="password"

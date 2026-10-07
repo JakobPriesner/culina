@@ -12793,7 +12793,7 @@
           },
           "apiKey": {
             "type": "string",
-            "description": "A new API key, or null to keep the one already stored.",
+            "description": "A new API key, or null to keep the one already stored — for the address\nit was stored with only: null with a different `baseUrl` is refused\nwith `assistance.api_key_required`, because a stored key is only\never sent to the address it was saved for.",
             "nullable": true
           },
           "baseUrl": {
@@ -12976,7 +12976,7 @@
           },
           "password": {
             "type": "string",
-            "description": "A new password, or null to keep the one already set. Write-only: no\nresponse ever carries it back.",
+            "description": "A new password, or null to keep the one already set. Write-only: no\nresponse ever carries it back. Kept only for the same server: null\nwith a different host, port, name or username is refused with\n`settings.database_password_required`, because the stored password\nis only ever sent to the server it was saved for.",
             "nullable": true
           },
           "requireSsl": {

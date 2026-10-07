@@ -32,7 +32,10 @@ public sealed record ConnectionRequest
     public required string Provider { get; init; }
 
     /// <summary>
-    /// A new API key, or null to keep the one already stored.
+    /// A new API key, or null to keep the one already stored — for the address
+    /// it was stored with only: null with a different <c>baseUrl</c> is refused
+    /// with <c>assistance.api_key_required</c>, because a stored key is only
+    /// ever sent to the address it was saved for.
     /// </summary>
     /// <remarks>
     /// Three states rather than two, because a settings form that is saved for

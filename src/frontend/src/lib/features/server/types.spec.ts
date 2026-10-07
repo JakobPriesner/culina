@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   databaseVariable,
   limitVariable,
+  needsPasswordAgain,
+  toDatabaseFacts,
+  toDatabaseDraft,
   toDatabaseRequest,
   toServerDraft,
   toServerRequest,
@@ -70,6 +73,32 @@ describe('server settings, as a form holds them', () => {
 
     expect(request.password).toBeNull();
     expect(request.host).toBe('db');
+  });
+
+  it('asks for the password again only when the server it belongs to changes', () => {
+    const wire = {
+      host: 'db',
+      port: 5432,
+      name: 'culina',
+      username: 'culina_app',
+      passwordConfigured: true,
+      requireSsl: false,
+      maxPoolSize: 20,
+      pinned: [],
+      writable: true
+    };
+    const facts = toDatabaseFacts(wire);
+    const draft = toDatabaseDraft(wire);
+
+    // The stored password is only ever sent to the server it was saved for.
+    expect(needsPasswordAgain({ ...draft, maxPoolSize: '40' }, facts)).toBe(false);
+    expect(needsPasswordAgain({ ...draft, host: 'elsewhere' }, facts)).toBe(true);
+    expect(needsPasswordAgain({ ...draft, port: '6543' }, facts)).toBe(true);
+    expect(needsPasswordAgain({ ...draft, name: 'other' }, facts)).toBe(true);
+    expect(needsPasswordAgain({ ...draft, username: 'someone' }, facts)).toBe(true);
+    expect(needsPasswordAgain({ ...draft, host: 'elsewhere', password: 'typed' }, facts)).toBe(
+      false
+    );
   });
 
   it('names a setting by the variable that pins it', () => {

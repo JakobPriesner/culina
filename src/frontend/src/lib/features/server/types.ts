@@ -75,6 +75,13 @@ export interface DatabaseFacts {
   readonly pinned: ReadonlySet<string>;
   readonly writable: boolean;
   readonly passwordConfigured: boolean;
+  /** The server the password that is set belongs to. */
+  readonly server: {
+    readonly host: string;
+    readonly port: number;
+    readonly name: string;
+    readonly username: string;
+  };
 }
 
 /** The environment variable that fixes one server setting, as the server names it. */
@@ -191,9 +198,24 @@ export function toDatabaseFacts(wire: DatabaseWire): DatabaseFacts {
   return {
     pinned: new Set(wire.pinned),
     writable: wire.writable,
-    passwordConfigured: wire.passwordConfigured
+    passwordConfigured: wire.passwordConfigured,
+    server: { host: wire.host, port: wire.port, name: wire.name, username: wire.username }
   };
 }
+
+/**
+ * Whether saving would need the password typed again: one is set, none is
+ * typed, and the draft points at a different server. The server only ever
+ * sends a stored password to the server it was saved for, so "keep it" stops
+ * meaning anything once the host, port, database or user changes.
+ */
+export const needsPasswordAgain = (draft: DatabaseDraft, facts: DatabaseFacts): boolean =>
+  facts.passwordConfigured &&
+  draft.password.length === 0 &&
+  (draft.host.trim() !== facts.server.host ||
+    wholeNumber(draft.port) !== facts.server.port ||
+    draft.name.trim() !== facts.server.name ||
+    draft.username.trim() !== facts.server.username);
 
 /** The fields of a database draft that are not whole numbers. */
 export const unreadableDatabaseNumbers = (draft: DatabaseDraft): string[] =>

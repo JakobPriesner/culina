@@ -95,10 +95,36 @@ public static class SettingsErrors
         "Culina could not set up an encrypted connection with that server. Enable TLS on the database server, or turn the TLS requirement off if the database is on the same private network.",
         ErrorType.Validation);
 
+    /// <summary>
+    /// The server asked for the password in clear text or as MD5, or for none.
+    /// </summary>
+    /// <remarks>
+    /// Culina signs in only with SCRAM-SHA-256, which never hands the server
+    /// the password or anything it could replay — so a server that only
+    /// pretends to be PostgreSQL, to be sent the password, gets nothing.
+    /// </remarks>
+    public static readonly Error DatabaseInsecureAuth = new(
+        "settings.database_insecure_auth",
+        "The database server wants a sign-in method Culina does not use. Culina signs in only with SCRAM-SHA-256: set password_encryption to scram-sha-256, set the role's password again, and use scram-sha-256 in pg_hba.conf.",
+        ErrorType.Validation);
+
     /// <summary>Something answered, but not as a PostgreSQL server Culina could use.</summary>
     public static readonly Error DatabaseNotPostgres = new(
         "settings.database_not_postgres",
         "Something answered at that address, but not a PostgreSQL server Culina can use.",
+        ErrorType.Validation);
+
+    /// <summary>
+    /// The stored database password was to be kept for a different server.
+    /// </summary>
+    /// <remarks>
+    /// The password is write-only, so an empty box means "keep it" — but only
+    /// for the server it was saved for. Otherwise anybody who may change the
+    /// host could have it sent to a server of their own.
+    /// </remarks>
+    public static readonly Error DatabasePasswordRequired = new(
+        "settings.database_password_required",
+        "Enter the password again. The host, port, database name or user changed, and the stored password is only ever sent to the server it was saved for.",
         ErrorType.Validation);
 
     /// <summary>
