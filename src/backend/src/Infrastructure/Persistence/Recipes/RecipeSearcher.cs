@@ -217,9 +217,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
           -- A recipe with no stated time is excluded by a time filter rather
           -- than treated as taking zero minutes. "I have 25 minutes" asks for
           -- recipes known to fit, and an unknown time is not an answer.
-          and (@maxMinutes is null
-               or ((r.prep_minutes is not null or r.cook_minutes is not null)
-                   and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= @maxMinutes))
+          and (@maxMinutes is null or {{RecipeSql.FitsWithin("@maxMinutes")}})
         """;
 
     /// <summary>
@@ -246,10 +244,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             r.household_id,
             r.title,
             r.image_id,
-            case
-                when r.prep_minutes is null and r.cook_minutes is null then null
-                else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0)
-            end as total_minutes,
+            {{RecipeSql.TotalMinutes()}} as total_minutes,
             r.yield_amount,
             r.yield_kind,
             r.yield_label,
@@ -398,8 +393,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             from matching m
             join recipes r on r.id = m.id
             cross join unnest(array[15, 30, 45, 60]) as band
-            where (r.prep_minutes is not null or r.cook_minutes is not null)
-              and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= band
+            where {{RecipeSql.FitsWithin("band")}}
             group by band
             union all
             select 'cuisine', cuisine, null, count(*)::int
@@ -523,22 +517,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             ? new RecipeCursor(sort, RecipeSearchSql.KeysOf(sort, page[^1]), page[^1].Id).Encode()
             : null;
 
-    private static RecipeSearchRow ToRow(RecipeSearchRowData data) => new RecipeSearchRow(
-        data.Id,
-        data.HouseholdId,
-        data.Title,
-        data.ImageId,
-        data.TotalMinutes,
-        data.YieldAmount,
-        data.YieldKind,
-        data.YieldLabel,
-        data.Tags,
-        data.CookCount,
-        data.LastCookedAt,
-        data.UpdatedAt,
-        data.MatchedIngredients,
-        data.IngredientCount,
-        data.AddedToCookbookAt)
+    private static RecipeSearchRow ToRow(RecipeSearchRowData data) => data.ToSearchRow() with
     {
         Reason = data.ReasonKind is { } kind ? new MatchReason(kind, data.ReasonTerm, data.Language) : null
     };
