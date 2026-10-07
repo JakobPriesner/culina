@@ -48,6 +48,16 @@ public static class SettingsErrors
         $"That cannot be saved: {reason.TrimEnd('.')}.",
         ErrorType.Validation);
 
+    /// <summary>
+    /// A trusted proxy network so wide that any client inside it could claim
+    /// any address.
+    /// </summary>
+    /// <param name="network">The network, as it was entered.</param>
+    public static Error ProxyNetworkTooWide(string network) => new(
+        "settings.proxy_network_too_wide",
+        $"The proxy network '{network}' is too wide to trust: every client in it could claim any address. Name your proxy's own network, at most a /8 for IPv4 or a /32 for IPv6, such as 172.16.0.0/12.",
+        ErrorType.Validation);
+
     /// <summary>The database could not be reached with the details given.</summary>
     /// <param name="reason">What the connection attempt reported.</param>
     public static Error DatabaseUnreachable(string reason) => new(

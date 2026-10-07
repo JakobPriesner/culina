@@ -30,9 +30,34 @@ public sealed record ForwardedHeadersSettings
     /// time — so a deployment that can only name addresses cannot name its own
     /// proxy at all. Keep the network as small as it can be: this is a trust
     /// boundary, and <c>0.0.0.0/0</c> means every client may forge its own
-    /// address.
+    /// address. So nothing wider than a <c>/8</c> (IPv4) or a <c>/32</c>
+    /// (IPv6) is accepted without <see cref="DangerouslyTrustWideNetworks"/>.
     /// </remarks>
     public IReadOnlyList<string> KnownNetworks { get; init; } = [];
+
+    /// <summary>
+    /// Accepts a <see cref="KnownNetworks"/> entry wider than a <c>/8</c>
+    /// (IPv4) or a <c>/32</c> (IPv6).
+    /// </summary>
+    /// <remarks>
+    /// Named to be noticed, and never offered on the settings screen. A network
+    /// that wide is almost never a proxy's own; it is "make it work", and it
+    /// lets every client inside it claim any address, which turns the
+    /// per-address rate limits and the security log into whatever a client
+    /// says. A container network is a <c>/12</c> at its widest
+    /// (<c>172.16.0.0/12</c>) and needs no override.
+    /// </remarks>
+    public bool DangerouslyTrustWideNetworks { get; init; }
+
+    private const int NarrowestIPv4Prefix = 8;
+    private const int NarrowestIPv6Prefix = 32;
+
+    /// <summary>
+    /// The first of <see cref="KnownNetworks"/> too wide to trust, or null when
+    /// none is — or when trusting one was asked for by name.
+    /// </summary>
+    public string? TooWideNetwork() =>
+        DangerouslyTrustWideNetworks ? null : KnownNetworks.FirstOrDefault(IsTooWide);
 
     /// <summary>Throws when any value would make the process unable to serve.</summary>
     public void Validate()
@@ -57,5 +82,21 @@ public sealed record ForwardedHeadersSettings
                     + "which is not a CIDR range such as 172.18.0.0/16.");
             }
         }
+
+        if (TooWideNetwork() is { } wide)
+        {
+            throw new InvalidOperationException(
+                $"Configuration {SectionName}__KnownNetworks contains '{wide}', which would let every "
+                + "client in it claim any address it likes. Name your proxy's own network, at most a "
+                + $"/{NarrowestIPv4Prefix} for IPv4 or a /{NarrowestIPv6Prefix} for IPv6, such as 172.16.0.0/12 "
+                + $"— or, if you truly mean it, set {SectionName}__{nameof(DangerouslyTrustWideNetworks)}=true.");
+        }
     }
+
+    /// <summary>Wider than a /8 for IPv4, or a /32 for IPv6.</summary>
+    private static bool IsTooWide(string network) =>
+        System.Net.IPNetwork.TryParse(network, out var parsed)
+        && parsed.PrefixLength < (parsed.BaseAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+            ? NarrowestIPv4Prefix
+            : NarrowestIPv6Prefix);
 }

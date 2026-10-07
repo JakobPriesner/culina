@@ -115,7 +115,7 @@ public class SettingsValidationTests
         // A reverse proxy in a container network has no address anyone can know
         // in advance, so a deployment that can only name addresses cannot name
         // its own proxy.
-        var settings = new ForwardedHeadersSettings { KnownNetworks = ["172.18.0.0/16", "fd00::/8"] };
+        var settings = new ForwardedHeadersSettings { KnownNetworks = ["172.18.0.0/16", "fd12:3456:789a::/48"] };
 
         // Act
         settings.Validate();
@@ -153,6 +153,66 @@ public class SettingsValidationTests
         // Assert
         var exception = Assert.Throws<InvalidOperationException>(Act);
         Assert.Contains("KnownNetworks", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("0.0.0.0/0")]
+    [InlineData("10.0.0.0/7")]
+    [InlineData("::/0")]
+    [InlineData("fd00::/8")]
+    [InlineData("2000::/3")]
+    public void ForwardedHeadersValidate_ShouldThrow_WhenANetworkIsTooWideToTrust(string network)
+    {
+        // Arrange
+        // Every client inside a trusted network may claim any address, so
+        // "make it work" would make the per-address limits and the security
+        // log whatever a client says.
+        var settings = new ForwardedHeadersSettings { KnownNetworks = ["172.18.0.0/16", network] };
+
+        // Act
+        void Act() => settings.Validate();
+
+        // Assert
+        var exception = Assert.Throws<InvalidOperationException>(Act);
+        Assert.Contains(network, exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ForwardedHeaders__DangerouslyTrustWideNetworks", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(network, settings.TooWideNetwork());
+    }
+
+    [Theory]
+    [InlineData("172.16.0.0/12")]
+    [InlineData("10.0.0.0/8")]
+    [InlineData("2001:db8::/32")]
+    [InlineData("fd12:3456:789a::/48")]
+    public void ForwardedHeadersValidate_ShouldAcceptANetwork_AtTheWidestItMayBe(string network)
+    {
+        // Arrange
+        // 172.16.0.0/12 is what CI, the rehearsal and the documentation use for
+        // a container network.
+        var settings = new ForwardedHeadersSettings { KnownNetworks = [network] };
+
+        // Act
+        settings.Validate();
+
+        // Assert
+        Assert.Null(settings.TooWideNetwork());
+    }
+
+    [Fact]
+    public void ForwardedHeadersValidate_ShouldAcceptAnyNetwork_WhenTrustingAWideOneIsAskedForByName()
+    {
+        // Arrange
+        var settings = new ForwardedHeadersSettings
+        {
+            KnownNetworks = ["0.0.0.0/0", "::/0"],
+            DangerouslyTrustWideNetworks = true
+        };
+
+        // Act
+        settings.Validate();
+
+        // Assert
+        Assert.Null(settings.TooWideNetwork());
     }
 
     [Fact]

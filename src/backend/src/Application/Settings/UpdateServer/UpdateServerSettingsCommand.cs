@@ -59,7 +59,7 @@ internal sealed class UpdateServerSettingsCommandHandler(
     /// Every group validated exactly as the next startup will validate it, all
     /// failures reported at once.
     /// </summary>
-    private static Result<Dictionary<string, string>> Proposal(UpdateServerSettingsCommand command)
+    private Result<Dictionary<string, string>> Proposal(UpdateServerSettingsCommand command)
     {
         var raw = command.OtlpEndpoint?.Trim();
         Uri? endpoint = null;
@@ -77,11 +77,24 @@ internal sealed class UpdateServerSettingsCommandHandler(
                     : SettingsErrors.Invalid(
                         $"The telemetry endpoint must be an http:// or https:// address, and '{raw}' is not one."),
                 ServerSettingsFile.Check(command.Cookies.Validate),
-                ServerSettingsFile.Check(command.ForwardedHeaders.Validate),
+                CheckProxies(command.ForwardedHeaders with
+                {
+                    DangerouslyTrustWideNetworks = proxies.DangerouslyTrustWideNetworks
+                }),
                 ServerSettingsFile.Check(command.RateLimits.Validate),
                 ServerSettingsFile.Check(exporter.Validate))
             .Map(() => Values(command.Cookies, command.ForwardedHeaders, command.RateLimits, exporter));
     }
+
+    /// <summary>
+    /// The proxies validated as the next startup will validate them, with the
+    /// override the deployment set (the screen never offers it), and a network
+    /// too wide to trust reported as such rather than as a bad value.
+    /// </summary>
+    private static Result CheckProxies(ForwardedHeadersSettings proposed) =>
+        proposed.TooWideNetwork() is { } wide
+            ? SettingsErrors.ProxyNetworkTooWide(wide)
+            : ServerSettingsFile.Check(proposed.Validate);
 
     private async Task<Result<ServerChange>> ApplyAsync(
         Dictionary<string, string> proposed,
