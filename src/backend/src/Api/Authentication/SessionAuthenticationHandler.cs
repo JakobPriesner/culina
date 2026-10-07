@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Sessions;
+using Domain.Shared;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -54,9 +55,13 @@ internal sealed class SessionAuthenticationHandler(
             return AuthenticateResult.NoResult();
         }
 
-        await RenewAsync(session, now).ConfigureAwait(false);
+        var renewed = await RenewAsync(session, now).ConfigureAwait(false);
 
-        return AuthenticateResult.Success(TicketFor(session.UserId, session.Id));
+        // A session revoked between the read and the renewal stays revoked,
+        // and this request is not let in on it.
+        return renewed.Match(
+            () => AuthenticateResult.Success(TicketFor(session.UserId, session.Id)),
+            _ => AuthenticateResult.NoResult());
     }
 
     /// <summary>
@@ -71,20 +76,20 @@ internal sealed class SessionAuthenticationHandler(
     /// <c>Cookies__SessionDays</c> means "thirty days unused" rather than
     /// "thirty days from signing in".
     /// </remarks>
-    private async Task RenewAsync(Session session, DateTimeOffset now)
+    private async Task<Result> RenewAsync(Session session, DateTimeOffset now)
     {
         if (!session.IsDueForRenewal(now, cookies.RenewAfter))
         {
-            return;
+            return Result.Success();
         }
 
         session.Touch(now, cookies.SessionLifetime);
 
-        await sessions.UpdateAsync(session, Context.RequestAborted).ConfigureAwait(false);
+        var renewed = await sessions.RenewAsync(session, Context.RequestAborted).ConfigureAwait(false);
 
         // Authentication runs before any endpoint, so the response has not
         // started and a cookie can still be added to it.
-        SessionCookies.Renew(Context, cookies, now);
+        return renewed.Tap(() => SessionCookies.Renew(Context, cookies, now));
     }
 
     private AuthenticationTicket TicketFor(Guid userId, Guid sessionId)
