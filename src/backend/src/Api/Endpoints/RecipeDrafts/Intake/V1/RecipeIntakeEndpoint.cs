@@ -86,13 +86,12 @@ internal sealed class RecipeIntakeEndpoint : IEndpoint
         }).WithName("getRecipeIntakeV1").WithTags(Tags.Recipes).Produces<IntakeJob>().RequireAuthorization();
         app.MapGet($"{ApiPaths.V1}/recipe-intakes/{{id:guid}}/photos/{{index:int}}", async (Guid id, int index, HttpContext context, IRecipeIntakeJobs jobs, CancellationToken token) =>
         {
-            var material = await jobs.MaterialAsync(id, context.CurrentUser().UserId, token).ConfigureAwait(false);
-            if (material is null || index < 0 || index >= material.Photos.Count)
+            var photo = await jobs.PhotoAsync(id, context.CurrentUser().UserId, index, token).ConfigureAwait(false);
+            if (photo is null)
             {
                 return Results.NotFound();
             }
 
-            var photo = material.Photos[index];
             context.Response.Headers.CacheControl = "no-store";
             return Results.Bytes(photo.Bytes, photo.MediaType);
         }).WithName("getRecipeIntakePhotoV1").WithTags(Tags.Recipes).RequireAuthorization();
