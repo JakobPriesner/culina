@@ -83,6 +83,7 @@ test.describe('a household that inherits another', () => {
 
       // A copy is the flat's own, and opens where it can be changed.
       await page
+        .getByRole('complementary')
         .getByRole('button', { name: /^(make my own copy|eigene kopie anlegen)$/i })
         .click();
       await expect(page).toHaveURL(/\/recipes\/[^/]+\/edit$/);

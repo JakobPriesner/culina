@@ -972,6 +972,7 @@
   }
 
   .group {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
@@ -1005,6 +1006,14 @@
      columns was the reason "4" sat in a field as wide as "Portionen". */
   .yield {
     grid-template-columns: 6rem minmax(0, 1fr);
+  }
+
+  /* Keep both fields usable when enlarged text leaves too little room for a
+     pair. The threshold follows the text size and each group's own width. */
+  @container (max-width: 16rem) {
+    .pair {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .note {
