@@ -12,10 +12,12 @@ namespace Infrastructure.Persistence.Migrations;
 /// which is what lets a test drive the runner with its own set without an
 /// interface existing solely for the test.
 /// </remarks>
+/// <param name="session">Keeps the connection the lock is taken on.</param>
 /// <param name="executor">Runs the SQL.</param>
 /// <param name="unitOfWork">Makes each migration atomic.</param>
 /// <param name="logger">Records what was applied.</param>
 internal sealed class MigrationRunner(
+    DbSession session,
     DbExecutor executor,
     IUnitOfWork unitOfWork,
     ILogger<MigrationRunner> logger)
@@ -40,54 +42,68 @@ internal sealed class MigrationRunner(
     {
         ArgumentNullException.ThrowIfNull(migrations);
 
-        // Session-scoped, so it survives the per-migration transactions below
-        // and is released when the connection closes.
-        await executor.ExecuteAsync(
-            "select pg_advisory_lock(@key);",
-            new { key = AdvisoryLockKey },
-            cancellationToken).ConfigureAwait(false);
+        // The lock lives on the connection, so the connection must not go back
+        // to the pool between statements: the pool's reset would drop the lock
+        // with it, before the migrations it guards had run.
+        var pin = await session.PinAsync(cancellationToken).ConfigureAwait(false);
 
-        try
+        await using (pin.ConfigureAwait(false))
         {
-            await executor.ExecuteAsync(HistoryTable, null, cancellationToken).ConfigureAwait(false);
+            // Session-scoped, so it survives the per-migration transactions below.
+            await executor.ExecuteAsync(
+                "select pg_advisory_lock(@key);",
+                new { key = AdvisoryLockKey },
+                cancellationToken).ConfigureAwait(false);
 
-            var applied = await AppliedAsync(cancellationToken).ConfigureAwait(false);
-            var pending = new List<SqlMigration>();
-
-            foreach (var migration in migrations)
+            try
             {
-                if (!applied.TryGetValue(migration.Version, out var checksum))
-                {
-                    pending.Add(migration);
-                    continue;
-                }
-
-                if (checksum != migration.Checksum)
-                {
-                    logger.ChecksumMismatch(migration.Version);
-
-                    throw new InvalidOperationException(
-                        $"Migration {migration.Version} has already been applied but its contents "
-                        + "have changed. Restore the file and add a new migration instead.");
-                }
+                await ApplyPendingAsync(migrations, cancellationToken).ConfigureAwait(false);
             }
-
-            foreach (var migration in pending)
+            finally
             {
-                await ApplyOneAsync(migration, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (pending.Count == 0 && migrations.Count > 0)
-            {
-                logger.UpToDate(migrations[^1].Version);
+                await executor.ExecuteAsync(
+                    "select pg_advisory_unlock(@key);",
+                    new { key = AdvisoryLockKey },
+                    CancellationToken.None).ConfigureAwait(false);
             }
         }
-        finally
+    }
+
+    private async Task ApplyPendingAsync(
+        IReadOnlyList<SqlMigration> migrations,
+        CancellationToken cancellationToken)
+    {
+        await executor.ExecuteAsync(HistoryTable, null, cancellationToken).ConfigureAwait(false);
+
+        var applied = await AppliedAsync(cancellationToken).ConfigureAwait(false);
+        var pending = new List<SqlMigration>();
+
+        foreach (var migration in migrations)
         {
-            await executor.ExecuteAsync(
-                "select pg_advisory_unlock(@key);",
-                new { key = AdvisoryLockKey },
-                CancellationToken.None).ConfigureAwait(false);
+            if (!applied.TryGetValue(migration.Version, out var checksum))
+            {
+                pending.Add(migration);
+                continue;
+            }
+
+            if (checksum != migration.Checksum)
+            {
+                logger.ChecksumMismatch(migration.Version);
+
+                throw new InvalidOperationException(
+                    $"Migration {migration.Version} has already been applied but its contents "
+                    + "have changed. Restore the file and add a new migration instead.");
+            }
+        }
+
+        foreach (var migration in pending)
+        {
+            await ApplyOneAsync(migration, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (pending.Count == 0 && migrations.Count > 0)
+        {
+            logger.UpToDate(migrations[^1].Version);
         }
     }
 

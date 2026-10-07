@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Api.Infrastructure;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Sessions;
@@ -60,7 +61,14 @@ internal sealed class SessionAuthenticationHandler(
         // A session revoked between the read and the renewal stays revoked,
         // and this request is not let in on it.
         return renewed.Match(
-            () => AuthenticateResult.Success(TicketFor(session.UserId, session.Id)),
+            () =>
+            {
+                // CsrfMiddleware compares against this, so an unsafe request
+                // reads its session once rather than twice.
+                RequestContext.SetCsrfTokenHash(Context, session.CsrfTokenHash);
+
+                return AuthenticateResult.Success(TicketFor(session.UserId, session.Id));
+            },
             _ => AuthenticateResult.NoResult());
     }
 
