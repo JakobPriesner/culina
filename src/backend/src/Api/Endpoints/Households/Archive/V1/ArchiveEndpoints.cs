@@ -2,6 +2,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Archive;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Endpoints.Households.Archive.V1;
 
@@ -57,6 +58,9 @@ internal sealed class ExportArchiveEndpoint : IEndpoint
 /// <summary>Writes an archive's recipes into a household.</summary>
 internal sealed class RestoreArchiveEndpoint : IEndpoint
 {
+    /// <summary>64 MB: roughly four hundred recipes with a photograph each.</summary>
+    private const long MaxArchiveBytes = 64L * 1024 * 1024;
+
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
@@ -99,7 +103,17 @@ internal sealed class RestoreArchiveEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            // The whole archive is read into memory, photographs and all, so
+            // the upload has a ceiling of its own rather than whatever the
+            // server was left with.
+            .WithMetadata(new RequestSizeLimitAttribute(MaxArchiveBytes))
             .DisableAntiforgery()
-            .RequireAuthorization();
+            .RequireAuthorization()
+            // The same budget as taking one: restoring is the heavier of the
+            // two, and a person who may do either a few times an hour has
+            // everything an honest use of them needs.
+            .RequireRateLimiting(RateLimitExtensions.Archive);
     }
 }

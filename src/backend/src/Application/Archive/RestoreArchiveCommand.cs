@@ -46,6 +46,12 @@ internal sealed class RestoreArchiveCommandHandler(
         return tracked.Record(result);
     }
 
+    /// <summary>
+    /// The most recipes one restore will write. A household that really has
+    /// more restores them in more than one archive.
+    /// </summary>
+    internal const int MaxRecipes = 2_000;
+
     private async Task<Result<ArchiveRestored>> RestoreAsync(
         RestoreArchiveCommand command,
         CancellationToken cancellationToken)
@@ -66,6 +72,14 @@ internal sealed class RestoreArchiveCommandHandler(
         if (archive is null || archive.Recipes is null)
         {
             return ArchiveErrors.NotAnArchive;
+        }
+
+        // Counted before a single recipe is written: each one is a transaction
+        // of its own, so an archive of a million empty recipes would otherwise
+        // keep the database busy until somebody noticed.
+        if (archive.Recipes.Count > MaxRecipes)
+        {
+            return ArchiveErrors.TooManyRecipes;
         }
 
         // Refused rather than half-read. A version this does not know may spell
@@ -219,6 +233,12 @@ public static class ArchiveErrors
     public static readonly Error NotAnArchive = new(
         "archive.not_an_archive",
         "That file is not a Culina archive.",
+        ErrorType.Validation);
+
+    /// <summary>The archive holds more recipes than one restore writes.</summary>
+    public static readonly Error TooManyRecipes = new(
+        "archive.too_many_recipes",
+        "That archive holds too many recipes to restore at once.",
         ErrorType.Validation);
 
     /// <summary>The file was written by a version this does not know.</summary>
