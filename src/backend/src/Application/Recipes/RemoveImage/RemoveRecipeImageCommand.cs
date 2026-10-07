@@ -13,9 +13,7 @@ public sealed record RemoveRecipeImageCommand(Guid RecipeId, Guid UserId);
 internal sealed class RemoveRecipeImageCommandHandler(
     IRecipeRepository recipes,
     IHouseholdRepository households,
-    IImageStore images,
-    IUnitOfWork unitOfWork,
-    TimeProvider time)
+    RecipeImageWriter images)
     : ICommandHandler<RemoveRecipeImageCommand>
 {
     public async Task<Result> Handle(
@@ -31,33 +29,7 @@ internal sealed class RemoveRecipeImageCommandHandler(
             .ConfigureAwait(false);
 
         var result = await editable.Match(
-            _ => unitOfWork.InTransactionAsync(
-                async token =>
-                {
-                    var removed = await recipes
-                        .RemoveImageAsync(command.RecipeId, time.GetUtcNow(), token)
-                        .ConfigureAwait(false);
-
-                    return await removed.Match(
-                        async displaced =>
-                        {
-                            // Only when nothing else points at it. Content-
-                            // addressed storage means one file can serve many
-                            // recipes, and an imported library where fifty
-                            // carry the same placeholder makes that ordinary
-                            // rather than a curiosity.
-                            if (displaced.PreviousContentHash is { Length: > 0 } previous
-                                && !await recipes.IsImageStillUsedAsync(previous, token)
-                                    .ConfigureAwait(false))
-                            {
-                                await images.DeleteAsync(previous, token).ConfigureAwait(false);
-                            }
-
-                            return Result.Success();
-                        },
-                        error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
-                },
-                cancellationToken),
+            _ => images.RemoveAsync(command.RecipeId, cancellationToken),
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);

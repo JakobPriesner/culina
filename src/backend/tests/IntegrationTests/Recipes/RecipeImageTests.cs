@@ -348,6 +348,67 @@ public class RecipeImageTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task RemovingARecipesPhoto_ShouldNotBreakACookPhotoOfTheSameFile()
+    {
+        // Arrange
+        // Re-encoding is deterministic, so one photograph used as a recipe's
+        // picture and as the photo of a time it was cooked is one file.
+        var (client, recipeId, entryId) = await SharedWithACookPhotoAsync();
+
+        // Act
+        await client.DeleteAsync($"/api/v1/recipes/{recipeId}/image", Token);
+
+        // Assert
+        var served = await client.GetAsync(CookPhoto(recipeId, entryId), Token);
+
+        Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+    }
+
+    [Fact]
+    public async Task ReplacingARecipesPhoto_ShouldNotBreakACookPhotoOfTheSameFile()
+    {
+        // Arrange
+        var (client, recipeId, entryId) = await SharedWithACookPhotoAsync();
+
+        // Act
+        await UploadAsync(client, recipeId, TestImages.Png(640, 480), "other.png", "image/png");
+
+        // Assert
+        var served = await client.GetAsync(CookPhoto(recipeId, entryId), Token);
+
+        Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+    }
+
+    private static string CookPhoto(Guid recipeId, Guid entryId) =>
+        $"/api/v1/recipes/{recipeId}/cook-log/{entryId}/photo";
+
+    /// <summary>A recipe whose picture is also the photo of the time it was cooked.</summary>
+    private async Task<(ApiClient Client, Guid RecipeId, Guid EntryId)> SharedWithACookPhotoAsync()
+    {
+        var (client, recipeId) = await SeedAsync();
+        var entryId = (await client.PostAsync($"/api/v1/recipes/{recipeId}/cook-log", new { }, Token))
+            .Json!.Value.GetProperty("entryId").GetGuid();
+        var shared = TestImages.Png(500, 500);
+
+        await UploadAsync(client, recipeId, shared, "photo.png", "image/png");
+
+        var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(shared);
+        file.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
+        content.Add(file, "file", "attempt.png");
+        await client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Put, CookPhoto(recipeId, entryId)) { Content = content },
+            Token);
+
+        // One file, or there is nothing to prove.
+        var picture = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=800", Token);
+        var photo = await client.GetAsync(CookPhoto(recipeId, entryId), Token);
+        Assert.Equal(picture.ETag, photo.ETag);
+
+        return (client, recipeId, entryId);
+    }
+
+    [Fact]
     public async Task Copy_ShouldShareThePicture_AndKeepItWhenTheOriginalLosesItsOwn()
     {
         // Arrange

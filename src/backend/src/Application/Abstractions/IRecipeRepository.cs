@@ -112,7 +112,8 @@ public interface IRecipeRepository
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Whether any recipe still points at this stored image.
+    /// Whether anything still points at this stored image: a recipe's picture
+    /// or a cook photo.
     /// </summary>
     /// <param name="contentHash">Which image.</param>
     /// <param name="cancellationToken">Cancels the query.</param>
@@ -125,8 +126,9 @@ public interface IRecipeRepository
     /// </para>
     /// <para>
     /// Asked before a file is deleted, because deleting one that another recipe
-    /// is still pointing at does not break the recipe being edited — it breaks
-    /// a different one, silently, and nothing connects the two.
+    /// or somebody's cook photo is still pointing at does not break the recipe
+    /// being edited — it breaks a different one, silently, and nothing connects
+    /// the two.
     /// </para>
     /// </remarks>
     Task<bool> IsImageStillUsedAsync(string contentHash, CancellationToken cancellationToken);
