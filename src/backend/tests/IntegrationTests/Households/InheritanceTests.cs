@@ -381,6 +381,54 @@ public class InheritanceTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task CookSession_ShouldNameARecipeNoLongerInherited_ToNobody()
+    {
+        // Arrange
+        var (ada, grace, flat, bolognese) = await FlatAsync();
+        var started = await grace.PostAsync(
+            "/api/v1/cook-sessions",
+            new { recipeId = bolognese, servings = 4, householdId = flat },
+            Token);
+        var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
+
+        // Act
+        await ada.Client.PutAsync($"/api/v1/households/{flat}/inheritance", new { householdId = (Guid?)null }, Token);
+        var current = await grace.GetAsync("/api/v1/cook-sessions/current", Token);
+        var moved = await grace.PatchAsync($"/api/v1/cook-sessions/{sessionId}", new { currentStepIndex = 0 }, Token);
+
+        // Assert
+        // Revoked access takes effect at once, the resume bar's title included.
+        Assert.Equal(HttpStatusCode.Created, started.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, current.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, moved.StatusCode);
+        Assert.DoesNotContain("Bolognese", current.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("Bolognese", moved.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ShoppingList_ShouldKeepTheAmounts_ButNotNameARecipeNoLongerInherited()
+    {
+        // Arrange
+        var (ada, grace, flat, bolognese) = await FlatAsync();
+        await grace.PostAsync(
+            $"/api/v1/households/{flat}/shopping-list/recipes",
+            new { recipeId = bolognese, servings = 4 },
+            Token);
+        var before = await grace.GetAsync($"/api/v1/households/{flat}/shopping-list", Token);
+
+        // Act
+        await ada.Client.PutAsync($"/api/v1/households/{flat}/inheritance", new { householdId = (Guid?)null }, Token);
+        var after = await grace.GetAsync($"/api/v1/households/{flat}/shopping-list", Token);
+
+        // Assert
+        Assert.Contains("Bolognese", before.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("Bolognese", after.Body, StringComparison.Ordinal);
+        Assert.Equal(
+            before.Json!.Value.GetProperty("items").GetArrayLength(),
+            after.Json!.Value.GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
     public async Task Copy_ShouldGiveTheHeirARecipeOfItsOwn_ThatItCanChange()
     {
         // Arrange
