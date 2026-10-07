@@ -9,7 +9,10 @@ namespace Infrastructure.Persistence.Import;
 internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, jsonb_set(material,'{photos}','[]'::jsonb)::text as material, jsonb_array_length(material->'photos') as photo_count, error_code";
+    private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, material::text as material, (select count(*) from recipe_intake_photos p where p.job_id=recipe_intake_jobs.id)::int as photo_count, error_code";
+
+    /// <summary>The material as stored: the photographs are rows of their own.</summary>
+    private static string Stored(IntakeMaterial material) => JsonSerializer.Serialize(material with { Photos = [] }, Json);
 
     public async Task<Result<IntakeJob>> EnqueueAsync(Guid id, Guid userId, Guid householdId, IntakeMaterial material, CancellationToken token)
     {
@@ -32,7 +35,15 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
 
         await db.ExecuteAsync(
             "insert into recipe_intake_jobs(id,user_id,household_id,material) values(@Id,@UserId,@HouseholdId,@Material::jsonb) on conflict(id) do nothing",
-            new { Id = id, UserId = userId, HouseholdId = householdId, Material = JsonSerializer.Serialize(material, Json) }, token).ConfigureAwait(false);
+            new { Id = id, UserId = userId, HouseholdId = householdId, Material = Stored(material) }, token).ConfigureAwait(false);
+
+        for (var position = 0; position < material.Photos.Count; position++)
+        {
+            await db.ExecuteAsync(
+                "insert into recipe_intake_photos(job_id,position,media_type,bytes) values(@Id,@Position,@MediaType,@Bytes) on conflict do nothing",
+                new { Id = id, Position = position, material.Photos[position].MediaType, Bytes = material.Photos[position].Bytes.ToArray() }, token).ConfigureAwait(false);
+        }
+
         var accepted = await GetAsync(id, userId, token).ConfigureAwait(false);
         return accepted is null ? new Error("RecipeIntake.IdInUse", "This import identity is already in use.", ErrorType.Conflict) : accepted;
     }
@@ -56,15 +67,36 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
     {
         var json = await db.ExecuteScalarAsync<string>("select material::text from recipe_intake_jobs where id=@Id and user_id=@UserId",
             new { Id = id, UserId = userId }, token).ConfigureAwait(false);
-        return json is null ? null : JsonSerializer.Deserialize<IntakeMaterial>(json, Json);
+        return json is null ? null : (JsonSerializer.Deserialize<IntakeMaterial>(json, Json)! with { Photos = await PhotosAsync(id, token).ConfigureAwait(false) });
+    }
+
+    public async Task<IntakePhoto?> PhotoAsync(Guid id, Guid userId, int index, CancellationToken token)
+    {
+        var row = await db.QuerySingleOrDefaultAsync<PhotoRow>(
+            "select p.media_type, p.bytes from recipe_intake_photos p join recipe_intake_jobs j on j.id=p.job_id where p.job_id=@Id and j.user_id=@UserId and p.position=@Index",
+            new { Id = id, UserId = userId, Index = index }, token).ConfigureAwait(false);
+        return row is null ? null : new IntakePhoto(row.Bytes, row.MediaType);
+    }
+
+    private async Task<IReadOnlyList<IntakePhoto>> PhotosAsync(Guid id, CancellationToken token)
+    {
+        var rows = await db.QueryAsync<PhotoRow>(
+            "select media_type, bytes from recipe_intake_photos where job_id=@Id order by position",
+            new { Id = id }, token).ConfigureAwait(false);
+        return [.. rows.Select(row => new IntakePhoto(row.Bytes, row.MediaType))];
     }
 
     public Task SourceAsync(Guid id, IntakeMaterial material, CancellationToken token) => db.ExecuteAsync(
         "update recipe_intake_jobs set material=@Material::jsonb, updated_at=now() where id=@Id",
-        new { Id = id, Material = JsonSerializer.Serialize(material, Json) }, token);
+        new { Id = id, Material = Stored(material) }, token);
 
     public Task ReviewAsync(Guid id, Guid userId, CancellationToken token) => db.ExecuteAsync(
-        "update recipe_intake_jobs set stage='reviewed', material=jsonb_set(material,'{photos}','[]'::jsonb), updated_at=now() where id=@Id and user_id=@UserId and stage in ('ready','failed')",
+        """
+        with reviewed as (
+            update recipe_intake_jobs set stage='reviewed', updated_at=now()
+            where id=@Id and user_id=@UserId and stage in ('ready','failed') returning id)
+        delete from recipe_intake_photos where job_id in (select id from reviewed)
+        """,
         new { Id = id, UserId = userId }, token);
 
     public async Task<IntakeWork?> ClaimAsync(CancellationToken token)
@@ -77,7 +109,7 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
             returning id,user_id,household_id,material::text,draft::text,stage
             """, null, token).ConfigureAwait(false);
         return row is null ? null : new IntakeWork(row.Id, row.UserId, row.HouseholdId,
-            JsonSerializer.Deserialize<IntakeMaterial>(row.Material, Json)!,
+            JsonSerializer.Deserialize<IntakeMaterial>(row.Material, Json)! with { Photos = await PhotosAsync(row.Id, token).ConfigureAwait(false) },
             row.Stage == "saving" && row.Draft is not null ? JsonSerializer.Deserialize<Draft>(row.Draft, Json) : null);
     }
 
@@ -121,5 +153,6 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
     }
 
     private sealed record JobRow(Guid Id, Guid HouseholdId, string Stage, DateTime CreatedAt, Guid? RecipeId, string? Draft, string Material, int PhotoCount, string? ErrorCode);
+    private sealed record PhotoRow(string MediaType, byte[] Bytes);
     private sealed record WorkRow(Guid Id, Guid UserId, Guid HouseholdId, string Material, string? Draft, string Stage);
 }
