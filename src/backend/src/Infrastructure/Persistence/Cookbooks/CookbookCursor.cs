@@ -20,8 +20,16 @@ internal sealed record CookbookCursor(DateTimeOffset UpdatedAt, Guid Id)
 
     /// <summary>Reads a cursor, or null when it is absent or unreadable.</summary>
     /// <param name="encoded">What the caller sent back.</param>
+    /// <remarks>
+    /// The time is put back into UTC, which is how every cursor is written.
+    /// Npgsql refuses to send a timestamptz with any other offset, so a
+    /// hand-made cursor saying <c>+02:00</c> was a 500 rather than the same
+    /// instant spelt differently.
+    /// </remarks>
     internal static CookbookCursor? Decode(string? encoded) =>
-        PageCursor.TryDecode<CookbookCursor>(encoded);
+        PageCursor.TryDecode<CookbookCursor>(encoded) is { } cursor
+            ? cursor with { UpdatedAt = cursor.UpdatedAt.ToUniversalTime() }
+            : null;
 
     /// <inheritdoc/>
     public override string ToString() =>

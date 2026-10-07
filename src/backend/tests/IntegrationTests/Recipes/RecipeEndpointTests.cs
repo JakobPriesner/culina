@@ -173,7 +173,7 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         var reference = segments.EnumerateArray().Single(s => s.GetProperty("type").GetString() == "ingredient");
         Assert.Equal("butter", reference.GetProperty("name").GetString());
         Assert.Equal(200.5m, reference.GetProperty("quantity").GetDecimal());
-        Assert.Equal(butterId, reference.GetProperty("recipeIngredientId").GetGuid());
+        Assert.Equal(LineIds(read)["butter"], reference.GetProperty("recipeIngredientId").GetGuid());
     }
 
     [Fact]
@@ -191,11 +191,12 @@ public class RecipeEndpointTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var lines = LineIds(saved);
         var steps = saved.Json!.Value.GetProperty("steps");
-        Assert.Equal([saltId], Uses(steps[0]));
+        Assert.Equal([lines["salt"]], Uses(steps[0]));
         // The second step lists salt and names butter, and gets both back in
         // the recipe's own ingredient order rather than the order it sent.
-        Assert.Equal([butterId, saltId], Uses(steps[1]));
+        Assert.Equal([lines["butter"], lines["salt"]], Uses(steps[1]));
     }
 
     [Fact]
@@ -216,7 +217,7 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         var steps = saved.Json!.Value.GetProperty("steps");
         Assert.Empty(Uses(steps[0]));
-        Assert.Equal([butterId], Uses(steps[1]));
+        Assert.Equal([LineIds(saved)["butter"]], Uses(steps[1]));
     }
 
     [Fact]
@@ -283,6 +284,73 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
         Assert.Equal("recipes.unknown_ingredient_reference", saved.ProblemCode);
+    }
+
+    [Fact]
+    public async Task Update_ShouldGiveNewIds_WhenTheIdsSentBelongToAnotherRecipe()
+    {
+        // Arrange
+        // Inserted as sent, another recipe's ids collided with its rows on the
+        // primary key, and the failure told the caller those ids exist. They
+        // are new rows to this recipe, so they get ids of their own — and the
+        // step that names the line in the same request follows it.
+        using var client = await SignedInAsync();
+        var other = await CreateRecipeAsync(client);
+        await PutAsync(client, other.Id, other.ETag, FullRecipe(Guid.CreateVersion7()));
+        var before = await client.GetAsync($"/api/v1/recipes/{other.Id}", Token);
+        var theirs = before.Json!.Value;
+        var theirGroup = theirs.GetProperty("groups")[0].GetProperty("groupId").GetGuid();
+        var theirButter = LineIds(before)["butter"];
+        var theirStep = theirs.GetProperty("steps")[1].GetProperty("stepId").GetGuid();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, new
+        {
+            title = "Bolognese",
+            language = "en",
+            yieldAmount = 4,
+            yieldKind = "servings",
+            groups = new[]
+            {
+                new
+                {
+                    groupId = theirGroup,
+                    ingredients = new object[] { new { ingredientId = theirButter, name = "butter" } }
+                }
+            },
+            steps = new object[]
+            {
+                new
+                {
+                    stepId = theirStep,
+                    segments = new object[]
+                    {
+                        new { type = "text", value = "Melt " },
+                        new { type = "ingredient", recipeIngredientId = theirButter }
+                    },
+                    uses = new[] { theirButter }
+                }
+            },
+            tags = Array.Empty<string>()
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var mine = saved.Json!.Value;
+        var butter = LineIds(saved)["butter"];
+        var step = mine.GetProperty("steps")[0];
+        Assert.NotEqual(theirButter, butter);
+        Assert.NotEqual(theirGroup, mine.GetProperty("groups")[0].GetProperty("groupId").GetGuid());
+        Assert.NotEqual(theirStep, step.GetProperty("stepId").GetGuid());
+        Assert.Equal(butter, step.GetProperty("segments")[1].GetProperty("recipeIngredientId").GetGuid());
+        Assert.Equal([butter], Uses(step));
+
+        // And the recipe whose ids they were has not moved.
+        var after = await client.GetAsync($"/api/v1/recipes/{other.Id}", Token);
+        Assert.Equal(before.ETag, after.ETag);
+        Assert.Equal(theirButter, LineIds(after)["butter"]);
+        Assert.Equal(theirStep, after.Json!.Value.GetProperty("steps")[1].GetProperty("stepId").GetGuid());
     }
 
     [Fact]
@@ -382,6 +450,17 @@ public class RecipeEndpointTests(PostgresFixture postgres)
 
     private static Guid[] Uses(JsonElement step) =>
         [.. step.GetProperty("uses").EnumerateArray().Select(one => one.GetGuid())];
+
+    /// <summary>
+    /// Each line's id by its name, as the server gave them: an id a request
+    /// makes up for a new line is replaced, so a test reads them back.
+    /// </summary>
+    private static Dictionary<string, Guid> LineIds(ApiResponse recipe) =>
+        recipe.Json!.Value.GetProperty("groups").EnumerateArray()
+            .SelectMany(group => group.GetProperty("ingredients").EnumerateArray())
+            .ToDictionary(
+                line => line.GetProperty("name").GetString()!,
+                line => line.GetProperty("ingredientId").GetGuid());
 
     /// <summary>The same recipe, with the needs of each step written down.</summary>
     private static object WithNeeds(Guid butterId, Guid saltId) => new

@@ -1,4 +1,6 @@
+using System.Buffers.Text;
 using System.Net;
+using System.Text;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Recipes;
@@ -163,6 +165,56 @@ public class RecipeSearchTests(PostgresFixture postgres)
         // Assert
         // Keyset paging, so the pages tile the result set exactly.
         Assert.Equal(["Bolognese", "Lasagne", "Omelette"], seen);
+    }
+
+    [Theory]
+    [InlineData("-cookCount", """{"Sort":3,"Keys":["x"]}""")]
+    [InlineData("-updatedAt", """{"Keys":null}""")]
+    [InlineData("-updatedAt", """{"Sort":0,"Keys":["not a time"]}""")]
+    [InlineData("title", """{"Sort":1,"Keys":[null]}""")]
+    [InlineData("totalMinutes", """{"Sort":2,"Keys":["soon"]}""")]
+    [InlineData("relevance", """{"Sort":4,"Keys":["1"]}""")]
+    [InlineData("relevance", """{"Sort":4,"Keys":["-2147483648","0.5","2026-10-01T00:00:00Z"]}""")]
+    [InlineData("suggested", """{"Sort":6,"Keys":["lots"]}""")]
+    public async Task Search_ShouldStartAtTheTop_WhenACursorsKeysAreNotWhatItsSortWrites(
+        string sort,
+        string forged)
+    {
+        // Arrange
+        // Opaque is not sealed: anybody can base64 some JSON, and the keys are
+        // cast in SQL. One that is not what the sort writes is as unreadable
+        // as a malformed cursor, and gets the same answer: the first page.
+        var world = await SeedAsync();
+        var path = $"/api/v1/recipes?householdId={world.HouseholdId}&sort={Uri.EscapeDataString(sort)}";
+        var cursor = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(forged));
+
+        // Act
+        var first = await world.Client.GetAsync(path, Token);
+        var response = await world.Client.GetAsync($"{path}&cursor={cursor}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(Titles(first), Titles(response));
+    }
+
+    [Fact]
+    public async Task Search_ShouldResume_WhenACursorScoreIsTooSmallForPostgreSqlToRead()
+    {
+        // Arrange
+        // A double that underflows to zero here is "out of range" to
+        // PostgreSQL, so the key is written back as the zero it was read as
+        // rather than passed through as it came.
+        var world = await SeedAsync();
+        var cursor = Base64Url.EncodeToString(
+            Encoding.UTF8.GetBytes("""{"Sort":4,"Keys":["0","1e-400","2026-10-01T00:00:00Z"]}"""));
+
+        // Act
+        var response = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&sort=relevance&cursor={cursor}",
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
