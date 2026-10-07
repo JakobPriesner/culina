@@ -32,11 +32,11 @@ internal sealed class CreateShareCommandHandler(
         using var tracked = UseCaseActivity.Start("Recipes.CreateShare");
 
         var editable = await RecipeAccess
-            .EditableAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .EditableHouseholdAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await editable.Match(
-            recipe => PublishAsync(recipe.Id, command.UserId, cancellationToken),
+            _ => PublishAsync(command.RecipeId, command.UserId, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);

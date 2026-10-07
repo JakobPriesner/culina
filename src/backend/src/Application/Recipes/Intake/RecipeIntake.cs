@@ -25,8 +25,9 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
         ArgumentNullException.ThrowIfNull(material);
         var access = await HouseholdAccess.MemberOfAsync(households, householdId, userId, token).ConfigureAwait(false);
         var valid = access.Bind(() => RecipeWords.ToLanguage(material.Language).Map(_ => material));
-        if (id == Guid.Empty || material.Text.Length + material.Transcript.Length > 20000 || material.Photos.Count > 8
-            || material.Photos.Sum(p => p.Bytes.Length) > 40 * 1024 * 1024)
+        if (id == Guid.Empty || material.Text.Length + material.Transcript.Length > DraftLimits.MaxMaterialCharacters
+            || material.Photos.Count > DraftLimits.MaxPhotos
+            || material.Photos.Sum(p => p.Bytes.Length) > DraftLimits.MaxPhotoBytes)
         {
             return Domain.Assistance.AssistanceErrors.TooMuchToWorkFrom;
         }
@@ -46,74 +47,149 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             error => Task.FromResult(Result<IntakeJob>.Failure(error))).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// How often a draft that is still being written is stored. Every part of a
+    /// recipe is an update that rewrites the whole draft, and a recipe is
+    /// hundreds of parts; the person watching is shown a few a second at most.
+    /// </summary>
+    private static readonly TimeSpan ProgressEvery = TimeSpan.FromMilliseconds(500);
+
     /// <summary>Runs on server lifetime, never a request cancellation token.</summary>
     public async Task ProcessAsync(IntakeWork work, CancellationToken token)
     {
         ArgumentNullException.ThrowIfNull(work);
+
         var draft = work.Draft;
+
         if (draft is null && work.Material.FetchSource && work.Material.SourceUrl is { } sourceUrl)
         {
-            await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
-            var fetched = await reader.Handle(new ImportRecipeQuery(sourceUrl, work.UserId), token).ConfigureAwait(false);
-            var source = work.Material;
-            string? sourceError = null;
-            fetched.Match(page =>
+            if (await FetchSourceAsync(work, sourceUrl, token).ConfigureAwait(false) is not { } fetched)
             {
-                var pageText = page.Text ?? string.Join("\n", new[] { page.Title }.Concat(page.IngredientLines).Concat(page.Steps).Where(s => !string.IsNullOrWhiteSpace(s)));
-                var material = string.Join("\n\n", new[] { source.Text, pageText }.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal));
-                var transcript = source.Transcript.Length > 0 ? source.Transcript : page.Transcript ?? "";
-                // The same combined limit as every provider ask. Original shared
-                // words win; fetched captions use the remaining space.
-                var textBudget = 20000 - Math.Min(source.Transcript.Length, 20000);
-                material = material[..Math.Min(material.Length, textBudget)];
-                transcript = transcript[..Math.Min(transcript.Length, 20000 - material.Length)];
-                source = source with { Text = material, Transcript = transcript, SourceUrl = page.SourceUrl, FetchSource = false };
-            }, error => sourceError = error.Code);
-            if (sourceError is not null && string.IsNullOrWhiteSpace(source.Text) && string.IsNullOrWhiteSpace(source.Transcript) && source.Photos.Count == 0)
-            {
-                await jobs.FailAsync(work.Id, sourceError, token).ConfigureAwait(false);
                 return;
             }
-            source = source with { FetchSource = false };
-            await jobs.SourceAsync(work.Id, source, token).ConfigureAwait(false);
-            work = work with { Material = source };
+
+            work = fetched;
         }
+
         if (draft is null)
         {
-            await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
-            var opened = await composer.Handle(new ComposeRecipeDraftCommand("social", work.HouseholdId, work.Material.Text, null, work.Material.Language, work.UserId)
+            draft = await ComposeAsync(work, token).ConfigureAwait(false);
+
+            if (draft is null)
             {
-                Transcript = work.Material.Transcript,
-                Pictures = work.Material.Photos.Select(p => new RecipePicture(p.Bytes, p.MediaType)).ToArray()
-            }, token).ConfigureAwait(false);
-            DraftProgress? progress = null;
-            string? failure = null;
-            opened.Match(value => progress = value, error => failure = error.Code);
-            if (progress is null)
-            {
-                await jobs.FailAsync(work.Id, failure!, token).ConfigureAwait(false);
-                return;
-            }
-            await jobs.ProgressAsync(work.Id, "thinking", null, token).ConfigureAwait(false);
-            var finished = false;
-            await foreach (var part in progress.Events.WithCancellation(token).ConfigureAwait(false))
-            {
-                draft = part.Draft;
-                if (part.Problem is { } problem)
-                {
-                    await jobs.ProgressAsync(work.Id, "writing", draft, token).ConfigureAwait(false);
-                    await jobs.FailAsync(work.Id, problem.Code, token).ConfigureAwait(false);
-                    return;
-                }
-                finished = part.Finished;
-                await jobs.ProgressAsync(work.Id, finished ? "saving" : "writing", draft, token).ConfigureAwait(false);
-            }
-            if (!finished || draft is null)
-            {
-                await jobs.FailAsync(work.Id, "RecipeIntake.Interrupted", token).ConfigureAwait(false);
                 return;
             }
         }
+
+        await SaveAsync(work, draft, token).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Reads the page the person shared and adds what it says to what they
+    /// wrote. Null once the job has been failed.
+    /// </summary>
+    private async Task<IntakeWork?> FetchSourceAsync(IntakeWork work, string sourceUrl, CancellationToken token)
+    {
+        await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
+
+        var fetched = await reader.Handle(new ImportRecipeQuery(sourceUrl, work.UserId), token).ConfigureAwait(false);
+        var source = work.Material;
+        string? sourceError = null;
+
+        fetched.Match(page =>
+        {
+            var pageText = page.Text ?? string.Join("\n", new[] { page.Title }.Concat(page.IngredientLines).Concat(page.Steps).Where(s => !string.IsNullOrWhiteSpace(s)));
+            var material = string.Join("\n\n", new[] { source.Text, pageText }.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal));
+            var transcript = source.Transcript.Length > 0 ? source.Transcript : page.Transcript ?? "";
+
+            // The same combined limit as every provider ask. Original shared
+            // words win; fetched captions use the remaining space.
+            var limit = DraftLimits.MaxMaterialCharacters;
+            var textBudget = limit - Math.Min(source.Transcript.Length, limit);
+            material = material[..Math.Min(material.Length, textBudget)];
+            transcript = transcript[..Math.Min(transcript.Length, limit - material.Length)];
+            source = source with { Text = material, Transcript = transcript, SourceUrl = page.SourceUrl, FetchSource = false };
+        }, error => sourceError = error.Code);
+
+        if (sourceError is not null && string.IsNullOrWhiteSpace(source.Text) && string.IsNullOrWhiteSpace(source.Transcript) && source.Photos.Count == 0)
+        {
+            await jobs.FailAsync(work.Id, sourceError, token).ConfigureAwait(false);
+
+            return null;
+        }
+
+        source = source with { FetchSource = false };
+        await jobs.SourceAsync(work.Id, source, token).ConfigureAwait(false);
+
+        return work with { Material = source };
+    }
+
+    /// <summary>
+    /// Has the model write the recipe, storing it as it grows. Null once the job
+    /// has been failed.
+    /// </summary>
+    private async Task<Draft?> ComposeAsync(IntakeWork work, CancellationToken token)
+    {
+        await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
+
+        var opened = await composer.Handle(new ComposeRecipeDraftCommand("social", work.HouseholdId, work.Material.Text, null, work.Material.Language, work.UserId)
+        {
+            Transcript = work.Material.Transcript,
+            Pictures = work.Material.Photos.Select(p => new RecipePicture(p.Bytes, p.MediaType)).ToArray()
+        }, token).ConfigureAwait(false);
+
+        DraftProgress? progress = null;
+        string? failure = null;
+        opened.Match(value => progress = value, error => failure = error.Code);
+
+        if (progress is null)
+        {
+            await jobs.FailAsync(work.Id, failure!, token).ConfigureAwait(false);
+
+            return null;
+        }
+
+        await jobs.ProgressAsync(work.Id, "thinking", null, token).ConfigureAwait(false);
+
+        Draft? draft = null;
+        var finished = false;
+        var lastStored = time.GetTimestamp();
+
+        await foreach (var part in progress.Events.WithCancellation(token).ConfigureAwait(false))
+        {
+            draft = part.Draft;
+
+            if (part.Problem is { } problem)
+            {
+                await jobs.ProgressAsync(work.Id, "writing", draft, token).ConfigureAwait(false);
+                await jobs.FailAsync(work.Id, problem.Code, token).ConfigureAwait(false);
+
+                return null;
+            }
+
+            finished = part.Finished;
+
+            // The last part is always stored: it is the one that is saved.
+            if (finished || time.GetElapsedTime(lastStored) >= ProgressEvery)
+            {
+                await jobs.ProgressAsync(work.Id, finished ? "saving" : "writing", draft, token).ConfigureAwait(false);
+                lastStored = time.GetTimestamp();
+            }
+        }
+
+        if (!finished || draft is null)
+        {
+            await jobs.FailAsync(work.Id, "RecipeIntake.Interrupted", token).ConfigureAwait(false);
+
+            return null;
+        }
+
+        return draft;
+    }
+
+    /// <summary>Saves the finished draft as a recipe, or fails the job.</summary>
+    private async Task SaveAsync(IntakeWork work, Draft draft, CancellationToken token)
+    {
         var permitted = await HouseholdAccess.MemberOfAsync(households, work.HouseholdId, work.UserId, token).ConfigureAwait(false);
         var prepared = permitted.Bind(() => Build(work, draft));
         var saved = await prepared.Match(recipe => transactions.InTransactionAsync(async t =>
@@ -128,8 +204,10 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
                 return Result.Success();
             }, e => Task.FromResult(Result.Failure(e))).ConfigureAwait(false);
         }, token), e => Task.FromResult(Result.Failure(e))).ConfigureAwait(false);
+
         string? errorCode = null;
         saved.Match(() => { }, e => errorCode = e.Code);
+
         if (errorCode is not null)
         {
             await jobs.FailAsync(work.Id, errorCode, token).ConfigureAwait(false);

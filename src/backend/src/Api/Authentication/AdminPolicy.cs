@@ -30,6 +30,13 @@ internal static class AdminPolicy
     /// </remarks>
     internal const string OrSetupName = "culina.admin-or-setup";
 
+    /// <summary>
+    /// The request's own token, so a caller who hung up does not still cost a
+    /// lookup. Absent when the resource is not an HTTP request.
+    /// </summary>
+    internal static CancellationToken RequestAborted(AuthorizationHandlerContext context) =>
+        (context.Resource as HttpContext)?.RequestAborted ?? CancellationToken.None;
+
     internal static AuthorizationBuilder AddAdminPolicy(this AuthorizationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -72,7 +79,7 @@ internal sealed class SetupRequirementHandler(ISetupProgress setup)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (await setup.CurrentAsync(CancellationToken.None).ConfigureAwait(false) != SetupStage.Complete)
+        if (await setup.CurrentAsync(AdminPolicy.RequestAborted(context)).ConfigureAwait(false) != SetupStage.Complete)
         {
             context.Succeed(requirement);
         }
@@ -96,7 +103,7 @@ internal sealed class AdminRequirementHandler(IUserRepository users)
             return;
         }
 
-        if (await users.IsAdminAsync(userId, CancellationToken.None).ConfigureAwait(false))
+        if (await users.IsAdminAsync(userId, AdminPolicy.RequestAborted(context)).ConfigureAwait(false))
         {
             context.Succeed(requirement);
         }

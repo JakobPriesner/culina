@@ -76,7 +76,7 @@ internal sealed class ComposeRecipeDraftCommandHandler(
     /// times this, at ten times the price, on a request anybody with an account
     /// can make.
     /// </remarks>
-    private const int LongestMaterial = 20_000;
+    private const int LongestMaterial = DraftLimits.MaxMaterialCharacters;
 
     /// <summary>
     /// Everything that can refuse the ask, then the stream.

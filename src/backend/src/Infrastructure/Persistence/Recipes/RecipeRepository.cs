@@ -78,6 +78,16 @@ internal sealed class RecipeRepository(
         return [.. names];
     }
 
+    public async Task<Result<Guid>> HouseholdOfAsync(Guid recipeId, CancellationToken cancellationToken)
+    {
+        var household = await executor.ExecuteScalarAsync<Guid?>(
+            "select household_id from recipes where id = @recipeId;",
+            new { recipeId },
+            cancellationToken).ConfigureAwait(false);
+
+        return household is { } found ? found : RecipeErrors.NotFound(recipeId);
+    }
+
     public async Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken)
     {
         // One round trip for the whole aggregate. A recipe is never useful
@@ -401,54 +411,82 @@ internal sealed class RecipeRepository(
             new { recipeId = recipe.Id, stepIds = recipe.Steps.Select(step => step.Id).ToArray() },
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var group in recipe.Groups)
+        // Groups and ingredients are one statement each, and the references one
+        // more, however big the recipe: a round trip per row made saving a
+        // recipe, and importing a thousand of them, a conversation with the
+        // database.
+        if (recipe.Groups.Count > 0)
         {
             await executor.ExecuteAsync(
                 """
                 insert into ingredient_groups (id, recipe_id, name, sort_order)
-                values (@id, @recipeId, @name, @sortOrder);
+                select id, @recipeId, name, sort_order
+                from unnest(@ids::uuid[], @names::text[], @sortOrders::integer[]) as g(id, name, sort_order);
                 """,
-                new { id = group.Id, recipeId = recipe.Id, name = group.Name, sortOrder = group.SortOrder },
+                new
+                {
+                    recipeId = recipe.Id,
+                    ids = recipe.Groups.Select(group => group.Id).ToArray(),
+                    names = recipe.Groups.Select(group => group.Name).ToArray(),
+                    sortOrders = recipe.Groups.Select(group => group.SortOrder).ToArray()
+                },
                 cancellationToken).ConfigureAwait(false);
+        }
 
-            foreach (var ingredient in group.Ingredients)
-            {
-                await executor.ExecuteAsync(
-                    """
-                    insert into recipe_ingredients (id, group_id, sort_order, quantity, unit, name, note)
-                    values (@id, @groupId, @sortOrder, @quantity, @unit, @name, @note);
-                    """,
-                    new
-                    {
-                        id = ingredient.Id,
-                        groupId = group.Id,
-                        sortOrder = ingredient.SortOrder,
-                        quantity = ingredient.Quantity.Amount,
-                        unit = RecipeCodes.Of(ingredient.Quantity.Unit),
-                        name = ingredient.Name,
-                        note = ingredient.Note
-                    },
-                    cancellationToken).ConfigureAwait(false);
-            }
+        var ingredients = recipe.Groups
+            .SelectMany(group => group.Ingredients.Select(ingredient => (group, ingredient)))
+            .ToArray();
+
+        if (ingredients.Length > 0)
+        {
+            await executor.ExecuteAsync(
+                """
+                insert into recipe_ingredients (id, group_id, sort_order, quantity, unit, name, note)
+                select id, group_id, sort_order, quantity, unit, name, note
+                from unnest(
+                    @ids::uuid[], @groupIds::uuid[], @sortOrders::integer[], @quantities::numeric[],
+                    @units::text[], @names::text[], @notes::text[])
+                    as i(id, group_id, sort_order, quantity, unit, name, note);
+                """,
+                new
+                {
+                    ids = ingredients.Select(one => one.ingredient.Id).ToArray(),
+                    groupIds = ingredients.Select(one => one.group.Id).ToArray(),
+                    sortOrders = ingredients.Select(one => one.ingredient.SortOrder).ToArray(),
+                    quantities = ingredients.Select(one => one.ingredient.Quantity.Amount).ToArray(),
+                    units = ingredients.Select(one => RecipeCodes.Of(one.ingredient.Quantity.Unit)).ToArray(),
+                    names = ingredients.Select(one => one.ingredient.Name).ToArray(),
+                    notes = ingredients.Select(one => one.ingredient.Note).ToArray()
+                },
+                cancellationToken).ConfigureAwait(false);
         }
 
         foreach (var step in recipe.Steps)
         {
             await WriteStepAsync(recipe.Id, step, cancellationToken).ConfigureAwait(false);
+        }
 
-            // The step's own set, which Step.Create has already widened to
-            // include everything the sentence mentions — so this cannot
-            // disagree with the words, and it is what the read path reads back.
-            foreach (var ingredientId in step.Uses)
-            {
-                await executor.ExecuteAsync(
-                    """
-                    insert into step_ingredient_refs (step_id, recipe_ingredient_id)
-                    values (@stepId, @ingredientId);
-                    """,
-                    new { stepId = step.Id, ingredientId },
-                    cancellationToken).ConfigureAwait(false);
-            }
+        // Each step's own set, which Step.Create has already widened to
+        // include everything the sentence mentions — so this cannot
+        // disagree with the words, and it is what the read path reads back.
+        var references = recipe.Steps
+            .SelectMany(step => step.Uses.Select(ingredientId => (stepId: step.Id, ingredientId)))
+            .ToArray();
+
+        if (references.Length > 0)
+        {
+            await executor.ExecuteAsync(
+                """
+                insert into step_ingredient_refs (step_id, recipe_ingredient_id)
+                select step_id, recipe_ingredient_id
+                from unnest(@stepIds::uuid[], @ingredientIds::uuid[]) as r(step_id, recipe_ingredient_id);
+                """,
+                new
+                {
+                    stepIds = references.Select(one => one.stepId).ToArray(),
+                    ingredientIds = references.Select(one => one.ingredientId).ToArray()
+                },
+                cancellationToken).ConfigureAwait(false);
         }
 
         await tags.LinkAsync(recipe, cancellationToken).ConfigureAwait(false);

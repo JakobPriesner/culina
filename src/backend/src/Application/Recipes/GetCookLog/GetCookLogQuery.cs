@@ -27,7 +27,7 @@ internal sealed class GetCookLogQueryHandler(
         using var tracked = UseCaseActivity.Start("Recipes.GetCookLog");
 
         var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
+            .VisibleHouseholdAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await visible.Match(

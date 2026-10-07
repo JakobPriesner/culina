@@ -29,11 +29,11 @@ internal sealed class GetRecipeImageQueryHandler(
         // private as the recipe it belongs to, and serving it from a path that
         // skipped the check would make the recipe public by accident.
         var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
+            .VisibleHouseholdAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var hash = await visible.Match(
-            recipe => recipes.ImageHashAsync(recipe.Id, cancellationToken),
+            _ => recipes.ImageHashAsync(query.RecipeId, cancellationToken),
             error => Task.FromResult(Result<string>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(hash.Map(contentHash => ImageDelivery.Of(images, contentHash, query.Width)));
