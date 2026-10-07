@@ -5,32 +5,19 @@
   import { lockScroll, unlockScroll } from './scrollLock';
 
   /**
-   * The one modal surface. `Modal` and `Sheet` are this with different
-   * geometry; no feature builds its own.
-   *
-   * Built on the native `<dialog>` because the browser already does the parts
-   * that are laborious and easy to get subtly wrong: it traps focus, makes the
-   * rest of the page inert, puts the dialog in the top layer above every
-   * stacking context, closes on Escape, and restores focus to whatever opened
-   * it. A hand-rolled version of that is a few hundred lines and is still worse
-   * on a screen reader.
-   *
-   * What is left to do by hand: locking the page's scroll, labelling, and
-   * keeping the caller's `open` in step with the browser's own closing.
+   * The one modal surface; `Modal` and `Sheet` are this with different geometry.
+   * Built on native `<dialog>` for focus trap, inert page, top layer and Escape; scroll lock,
+   * labelling and syncing `open` are manual.
    */
   interface Props {
     open: boolean;
-    /** Announced as the dialog's name. Never optional: an unnamed dialog is a box. */
+    /** Announced as the dialog's name. */
     title: string;
     children: Snippet;
-    /** Actions, kept out of the scrolling body so they stay reachable. */
     footer?: Snippet;
     closeLabel: string;
-    /** The visual shape. `sheet` rises from the bottom edge on a phone. */
     placement?: 'centre' | 'sheet';
-    /** Allows source and draft to be read side by side on a wide screen. */
     wide?: boolean;
-    /** Hides the heading visually while still naming the dialog. */
     hideTitle?: boolean;
     onclose?: () => void;
   }
@@ -50,8 +37,7 @@
   let element = $state<HTMLDialogElement>();
 
   /**
-   * Shown since it last finished closing. Not reactive: only decides whether there is an exit to
-   * wait for.
+   * Shown since it last finished closing; not reactive, only decides whether an exit is awaited.
    */
   let shown = false;
 
@@ -60,8 +46,8 @@
   const id = $props.id();
   const titleId = `${id}-title`;
 
-  // Body is built only while up or leaving, so mounted-but-unused sheets cost nothing; `.pre` keeps
-  // it for the exit's first frame.
+  // The body is built only while up or leaving, so unused sheets cost nothing; `.pre` keeps it for
+  // the exit's first frame.
   $effect.pre(() => {
     if (open) {
       shown = true;
@@ -95,7 +81,6 @@
     return undefined;
   });
 
-  /** Waits for the exit animation so the content is not pulled out from under it. */
   async function finishExit(dialog: HTMLDialogElement) {
     await Promise.allSettled(dialog.getAnimations?.().map((animation) => animation.finished) ?? []);
 
@@ -106,7 +91,6 @@
     closing = false;
   }
 
-  /** The browser closed it — Escape, or the close method. Tell the caller. */
   function synchronise() {
     if (open) {
       dismiss();
@@ -114,23 +98,15 @@
   }
 
   /**
-   * Closed, and the caller told about it.
-   *
-   * Every way out goes through here. A caller that passes `open` as an
-   * expression rather than a binding — `open={chosen !== null}` — only ever
-   * learns that this closed from `onclose`, so a dismissal that skipped it
-   * would leave that caller believing the dialog was still up, and the next
-   * open would set state that was already set and change nothing on screen.
+   * Closed and the caller told; every way out goes through here since `open={expr}` callers only
+   * learn via `onclose`.
    */
   function dismiss() {
     open = false;
     onclose?.();
   }
 
-  /**
-   * A click on the backdrop lands on the dialog element itself, because the
-   * backdrop is not a node. Anything inside stops at its own element.
-   */
+  /** A backdrop click lands on the dialog element itself, as the backdrop is not a node. */
   function dismissOnBackdrop(event: MouseEvent) {
     if (event.target === element) {
       dismiss();
@@ -150,8 +126,6 @@
     <header class="header">
       <h2 class="title" class:ds-clipped={hideTitle} id={titleId}>{title}</h2>
 
-      <!-- The backdrop and Escape both dismiss, but neither is discoverable:
-           a visible control is the way out that can be seen. -->
       <IconButton label={closeLabel} onclick={dismiss}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
@@ -210,22 +184,15 @@
     padding: var(--space-2) var(--space-6) var(--space-6);
     min-height: 0;
     overflow-y: auto;
-    /* The gutter stops the body sliding sideways when its content outgrows
-       the panel, on the machines where the bar takes width. Where it is an
-       overlay it takes none and is painted over the content instead, which the
-       body's own inline padding already holds clear. */
+    /* The gutter stops the body sliding sideways when its content outgrows the dialog. */
     scrollbar-gutter: stable;
     scroll-padding-block: var(--space-2);
     overscroll-behavior: contain;
   }
 
   /*
-   * A body whose content manages its own height stops being the scroller.
-   *
-   * Set by a feature that puts something pinned above a scrolling list — a
-   * search field above results. Without it the body and the list are both
-   * capped and both scroll, which on a short viewport is two bars ten pixels
-   * apart, with the wheel going to whichever the pointer is over.
+   * A body whose content manages its own height stops being the scroller, so a pinned search field
+   * doesn't produce two scrollbars.
    */
   .body:has(> :global([data-fills-dialog])) {
     display: flex;
@@ -259,12 +226,6 @@
     border-radius: var(--radius-lg);
   }
 
-  /*
-   * One component, two shapes. On a phone a sheet rises from the bottom edge,
-   * where a thumb already is; on a larger screen the same content is a centred
-   * dialog, because a full-width strip along the bottom of a desktop window is
-   * a long way from where the eye is.
-   */
   .sheet {
     width: 100vw;
     max-width: 100vw;
@@ -297,8 +258,10 @@
     }
   }
 
-  /* Keep native focus/closing semantics. Supporting browsers keep the surface
-     in the top layer just long enough to paint its exit, without JS timers. */
+  /*
+   * Keep native focus/closing semantics; the surface stays in the top layer just long enough to
+   * paint its exit.
+   */
   @supports (overlay: auto) and (transition-behavior: allow-discrete) {
     .dialog {
       --dialog-travel: var(--space-2);

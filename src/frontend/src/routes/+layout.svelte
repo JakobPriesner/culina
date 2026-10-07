@@ -25,8 +25,7 @@
   let activeTransition: ViewTransition | undefined;
 
   onNavigate((navigation) => {
-    // Filters and serving counts update in place. Only a different screen
-    // needs a transition, and a second navigation can interrupt the first.
+    // Filters and serving counts update in place; only a different screen transitions, and a new navigation can interrupt the old one.
     activeTransition?.skipTransition();
     if (
       typeof document === 'undefined' ||
@@ -52,26 +51,21 @@
   });
 
   onMount(() => {
-    // The static boot screen in app.html has done its job the moment there is
-    // something real to look at.
+    // The static boot screen in app.html is done once there is something real to see.
     document.getElementById('boot')?.remove();
 
     const stopFollowingTheDevice = preferences.start();
     appIcon.start();
-    // Not under the dev server: every rebuild there is a "new version", and a
-    // prompt to reload after each save is noise the production app never has.
+    // Not under the dev server, where every rebuild would prompt a reload.
     const stopWatchingForUpdates = dev ? () => {} : watchForUpdates();
     const stopFollowingTheNetwork = connection.start();
 
-    // Ask for persistent storage so the browser does not evict cached recipes
-    // and offline shopping data under storage pressure or after inactivity.
+    // Ask for persistent storage so the browser does not evict cached recipes and offline shopping data.
     if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
       void navigator.storage.persist();
     }
 
-    // The API layer decides *when* a session has ended; what happens next is
-    // the app's business, and keeping that here is what stops the client from
-    // having to know that a router exists.
+    // The API layer decides when a session has ended; what happens next is the app's business, so the client need not know a router exists.
     handleSessionExpiry(() => {
       session.end();
       void goto(loginUrlFor(page.url, 'expired'), { replaceState: true });
@@ -85,19 +79,9 @@
   });
 </script>
 
-<!--
-  Re-creating the tree is what makes a language switch take effect without a
-  reload: compiled messages are plain function calls, so nothing else would tell
-  Svelte that every string on the page just changed. Language changes are rare
-  enough that the cost never shows.
--->
+<!-- Re-creating the tree makes a language switch take effect without a reload: compiled messages are plain calls Svelte cannot track. -->
 {#key preferences.locale}
-  <!--
-    The last line of defence. A component that throws would otherwise leave a
-    blank page with no way forward; this keeps something on screen that says
-    what happened and offers a way out — and tells the operator, since a
-    boundary that catches an error is also the reason nothing else hears of it.
-  -->
+  <!-- Last line of defence: keeps something on screen with a way out, and reports it, since a boundary that catches an error is why nothing else hears of it. -->
   <svelte:boundary onerror={(error) => report('render_failed', error)}>
     {@render children()}
 
@@ -124,11 +108,7 @@
     min-height: 100dvh;
   }
 
-  /*
-   * A plain button rather than the design system's: whatever threw might have
-   * been inside it, and the one control that recovers the app must not depend
-   * on the part that is broken.
-   */
+  /* A plain button, not the design system's: whatever threw might have been inside it, and the control that recovers the app must not depend on the broken part. */
   .retry {
     min-height: var(--control-md);
     padding-inline: var(--space-4);

@@ -13,19 +13,8 @@
   import SettingsSection from '../SettingsSection.svelte';
 
   /**
-   * How the app looks and which words and units it uses.
-   *
-   * These live here rather than in the top bar of every page: they are set once
-   * and then never again, and a control used twice a year does not belong where
-   * the eye lands every time.
-   *
-   * The settings share one enclosure. They are not unrelated things that
-   * happen to share a page — they are the whole of "how this reads to me", and
-   * loose controls a gap apart could not say that.
-   *
-   * Each picker is `compact`: the row prints the label and the picker keeps its
-   * own, clipped, so the select's accessible name is exactly the words above it
-   * without the field carrying two labels.
+   * How the app looks and which words and units it uses; set once, so not in the top bar, and in one enclosure as "how this reads to me".
+   * Each picker is `compact`: the row prints the label and the picker keeps its own clipped one, so the select has exactly one name.
    */
 </script>
 

@@ -50,8 +50,7 @@ export function autoScrollStep(root: HTMLElement, initial: Options) {
     frame = 0;
     if (!options.enabled || options.suspended || document.hidden) return;
 
-    // RecipeSurface follows each step after its resize animation. Give that
-    // move time to settle before taking over, including native smooth scroll.
+    // RecipeSurface follows each step after its resize animation; let that settle first.
     if (!last) waitUntil = now + 800;
     const elapsed = Math.min(now - (last || now), 100);
     last = now;
@@ -73,7 +72,6 @@ export function autoScrollStep(root: HTMLElement, initial: Options) {
       (viewport?.height ?? window.innerHeight) -
       (parseFloat(style.scrollMarginBottom) || 0);
     const room = bottom - top;
-    // Short steps stay still. Leave a fitting step where RecipeSurface put it.
     if (room <= 0 || box.height <= room + 1) {
       position = undefined;
       schedule(1000);
@@ -92,16 +90,15 @@ export function autoScrollStep(root: HTMLElement, initial: Options) {
       waitUntil = now + dwell;
     } else {
       position = Math.min(end, Math.max(start, position ?? window.scrollY));
-      // Keep fractional pixels ourselves: reading scrollY back every frame
-      // loses subpixel movement in browsers that round scroll positions.
+      // Fractional pixels are kept here, as reading scrollY back loses subpixel movement.
       const distance = reduced.matches ? room * 0.7 : (elapsed / 1000) * 20;
       position = Math.min(end, Math.max(start, position + direction * distance));
       if ((direction > 0 && position >= end) || (direction < 0 && position <= start)) {
         direction *= -1;
         waitUntil = now + dwell;
       } else if (reduced.matches) {
-        // Reduced motion reads overlapping portions with an instant jump,
-        // rather than making the text move continuously under the cook's eye.
+        // Reduced motion reads overlapping portions with an instant jump rather than moving text
+        // continuously.
         waitUntil = now + dwell;
       }
     }
@@ -117,15 +114,15 @@ export function autoScrollStep(root: HTMLElement, initial: Options) {
   }
 
   function touch(event: Event) {
-    // Controls remain usable, including the explicit Stop button. Touching
-    // the recipe itself hands scrolling back to the cook before the gesture.
+    // Controls stay usable, including Stop; touching the recipe hands scrolling back to the cook
+    // first.
     if (event.target instanceof Element && event.target.closest('.controls')) return;
     stop();
   }
 
   function key(event: KeyboardEvent) {
-    // Space activates a focused control. Stopping here would turn Stop into
-    // Start before the button's click fires on keyup.
+    // Space activates a focused control; stopping here would turn Stop into Start before its click
+    // fires on keyup.
     if (
       event.key === ' ' &&
       event.target instanceof Element &&

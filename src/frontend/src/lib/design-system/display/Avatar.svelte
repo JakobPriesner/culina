@@ -1,13 +1,7 @@
 <script lang="ts">
-  /**
-   * A person, at a glance.
-   *
-   * Falls back to initials rather than to a generic silhouette: in a household
-   * of four, four identical grey heads identify nobody. The initials are
-   * derived here rather than asked for, so every caller gets the same answer.
-   */
+  /** A person at a glance, falling back to initials (four identical silhouettes identify nobody), derived here so every caller gets the same answer. */
   interface Props {
-    /** The full name. Also the accessible name. */
+    /** The full name, also the accessible name. */
     name: string;
     src?: string | null;
     size?: 'sm' | 'md';

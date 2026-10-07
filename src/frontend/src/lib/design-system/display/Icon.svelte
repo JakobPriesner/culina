@@ -1,14 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * An icon at a known size.
-   *
-   * Decorative by default — `aria-hidden` — because an icon almost always sits
-   * beside the words it illustrates, and announcing both says everything twice.
-   * Give it a `label` only when it is genuinely the only thing carrying the
-   * meaning, which usually means it should have been text.
-   */
+  /** An icon at a known size; decorative (`aria-hidden`) by default since it sits beside its words; give it a `label` only when it alone carries meaning. */
   interface Props {
     children: Snippet;
     size?: 'sm' | 'md' | 'lg';

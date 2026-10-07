@@ -5,14 +5,7 @@
   import CookbookCover from './CookbookCover.svelte';
   import type { Cookbook } from './types';
 
-  /**
-   * One cookbook on a shelf.
-   *
-   * Built like a recipe card and for the same reason: a picture, a title in the
-   * editorial face, and one line of fact underneath. No box — the cover is
-   * already a rectangle, and putting it inside another one is two borders
-   * saying the same thing.
-   */
+  /** One cookbook on a shelf, built like a recipe card (picture, editorial title, one line of fact) with no box: the cover is already a rectangle. */
   interface Props {
     cookbook: Cookbook;
     /** Dimmed while a change to it is in flight. */
@@ -37,9 +30,7 @@
 
   <p class="meta">
     {m['cookbooks.card.count']({ count: cookbook.recipeCount })}
-    <!-- Said in a word rather than drawn as a gear: this app has no icon
-         vocabulary somebody would already know, and a symbol nobody can read is
-         a decoration. -->
+    <!-- A word, not a gear: the app has no icon vocabulary, and a symbol nobody can read is decoration. -->
     {#if cookbook.kind === 'smart'}
       <span class="automatic">{m['cookbooks.kind.label']()}</span>
     {/if}
@@ -77,8 +68,7 @@
     text-decoration: none;
   }
 
-  /* The whole card is the link, so the target is the cookbook rather than the
-     one or two words of its name. */
+  /* The whole card is the link, so the target is the cookbook, not its name. */
   .link::after {
     content: '';
     position: absolute;

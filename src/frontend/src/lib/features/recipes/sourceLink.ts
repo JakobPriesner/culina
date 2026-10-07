@@ -6,17 +6,8 @@ export interface SourceLink {
 }
 
 /**
- * The original's address as a link, or nothing.
- *
- * The address comes from places this app does not control — a connected
- * Tandoor, a page's redirect, a share sheet — and the server checks it, but a
- * link is only as safe as the last thing that looked at it. So it is checked
- * again here, where it becomes an `href`: an absolute `http` or `https` address
- * with a host, or no link at all. `javascript:`, `data:` and the schemes desktop
- * apps register for themselves are not places a recipe should send anyone.
- *
- * The label is read from the same parsed address the link points at, so
- * `javascript://chefkoch.de/…` can never be shown as "from chefkoch.de".
+ * The original's address as a link, or nothing: re-checked where it becomes an `href` (absolute http(s) with a host; no `javascript:`, `data:` or app schemes).
+ * The label is read from the same parsed address, so `javascript://chefkoch.de/…` never shows as "from chefkoch.de".
  */
 export function sourceLink(address: string | null | undefined): SourceLink | null {
   if (!address) {

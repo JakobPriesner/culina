@@ -11,9 +11,7 @@ export interface SaveFacts {
   readonly failure: AppError | null;
   readonly saving: boolean;
   readonly saved: boolean;
-  /** The editor opened onto work a previous visit had not saved. */
   readonly recovered: boolean;
-  /** What is on screen exists only on this device. */
   readonly unsent: boolean;
 }
 

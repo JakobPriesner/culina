@@ -7,11 +7,7 @@ import type { AppError } from '$api';
 import type { ImportRun } from './types';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The end of the flow, which is where the whole design either lands or does
- * not: four hundred recipes arriving into a library is invisible, and the
- * cookbook is what makes it something somebody can go and look at.
- */
+/* The end of the flow: four hundred recipes arriving is invisible, so the cookbook is what makes the import something to go and look at. */
 const run = (over: Partial<ImportRun> = {}): ImportRun => ({
   total: 40,
   done: 40,
@@ -60,8 +56,7 @@ describe('an import as it runs', () => {
       }
     });
 
-    // The import belongs to the server, so watching it is optional — and the
-    // shelf it is filling exists from the first second.
+    // The import belongs to the server, so watching is optional, and the shelf exists from the first second.
     expect(screen.getByRole('link', { name: /Open recipes\.example\.com/ })).toHaveAttribute(
       'href',
       '/cookbooks/cb1'
@@ -98,9 +93,7 @@ describe('an import as it runs', () => {
       }
     });
 
-    // "The connection went" is worth waiting through; "that import is gone" is
-    // not, and a screen that says only "something stopped" cannot tell anybody
-    // which of the two they are looking at.
+    // "The connection went" is worth waiting through, "that import is gone" is not; the screen must say which.
     expect(screen.getByText(/That import is no longer being followed/)).toBeInTheDocument();
     expect(screen.getByText(/abc123/)).toBeInTheDocument();
   });
@@ -121,8 +114,7 @@ describe('an import as it runs', () => {
       props: { run: run(), ondone: () => {}, onlook: () => {}, onanyway: () => {} }
     });
 
-    // Twelve that failed is a statistic; twelve titles is a list somebody can
-    // act on.
+    // Twelve failures are a statistic; twelve titles are a list to act on.
     expect(screen.getByText('Oma’s Kuchen')).toBeInTheDocument();
   });
 
@@ -178,8 +170,7 @@ describe('recipes held back because one like them is already here', () => {
       props: { run: held, ondone: () => {}, onlook: () => {}, onanyway }
     });
 
-    // Never automatic: a household may want two Bolognese, but only somebody
-    // who has looked at both can say so.
+    // Never automatic: a household may want two Bolognese, and only someone who has seen both can say so.
     expect(screen.getByRole('checkbox', { name: 'Spaghetti Bolognese' })).not.toBeChecked();
     expect(screen.getByRole('button', { name: /anyway/ })).toBeDisabled();
 

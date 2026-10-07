@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { sourceLink } from './sourceLink';
 
-/**
- * The "from chefkoch.de" link under an imported recipe.
- *
- * Its address arrived from somewhere this app does not control, and it is
- * shown on the public share page too, so only a web address becomes a link —
- * and the host it is labelled with is the host it goes to.
- */
+/** The "from chefkoch.de" link: the address is untrusted and shown on the public share page, so only a web address becomes a link, labelled with the host it goes to. */
 describe('a link to where a recipe came from', () => {
   it('is the address and its host for an ordinary web page', () => {
     expect(sourceLink('https://www.chefkoch.de/rezepte/123/beans.html')).toEqual({

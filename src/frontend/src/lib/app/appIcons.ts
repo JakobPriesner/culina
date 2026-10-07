@@ -1,15 +1,6 @@
 /**
- * The app icons a person can pick, and where each one's files are.
- *
- * Read by the settings screen and by `build-tools/generateIcons.ts`, which
- * draws every file named here, so a new icon is one id below and one drawing
- * there. Nothing here imports anything: the build tool runs this file straight
- * under Node.
- *
- * The default lives at the root of `static/` under the names browsers and
- * phones ask for without being told (`/favicon.ico`, `/apple-touch-icon.png`)
- * and the names an existing install already holds. The others sit in a folder
- * of their own.
+ * The app icons a person can pick and where each one's files are; read by settings and by `build-tools/generateIcons.ts` (a new icon is one id here and one drawing there). Imports nothing: the build tool runs it under Node.
+ * The default sits at the root of `static/` under the names browsers and existing installs ask for; the others have their own folder.
  */
 export const appIcons = ['cocotte', 'basil', 'ink', 'paper', 'saffron'] as const;
 
@@ -17,7 +8,7 @@ export type AppIcon = (typeof appIcons)[number];
 
 export const defaultAppIcon: AppIcon = 'cocotte';
 
-/** Which icon this device shows. Per device, because every install has its own. */
+/** Which icon this device shows; per device, as every install has its own. */
 export const appIconStorageKey = 'culina.appIcon';
 
 export function isAppIcon(value: unknown): value is AppIcon {

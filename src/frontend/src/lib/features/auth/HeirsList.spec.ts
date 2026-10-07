@@ -5,10 +5,7 @@ import { renderWithProviders } from '$lib/test/render';
 
 import HeirsList from './HeirsList.svelte';
 
-/*
- * The kitchen being read is told who reads it, and its owners can cut a
- * household that inherits directly — one further down is its parent's to cut.
- */
+/* The kitchen being read is told who reads it; its owners can cut a household that inherits directly, one further down is its parent's to cut. */
 const heirs = {
   items: [
     { householdId: 'flat', name: 'Flat', inheritsFrom: 'family' },

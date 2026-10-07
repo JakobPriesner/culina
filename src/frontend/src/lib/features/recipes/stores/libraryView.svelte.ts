@@ -1,14 +1,6 @@
 import { registerStore } from '$shell/stores';
 
-/**
- * How a list of recipes is ordered.
- *
- * The app's own words rather than the query string's, so a component reads
- * `quickest` instead of `totalMinutes`; `toWireSort` is the one place the two
- * meet. Every one of these is an order `GET /recipes` accepts — which is the
- * bug this type replaced, where the union said `match` and the API answered
- * 400.
- */
+/** The app's own sort names; each is an order `GET /recipes` accepts, and `toWireSort` is where they meet the query string. */
 export type RecipeSort =
   | 'relevance'
   | 'suggested'
@@ -16,27 +8,17 @@ export type RecipeSort =
   | 'title'
   | 'quickest'
   | 'mostCooked'
-  /** The order a cookbook was built in. Only meaningful inside one. */
+  /** A cookbook's own order; only meaningful inside one. */
   | 'shelf';
 
-/** What the list is being asked for, when nobody has said. */
 export interface SortContext {
-  /** Whether there are words in the search box. */
   readonly searching: boolean;
-  /** Whether the ranking has anything true to say about this kitchen yet. */
+  /** Whether the ranking has anything to say about this kitchen yet. */
   readonly ranks: boolean;
-  /** Whether a cookbook is being read. */
   readonly inACookbook: boolean;
 }
 
-/**
- * Which order a list is actually in.
- *
- * One function, used by both the request and the label above it. The server
- * has the same rule and would apply it for a client that sent nothing, but a
- * page that says "best match" has to be certain that is what it asked for —
- * a label deduced separately from the request is a label that can be wrong.
- */
+/** The order a list is actually in, shared by the request and its label so the two cannot disagree. */
 export function effectiveSort(chosen: RecipeSort | null, context: SortContext): RecipeSort {
   if (chosen !== null) {
     return chosen;
@@ -53,7 +35,6 @@ export function effectiveSort(chosen: RecipeSort | null, context: SortContext): 
   return 'recent';
 }
 
-/** Which orders are worth offering, given what is being asked. */
 export function sortsFor(context: SortContext): readonly RecipeSort[] {
   return [
     // "Best match" of nothing is not an order anybody means.
@@ -67,7 +48,6 @@ export function sortsFor(context: SortContext): readonly RecipeSort[] {
   ];
 }
 
-/** The words the query string uses. */
 export function toWireSort(sort: RecipeSort): string {
   switch (sort) {
     case 'relevance':
@@ -87,7 +67,6 @@ export function toWireSort(sort: RecipeSort): string {
   }
 }
 
-/** The same, read back — what a saved search stored. */
 export function fromWireSort(wire: string | null | undefined): RecipeSort | null {
   switch (wire) {
     case 'relevance':
@@ -103,60 +82,31 @@ export function fromWireSort(wire: string | null | undefined): RecipeSort | null
     case '-updatedAt':
       return 'recent';
     default:
-      // Including `cookbookOrder`, which a saved search may not hold: it needs
-      // a cookbook to be an order of, and the library has none.
+      // A saved search may hold `cookbookOrder`, which needs a cookbook the library lacks.
       return null;
   }
 }
 
-/**
- * The time ceilings the filter panel offers.
- *
- * Buckets rather than a number field, because "I have about half an hour" is
- * the thought, and asking somebody to type 37 is asking them to invent a
- * precision they do not have.
- */
+/** Time ceiling buckets: "about half an hour" is the thought, not 37 minutes. */
 export const timeCeilings = [15, 30, 45, 60] as const;
 
-/**
- * What the library is being asked for.
- *
- * One object rather than four loose pieces of state, because the page, the
- * cookbook page, the filter panel and a saved search all have to describe the
- * same question — and four separate fields are four chances for one of them to
- * describe a different one.
- */
+/** One object for the question the page, cookbook page, filter panel and saved searches all ask, so they cannot diverge. */
 export class RecipeQuery {
-  /** The words in the search box, applied — not what is half-typed into it. */
+  /** Applied words, not what is half-typed. */
   query = $state('');
 
-  /** Tag slugs a recipe must all carry. */
   tags = $state<readonly string[]>([]);
 
-  /** The longest a recipe may take, or null for any length. */
   maxMinutes = $state<number | null>(null);
 
-  /**
-   * Which order, once somebody has chosen one.
-   *
-   * Null means nobody has and the page decides — see `effectiveSort`. Stored as
-   * a choice rather than as a default, so picking "recently updated" sticks
-   * even on a day the ranking would have offered to take over.
-   */
+  /** The chosen order; null means the page decides (`effectiveSort`), so a pick sticks even when ranking would take over. */
   sort = $state<RecipeSort | null>(null);
 
-  /**
-   * How many filters are on, for the number on the panel's trigger.
-   *
-   * The words are not counted: they are visible in the box they were typed
-   * into, and a badge that included them would say "1 filter" over an empty
-   * panel.
-   */
+  /** Filters on, for the trigger badge; words are excluded as they are visible in the box. */
   get activeCount(): number {
     return this.tags.length + (this.maxMinutes === null ? 0 : 1) + (this.sort === null ? 0 : 1);
   }
 
-  /** Whether anything at all narrows the list. */
   get filtered(): boolean {
     return this.query.trim().length > 0 || this.tags.length > 0 || this.maxMinutes !== null;
   }
@@ -167,7 +117,6 @@ export class RecipeQuery {
       : [...this.tags, slug];
   }
 
-  /** Everything at once, which is what applying a saved search is. */
   assign(next: {
     query?: string;
     tags?: readonly string[];
@@ -180,7 +129,6 @@ export class RecipeQuery {
     this.sort = next.sort ?? null;
   }
 
-  /** The same, read back out — what saving a search stores. */
   snapshot(): {
     query: string;
     tags: readonly string[];
@@ -203,13 +151,7 @@ export class RecipeQuery {
   }
 }
 
-/**
- * The library's own question, kept through a recipe round trip.
- *
- * Scoped to the household: another kitchen's tags are not this one's, and a
- * filter naming a slug nobody here uses would quietly match nothing and look
- * broken.
- */
+/** The library's own query, kept through a recipe round trip and scoped to the household (another kitchen's tag slugs match nothing). */
 class LibraryView extends RecipeQuery {
   #householdId: string | null = null;
 

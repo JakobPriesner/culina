@@ -10,14 +10,7 @@
   import { issueRecoveryCode } from './recovery';
   import { createSubmission } from './submission.svelte';
 
-  /**
-   * Helping somebody on this instance back into their account.
-   *
-   * Culina has no way to reach them, so the administrator does: the code is
-   * shown here once, to read out or send, and it stops working after a day
-   * because it has passed through more hands than a code a person saved for
-   * themselves.
-   */
+  /** Helping somebody back into their account: the administrator reads out or sends the code, shown once and valid for a day (it passes through more hands). */
   let email = $state('');
   let issued = $state<{ email: string; code: string; expiresAt: string } | null>(null);
 

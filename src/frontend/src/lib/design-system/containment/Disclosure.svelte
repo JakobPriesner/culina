@@ -1,13 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * Something that is usually not needed, available when it is.
-   *
-   * Native `<details>`: it is open to the browser's find-in-page, it works
-   * before any script has run, and it is one element instead of a button, a
-   * region, `aria-expanded`, `aria-controls` and a keyboard handler.
-   */
+  /** Something usually not needed, available when it is: native `<details>` is findable in-page, works before any script runs, and replaces a button, region and ARIA wiring. */
   interface Props {
     summary: string;
     children: Snippet;

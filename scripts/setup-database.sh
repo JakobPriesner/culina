@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 #
-# Does the setup screen's first step without the screen: points a fresh
-# instance started from compose.prod.yaml at the database beside it, and waits
-# for it to restart into the real app.
-#
-# compose.prod.yaml passes the app where the database is, but not how to sign in
-# to it — that is the setup screen's to ask — so anything that starts the stack
-# unattended has to answer it the way an administrator would.
+# Does the setup screen's first step unattended: points a fresh instance from compose.prod.yaml at its
+# database (the sign-in is the setup screen's to ask, so unattended starts must answer it) and waits
+# for the restart into the real app.
 #
 #   Database__Password=… scripts/setup-database.sh http://localhost:8080
 #
-# The role and password are the ones the db service created from the same
-# variables. An instance already past this step is left alone.
+# Role and password are those the db service created from the same variables. Instances past this step are left alone.
 
 set -euo pipefail
 
@@ -29,8 +24,7 @@ BEFORE="$(setup)"
 
 [ "${BEFORE%% *}" = "database" ] || exit 0
 
-# Built and sent on stdin, so the password is never an argument any process
-# listing can show.
+# Sent on stdin so the password is never an argument visible in a process listing.
 STATUS="$(python3 -c 'import json,os; print(json.dumps({
     "host": "db",
     "port": 5432,
@@ -44,8 +38,7 @@ STATUS="$(python3 -c 'import json,os; print(json.dumps({
 
 [ "$STATUS" = "202" ] || { echo "the database was not saved: ${STATUS}" >&2; exit 1; }
 
-# 202 means saved and restarting. It is over when a new host answers — a
-# changed startedAt — and it is no longer asking for a database.
+# 202 means saved and restarting; done when a new host answers (changed startedAt) and no longer asks for a database.
 DEADLINE=$((SECONDS + 60))
 
 until NOW="$(setup)"; [ -n "$NOW" ] && [ "$NOW" != "$BEFORE" ] && [ "${NOW%% *}" != "database" ]; do

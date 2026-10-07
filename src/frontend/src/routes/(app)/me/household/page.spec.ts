@@ -8,12 +8,7 @@ import { resetAllStores } from '$shell/stores';
 import { toaster } from '$shell/toaster.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * Deleting a household, from the page that offers it. The server decides who
- * may — these prove the page does not offer it to anybody else, sends the
- * version it just read rather than one it guessed, and says so when the
- * server refuses anyway.
- */
+/* Deleting a household: the server decides who may; these prove the page offers it to nobody else, sends the version it just read, and says so when the server refuses anyway. */
 const goto = vi.hoisted(() => vi.fn());
 
 vi.mock('$app/navigation', () => ({ goto, invalidateAll: vi.fn() }));
@@ -156,8 +151,7 @@ describe('deleting a household', () => {
     const dialog = screen.getByRole('dialog', { name: 'Delete Home?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete household' }));
 
-    // Once the session is read again the page is about Flat; the message and
-    // its Undo must still be about Home.
+    // Once the session is re-read the page is about Flat; the message and its Undo must still be about Home.
     await waitFor(() => expect(toaster.toasts).toHaveLength(1));
     const toast = toaster.toasts[0]!;
     expect(toast.message()).toBe('Home was deleted.');

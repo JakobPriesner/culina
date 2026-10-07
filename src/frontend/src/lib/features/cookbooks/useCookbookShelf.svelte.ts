@@ -10,22 +10,15 @@ interface Page {
 
 /** The recipes on one shelf: the recipe store with a `cookbookId` filter and its own query. */
 export function useCookbookShelf(page: Page) {
-  /**
-   * Its own store; filtering the shared one would leave the library filtered after navigating back.
-   */
+  /** Its own store; filtering the shared one would leave the library filtered after navigating back. */
   const shelf = createRecipeStore();
 
-  /**
-   * Its own query, for the same reason, on the library's class so a shelf sorts and narrows alike.
-   */
+  /** Its own query for the same reason, on the library's class so a shelf sorts and narrows alike. */
   const view = new RecipeQuery();
 
   const filtered = $derived(view.filtered);
 
-  /**
-   * `ranks: false`: "for tonight" ranks the whole library and would promise an order a shelf does
-   * not have.
-   */
+  /** `ranks: false`: "for tonight" ranks the whole library and would promise an order a shelf lacks. */
   const context = $derived({
     searching: view.query.trim().length > 0,
     ranks: false,

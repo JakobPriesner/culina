@@ -8,16 +8,8 @@
   import { chipLabel } from './wording';
 
   /**
-   * What the search had to change to find anything — said, never done quietly.
-   *
-   * Every way the server recovers from an empty answer is named here with the
-   * way back from it: a corrected word with the original one tap away, a
-   * reading that was set aside with a way to drop it for good, two readings
-   * that contradict each other with a way to drop either. An unlabelled
-   * fallback is a search box that lies.
-   *
-   * And when there is truly nothing, the end of the search is the start of a
-   * task: a recipe nobody has is one to write down or bring in.
+   * What the search had to change to find anything: each recovery (corrected word, set-aside reading,
+   * contradicting readings) is named with its way back, since an unlabelled fallback is a search box that lies.
    */
   interface Props {
     interpretation: Interpretation | null;
@@ -25,10 +17,7 @@
     total: number;
     /** What was typed, for naming the empty answer. */
     query: string;
-    /**
-     * Whether an empty answer offers to write or import the recipe. A page
-     * with an empty state of its own says that itself.
-     */
+    /** Whether an empty answer offers to write or import the recipe; a page with its own empty state says it itself. */
     offer?: boolean;
     onastyped: () => void;
     onremove: (chip: SearchChip) => void;

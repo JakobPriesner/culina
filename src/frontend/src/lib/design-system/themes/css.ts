@@ -1,16 +1,9 @@
-/**
- * A very small CSS reader, used by the theme contract test.
- *
- * Deliberately not a real parser: it only has to find custom-property
- * declarations inside top-level blocks, and pulling in a CSS parser to check
- * three files would be more dependency than the job is worth.
- */
+/** A tiny CSS reader for the theme contract test: it only finds custom-property declarations in top-level blocks. */
 export interface CssBlock {
   readonly selector: string;
   readonly declarations: ReadonlyMap<string, string>;
 }
 
-/** Every top-level rule in a stylesheet, with its custom properties. */
 export function readBlocks(css: string): CssBlock[] {
   const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const blocks: CssBlock[] = [];
@@ -36,7 +29,6 @@ export function readBlocks(css: string): CssBlock[] {
   return blocks;
 }
 
-/** Every custom property a stylesheet declares, anywhere. */
 export function declaredProperties(css: string): Set<string> {
   const names = new Set<string>();
 

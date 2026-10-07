@@ -7,26 +7,13 @@ export interface TagSuggestion {
   readonly slug: string | null;
 }
 
-/**
- * The tags each recipe is offered, per saved version.
- *
- * Asked again whenever the recipe has been saved, because what it is read as
- * is what was last saved — a new title is a new set of suggestions once it
- * has reached the server, and not before.
- */
+/** The tags offered per saved version; asked again after each save since suggestions follow what was last saved. */
 class TagSuggestionStore {
   #answers = $state<Record<string, readonly TagSuggestion[]>>({});
 
-  /**
-   * Which versions have been asked about.
-   *
-   * A plain field, not `$state`: `load` is called from an `$effect`, and a
-   * guard that effect could read would make it depend on what `load` writes,
-   * and ask forever.
-   */
+  /** Versions already asked about; plain, not $state: `load` runs in an `$effect` and a readable guard would loop. */
   #asked = new Set<string>();
 
-  /** The suggestions for this version of the recipe, or none until they are in. */
   of(recipeId: string, version: number): readonly TagSuggestion[] {
     return this.#answers[`${recipeId}@${version}`] ?? [];
   }

@@ -7,11 +7,7 @@ import SearchChips from './SearchChips.svelte';
 import SearchNotice from './SearchNotice.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * Every way a search recovers from an empty answer is said, with the way back.
- * These hold each one to having a control, because a notice without one is a
- * search box that changed the question and only mentioned it.
- */
+/* Every recovery from an empty answer is said with a way back; a notice without a control only mentions the changed question. */
 const vegetarian: SearchChip = {
   kind: 'diet',
   value: 'vegetarian',

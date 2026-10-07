@@ -18,7 +18,6 @@
     recipe: RecipeReading;
     emphasis?: 'read' | 'cook';
     currentStep?: number;
-    /** Owned by the page, which keeps it in the URL. */
     servings: number;
     onservings?: (value: number) => void;
     onstartcooking?: () => void;
@@ -186,7 +185,6 @@
     }
   }
 
-  /* Print uses the scaled amounts shown on screen. */
   @media print {
     .surface {
       display: block;
@@ -194,7 +192,6 @@
       padding: 0;
     }
 
-    /* Two columns on paper so most recipes fit one sheet. */
     .body {
       display: grid;
       grid-template-columns: 32% 1fr;

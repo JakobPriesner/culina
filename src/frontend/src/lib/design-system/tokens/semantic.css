@@ -1,43 +1,27 @@
 /*
- * Layer 2 — the contract.
- *
- * This is the entire vocabulary a component may use. Every theme must define
- * every token declared here, in both modes; `themes.spec.ts` reads this file to
- * find out what "every" means and fails a theme that is missing one.
- *
- * The values below are light-mode defaults, so a partially written theme
- * degrades to something readable instead of rendering invisible text.
+ * Layer 2: the contract. Every theme must define every token here in both modes (`themes.spec.ts`
+ * enforces it); values are light defaults.
  */
 
 :root {
-  /* Surfaces, from the page outward. */
   --surface: var(--c-sand-50);
   --surface-raised: var(--c-white);
   --surface-sunken: var(--c-sand-100);
   --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
-  /* The veil an overlay lays over whatever it covers. The plain overlay for
-     anything that must stay legible on top of it; this where a hint of the
-     page beneath tells the reader the thing is temporary. */
+  /*
+   * The veil an overlay lays over what it covers; a plain overlay tells the reader it is temporary.
+   */
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-100);
-  /* The one row the reader is pointing at, right now. Louder than
-     `--surface-accent-subtle`, which marks a lasting choice on the page's own
-     ground: this has to carry across a sunken card, and only while a finger or
-     a cursor is on something else entirely. */
   --surface-highlight: var(--c-olive-200);
-  /* The band behind a line of a list that is being pointed at from somewhere
-     else — an ingredient row lit by a mention of it in the steps. A wash of the
-     accent rather than a step up the scale, so it says "this one" without
-     reading as a selected item; the accent mark beside it carries the rest. */
   --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-sand-100);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
   --surface-selected: var(--c-sand-200);
 
-  /* Text, in decreasing emphasis. */
   --text: var(--c-sand-900);
   --text-muted: var(--c-sand-600);
   --text-subtle: var(--c-sand-500);
@@ -45,26 +29,19 @@
   --text-danger: var(--c-rust-600);
   --text-success: var(--c-sage-500);
 
-  /* Lines. Used sparingly: spacing separates, borders only enclose. */
   --border: var(--c-sand-200);
   --border-strong: var(--c-sand-400);
   --border-focus: var(--c-olive-600);
-  /* The edge of something tinted with the accent — an ingredient capsule in a
-     step, a chosen row. Quieter than `--accent` itself, which on a hairline
-     around a pale fill reads as a box drawn around the words. */
   --border-accent: var(--c-olive-300);
 
-  /* The accent. One colour, for the primary action on a screen. */
   --accent: var(--c-olive-600);
   --accent-hover: var(--c-olive-700);
   --accent-active: var(--c-olive-700);
   --accent-contrast: var(--c-white);
 
-  /* Brand punctuation, separate from the action colour used by controls. */
   --brand-accent: var(--c-saffron-600);
 
-  /* Status. Colour is never the only carrier of meaning; these support an icon
-     or a word rather than replacing one. */
+  /* Status: supports an icon or a word, never the only carrier of meaning. */
   --danger: var(--c-rust-600);
   --danger-hover: var(--c-rust-500);
   --danger-subtle: var(--c-rust-200);
@@ -74,14 +51,8 @@
   --warning-subtle: var(--c-amber-200);
 
   /*
-   * The assistant at work.
-   *
-   * Four lights — orange, pink, violet, blue — that flow around whatever is
-   * being generated and drift under a picture being drawn, in the manner of
-   * Apple Intelligence's glow. Their own tokens rather than the accent at
-   * several strengths, because this is the one place in the app where colour
-   * says nothing except "the assistant is working here", and it should look
-   * like nothing else on the page.
+   * The assistant at work: its own tokens rather than the accent, so it looks like nothing else on
+   * the page.
    */
   --generating-ground: var(--c-sand-100);
   --generating-1: rgb(255 153 82);
@@ -93,41 +64,25 @@
   --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
 
   /*
-   * Controls that sit on a photograph.
-   *
-   * The same in both modes on purpose, and the only tokens here that are. A
-   * photograph is not lighter in light mode: a button on one has to be legible
-   * over whatever the picture happens to be underneath it, and the app's own
-   * surfaces — a white pill on a bright dish, a dark one on a dark kitchen —
-   * are exactly what fails there.
+   * Controls on a photograph: the same in both modes, since a photograph is not lighter in light
+   * mode.
    */
   --control-on-media: rgb(20 17 14 / 62%);
   --control-on-media-hover: rgb(20 17 14 / 78%);
   --border-on-media: rgb(255 255 255 / 22%);
   --text-on-media: var(--c-white);
 
-  /* Effects. */
   --shadow-card: 0 1px 2px rgb(31 26 22 / 6%), 0 4px 12px rgb(31 26 22 / 6%);
   --shadow-overlay: 0 8px 32px rgb(31 26 22 / 18%);
-  /* The header's floating glass: a lit rim along the top edge and a faint one
-     all round, so a pill reads as a pane of something rather than a flat
-     shape, over a shadow soft enough to lift it off whatever passes under. */
   --shadow-glass:
     inset 0 1px 0 rgb(255 255 255 / 70%), inset 0 0 0 1px rgb(255 255 255 / 40%),
     0 1px 2px rgb(31 26 22 / 6%), 0 6px 20px rgb(31 26 22 / 8%);
   --scrim: rgb(31 26 22 / 45%);
 
-  /* The shimmer a skeleton animates between. */
   --skeleton-base: var(--c-sand-200);
   --skeleton-highlight: var(--c-sand-100);
 
-  /*
-   * Olli, the mascot.
-   *
-   * The same in both modes, like a photograph: Olli is a character with its
-   * own colours, not a surface that follows the page. Only the steam follows
-   * the page, because steam is the room's colour.
-   */
+  /* Olli, the mascot: the same in both modes; only the steam follows the page. */
   --mascot-line: var(--c-sand-900);
   --mascot-body: var(--c-olive-400);
   --mascot-shine: color-mix(in srgb, var(--c-olive-300) 55%, var(--c-olive-400));

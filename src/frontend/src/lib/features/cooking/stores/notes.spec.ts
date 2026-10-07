@@ -2,11 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { notes } from './notes.svelte';
 
-/*
- * A note is read back the moment cook mode opens, while the recipe page that
- * was just left is still sending what was typed on it. The read must see that
- * write, or cook mode shows the note as it was before.
- */
+/* Cook mode reads the note while the recipe page is still sending what was typed; the read must see that write. */
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
 

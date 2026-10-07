@@ -8,22 +8,8 @@
   import type { ImportRun } from './types';
 
   /**
-   * An import, while it runs and once it has stopped.
-   *
-   * Counted in recipes, because recipes are what somebody asked for — the fact
-   * that the server fetches four of them at a time is its business and not
-   * theirs. And the progress is real rather than estimated: every number here
-   * came from a recipe that is written, so the bar never jumps backwards and
-   * never sits at 99%.
-   *
-   * The end of the flow is a link to the cookbook, which is the whole design in
-   * one control. Four hundred recipes arriving into a library is invisible;
-   * four hundred recipes on a shelf with a name is something you can open, look
-   * through, show somebody, and — if it was a mistake — delete.
-   *
-   * That link is offered from the first second and not only at the end, because
-   * the import is the server's: leaving this screen costs the progress bar and
-   * nothing else.
+   * An import while it runs and after it stops, counted in recipes with real progress that never jumps back.
+   * Ends in a link to the cookbook, offered from the first second since the import is the server's and leaving costs only the bar.
    */
   interface Props {
     run: ImportRun;
@@ -35,13 +21,7 @@
 
   let { run, ondone, onlook, onanyway }: Props = $props();
 
-  /**
-   * Which of the held-back recipes to bring over after all.
-   *
-   * None to begin with, and that is the rule this whole list exists to keep: a
-   * household may want two Bolognese, but only somebody who has looked at both
-   * can say so.
-   */
+  /** Held-back recipes to bring over after all; none to begin with, since only someone who has looked at both can want two Bolognese. */
   let chosen = $state<string[]>([]);
 </script>
 
@@ -60,10 +40,7 @@
   <p class="line" role="status">{m['import.run.of']({ done: run.done, total: run.total })}</p>
 
   {#if run.lost && !run.finished}
-    <!-- What stopped is usually this page, not the import: the server keeps
-         bringing the recipes over. So the reason is quoted rather than
-         summarised — "the connection went" and "that import is gone" are two
-         different situations and only one of them is worth waiting through. -->
+    <!-- What stopped is usually this page, not the import; the reason is quoted because "connection went" and "import is gone" differ in whether to wait. -->
     <div class="lost" role="status">
       <p>{m['import.run.lost']()}</p>
       <p class="why">{explain(run.lost)}</p>
@@ -83,8 +60,7 @@
 
       {#if run.skipped > 0}
         <div class="item">
-          <!-- Not a failure, and never counted as one: re-running an import is
-               the ordinary way to catch up on what is new. -->
+          <!-- Not a failure: re-running an import is how you catch up on what is new. -->
           <dt>{m['import.run.skipped']()}</dt>
           <dd>{run.skipped}</dd>
         </div>
@@ -92,8 +68,7 @@
 
       {#if run.held.length > 0}
         <div class="item">
-          <!-- Not a failure either: each could have been written, and was held
-               back only so that somebody could say whether they want two. -->
+          <!-- Not a failure: held back only so somebody can say whether they want two. -->
           <dt>{m['import.run.held']()}</dt>
           <dd>{run.held.length}</dd>
         </div>
@@ -111,8 +86,7 @@
       <div class="failures">
         <p class="failuresLead">{m['import.run.failedLead']()}</p>
 
-        <!-- By name, not as a number. Twelve that could not be read is a
-             statistic; twelve titles is a list somebody can act on. -->
+        <!-- By name, not as a number: twelve titles is something to act on. -->
         <ul class="failureList">
           {#each run.failures as title, index (index)}
             <li>{title}</li>
@@ -152,8 +126,7 @@
                 ]
                   .filter(Boolean)
                   .join(' · ')}
-                <!-- Beside it rather than instead of it: the reader decides by
-                     looking at the one they already have. -->
+                <!-- Beside it, so the reader compares against the one they already have. -->
                 <a
                   class="compare"
                   href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.recipeId })}
@@ -189,8 +162,7 @@
     </div>
   {:else if run.cookbookId}
     <div class="actions">
-      <!-- The shelf exists before the recipes do, so somebody who does not want
-           to watch four hundred of them arrive can go and wait there. -->
+      <!-- The shelf exists before the recipes, so waiting there is possible. -->
       <Button
         variant="ghost"
         href={resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: run.cookbookId })}

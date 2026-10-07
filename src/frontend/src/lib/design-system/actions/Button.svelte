@@ -1,52 +1,31 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * The one action element.
-   *
-   * A `<button>` when it does something and an `<a>` when it goes somewhere —
-   * never a styled `div`, because a div cannot be reached by keyboard, cannot
-   * be activated by space, and tells a screen reader nothing.
-   */
-  /**
-   * `media` is the one that is not about emphasis: it is where the button is.
-   * A control lying on a photograph cannot take its colour from the page,
-   * because the page is not what is behind it.
-   */
+  /** `<button>` when it acts, `<a>` when it navigates: a div has no keyboard, space activation or semantics. */
+  /** `media` is for buttons lying on a photograph, which can't take their colour from the page. */
   export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'media';
   export type ButtonSize = 'sm' | 'md' | 'lg';
 
   interface Props {
     children: Snippet;
-    /** Rendered before the label. Decorative: the label carries the meaning. */
+    /** Decorative, before the label. */
     icon?: Snippet;
     variant?: ButtonVariant;
     size?: ButtonSize;
-    /** Fills its container — for a form's submit, or a sheet's confirm. */
     full?: boolean;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     /** Shows progress without losing the label or changing width. */
     loading?: boolean;
-    /** Turns the button into a link. Navigation belongs in an anchor. */
     href?: string;
     /**
-     * Saves what the link points at instead of navigating to it.
-     *
-     * Only meaningful with `href`, and only for something the browser would
-     * otherwise try to display. The browser's own download is what gives a file
-     * a name and a progress indication; a blob assembled in memory has neither.
+     * Saves the target instead of navigating; only with `href`, for what the browser would
+     * otherwise display. The browser's download gives a file a name and progress.
      */
     download?: string;
     /** Announced in place of the label when the label is only an icon. */
     label?: string;
-    /**
-     * The popover this button opens, from `Popover`'s trigger snippet.
-     *
-     * Explicit rather than spread through, because this is the whole of what a
-     * button needs to drive a popover: the browser handles the toggling, the
-     * light dismiss and the `aria-expanded` from this one attribute.
-     */
+    /** The popover this button opens (from `Popover`'s trigger); the browser handles toggling, light dismiss and `aria-expanded`. */
     popovertarget?: string;
     onclick?: (event: MouseEvent) => void;
   }
@@ -67,10 +46,7 @@
     onclick
   }: Props = $props();
 
-  // A button that is working is not available, but it must still be readable by
-  // assistive technology — `aria-disabled` rather than `disabled`, which would
-  // remove it from the tab order mid-interaction and move focus somewhere
-  // unexpected.
+  // `aria-disabled`, not `disabled`: a working button stays readable and in the tab order, so focus doesn't jump.
   const inert = $derived(disabled || loading);
 </script>
 
@@ -138,10 +114,8 @@
     max-width: 100%;
     padding-block: var(--space-2);
     white-space: normal;
-    /* Breaks a word only when the word alone is wider than the button can be.
-       The page's inherited 'anywhere' also counts those breaks as the
-       button's smallest size, so a row of controls squeezed it to "Ersetze"
-       over "n" while there was room to wrap somewhere else. */
+    /* Break a word only when it alone is wider than the button; the inherited 'anywhere'
+       would shrink its minimum size ("Ersetze" over "n"). */
     overflow-wrap: break-word;
     text-align: center;
     letter-spacing: -0.01em;
@@ -219,14 +193,7 @@
     background: var(--danger-hover);
   }
 
-  /*
-   * On a photograph.
-   *
-   * Dark glass and white text whichever mode the app is in, because what is
-   * behind it is a picture rather than a surface. Blurred where the browser
-   * will: it separates the label from a busy photograph without another
-   * shadow, and the translucency is what keeps it from looking like a sticker.
-   */
+  /* On a photograph: dark glass and white text in either mode; blur separates the label from a busy picture. */
   .media {
     border-color: var(--border-on-media);
     background: var(--control-on-media);
@@ -251,9 +218,8 @@
     box-shadow: none;
   }
 
-  /* After the rule above, which it has to beat: the app's disabled surfaces
-     are page colours, and on a picture they read as a solid tile. Fading the
-     glass says the same thing and stays glass. */
+  /* Must follow the rule above: page-coloured disabled surfaces read as a solid tile on a
+     picture, so fade the glass instead. */
   .media[aria-disabled='true'],
   .media:disabled {
     background: var(--control-on-media);
@@ -273,7 +239,7 @@
     height: var(--space-4);
   }
 
-  /* Preserve the label’s layout and accessible name while progress replaces it visually. */
+  /* Keeps layout and accessible name while the spinner replaces the label visually. */
   .loading .label,
   .loading .icon {
     opacity: 0;
@@ -315,8 +281,7 @@
     }
   }
 
-  /* Without motion the ring would sit there as a broken circle, so it becomes a
-     steady dot instead — present, but not pretending to move. */
+  /* Without motion the ring would be a broken circle: show a steady dot. */
   @media (prefers-reduced-motion: reduce) {
     .spinner {
       border-top-color: currentcolor;

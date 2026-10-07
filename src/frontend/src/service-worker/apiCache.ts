@@ -3,10 +3,8 @@ import { base } from '$service-worker';
 import { forgetKitchen } from '../lib/features/cooking/timerState';
 import { privateCacheName } from './scope';
 
-/** Cap on kept responses; the oldest written goes first. */
 const privateCacheLimit = 120;
 
-/** Who is signed in, as far as the worker knows: the last network answer to this read. */
 const whoIsSignedIn = `${base}/api/v1/users/me`;
 
 /**

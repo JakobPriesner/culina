@@ -2,10 +2,8 @@ import { http, request, type AppError } from '$api';
 import type { components } from '$api/generated/schema';
 
 /**
- * Creating an account, and what the instance will allow.
- *
- * Kept out of the page so the sign-up form and the invitation flow ask the
- * instance the same question and read the answer the same way.
+ * Creating an account and what the instance allows; shared by the sign-up form and the invitation
+ * flow.
  */
 export type RegistrationPolicy = components['schemas']['RegistrationGetPolicyResponse'];
 
@@ -17,23 +15,18 @@ export interface Registration {
   readonly invitationCode?: string;
 }
 
-/** What the instance allows, or a sensible closed default if it will not say. */
 export async function readPolicy(): Promise<RegistrationPolicy> {
   const result = await request(() => http.GET('/api/v1/registration/policy'));
 
-  // Closed by default. Offering a sign-up form because a request failed would
-  // send people into a form that cannot succeed.
+  // Closed by default: a sign-up form that cannot succeed is worse.
   return result.ok
     ? result.value
     : { openRegistration: false, requireInvitation: false, hasAccounts: true };
 }
 
 /**
- * Creates the account.
- *
- * Returns the household it landed in, which is `null` when the instance allows
- * an account without one — the caller then offers a way to get one rather than
- * leaving a dead end.
+ * Creates the account; returns the household it landed in, or `null` when the instance allows an
+ * account without one.
  */
 export async function register(
   details: Registration

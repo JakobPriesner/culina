@@ -10,14 +10,7 @@
   import SettingsRow from './SettingsRow.svelte';
   import SettingsSection from './SettingsSection.svelte';
 
-  /**
-   * Who is signed in, and the way out.
-   *
-   * The first category, and deliberately the emptiest: an account nobody has to
-   * think about is an account that is working. What little there is, though, is
-   * said properly — a name and an address stacked as two bare paragraphs are
-   * two pieces of text, not a person.
-   */
+  /** Who is signed in and the way out; deliberately the emptiest category. */
   const user = $derived(session.user);
 
   async function signOut() {
@@ -28,8 +21,7 @@
 
 <svelte:head><title>{m['me.account']()}</title></svelte:head>
 
-<!-- Where the update offer waits after its toast has gone, so a version that
-     was mentioned once and missed is still one tap away. -->
+<!-- Where the update offer waits after its toast is gone. -->
 {#if update.ready}
   <SettingsSection>
     <SettingsRow label={m['me.update']()} description={m['app.update.available']()}>
@@ -59,8 +51,7 @@
   </SettingsSection>
 {/if}
 
-<!-- No heading above it: the button says what it does, and a title repeating
-     the two words on the button is a line nobody reads twice. -->
+<!-- No heading: the button says what it does. -->
 <SettingsSection description={m['me.signOut.body']()} bare>
   <Button onclick={signOut}>{m['auth.signOut']()}</Button>
 </SettingsSection>

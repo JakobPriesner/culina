@@ -5,16 +5,7 @@
   import { preferences } from './preferences.svelte';
   import type { MeasurementSystem } from '$features/recipes/measurement';
 
-  /**
-   * Which units a recipe's amounts are shown in.
-   *
-   * A plain select, like the language beside it: there are two systems and
-   * everyone recognises the control.
-   *
-   * It changes only what is *shown*. A recipe is stored in whatever its author
-   * wrote, so switching this and switching back leaves it exactly as it was —
-   * and a German recipe shared with an American is one recipe, read two ways.
-   */
+  /** Which units a recipe's amounts are *shown* in; storage is unchanged, so switching back leaves it exactly as it was. */
   const id = 'measurement-picker';
 
   /** Hides the label for a caller that already names the control. */

@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createTimers } from './timers.svelte';
 
-/*
- * A timer has to keep counting while the app is closed and the phone is in a
- * pocket. That is the whole reason it is a wall-clock deadline on the device
- * rather than a duration ticked down by a page that may not be running.
- */
+/* Timers are wall-clock deadlines, not ticked durations, so they keep counting while the app is closed. */
 const sessionId = 'session-1';
 const timers = () => createTimers(() => sessionId);
 
@@ -63,7 +59,6 @@ describe('coming back to a closed app', () => {
 
     first.start(0, 600, 'Step 1');
 
-    // The app was closed for four minutes.
     vi.advanceTimersByTime(240_000);
 
     const second = timers();
@@ -71,7 +66,6 @@ describe('coming back to a closed app', () => {
     second.load();
     second.tick()();
 
-    // A stored duration would have said ten minutes; a deadline says six.
     expect(second.remaining(second.timers[0]!)).toBe(360);
   });
 
@@ -103,16 +97,12 @@ describe('finishing', () => {
 
 describe('a phone that was in a pocket', () => {
   it('shows the right number the instant it is looked at again', () => {
-    // A backgrounded tab has its intervals throttled to once a minute, or
-    // stopped altogether. Waiting for the next tick would mean the first thing
-    // somebody sees on unlocking is a number up to a minute stale, and a
-    // kitchen timer showing the wrong number is worse than one showing none.
+    // Backgrounded tabs throttle or stop intervals; waiting for the next tick would show a stale number on unlocking.
     const kitchen = timers();
     const stop = kitchen.tick();
 
     kitchen.start(0, 600, 'Simmer');
 
-    // Time passes with nothing running: no interval fires.
     vi.setSystemTime(new Date('2026-09-12T12:05:00Z'));
 
     document.dispatchEvent(new Event('visibilitychange'));
@@ -132,7 +122,6 @@ describe('a phone that was in a pocket', () => {
     vi.setSystemTime(new Date('2026-09-12T12:05:00Z'));
     document.dispatchEvent(new Event('visibilitychange'));
 
-    // The clock the component left behind is not still being read.
     expect(kitchen.remaining(kitchen.timers[0]!)).toBe(600);
   });
 });

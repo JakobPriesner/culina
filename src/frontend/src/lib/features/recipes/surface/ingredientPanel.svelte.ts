@@ -36,7 +36,6 @@ export function createIngredientPanel(source: Source) {
 
   const perStep = $derived(view === 'perStep' && !source.cooking() && divisible);
 
-  /** A step's ingredient lines; ids the recipe no longer has are dropped. */
   const needsOf = (step: Step | undefined): Ingredient[] =>
     (step?.uses ?? []).map((id) => byId.get(id)).filter((one) => one !== undefined);
 

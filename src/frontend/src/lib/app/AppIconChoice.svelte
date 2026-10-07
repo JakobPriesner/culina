@@ -4,15 +4,8 @@
   import { m } from './i18n';
 
   /**
-   * Every app icon at once, as the icons themselves.
-   *
-   * A picture of each, because the names are only names: nobody knows what
-   * "Saffron" looks like on their home screen until they see it. The pictures
-   * are the files the browser would use, so what is chosen is what is shown.
-   *
-   * Native radios under the tiles, for the same reasons as `ThemeChoice`: arrow
-   * keys move between them and the chosen one is announced against the row's
-   * label.
+   * Every app icon at once, as the icons themselves; native radios give arrow-key movement and
+   * announce the choice.
    */
   const names: Record<AppIcon, () => string> = {
     basil: m['appIcon.basil'],
@@ -75,8 +68,7 @@
     border-radius: var(--radius-lg);
   }
 
-  /* A ring around the chosen icon as well as the bolder name, so colour is
-     never the only thing that says which one it is. */
+  /* A ring as well as the bolder name, so colour is never the only signal. */
   .chosen {
     color: var(--text);
     font-weight: var(--weight-semibold);

@@ -15,12 +15,7 @@
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
 
-  /**
-   * Sign in, and go back to wherever you were headed.
-   *
-   * The `next` parameter is why deep links work: following a link to a recipe
-   * while signed out has to end on that recipe, not on the start page.
-   */
+  /** Sign in and return to where you were headed: the `next` parameter makes deep links survive a sign-in. */
   let email = $state('');
   let password = $state('');
 
@@ -28,19 +23,10 @@
 
   onDestroy(() => submission.dispose());
 
-  // From the URL, so from whoever wrote the link: only a path inside this app
-  // is accepted. See `safeRedirect`.
+  // From the URL, so only a path inside this app is accepted (`safeRedirect`).
   const destination = $derived(safeRedirect(page.url.searchParams.get('next')));
 
-  /**
-   * Why somebody is here, when it was not their idea.
-   *
-   * A session that ended under them gets the stove that went cold; a link
-   * followed while signed out gets the family recipe under a stamp. Either way
-   * the form says why it appeared, and that they will land where they were
-   * going. Somebody who simply opened the app is told nothing: there is
-   * nothing to explain.
-   */
+  /** Why the form appeared when it was not the visitor's idea (expired session, followed link); nothing is said to someone who just opened the app. */
   const moment = $derived(
     page.url.searchParams.get('reason') === 'expired'
       ? 'cold'
@@ -69,8 +55,7 @@
           }
   );
 
-  // Every character typed lights one more flame; the whole burner while the
-  // request is on its way.
+  // Each typed character lights a flame; the whole burner while submitting.
   const flames = $derived(submission.inFlight ? 9 : password.length);
 
   const registerHref = $derived(
@@ -83,15 +68,13 @@
     const succeeded = await submission.run(() => session.signIn(email, password));
 
     if (!succeeded) {
-      // The address stays: retyping it is a punishment for a typo in the other
-      // field, and it is the half that is rarely wrong.
+      // The address stays: retyping it punishes a typo in the other field.
       password = '';
 
       return;
     }
 
-    // Replaced, not pushed: pressing back from inside the app should not land
-    // on a sign-in form for a session that already exists.
+    // Replaced, not pushed, so back does not land on a sign-in form for an existing session.
     await goto(destination, { replaceState: true });
   }
 </script>
@@ -111,11 +94,7 @@
     <p class="subtitle">{heading.body}</p>
   </header>
 
-  <!--
-    One message for "no such account" and for "wrong password", always. Telling
-    them apart turns this form into a way to discover which addresses are
-    registered here.
-  -->
+  <!-- One message for "no such account" and "wrong password", so the form cannot reveal which addresses are registered. -->
   <FormFailure
     failure={submission.failure}
     message={submission.failure?.code === ErrorCodes.invalidCredentials

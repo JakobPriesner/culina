@@ -8,17 +8,8 @@ import {
 import { readDevice, writeDevice } from './deviceStorage';
 
 /**
- * Which icon this device shows for Culina: in the tab, and on the home screen
- * once it is installed.
- *
- * Kept on the device and not with the account. Every install has its own icon,
- * and the phone and the laptop in one kitchen can reasonably want two.
- *
- * Choosing one points the document's links at that icon's files. A browser
- * reads the manifest and the touch icon when Culina is installed, not before,
- * so a choice made before installing is the one the install gets; an app
- * already installed on a home screen or desktop keeps its original icon
- * until re-added.
+ * The icon this device shows (tab and installed home screen); per device, not per account.
+ * Browsers read the manifest and touch icon at install time, so an already-installed app keeps its icon until re-added.
  */
 class AppIconStore {
   #current = $state<AppIcon>(defaultAppIcon);

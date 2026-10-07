@@ -15,22 +15,7 @@
 
   import SettingsSection from '../SettingsSection.svelte';
 
-  /**
-   * The kitchen being shared: who is in it, how somebody else gets in, and how
-   * to take the whole thing elsewhere.
-   *
-   * Everything here belongs to the household rather than to the person reading
-   * it, which is the whole reason it is a category of its own.
-   *
-   * The page led with the household's name set as a bare line of text, and then
-   * never answered the question its own subtitle asks. Now it opens the way the
-   * account page does — the thing itself, named, with what it is at a glance —
-   * and the first section is the list of people the rest of this page is about.
-   *
-   * The sections are separated by the space around their headings rather than
-   * by the rules that used to sit between them. A line drawn across a gap that
-   * was already doing the work is decoration, and there were two of them.
-   */
+  /** The kitchen being shared: members, how somebody joins, and how to take it elsewhere. Everything here belongs to the household, not the reader. */
   const household = $derived(session.activeHousehold);
 
   const roles: Record<string, () => string> = {
@@ -38,11 +23,7 @@
     member: m['me.role.member']
   };
 
-  /**
-   * The households in the bin this person owns. Asked once per visit; the
-   * read touches no state before it answers, so the effect cannot call it
-   * again.
-   */
+  /** Households in the bin this person owns; asked once per visit, and the read touches no state so the effect cannot re-run it. */
   let deleted = $state<readonly DeletedHousehold[]>([]);
 
   $effect(() => {
@@ -51,7 +32,6 @@
     });
   });
 
-  /** Said under the name once it is known, and nothing before then. */
   const size = $derived(members.status === 'ready' ? members.items.length : null);
 </script>
 
@@ -59,9 +39,7 @@
 
 {#if household}
   <div class="identity">
-    <!-- The household's own initial rather than a generic house: on a screen
-         where the next panel is a column of faces, the same mark drawn the same
-         way says these are the same kind of thing. -->
+    <!-- The household's own initial, matching the faces in the next panel. -->
     <Avatar name={household.name} />
 
     <div class="names">
@@ -122,11 +100,7 @@
 {/if}
 
 <style>
-  /*
-   * The same arrangement the account page opens with, because it is the same
-   * kind of statement: this is the thing the page is about, and here is what
-   * you are to it.
-   */
+  /* Same arrangement the account page opens with: the thing itself, and what you are to it. */
   .identity {
     display: flex;
     flex-wrap: wrap;

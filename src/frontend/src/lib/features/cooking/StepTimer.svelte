@@ -5,11 +5,8 @@
   import type { KitchenTimer } from './timers.svelte';
 
   /**
-   * The timer for one step.
-   *
-   * Only where the recipe says the step is a wait — a timer button on "chop the
-   * onion" is noise. When it goes off it says so in place rather than throwing
-   * a dialog at someone holding a hot pan.
+   * The timer for one step, only where the recipe says it is a wait; it goes off in place, not in a
+   * dialog.
    */
   interface Props {
     durationSeconds: number;
@@ -46,7 +43,7 @@
     {/if}
   </div>
 {:else}
-  <!-- Assertive, because this one genuinely cannot wait: the pan is on. -->
+  <!-- Assertive: this one cannot wait, the pan is on. -->
   <p class="done" role="alert">
     {m['cooking.timer.done']()}
     <button class="dismiss" type="button" onclick={ondismiss}>

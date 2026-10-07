@@ -15,31 +15,15 @@
   import type { Ingredient, Step } from '../types';
 
   /**
-   * The ingredient list, written one ingredient at a time.
-   *
-   * An amount, a unit and a name, each in its own field, because each is its
-   * own thing: the amount scales, the unit converts, and the name is what ends
-   * up on a shopping list. Typing them apart is what makes them separable
-   * without a parser having to guess where one ends and the next begins.
-   *
-   * A written ingredient reads back as one line — "200 g flour, sifted" — since
-   * that is how a recipe reads. The fields only reappear to correct it, and
-   * they are the same fields it was written in.
-   *
-   * Under each line is where it ends up in the method. Read-only on purpose:
-   * ingredients are put on steps under the steps, and one thing that can be
-   * done in two places is how the two places start disagreeing. "Not in a step"
-   * is said quietly rather than flagged, because salt to taste belongs to no
-   * step and never will.
+   * The ingredient list, one ingredient at a time, with each ingredient's steps shown read-only
+   * underneath.
+   * Ingredients are attached to steps under the steps, so there is one place to do that.
    */
   interface Props {
     ingredients: readonly Ingredient[];
-    /** The method, read backwards: which steps each ingredient ends up in. */
     steps: readonly Step[];
     onchange: (ingredients: Ingredient[]) => void;
-    /** Whose kitchen, so the suggestions are this household's own words. */
     householdId: string;
-    /** What the recipe is written in, which is what its names are in. */
     language: string;
   }
 
@@ -48,21 +32,16 @@
   const usage = $derived(usageOf(steps));
 
   let adding = $state<IngredientDraft>(emptyDraft);
-  /** Which row is open for correction, by position. Only ever one. */
   let editing = $state<number | null>(null);
   let editingDraft = $state<IngredientDraft>(emptyDraft);
 
   /**
-   * Keeps a unit somebody wrote, once they have finished writing it.
-   *
-   * On settling rather than on every keystroke, or typing "Schuss" would leave
-   * behind S, Sc, Sch and every other prefix of it as units this kitchen
-   * measures in.
+   * Keeps a unit once it has settled, not per keystroke, or typing "Schuss" would save S, Sc,
+   * Sch...
    */
   function remember(draft: IngredientDraft) {
-    // The field holds a word and the store holds units, so the word has to be
-    // read as one first — otherwise choosing "Zehe" would file the German for
-    // `clove` as a unit this kitchen invented.
+    // The field holds a word, not a unit: read it as one first, or "Zehe" would be filed as a new
+    // unit.
     const unit = unitFor(draft.unit);
 
     if (unit) {
@@ -71,16 +50,13 @@
   }
 
   function add() {
-    // The name is the ingredient. An amount with nothing to measure is not a
-    // half-finished row worth keeping, it is a row that says nothing.
     if (!adding.name.trim()) {
       return;
     }
 
     remember(adding);
 
-    // No id: the server assigns one, and an ingredient that has never been
-    // saved has no identity to borrow.
+    // No id: the server assigns one.
     onchange([...ingredients, toIngredient(adding, '')]);
 
     adding = emptyDraft;
@@ -104,11 +80,7 @@
   }
 
   /**
-   * Writes a correction straight through to the recipe.
-   *
-   * Per keystroke, so the autosave that watches the recipe sees the edit the
-   * same way it sees every other one — there is no separate moment where a
-   * correction is committed and nothing to lose by navigating away.
+   * Writes a correction straight through, per keystroke, so autosave sees it like any other edit.
    */
   function correct(draft: IngredientDraft) {
     editingDraft = draft;
@@ -149,14 +121,9 @@
         {/each}
       </ul>
     {:else}
-      <!-- Said once, where the first line will go. An empty list with nothing
-           but four blank fields under it is a form; this is a recipe that has
-           not been shopped for yet. -->
       <p class="none">{m['editor.ingredientsEmpty']()}</p>
     {/if}
 
-    <!-- Enter adds the ingredient and puts the cursor back on the amount, so a
-         whole list can be typed without ever reaching for the mouse. -->
     <div class="add">
       <IngredientFields
         id="add-ingredient"
@@ -187,14 +154,8 @@
   }
 
   /*
-   * A hairline enclosure, not a card.
-   *
-   * The list and the line being added to it are one thing, and nothing else on
-   * the page says so: a run of rows and a row of fields a gap apart look
-   * exactly like two unrelated blocks. The same enclosure the settings screens
-   * use, for the same reason and with the same restraint — a border, never a
-   * shadow, because a shadow would lift the ingredients off the page as if they
-   * were a separate document from the method below them.
+   * A hairline border, never a shadow, so the list and the add row read as one block next to the
+   * method.
    */
   .panel {
     min-width: 0;
@@ -204,13 +165,7 @@
   }
 
   /*
-   * One grid for the whole list, not one per row.
-   *
-   * A row that sizes its own amount column leaves every name starting somewhere
-   * different — "1 Päckchen Vanillezucker" pushes its name three characters
-   * past "125 g Butter" — and the list reads as a ragged pile rather than a
-   * written-out recipe. The same arrangement, and the same reasoning, as the
-   * list on the page that reads the recipe back.
+   * One grid for the whole list, so names align instead of following each row's own amount column.
    */
   .list {
     display: grid;
@@ -221,8 +176,7 @@
     list-style: none;
   }
 
-  /* The line between two rows belongs to the list rather than to a row: whether
-     a row has a neighbour is not something the row knows. */
+  /* The line between rows belongs to the list; a row doesn't know whether it has a neighbour. */
   .list > :global(.row + .row),
   .panel.filled .add {
     border-top: 1px solid var(--border);
@@ -255,19 +209,15 @@
     }
   }
 
-  /* On a phone the fields already stack, and a control beside them would have
-     nothing but a sliver left. They go underneath instead — and the row being
-     corrected does the same, or its four fields would be squeezed to make room
-     for two icons while the row below them used the whole width. */
+  /*
+   * On a phone the fields already stack, so the buttons go underneath (also the corrected row, to
+   * keep its width).
+   */
   @container ingredient-editor (width < 44rem) {
     .add {
       grid-template-columns: 1fr;
     }
 
-    /* Sized to its own words rather than stretched across the panel: the
-       button is disabled until there is a name to add, and a full-width grey
-       slab is the heaviest thing that can be said with a control nobody can
-       press yet. */
     .add :global(.button) {
       justify-self: start;
     }

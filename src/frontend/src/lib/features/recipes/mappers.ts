@@ -15,14 +15,7 @@ import { toReason } from './searchMappers';
 export { toWireGroups, toWireRecipe, toWireSteps } from './contentMappers';
 export { toCompletion, toFacets, toInterpretation } from './searchMappers';
 
-/**
- * Wire shapes to the app's own, at the store boundary and nowhere else.
- *
- * This is the frontend's half of the same rule the backend follows: a contract
- * is a wire format, not a domain model. Everything awkward about the wire — a
- * nullable id that is never actually null on a read, a flattened union, a date
- * as a string — is dealt with here once.
- */
+/** Wire shapes to the app's own, at the store boundary only; wire awkwardness (nullable ids, flattened unions, string dates) is dealt with once here. */
 type WireSummary = components['schemas']['RecipesGetAllRecipeSummary'];
 type WireRecipe = components['schemas']['RecipesRecipeDetail'];
 type WireSuggestion = components['schemas']['SuggestionsGetAllSuggestion'];
@@ -67,8 +60,7 @@ export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
   cookCount: wire.cookCount,
   lastCookedAt: wire.lastCookedAt ?? null,
   updatedAt: wire.updatedAt,
-  // A suggestion is not a search result: nobody named an ingredient, so there
-  // is nothing to report a match against.
+  // A suggestion names no ingredient, so there is no match to report.
   match: null,
   reason: wire.reason
     ? { code: wire.reason.code as SuggestionReasonCode, subject: wire.reason.subject ?? null }
@@ -118,13 +110,7 @@ export const toRecipe = (wire: WireRecipe): Recipe => ({
   version: wire.version
 });
 
-/**
- * A shared recipe, which is a reading and nothing more.
- *
- * The id it is given is the token out of the link, because on this page that is
- * genuinely what identifies the recipe — there is no other name for it here,
- * and it is what the photograph is fetched under.
- */
+/** A shared recipe, a reading only; its id is the link token, which is what identifies it (and its photo) on that page. */
 export const toSharedRecipe = (token: string, wire: WireShared): RecipeReading => ({
   id: token,
   title: wire.title,
@@ -136,16 +122,13 @@ export const toSharedRecipe = (token: string, wire: WireShared): RecipeReading =
   prepMinutes: wire.prepMinutes ?? null,
   cookMinutes: wire.cookMinutes ?? null,
   totalMinutes: wire.totalMinutes ?? null,
-  // The surface only asks whether there is a picture; where it lives is the
-  // page's business, and on this page it lives under the token.
+  // The surface only asks whether there is a picture; on this page it lives under the token.
   imageId: wire.hasImage ? token : null,
   groups: wire.groups.map(toGroup),
   steps: wire.steps.map(toStep),
   tags: wire.tags,
-  // Only the address travels: which library it came from and when it was
-  // fetched are facts about somebody's setup, and are not on the wire here.
+  // Only the address travels: the source library and fetch time are setup facts, not on the wire here.
   sourceUrl: wire.sourceUrl ?? null,
-  // A visitor cannot see when it last changed, and the surface does not draw
-  // it — but the type asks, so it is the one thing here that is a placeholder.
+  // A visitor cannot see when it last changed and the surface does not draw it, but the type asks: a placeholder.
   updatedAt: ''
 });

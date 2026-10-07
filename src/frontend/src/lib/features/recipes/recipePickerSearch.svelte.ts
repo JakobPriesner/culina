@@ -9,7 +9,6 @@ interface Source {
   readonly householdId: () => string;
   readonly cookbookId: () => string | undefined;
   readonly suggestFor: () => 'breakfast' | 'lunch' | 'dinner' | undefined;
-  /** Already taken; not suggested again. */
   readonly taken: () => readonly string[];
 }
 
@@ -31,7 +30,6 @@ export function createPickerSearch(source: Source) {
       source.cookbookId() === undefined
   );
 
-  /** Excludes recipes already on this week. */
   const occasion = $derived({ slot: source.suggestFor(), exclude: source.taken(), limit: 5 });
 
   const shown = $derived(

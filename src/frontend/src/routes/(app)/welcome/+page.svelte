@@ -21,16 +21,8 @@
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
 
-  /**
-   * An account with nowhere to cook.
-   *
-   * Reachable in two cases: an instance that allows accounts without an
-   * invitation, and an owner who has just deleted their only household. It is
-   * never a dead end — both ways out are on the screen, neither is hidden
-   * behind the other, and the second case also finds the way back.
-   */
-  // An invitation link lands here with its code already in hand, so the second
-  // tab opens with the field filled and nothing to copy out of a message.
+  /** An account with nowhere to cook: an instance allowing invitation-free accounts, or an owner who deleted their only household. Never a dead end. */
+  // An invitation link arrives with its code, so the second tab opens prefilled.
   const invited = page.url.searchParams.get('code') ?? '';
 
   let tab = $state(invited ? 'join' : 'create');
@@ -57,9 +49,7 @@
         return outcome;
       }
 
-      // Re-read rather than patching the store: the household arrives with a
-      // role and a name, and inventing them here would be a second source of
-      // truth for the same facts.
+      // Re-read rather than patching the store: the household's role and name would otherwise have a second source of truth.
       await session.refresh();
 
       return null;
@@ -126,9 +116,7 @@
     {/snippet}
   </Tabs>
 
-  <!-- Where an owner who deleted their only household arrives, so the way
-       back has to be here as well as in the settings they can no longer
-       reach. Nothing at all for everybody else. -->
+  <!-- Where an owner who deleted their only household arrives, so the way back must be here too; nothing for everybody else. -->
   {#if deleted.length > 0}
     <section class="deleted">
       <h2 class="heading">{m['household.deleted.title']()}</h2>

@@ -1,14 +1,7 @@
 <script lang="ts">
   import IconButton from '../actions/IconButton.svelte';
 
-  /**
-   * A small whole number, changed by pressing rather than typing.
-   *
-   * Built for servings: the common change is one up or one down, and doing that
-   * with a keyboard on a phone in a kitchen is the worst version of an easy
-   * thing. The value stays a real input, so it can still be typed when someone
-   * wants eighteen.
-   */
+  /** A small whole number changed by pressing; stays a real input so it can still be typed. */
   interface Props {
     id: string;
     value: number;
@@ -22,13 +15,8 @@
     describedBy?: string | undefined;
     onchange?: (value: number) => void;
     /**
-     * Replaces what a tap on plus or minus arrives at.
-     *
-     * For a value that is displayed rounded — a recipe scaled to an amount
-     * somebody has reads as 7½ servings while its amounts are computed from
-     * 7.4 — stepping from the number on screen would produce 6½ and 8½. The
-     * owner of the value decides where a tap lands; typing still goes through
-     * `onchange`.
+     * Replaces where a tap lands, for a value displayed rounded (7½ shown, 7.4 held); typing still
+     * goes through `onchange`.
      */
     onstep?: (direction: 1 | -1) => void;
   }
@@ -52,8 +40,7 @@
   const atMax = $derived(value >= max);
 
   function set(next: number) {
-    // Clamped here rather than trusted from the input, because typing 500 into
-    // a servings box should not produce a shopping list for a wedding.
+    // Clamped here, so typing 500 doesn't produce a shopping list for a wedding.
     const clamped = Math.min(max, Math.max(min, Math.round(next)));
 
     if (clamped !== value) {
@@ -105,8 +92,7 @@
 <style>
   .stepper {
     display: inline-flex;
-    /* Sized by its contents even inside a stretching column: a servings control
-       as wide as the form would look like a text field. */
+    /* Sized by its contents inside a stretching column, or it would look like a text field. */
     align-self: flex-start;
     align-items: center;
     gap: var(--space-1);
@@ -128,8 +114,7 @@
     font-variant-numeric: tabular-nums;
     font-weight: var(--weight-semibold);
     text-align: center;
-    /* The spinners duplicate the two buttons either side of them, and they are
-       far too small to hit. */
+    /* The spinners duplicate the buttons and are too small to hit. */
     appearance: textfield;
   }
 

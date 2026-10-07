@@ -7,38 +7,21 @@
   import type { MealSlot, PlannedMeal } from './mealPlan.svelte';
   import { slotLabel } from './slots';
 
-  /**
-   * One planned meal, on the day it is planned for.
-   *
-   * Small on purpose. A week view is seven of these side by side, and a card
-   * carrying everything a recipe card carries turns a week into a wall.
-   */
+  /** One planned meal on its day; small on purpose, as a week is seven of these side by side. */
   interface Props {
     meal: PlannedMeal;
     onremove: () => void;
-    /**
-     * A press on the grip, or anywhere on the card. Whether it becomes a drag
-     * is the week's business, not this card's.
-     */
+    /** A press on the grip or card; whether it becomes a drag is the week's business. */
     onpress?: (event: PointerEvent) => void;
-    /** The grip, activated rather than dragged: by a click, or by a keyboard. */
     onmove?: () => void;
-    /** Dimmed, because the real one is the one under the pointer. */
     lifted?: boolean;
   }
 
   let { meal, onremove, onpress, onmove, lifted = false }: Props = $props();
 </script>
 
-<!-- A press anywhere on the card can become a drag, which is the whole gesture
-     on a phone. It carries no role and needs none: it is an enhancement for a
-     pointer over the grip below, which is a real button that a keyboard reaches
-     and a screen reader announces.
-
-     `dragstart` is refused because a card is a link wrapped round a picture,
-     and both of those are things a browser starts dragging by itself. Once it
-     does, it stops sending pointer events altogether and the card is left
-     behind — so the native drag has to be declined before ours can happen. -->
+<!-- A press anywhere can become a drag (the phone gesture); the real button is the grip.
+     `dragstart` is refused because a native drag of the link or picture stops pointer events. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="card"
@@ -47,9 +30,8 @@
   ondragstart={(event) => event.preventDefault()}
 >
   {#if onmove}
-    <!-- The handle and the button are one control. Dragging it is the quick
-         way; pressing it opens the sheet, which is the only way for a keyboard
-         and the easier way for anybody whose Thursday is off the screen. -->
+    <!-- Handle and button are one control: dragging is quick, pressing opens the sheet (the
+         keyboard's only way). -->
     <IconButton label={m['plan.move.handle']({ title: meal.title })} size="sm" onclick={onmove}>
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <circle cx="9" cy="6" r="1.5" />
@@ -75,8 +57,6 @@
         {slotLabel[meal.slot as MealSlot]?.() ?? ''}{#if meal.servings}
           · {m['recipes.meta.servings']({ count: meal.servings })}{/if}
       </span>
-      <!-- Part of the link's name, so a screen reader hears it with the meal
-           rather than as a stray word between cards. -->
       {#if meal.isOnShoppingList}
         <span class="listed">
           <svg
@@ -142,15 +122,16 @@
     min-width: 0;
   }
 
-  /* A narrow day gives the title its own row. Keep the whole name readable
-     so similar recipes remain distinguishable in the seven-day view. */
+  /*
+   * A narrow day gives the title its own row, kept readable so similar recipes stay
+   * distinguishable.
+   */
   .name {
     display: block;
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     line-height: var(--leading-tight);
-    /* A long unbroken word would otherwise push out of the card rather than
-       wrap inside it, and a column this narrow meets one eventually. */
+    /* A long unbroken word would otherwise push out of the card. */
     overflow-wrap: anywhere;
   }
 
@@ -158,16 +139,12 @@
     margin-inline-start: auto;
   }
 
-  /* Left behind while its copy is under the pointer, rather than removed: the
-     gaps a drop is aimed at are the gaps of the day as it looks right now, and
-     a day that reflows as you cross it is a day you cannot aim at. */
+  /* Left behind while its copy is dragged, so the day doesn't reflow under the pointer. */
   .lifted {
     opacity: 0.4;
   }
 
-  /* The grip is quiet until it is wanted. Always drawn, though — on a phone
-     there is no hover to reveal it with, and a control that appears only on a
-     pointer is a control a phone does not have. */
+  /* Always drawn: a phone has no hover to reveal it with. */
   .card :global(> button:first-child) {
     color: var(--text-subtle);
     cursor: grab;

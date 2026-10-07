@@ -1,28 +1,19 @@
 import { http, request } from '$api';
 import { registerStore } from '$shell/stores';
 
-/** One thing a recipe could call for. */
 export interface IngredientSuggestion {
   readonly name: string;
-  /** Where in a shop it is found. */
   readonly section: string;
-  /** Whether this household has written it before. */
   readonly own: boolean;
 }
 
 /**
- * What an ingredient line could be about.
- *
- * The household's own words first — after a few recipes they are how these
- * particular people talk about food — then a short seeded list of what a home
- * kitchen buys, so an empty kitchen is not offered nothing.
- *
- * Suggestions only. An ingredient is whatever somebody types, and nothing here
- * ever has to be chosen.
+ * What an ingredient line could be about: the household's own words first, then a seeded list;
+ * suggestions only, never required.
  */
 class IngredientStore {
   #items = $state<IngredientSuggestion[]>([]);
-  /** The query the current items answer, so a stale reply cannot overwrite. */
+  /** The query the current items answer, so a stale reply can't overwrite. */
   #asked = '';
 
   get items(): readonly IngredientSuggestion[] {
@@ -44,15 +35,13 @@ class IngredientStore {
       })
     );
 
-    // Typing fast sends several of these and they do not come back in order: a
-    // short query matches more rows and regularly answers last. Only the reply
-    // to the question still being asked is allowed to write.
+    // Replies arrive out of order (a short query answers last): only the reply to the current
+    // question may write.
     if (this.#asked !== asked) {
       return;
     }
 
-    // Nothing is said about this failing. Suggestions are a convenience, and a
-    // message about not having any would be worse than not having any.
+    // Suggestions are a convenience; a message about having none would be worse.
     this.#items = result.ok ? [...result.value.items] : [];
   }
 

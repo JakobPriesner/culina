@@ -63,7 +63,6 @@ test.describe('responsive production layouts @offline', () => {
               });
             }
             if (path === '/shopping' || path.endsWith('/edit')) {
-              // Text remains useful to type into, even when the outer row fits.
               const name = page.locator(
                 path === '/shopping' ? '#shopping-add-name' : '#add-ingredient-name'
               );
@@ -310,7 +309,6 @@ test.describe('responsive production layouts @offline', () => {
       const next = page.getByRole('button', { name: /nächster schritt/i });
       await expect(next).toBeEnabled();
 
-      // Arriving, every step after it, and the phone turned on its side.
       await expectCurrentStepReadable(page);
       for (let step = 2; step <= 4; step++) {
         await next.click();
@@ -351,15 +349,8 @@ test.describe('responsive production layouts @offline', () => {
 });
 
 /**
- * The current step starts clear of the header and, scrolled by no more than
- * its own overhang, ends clear of the controls and the bottom navigation.
- * Polled, because the page follows a move once the steps stop resizing.
- *
- * Measured only after two frames. A resize is answered on the next frame, not
- * when `setViewportSize` returns, and the page then brings the step back into
- * the clear. Scrolling before that is scrolling against the page: on a slow
- * runner the rescue lands after the test's own scroll and puts the step back
- * where the rescue wants it, overhang and all.
+ * The current step starts clear of the header and ends clear of the controls and bottom navigation. Polled, and measured only after two frames:
+ * a resize is answered on the next frame, and scrolling before the page's own rescue lands fights it on slow runners.
  */
 async function expectCurrentStepReadable(page: Page) {
   await page.evaluate(
@@ -417,7 +408,6 @@ async function expectStartCookingReachable(page: Page, width: number, height: nu
   expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(bottom);
 
   if (width < 1024) {
-    // Keep the action clear of navigation when the visible screen gets shorter.
     await page.setViewportSize({ width, height: height - 100 });
     await expect(start).toBeInViewport({ ratio: 1 });
     await expect
@@ -430,13 +420,10 @@ async function expectStartCookingReachable(page: Page, width: number, height: nu
     await expect.poll(async () => (await action.boundingBox())!.y).toBeCloseTo(actionBox.y, 0);
   }
 
-  // It stays at the same viewport position while reading the recipe.
   await page.evaluate(() => window.scrollTo(0, 150));
   await expect(start).toBeInViewport({ ratio: 1 });
   expect((await action.boundingBox())!.y).toBeCloseTo(actionBox.y, 0);
 
-  // Once reached, its place follows the document, rather than floating over
-  // the notes and related recipes that come after it.
   await page.locator('article.surface > .body').evaluate((element, dockedTop) => {
     const gap = parseFloat(getComputedStyle(element.parentElement!).rowGap);
     window.scrollTo(

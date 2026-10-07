@@ -5,11 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ChoiceHarness from '../__fixtures__/ChoiceHarness.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * These four are native elements on purpose. What is worth asserting is that
- * they are still native — reachable by keyboard, announced by role — and that
- * the props each one adds behave.
- */
+/* These four are native on purpose: assert they stay native (keyboard, role) and that each added prop works. */
 describe('Checkbox', () => {
   it('is toggled by its label, so the whole row is the target', async () => {
     const onchecked = vi.fn();

@@ -10,37 +10,14 @@
 
   interface Props {
     recipe: RecipeSummary;
-    /**
-     * Why this one is here, when something can honestly say.
-     *
-     * The panel already had an eyebrow, filled with a fixed line because the
-     * recipe underneath it was picked by an accident of photography. Now the
-     * recipe is an answer, and the eyebrow is what makes it read as one —
-     * contextual rather than promotional, with no section header claiming to
-     * recommend anything.
-     *
-     * Falls back to the fixed line, so a suggestion nothing can explain looks
-     * exactly like the panel always did.
-     */
+    /** Why this one is here, when something can honestly say; falls back to the fixed eyebrow line. */
     reason?: string | null;
     /**
-     * Stops this one being suggested, when it is a suggestion.
-     *
-     * Absent on the panel's old behaviour, where the recipe was picked by an
-     * accident of photography and there was nothing to disagree with. It is the
-     * only negative signal the ranking cannot derive from something another
-     * feature already records — with a household this size there is no such
-     * thing as a meaningful non-click, so "not this" has to be sayable.
+     * Stops this being suggested. The only negative signal ranking can't derive: a small household
+     * has no meaningful non-click.
      */
     ondismiss?: () => void;
-    /**
-     * Whether this is the panel already on screen at first paint.
-     *
-     * True for the leader and false for everything behind it in the deck. The
-     * photograph here is the largest image the app ever asks for, and five of
-     * them fetched eagerly to look at one is four downloads spent on a swipe
-     * that most evenings never happens.
-     */
+    /** True for the leader at first paint: its photograph is the largest image the app fetches, so the rest of the deck loads lazily. */
     priority?: boolean;
     /** The household it comes from, when it is inherited rather than this one's own. */
     from?: string | null;
@@ -66,8 +43,7 @@
       </a>
 
       {#if ondismiss}
-        <!-- Quiet, and named for a screen reader: five buttons all reading
-             "Dismiss" is five buttons nobody can tell apart. -->
+        <!-- Named for a screen reader: five buttons all reading "Dismiss" are indistinguishable. -->
         <button type="button" class="dismiss" onclick={ondismiss}>
           {m['suggestions.dismiss']({ title: recipe.title })}
         </button>
@@ -75,9 +51,8 @@
     </div>
   </div>
 
-  <!-- The photograph is what people reach for, so it opens the recipe too. A
-       second copy of the link above, kept out of the tab order and the
-       accessibility tree so a keyboard or screen reader meets it only once. -->
+  <!-- Second link to the recipe for the photograph, kept out of the tab order and accessibility
+       tree so it is met only once. -->
   <a
     class="photo"
     href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}

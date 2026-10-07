@@ -4,24 +4,14 @@ import { formatQuantity, type QuantityLabels } from './formatQuantity';
 import { scaleQuantity } from './scaling';
 import type { Unit } from './units';
 
-/*
- * Formatting is the only part of scaling that knows about language, so this is
- * where `1,5 kg` and `1.5 kg` are pinned down.
- */
 const labels: QuantityLabels = {
-  // Stands in for the real, localised labels. Spoons are abbreviated and never
-  // pluralised; anything else that needs a word beside the number is spelled
-  // out, and a word does pluralise.
+  // Stand-in for the localised labels: spoons abbreviate and never pluralise; other words pluralise.
   unitName: (unit: Unit, count: number) =>
     unit === 'tsp' || unit === 'tbsp' ? unit : count === 1 ? unit : `${unit}s`,
   approximately: (amount) => `~${amount}`
 };
 
-/**
- * Amount and unit are joined by a non-breaking space, so `250` never wraps away
- * from `g`. Spelled out here because it is invisible in a diff and in an
- * assertion message.
- */
+/** Escaped: a non-breaking space is invisible in a diff and in assertion messages. */
 const nbsp = '\u00a0';
 
 const show = (value: number | null, unit: Unit | null, factor = 1, locale = 'en') =>
@@ -104,11 +94,6 @@ describe('the parts', () => {
 });
 
 describe('units whose abbreviation is a word', () => {
-  /*
-   * A German recipe says EL, not tbsp. Spoons used to carry a hard-coded
-   * English abbreviation, which no translation could reach; they now come from
-   * the labels like every other unit that needs a word.
-   */
   it('take their short form from the labels, so a translation can reach it', () => {
     const german: QuantityLabels = {
       unitName: (unit: Unit) => ({ tsp: 'TL', tbsp: 'EL' })[unit as 'tsp' | 'tbsp'] ?? '',
@@ -122,10 +107,6 @@ describe('units whose abbreviation is a word', () => {
 });
 
 describe('part of one countable thing', () => {
-  /*
-   * Scaling a recipe down asks for half an onion, and half an onion is how a
-   * person says it. `0.5 piece` is arithmetic showing through.
-   */
   it('reads as a fraction, because nobody writes 0.5 onion', () => {
     const amount = (factor: number) =>
       formatQuantity(scaleQuantity({ value: 1, unit: 'piece' }, factor), 'en', labels).amount;

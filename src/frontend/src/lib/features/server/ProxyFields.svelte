@@ -5,14 +5,7 @@
   import SettingField from './SettingField.svelte';
   import { variables, type ServerDraft, type ServerFacts } from './types';
 
-  /**
-   * Which proxies may say who a visitor really is.
-   *
-   * The hardest setting on the screen to get right from the outside, because
-   * the address that matters is the proxy's as Culina sees it — a container
-   * address nobody chose. So the server says what it saw on this very request,
-   * and the likely answer is one button away.
-   */
+  /** Which proxies may say who a visitor is: the address that matters is the proxy's as Culina sees it, so the server reports what it saw on this request. */
   interface Props {
     draft: ServerDraft;
     facts: ServerFacts;

@@ -35,8 +35,7 @@ describe('the library view', () => {
     libraryView.forHousehold('two');
     expect(libraryView.query).toBe('');
     expect(libraryView.maxMinutes).toBeNull();
-    // A tag slug is one kitchen's word. Carrying it across would filter by
-    // something nobody in the new one uses, and look broken rather than empty.
+    // A tag slug is one kitchen's word; carrying it across would filter by something unused and look broken, not empty.
     expect(libraryView.tags).toEqual([]);
   });
 
@@ -98,8 +97,7 @@ describe('which order a list is in', () => {
   });
 
   it('lets a choice beat every default', () => {
-    // Picking "recently updated" has to stick even on a day the ranking would
-    // have offered to take over.
+    // "Recently updated" must stick even on a day the ranking would offer to take over.
     expect(effectiveSort('recent', { searching: true, ranks: true, inACookbook: true })).toBe(
       'recent'
     );
@@ -115,8 +113,7 @@ describe('which order a list is in', () => {
   });
 
   it('spells every order the way the API reads it', () => {
-    // The bug this replaced: the union said `match`, and the API answered 400.
-    // An integration test holds the endpoint to the other half of this.
+    // Regression: the union said `match` and the API answered 400.
     const every: readonly RecipeSort[] = [
       'relevance',
       'suggested',
@@ -142,8 +139,7 @@ describe('which order a list is in', () => {
     expect(fromWireSort('totalMinutes')).toBe('quickest');
     expect(fromWireSort('-updatedAt')).toBe('recent');
     expect(fromWireSort(null)).toBeNull();
-    // A shelf's own order needs a shelf to be an order of, so a saved search
-    // that somehow carried one applies as no order at all rather than a 400.
+    // A shelf's own order needs a shelf, so a saved search carrying one applies no order rather than a 400.
     expect(fromWireSort('cookbookOrder')).toBeNull();
   });
 });

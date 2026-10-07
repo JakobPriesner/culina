@@ -3,14 +3,7 @@
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
-  /**
-   * What went wrong with the form as a whole.
-   *
-   * Only shown for a failure that is not about a single field — those belong on
-   * the field itself. `role="alert"` because the submit that caused it has just
-   * moved focus expectations, and a message nobody is told about is a message
-   * nobody reads.
-   */
+  /** A failure of the form as a whole (field failures belong on the field); `role="alert"` so a message after submit is announced. */
   interface Props {
     failure: AppError | null;
     /** Overrides the server's prose where the app has something better to say. */

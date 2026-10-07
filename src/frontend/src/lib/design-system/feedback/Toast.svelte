@@ -4,11 +4,7 @@
 
   import IconButton from '../actions/IconButton.svelte';
 
-  /**
-   * One message. Presentation only — the queue and the clock live in the
-   * toaster, so a toast is the same whether it was raised by a page, a store or
-   * a failed request.
-   */
+  /** One message, presentation only; the queue and clock live in the toaster. */
   interface Props {
     toast: Toast;
     dismissLabel: string;
@@ -27,11 +23,7 @@
   };
 </script>
 
-<!--
-  Pausing on hover *and* on focus: a keyboard user reading the message with the
-  tab focus inside it is doing exactly what a pointer user hovering is doing,
-  and the clock should stop for both.
--->
+<!-- Pause on hover and on focus: a keyboard user reading inside it is doing what a hovering pointer user is. -->
 <div
   class="toast {tones[toast.tone]}"
   role="status"

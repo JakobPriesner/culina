@@ -1,23 +1,11 @@
 import type { Snippet } from 'svelte';
 
-/**
- * The queue of short messages, and the undo that makes them worth having.
- *
- * This is how Culina avoids confirmation dialogs. Asking "are you sure?" before
- * something reversible costs everyone a decision to protect against a mistake
- * that was already cheap to fix. Doing it and offering Undo costs nothing and
- * is faster for the person who meant it.
- */
+/** The queue of short messages with Undo, which is how Culina avoids confirmation dialogs. */
 export type ToastTone = 'neutral' | 'success' | 'danger';
 
 /**
- * What a toast says, asked for each time it is drawn.
- *
- * A function rather than a string, because a toast can outlive the language it
- * was raised in: switch from German to English while "Eine neue Version ist
- * bereit" is showing, and a string would stay German beside an English Dismiss
- * button until the next reload. The shell redraws on a change of language, and
- * a function answers again in the new one — message, action and all.
+ * What a toast says, asked on each draw: a function so a toast raised in one language redraws in
+ * another when it changes.
  */
 export type ToastWords = () => string;
 
@@ -31,9 +19,7 @@ export interface Toast {
   readonly message: ToastWords;
   readonly tone: ToastTone;
   readonly action?: ToastAction;
-  /** Optional decoration that peeks from behind the card; the message carries the meaning. */
   readonly art?: Snippet;
-  /** How long it stays. Zero means until it is dismissed. */
   readonly durationMs: number;
 }
 
@@ -45,10 +31,8 @@ export interface ToastRequest {
   readonly durationMs?: number;
 }
 
-/** Long enough to read a sentence and reach for Undo, short enough to not nag. */
 const defaultDurationMs = 6000;
 
-/** More than three stacked is a log, not a notification. */
 const maximum = 3;
 
 class Toaster {
@@ -68,8 +52,7 @@ class Toaster {
       ...request
     };
 
-    // The oldest goes, not the newest: the most recent message is the one
-    // about what just happened.
+    // The oldest goes: the newest is about what just happened.
     this.#toasts = [...this.#toasts, toast].slice(-maximum);
     this.resume(toast.id);
 
@@ -81,23 +64,16 @@ class Toaster {
     this.#toasts = this.#toasts.filter((toast) => toast.id !== id);
   }
 
-  /**
-   * Runs the action and takes the message away.
-   *
-   * Leaving an Undo on screen after it has been used invites a second press
-   * that would undo the undo.
-   */
+  /** Runs the action and takes the message away, so a used Undo can't be pressed twice. */
   act(id: string): void {
     this.#toasts.find((toast) => toast.id === id)?.action?.run();
     this.dismiss(id);
   }
 
-  /** Stops the clock while a pointer or focus is on the toast. */
   pause(id: string): void {
     this.#clear(id);
   }
 
-  /** Restarts the full duration: the reading was interrupted, so give it again. */
   resume(id: string): void {
     const toast = this.#toasts.find((candidate) => candidate.id === id);
 
@@ -112,7 +88,6 @@ class Toaster {
     );
   }
 
-  /** Called on sign-out, and by tests. */
   reset(): void {
     for (const id of [...this.#timers.keys()]) {
       this.#clear(id);

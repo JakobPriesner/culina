@@ -6,14 +6,7 @@
 
   let { compact = false }: { compact?: boolean } = $props();
 
-  /**
-   * A plain select: there are three choices, everyone recognises the control,
-   * and a custom menu would buy nothing but keyboard bugs.
-   *
-   * Following the device comes first because it is where everybody starts,
-   * and the one choice that is right on a phone and a laptop set to different
-   * languages.
-   */
+  /** A plain select (a custom menu buys only keyboard bugs); following the device comes first as where everybody starts. */
   const names: Record<LocaleChoice, () => string> = {
     system: m['locale.system'],
     en: m['locale.en'],

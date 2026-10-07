@@ -1,13 +1,4 @@
-/**
- * Whether the search is open, over whatever page is on screen.
- *
- * Search is a state the app can be in rather than a place it goes: a `/search`
- * route would navigate away from the page somebody chose, put results in the
- * history where the back button turns them into archaeology, and make
- * finding a recipe while planning Thursday cost Thursday. So the shell holds
- * this flag, anything can raise it, and closing it leaves the page beneath
- * exactly as it was.
- */
+/** Whether the search is open over the current page. A state rather than a `/search` route, which would leave the chosen page, pollute history and make searching while planning cost the plan. */
 class SearchOverlay {
   #open = $state(false);
 

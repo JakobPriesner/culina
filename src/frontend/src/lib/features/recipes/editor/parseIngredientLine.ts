@@ -2,17 +2,8 @@ import type { Quantity } from '../types';
 import { foldUnit, spelledUnit } from '../unitSpellings';
 
 /**
- * Reads "200 g Mehl" into an amount, a unit and a name.
- *
- * For lines that arrive already written, rather than for the editor: a recipe
- * pasted in as text, a website's ingredient list, a line typed into the
- * shopping list. Somebody writing a recipe here fills the three fields in
- * themselves, and nothing has to be guessed.
- *
- * Guessing is only ever safe because the result is shown back as separate parts
- * before it is kept — the paste import shows what it understood, and every part
- * of it can be corrected. A parser that guessed silently would be worse than no
- * parser.
+ * Reads "200 g Mehl" into amount, unit and name, for lines that arrive already written (pasted text, websites, the shopping list).
+ * Guessing is safe only because results are shown back as separate, correctable parts.
  */
 export interface ParsedIngredient {
   readonly quantity: Quantity;
@@ -36,21 +27,11 @@ const amountPattern = new RegExp(
 );
 const mixedPattern = new RegExp(`^(\\d+)\\s*([${glyphs}])$`);
 
-/**
- * Reads a line, knowing the units this kitchen already uses.
- *
- * @param line What was typed.
- * @param own The household's own units, which the built-in spellings do not
- *   cover. Once somebody has written "1 Schuss Milch" once, every later line
- *   reads the same way without being told again — which is the whole of what it
- *   means for a household to have added a unit.
- */
+/** Reads a line; `own` is the household's own units, so one written once reads the same way afterwards. */
 export function parseIngredientLine(line: string, own: readonly string[] = []): ParsedIngredient {
   const trimmed = line.trim();
 
-  // Everything after the comma is how it is prepared, not what it is — but a
-  // comma between two digits is a German decimal point, and "1,5 kg Mehl" is
-  // one and a half kilos, not one kilo prepared "5 kg Mehl".
+  // After a comma is preparation, but a comma between digits is a German decimal point ("1,5 kg Mehl").
   const comma = trimmed.search(/(?<!\d),|,(?!\d)/);
   const head = comma === -1 ? trimmed : trimmed.slice(0, comma).trim();
   const note = comma === -1 ? null : trimmed.slice(comma + 1).trim() || null;
@@ -61,8 +42,7 @@ export function parseIngredientLine(line: string, own: readonly string[] = []): 
 
   const [firstWord = '', ...restWords] = afterAmount.split(/\s+/).filter(Boolean);
 
-  // A unit only counts when there is an amount for it to measure: "Salz" is an
-  // ingredient, and a word starting a name is not a litre.
+  // A unit needs an amount to measure: "Salz" is an ingredient, not a litre.
   const unitWord = foldUnit(firstWord);
   const unit =
     value === null
@@ -74,8 +54,7 @@ export function parseIngredientLine(line: string, own: readonly string[] = []): 
 
   return {
     quantity: { value, unit },
-    // Falling back to the whole line means an entry it cannot read still saves
-    // as an ingredient rather than vanishing.
+    // Fall back to the whole line so an unreadable entry still saves.
     name: name || head,
     note
   };

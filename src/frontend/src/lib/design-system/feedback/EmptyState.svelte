@@ -2,26 +2,15 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * Nothing to show, and what to do about it.
-   *
-   * "No results" on its own is not an empty state: it tells someone what they
-   * can already see. This says why the space is empty and offers the next step,
-   * and it insists on distinguishing "you have not made one yet" from "your
-   * filter matched nothing" — the second is a mistake to undo, the first is an
-   * invitation.
+   * Nothing to show and what to do about it; says why the space is empty, telling "not made yet"
+   * (an invitation) from "filter matched nothing" (a mistake to undo).
    */
   interface Props {
     title: string;
-    /** One or two sentences. Why it is empty, in the reader's terms. */
     body: string;
-    /** A real button or link. An empty state without one is a dead end. */
     action: Snippet;
-    /** An outline, not a picture: decoration here just delays reading. */
     icon?: Snippet;
-    /**
-     * A character in place of the icon, drawn without the icon's frame. The
-     * app decides whether there is one; with none, the icon stands in.
-     */
+    /** A character in place of the icon, drawn without its frame. */
     art?: Snippet;
   }
 

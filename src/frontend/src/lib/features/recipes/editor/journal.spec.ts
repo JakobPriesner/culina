@@ -3,11 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { forget, forgetEveryDraft, recall, remember } from './journal';
 import type { Recipe } from '../types';
 
-/*
- * The gap between a keystroke and a save is where work goes missing: the tab
- * closed mid-sentence, the session that expired while somebody was thinking,
- * the kitchen with no signal. This is what makes that gap survivable.
- */
+/* The gap between a keystroke and a save is where work goes missing (closed tab, expired session, no signal); this makes it survivable. */
 const recipe = { id: 'r1', title: 'Half a thought' } as unknown as Recipe;
 
 describe('the editor journal', () => {
@@ -49,7 +45,6 @@ describe('the editor journal', () => {
 
     expect(recall('u1', 'r1')).toBeNull();
     expect(recall('u2', 'r2')).toBeNull();
-    // And leaves alone what is not a draft.
     expect(localStorage.getItem('culina.appearance')).toBe('{}');
   });
 
@@ -73,9 +68,7 @@ describe('the editor journal', () => {
   });
 
   it('survives a store that refuses to be written to', () => {
-    // Private browsing, or no room left. The editor still works; it simply
-    // cannot promise to survive a reload — and it says "Kept on this device"
-    // only when this succeeded.
+    // Private browsing or no room: the editor still works but cannot promise to survive a reload, and says "Kept on this device" only on success.
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('QuotaExceededError');
     });

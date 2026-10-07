@@ -1,10 +1,4 @@
-/**
- * The design system's public surface.
- *
- * Features import from `$ds`, never from a file path inside it, so a component
- * can be moved or split without touching a page. Nothing here knows what a
- * recipe is — if it did, it would belong in `$features`.
- */
+/** The design system's public surface: features import from `$ds`, never a file path inside it. Nothing here knows what a recipe is; if it did, it would belong in `$features`. */
 export { default as FilterChip } from './actions/FilterChip.svelte';
 export { default as Button, type ButtonVariant } from './actions/Button.svelte';
 export { default as IconButton } from './actions/IconButton.svelte';

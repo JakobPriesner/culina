@@ -9,18 +9,11 @@
   import { mealSlots, slotLabel } from './slots';
 
   /**
-   * Where a meal goes, answered rather than aimed at.
-   *
-   * The same move as the drag, and deliberately not a lesser one: it is the
-   * only way a keyboard has, the only way a screen reader has, and on a phone
-   * it is the better way whenever the day you want is not on screen. It is also
-   * the only place the slot can be changed, because a drag that quietly turned
-   * a dinner into a breakfast would be a drag nobody could aim.
+   * Where a meal goes, answered rather than aimed at: the keyboard's and screen reader's only way, and the only place the slot can change
+   * (a drag that silently turned dinner into breakfast would be unaimable).
    */
   interface Props {
-    /** The meal being moved, or null when nothing is. */
     meal: PlannedMeal | null;
-    /** The week on screen. A move reaches the days you can see. */
     days: readonly PlannedDay[];
     /** Which day it is on now, so the sheet opens on the answer it already has. */
     from: string;
@@ -33,9 +26,7 @@
   let date = $state('');
   let slot = $state<MealSlot>('dinner');
 
-  // Set here rather than initialised above, so that opening the sheet again for
-  // another meal starts from that meal's day. Answers left over from the last
-  // one are answers about something else.
+  // Set here so opening the sheet for another meal starts from that meal's day.
   $effect(() => {
     if (meal) {
       date = from;
@@ -54,8 +45,6 @@
     days.map((day) => ({
       value: day.date,
       label: weekdays.format(dayOf(day.date)),
-      // What is already there, so the choice is made against the week rather
-      // than against seven dates.
       description:
         day.meals.length > 0
           ? day.meals.map((one) => one.title).join(', ')

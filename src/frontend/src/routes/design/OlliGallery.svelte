@@ -2,12 +2,7 @@
   import Olli from '$shell/olli/Olli.svelte';
   import { poses, type Pose } from '$shell/olli/poses';
 
-  /*
-   * Olli in every pose, for looking at the motion.
-   *
-   * The big one moves between poses as they are chosen, which is the case the
-   * springs exist for; the row below arrives in each pose once.
-   */
+  /* Olli in every pose, for inspecting motion: the big one moves between poses as chosen (what the springs are for); the row arrives in each pose once. */
   const names = Object.keys(poses) as Pose[];
 
   let pose = $state<Pose>('hello');

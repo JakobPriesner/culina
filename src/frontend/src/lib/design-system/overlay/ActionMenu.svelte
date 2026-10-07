@@ -8,7 +8,6 @@
    * Callers supply `<button>`/`<a>` rows styled via `.item`, `.item.danger`, `.mark`, `.heading`, `.separator`.
    */
   interface Props {
-    /** The control that opens it; receives the attributes that pair the two. */
     trigger: Snippet<[{ popovertarget: string }]>;
     children: Snippet;
     minWidth?: string;
@@ -51,7 +50,6 @@
   .menu {
     display: flex;
     flex-direction: column;
-    /* Do not inherit a surrounding line-through. */
     text-decoration: none;
   }
 

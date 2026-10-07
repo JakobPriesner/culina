@@ -29,26 +29,14 @@
   } from '$features/server/types';
 
   /**
-   * Setting up a fresh instance, in the order it has to happen.
-   *
-   * The database first, when there is none: nothing else can be saved until
-   * there is somewhere to keep it. Then the two settings that depend on how the
-   * server is put on the network — whether cookies need HTTPS, and which proxy
-   * to believe — with everything else folded away, because the defaults are
-   * right for a household. The account last, because the settings before it
-   * restart the server, and turning secure cookies on or off renames the
-   * session cookie: an account created first would be signed straight out.
-   *
-   * Whoever finishes this administers the instance. That is the same promise
-   * the first registration always made; this only lets them set the server up
-   * before making it.
+   * Fresh-instance setup in dependency order: database, then the network-dependent settings (secure cookies, trusted proxy), then the account.
+   * The account is last because those settings restart the server and renaming the session cookie would sign an earlier account out.
    */
   let { data } = $props();
 
   type Step = 'database' | 'server' | 'account';
 
-  // Fixed when the page opens: a step list that changed under somebody as they
-  // went would make "step 2 of 3" mean two different things.
+  // Fixed when the page opens, so "step 2 of 3" cannot change meaning.
   const steps: readonly Step[] =
     untrack(() => data.setup?.stage) === 'database'
       ? ['database', 'server', 'account']
@@ -83,12 +71,8 @@
 
     const draft = structuredClone($state.snapshot(server.server));
 
-    // The browser knows what the server cannot: whether it will keep a Secure
-    // cookie on this page. Behind a proxy that terminates TLS, every request
-    // the server sees is plain HTTP, so its default has to be corrected from
-    // here. A secure context rather than https: alone, because browsers keep
-    // Secure cookies on http://localhost too — and outside Development the
-    // server refuses to turn them off at all unless the deployment allows it.
+    // The browser knows whether it will keep a Secure cookie on this page; a TLS-terminating proxy hides that from the server.
+    // A secure context rather than https: alone, since http://localhost keeps them too.
     if (!server.serverFacts.pinned.has(variables.secure)) {
       draft.secure = window.isSecureContext;
     }
@@ -104,8 +88,7 @@
       return;
     }
 
-    // A database that already has an administrator — an existing Culina moved
-    // to a new server — has nothing left to set up.
+    // An existing Culina moved to a new server already has an administrator: nothing to set up.
     if (result.kind === 'applied' && result.setup.stage === 'complete') {
       await goto(resolve('/(auth)/login'), { replaceState: true });
 
@@ -159,8 +142,7 @@
     const succeeded = await submission.run(async () => {
       const outcome = await register({ email, displayName, password, householdName });
 
-      // Registering signs you in; asking for the same password again on the
-      // next screen would be a pointless second step.
+      // Registering signs you in; a second password prompt would be pointless.
       return 'code' in outcome ? outcome : session.signIn(email, password);
     });
 

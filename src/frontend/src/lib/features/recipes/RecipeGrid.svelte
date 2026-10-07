@@ -7,14 +7,7 @@
   import { inheritedFrom } from './recipeMeta';
   import type { RecipeSummary } from './types';
 
-  /**
-   * The recipes, in columns.
-   *
-   * Three across on a wide screen, one on a phone — the rows are text, so they
-   * read as columns of a page rather than as a gallery of tiles. The number of
-   * columns is the only thing that changes; the row itself is identical
-   * everywhere.
-   */
+  /** The recipes as columns of text rows (three wide, one on a phone); only the column count changes. */
   interface Props {
     recipes: readonly RecipeSummary[];
     /** Drawn instead of the recipes, when there are none yet to draw. */
@@ -22,19 +15,13 @@
     /** Ids whose change is in flight. */
     pending?: readonly string[];
     /**
-     * Asked for the next page when the end of the list comes into view.
-     *
-     * Given only while there is a next page to ask for. It is called once per
-     * row of placeholders and again whenever they come back into view, so it
-     * has to be free to call while its own request is still running.
+     * Asked for the next page when the list end comes into view; given only while there is one, and
+     * must tolerate being called while its request runs.
      */
     onmore?: () => void;
     /** What was searched for, marked in each result it found. */
     query?: string;
-    /**
-     * The households this one inherits recipes from, by id, with their names.
-     * A recipe from one of them says so on its card.
-     */
+    /** Households this one inherits from, by id with names; a recipe from one says so. */
     inherited?: Readonly<Record<string, string>>;
   }
 
@@ -48,9 +35,7 @@
 </script>
 
 {#if loading}
-  <!-- A status rather than a bare div: a plain element is generic, and a
-       generic element may not carry a name at all — the label was there for
-       assistive technology and was being dropped on the floor by it. -->
+  <!-- role=status: a plain element is generic and may not carry a name, so the label was dropped. -->
   <div class="grid" role="status" aria-busy="true" aria-label={m['recipes.list.loading']()}>
     {#each placeholders as row (row)}
       <RecipeCardSkeleton />
@@ -69,9 +54,8 @@
       </li>
     {/each}
 
-    <!-- The end of the list, drawn as the rows that are coming. Reaching them
-         is what fetches them, so there is no button to find and no moment
-         where the list looks finished when it is not. -->
+    <!-- Skeleton of the coming rows; reaching them fetches them, so there is no button and no false
+         "finished" look. -->
     {#if onmore}
       {#each next as row (row)}
         <li aria-hidden="true" {@attach whenVisible(onmore)}><RecipeCardSkeleton /></li>
@@ -94,9 +78,8 @@
     min-width: 0;
   }
 
-  /* Cards below the fold are not laid out or painted until they near the
-     screen. That clips to the box, so the padding (given back by the negative
-     margin) leaves room for the focus ring around the card's link. */
+  /* Off-screen cards aren't laid out or painted; that clips to the box, so the padding (given back by
+     the negative margin) leaves room for the focus ring. */
   .card {
     content-visibility: auto;
     contain-intrinsic-size: auto 14rem;

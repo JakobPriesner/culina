@@ -30,10 +30,7 @@ const goToList = async () => {
 export function usePlanActions(page: Page) {
   const ui = $state({ busy: false });
 
-  /**
-   * Moves a meal to another day and offers undo: a drop is cheap to reverse and a confirmation
-   * would interrupt it.
-   */
+  /** Moves a meal and offers undo; a drop is cheap to reverse, a confirmation would interrupt it. */
   async function move(entryId: string, to: { date: string; slot?: MealSlot; position?: number }) {
     const householdId = page.householdId();
     const before = householdId && placeOf(mealPlan.days, entryId);
@@ -50,8 +47,7 @@ export function usePlanActions(page: Page) {
       return;
     }
 
-    // Read from the returned week: the server decides a day's order, so only its answer can anchor
-    // an undo.
+    // From the returned week: only the server's answer can anchor an undo, as it decides a day's order.
     const after = placeOf(mealPlan.days, entryId);
 
     toaster.show({
@@ -84,10 +80,7 @@ export function usePlanActions(page: Page) {
     void move(held.entryId, { date: landing.date, position: landing.position });
   }
 
-  /**
-   * Adds the week's shopping in one request: only the server knows which meals are already on the
-   * list.
-   */
+  /** Adds the week's shopping in one request: only the server knows which meals are already listed. */
   async function shop() {
     const householdId = page.householdId();
 
@@ -133,10 +126,7 @@ export function usePlanActions(page: Page) {
     );
   }
 
-  /**
-   * Unplans a meal and offers (rather than forces) removing its shopping, which may be in the
-   * cupboard already.
-   */
+  /** Unplans a meal and offers (not forces) removing its shopping, which may already be in the cupboard. */
   async function unplan(meal: PlannedMeal) {
     const householdId = page.householdId();
 

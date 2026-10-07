@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { cooking } from './cooking.svelte';
 
-/*
- * One session at a time, and a step advance that feels instant. Those are the
- * two things the cook actually experiences.
- */
 const session = (over: Record<string, unknown> = {}) => ({
   sessionId: 's1',
   recipeId: 'r1',
@@ -57,8 +53,7 @@ describe('resuming on boot', () => {
     await cooking.resume();
 
     expect(cooking.session).toBeNull();
-    // Resolved either way: the bar has to know the difference between "nothing
-    // is cooking" and "we have not asked yet".
+    // Resolved either way: "nothing is cooking" differs from "not asked yet".
     expect(cooking.resolved).toBe(true);
   });
 });
@@ -69,8 +64,7 @@ describe('moving through the steps', () => {
 
     cooking.moveTo('r1', 2);
 
-    // Not awaited: tapping next must feel instant, and the server's answer
-    // changes nothing the cook can see.
+    // Not awaited: tapping next must feel instant.
     expect(cooking.session?.currentStepIndex).toBe(2);
   });
 
@@ -97,8 +91,7 @@ describe('moving through the steps', () => {
     resolve(json(session({ currentStepIndex: 1 })));
     await vi.waitFor(() => expect(sent.filter((one) => one.method === 'PATCH')).toHaveLength(2));
 
-    // Two requests for three taps, and the second carries where they actually
-    // are — four requests would arrive out of order and land them elsewhere.
+    // Two requests for three taps; the second carries where they actually are (four would arrive out of order).
     const last = sent.filter((one) => one.method === 'PATCH').at(-1)!;
 
     expect(await last.json()).toEqual({ currentStepIndex: 3 });
@@ -130,8 +123,6 @@ describe('rescaling mid-cook', () => {
     serverAnswers(() => json({ code: 'cooking.session_finished', detail: 'Over.' }, 409));
     await cooking.rescale(6);
 
-    // An amount that silently failed to save is worse than one that visibly
-    // did not change.
     expect(cooking.session?.servings).toBe(4);
   });
 });

@@ -12,20 +12,7 @@
   import { formatDate, m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
 
-  /**
-   * Bringing a whole library over.
-   *
-   * A page of its own rather than a panel in settings, because for the ten
-   * minutes it takes this is the only thing somebody is doing — and because it
-   * is a place you leave. Once the recipes are here there is nothing to come
-   * back for except the next batch, and the way back is the cookbook it made,
-   * not this screen.
-   *
-   * Three states, in the order they happen: connect, choose, watch. Never two
-   * at once. The thing that ties them together is that the last one ends with a
-   * link out of here and into the ordinary library, which is where the recipes
-   * now live.
-   */
+  /** Bringing a whole library over: its own page, a place you leave. Three states in order (connect, choose, watch), never two at once. */
   const householdId = $derived(session.activeHouseholdId);
 
   let connectingAnother = $state(false);
@@ -59,8 +46,7 @@
     const source = sources.open;
 
     if (source) {
-      // Re-read, so what has just arrived shows as already here. Otherwise the
-      // second pass offers the same recipes back and the count would be a lie.
+      // Re-read so what just arrived shows as already here; otherwise the second pass offers it back and the count is wrong.
       void sources.browse(source);
     }
   }
@@ -96,8 +82,7 @@
       </header>
 
       {#if sources.status === 'failed'}
-        <!-- Without this the page is a heading and a footer link: neither the
-             list nor the connect form shows, and there is nothing to press. -->
+        <!-- Without this the page is a heading and a footer link with nothing to press. -->
         <ErrorState
           title={m['import.sourcesFailed']()}
           body={sources.error ? explain(sources.error) : m['import.sourcesFailed']()}

@@ -11,21 +11,8 @@
   import Page from '$shell/Page.svelte';
 
   /**
-   * One recipe, to somebody who does not have Culina.
-   *
-   * The same `RecipeSurface` the household's own page renders, at the same
-   * weighting, with the same ingredient-view switch and the same scaling. That
-   * is the point of sharing a Culina recipe rather than a screenshot: the
-   * amounts still move.
-   *
-   * What it does not offer is everything that needs a kitchen to put something
-   * in — cooking, the shopping list, a cookbook shelf, the editor. Those props
-   * are simply not passed, and the surface draws no bar at all rather than a
-   * row of controls that would refuse.
-   *
-   * It deliberately does not try to be clever about a visitor who happens to be
-   * signed in. There is no recipe id on this page to send them to, by design,
-   * and the sender checking their own link should see exactly what they sent.
+   * One recipe for a visitor without Culina: the same `RecipeSurface`, so amounts still scale; props that need a kitchen are not passed.
+   * No special handling of a signed-in visitor: there is no recipe id here to send them to.
    */
   const token = $derived(page.params.token ?? '');
   const recipe = $derived(sharedRecipe.recipe);
@@ -37,12 +24,7 @@
     }
   });
 
-  /**
-   * Scaling, exactly as on the household's own page.
-   *
-   * Replaced rather than pushed, for the same reason: every tap of the stepper
-   * becoming a back-button step would bury the message the link came from.
-   */
+  /** Scaling as on the household page, replaced not pushed so each stepper tap is not a Back step. */
   function scale(value: number) {
     void goto(urlAtYield(page.url, value, recipe), {
       replaceState: true,
@@ -54,8 +36,7 @@
 
 <svelte:head>
   <title>{recipe?.title ?? m['shared.badge']()}</title>
-  <!-- A link is sent to one person, not published. Nothing here should end up
-       in a search index, whatever a crawler was handed. -->
+  <!-- Sent to one person, not published: keep it out of search indexes. -->
   <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
@@ -77,8 +58,7 @@
 </Page>
 
 <style>
-  /* Quiet, and above the recipe rather than over it: a visitor should know what
-     kind of page this is before they start reading, and then forget it. */
+  /* Quiet and above the recipe: say what kind of page this is, then be forgotten. */
   .badge {
     margin-bottom: var(--space-6);
     color: var(--text-subtle);

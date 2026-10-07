@@ -3,15 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { suggestions } from './suggestions.svelte';
 
 /*
- * The store components read suggestions from, so what it gets wrong the whole
- * feature gets wrong.
- *
- * The first test is the important one and it is not about suggestions at all:
- * this store is called from an `$effect`, and an effect re-runs when anything
- * reactive it read while running changes. A store that guarded itself with
- * `$state` would therefore ask the same question forever — which does not
- * present as a hang, but as a flood of identical requests and then a 429 from
- * the session rate limiter, on a page that looks merely broken.
+ * The store components read suggestions from. The first test matters most: the store is called from
+ * an `$effect`, so a `$state` guard would loop into a flood of identical requests and a 429.
  */
 const household = 'h1';
 
@@ -68,9 +61,7 @@ describe('asking', () => {
   });
 
   it('does not ask again after a failure, because a retry is a decision', async () => {
-    // A guarded call that re-armed itself on failure is the same loop by
-    // another name: the end of a failing page stays on screen, asks again, and
-    // fails again for the rest of the afternoon.
+    // A guard that re-armed itself on failure would be the same loop.
     const fetched = serverAnswers(() => new Response('{}', { status: 500 }));
 
     await suggestions.ask(household, { limit: 1 });
@@ -106,8 +97,6 @@ describe('asking', () => {
 });
 
 describe('remembering', () => {
-  // Every change to the week plan names what is planned, so each one is a new
-  // question; without a cap the store keeps all of them for the whole session.
   const week = (planned: number) => ({ limit: 1, exclude: [`recipe-${planned}`] });
 
   it('forgets the question used least recently once too many are kept', async () => {
@@ -164,8 +153,6 @@ describe('remembering', () => {
 
 describe('dismissing', () => {
   it('removes the card from every answer at once, not just the one on screen', async () => {
-    // The same recipe is regularly in two answers. Watching it vanish from one
-    // list and stay in another is worse than not having dismissed it.
     serverAnswers(() => answer([suggestion('a'), suggestion('b')]));
 
     await suggestions.ask(household, { limit: 2 });
@@ -229,8 +216,6 @@ describe('mapping', () => {
 
 describe('a deleted recipe', () => {
   it('is taken out of every answer, without asking the server anything', async () => {
-    // Each question is asked once, so an answer kept from before the delete
-    // would go on offering a recipe that opens onto nothing.
     serverAnswers(() => answer([suggestion('a'), suggestion('b')]));
 
     await suggestions.ask(household, { limit: 2 });
@@ -248,7 +233,6 @@ describe('a deleted recipe', () => {
 });
 
 describe('the end of the shortlist', () => {
-  /** A ranked kitchen of eight, answered the way the server does: without what is excluded. */
   const kitchen = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
   const ranked = (url: string) => {

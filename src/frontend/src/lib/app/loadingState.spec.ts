@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createLoadingState, defaultTimings } from './loadingState.svelte';
 
-/*
- * Three numbers decide whether waiting feels like progress or like a glitch.
- * Fake timers are the only way to assert them, and asserting them is the only
- * way they stay the same on every screen.
- */
+/* Three numbers decide whether waiting feels like progress or a glitch; fake timers assert them so they stay the same on every screen. */
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 

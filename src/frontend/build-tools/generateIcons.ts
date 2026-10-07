@@ -8,19 +8,10 @@ import * as prettier from 'prettier';
 import { appIconFolder, appIcons, type AppIcon } from '../src/lib/app/appIcons.ts';
 
 /**
- * Draws every app icon and writes every file a browser or phone reads for it:
- * `pnpm icons`.
- *
- * The default is the cocotte reduced to its shapes on deep basil, its knob in
- * saffron; the others are the wordmark's own "c." — a geometric c and the dot
- * after the name — on a ground of their own. Flat on purpose: iOS, Android and the browsers add
- * their own light, gloss and shadow, and a drawn highlight under theirs is the
- * thing that makes an icon look home-made.
- *
- * Drawn on a 512 grid inside the 409-pixel circle a maskable icon is promised,
- * which is also Android's 66/108 safe zone, so no launcher's mask ever crops
- * it. Below 48 pixels the same mark is drawn heavier and larger, because a
- * hairline gap at 16 pixels is a grey smudge.
+ * Draws every app icon and writes the files a browser or phone reads: `pnpm icons`.
+ * Flat on purpose (platforms add their own gloss), drawn inside the 409px maskable circle
+ * (Android's 66/108 safe zone),
+ * and heavier below 48px where a hairline gap is a smudge.
  */
 const staticDir = join(dirname(fileURLToPath(import.meta.url)), '../static');
 const tempDir = join(staticDir, '../.icon-temp');
@@ -35,39 +26,33 @@ const colours = {
 
 interface Drawing {
   ground: string;
-  /** The mark alone, on a transparent 512 canvas. */
   mark: (fill: { body: string; accent: string }, small: boolean) => string;
   body: string;
   accent: string;
 }
 
-/** A point on a circle, with 0° to the right and angles turning anticlockwise. */
 function point(cx: number, cy: number, r: number, degrees: number): string {
   const radians = (degrees * Math.PI) / 180;
 
   return `${(cx + r * Math.cos(radians)).toFixed(1)} ${(cy - r * Math.sin(radians)).toFixed(1)}`;
 }
 
-/** The c: a ring open to the right, its terminals cut along the radius. */
 function monogram({ body, accent }: { body: string; accent: string }, small: boolean): string {
   const outer = 124;
   const stroke = small ? 72 : 58;
   const inner = outer - stroke;
   const dot = small ? 40 : 32;
-  // Centred as a pair: the c and its dot together sit in the middle.
   const cx = 231;
   const cy = 256;
   const [from, to] = [40, 320];
   const ring =
     `M${point(cx, cy, outer, from)} A${outer} ${outer} 0 1 0 ${point(cx, cy, outer, to)} ` +
     `L${point(cx, cy, inner, to)} A${inner} ${inner} 0 1 1 ${point(cx, cy, inner, from)} Z`;
-  // The dot sits on the c's baseline, the way a full stop sits on a line.
   const scale = small ? ' transform="translate(256 256) scale(1.16) translate(-256 -256)"' : '';
 
   return `<g${scale}><path d="${ring}" fill="${body}"/><circle cx="${cx + 142}" cy="${cy + outer - dot}" r="${dot}" fill="${accent}"/></g>`;
 }
 
-/** The cocotte the app started with, reduced to its shapes; the knob is the dot. */
 function cocotte({ body, accent }: { body: string; accent: string }, small: boolean): string {
   const scale = small ? ' transform="translate(256 256) scale(1.12) translate(-256 -256)"' : '';
 
@@ -89,9 +74,8 @@ const drawings: Record<AppIcon, Drawing> = {
 };
 
 /**
- * The icon as a file. `radius` rounds the ground for the tab and the settings
- * screen; every platform icon is a full square, because the platform cuts its
- * own shape and a pre-rounded corner shows as a dark rim inside theirs.
+ * The icon as a file; platform icons are full squares because the platform cuts its own shape (a
+ * rounded corner shows as a dark rim).
  */
 function svg(icon: AppIcon, { radius = 0, small = false } = {}): string {
   const { ground, mark, body, accent } = drawings[icon];
@@ -104,10 +88,7 @@ function svg(icon: AppIcon, { radius = 0, small = false } = {}): string {
 `;
 }
 
-/**
- * The shape alone, for Android's themed icons, which keep only the alpha and
- * paint it in the wallpaper's colours.
- */
+/** The shape alone, for Android's themed icons, which keep only the alpha. */
 function monochrome(icon: AppIcon): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${drawings[icon].mark({ body: '#fff', accent: '#fff' }, false)}</svg>`;
 }
@@ -122,7 +103,6 @@ async function render(browser: Browser, markup: string, size: number, path: stri
   await page.close();
 }
 
-/** Every file one icon needs, written into its folder. */
 async function writeIcon(browser: Browser, icon: AppIcon) {
   const folder = join(staticDir, appIconFolder(icon));
   const square = svg(icon);
@@ -133,7 +113,6 @@ async function writeIcon(browser: Browser, icon: AppIcon) {
 
   await render(browser, square, 512, join(folder, 'icon-512.png'));
   await render(browser, square, 192, join(folder, 'icon-192.png'));
-  // The same file as icon-512: the mark is already inside the maskable circle.
   await render(browser, square, 512, join(folder, 'icon-maskable-512.png'));
   await render(browser, monochrome(icon), 512, join(folder, 'icon-monochrome-512.png'));
   await render(browser, square, 180, join(folder, 'apple-touch-icon.png'));
@@ -142,11 +121,9 @@ async function writeIcon(browser: Browser, icon: AppIcon) {
     await render(browser, small, size, join(tempDir, `${icon}-${size}.png`));
   }
 
-  // Pillow writes the multi-size .ico — from the largest, because it drops
-  // every size bigger than the image it saves from — and quantises the PNGs to a palette:
-  // flat colour loses nothing to 256 of them, and it is a third of the bytes.
-  // Opaque icons are quantised from RGB, because a transparency chunk on a
-  // full-bleed icon is one iOS paints black behind.
+  // Pillow writes the .ico from the largest size (it drops sizes bigger than its source) and
+  // quantises PNGs to a palette; opaque icons are quantised from RGB because a transparency chunk
+  // on a full-bleed icon paints black on iOS.
   execFileSync('python3', [
     '-c',
     `
@@ -167,10 +144,7 @@ for name in ['icon-512', 'icon-192', 'icon-maskable-512', 'icon-monochrome-512',
   ]);
 }
 
-/**
- * The root manifest is the one written by hand; every icon's manifest is that
- * one with its own files in, so a name or a shortcut is changed in one place.
- */
+/** The root manifest is hand-written; each icon's manifest is it with its own files in. */
 async function writeManifests() {
   const rootPath = join(staticDir, 'manifest.webmanifest');
   const manifest = JSON.parse(await readFile(rootPath, 'utf8'));

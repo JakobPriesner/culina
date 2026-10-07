@@ -8,7 +8,6 @@
   interface Props {
     label: string;
     count?: number;
-    /** Sets the section apart at the bottom (bought items). */
     apart?: boolean;
     items: readonly ShoppingItem[];
     action?: Snippet;

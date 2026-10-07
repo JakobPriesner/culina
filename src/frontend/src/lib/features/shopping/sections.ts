@@ -3,11 +3,8 @@ import { m } from '$shell/i18n';
 import type { components } from '$api/generated/schema';
 
 /**
- * The sections, in the order a shop is walked.
- *
- * That order is the entire value of sections: a list read top to bottom is a
- * route rather than a scavenger hunt. It comes from the contract, so the
- * backend's ordering and this one cannot disagree.
+ * The sections in the order a shop is walked, from the contract so it can't disagree with the
+ * backend.
  */
 export type Section = components['schemas']['ShoppingItemContract']['section'];
 
@@ -39,5 +36,4 @@ const names: Record<Section, () => string> = {
   other: m['section.other']
 };
 
-/** A section's name, falling back rather than rendering a blank heading. */
 export const nameOf = (section: Section): string => (names[section] ?? names.other)();

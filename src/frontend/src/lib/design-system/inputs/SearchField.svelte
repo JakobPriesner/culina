@@ -1,12 +1,5 @@
 <script lang="ts">
-  /**
-   * Search, with a way out of it.
-   *
-   * The clear button only exists while there is something to clear: a control
-   * that is always there but usually does nothing is one more thing to read
-   * past. Typing is debounced by the caller, not here — this component does not
-   * decide how expensive a search is.
-   */
+  /** Search with a clear button that exists only while there is something to clear; debouncing is the caller's call. */
   import IconButton from '../actions/IconButton.svelte';
 
   interface Props {

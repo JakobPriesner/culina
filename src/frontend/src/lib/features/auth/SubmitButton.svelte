@@ -4,15 +4,7 @@
   import { m } from '$shell/i18n';
   import type { Submission } from './submission.svelte';
 
-  /**
-   * The button at the bottom of an auth form.
-   *
-   * Disabled while a request is in flight, and while a rate limit is counting
-   * down — and in that case it says *when*, because "try again later" is advice
-   * nobody can act on. It is never disabled because a field looks wrong:
-   * guessing at validity while someone is still typing hides the button exactly
-   * when they reach for it.
-   */
+  /** The auth form's button: disabled while in flight or rate-limited (saying *when*), never because a field looks wrong, which hides it as someone reaches for it. */
   interface Props {
     label: string;
     submission: Submission;

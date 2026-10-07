@@ -1,14 +1,6 @@
 import { forgetAccountKeys } from '$shell/deviceStorage';
 
-/**
- * Which recipe was last started here, so leaving the create page mid-thought
- * does not mean starting over.
- *
- * A recipe with just a title is real the moment it is created — there is no
- * separate draft entity to point at. What this remembers is only *which one*,
- * so the create page can offer it back rather than making a second empty
- * recipe next to the first.
- */
+/** Which recipe was last started here, so leaving the create page offers it back instead of making a second empty one (a titled recipe is real at creation; there is no draft entity). */
 export interface LastDraft {
   readonly recipeId: string;
   readonly title: string;
@@ -32,8 +24,7 @@ export function rememberLastDraft(
       JSON.stringify({ recipeId, title } satisfies LastDraft)
     );
   } catch {
-    // Private browsing, a disabled store, or no room left. There is simply
-    // nothing to offer back next time.
+    // Private browsing, disabled storage or no room: nothing to offer back.
   }
 }
 
@@ -57,17 +48,11 @@ export function forgetLastDraft(userId: string, householdId: string): void {
   try {
     localStorage.removeItem(keyFor(userId, householdId));
   } catch {
-    // Nothing to do, and nothing worth saying.
+    // Storage unavailable: nothing to forget.
   }
 }
 
-/**
- * Forgets which recipe was last started, for everybody but `keep`.
- *
- * At the same moments as the drafts themselves, for the same reason — it
- * holds a title — and not when a session merely expires, which would lose the
- * way back to a draft that was kept.
- */
+/** Forgets the last-started recipe for everybody but `keep`, at the same moments as the drafts (it holds a title); not on mere session expiry. */
 export function forgetEveryLastDraft(keep?: string): void {
   forgetAccountKeys(prefix, keep);
 }

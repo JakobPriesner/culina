@@ -11,18 +11,9 @@ import {
   unique
 } from './support/culina';
 
-/**
- * Every route, in both modes, checked by a machine.
- *
- * An automated pass finds the things people stop noticing — a contrast that
- * drifted, a control with no name, a heading level skipped — and finds none of
- * the things that actually matter most, which is why it is a floor and not a
- * standard. What it is good at is not letting the floor move.
- */
+/** Every route in both modes, checked by axe: a floor, not a standard. */
 async function violations(page: Page) {
   const result = await new AxeBuilder({ page })
-    // The published levels, which is what "accessible" means to anybody
-    // outside this repository.
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
 
@@ -35,15 +26,8 @@ async function violations(page: Page) {
 }
 
 /*
- * Motion off, everywhere in this file.
- *
- * A colour is only a colour once it has stopped moving. The advance button on
- * the cooking screen starts in the disabled palette and crosses to the accent
- * one over 120ms as the session resolves, and axe sampling inside that window
- * read #b4b1ab on #9fa691 — 1.17:1 — and called it a serious contrast failure.
- * Two and a half seconds later the same button is white on #536340, which is
- * fine. app.css collapses every transition under reduced motion, so asking for
- * it is how this suite gets told the truth rather than a frame of it.
+ * Motion off: axe sampling mid-transition (the cooking advance button crossing disabled -> accent over 120ms) reported a false contrast failure.
+ * app.css collapses transitions under reduced motion.
  */
 test.use({ reducedMotion: 'reduce' });
 
@@ -90,8 +74,7 @@ test.describe('what a machine can check, signed in', () => {
       return;
     }
 
-    // An explicit context, because axe refuses to run in a page that was made
-    // straight from the browser.
+    // Explicit context: axe refuses a page made straight from the browser.
     context = await browser.newContext({ reducedMotion: 'reduce' });
     page = await context.newPage();
 
@@ -104,11 +87,8 @@ test.describe('what a machine can check, signed in', () => {
       steps: ['Melt {0} slowly.', 'Let it cool.']
     });
 
-    // A cookbook with the recipe on it, so neither the shelf nor the shelves
-    // are tested empty — an empty state and a full one are different pages.
     cookbookId = await seedCookbook(page, unique('Accessible shelf'), recipeId);
 
-    // Something on the shopping list, so the list is not tested empty.
     await page.goto('/shopping');
 
     await page.getByRole('textbox', { name: /^(amount|menge)$/i }).fill('500');
@@ -174,8 +154,6 @@ test.describe('what a machine can check, signed in', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  // Every category, not only the first: the side navigation means the controls
-  // people rarely touch now live on pages nobody looks at either.
   for (const path of ['/me', '/me/appearance', '/me/household']) {
     test(`settings at ${path} has no violations`, async () => {
       await page.goto(path);
@@ -186,14 +164,7 @@ test.describe('what a machine can check, signed in', () => {
   }
 });
 
-/**
- * Nothing moves under a thumb.
- *
- * Every image box reserves its space and every list has a skeleton, precisely
- * so that content arriving does not push what somebody was about to tap. A
- * regression here means one of them was skipped, which is invisible on a fast
- * machine and infuriating on a slow connection.
- */
+/** No layout shift under a thumb: image boxes and lists reserve space, so arriving content never moves a tap target. */
 test.describe('what moves while a page loads', () => {
   test.skip(needsBackend, skipReason);
   test.skip(({ browserName }) => browserName !== 'chromium', 'Layout instrumentation.');
@@ -234,7 +205,7 @@ test.describe('what moves while a page loads', () => {
           for (const entry of list.getEntries()) {
             const layout = entry as unknown as { value: number; hadRecentInput: boolean };
 
-            // Anything a person just caused is not a shift they suffered.
+            // Shifts a person just caused don't count.
             if (!layout.hadRecentInput) {
               (window as unknown as { shift: number }).shift += layout.value;
             }
@@ -248,22 +219,13 @@ test.describe('what moves while a page loads', () => {
 
       const shift = await page.evaluate(() => (window as unknown as { shift: number }).shift);
 
-      // Google calls 0.1 "good". Culina reserves space for everything that
-      // arrives late, so anything above a rounding error means a box was
-      // forgotten.
+      // Google calls 0.1 "good"; everything reserves space, so more than a rounding error means a forgotten box.
       expect(shift).toBeLessThan(0.02);
     });
   }
 });
 
-/**
- * Every flow, by keyboard alone.
- *
- * Not only for people who cannot use a pointer: a keyboard walk is the fastest
- * way to find a control that is a `div`, a focus order that jumps around the
- * page, and a dialog that lets focus escape behind it. If the tab order makes
- * sense, the page structure almost certainly does too.
- */
+/** Every flow by keyboard alone: finds div controls, jumping focus order and dialogs that leak focus. */
 test.describe('reaching everything with a keyboard', () => {
   test.skip(needsBackend, skipReason);
 
@@ -288,10 +250,7 @@ test.describe('reaching everything with a keyboard', () => {
       steps: ['Melt {0}.', 'Wait.']
     });
 
-    // An earlier describe in this file cooked something else with the same
-    // account, and only one recipe can be cooked at a time. Arriving with one
-    // already going means the screen starts by abandoning it, which is a race
-    // this test has no reason to be running.
+    // Only one recipe can be cooked at a time; a leftover session would make the screen abandon it first (a race).
     await endAnyCooking(page);
   });
 
@@ -299,7 +258,6 @@ test.describe('reaching everything with a keyboard', () => {
     await context?.close();
   });
 
-  /** Leaves the account with nothing being cooked. */
   async function endAnyCooking(who: Page) {
     const current = await who.request.get('/api/v1/cook-sessions/current');
 
@@ -318,7 +276,6 @@ test.describe('reaching everything with a keyboard', () => {
     }
   }
 
-  /** Everything the tab key reaches, in the order it reaches it. */
   async function tabOrder(limit = 40) {
     const reached: string[] = [];
 
@@ -343,7 +300,6 @@ test.describe('reaching everything with a keyboard', () => {
       }
 
       if (reached.includes(focused) && reached[0] === focused) {
-        // Back to where it started: the whole page has been walked.
         break;
       }
 
@@ -354,8 +310,7 @@ test.describe('reaching everything with a keyboard', () => {
   }
 
   test('the first stop is the skip link, on every screen', async () => {
-    // Without it, reaching the page content by keyboard means tabbing through
-    // the navigation on every single page.
+    // Without it, keyboard users tab through the navigation on every page.
     for (const path of ['/', `/recipes/${recipeId}`, '/shopping', '/me']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -373,14 +328,12 @@ test.describe('reaching everything with a keyboard', () => {
 
     const reached = await tabOrder();
 
-    // The controls that matter, in the order somebody would meet them.
     expect(reached.join('\n')).toMatch(/one fewer|eine weniger/i);
     expect(reached.join('\n')).toMatch(/scale to what i have|auf meine menge/i);
     expect(reached.join('\n')).toMatch(/shopping list|einkaufsliste/i);
     expect(reached.join('\n')).toMatch(/start cooking|kochen starten/i);
 
-    // Everything focusable is a real control. A focusable `div` is a control
-    // that a screen reader describes as nothing at all.
+    // A focusable div is a control a screen reader describes as nothing.
     const tags = new Set(reached.map((entry) => entry.split(':')[0]));
 
     expect([...tags].sort()).toEqual(['a', 'button', 'input', 'textarea']);
@@ -392,8 +345,7 @@ test.describe('reaching everything with a keyboard', () => {
     await expect(page.getByText(/step 1 of 2|schritt 1 von 2/i)).toBeVisible();
 
     const next = page.getByRole('button', { name: /^(next step|nächster schritt)$/i });
-    // The recipe is visible before its cooking session is ready. Unlike click,
-    // focus does not wait for a control to become enabled.
+    // Unlike click, focus does not wait for a control to become enabled.
     await expect(next).toBeEnabled();
     await next.focus();
     await expect(next).toBeFocused();
@@ -401,8 +353,7 @@ test.describe('reaching everything with a keyboard', () => {
 
     await expect(page.getByText(/step 2 of 2|schritt 2 von 2/i)).toBeVisible();
 
-    // Focus follows the cook to the step they moved to, so a screen reader reads
-    // it out, and the control that finishes has taken the advancing one's place.
+    // Focus follows the cook to the new step so a screen reader reads it.
     await expect(page.locator('[aria-current="step"]')).toBeFocused();
     await expect(page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i })).toBeEnabled();
   });

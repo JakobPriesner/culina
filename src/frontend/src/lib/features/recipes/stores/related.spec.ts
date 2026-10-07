@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { related } from './related.svelte';
 
-/*
- * Each recipe's shelf is asked for once, so what the store holds is what the
- * page shows for as long as the tab is open.
- */
+/* Each recipe's shelf is asked for once; the store holds what the page shows while the tab is open. */
 const item = (id: string) => ({
   recipeId: id,
   title: `Recipe ${id}`,

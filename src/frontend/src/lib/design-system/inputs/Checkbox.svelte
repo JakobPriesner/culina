@@ -1,14 +1,8 @@
 <script lang="ts">
-  /**
-   * One yes-or-no, with its label.
-   *
-   * The whole row is the label, so the target is the text as well as the box —
-   * a 16px box is not something to aim at with a thumb.
-   */
+  /** One yes-or-no with its label; the whole row is the label, since a 16px box is no thumb target. */
   interface Props {
     checked: boolean;
     label: string;
-    /** Some but not all of a set: the "select all" that is partly selected. */
     indeterminate?: boolean;
     disabled?: boolean;
     describedBy?: string | undefined;
@@ -60,12 +54,8 @@
     cursor: not-allowed;
   }
 
-  /* Drawn rather than left to the browser. The native control follows
-     `color-scheme`, which in dark mode is a filled grey square that reads as a
-     disabled field rather than as something to tick — and the one place this
-     is used most, a shopping list, is a column of them. `appearance: none`
-     keeps the real input, so it is still focusable, still announced and still
-     toggled by Space. */
+  /* Drawn, not native: in dark mode the native control is a filled grey square that reads as disabled.
+     `appearance: none` keeps the real input focusable, announced and toggled by Space. */
   input {
     appearance: none;
     flex: none;
@@ -93,8 +83,7 @@
     background: var(--accent);
   }
 
-  /* The tick itself: two sides of a square, turned. A glyph would be a font
-     the theme does not control, and an image would be a colour it cannot. */
+  /* The tick: two turned sides of a square; a glyph or image would escape the theme's colour control. */
   input::before {
     content: '';
     width: var(--space-2);
@@ -109,7 +98,6 @@
     transform: translateY(-1px) rotate(45deg) scale(1);
   }
 
-  /* Some but not all: a bar, not a tick. */
   input:indeterminate::before {
     width: var(--space-3);
     height: 0;

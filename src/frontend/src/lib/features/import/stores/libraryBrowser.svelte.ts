@@ -7,7 +7,6 @@ import { toRecipe } from './wire';
 /** Looking through one connected library, a page at a time. */
 export class LibraryBrowser {
   #open = $state<ConnectedSource | null>(null);
-  // Raw: up to twenty thousand rows, only ever replaced wholesale.
   #recipes = $state.raw<SourceRecipe[]>([]);
   #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
@@ -16,7 +15,6 @@ export class LibraryBrowser {
   #loadingMore = $state(false);
   #loadingAll = $state(false);
 
-  /** Set when the next page failed, so a list that fetches at its end stops instead of looping. */
   #moreFailed = $state(false);
 
   /**

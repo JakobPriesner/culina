@@ -27,17 +27,9 @@
   import SettingsSection from '../SettingsSection.svelte';
 
   /**
-   * How the server runs: its database, what it trusts, what it allows.
-   *
-   * Two saves rather than one, because they are two different kinds of risk.
-   * The server settings take effect with a restart and can be put back from
-   * this screen; the database is connected to before it is saved, and pointing
-   * it somewhere new is the one change here that leaves the instance with
-   * different data afterwards.
-   *
-   * Every save that changes something restarts the server, which is said on
-   * the button rather than in a dialog: it takes a second or two, and a
-   * confirmation for that would be a click spent on reassurance.
+   * How the server runs: its database, what it trusts, what it allows. Two saves for two kinds of risk: server settings
+   * restart and can be put back here; the database is connected to before saving, and a new one leaves different data.
+   * A restart is said on the button, not in a dialog.
    */
 
   let serverDraft = $state<ServerDraft | null>(null);
@@ -56,12 +48,7 @@
     copyDrafts();
   });
 
-  /**
-   * After a restart the session may not have survived it: turning secure
-   * cookies on or off renames the cookie, and the browser then holds one the
-   * new host does not look for. Asked rather than assumed, and sent to sign in
-   * again — back to this page — only when it really is gone.
-   */
+  /** After a restart the session may be gone (toggling secure cookies renames the cookie); checked, not assumed, and sent to sign in again only if lost. */
   async function settle(outcome: SaveOutcome) {
     if (outcome.kind !== 'applied') {
       return;
@@ -70,7 +57,6 @@
     await session.refresh();
 
     if (session.status !== 'authenticated') {
-      // The app's own guard sends them to sign in, and back here afterwards.
       await invalidateAll();
 
       return;
@@ -206,7 +192,6 @@
     onretry={() => retry('database')}
   />
 {:else}
-  <!-- The shape of the first two sections, so nothing jumps when they land. -->
   <div class="loading" aria-busy="true">
     {#each { length: 2 } as _, index (index)}
       <div class="placeholder" aria-hidden="true">
@@ -217,8 +202,7 @@
   </div>
 {/if}
 
-<!-- Outside the settings above: it changes no configuration, needs no restart,
-     and must still work while the configuration cannot be read. -->
+<!-- Outside the settings above: needs no restart and must work while the configuration cannot be read. -->
 <SettingsSection title={m['server.recovery']()} description={m['server.recovery.hint']()} bare>
   <IssueRecoveryCodePanel />
 </SettingsSection>

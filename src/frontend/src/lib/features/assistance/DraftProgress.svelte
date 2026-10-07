@@ -2,13 +2,7 @@
   import { GenerationStatus } from '$ds';
   import Olli from '$shell/olli/Olli.svelte';
 
-  /**
-   * The assistant at work, said with the status line and shown with Olli.
-   *
-   * A legible work scene: thinking before the first words, writing as they
-   * arrive. The status remains plain text and motion follows the device setting without
-   * interrupting the request.
-   */
+  /** The assistant at work: a status line plus Olli, thinking before the first words, writing as they arrive; motion follows the device setting. */
   interface Props {
     label: string;
     /** Whether any of the draft has arrived yet. */

@@ -1,75 +1,14 @@
 import { gzipSync } from 'node:zlib';
 import { glob, readFile } from 'node:fs/promises';
 
-/**
- * What the app is allowed to weigh.
- *
- * A recipe app is read on a phone in a kitchen, often on whatever signal
- * reaches the back of a house. The number that matters is the first load —
- * everything the document asks for before anything is on screen — and the way
- * it gets worse is never a decision anybody made: it is one convenient
- * dependency, pulled in for one helper, that brings a date library with it.
- *
- * Gzipped, because that is what is actually transferred. Measured rather than
- * estimated, and printed on every run so the number is visible before it is a
- * failure.
- */
+/** Gzipped size budgets, measured on every run; the first load is what someone waits for on a bad signal. */
 
 /**
- * The limits. Raise one deliberately, in a commit that says what was added and
- * why it was worth it — never to make a build pass.
- *
- * The two totals were re-baselined on 21 September 2026, against an app that
- * had roughly half again as much in it as the one they were written for: 21
- * pages rather than 13, 128 components rather than 92, and 808 translated
- * strings rather than 297. Measured rather than assumed — no dependency had
- * crept in, the only runtime one is still openapi-fetch, and the largest
- * chunks are the Svelte and SvelteKit runtimes. Building with one locale
- * instead of two gives 205.5 kB, so the second language is 16.9 kB of it:
- * Paraglide inlines both strings and a dispatcher for every message.
- *
- * `firstLoadBytes` did not move and should be the last one that ever does. It
- * is what somebody waits for at the back of a house on a bad signal, and at
- * 70.3 kB there is still room under it.
- *
- * The totals moved again on 24 September 2026, for the server's own setup:
- * the first-run screen and Settings → Server, two pages that one administrator
- * opens a handful of times in the life of an instance. Measured against the
- * build before them, they are 14.7 kB of script — 5.5 kB of it the 85 new
- * strings in both languages, 4.2 kB the two pages, 4.3 kB the fields they
- * share — and 1.0 kB of styles, with no new dependency. The search highlight
- * just before them had already taken the last of the old headroom (236.9 kB).
- * Worth it: without them a fresh container did not start at all, and the
- * settings could only be changed by somebody with a shell. Neither page is on
- * the first load, which went from 70.6 to 71.0 kB.
- *
- * The JavaScript total moved a third time on 26 September 2026, to 500 kB, for
- * households: switching between the ones you are in, making a new one, and one
- * household inheriting another's recipes to read and cook but not change.
- * Measured against the build before it, that is 3.1 kB of script — the header
- * switcher, the new-household sheet, the inheritance setting, the note on an
- * inherited recipe, and 20 strings in both languages, already cut down from 34
- * by reusing the ones households had — and 0.4 kB of styles, with no new
- * dependency. The first load did not move from 71.5 kB. This time the ceiling
- * was not raised by the cost of the feature but well past it, on purpose:
- * features are still arriving faster than they can each be weighed against a
- * limit set a few kilobytes above the last one, and the total bounds only the
- * worst navigation. What somebody waits for on a bad signal is
- * `firstLoadBytes`, which stays where it is and remains the number to defend.
- *
- * The styles total followed on 27 September 2026, from 40 to 60 kB, for the same
- * reason. It had been creeping up by a few hundred bytes a feature and reached
- * 40.2 kB with the list of households that inherit this one's recipes, the
- * mobile recipe layout and the navigation's hover feedback — none of them a
- * dependency, all of them styles scoped to the components that use them. A
- * limit a few hundred bytes above the last feature would be raised again by the
- * next one, which makes it a number to argue with rather than a guard. The
- * first load, which is where styles cost somebody waiting, stays at 80 kB.
+ * Raise a limit deliberately, in a commit that says what was added and why, never to make a build pass.
+ * `firstLoadBytes` is the number to defend; the totals only bound the worst navigation.
  */
 export const budgets = {
-  /** Everything the shell asks for before it can render: scripts and styles. */
   firstLoadBytes: 80 * 1024,
-  /** Every chunk of every route together, which bounds the worst navigation. */
   totalJavaScriptBytes: 500 * 1024,
   totalStyleBytes: 60 * 1024
 } as const;
@@ -85,8 +24,7 @@ const gzipped = (bytes: Buffer | string) => gzipSync(bytes, { level: 9 }).byteLe
 export async function weigh(buildDir: string): Promise<Weight> {
   const html = await readFile(`${buildDir}/index.html`, 'utf8');
 
-  // What the shell references directly: the entry scripts and the stylesheets
-  // the page cannot paint without.
+  // What the shell references directly: entry scripts and the stylesheets needed to paint.
   const referenced = [...html.matchAll(/(?:href|src)="(\/_app\/[^"]+)"/g)].map(
     (match) => match[1]!
   );

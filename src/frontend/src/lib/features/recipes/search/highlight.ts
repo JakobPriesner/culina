@@ -7,34 +7,20 @@ export interface Stretch {
 /** The shortest word worth marking: one letter would light up half a title. */
 const shortestWord = 2;
 
-/**
- * One character, compared the way a search compares: case and accents
- * ignored, so "creme" finds "Crème". Character for character, so a position
- * in the folded text is the same position in what is on screen.
- */
+/** One character compared as a search does (case and accents ignored: "creme" finds "Crème"), one for one so folded positions match the screen. */
 const foldChar = (character: string): string =>
   character.toLocaleLowerCase().normalize('NFD').charAt(0);
 
 const fold = (text: string): string => [...text].map(foldChar).join('');
 
-/**
- * A folded query word, and the same word as a German keyboard without umlauts
- * writes it: "kaesekuchen" is also "kasekuchen", which is what "Käsekuchen"
- * folds to. The search reads both spellings, so the marks do too.
- */
+/** A folded query word plus its German-keyboard spelling ("kaesekuchen" also reads "kasekuchen", what "Käsekuchen" folds to); search reads both, so marks do too. */
 const spellings = (word: string): string[] => {
   const plain = word.replaceAll('ae', 'a').replaceAll('oe', 'o').replaceAll('ue', 'u');
 
   return plain === word ? [word] : [word, plain];
 };
 
-/**
- * Splits text into what the typed words matched and what they did not.
- *
- * For the words a person reads a result by — its title and the line saying
- * why it is there — so the reason a recipe was found can be seen, not only
- * read. Where nothing matches, the text comes back whole.
- */
+/** Splits text into what the typed words matched and what they did not, for titles and match reasons; unmatched text comes back whole. */
 export function highlightMatches(text: string, query: string): readonly Stretch[] {
   const characters = [...text];
   const folded = fold(text);

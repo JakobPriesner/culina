@@ -8,13 +8,11 @@
   import StepNeeds from './StepNeeds.svelte';
   import StepText from './StepText.svelte';
 
-  /** The method: every step, the one being cooked growing in place. */
   interface Props {
     steps: readonly Step[];
     cooking: boolean;
     currentStep: number;
     perStep: boolean;
-    /** Whether there is more than one step to split ingredients between. */
     divisible: boolean;
     scaling: Scaling;
     highlighted: string | null;

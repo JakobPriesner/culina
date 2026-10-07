@@ -1,13 +1,6 @@
 import type { BuiltInUnit } from './units';
 
-/**
- * Folds a typed word to the form the table below is keyed by.
- *
- * German is written with umlauts and typed both ways: the same person writes
- * `Stück` at a keyboard and `Stueck` on a phone in a hurry. Folding here means
- * the table below holds one spelling of each word instead of two, and `Esslöffel`
- * cannot be the one that was forgotten.
- */
+/** Folds a typed word to the table's key form: umlauts are typed both ways (`Stück`, `Stueck`). */
 export const foldUnit = (word: string): string =>
   word
     .toLowerCase()
@@ -18,17 +11,9 @@ export const foldUnit = (word: string): string =>
     .replaceAll('ß', 'ss');
 
 /**
- * What people actually type, mapped to the wire codes.
- *
- * The server reads the same words the same way (`Domain/Recipes/UnitSpellings`)
- * for units that arrive without passing through here — another app's import, a
- * unit typed into the editor. Here they are read before anything is sent, so a
- * pasted line is shown back already understood.
- *
- * Both languages, because a German recipe says `EL` and an English one says
- * `tbsp`, and the same person writes both depending on where the recipe came
- * from. Plurals are listed rather than stripped: German plurals are not a
- * suffix rule, and a parser that guessed would read `Zitronen` as a unit.
+ * What people type, mapped to the wire codes; the server reads the same words
+ * (`Domain/Recipes/UnitSpellings`).
+ * Both languages, with plurals listed rather than stripped (German plurals aren't a suffix rule).
  */
 const spellings: Record<string, BuiltInUnit> = {
   g: 'g',
@@ -98,5 +83,4 @@ const spellings: Record<string, BuiltInUnit> = {
   pinches: 'pinch'
 };
 
-/** The built-in unit a written word spells — `Milliliter`, `EL`, `Stk.` — if any. */
 export const spelledUnit = (word: string): BuiltInUnit | undefined => spellings[foldUnit(word)];

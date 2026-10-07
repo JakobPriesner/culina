@@ -4,11 +4,7 @@ import { describe, expect, it } from 'vitest';
 import Greeting from './Greeting.svelte';
 import { renderWithProviders } from './render';
 
-/*
- * Proves the harness itself works: a component renders, it is queried the way
- * every other suite must query it — by role and accessible name, never by CSS
- * class — and module state is put back between tests.
- */
+/* Proves the harness: a component renders, is queried by role and accessible name (never CSS class), and module state is reset between tests. */
 describe('the test harness', () => {
   it('renders a component with a theme applied', () => {
     renderWithProviders(Greeting);
