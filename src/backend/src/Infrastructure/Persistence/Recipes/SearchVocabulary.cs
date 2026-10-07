@@ -92,8 +92,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             $"""
             with {Typed}
             select r.id as recipe_id, r.title, r.image_id,
-                   case when r.prep_minutes is null and r.cook_minutes is null then null
-                        else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) end as total_minutes
+                   {RecipeSql.TotalMinutes()} as total_minutes
             from recipe_search_documents d
             cross join typed t
             join recipes r on r.id = d.recipe_id
@@ -114,8 +113,7 @@ internal sealed class SearchVocabulary(DbExecutor executor) : ISearchVocabulary
             select min(i.name) as name,
                    count(distinct r.id)::int as recipe_count,
                    count(distinct r.id) filter (
-                       where (r.prep_minutes is not null or r.cook_minutes is not null)
-                         and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= 30)::int as quick_count
+                       where {RecipeSql.FitsWithin("30")})::int as quick_count
             from recipe_ingredients i
             cross join typed t
             join ingredient_groups g on g.id = i.group_id

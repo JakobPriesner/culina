@@ -1,3 +1,5 @@
+using Infrastructure.Persistence.Recipes;
+
 namespace Infrastructure.Persistence.Cookbooks;
 
 /// <summary>
@@ -49,10 +51,7 @@ internal static class SmartShelfSql
             -- A recipe with no stated time is excluded by the ceiling rather
             -- than treated as taking zero minutes, the same way the filter bar
             -- reads it.
-            and ({maxMinutes} is null
-                 or ((r.prep_minutes is not null or r.cook_minutes is not null)
-                     and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0)
-                         <= {maxMinutes}))
+            and ({maxMinutes} is null or {RecipeSql.FitsWithin(maxMinutes)})
         """;
 
     /// <summary>

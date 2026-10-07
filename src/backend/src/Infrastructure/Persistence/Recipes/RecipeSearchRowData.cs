@@ -3,42 +3,19 @@ using Application.Abstractions;
 namespace Infrastructure.Persistence.Recipes;
 
 /// <summary>One row of the search projection as PostgreSQL returns it.</summary>
-internal sealed record RecipeSearchRowData
+internal sealed record RecipeSearchRowData : RecipeCardRow
 {
-    public Guid Id { get; init; }
-
-    public Guid HouseholdId { get; init; }
-
-    public string Title { get; init; } = string.Empty;
-
-    public Guid? ImageId { get; init; }
-
-    public int? TotalMinutes { get; init; }
-
-    public decimal YieldAmount { get; init; }
-
-    public string YieldKind { get; init; } = "servings";
-
-    public string? YieldLabel { get; init; }
-
-    public string[] Tags { get; init; } = [];
-
-    public int CookCount { get; init; }
-
-    public DateTimeOffset? LastCookedAt { get; init; }
+    /// <summary>The search selects the recipe as <c>id</c>.</summary>
+    public Guid Id
+    {
+        get => RecipeId;
+        init => RecipeId = value;
+    }
 
     /// <summary>Zero for every sort but <see cref="RecipeSort.Suggested"/>.</summary>
     public decimal SuggestionScore { get; init; }
 
-    public DateTimeOffset UpdatedAt { get; init; }
-
-    public int MatchedIngredients { get; init; }
-
-    public int IngredientCount { get; init; }
-
     public int TotalCount { get; init; }
-
-    public DateTimeOffset? AddedToCookbookAt { get; init; }
 
     public string Language { get; init; } = "de";
 
