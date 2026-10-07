@@ -4,7 +4,8 @@
 
   import { imageUrl } from '$features/recipes/recipeImage';
   import { m } from '$shell/i18n';
-  import type { PlannedMeal } from './mealPlan.svelte';
+  import type { MealSlot, PlannedMeal } from './mealPlan.svelte';
+  import { slotLabel } from './slots';
 
   /**
    * One planned meal, on the day it is planned for.
@@ -71,7 +72,7 @@
     <div class="words">
       <span class="name">{meal.title}</span>
       <span class="meta">
-        {m[`plan.slot.${meal.slot as 'dinner'}`]?.() ?? ''}{#if meal.servings}
+        {slotLabel[meal.slot as MealSlot]?.() ?? ''}{#if meal.servings}
           · {m['recipes.meta.servings']({ count: meal.servings })}{/if}
       </span>
       <!-- Part of the link's name, so a screen reader hears it with the meal

@@ -6,6 +6,7 @@
 
   import PlannedCard from '$features/planning/PlannedCard.svelte';
   import PlanWeekSkeleton from '$features/planning/PlanWeekSkeleton.svelte';
+  import { mealSlots, slotLabel } from '$features/planning/slots';
   import MoveMealSheet from '$features/planning/MoveMealSheet.svelte';
   import {
     asDate,
@@ -123,10 +124,10 @@
     }
   });
 
-  // The shelves, so the picker can offer to narrow to one. Only worth asking
-  // for once the picker can be opened, which is whenever this page is.
+  // The shelves, so the picker can offer to narrow to one. Only asked for once
+  // the picker is opened.
   $effect(() => {
-    if (householdId) {
+    if (householdId && adding !== null) {
       void cookbooks.list(householdId);
     }
   });
@@ -470,10 +471,10 @@
 
       <fieldset class="slots">
         <legend>{m['plan.pick.slot']()}</legend>
-        {#each ['breakfast', 'lunch', 'dinner'] as const as which (which)}
+        {#each mealSlots as which (which)}
           <label>
             <input type="radio" name="slot" value={which} bind:group={slot} />
-            {m[`plan.slot.${which}`]()}
+            {slotLabel[which]()}
           </label>
         {/each}
       </fieldset>

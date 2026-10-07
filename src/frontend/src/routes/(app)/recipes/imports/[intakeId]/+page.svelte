@@ -149,6 +149,8 @@
             {#each Array(job.photoCount) as _, index (index)}<img
                 src="/api/v1/recipe-intakes/{id}/photos/{index}"
                 alt={m['import.review.photo']()}
+                loading="lazy"
+                decoding="async"
               />{/each}
           </div>{/if}
       </section>

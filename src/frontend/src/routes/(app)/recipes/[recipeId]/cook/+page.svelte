@@ -4,21 +4,19 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button, ErrorState, IconButton, Select, Sheet, Skeleton } from '$ds';
+  import { Button, ErrorState } from '$ds';
   import { busy } from '$shell/busy.svelte';
   import { session } from '$features/auth/session.svelte';
   import { autoScrollStep } from '$features/cooking/autoScrollStep';
+  import CookingControls from '$features/cooking/CookingControls.svelte';
+  import CookSkeleton from '$features/cooking/CookSkeleton.svelte';
+  import { finishCooking } from '$features/cooking/finishCooking';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
-  import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
-  import StepTimer from '$features/cooking/StepTimer.svelte';
-  import CookingPipToggle from '$features/cooking/CookingPipToggle.svelte';
-  import CookingRemoteToggle from '$features/cooking/CookingRemoteToggle.svelte';
-  import {
-    kitchenTimers as timers,
-    kitchenWakeLock as wakeLock
-  } from '$features/cooking/kitchen.svelte';
-  import { kitchenLighting } from '$features/cooking/lighting.svelte';
+  import { kitchenTimers as timers } from '$features/cooking/kitchen.svelte';
+  import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
+  import NotesSheet from '$features/cooking/NotesSheet.svelte';
+  import { createStepGestures } from '$features/cooking/stepGestures';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
@@ -39,6 +37,8 @@
   const recipeId = $derived(page.params.recipeId ?? '');
   const servings = $derived(yieldFrom(page.url, recipes.detail));
 
+  /** The recipe on screen, once it is the one in the address. */
+  const recipe = $derived(recipes.detail?.id === recipeId ? recipes.detail : null);
   const totalSteps = $derived(recipes.detail?.steps.length ?? 0);
 
   /**
@@ -67,8 +67,24 @@
 
   const onLastStep = $derived(currentStep >= totalSteps - 1);
 
+  /** The recipe page, at the yield being cooked. */
+  const recipeHref = $derived(
+    urlAtYield(
+      new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url),
+      servings,
+      recipes.detail
+    )
+  );
+
   /** Forward, or done — the same control, because it is the same gesture. */
   const advance = () => (onLastStep ? finish(true) : move(currentStep + 1));
+
+  const gestures = createStepGestures({
+    ready: () => ready,
+    currentStep: () => currentStep,
+    move,
+    advance
+  });
 
   onMount(() => {
     // Nothing interrupts somebody at a hob — not even an offer. See
@@ -151,21 +167,14 @@
   async function finish(completed: boolean) {
     over = true;
 
+    const { closed, recorded } = await finishCooking(
+      recipeId,
+      servings,
+      session.activeHouseholdId,
+      completed
+    );
+
     if (completed) {
-      haptics.celebrate();
-    }
-
-    const closed = await cooking.end(completed);
-    timers.clear();
-
-    if (completed) {
-      const recorded = await cookLog.record(recipeId, servings, session.activeHouseholdId);
-
-      // Both halves of "I made it" are reported on, not just the one that
-      // happens to have a toast. Saying it was added when the attempt never
-      // reached the server, or when the session it belongs to is still open,
-      // is worse than saying nothing: the history is the only place anyone
-      // would go to check.
       toaster.show(
         recorded && closed
           ? {
@@ -185,28 +194,8 @@
       );
     }
 
-    await goto(
-      urlAtYield(
-        new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url),
-        servings,
-        recipes.detail
-      )
-    );
+    await goto(recipeHref);
   }
-
-  const stepTimer = $derived(timers.timers.find((timer) => timer.stepIndex === currentStep));
-  const duration = $derived(recipes.detail?.steps[currentStep]?.durationSeconds ?? null);
-
-  /**
-   * What the timer is called once it has left the step behind.
-   *
-   * A timer outlives the screen it was started from — it shows in the bar with
-   * four others — so it takes the step's own name when there is one. "Proving"
-   * is findable among five running timers in a way "Step 3" is not.
-   */
-  const stepName = $derived(
-    recipes.detail?.steps[currentStep]?.title ?? m['recipe.step']({ number: currentStep + 1 })
-  );
 
   /**
    * How tall the controls are, so the surface can keep a step out from under
@@ -217,69 +206,6 @@
   let autoScrolling = $state(false);
   let notesOpen = $state(false);
   let kitchenOpen = $state(false);
-
-  function stepFromKeyboard(event: KeyboardEvent) {
-    if (!ready || event.defaultPrevented) {
-      return;
-    }
-
-    const target = event.target;
-
-    if (
-      target instanceof HTMLElement &&
-      target.closest('input, textarea, select, button, a, [contenteditable="true"]')
-    ) {
-      return;
-    }
-
-    if (event.key === 'ArrowRight' || event.key === 'PageDown') {
-      event.preventDefault();
-      move(currentStep + 1);
-    } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
-      event.preventDefault();
-      move(currentStep - 1);
-    }
-  }
-
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
-
-  function handleTouchStart(event: TouchEvent) {
-    const touch = event.changedTouches[0];
-    if (!touch || !ready) return;
-
-    const target = event.target;
-    if (
-      target instanceof HTMLElement &&
-      target.closest('input, textarea, select, button, a, [contenteditable="true"]')
-    ) {
-      return;
-    }
-
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    touchStartTime = Date.now();
-  }
-
-  function handleTouchEnd(event: TouchEvent) {
-    const touch = event.changedTouches[0];
-    if (!touch || !ready) return;
-
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    const elapsed = Date.now() - touchStartTime;
-
-    // A deliberate horizontal swipe: at least 50px displacement, predominantly horizontal,
-    // and performed in under 600ms so slow vertical scrolling is not mistaken for a step move.
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && elapsed < 600) {
-      if (deltaX < 0) {
-        advance();
-      } else {
-        move(currentStep - 1);
-      }
-    }
-  }
 </script>
 
 {#snippet cookedArt()}
@@ -291,16 +217,15 @@
 </svelte:head>
 
 <!-- The whole screen advances, because a cook's hands are busy and the target
-     should be the phone rather than a button on it. Arrow keys for a laptop
-     propped on the counter, horizontal swipes for a phone on a stand. -->
+     should be the phone rather than a button on it. -->
 <svelte:window
-  onkeydown={stepFromKeyboard}
-  ontouchstart={handleTouchStart}
-  ontouchend={handleTouchEnd}
+  onkeydown={gestures.keydown}
+  ontouchstart={gestures.touchstart}
+  ontouchend={gestures.touchend}
 />
 
 <Page>
-  {#if recipes.detail && recipes.detail.id === recipeId}
+  {#if recipe}
     <div
       class="cook"
       style:--controls-height="{controlsHeight}px"
@@ -312,7 +237,7 @@
       }}
     >
       <RecipeSurface
-        recipe={recipes.detail}
+        {recipe}
         emphasis="cook"
         {servings}
         onservings={scale}
@@ -321,112 +246,19 @@
         onstopcooking={() => finish(false)}
       />
 
-      <div class="controls" bind:clientHeight={controlsHeight}>
-        {#if duration !== null}
-          <div class="control-timer">
-            <StepTimer
-              durationSeconds={duration}
-              timer={stepTimer}
-              secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
-              onstart={() => timers.start(currentStep, duration, stepName)}
-              ondismiss={() => timers.dismiss(currentStep)}
-              onpause={() => timers.pause(currentStep)}
-              onresume={() => timers.resume(currentStep)}
-            />
-          </div>
-        {/if}
-
-        <div class="control-summary">
-          <div class="control-place">
-            <a
-              class="recipe-return"
-              href={urlAtYield(
-                new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url),
-                servings,
-                recipes.detail
-              )}
-              aria-label={m['cooking.backToRecipe']()}
-              title={m['cooking.backToRecipe']()}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <path d="m10 6-6 6 6 6M4 12h16" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span>{m['cooking.recipe']()}</span>
-            </a>
-            <p class="progress">
-              {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
-            </p>
-          </div>
-          <Button
-            size="sm"
-            label={autoScrolling ? m['cooking.autoScroll.stop']() : undefined}
-            disabled={!ready}
-            onclick={() => (autoScrolling = !autoScrolling)}
-          >
-            {autoScrolling ? m['cooking.autoScroll.stopShort']() : m['cooking.autoScroll.start']()}
-          </Button>
-          <IconButton
-            size="sm"
-            bordered
-            label={m['kitchen.controls']()}
-            onclick={() => (kitchenOpen = true)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 7h16M4 17h16M9 4v6M15 14v6" stroke-linecap="round" />
-            </svg>
-          </IconButton>
-        </div>
-
-        <div class="moves">
-          <IconButton
-            label={m['notes.title']()}
-            size="lg"
-            bordered
-            onclick={() => (notesOpen = true)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 4.5h14v15H5z" stroke-linejoin="round" />
-              <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
-            </svg>
-          </IconButton>
-
-          <!-- The largest control size, because these are pressed with a wet
-             thumb while looking at a pan rather than at the screen.
-             Measured at 320 px, "Previous step" used to be the *wider* of the
-             two simply because it is a longer phrase — the control that undoes
-             progress was an easier target than the one pressed at every step.
-             It is an icon now, and next takes the room that frees. -->
-          <IconButton
-            label={m['cooking.previous']()}
-            size="lg"
-            bordered
-            disabled={!ready || currentStep === 0}
-            onclick={() => move(currentStep - 1)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m14 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </IconButton>
-
-          <!-- One control that changes what it says, not two that replace each
-             other. Swapping the element loses focus at exactly the moment
-             somebody reaches the last step, which for a keyboard user means
-             tabbing back into the page to finish. -->
-          <div class="advance">
-            <Button size="lg" variant="primary" full disabled={!ready} onclick={advance}>
-              <span class="advance-label">
-                {onLastStep ? m['cooking.finish']() : m['cooking.next']()}
-              </span>
-            </Button>
-          </div>
-        </div>
-      </div>
+      <CookingControls
+        {recipe}
+        {currentStep}
+        {ready}
+        {recipeHref}
+        {autoScrolling}
+        bind:height={controlsHeight}
+        onmove={move}
+        onadvance={advance}
+        onautoscroll={() => (autoScrolling = !autoScrolling)}
+        onnotes={() => (notesOpen = true)}
+        onkitchen={() => (kitchenOpen = true)}
+      />
     </div>
   {:else if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
     <NotFound kind="recipe" level={1} />
@@ -444,244 +276,18 @@
       {/snippet}
     </ErrorState>
   {:else}
-    <div class="cook-skeleton" aria-busy="true" aria-label={m['recipes.list.loading']()}>
-      <div class="back">
-        <Skeleton width="6rem" height="1.5rem" />
-      </div>
-
-      <div class="cook-head">
-        <Skeleton width="50%" height="2rem" />
-        <Skeleton width="25%" height="1rem" />
-      </div>
-
-      <div class="cook-servings">
-        <Skeleton shape="block" width="8.5rem" height="var(--control-sm)" />
-      </div>
-
-      <div class="cook-step-card">
-        <div class="cook-step-header">
-          <Skeleton shape="circle" width="2.25rem" height="2.25rem" />
-          <Skeleton width="5rem" height="1.25rem" />
-        </div>
-        <div class="cook-step-body">
-          <Skeleton width="95%" height="1.25rem" />
-          <Skeleton width="85%" height="1.25rem" />
-          <Skeleton width="70%" height="1.25rem" />
-        </div>
-      </div>
-
-      <div class="controls" aria-hidden="true">
-        <Skeleton width="6rem" height="1rem" />
-        <div class="moves">
-          <Skeleton shape="circle" width="var(--control-lg)" height="var(--control-lg)" />
-          <div class="advance">
-            <Skeleton shape="block" width="9rem" height="var(--control-lg)" />
-          </div>
-        </div>
-      </div>
-    </div>
+    <CookSkeleton />
   {/if}
 </Page>
 
-<Sheet
-  open={kitchenOpen}
-  title={m['kitchen.controls']()}
-  closeLabel={m['picker.close']()}
-  onclose={() => (kitchenOpen = false)}
->
-  {#if recipes.detail && recipes.detail.id === recipeId}
-    <p class="auto-scroll-hint">{m['cooking.autoScroll.hint']()}</p>
-    <div class="kitchen-display">
-      <label for="kitchen-lighting">{m['kitchen.lighting']()}</label>
-      <Select
-        id="kitchen-lighting"
-        value={kitchenLighting.mode}
-        inline
-        options={[
-          { value: 'normal', label: m['kitchen.normal']() },
-          { value: 'glare', label: m['kitchen.glare']() },
-          { value: 'oled', label: m['kitchen.oled']() }
-        ]}
-        onchange={(value) => kitchenLighting.choose(value)}
-      />
-      <span class="wake-status" class:held={wakeLock.held}>
-        <span aria-hidden="true">{wakeLock.held ? '◉' : '○'}</span>
-        {wakeLock.held ? m['kitchen.awake']() : m['kitchen.canSleep']()}
-      </span>
-      <CookingPipToggle recipe={recipes.detail} />
-      <CookingRemoteToggle recipe={recipes.detail} />
-    </div>
-  {/if}
-</Sheet>
-
-<Sheet
-  open={notesOpen}
-  title={m['notes.title']()}
-  closeLabel={m['picker.close']()}
-  onclose={() => (notesOpen = false)}
->
-  <PersonalNotePanel {recipeId} variant="cook" />
-</Sheet>
+<KitchenSheet open={kitchenOpen} {recipe} onclose={() => (kitchenOpen = false)} />
+<NotesSheet open={notesOpen} {recipeId} onclose={() => (notesOpen = false)} />
 
 <style>
-  .auto-scroll-hint {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-  }
-
-  .kitchen-display {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    padding-block: var(--space-3);
-    color: var(--text);
-    font-size: var(--text-sm);
-  }
-  .wake-status {
-    flex-basis: 100%;
-    color: var(--text-muted);
-  }
-  .wake-status.held {
-    color: var(--text-success);
-  }
-
   /* What the controls stand over: their own height, the gap they float at and
      as much again, so a step's last line is not flush against them. */
   .cook {
     --controls-inset: calc(var(--controls-height) + var(--space-8));
-  }
-
-  .cook-skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-  }
-
-  .cook-head {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .cook-servings {
-    padding-block: var(--space-4);
-    border-block: 1px solid var(--border);
-  }
-
-  .cook-step-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-    padding: var(--space-6);
-    background: var(--surface-sunken);
-    border-radius: var(--radius-lg);
-    min-height: 14rem;
-  }
-
-  .cook-step-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-  }
-
-  .cook-step-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .controls {
-    position: sticky;
-    bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-4));
-    z-index: var(--z-sticky);
-    display: grid;
-    /* Wrap whole groups according to their available space, including when
-       text is enlarged. Navigation must never become a sliver beside them. */
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
-    align-items: center;
-    gap: var(--space-3);
-    margin-top: var(--space-8);
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-overlay);
-  }
-
-  .control-timer {
-    grid-column: 1 / -1;
-    min-width: 0;
-  }
-
-  .control-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: var(--space-2);
-  }
-
-  .progress {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-variant-numeric: tabular-nums;
-    overflow-wrap: normal;
-  }
-
-  .control-place {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-  }
-
-  .recipe-return {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-height: var(--control-sm);
-    color: var(--accent);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    text-decoration: none;
-    border-radius: var(--radius-sm);
-  }
-
-  .recipe-return:hover {
-    color: var(--accent-hover);
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-  }
-
-  .recipe-return svg {
-    flex: none;
-    width: var(--space-4);
-    height: var(--space-4);
-  }
-
-  .moves {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    align-items: center;
-    min-width: 0;
-    gap: var(--space-2);
-  }
-
-  /* Next takes whatever is left. It is pressed once per step and Previous is
-     pressed when something went wrong, and a target's size should say which is
-     which. */
-  .advance {
-    min-width: 0;
-  }
-
-  .advance :global(.button) {
-    padding-inline: var(--space-3);
-  }
-
-  .advance-label {
-    overflow-wrap: normal;
   }
 
   @media (width < 64rem) {
@@ -693,10 +299,6 @@
   @media screen and (max-height: 32rem) {
     .cook {
       --controls-inset: var(--space-8);
-    }
-
-    .controls {
-      position: static;
     }
   }
 </style>

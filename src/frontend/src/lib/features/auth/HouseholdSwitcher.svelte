@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Popover } from '$ds';
+  import { ActionMenu } from '$ds';
 
   import { m } from '$shell/i18n';
   import NewHouseholdSheet from './NewHouseholdSheet.svelte';
@@ -33,17 +33,6 @@
 
   const active = $derived(session.activeHousehold);
 
-  /** Closes the menu the choice was made in, then acts on it. */
-  function choose(event: MouseEvent, run: () => void) {
-    const panel = (event.currentTarget as HTMLElement).closest('[popover]');
-
-    if (panel instanceof HTMLElement && typeof panel.hidePopover === 'function') {
-      panel.hidePopover();
-    }
-
-    run();
-  }
-
   function select(householdId: string) {
     if (householdId === session.activeHouseholdId) {
       return;
@@ -55,7 +44,7 @@
 </script>
 
 {#if active}
-  <Popover placement="bottom-end">
+  <ActionMenu minWidth="14rem" maxWidth="20rem" wrap>
     {#snippet trigger({ popovertarget })}
       <button
         type="button"
@@ -80,69 +69,63 @@
       </button>
     {/snippet}
 
-    <div class="menu">
-      <p class="heading">{m['household.switch.heading']()}</p>
+    <p class="heading">{m['household.switch.heading']()}</p>
 
-      {#each session.households as household (household.householdId)}
-        {@const current = household.householdId === active.householdId}
-        <button
-          type="button"
-          class="item"
-          aria-current={current || undefined}
-          onclick={(e) => choose(e, () => select(household.householdId))}
-        >
-          <span class="mark" aria-hidden="true">
-            {#if current}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m5 12 5 5 9-10" />
-              </svg>
-            {/if}
-          </span>
-          <span class="label">
-            <span class="title">{household.name}</span>
-            {#if household.inheritsFrom[0]}
-              <span class="inherits">
-                {m['household.inherit.current']({ name: household.inheritsFrom[0].name })}
-              </span>
-            {/if}
-          </span>
-        </button>
-      {/each}
-
-      <hr class="separator" />
-
-      <button type="button" class="item" onclick={(e) => choose(e, () => (creating = true))}>
-        <span class="mark" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </span>
-        <span class="title">{m['household.new.title']()}</span>
-      </button>
-
-      <a
+    {#each session.households as household (household.householdId)}
+      {@const current = household.householdId === active.householdId}
+      <button
+        type="button"
         class="item"
-        href={resolve('/(app)/me/household')}
-        onclick={(e) => choose(e, () => undefined)}
+        aria-current={current || undefined}
+        onclick={() => select(household.householdId)}
       >
-        <span class="mark" aria-hidden="true"></span>
-        <span class="title">{m['me.household']()}</span>
-      </a>
-    </div>
-  </Popover>
+        <span class="mark" aria-hidden="true">
+          {#if current}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m5 12 5 5 9-10" />
+            </svg>
+          {/if}
+        </span>
+        <span class="label">
+          <span class="title">{household.name}</span>
+          {#if household.inheritsFrom[0]}
+            <span class="inherits">
+              {m['household.inherit.current']({ name: household.inheritsFrom[0].name })}
+            </span>
+          {/if}
+        </span>
+      </button>
+    {/each}
+
+    <hr class="separator" />
+
+    <button type="button" class="item" onclick={() => (creating = true)}>
+      <span class="mark" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </span>
+      <span class="title">{m['household.new.title']()}</span>
+    </button>
+
+    <a class="item" href={resolve('/(app)/me/household')}>
+      <span class="mark" aria-hidden="true"></span>
+      <span class="title">{m['me.household']()}</span>
+    </a>
+  </ActionMenu>
 
   <NewHouseholdSheet
     open={creating}
@@ -187,54 +170,6 @@
     height: calc(var(--space-4) + var(--space-1));
   }
 
-  .menu {
-    display: flex;
-    flex-direction: column;
-    min-width: 14rem;
-    max-width: 20rem;
-  }
-
-  .heading {
-    padding: var(--space-2) var(--space-3) var(--space-1);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-  }
-
-  .item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    min-height: var(--control-sm);
-    padding: var(--space-2) var(--space-3);
-    border: none;
-    border-radius: var(--radius-md);
-    background: none;
-    color: var(--text);
-    font: inherit;
-    font-size: var(--text-sm);
-    text-align: start;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .item:hover {
-    background: var(--surface-hover);
-  }
-
-  .mark {
-    display: grid;
-    flex: none;
-    place-items: center;
-    width: var(--space-4);
-    height: var(--space-4);
-    color: var(--accent);
-  }
-
-  .mark svg {
-    width: 100%;
-    height: 100%;
-  }
-
   .label {
     display: flex;
     flex-direction: column;
@@ -248,11 +183,5 @@
   .inherits {
     color: var(--text-muted);
     font-size: var(--text-xs);
-  }
-
-  .separator {
-    margin: var(--space-1) var(--space-3);
-    border: none;
-    border-top: 1px solid var(--border);
   }
 </style>

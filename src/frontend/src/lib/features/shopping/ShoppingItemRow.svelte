@@ -1,12 +1,14 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Checkbox, IconButton, Popover } from '$ds';
+  import { ActionMenu, Checkbox, IconButton } from '$ds';
 
   import { formatQuantity } from '$features/recipes/formatQuantity';
   import { quantityLabels } from '$features/recipes/quantityLabels';
   import { scaleQuantity } from '$features/recipes/scaling';
+  import type { MealSlot } from '$features/planning/mealPlan.svelte';
+  import { slotLabel } from '$features/planning/slots';
   import { haptics } from '$shell/haptics';
-  import { m } from '$shell/i18n';
+  import { formatDate, m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
   import { nameOf, sectionOrder, type Section } from './sections';
   import type { ShoppingItem } from './stores/shopping.svelte';
@@ -47,28 +49,20 @@
 
   const amount = $derived(amountOf(item.quantity, item.unit));
   const sources = $derived(item.sources ?? []);
-  const dates = $derived(
-    new Intl.DateTimeFormat(preferences.locale, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    })
-  );
 
   const plannedFor = (date: string, slot: string | null | undefined) =>
     m['shopping.source.planned']({
-      date: dates.format(new Date(`${date}T12:00:00`)),
-      slot: slot ? m[`plan.slot.${slot as 'breakfast' | 'lunch' | 'dinner'}`]() : ''
+      date: formatDate(new Date(`${date}T12:00:00`), {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short'
+      }),
+      // A slot this client does not know is left out rather than guessed at.
+      slot: (slot && slotLabel[slot as MealSlot]?.()) || ''
     });
 
-  /** Closes the menu the section was chosen in, then moves the line. */
-  function move(event: MouseEvent, section: Section) {
-    const panel = (event.currentTarget as HTMLElement).closest('[popover]');
-
-    if (panel instanceof HTMLElement && typeof panel.hidePopover === 'function') {
-      panel.hidePopover();
-    }
-
+  /** Moves the line, but only when the section chosen is a different one. */
+  function move(section: Section) {
     if (section !== item.section) {
       onmove(section);
     }
@@ -113,7 +107,7 @@
     <!-- Only while it is still to find: a bought line is not in any aisle any
          more, and the list does not show one under a section. -->
     {#if !item.isChecked}
-      <Popover placement="bottom-end">
+      <ActionMenu wrap>
         {#snippet trigger({ popovertarget })}
           <IconButton label={m['shopping.move']({ name: item.name })} size="sm" {popovertarget}>
             <!-- Two arrows passing: this goes somewhere else, not away. -->
@@ -130,36 +124,34 @@
           </IconButton>
         {/snippet}
 
-        <div class="menu">
-          <p class="menu-heading">{m['shopping.move.heading']()}</p>
+        <p class="heading">{m['shopping.move.heading']()}</p>
 
-          {#each sectionOrder as section (section)}
-            {@const current = section === item.section}
-            <button
-              type="button"
-              class="menu-item"
-              aria-current={current || undefined}
-              onclick={(event) => move(event, section)}
-            >
-              <span class="mark" aria-hidden="true">
-                {#if current}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="m5 12 5 5 9-10" />
-                  </svg>
-                {/if}
-              </span>
-              {nameOf(section)}
-            </button>
-          {/each}
-        </div>
-      </Popover>
+        {#each sectionOrder as section (section)}
+          {@const current = section === item.section}
+          <button
+            type="button"
+            class="item"
+            aria-current={current || undefined}
+            onclick={() => move(section)}
+          >
+            <span class="mark" aria-hidden="true">
+              {#if current}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m5 12 5 5 9-10" />
+                </svg>
+              {/if}
+            </span>
+            {nameOf(section)}
+          </button>
+        {/each}
+      </ActionMenu>
     {/if}
 
     <IconButton label={m['shopping.remove']({ name: item.name })} size="sm" onclick={onremove}>
@@ -321,55 +313,6 @@
     .actions {
       opacity: 1;
     }
-  }
-
-  /* Not struck through with the line it belongs to: it is a menu, not part of
-     the item. */
-  .menu {
-    display: flex;
-    flex-direction: column;
-    min-width: 12rem;
-    text-decoration: none;
-  }
-
-  .menu-heading {
-    padding: var(--space-2) var(--space-3) var(--space-1);
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-  }
-
-  .menu-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    min-height: var(--control-sm);
-    padding: var(--space-2) var(--space-3);
-    border: none;
-    border-radius: var(--radius-md);
-    background: none;
-    color: var(--text);
-    font: inherit;
-    font-size: var(--text-sm);
-    text-align: start;
-    cursor: pointer;
-  }
-
-  .menu-item:hover {
-    background: var(--surface-hover);
-  }
-
-  .mark {
-    display: grid;
-    flex: none;
-    place-items: center;
-    width: var(--space-4);
-    height: var(--space-4);
-    color: var(--accent);
-  }
-
-  .mark svg {
-    width: 100%;
-    height: 100%;
   }
 
   @media (width < 32rem) {

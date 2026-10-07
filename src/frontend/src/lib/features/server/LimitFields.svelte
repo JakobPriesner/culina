@@ -5,6 +5,7 @@
   import {
     limitVariable,
     rateLimits,
+    type RateLimit,
     wholeNumber,
     type ServerDraft,
     type ServerFacts
@@ -18,12 +19,27 @@
   }
 
   let { draft = $bindable(), facts, disabled = false }: Props = $props();
+
+  // One entry per limit rather than a computed message key, which would keep
+  // every message in the bundle.
+  const limitLabel: Record<RateLimit, () => string> = {
+    loginPerIpPerMinute: () => m['server.limit.loginPerIpPerMinute'](),
+    loginPerAccountPerMinute: () => m['server.limit.loginPerAccountPerMinute'](),
+    registerPerIpPerHour: () => m['server.limit.registerPerIpPerHour'](),
+    invitationPerIpPerHour: () => m['server.limit.invitationPerIpPerHour'](),
+    sharedRecipesPerIpPerMinute: () => m['server.limit.sharedRecipesPerIpPerMinute'](),
+    importsPerHour: () => m['server.limit.importsPerHour'](),
+    sourceRequestsPerHour: () => m['server.limit.sourceRequestsPerHour'](),
+    assistantRequestsPerHour: () => m['server.limit.assistantRequestsPerHour'](),
+    archiveExportsPerHour: () => m['server.limit.archiveExportsPerHour'](),
+    requestsPerSessionPerMinute: () => m['server.limit.requestsPerSessionPerMinute']()
+  };
 </script>
 
 <div class="limits">
   {#each rateLimits as limit (limit)}
     <SettingField
-      label={m[`server.limit.${limit}`]()}
+      label={limitLabel[limit]()}
       variable={limitVariable(limit)}
       pinned={facts.pinned.has(limitVariable(limit))}
       inputmode="numeric"

@@ -81,19 +81,44 @@
   let sourceUrl = $state('');
   let transcript = $state('');
   let photos = $state<File[]>([]);
-  let photoUrls = $state<string[]>([]);
   let reviewing = $state(false);
   let assisted = $state(false);
   let reviewed = $state<ParsedRecipe | null>(null);
   let reviewDraft = $state<Draft | null>(null);
   const current = $derived(intakeBaseline(householdId));
 
-  $effect(() => {
-    const urls = photos.map((file) => URL.createObjectURL(file));
-    photoUrls = urls;
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  // One object URL per photo for as long as the photo is held: adding one
+  // photo does not re-read and re-decode the others.
+  const objectUrls = new WeakMap<File, string>();
+  let withUrls: File[] = [];
+  const photoUrls = $derived(
+    photos.map((file) => {
+      let url = objectUrls.get(file);
+
+      if (!url) {
+        url = URL.createObjectURL(file);
+        objectUrls.set(file, url);
+        withUrls.push(file);
+      }
+
+      return url;
+    })
+  );
+  const revoke = (kept: readonly File[]) => {
+    for (const file of withUrls) {
+      if (!kept.includes(file)) {
+        URL.revokeObjectURL(objectUrls.get(file)!);
+        objectUrls.delete(file);
+      }
+    }
+
+    withUrls = withUrls.filter((file) => kept.includes(file));
+  };
+  $effect(() => revoke(photos));
+  onDestroy(() => {
+    drafts.dismiss();
+    revoke([]);
   });
-  onDestroy(() => drafts.dismiss());
   let reading = $state(false);
   let failure = $state<string | null>(null);
   let iphoneShareHelp = $state(false);
@@ -388,7 +413,12 @@
         {#if photos.length}
           <div class="photos">
             {#each photoUrls as photo, index (photo)}
-              <img src={photo} alt={photos[index]?.name ?? m['import.review.photo']()} />
+              <img
+                src={photo}
+                alt={photos[index]?.name ?? m['import.review.photo']()}
+                loading="lazy"
+                decoding="async"
+              />
             {/each}
           </div>
           <Button variant="ghost" onclick={() => (photos = [])}>{m['import.media.remove']()}</Button
