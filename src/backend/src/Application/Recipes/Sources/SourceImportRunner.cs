@@ -137,6 +137,10 @@ public sealed class SourceImportRunner(
         await reader.Match(
             async library =>
             {
+                var alreadyHere = await services.GetRequiredService<IRecipeOriginRepository>()
+                    .AlreadyHereAsync(source.HouseholdId, source.Kind, [.. run.ExternalIds], cancellationToken)
+                    .ConfigureAwait(false);
+
                 await EachAsync(
                         run,
                         new ImportInto(
@@ -145,7 +149,8 @@ public sealed class SourceImportRunner(
                             run.CookbookId,
                             run.UserId,
                             theirs.Language ?? run.DeviceLanguage,
-                            run.AllowLookalikes),
+                            run.AllowLookalikes,
+                            alreadyHere),
                         cancellationToken)
                     .ConfigureAwait(false);
 
