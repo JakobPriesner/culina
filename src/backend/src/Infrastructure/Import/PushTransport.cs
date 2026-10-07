@@ -1,3 +1,5 @@
+using System.Security.Cryptography.X509Certificates;
+using Domain.Import;
 using Lib.Net.Http.WebPush;
 using Lib.Net.Http.WebPush.Authentication;
 
@@ -10,7 +12,7 @@ internal sealed class PushTransport : IDisposable
     private readonly PushServiceClient client;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The owned HttpClient disposes its handler and is disposed by this singleton.")]
-    public PushTransport() : this(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CheckCertificateRevocationList = true }, disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) }) { }
+    public PushTransport() : this(new HttpClient(Handler(), disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) }) { }
     internal PushTransport(HttpClient http)
     {
         this.http = http;
@@ -25,4 +27,23 @@ internal sealed class PushTransport : IDisposable
     }
 
     public void Dispose() => http.Dispose();
+
+    /// <summary>
+    /// The connections a push goes out on: public addresses only, never
+    /// through a proxy, no redirects.
+    /// </summary>
+    /// <remarks>
+    /// The endpoint is an address a browser handed over, and the list of push
+    /// services it is checked against is a list of <em>names</em>. Where a name
+    /// resolves is checked here, at the moment of connecting, by the same
+    /// checked connections every other fetch made on a user's behalf uses.
+    /// </remarks>
+    private static SocketsHttpHandler Handler()
+    {
+        var handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);
+
+        handler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
+
+        return handler;
+    }
 }
