@@ -4,6 +4,7 @@ using Application.Abstractions.Messaging;
 using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
+using Domain.Cooking;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -112,15 +113,25 @@ internal sealed class ExportArchiveQueryHandler(
                         cancellationToken)
                     .ConfigureAwait(false);
 
+                // The page's recipes and everything read about them, one round
+                // trip each rather than four per recipe.
+                var ids = page.Items.Select(summary => summary.RecipeId).ToArray();
+                var found = await recipes.FindManyAsync(ids, cancellationToken).ConfigureAwait(false);
+                var personalNotes = await notes.ForRecipesAsync(ids, query.UserId, cancellationToken).ConfigureAwait(false);
+                var cooked = await log.ForRecipesAsync(ids, query.UserId, cancellationToken).ConfigureAwait(false);
+                var hashes = await recipes.ImageHashesAsync(ids, cancellationToken).ConfigureAwait(false);
+
                 foreach (var summary in page.Items)
                 {
-                    var found = await recipes
-                        .FindAsync(summary.RecipeId, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    var archived = await found.Match(
-                        recipe => ToArchivedAsync(recipe, query.UserId, cancellationToken),
-                        _ => Task.FromResult<ArchivedRecipe?>(null)).ConfigureAwait(false);
+                    var archived = found.TryGetValue(summary.RecipeId, out var recipe)
+                        ? await ToArchivedAsync(
+                                recipe,
+                                [.. personalNotes[recipe.Id]],
+                                [.. cooked[recipe.Id]],
+                                hashes.GetValueOrDefault(recipe.Id),
+                                cancellationToken)
+                            .ConfigureAwait(false)
+                        : null;
 
                     if (archived is null)
                     {
@@ -158,17 +169,11 @@ internal sealed class ExportArchiveQueryHandler(
 
     private async Task<ArchivedRecipe?> ToArchivedAsync(
         Recipe recipe,
-        Guid userId,
+        IReadOnlyList<PersonalNote> written,
+        IReadOnlyList<CookLogEntry> cooked,
+        string? imageHash,
         CancellationToken cancellationToken)
     {
-        var written = await notes
-            .ForRecipeAsync(recipe.Id, userId, cancellationToken)
-            .ConfigureAwait(false);
-
-        var cooked = await log
-            .ForRecipeAsync(recipe.Id, userId, cancellationToken)
-            .ConfigureAwait(false);
-
         var positions = PositionsOf(recipe);
 
         return new ArchivedRecipe
@@ -184,7 +189,7 @@ internal sealed class ExportArchiveQueryHandler(
             Tags = [.. recipe.Tags],
             Groups = [.. recipe.Groups.Select(ToArchived)],
             Steps = [.. recipe.Steps.Select(step => ToArchived(step, positions))],
-            Image = await ToArchivedImageAsync(recipe.Id, cancellationToken).ConfigureAwait(false),
+            Image = await ToArchivedImageAsync(imageHash, cancellationToken).ConfigureAwait(false),
             // The overall note, which is the one on the recipe rather than on a
             // step: a step note restored against a step that moved is a note
             // attached to the wrong instruction.
@@ -236,29 +241,27 @@ internal sealed class ExportArchiveQueryHandler(
         .ToDictionary(one => one.Id, one => one.index);
 
     private async Task<ArchivedImage?> ToArchivedImageAsync(
-        Guid recipeId,
+        string? contentHash,
         CancellationToken cancellationToken)
     {
-        var hash = await recipes.ImageHashAsync(recipeId, cancellationToken).ConfigureAwait(false);
+        if (contentHash is null)
+        {
+            return null;
+        }
 
-        return await hash.Match<Task<ArchivedImage?>>(
-            async contentHash =>
-            {
-                var buffer = new MemoryStream();
+        var buffer = new MemoryStream();
 
-                await using (buffer.ConfigureAwait(false))
-                {
-                    var copied = await images
-                        .CopyToAsync(contentHash, ImageWidth, buffer, cancellationToken)
-                        .ConfigureAwait(false);
+        await using (buffer.ConfigureAwait(false))
+        {
+            var copied = await images
+                .CopyToAsync(contentHash, ImageWidth, buffer, cancellationToken)
+                .ConfigureAwait(false);
 
-                    return copied.Match<ArchivedImage?>(
-                        () => new ArchivedImage("image/webp", Convert.ToBase64String(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))),
-                        // A row whose file is gone exports without a picture
-                        // rather than failing the whole archive.
-                        _ => null);
-                }
-            },
-            _ => Task.FromResult<ArchivedImage?>(null)).ConfigureAwait(false);
+            return copied.Match<ArchivedImage?>(
+                () => new ArchivedImage("image/webp", Convert.ToBase64String(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))),
+                // A row whose file is gone exports without a picture
+                // rather than failing the whole archive.
+                _ => null);
+        }
     }
 }

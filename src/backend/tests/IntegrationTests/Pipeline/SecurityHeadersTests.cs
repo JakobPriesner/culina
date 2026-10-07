@@ -97,6 +97,29 @@ public class SecurityHeadersTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task DocumentResponses_ShouldRequireTrustedTypes_ForEveryScriptSink()
+    {
+        // Arrange
+        using var client = postgres.Api.CreateClient();
+
+        // Act
+        using var response = await client.GetAsync(
+            new Uri("/health/live", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var policy = Policy(response);
+        Assert.Contains("require-trusted-types-for 'script'", policy, StringComparison.Ordinal);
+        Assert.Contains(
+            "trusted-types svelte-trusted-html sveltekit-trusted-url culina-worker-url",
+            policy,
+            StringComparison.Ordinal);
+        // 'allow-duplicates' and a catch-all would each let any code mint its own policy.
+        Assert.DoesNotContain("allow-duplicates", policy, StringComparison.Ordinal);
+        Assert.DoesNotContain("trusted-types *", policy, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DocumentResponses_ShouldAllowOneStyleAttribute_TheRouteAnnouncers()
     {
         // Arrange

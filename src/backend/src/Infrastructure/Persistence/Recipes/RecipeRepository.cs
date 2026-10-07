@@ -90,60 +90,88 @@ internal sealed class RecipeRepository(
 
     public async Task<Result<Recipe>> FindAsync(Guid recipeId, CancellationToken cancellationToken)
     {
-        // One round trip for the whole aggregate. A recipe is never useful
-        // without its ingredients, so a query per collection would be four
-        // round trips to render one page.
-        return await executor.QueryMultipleAsync<Result<Recipe>>(
+        var found = await FindManyAsync([recipeId], cancellationToken).ConfigureAwait(false);
+
+        return found.TryGetValue(recipeId, out var recipe) ? recipe : RecipeErrors.NotFound(recipeId);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, Recipe>> FindManyAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(recipeIds);
+
+        if (recipeIds.Count == 0)
+        {
+            return new Dictionary<Guid, Recipe>();
+        }
+
+        // One round trip for the whole aggregate, and for however many of them
+        // are wanted. A recipe is never useful without its ingredients, so a
+        // query per collection would be four round trips to render one page —
+        // and a week of meals would be one set of them per recipe.
+        return await executor.QueryMultipleAsync<IReadOnlyDictionary<Guid, Recipe>>(
             """
             select id, household_id, title, description, language as recipe_language,
                    yield_amount, yield_kind, yield_label, prep_minutes, cook_minutes, image_id,
                    created_by, created_at, updated_at, version
-            from recipes where id = @recipeId;
+            from recipes where id = any(@recipeIds);
 
             select id, recipe_id, name, sort_order
-            from ingredient_groups where recipe_id = @recipeId order by sort_order;
+            from ingredient_groups where recipe_id = any(@recipeIds) order by sort_order;
 
             select i.id, i.group_id, i.sort_order, i.quantity, i.unit, i.name, i.note
             from recipe_ingredients i
             join ingredient_groups g on g.id = i.group_id
-            where g.recipe_id = @recipeId
+            where g.recipe_id = any(@recipeIds)
             order by i.sort_order;
 
             select id, recipe_id, sort_order, title, body, duration_seconds
-            from steps where recipe_id = @recipeId order by sort_order;
+            from steps where recipe_id = any(@recipeIds) order by sort_order;
 
             select r.step_id, r.recipe_ingredient_id
             from step_ingredient_refs r
             join steps s on s.id = r.step_id
-            where s.recipe_id = @recipeId;
+            where s.recipe_id = any(@recipeIds);
 
-            select t.slug from recipe_tags rt
+            select rt.recipe_id, t.slug from recipe_tags rt
             join tags t on t.id = rt.tag_id
-            where rt.recipe_id = @recipeId order by t.slug;
+            where rt.recipe_id = any(@recipeIds) order by t.slug;
             """,
-            new { recipeId },
+            new { recipeIds = recipeIds.ToArray() },
             async reader =>
             {
-                var row = await reader.ReadSingleOrDefaultAsync<RecipeRow>().ConfigureAwait(false);
+                var rows = await reader.ReadAsync<RecipeRow>().ConfigureAwait(false);
+                var groups = (await reader.ReadAsync<IngredientGroupRow>().ConfigureAwait(false)).ToList();
+                var ingredients = (await reader.ReadAsync<RecipeIngredientRow>().ConfigureAwait(false)).ToList();
+                var steps = (await reader.ReadAsync<StepRow>().ConfigureAwait(false)).ToList();
+                var uses = (await reader.ReadAsync<StepIngredientRefRow>().ConfigureAwait(false)).ToList();
+                var tagged = (await reader.ReadAsync<RecipeTagRow>().ConfigureAwait(false)).ToList();
 
-                if (row is null)
-                {
-                    return RecipeErrors.NotFound(recipeId);
-                }
+                // Each child row is filed under the recipe it belongs to; the
+                // ingredients and the references reach it through their group
+                // and their step.
+                var groupsOf = groups.ToLookup(group => group.RecipeId);
+                var recipeOfGroup = groups.ToDictionary(group => group.Id, group => group.RecipeId);
+                var ingredientsOf = ingredients
+                    .Where(ingredient => recipeOfGroup.ContainsKey(ingredient.GroupId))
+                    .ToLookup(ingredient => recipeOfGroup[ingredient.GroupId]);
+                var stepsOf = steps.ToLookup(step => step.RecipeId);
+                var recipeOfStep = steps.ToDictionary(step => step.Id, step => step.RecipeId);
+                var usesOf = uses
+                    .Where(use => recipeOfStep.ContainsKey(use.StepId))
+                    .ToLookup(use => recipeOfStep[use.StepId]);
+                var tagsOf = tagged.ToLookup(tag => tag.RecipeId, tag => tag.Slug);
 
-                var groups = await reader.ReadAsync<IngredientGroupRow>().ConfigureAwait(false);
-                var ingredients = await reader.ReadAsync<RecipeIngredientRow>().ConfigureAwait(false);
-                var steps = await reader.ReadAsync<StepRow>().ConfigureAwait(false);
-                var uses = await reader.ReadAsync<StepIngredientRefRow>().ConfigureAwait(false);
-                var slugs = await reader.ReadAsync<string>().ConfigureAwait(false);
-
-                return RecipeAssembler.Assemble(
-                    [.. groups],
-                    [.. ingredients],
-                    [.. steps],
-                    [.. uses],
-                    [.. slugs],
-                    row);
+                return (IReadOnlyDictionary<Guid, Recipe>)rows.ToDictionary(
+                    row => row.Id,
+                    row => RecipeAssembler.Assemble(
+                        [.. groupsOf[row.Id]],
+                        [.. ingredientsOf[row.Id]],
+                        [.. stepsOf[row.Id]],
+                        [.. usesOf[row.Id]],
+                        [.. tagsOf[row.Id]],
+                        row));
             },
             cancellationToken).ConfigureAwait(false);
     }
@@ -298,6 +326,20 @@ internal sealed class RecipeRepository(
         var hash = await PreviousHashAsync(recipeId, cancellationToken).ConfigureAwait(false);
 
         return hash is null ? ImageErrors.NotFound : hash;
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> ImageHashesAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(recipeIds);
+
+        var rows = await executor.QueryAsync<(Guid RecipeId, string ContentHash)>(
+            "select recipe_id, content_hash from recipe_images where recipe_id = any(@recipeIds);",
+            new { recipeIds = recipeIds.ToArray() },
+            cancellationToken).ConfigureAwait(false);
+
+        return rows.ToDictionary(row => row.RecipeId, row => row.ContentHash);
     }
 
     private Task<string?> PreviousHashAsync(Guid recipeId, CancellationToken cancellationToken) =>

@@ -54,6 +54,23 @@ internal static class SecurityHeaders
     internal const string AnnouncerStyleHash = "sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo=";
 
     /// <summary>
+    /// The only Trusted Types policies a page may create — each one is a place
+    /// a string becomes markup or a script address, so each is named.
+    /// </summary>
+    /// <remarks>
+    /// <c>svelte-trusted-html</c> is Svelte's, for the static markup of its
+    /// compiled templates. <c>sveltekit-trusted-url</c> is SvelteKit's, named
+    /// because its generated boot code creates it whenever it registers the
+    /// worker itself; Culina registers the worker, so it is not used today.
+    /// <c>culina-worker-url</c> is ours, in <c>updates.svelte.ts</c>, and
+    /// accepts the worker's address and nothing else. There is no
+    /// <c>default</c> policy and no <c>'allow-duplicates'</c>: a library that
+    /// writes a string into the DOM is refused rather than quietly trusted.
+    /// </remarks>
+    internal const string TrustedTypesPolicies =
+        "svelte-trusted-html sveltekit-trusted-url culina-worker-url";
+
+    /// <summary>
     /// The SPA document's policy. There is no <c>unsafe-inline</c> and no
     /// <c>unsafe-eval</c> anywhere — either one disables the protection the
     /// rest of the policy provides. The inline blocks the app needs (the theme
@@ -82,5 +99,10 @@ internal static class SecurityHeaders
             "object-src 'none'",
             "base-uri 'none'",
             "frame-ancestors 'none'",
-            "form-action 'self'");
+            "form-action 'self'",
+            // Every DOM sink that takes script — innerHTML, a script's text,
+            // the worker's address — must be handed a value a named policy made,
+            // so a string an attacker controls cannot reach one by accident.
+            "require-trusted-types-for 'script'",
+            $"trusted-types {TrustedTypesPolicies}");
 }

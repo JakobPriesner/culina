@@ -15,6 +15,15 @@ public interface ICookLogRepository
         Guid userId,
         CancellationToken cancellationToken);
 
+    /// <summary>This person's entries for several recipes, in one round trip.</summary>
+    /// <param name="recipeIds">Which recipes.</param>
+    /// <param name="userId">Whose log.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<ILookup<Guid, CookLogEntry>> ForRecipesAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        Guid userId,
+        CancellationToken cancellationToken);
+
     /// <summary>Appends an entry.</summary>
     /// <param name="entry">What was cooked.</param>
     /// <param name="cancellationToken">Cancels the write.</param>

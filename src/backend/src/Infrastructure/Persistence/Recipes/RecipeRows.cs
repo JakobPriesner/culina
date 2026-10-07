@@ -91,6 +91,14 @@ internal sealed record StepIngredientRefRow
     public Guid RecipeIngredientId { get; init; }
 }
 
+/// <summary>The <c>recipe_tags</c> row, with the slug of the tag it points at.</summary>
+internal sealed record RecipeTagRow
+{
+    public Guid RecipeId { get; init; }
+
+    public string Slug { get; init; } = string.Empty;
+}
+
 /// <summary>
 /// The words each enum is stored as.
 /// </summary>

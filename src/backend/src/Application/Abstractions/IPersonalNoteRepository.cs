@@ -15,6 +15,15 @@ public interface IPersonalNoteRepository
         Guid userId,
         CancellationToken cancellationToken);
 
+    /// <summary>This person's notes on several recipes, in one round trip.</summary>
+    /// <param name="recipeIds">Which recipes.</param>
+    /// <param name="userId">Whose notes.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<ILookup<Guid, PersonalNote>> ForRecipesAsync(
+        IReadOnlyCollection<Guid> recipeIds,
+        Guid userId,
+        CancellationToken cancellationToken);
+
     /// <summary>
     /// Replaces this person's notes on this recipe with the ones supplied.
     /// </summary>
