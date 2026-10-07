@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Domain.Suggestions;
+using Infrastructure.Persistence.Recipes;
 
 namespace Infrastructure.Persistence.Suggestions;
 
@@ -9,36 +10,8 @@ namespace Infrastructure.Persistence.Suggestions;
 /// of how an explanation stays a fact: the reason is whichever term dominated,
 /// not a sentence chosen to suit a recipe that was picked for other reasons.
 /// </remarks>
-internal sealed record SuggestionRowData
+internal sealed record SuggestionRowData : RecipeCardRow
 {
-    public Guid RecipeId { get; init; }
-
-    public Guid HouseholdId { get; init; }
-
-    public string Title { get; init; } = string.Empty;
-
-    public Guid? ImageId { get; init; }
-
-    public int? TotalMinutes { get; init; }
-
-    public decimal YieldAmount { get; init; }
-
-    public string YieldKind { get; init; } = "servings";
-
-    public string? YieldLabel { get; init; }
-
-    public string[] Tags { get; init; } = [];
-
-    public int CookCount { get; init; }
-
-    public DateTimeOffset? LastCookedAt { get; init; }
-
-    public DateTimeOffset UpdatedAt { get; init; }
-
-    public int MatchedIngredients { get; init; }
-
-    public int IngredientCount { get; init; }
-
     public string[] Features { get; init; } = [];
 
     public decimal Score { get; init; }
@@ -108,10 +81,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                 r.household_id,
                 r.title,
                 r.image_id,
-                case
-                    when r.prep_minutes is null and r.cook_minutes is null then null
-                    else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0)
-                end as total_minutes,
+                {{RecipeSql.TotalMinutes()}} as total_minutes,
                 r.yield_amount,
                 r.yield_kind,
                 r.yield_label,
@@ -166,8 +136,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
               -- an unknown time as zero: "I have 25 minutes" asks for recipes
               -- known to fit, and an unknown time is not an answer.
               and (@maxMinutes::int is null
-                   or ((r.prep_minutes is not null or r.cook_minutes is not null)
-                       and coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) <= @maxMinutes::int))
+                   or {{RecipeSql.FitsWithin("@maxMinutes::int")}})
               and (@tagCount::int = 0 or (
                     select count(distinct t.slug) from recipe_tags rt
                     join tags t on t.id = rt.tag_id
@@ -208,22 +177,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
     }
 
     private static ScoredRecipe ToScored(SuggestionRowData row) => new(
-        new RecipeSearchRow(
-            row.RecipeId,
-            row.HouseholdId,
-            row.Title,
-            row.ImageId,
-            row.TotalMinutes,
-            row.YieldAmount,
-            row.YieldKind,
-            row.YieldLabel,
-            row.Tags,
-            row.CookCount,
-            row.LastCookedAt,
-            row.UpdatedAt,
-            row.MatchedIngredients,
-            row.IngredientCount,
-            AddedToCookbookAt: null),
+        row.ToSearchRow(),
         row.Score,
         Terms(row),
         row.Features);

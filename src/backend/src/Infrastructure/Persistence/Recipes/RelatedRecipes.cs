@@ -91,22 +91,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
         return new RelatedPage(
         [
             .. page.Select(row => new RelatedRecipe(
-                new RecipeSearchRow(
-                    row.RecipeId,
-                    row.HouseholdId,
-                    row.Title,
-                    row.ImageId,
-                    row.TotalMinutes,
-                    row.YieldAmount,
-                    row.YieldKind,
-                    row.YieldLabel,
-                    row.Tags,
-                    row.CookCount,
-                    row.LastCookedAt,
-                    row.UpdatedAt,
-                    MatchedIngredients: 0,
-                    row.IngredientCount,
-                    AddedToCookbookAt: null),
+                row.ToSearchRow(),
                 row.Kinds,
                 row.Stuff,
                 row.KindScore,
@@ -134,7 +119,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
     /// exactly: a page cut on a float would be resumed on a number near it,
     /// and skip the row after it or return it twice.
     /// </remarks>
-    private const string Sql = """
+    private static readonly string Sql = $$"""
         with library as (
             select count(*)::float8 as size
             from recipe_search_documents
@@ -177,8 +162,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                    round((0.6 * s.kind_score + 0.4 * s.stuff_score)::numeric, 6) as score
             from scored s)
         select r.id as recipe_id, r.household_id, r.title, r.image_id,
-               case when r.prep_minutes is null and r.cook_minutes is null then null
-                    else coalesce(r.prep_minutes, 0) + coalesce(r.cook_minutes, 0) end as total_minutes,
+               {{RecipeSql.TotalMinutes()}} as total_minutes,
                r.yield_amount, r.yield_kind, r.yield_label, r.updated_at,
                coalesce(array(select t.slug from recipe_tags rt
                               join tags t on t.id = rt.tag_id
@@ -202,34 +186,8 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
         limit @limit;
         """;
 
-    private sealed record Row
+    private sealed record Row : RecipeCardRow
     {
-        public Guid RecipeId { get; init; }
-
-        public Guid HouseholdId { get; init; }
-
-        public string Title { get; init; } = string.Empty;
-
-        public Guid? ImageId { get; init; }
-
-        public int? TotalMinutes { get; init; }
-
-        public decimal YieldAmount { get; init; }
-
-        public string YieldKind { get; init; } = "servings";
-
-        public string? YieldLabel { get; init; }
-
-        public DateTimeOffset UpdatedAt { get; init; }
-
-        public string[] Tags { get; init; } = [];
-
-        public int CookCount { get; init; }
-
-        public DateTimeOffset? LastCookedAt { get; init; }
-
-        public int IngredientCount { get; init; }
-
         public string[] Kinds { get; init; } = [];
 
         public string[] Stuff { get; init; } = [];
