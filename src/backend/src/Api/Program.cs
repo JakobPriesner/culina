@@ -104,6 +104,7 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
     app.UseSessionContext();          // 12. User id on the logging scope and the span.
     app.UseCsrfGuard();               // 13. Needs the session to compare the token against.
     app.UseAuthorization();           // 14. Policies, after identity is established.
+    app.UsePersonalRateLimits();      // 15. Costly limits per person, now that it is known who asks.
 
     app.MapHealthEndpoints();
     app.MapSecurityTxt();

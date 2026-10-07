@@ -21,6 +21,7 @@ const read = {
     sourceRequestsPerHour: 1500,
     sharedRecipesPerIpPerMinute: 120,
     assistantRequestsPerHour: 60,
+    archiveExportsPerHour: 5,
     requestsPerSessionPerMinute: 600
   },
   telemetry: { otlpEndpoint: null, otlpProtocol: 'grpc' },

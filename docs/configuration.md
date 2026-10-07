@@ -157,8 +157,9 @@ All of these are in the app.
 | `RateLimits__InvitationPerIpPerHour` | `10` | |
 | `RateLimits__SharedRecipesPerIpPerMinute` | `120` | Reads of recipes shared behind a link. |
 | `RateLimits__ImportsPerHour` | `30` | Imports from a web page, per person. |
-| `RateLimits__SourceRequestsPerHour` | `1500` | Requests against a connected recipe library. |
-| `RateLimits__AssistantRequestsPerHour` | `60` | The only limit here about money rather than load. |
+| `RateLimits__SourceRequestsPerHour` | `1500` | Requests against a connected recipe library, per person. |
+| `RateLimits__AssistantRequestsPerHour` | `60` | Per person. The only limit here about money rather than load. |
+| `RateLimits__ArchiveExportsPerHour` | `5` | Archives taken, per person: each one streams every photograph in the household. |
 | `RateLimits__RequestsPerSessionPerMinute` | `600` | Every request, per address despite the name. |
 
 Login is limited per address **and** per account: per-address alone lets a
@@ -168,6 +169,10 @@ is counted before the password is checked, so simultaneous guesses cannot slip
 past the limit. An address the account has signed in from in the last 30 days
 gets a per-account budget of its own, so somebody guessing from elsewhere
 cannot lock the owner out at home; every other address shares the account's.
+
+The limits "per person" count against the signed-in account, whichever device,
+session or address it uses, so signing in again does not buy a fresh
+allowance.
 
 ## The assistant
 

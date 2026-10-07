@@ -27,7 +27,7 @@ public sealed record RateLimitSettings
     public int InvitationPerIpPerHour { get; init; } = 10;
 
     /// <summary>
-    /// Recipe imports allowed per hour from one caller.
+    /// Recipe imports allowed per hour from one person.
     /// </summary>
     /// <remarks>
     /// The one operation that makes the server fetch an address somebody else
@@ -37,7 +37,7 @@ public sealed record RateLimitSettings
     public int ImportsPerHour { get; init; } = 30;
 
     /// <summary>
-    /// Requests allowed per hour against libraries this household has connected.
+    /// Requests one person may make per hour against libraries their household has connected.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -83,6 +83,17 @@ public sealed record RateLimitSettings
     public int AssistantRequestsPerHour { get; init; } = 60;
 
     /// <summary>
+    /// Archives one person may take per hour.
+    /// </summary>
+    /// <remarks>
+    /// An archive streams every recipe in a household with every photograph
+    /// inline, which makes it the heaviest read there is. Taking one is a
+    /// once-in-a-while thing; a few an hour leaves room for a download that
+    /// failed, and none for a loop.
+    /// </remarks>
+    public int ArchiveExportsPerHour { get; init; } = 5;
+
+    /// <summary>
     /// Requests allowed per minute from one address, signed in or not.
     /// </summary>
     /// <remarks>
@@ -103,6 +114,7 @@ public sealed record RateLimitSettings
         SettingsGuard.InRange(SourceRequestsPerHour, 1, 100_000, SectionName, nameof(SourceRequestsPerHour));
         SettingsGuard.InRange(SharedRecipesPerIpPerMinute, 1, 100_000, SectionName, nameof(SharedRecipesPerIpPerMinute));
         SettingsGuard.InRange(AssistantRequestsPerHour, 1, 10_000, SectionName, nameof(AssistantRequestsPerHour));
+        SettingsGuard.InRange(ArchiveExportsPerHour, 1, 1_000, SectionName, nameof(ArchiveExportsPerHour));
         SettingsGuard.InRange(RequestsPerSessionPerMinute, 10, 100_000, SectionName, nameof(RequestsPerSessionPerMinute));
     }
 }

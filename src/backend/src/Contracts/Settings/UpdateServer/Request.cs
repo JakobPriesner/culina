@@ -72,6 +72,9 @@ public sealed record RateLimitsContract
     /// <summary>Requests to the assistant per hour from one person.</summary>
     public required int AssistantRequestsPerHour { get; init; }
 
+    /// <summary>Archives one person may take per hour.</summary>
+    public required int ArchiveExportsPerHour { get; init; }
+
     /// <summary>Requests per minute from one address, signed in or not.</summary>
     public required int RequestsPerSessionPerMinute { get; init; }
 }
