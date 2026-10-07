@@ -952,6 +952,7 @@
   "search.reason.concept": "Ähnlich: {term}",
   "search.refine": "Eingrenzen",
   "problem.archive.not_an_archive": "Diese Datei ist kein Culina-Archiv.",
+  "problem.archive.too_many_recipes": "Dieses Archiv enthält zu viele Rezepte für eine einzelne Wiederherstellung. Teile es auf und stelle die Teile einzeln wieder her.",
   "problem.archive.unknown_version": "Dieses Archiv stammt aus einer neueren Culina-Version. Aktualisiere zuerst dieses Culina.",
   "problem.assistance.invalid_api_key": "Das sieht nicht nach einem API-Schlüssel aus.",
   "problem.assistance.invalid_base_url": "Mit dieser Adresse kann Culina sich nicht verbinden. Sie sieht so aus: https://api.example.com.",

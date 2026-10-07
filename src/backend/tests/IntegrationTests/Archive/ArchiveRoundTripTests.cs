@@ -115,6 +115,28 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Restore_ShouldRefuse_AnArchiveWithMoreRecipesThanOneRestoreWrites()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+        var recipes = string.Join(",", Enumerable.Repeat(
+            """{ "title": "T", "language": "en", "yieldAmount": 1, "yieldKind": "servings", "tags": [], "groups": [], "steps": [], "cooked": [] }""",
+            2_001));
+
+        // Act
+        var response = await UploadAsync(
+            client,
+            householdId,
+            $$"""{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{{recipes}}] }""");
+
+        // Assert
+        // Counted before anything is written: each recipe is a transaction.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("archive.too_many_recipes", response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Restore_ShouldRefuse_AFileThatIsNotAnArchive()
     {
         // Arrange
