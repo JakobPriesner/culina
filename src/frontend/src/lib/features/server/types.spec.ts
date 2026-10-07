@@ -10,7 +10,7 @@ import {
 } from './types';
 
 const read = {
-  cookies: { secure: true, sessionDays: 30, renewAfterHours: 24 },
+  cookies: { secure: true, sessionDays: 30, renewAfterHours: 24, maxSessionDays: 90 },
   forwardedHeaders: { knownProxies: ['10.0.0.2', '10.0.0.3'], knownNetworks: [] },
   rateLimits: {
     loginPerIpPerMinute: 10,

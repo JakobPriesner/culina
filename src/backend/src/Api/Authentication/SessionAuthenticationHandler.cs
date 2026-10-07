@@ -74,7 +74,8 @@ internal sealed class SessionAuthenticationHandler(
     /// of an access token's life. This is what takes its place — the row's
     /// expiry and both cookies move forward while the session is in use, so
     /// <c>Cookies__SessionDays</c> means "thirty days unused" rather than
-    /// "thirty days from signing in".
+    /// "thirty days from signing in" — up to <c>Cookies__MaxSessionDays</c>
+    /// after signing in, when the session ends however busy it is.
     /// </remarks>
     private async Task<Result> RenewAsync(Session session, DateTimeOffset now)
     {
@@ -83,7 +84,7 @@ internal sealed class SessionAuthenticationHandler(
             return Result.Success();
         }
 
-        session.Touch(now, cookies.SessionLifetime);
+        session.Touch(now, cookies.SessionLifetime, cookies.MaxSessionLifetime);
 
         var renewed = await sessions.RenewAsync(session, Context.RequestAborted).ConfigureAwait(false);
 

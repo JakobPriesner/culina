@@ -25,7 +25,7 @@ internal sealed class SignInEndpoint : IEndpoint
                 CancellationToken cancellationToken) =>
             {
                 var result = await handler
-                    .Handle(request.ToCommand(context), cancellationToken)
+                    .Handle(request.ToCommand(context, cookies), cancellationToken)
                     .ConfigureAwait(false);
 
                 return result.Match(

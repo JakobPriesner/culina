@@ -17,11 +17,16 @@ namespace Application.Sessions.SignIn;
 /// guess is counted against.
 /// </param>
 /// <param name="UserAgent">The browser, for the devices screen.</param>
+/// <param name="PreviousSessionToken">
+/// The session cookie this browser already held, if any, which the new one
+/// replaces.
+/// </param>
 public sealed record SignInCommand(
     string Email,
     string Password,
     string? IpAddress,
-    string? UserAgent);
+    string? UserAgent,
+    string? PreviousSessionToken);
 
 internal sealed class SignInCommandHandler(
     IUserRepository users,
@@ -79,6 +84,10 @@ internal sealed class SignInCommandHandler(
 
         var outcome = await StartSessionAsync(user, command, now, cancellationToken).ConfigureAwait(false);
 
+        await outcome.Match(
+            _ => EndReplacedSessionAsync(command.PreviousSessionToken, now, cancellationToken),
+            _ => Task.CompletedTask).ConfigureAwait(false);
+
         tracked.Tag("culina.user_id", user.Id);
 
         return tracked.Record(outcome);
@@ -103,6 +112,34 @@ internal sealed class SignInCommandHandler(
         AuthenticationLogs.SignInRefused(logger);
 
         return SessionErrors.InvalidCredentials;
+    }
+
+    /// <summary>
+    /// Ends the session this browser held before signing in again.
+    /// </summary>
+    /// <remarks>
+    /// The new cookie overwrites the old one, so nobody should be holding the
+    /// old session any more — and if somebody still is, it is not this
+    /// browser. Left alone it would live on for as long as it kept being used.
+    /// </remarks>
+    private async Task EndReplacedSessionAsync(
+        string? previousToken,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(previousToken))
+        {
+            return;
+        }
+
+        var previous = await sessions.FindActiveByTokenAsync(previousToken, now, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Nothing to report either way: a session that is already gone is
+        // what this wants.
+        await previous.Match(
+            session => sessions.RevokeAsync(session.Id, session.UserId, now, cancellationToken),
+            _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
     }
 
     private async Task UpgradeHashAsync(User user, string password, CancellationToken cancellationToken)

@@ -16,7 +16,8 @@ internal static class UpdateServerSettingsRequestExtensions
             {
                 Secure = request.Cookies.Secure,
                 SessionDays = request.Cookies.SessionDays,
-                RenewAfterHours = request.Cookies.RenewAfterHours
+                RenewAfterHours = request.Cookies.RenewAfterHours,
+                MaxSessionDays = request.Cookies.MaxSessionDays
             },
             new ForwardedHeadersSettings
             {

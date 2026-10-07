@@ -1512,5 +1512,7 @@
   "notAllowed.ticket.chef": "Nur für die Küchenleitung",
   "intake.pause": "Animation pausieren",
   "intake.resume": "Animation abspielen",
-  "problem.settings.insecure_cookies": "Sichere Cookies lassen sich nur ausschalten, wenn die Installation dieses Servers es erlaubt. Öffne Culina stattdessen über https://."
+  "problem.settings.insecure_cookies": "Sichere Cookies lassen sich nur ausschalten, wenn die Installation dieses Servers es erlaubt. Öffne Culina stattdessen über https://.",
+  "server.maxSessionDays": "Tage, die eine Sitzung höchstens hält",
+  "server.maxSessionDays.hint": "Ab der Anmeldung gezählt, egal wie oft sie genutzt wird. Danach ist eine neue Anmeldung nötig."
 }
