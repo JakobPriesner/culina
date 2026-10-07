@@ -25,7 +25,10 @@ namespace Domain.Import;
 /// <param name="Kind">Which sort of place it came from.</param>
 /// <param name="SourceId">Which connection brought it, when one did.</param>
 /// <param name="ExternalId">What that place called it.</param>
-/// <param name="SourceUrl">Where to go and look at the original.</param>
+/// <param name="SourceUrl">
+/// Where to go and look at the original, when there is an address worth
+/// linking to.
+/// </param>
 /// <param name="ImportedAt">When it arrived.</param>
 public sealed record RecipeOrigin(
     Guid RecipeId,
@@ -33,5 +36,5 @@ public sealed record RecipeOrigin(
     SourceKind Kind,
     Guid? SourceId,
     string ExternalId,
-    string? SourceUrl,
+    SourceUrl? SourceUrl,
     DateTimeOffset ImportedAt);

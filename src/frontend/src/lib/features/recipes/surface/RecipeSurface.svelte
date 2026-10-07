@@ -20,6 +20,7 @@
   import StepText from './StepText.svelte';
   import { imageSrcset, imageUrl } from '../recipeImage';
   import { metaLineFor } from '../recipeMeta';
+  import { sourceLink } from '../sourceLink';
   import {
     everyIngredient,
     ingredientsOf,
@@ -27,21 +28,6 @@
     type RecipeReading,
     type Step
   } from '../types';
-
-  /**
-   * The host of the original, for the "from …" line.
-   *
-   * The host and not the whole address: "chefkoch.de" is the fact worth showing
-   * and a 140-character URL with tracking parameters on the end is the same
-   * fact, unreadable. An address that will not parse simply has no line.
-   */
-  const hostOf = (url: string): string => {
-    try {
-      return new URL(url).host.replace(/^www\./, '');
-    } catch {
-      return url;
-    }
-  };
 
   /**
    * The one surface the product is built around.
@@ -177,6 +163,16 @@
   );
 
   const cooking = $derived(emphasis === 'cook');
+
+  /**
+   * The original, for the "from …" line, or no line at all.
+   *
+   * The host and not the whole address: "chefkoch.de" is the fact worth showing
+   * and a 140-character URL with tracking parameters on the end is the same
+   * fact, unreadable. An address that is not an ordinary web address — it came
+   * from somewhere this app does not control — simply has no line.
+   */
+  const original = $derived(sourceLink(recipe.sourceUrl));
 
   /**
    * Whether anything is parked at the bottom of the screen.
@@ -688,13 +684,13 @@
          an ordinary recipe now, and anything louder would make "imported" into
          a second kind of recipe. Reading only — at the hob, where it came from
          is the least useful fact on the screen. -->
-    {#if recipe.sourceUrl && !cooking}
+    {#if original && !cooking}
       <p class="origin">
         <!-- Off site, and the one link on this page that is: resolve() is for
              this app's own routes, and there is nothing here to resolve. -->
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-        <a href={recipe.sourceUrl} rel="noreferrer nofollow" target="_blank">
-          {m['import.origin.from']({ where: hostOf(recipe.sourceUrl) })}
+        <a href={original.href} rel="noreferrer nofollow" target="_blank">
+          {m['import.origin.from']({ where: original.host })}
         </a>
       </p>
     {/if}

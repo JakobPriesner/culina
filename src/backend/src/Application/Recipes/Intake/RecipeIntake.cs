@@ -36,7 +36,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             return Domain.Assistance.AssistanceErrors.NothingToWorkFrom;
         }
 
-        if ((material.FetchSource && material.SourceUrl is null) || (material.SourceUrl is { } url && (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") || url.Length > 2048)))
+        if ((material.FetchSource && material.SourceUrl is null) || (material.SourceUrl is not null && SourceUrl.From(material.SourceUrl) is null))
         {
             return ImportErrors.UnreachableAddress;
         }
@@ -121,8 +121,9 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             var added = await recipes.AddAsync(recipe, t).ConfigureAwait(false);
             return await added.Match(async () =>
             {
+                var original = SourceUrl.From(work.Material.SourceUrl);
                 await origins.AddAsync(new RecipeOrigin(recipe.Id, recipe.HouseholdId,
-                    work.Material.SourceUrl is null ? SourceKind.Assistant : SourceKind.Web, null, work.Id.ToString(), work.Material.SourceUrl, time.GetUtcNow()), t).ConfigureAwait(false);
+                    original is null ? SourceKind.Assistant : SourceKind.Web, null, work.Id.ToString(), original, time.GetUtcNow()), t).ConfigureAwait(false);
                 await jobs.CompleteAsync(work.Id, recipe.Id, t).ConfigureAwait(false);
                 return Result.Success();
             }, e => Task.FromResult(Result.Failure(e))).ConfigureAwait(false);

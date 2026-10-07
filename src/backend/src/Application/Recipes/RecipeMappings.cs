@@ -57,7 +57,7 @@ internal static class RecipeMappings
                 Kind = origin.Kind.Code,
                 SourceId = origin.SourceId,
                 ExternalId = origin.ExternalId,
-                SourceUrl = origin.SourceUrl,
+                SourceUrl = origin.SourceUrl?.Value,
                 ImportedAt = origin.ImportedAt
             },
             CreatedBy = recipe.CreatedBy,
