@@ -9,15 +9,8 @@
   import { summarise } from './labels';
 
   /**
-   * Saving what the toolbar is showing, and everything saved before.
-   *
-   * One sheet for both, because they are one thought: somebody opening "saved
-   * searches" is either adding to the list or acting on it, and two sheets
-   * would mean guessing which before they had looked.
-   *
-   * Nothing here is optimistic. A saved search is a small deliberate act with a
-   * name attached, and a name that appeared and then vanished because the
-   * server disagreed would be worse than a moment's wait.
+   * Saving what the toolbar shows and managing what was saved, in one sheet.
+   * Nothing is optimistic: a name that appeared and then vanished because the server disagreed is worse than a short wait.
    */
   interface Props {
     open: boolean;
@@ -37,13 +30,7 @@
   const savable = $derived(worthSaving(current));
   const summary = $derived(summarise(current));
 
-  /**
-   * Whether a shelf could ask the same question.
-   *
-   * A cookbook fills itself from tags and a time limit; it cannot ask for
-   * words. So a search that is only words has nothing a shelf could be made
-   * from, and offering the button anyway would be offering an empty cookbook.
-   */
+  /** Whether a shelf could ask the same question: cookbooks fill from tags and a time limit, not words. */
   const shelvable = (search: SavedSearch): boolean =>
     search.tags.length > 0 || search.maxMinutes !== null;
 
@@ -163,8 +150,7 @@
                   {m['filters.action']()}
                 </Button>
 
-                <!-- Only where there is something to save over it with.
-                     Otherwise this button would quietly empty a search. -->
+                <!-- Only where there is something to save over; otherwise this would quietly empty a search. -->
                 {#if savable}
                   <Button
                     size="sm"

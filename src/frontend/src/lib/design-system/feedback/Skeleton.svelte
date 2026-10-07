@@ -1,13 +1,7 @@
 <script lang="ts">
   /**
-   * One placeholder block.
-   *
-   * A skeleton rather than a spinner: it shows the shape of what is coming, so
-   * the layout does not jump when the content lands and the wait reads as
-   * "nearly there" rather than "something is happening somewhere".
-   *
-   * Every feature skeleton is built from this. A bespoke one is how two screens
-   * end up shimmering at different speeds.
+   * One placeholder block: a skeleton shows the shape of what is coming so the layout doesn't jump.
+   * Every feature skeleton is built from this, so shimmers stay in sync.
    */
   interface Props {
     /** Any CSS length. Defaults to filling the row. */
@@ -22,18 +16,12 @@
   const defaultHeight = $derived(shape === 'text' ? '1em' : '100%');
 </script>
 
-<!--
-  Hidden from assistive technology: the container that holds these carries
-  aria-busy, which is the one announcement worth making. A screen reader
-  listing twelve empty boxes is worse than silence.
--->
+<!-- Hidden from assistive technology: the container carries aria-busy, the one announcement worth making. -->
 <span class="skeleton {shape}" aria-hidden="true" style:width style:height={height ?? defaultHeight}
 ></span>
 
 <style>
-  /* Fades in rather than popping: the skeleton only appears once a wait has
-     outlasted the loading delay, and a block snapping into an empty page reads
-     as a glitch rather than as "coming". */
+  /* Fades in: it only appears after a wait outlasts the loading delay, and snapping in reads as a glitch. */
   .skeleton {
     position: relative;
     overflow: hidden;
@@ -42,10 +30,8 @@
     animation: appear var(--duration-slow) var(--ease-out) both;
   }
 
-  /* One slanted band of light, then a rest. A single, unhurried pass reads as
-     calm; the earlier pulse beating against a shimmer of a different period
-     made a page of placeholders flicker. Every block on screen mounts in the
-     same frame, so they sweep together. */
+  /* One slanted band then a rest; a single unhurried pass reads calm (the old pulse against a
+     different-period shimmer flickered). Every block mounts in one frame, so they sweep together. */
   .skeleton::after {
     position: absolute;
     inset: 0;
@@ -92,8 +78,7 @@
     }
   }
 
-  /* A static tint rather than a slower shimmer: the point of the animation is
-     "this is coming", and a flat block says that too. */
+  /* A static tint: a flat block says "coming" too. */
   @media (prefers-reduced-motion: reduce) {
     .skeleton {
       animation: none;

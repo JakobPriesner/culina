@@ -1,11 +1,8 @@
 import { describe, over, weigh } from './budget.ts';
 
 /**
- * The weight check, as a command: `pnpm verify:budget`.
- *
- * Run after a build. Prints what the app weighs whether or not it passes, so
- * the number is in the log of every CI run rather than only in the one that
- * failed.
+ * The weight check as a command: `pnpm verify:budget`, run after a build. Prints the weight pass or fail,
+ * so every CI log has the number.
  */
 const buildDir = process.argv[2] ?? 'build';
 const weight = await weigh(buildDir);

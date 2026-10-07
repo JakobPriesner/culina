@@ -15,48 +15,24 @@
   import ShellDock from './shell/ShellDock.svelte';
   import SkipLink from './shell/SkipLink.svelte';
 
-  /**
-   * The frame every signed-in page sits in.
-   *
-   * One set of destinations moves from the top on desktop to the bottom on
-   * compact screens. The dock reserves space for the cooking bar.
-   */
+  /** The frame every signed-in page sits in; the dock reserves space for the cooking bar. */
   interface Props {
     children: Snippet;
-    /** Reserved for the bar that appears while a recipe is being cooked. */
     dock?: Snippet;
   }
 
   let { children, dock }: Props = $props();
 
   /**
-   * How much of the viewport bottom is already spoken for.
-   *
-   * The dock and the bottom bar are their own grid rows, so they never cover
-   * page content that simply flows. They do cover anything a page sticks to the
-   * bottom of the viewport — an action footer, say — and a "Start cooking"
-   * button sliced in half by the cooking bar is exactly the kind of detail that
-   * makes an app feel unfinished. Pages read this instead of guessing.
-   *
-   * Measured rather than declared: the bottom bar is display:none on a wide
-   * screen and reports zero, so one expression covers both layouts.
+   * Viewport bottom already taken by the dock and bottom bar, which cover page content stuck to the viewport bottom.
+   * Measured: the bottom bar is display:none on wide screens and reports zero.
    */
   let dockHeight = $state(0);
   let barHeight = $state(0);
 
   /**
-   * How tall the floating header is, for the few pages that put something of
-   * their own on its line.
-   *
-   * On a tablet the header is the brand and nothing else — the destinations are
-   * down on the bottom bar — so its right half is empty, and a page with its
-   * own navigation can use it. Lining up with the brand means knowing where the
-   * brand's line is, and the brand's height is its wordmark's, which is a font
-   * metric: measured for the same reason the bar below is.
-   *
-   * Left unset until it has been measured, so the token's own figure holds the
-   * place through the server's render rather than a zero that would put those
-   * pills half off the top edge until the page hydrates.
+   * Height of the floating header, for pages that put content on its line; measured because it follows the wordmark's font metrics.
+   * Unset until measured so the token's figure holds the place in SSR rather than a zero.
    */
   let headerHeight = $state<number>();
 
@@ -66,20 +42,11 @@
     offersSearch(page.url.pathname) && session.activeHouseholdId !== null
   );
 
-  /**
-   * How tall the window is, so the shell can tell when it is mostly furniture.
-   */
   let viewportHeight = $state(0);
 
   /**
-   * True when the header, the dock and the bar would take half the screen.
-   *
-   * Every one of them is sized by its contents, so all three grow when somebody
-   * enlarges text — and none of them knows about the others. On a 320x568
-   * phone at 200% the header alone is 208px, the dock 120 and the navigation
-   * 193: 521 pixels of chrome around 47 pixels of recipe. No media query can
-   * see this, because text scale is not a thing a media query is told about;
-   * the shell already measures all three, so it is the one place that can.
+   * Header, dock and bar would take half the screen: all grow with enlarged text and no media query can see it
+   * (320x568 at 200%: 521px of chrome around 47px of recipe).
    */
   const crowded = $derived(
     viewportHeight > 0 && (headerHeight ?? 0) + dockHeight + barHeight > viewportHeight / 2
@@ -132,20 +99,18 @@
     grid-area: content;
     min-width: 0;
     view-transition-name: page-content;
-    /* Focusable as a skip-link target, but never with a ring of its own. */
+    /* Skip-link target: focusable but no ring. */
     outline: none;
     scroll-margin-top: var(--space-24);
   }
 
-  /* Guided cooking has its own way back to the recipe, and on compact screens
-     the instructions need the space the header and bar would take. */
+  /* Guided cooking has its own way back, and needs the space on compact screens. */
   @media (width < 64rem) {
     .focused-cooking .content {
       padding-top: env(safe-area-inset-top, 0px);
     }
   }
 
-  /* On paper there is no app: only what is in the middle of the screen. */
   @media print {
     .shell,
     .content {

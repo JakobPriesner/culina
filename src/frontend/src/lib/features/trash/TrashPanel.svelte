@@ -10,12 +10,8 @@
   import { readTrash, restoreCookbook, restoreRecipe } from './trash';
 
   /**
-   * What was deleted in this household lately, and the way back.
-   *
-   * Said plainly when it will be gone for good, because "deleted" that is not
-   * quite deleted is only reassuring if the date is on the page. Restoring
-   * opens the thing restored, which is where somebody who went looking for it
-   * wanted to be.
+   * What was deleted in this household lately, with the way back; says plainly when it is gone for good,
+   * and restoring opens the thing restored.
    */
   interface Props {
     householdId: string;
@@ -103,8 +99,7 @@
     font-size: var(--text-sm);
   }
 
-  /* Hairlines between rows, like the invitations: one list, not a stack of
-     boxes. */
+  /* Hairlines between rows, like the invitations: one list, not a stack of boxes. */
   .list {
     display: flex;
     flex-direction: column;

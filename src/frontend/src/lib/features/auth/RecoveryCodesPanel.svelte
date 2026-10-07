@@ -12,13 +12,8 @@
   import { createSubmission } from './submission.svelte';
 
   /**
-   * The way back in that does not depend on anybody else.
-   *
-   * On an instance with one account there is no administrator to ask, so
-   * these ten codes are the only thing between a forgotten password and a lost
-   * recipe book. The page says so, shows the codes once, and offers them as a
-   * file — a list on a screen is gone the moment the tab closes, and the whole
-   * point is to have them on the day this screen cannot be reached.
+   * The way back in that depends on nobody else: ten codes shown once and offered as a file,
+   * since a list on screen is gone when the tab closes.
    */
   let remaining = $state<number | null>(null);
   let createdAt = $state<string | null>(null);
@@ -192,8 +187,7 @@
     gap: var(--space-2);
   }
 
-  /* Raised, like a fresh invitation: the one thing on the page that cannot be
-     read again is the one thing that is impossible to scroll past. */
+  /* Raised like a fresh invitation: the one unrepeatable thing is impossible to scroll past. */
   .fresh {
     display: flex;
     flex-direction: column;
@@ -209,9 +203,8 @@
     font-weight: var(--weight-semibold);
   }
 
-  /* Columns where there is room, monospaced so a 0 and a 1 are never in doubt
-     when copied by hand. Unnumbered: the codes have no order, and a "10." took
-     the room the tenth code needed. */
+  /* Columns where there is room, monospaced so 0 and 1 are never in doubt; unnumbered, since a "10."
+     took room the tenth code needed. */
   .codes {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));

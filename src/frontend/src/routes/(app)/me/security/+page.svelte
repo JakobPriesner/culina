@@ -5,14 +5,7 @@
 
   import SettingsSection from '../SettingsSection.svelte';
 
-  /**
-   * The password, and what to do on the day it is forgotten.
-   *
-   * Its own category rather than more rows under Account: both sections ask
-   * for the password before they do anything, and the recovery codes need a
-   * paragraph of explanation that would drown the name and address the
-   * account page is for.
-   */
+  /** The password and recovery codes: their own category since both ask for the password first and the codes need a paragraph that would drown the Account page. */
 </script>
 
 <svelte:head><title>{m['me.security']()}</title></svelte:head>

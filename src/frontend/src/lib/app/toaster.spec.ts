@@ -8,11 +8,7 @@ import { m } from './i18n';
 import { preferences } from './preferences.svelte';
 import { toaster } from './toaster.svelte';
 
-/*
- * Undo is what lets Culina skip confirmation dialogs, so the undo path is the
- * part that has to be right: it must run, it must run once, and the message
- * must survive long enough to be reached.
- */
+/* Undo lets Culina skip confirmation dialogs, so it must run, run once, and stay long enough to be reached. */
 beforeEach(() => {
   vi.useFakeTimers();
   toaster.reset();
@@ -20,7 +16,6 @@ beforeEach(() => {
 
 afterEach(() => vi.useRealTimers());
 
-/** Words that do not depend on the language, for the tests that are about timing. */
 const words = (text: string) => () => text;
 
 describe('a message', () => {
@@ -128,11 +123,7 @@ describe('dismissing by hand', () => {
   });
 });
 
-/*
- * A toast can be on screen when somebody changes language — the update offer
- * stays until it is answered — and it has to change with everything around
- * it, message and buttons as one.
- */
+/* A toast (e.g. the update offer) can be on screen when the language changes; message and buttons must change together. */
 describe('a change of language', () => {
   beforeEach(() => vi.useRealTimers());
 

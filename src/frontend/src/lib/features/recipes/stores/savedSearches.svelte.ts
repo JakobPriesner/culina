@@ -4,12 +4,7 @@ import { registerStore } from '$shell/stores';
 
 import { fromWireSort, toWireSort, type RecipeSort } from './libraryView.svelte';
 
-/**
- * A search somebody wanted back.
- *
- * The same four things the toolbar holds, so applying one is assigning them
- * rather than translating anything.
- */
+/** A saved search holds the toolbar's four things, so applying one is assigning them. */
 export interface SavedSearch {
   readonly id: string;
   readonly name: string;
@@ -19,7 +14,6 @@ export interface SavedSearch {
   readonly sort: RecipeSort | null;
 }
 
-/** What a saved search is made of, before it has a name or an id. */
 export interface SearchCriteria {
   readonly query: string;
   readonly tags: readonly string[];
@@ -27,20 +21,13 @@ export interface SearchCriteria {
   readonly sort: RecipeSort | null;
 }
 
-/** Whether a set of filters says anything the server will accept as a search. */
 export const worthSaving = (criteria: SearchCriteria): boolean =>
   criteria.query.trim().length > 0 ||
   criteria.tags.length > 0 ||
   criteria.maxMinutes !== null ||
   criteria.sort !== null;
 
-/**
- * The searches this household has saved.
- *
- * Household-owned rather than kept in this browser, unlike the recent searches
- * the overlay will remember: a search saved on a laptop that does not exist on
- * the phone in the kitchen is a search saved in the wrong place.
- */
+/** Household-owned (unlike recent searches, which stay in the browser) so a search saved on a laptop exists on the kitchen phone. */
 class SavedSearchStore {
   #items = $state<SavedSearch[]>([]);
   #error = $state<AppError | null>(null);
@@ -54,13 +41,7 @@ class SavedSearchStore {
     return this.#error;
   }
 
-  /**
-   * Reads the household's saved searches, once.
-   *
-   * Not cached by age, unlike the tag vocabulary: this list only changes when
-   * somebody on this device changes it, and every one of those paths updates
-   * the store itself.
-   */
+  /** Reads the saved searches once; not age-cached, since every change to the list goes through this store. */
   async load(householdId: string): Promise<void> {
     if (this.#loadedFor === householdId) {
       return;
@@ -73,8 +54,7 @@ class SavedSearchStore {
     );
 
     if (!result.ok) {
-      // Asked again next time: a list that failed to load once should not stay
-      // missing for the rest of the session.
+      // Retry next time instead of staying missing for the session.
       this.#loadedFor = null;
       this.#error = result.error;
 
@@ -85,7 +65,6 @@ class SavedSearchStore {
     this.#error = null;
   }
 
-  /** Saves what the toolbar is currently showing, under a name. */
   async save(
     householdId: string,
     name: string,
@@ -103,14 +82,12 @@ class SavedSearchStore {
 
     const saved = toSaved(result.value);
 
-    // Appended rather than refetched, and at the end, because the server orders
-    // these oldest first and this is the newest.
+    // Appended: the server orders oldest first and this is the newest.
     this.#items = [...this.#items, saved];
 
     return saved;
   }
 
-  /** Renames one, or points it at different filters. Both are the same gesture. */
   async revise(
     searchId: string,
     name: string,
@@ -139,7 +116,6 @@ class SavedSearchStore {
     return saved;
   }
 
-  /** Forgets one, putting it back if the server disagrees. */
   async forget(searchId: string): Promise<AppError | null> {
     const before = this.#items;
 
@@ -170,7 +146,7 @@ class SavedSearchStore {
   }
 }
 
-/** The wire shape, at the store boundary and nowhere else. */
+/** Wire shape, used at the store boundary only. */
 type WireSavedSearch = components['schemas']['SearchesSavedSearchDetail'];
 
 function toSaved(wire: WireSavedSearch): SavedSearch {
@@ -188,13 +164,11 @@ function toWire(criteria: SearchCriteria) {
   const words = criteria.query.trim();
 
   return {
-    // Omitted rather than sent empty: the server reads "nothing was asked" from
-    // absence, and an empty string would be a filter matching everything.
+    // Omitted rather than empty: the server reads absence as "nothing asked"; an empty string would match everything.
     query: words.length > 0 ? words : undefined,
     tags: [...criteria.tags],
     maxMinutes: criteria.maxMinutes ?? undefined,
-    // `shelf` is dropped rather than stored: it is a cookbook's own order, and
-    // a saved search applied from the library has no cookbook to be an order of.
+    // `shelf` is dropped: it is a cookbook's own order, and the library has no cookbook.
     sort:
       criteria.sort === null || criteria.sort === 'shelf' ? undefined : toWireSort(criteria.sort)
   };

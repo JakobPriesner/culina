@@ -6,24 +6,14 @@
   import { chipLabel } from './wording';
 
   /**
-   * What a query was understood to mean, each reading removable where it
-   * stands.
-   *
-   * The chips are the parser's confession: without them, reading a sentence
-   * for a diet and a time is a system quietly changing what was asked for, and
-   * the first wrong guess is the last time anybody trusts the box. With them a
-   * wrong guess is one tap to undo — and seeing "unter 30 Minuten" become a
-   * chip once is how somebody learns to type it on purpose.
-   *
-   * Drawn like the toolbar's own applied filters, because to the person they
-   * are the same thing: something narrowing the list, with an × to stop it.
+   * What a query was understood to mean, each reading removable in place, so a wrong guess is one
+   * tap to undo.
    */
   interface Props {
     chips: readonly SearchChip[];
     /**
-     * The cookbook being searched, when it is one: drawn first and without an
-     * ×, because it is where the search is rather than something it read, and
-     * leaving it is leaving the page.
+     * The cookbook being searched: drawn first and without an ×, since it is where the search is
+     * and leaving it leaves the page.
      */
     scope?: string;
     onremove: (chip: SearchChip) => void;
@@ -112,7 +102,6 @@
     height: 1em;
   }
 
-  /* What is left out reads as a subtraction, not as one more filter. */
   .exclusion {
     background: transparent;
     border-style: dashed;

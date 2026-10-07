@@ -1,18 +1,7 @@
 /**
- * The timing rules for showing that something is loading — written once.
- *
- * Three numbers, each earning its place:
- *
- * - Nothing appears for the first ~150 ms. Most responses arrive inside that,
- *   and a skeleton that flashes for one frame makes a fast app feel broken.
- * - Once shown, it stays for at least ~300 ms. Otherwise a response landing at
- *   160 ms produces a flicker that reads as a glitch rather than as progress.
- * - After ~10 s it says so and offers to try again, instead of spinning
- *   forever while the person wonders whether to reload.
- *
- * Every feature uses this rather than its own `setTimeout`, because the moment
- * two screens disagree about these numbers the app feels inconsistent and
- * nobody can say why.
+ * The timing rules for showing loading, written once: nothing for ~150 ms, then at least ~300 ms
+ * visible to avoid flicker,
+ * and after ~10 s it says so and offers a retry.
  */
 export interface LoadingTimings {
   readonly delayMs: number;
@@ -27,15 +16,10 @@ export const defaultTimings: LoadingTimings = {
 };
 
 export interface LoadingState {
-  /** True only once the delay has passed and the minimum has not yet elapsed. */
   readonly showing: boolean;
-  /** True when it has been long enough to say "this is taking a while". */
   readonly slow: boolean;
-  /** Call when the work starts. */
   start(): void;
-  /** Call when the work finishes, successfully or not. */
   stop(): void;
-  /** Call when the component goes away, so nothing fires into a dead tree. */
   dispose(): void;
 }
 
@@ -98,8 +82,8 @@ export function createLoadingState(timings: LoadingTimings = defaultTimings): Lo
         return;
       }
 
-      // Already visible: hold it for the rest of the minimum so it cannot
-      // appear and vanish within the same glance.
+      // Already visible: hold it for the rest of the minimum so it can't appear and vanish in one
+      // glance.
       const remaining = timings.minimumMs - (Date.now() - shownAt);
 
       if (remaining <= 0) {

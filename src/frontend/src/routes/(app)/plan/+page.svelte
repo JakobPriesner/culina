@@ -28,18 +28,8 @@
   import { preferences } from '$shell/preferences.svelte';
 
   /**
-   * What this household means to cook this week.
-   *
-   * Seven days, and deliberately not a calendar. A week is the unit people
-   * actually plan in — you shop at the weekend for the week that follows — and
-   * a month view is where recurrence and a second shopping list come from.
-   *
-   * Meals are moved between the days by dragging them, which is the commonest
-   * edit a plan gets: a week is agreed on Sunday and then argued with all week.
-   *
-   * It is reached from the recipe list rather than from the navigation bar,
-   * which is closed at three on purpose: a plan is a weekly thing, and anything
-   * rarer than daily belongs behind one of the three rather than beside it.
+   * The week's plan: seven days, deliberately not a calendar (a month view brings recurrence and a second shopping list); meals move by dragging.
+   * Reached from the recipe list, because the navigation bar is deliberately closed at three.
    */
   const householdId = $derived(session.activeHouseholdId);
 

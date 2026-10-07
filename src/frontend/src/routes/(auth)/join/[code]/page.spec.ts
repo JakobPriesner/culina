@@ -5,13 +5,7 @@ import JoinPage from './+page.svelte';
 import { session, type SessionStatus } from '$features/auth/session.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * One link, four people opening it: somebody signed out, somebody signed in
- * who chooses to join, the owner checking the link they are about to send, and
- * somebody holding a code that no longer works. Only the first is ever offered
- * a sign-in, nobody signed in joins without asking to, and nobody signed in is
- * left on a page with no way back.
- */
+/* One link, four visitors (signed out, signed in, the owner, an expired code): only the first is offered a sign-in, nobody joins without asking, nobody is left without a way back. */
 vi.mock('$app/state', () => ({ page: { params: { code: 'abc123' } } }));
 
 const goto = vi.hoisted(() => vi.fn());
@@ -23,10 +17,7 @@ const json = (body: unknown, status: number) =>
 
 const named = () => json({ householdName: 'Graces Küche' }, 200);
 
-/**
- * Answers the redemption and the read of the invitation; every other request
- * is the session re-reading itself.
- */
+/** Answers the redemption and the invitation read; every other request is the session re-reading itself. */
 function redemptionAnswers(
   reply: () => Response,
   read: () => Promise<Response> | Response = named
@@ -55,7 +46,6 @@ function signedIn(status: SessionStatus) {
 
 const signInOffered = () => screen.queryByRole('link', { name: /sign in/i });
 
-/** Says yes to the household the link is for. */
 async function joinIt() {
   (await screen.findByRole('button', { name: 'Join household' })).click();
 }
@@ -164,13 +154,11 @@ describe('opening an invitation', () => {
 
     await vi.waitFor(() => expect(goto).toHaveBeenCalled());
 
-    // The one the link was for, not whichever kitchen they had open last.
     expect(select).toHaveBeenCalledWith('h2');
   });
 
   it('redeems the code once, though joining re-reads the session', async () => {
-    // The real store this time: it is its status changing under the page,
-    // as joining re-reads the session, that must not redeem the code again.
+    // The real store: its status changing while joining re-reads the session must not redeem the code again.
     session.reset();
     let redeemed = 0;
 

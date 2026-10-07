@@ -7,13 +7,7 @@ import { sectionOrder, type Section } from '../sections';
 
 import type { components } from '$api/generated/schema';
 
-/**
- * One household's shopping list.
- *
- * Household-owned, so two people can add to it at once — which is why every
- * change sends the whole list back and the store takes the server's answer
- * rather than patching its own copy.
- */
+/** One household's list. Every change returns the whole list and the store takes the server's answer: two people can add at once. */
 export type ShoppingItem = components['schemas']['ShoppingItemContract'];
 type ShoppingList = components['schemas']['ShoppingResponse'];
 
@@ -26,11 +20,7 @@ class ShoppingStore {
   #list = $state<ShoppingList | null>(null);
   #status = $state<LoadStatus>('idle');
 
-  /**
-   * Whose items these are. Plain rather than $state: it is read before the
-   * first await of a method an effect calls, and a tracked read there would
-   * make the method's own writes call it again.
-   */
+  /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
   #error = $state<AppError | null>(null);
 
@@ -50,7 +40,7 @@ class ShoppingStore {
     return this.#list?.items ?? [];
   }
 
-  /** Still to buy, grouped in shop order. Empty sections are not shown. */
+  /** Still to buy, grouped in shop order; empty sections omitted. */
   get toBuy(): readonly SectionGroup[] {
     const remaining = this.items.filter((item) => !item.isChecked);
 
@@ -62,14 +52,13 @@ class ShoppingStore {
       .filter((group) => group.items.length > 0);
   }
 
-  /** Already in the trolley. Kept visible, because putting one back is common. */
+  /** Already in the trolley; kept visible because putting one back is common. */
   get bought(): readonly ShoppingItem[] {
     return this.items.filter((item) => item.isChecked);
   }
 
   async load(householdId: string): Promise<void> {
-    // Another household's list is not one to go on showing while this one's
-    // arrives. Ticking something on it in that moment would tick the wrong list.
+    // Don't keep showing another household's list: a tick in that moment would hit the wrong list.
     if (this.#householdId !== householdId) {
       this.#householdId = householdId;
       this.#list = null;
@@ -109,13 +98,7 @@ class ShoppingStore {
     this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
   }
 
-  /**
-   * Ticks a line off, here first and on the server after.
-   *
-   * Standing in a shop is exactly where a round trip is most likely to be slow
-   * and least likely to be forgiven, so the tick lands immediately and the
-   * server's answer replaces it when it arrives.
-   */
+  /** Optimistic: in a shop the round trip is slowest and least forgiven; the server's answer replaces the tick. */
   async check(householdId: string, itemId: string, isChecked: boolean): Promise<void> {
     const failure = await this.#change(householdId, itemId, { isChecked });
 
@@ -124,13 +107,7 @@ class ShoppingStore {
     }
   }
 
-  /**
-   * Moves a line to another part of the shop, and the household's list
-   * remembers it: the same name lands there from now on.
-   *
-   * Optimistic for the same reason a tick is. The line leaves its section the
-   * moment the section is chosen, which is the receipt that it was.
-   */
+  /** Moves a line to another shop section and remembers it for that name; optimistic like a tick. */
   async moveToSection(
     householdId: string,
     itemId: string,
@@ -149,7 +126,6 @@ class ShoppingStore {
     this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
   }
 
-  /** After a shop: the one bulk action worth having. */
   async clearBought(householdId: string): Promise<void> {
     const result = await request(() =>
       http.DELETE('/api/v1/households/{householdId}/shopping-list/items', {
@@ -178,14 +154,7 @@ class ShoppingStore {
     return result.ok ? null : result.error;
   }
 
-  /**
-   * Puts a planned week's meals on, each once.
-   *
-   * One request for the whole week rather than one per meal, because only the
-   * server can see which meals are already here — and a week that is added
-   * twice, or after one of its recipes was added from its own page, must not
-   * be bought twice.
-   */
+  /** One request for the whole week: only the server knows which meals are already here, so nothing is bought twice. */
   async addPlannedWeek(householdId: string, from: string): Promise<AppError | null> {
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/shopping-list/meals', {
@@ -253,8 +222,7 @@ class ShoppingStore {
       return null;
     }
 
-    // Exactly what was there, not an inverse: inverses drift when something
-    // else changed in between.
+    // Exact restore, not an inverse: inverses drift if something else changed meanwhile.
     this.#list = before;
 
     return result.error;

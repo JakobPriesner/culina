@@ -7,26 +7,17 @@
   import { yieldNoun } from '../yieldWords';
 
   /**
-   * How many this is being made for.
-   *
-   * It sits in the same place whether you are reading or cooking, and stays
-   * usable mid-cook — realising halfway through that one more person is coming
-   * is exactly when you need it.
-   *
-   * Pieces step by something that suits the recipe: twelve muffins go up by
-   * six, not by one, because nobody bakes thirteen.
+   * How many this is being made for, usable mid-cook; pieces step by something sensible (twelve
+   * muffins by six).
    */
   interface Props {
     value: number;
     kind: YieldKind;
     /**
-     * The recipe's own word for what it makes, when it has one.
-     *
-     * It renames the control and nothing else. How far the stepper counts stays
-     * with the kind, because "one cake" says nothing about what one more is.
+     * The recipe's own word for what it makes; renames the control only, the step stays with the
+     * kind.
      */
     label: string | null;
-    /** The recipe's own yield, which decides a sensible step for pieces. */
     base: number;
     onchange?: (value: number) => void;
   }
@@ -36,27 +27,20 @@
   const step = $derived(kind === 'pieces' ? stepForPieces(base) : 1);
 
   /**
-   * What the number reads as, which is not always what it is.
-   *
-   * Scaling to an amount somebody has — 370 g of that flour — produces a yield
-   * like 7.4. The amounts are computed from 7.4, because that is what makes the
-   * flour come out at 370 g; the control says 7½, because that is a number
-   * somebody would say aloud.
+   * What the number reads as: scaling to 370 g gives a yield like 7.4 internally, shown as 7½,
+   * which is what a person would say.
    */
   const shown = $derived(yieldLabel(value));
 
   /**
-   * Tapping moves to a whole step, not 7.4 to 8.4.
-   *
-   * Somebody who has left the exact yield behind by touching the stepper is no
-   * longer anchored to an amount, and wants the ordinary numbers back.
+   * Tapping moves to a whole step (not 7.4 to 8.4): someone using the stepper is no longer anchored
+   * to an amount.
    */
   const move = (direction: 1 | -1) =>
     onchange?.(
       Math.max(step, (direction > 0 ? Math.floor(shown) : Math.ceil(shown)) + direction * step)
     );
 
-  /** Half a batch, rounded to something whole, and never zero. */
   function stepForPieces(amount: number): number {
     if (amount >= 24) {
       return 12;

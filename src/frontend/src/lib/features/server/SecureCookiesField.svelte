@@ -5,14 +5,8 @@
   import { variables } from './types';
 
   /**
-   * Whether the session cookie is only sent over HTTPS.
-   *
-   * The one server setting that can lock the person changing it out: on, over
-   * plain HTTP, the browser refuses the cookie and nobody can sign in. The
-   * server cannot see this — behind a proxy that terminates TLS every request
-   * it receives is plain HTTP — but the browser can, so the warning is decided
-   * here, from whether the page itself is a secure context: https://, or
-   * http://localhost, where browsers keep a Secure cookie as well.
+   * Whether the session cookie is HTTPS-only: the one setting that can lock out the person changing it (on, over plain HTTP, nobody signs in).
+   * The server cannot see it behind a TLS-terminating proxy, so the warning comes from the page being a secure context (https, or http://localhost).
    */
   interface Props {
     checked: boolean;

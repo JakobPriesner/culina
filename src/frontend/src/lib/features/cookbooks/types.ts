@@ -1,17 +1,4 @@
-/**
- * What a cookbook is, to this app.
- *
- * A named shelf that points at recipes. It never carries them: the recipes on
- * it are read through the recipe store with a `cookbookId` filter, which is
- * what lets a cookbook page be the collection page with a different question.
- */
-/**
- * What a cookbook that fills itself asks for.
- *
- * Every rule must hold. Nothing here records what matches — that is worked out
- * whenever the shelf is read, which is why a recipe written this evening is on
- * it immediately and no rule change needs anything rebuilt.
- */
+/** Rules for a cookbook that fills itself; every rule must hold. Matches are computed on read, so new recipes appear with no rebuild. */
 export interface CookbookRules {
   /** Tag slugs a recipe must all carry. */
   readonly tags: readonly string[];

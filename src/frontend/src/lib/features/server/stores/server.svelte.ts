@@ -16,31 +16,19 @@ import {
   type Setup
 } from '../types';
 
-/**
- * What saving did: nothing (the values were what the server already runs
- * with), a restart that came back, or a restart that did not.
- */
+/** What saving did: nothing changed, a restart that came back, or a restart that did not. */
 export type SaveOutcome =
   | { readonly kind: 'unchanged' }
   | { readonly kind: 'applied'; readonly setup: Setup }
   | { readonly kind: 'stalled' }
   | { readonly kind: 'failed'; readonly error: AppError };
 
-/** Where a save has got to, for the screen to say. */
 export type SavePhase = 'idle' | 'saving' | 'restarting';
 
 /**
- * The server and database settings, for the one account that administers
- * the instance — or, before there is one, for whoever is setting it up.
- *
- * Read on demand, never at boot. Everybody else on the instance would be
- * paying for a request whose answer only one person may see.
- *
- * Saving is not the usual write. The server answers `204` when nothing
- * differed and `202` when it saved the settings and is restarting to use
- * them, and in the second case the write is not over until the new host
- * answers: that is when the settings are in effect, and when it becomes
- * clear whether they started at all.
+ * The server and database settings for the instance admin; read on demand, never at boot.
+ * Saving answers `204` (nothing differed) or `202` (restarting), and the write is over only once
+ * the new host answers.
  */
 class ServerStore {
   #server = $state<ServerDraft | null>(null);
@@ -48,13 +36,12 @@ class ServerStore {
   #database = $state<DatabaseDraft | null>(null);
   #databaseFacts = $state<DatabaseFacts | null>(null);
   #status = $state<LoadStatus>('idle');
-  // One per read: `load` runs both at once, and whichever finished last
-  // would otherwise decide whether the other one failed.
+  // One per read: `load` runs both at once, and the last to finish would decide whether the other
+  // failed.
   #serverError = $state<AppError | null>(null);
   #databaseError = $state<AppError | null>(null);
   #phase = $state<SavePhase>('idle');
 
-  /** The server settings as the running process uses them, shaped for a form. */
   get server(): ServerDraft | null {
     return this.#server;
   }
@@ -71,12 +58,10 @@ class ServerStore {
     return this.#databaseFacts;
   }
 
-  /** How far `load` has got. The single reads report only through `error`. */
   get status(): LoadStatus {
     return this.#status;
   }
 
-  /** Why the last read failed. */
   get error(): AppError | null {
     return this.#serverError ?? this.#databaseError;
   }
@@ -85,7 +70,6 @@ class ServerStore {
     return this.#phase;
   }
 
-  /** Both groups, for the settings screen. */
   async load(): Promise<void> {
     this.#status = 'loading';
 
@@ -130,10 +114,7 @@ class ServerStore {
     return this.#apply(() => http.PUT('/api/v1/settings/database', { body }));
   }
 
-  /**
-   * Waits again for a restart that took longer than it should — the screen's
-   * "check again".
-   */
+  /** Waits again for a restart that took too long ("check again"). */
   async awaitRestart(): Promise<SaveOutcome> {
     this.#phase = 'restarting';
 

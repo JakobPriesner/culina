@@ -3,15 +3,8 @@ import type { CookbookRules } from '$features/cookbooks/types';
 import type { Interpretation } from '../types';
 
 /**
- * A search, as the cookbook that would ask the same question.
- *
- * A cookbook that fills itself asks for tags, ingredients and a time limit,
- * and nothing else — which is exactly what a shelf can count, draw and take to
- * the shop without running the search engine once per card. So the chips that
- * are one of those cross over as they are, and everything else stays with the
- * search and is named, so that nothing is quietly dropped: a diet, a cuisine
- * or a meal is something the lexicon reads a recipe as, not something a shelf
- * can check, and the words were a lens to begin with.
+ * A search as the cookbook that would ask the same question. A smart cookbook asks only for tags, ingredients
+ * and a time limit, so those chips cross over; everything else (diet, cuisine, meal) is named in `behind`, never dropped.
  */
 export interface Shelving {
   readonly rules: CookbookRules;

@@ -7,17 +7,12 @@
   import type { Cookbook } from './types';
 
   /**
-   * Every shelf, in columns.
-   *
-   * Tighter than the recipe grid — four across where recipes get three — because
-   * a cover is a square and a name is two words, so more of them fit before the
-   * page stops being scannable.
+   * Every shelf in columns, tighter than the recipe grid since covers are square and names short.
    */
   interface Props {
     cookbooks: readonly Cookbook[];
     loading?: boolean;
     pending?: readonly string[];
-    /** Asked for the next page when the end of the list comes into view. */
     onmore?: () => void;
   }
 
@@ -29,9 +24,7 @@
 </script>
 
 {#if loading}
-  <!-- A status rather than a bare div: a plain element is generic, and a
-       generic element may not carry a name at all — the label was there for
-       assistive technology and was being dropped on the floor by it. -->
+  <!-- A status role, since a generic div may not carry the accessible name. -->
   <div class="grid" role="status" aria-busy="true" aria-label={m['cookbooks.list.loading']()}>
     {#each placeholders as row (row)}
       <CookbookCardSkeleton />

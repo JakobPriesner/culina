@@ -16,31 +16,12 @@
   import { createLoadingState } from '$shell/loadingState.svelte';
 
   /**
-   * The page an invitation link opens.
-   *
-   * It works signed out, which is the whole point of sending someone a link:
-   * the code is carried through sign-in or sign-up and redeemed on the other
-   * side, so nobody has to copy it out of a message and paste it into a form
-   * they have not reached yet. Signing in comes back here, so the code is
-   * redeemed by the one page that knows how to answer every outcome.
-   *
-   * The household's name is deliberately not shown before signing in. An
-   * invitation code is a bearer token, and anyone holding the link would
-   * otherwise learn what they had been handed the keys to.
-   *
-   * Somebody already signed in is never offered a sign-in or an account they
-   * already have, but is asked before the code is redeemed. Opening a link must
-   * not be the same as joining: anybody can make a household and send its
-   * link, and a person let straight in would be switched into a stranger's
-   * kitchen, adding their recipes and lists there and showing them their name.
-   * The owner checking the link before sending it is told they are already in,
-   * and taken back to their kitchen.
-   *
-   * Asking is only fair if the question says whose kitchen it is, so once the
-   * session is known to be signed in the invitation is read — which uses
-   * nothing up — and the household's name is shown above the Join button. A
-   * code that no longer works says so straight away; any other failure leaves
-   * the question as it was, without a name, and pressing Join answers it.
+   * The page an invitation link opens; it works signed out and carries the code through sign-in or
+   * sign-up.
+   * The household name is not shown before signing in (the code is a bearer token), and a signed-in
+   * user is asked before joining:
+   * opening a link must not mean joining a stranger's household. The invitation is read, which uses
+   * nothing up, to show whose it is.
    */
   const code = $derived(page.params.code ?? '');
 
@@ -51,7 +32,6 @@
 
   let answer = $state<Answer | null>(null);
   let joining = $state(false);
-  /** Whose kitchen the link is for, once read; null until then or if it could not be. */
   let householdName = $state<string | null>(null);
   let reading = $state(false);
   const loading = createLoadingState();
@@ -61,7 +41,6 @@
   onMount(() => void open());
   onDestroy(() => loading.dispose());
 
-  /** Resolves the session, and reads the invitation for somebody signed in. */
   async function open() {
     await session.resolve();
 
@@ -102,14 +81,12 @@
       return;
     }
 
-    // Re-read: the household arrives with a name and a role, and the shell
-    // needs both before it renders anything about it.
+    // Re-read: the shell needs the household's name and role before it renders anything about it.
     session.reset();
     await session.resolve();
     await enter(outcome.householdId);
   }
 
-  /** Into the kitchen the link was for, rather than whichever was open last. */
   async function enter(householdId: string) {
     session.selectHousehold(householdId);
     await goto(resolve('/(app)'), { replaceState: true });

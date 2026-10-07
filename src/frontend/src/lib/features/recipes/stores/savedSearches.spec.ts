@@ -2,13 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { savedSearches, worthSaving } from './savedSearches.svelte';
 
-/*
- * The store the toolbar's saved-search chips read from.
- *
- * What it has to get right is the round trip: a saved search that came back as
- * anything but what was sent could not be trusted to reopen as the search that
- * was saved, and the whole feature is that promise.
- */
+/* The store behind the toolbar's saved-search chips: the round trip must return exactly what was sent, or a saved search cannot be trusted to reopen. */
 const household = 'h1';
 
 const wire = (id: string, name: string, criteria: Record<string, unknown>) => ({
@@ -77,8 +71,7 @@ describe('saved searches', () => {
         query: 'auflauf',
         tags: ['vegetarisch'],
         maxMinutes: 30,
-        // The wire says `totalMinutes`; everything above this line says
-        // `quickest`.
+        // The wire says `totalMinutes`; above this line it is `quickest`.
         sort: 'quickest'
       }
     ]);
@@ -96,8 +89,7 @@ describe('saved searches', () => {
   });
 
   it('asks only once per household', async () => {
-    // Called from an `$effect`, so a store that asked again on every read would
-    // not hang — it would flood, and then meet the rate limiter.
+    // Called from an `$effect`: a store that asked again on every read would flood and meet the rate limiter.
     const fetched = vi.fn(() => Promise.resolve(json({ items: [] })));
 
     vi.stubGlobal('fetch', fetched);
@@ -131,8 +123,7 @@ describe('saved searches', () => {
 
     const sent = body();
 
-    // An empty search box is "nothing was asked", not a filter matching
-    // everything.
+    // An empty search box is "nothing was asked", not a filter matching everything.
     expect(sent.criteria.query).toBeUndefined();
     expect(sent.criteria.maxMinutes).toBeUndefined();
     expect(sent.criteria.sort).toBeUndefined();
@@ -150,8 +141,7 @@ describe('saved searches', () => {
 
     const sent = body();
 
-    // `cookbookOrder` needs a cookbook to be an order of, and a saved search is
-    // applied from the library, which has none.
+    // `cookbookOrder` needs a cookbook, and a saved search is applied from the library, which has none.
     expect(sent.criteria.sort).toBeUndefined();
   });
 
@@ -176,7 +166,6 @@ describe('saved searches', () => {
 
 describe('whether there is anything to save', () => {
   it('refuses a search that asks for nothing', () => {
-    // It would be the library, which is the screen it would be applied from.
     expect(worthSaving({ query: '  ', tags: [], maxMinutes: null, sort: null })).toBe(false);
   });
 

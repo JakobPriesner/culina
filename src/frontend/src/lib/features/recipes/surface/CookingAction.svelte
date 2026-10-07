@@ -21,8 +21,7 @@
     {#if cooking}
       <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
     {:else if canCook}
-      <!-- At the end of the reading, where the decision is made; floats within reach until its own
-           place enters the viewport. -->
+      <!-- At the end of the reading, where the decision is made; floats until its own place is in view. -->
       <Button variant="primary" size="lg" onclick={onstartcooking}>
         {m['recipe.startCooking']()}
       </Button>
@@ -41,10 +40,7 @@
 {/if}
 
 <style>
-  /*
-   * In the document at the end of the recipe; cooking keeps it here because step navigation owns
-   * the bottom edge.
-   */
+  /* In the document at the recipe's end; step navigation owns the bottom edge while cooking. */
   .foot {
     max-width: 100%;
     margin-block-end: var(--space-8);
@@ -53,10 +49,7 @@
     align-self: center;
   }
 
-  /*
-   * A strip of its own rather than a bare floating button, which cut a hole in a line of the method.
-   * Not at the inline end: that column is the ingredient list. Sticks above the shell's bottom inset.
-   */
+  /* A strip of its own (a bare floating button cut a hole in the method), not at the inline end where the ingredient column is; sticks above the shell's bottom inset. */
   @media screen {
     .cook-action {
       position: sticky;
@@ -72,9 +65,7 @@
       padding-block: var(--space-8) var(--space-6);
     }
 
-    /*
-     * Gradient, not blur: what passes under is a flat column. Solid behind the button, faded above.
-     */
+    /* Gradient, not blur: the column beneath is flat. Solid behind the button, faded above. */
     .cook-action .foot::before {
       content: '';
       position: absolute;

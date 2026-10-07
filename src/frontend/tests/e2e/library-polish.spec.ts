@@ -75,9 +75,7 @@ test.describe('library refinement @offline', () => {
     await libraryData(page);
     await page.goto('/');
 
-    // The ceiling lives in the filter panel with the other three. It had a
-    // shortcut of its own beside the search box, which was only ever there
-    // because it was the one the app shipped with first.
+    // The ceiling lives in the filter panel with the other three, not beside the search box.
     const applyHalfAnHour = async () => {
       await page.getByRole('button', { name: /^Filter/ }).click();
       await page.getByRole('button', { name: 'Up to 30 min', exact: true }).click();
@@ -85,7 +83,6 @@ test.describe('library refinement @offline', () => {
       await page.locator('footer').getByRole('button', { name: 'Done', exact: true }).click();
     };
 
-    // What is applied, said where it can be taken off again.
     const applied = page
       .getByRole('list', { name: 'Applied filters' })
       .getByRole('button', { name: /Up to 30 min/ });

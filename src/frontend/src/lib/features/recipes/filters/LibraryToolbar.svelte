@@ -16,16 +16,7 @@
   import SavedSearchChips from './SavedSearchChips.svelte';
   import SavedSearchSheet from './SavedSearchSheet.svelte';
 
-  /**
-   * One toolbar, for every list of recipes.
-   *
-   * The library and a cookbook page were two search boxes with two debounces
-   * and two ideas of what "filtered" meant, kept in step by hand. They are one
-   * component now, so a shelf can be sorted and narrowed exactly as the library
-   * can, and neither can gain a filter the other quietly lacks.
-   *
-   * The debounce is shared for the same reason: see `createQueryBox`.
-   */
+  /** One toolbar for every recipe list, so a shelf is sorted and narrowed exactly like the library and neither gains a filter the other lacks. */
   interface Props {
     id: string;
     householdId: string;
@@ -34,20 +25,11 @@
     searchLabel: string;
     searchPlaceholder: string;
     keyShortcuts?: string;
-    /**
-     * Whether a search here can be saved.
-     *
-     * False inside a cookbook: what would be saved is the shelf's own question
-     * plus a filter over it, and reapplying that from the library would find
-     * something else entirely.
-     */
+    /** Whether a search here can be saved; false in a cookbook, where reapplying it from the library would find something else. */
     savable?: boolean;
-    /** The count, the order note — whatever the page says about its own list. */
+    /** Whatever the page says about its own list (count, order note). */
     summary?: Snippet;
-    /**
-     * What the server read the applied query to mean, and how many it found:
-     * the chips and notices under the box. Absent where nothing searches.
-     */
+    /** What the server read the query to mean and how many it found: the chips and notices under the box. Absent where nothing searches. */
     interpretation?: Interpretation | null;
     total?: number;
     /** The cookbook this list is, drawn as the first chip of a search inside it. */
@@ -104,9 +86,7 @@
       />
     </div>
 
-    <!-- The panel's trigger carries how many filters are on, because a panel
-         that has to be opened to find out whether it is doing anything is one
-         people open over and over. -->
+    <!-- The trigger shows how many filters are on, so nobody opens the panel just to see whether it does anything. -->
     <FilterChip shape="rounded" selected={view.activeCount > 0} onclick={() => (filtering = true)}>
       {#snippet icon()}
         <svg
@@ -194,19 +174,7 @@
     min-width: 0;
   }
 
-  /*
-   * The widest thing in the toolbar, and deliberately so.
-   *
-   * Searching is what a library of a hundred recipes is actually used with;
-   * the panel beside it is opened once a week. It took a third of the row when
-   * a "Up to 30 minutes" shortcut sat next to it — one of four ceilings, given
-   * a control of its own at the top level because it happened to be the one
-   * the app shipped with first. That went into the panel with the other three,
-   * and the box took the room.
-   *
-   * Capped rather than left to grow: a search field running the full width of
-   * a 1400px monitor stops reading as a field and starts reading as a band.
-   */
+  /* The widest thing in the toolbar: searching is the main use and the panel is opened rarely. Capped, since a full-width field on a big monitor reads as a band. */
   .search {
     flex: 1 1 20rem;
     max-width: 42rem;

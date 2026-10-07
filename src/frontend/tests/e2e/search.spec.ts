@@ -2,13 +2,8 @@ import { expect, test } from '@playwright/test';
 import { recipeId, responsiveData } from './support/responsive';
 
 /**
- * The search overlay, over the pages it opens on.
- *
- * Against fixtures rather than a server: what is being proven is the
- * interface's half of the contract — that a reading comes back as a chip, that
- * removing it removes exactly its characters from what is asked next, and that
- * the keyboard reaches a recipe without the field ever losing focus. The
- * server's half is proven in RecipeSearchRelevanceTests.
+ * Search overlay against fixtures: the UI half of the contract (chips, removal, keyboard without losing
+ * field focus); the server's half is in RecipeSearchRelevanceTests.
  */
 test.describe('search @offline', () => {
   test.use({ serviceWorkers: 'block' });
@@ -72,7 +67,6 @@ test.describe('search @offline', () => {
     await page.goto('/');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-    // ⌘K / Ctrl-K from anywhere.
     await page.keyboard.press('ControlOrMeta+k');
     const field = page.getByRole('combobox', { name: 'Rezepte durchsuchen' });
     await expect(field).toBeFocused();
@@ -87,7 +81,6 @@ test.describe('search @offline', () => {
     await expect(field).toHaveValue('unter 30 Minuten');
     await expect(field).toBeFocused();
 
-    // The arrow keys walk the results with the focus still in the field.
     await field.press('ArrowDown');
     await expect(field).toHaveAttribute('aria-activedescendant', /.+/);
     await field.press('Enter');
@@ -127,8 +120,6 @@ test.describe('search @offline', () => {
     await field.fill('somm');
     await expect(page.getByRole('option', { name: /Sommer/ })).toBeVisible();
 
-    // Taken into the search without leaving the field: the half-typed word
-    // becomes the tag it was on its way to.
     await field.press('Tab');
     const chip = page.getByRole('button', { name: '„Sommer“ entfernen' });
     await expect(chip).toBeVisible();
@@ -136,7 +127,6 @@ test.describe('search @offline', () => {
     await expect(field).toBeFocused();
     await expect.poll(() => tagsAsked.at(-1)).toEqual(['sommer']);
 
-    // Nothing left to delete in the field, so the chip goes.
     await field.press('Backspace');
     await expect(chip).toBeHidden();
     await expect(field).toBeFocused();
@@ -152,7 +142,6 @@ test.describe('search @offline', () => {
     await expect(page.getByRole('combobox', { name: 'Rezepte durchsuchen' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toBeHidden();
-    // Searching from the plan must leave the plan exactly as it was.
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     await page.goto(`/recipes/${recipeId}/cook`);

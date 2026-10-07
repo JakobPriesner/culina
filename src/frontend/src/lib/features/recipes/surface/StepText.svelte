@@ -5,27 +5,13 @@
   import type { Ingredient, Step } from '../types';
 
   /**
-   * One step, written as Markdown, with its ingredients written into the
-   * sentence at the scaled amount.
-   *
-   * "Melt **180 g butter** in the pan" — not "Melt 200 g butter" beside an
-   * ingredient list that says 180. Getting that wrong is the single most common
-   * bug in recipe apps, and it is impossible here because the step stores a
-   * reference rather than the words.
-   *
-   * The Markdown is parsed over those references rather than around them, so
-   * emphasis and lists never cost a step its scaling. See `stepMarkdown.ts`.
+   * One step as Markdown with ingredients written in at the scaled amount; the step stores
+   * references, so text and list can't disagree. Parsed over the references: see `stepMarkdown.ts`.
    */
   interface Props {
     step: Step;
     scaling: Scaling;
-    /**
-     * Whether an ingredient reference can be pointed at.
-     *
-     * Off while cooking, where the whole step is the control — a button inside
-     * a button is invalid HTML and behaves unpredictably, and mid-cook the
-     * useful gesture is "next step", not "which butter".
-     */
+    /** Off while cooking: the whole step is the control, and a button inside a button is invalid HTML. */
     interactive?: boolean;
     /** Called as the reader's eye moves, so the ingredient list can light up. */
     onhighlight?: (ingredientId: string | null) => void;
@@ -99,16 +85,9 @@
 
 <style>
   /*
-   * The line breaks inside a paragraph are the cook's own. A step written as
-   * three lines — bake, rest, slice — is three lines because somebody meant it
-   * to be, and collapsing them into one loses the shape of the instruction.
-   * Imported steps depend on this too: a Tandoor instruction is Markdown
-   * rendered with a line break per newline, so its newlines arrive here meaning
-   * exactly that. A *blank* line is the one that starts a new paragraph, which
-   * is what Markdown says it is.
-   *
-   * It makes the whitespace inside a paragraph significant, which is why
-   * `StepInline` is written without breaks between its tags.
+   * Line breaks inside a paragraph are the cook's own (imported Tandoor steps rely on it too);
+   * a blank line starts a paragraph. Whitespace is significant, so `StepInline` has no breaks
+   * between its tags.
    */
   .text {
     line-height: var(--leading-relaxed);
@@ -116,14 +95,8 @@
   }
 
   /*
-   * A list inside a step is nearly always a list of things to do in order, so
-   * it is set as prose with markers rather than as a stack of rows: indented
-   * enough to read as a list, not so much that it leaves the sentence behind.
-   *
-   * No margins of its own, here or on the paragraphs: a step body is a column
-   * with a gap, and every block a step renders is one of its items — as the
-   * step's number and the list of what it needs already are. A margin on top
-   * would be added to that gap rather than replacing it.
+   * A list in a step is prose with markers. No margins here or on paragraphs: the step body is a
+   * column with a gap, and a margin would add to it.
    */
   .list {
     margin: 0;

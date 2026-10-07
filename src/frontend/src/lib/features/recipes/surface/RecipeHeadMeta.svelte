@@ -8,10 +8,8 @@
 
   interface Props {
     recipe: RecipeReading;
-    /** Hides the shelves and origin lines while cooking. */
     cooking: boolean;
     cookbooks: readonly { readonly id: string; readonly name: string }[];
-    /** Yield at the servings on screen, shown on paper only. */
     printedYield: string;
   }
 

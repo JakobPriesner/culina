@@ -1,8 +1,6 @@
 <script lang="ts">
-  /** A restrained static colour edge. The colours stay still, so
-   * large recipe surfaces do not repaint a moving gradient on every frame. */
+  /** A restrained static colour edge; the colours stay still so large surfaces do not repaint a moving gradient. */
   interface Props {
-    /** Whether the work is running. */
     active?: boolean;
     /** Over the content instead, for a frame whose content is itself the backdrop. */
     over?: boolean;
@@ -23,8 +21,7 @@
     inset: -1px;
     border-radius: inherit;
     pointer-events: none;
-    /* Hidden once faded, so a finished card stops repainting a glow that
-       nobody can see. */
+    /* Hidden once faded, so a finished card stops repainting an invisible glow. */
     visibility: hidden;
     opacity: 0;
     transition:
@@ -55,9 +52,7 @@
     border-radius: inherit;
   }
 
-  /* Blurred copies of the same ring rather than a box-shadow: a shadow takes
-     one colour, and the point is that the glow has all four, each where its
-     own light is on the edge. */
+  /* Blurred copies of the ring rather than a box-shadow, which takes one colour; the glow needs all four where their light is. */
   .soft {
     filter: blur(6px);
     opacity: 0.3;
@@ -72,8 +67,7 @@
       var(--generating-3),
       var(--generating-4)
     );
-    /* Everything but the padding is cut away, which leaves the gradient as a
-       line that follows the container's own corners. */
+    /* Only the padding survives, leaving the gradient as a line that follows the container's corners. */
     mask:
       linear-gradient(currentColor 0 0) content-box,
       linear-gradient(currentColor 0 0);

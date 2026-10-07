@@ -1,17 +1,8 @@
 import { http, request, type AppError } from '$api';
 
 /**
- * Passwords, and the ways back in when one is lost.
- *
- * Culina sends no mail, so "forgot password" cannot mean a link in an inbox.
- * It means a code the person holds: one of the ten they saved while they still
- * knew their password, or one the administrator made for them. Both are
- * entered on the same form, because the person locked out should not have to
- * know which kind they have.
- *
- * Plain functions rather than a store: none of this is state the app keeps.
- * Every code is shown once, on the screen that asked for it, and forgotten
- * with that screen.
+ * Passwords and the ways back in. Culina sends no mail, so recovery is a code the person holds (one of the
+ * ten saved earlier, or one an administrator made). Plain functions: codes are shown once and forgotten.
  */
 
 /** Sets a new password with a recovery code. Nobody is signed in afterwards. */

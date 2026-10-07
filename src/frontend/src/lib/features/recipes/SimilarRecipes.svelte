@@ -9,30 +9,12 @@
   import type { RelatedReason } from './types';
 
   /**
-   * Recipes close to the one being read.
-   *
-   * The only place in this feature that needed new markup, because nothing on
-   * the recipe page was a list of other recipes before. It borrows the
-   * cookbook shelf's behaviour rather than inventing a carousel: a horizontal
-   * scroller inside the page, focus revealing the whole card, and snapping
-   * disabled while focus is inside it.
-   *
-   * Similarity is what the recipes are and what they are made from, as the
-   * search reads them — never "people who cooked this also cooked": with two to
-   * eight people the co-occurrence between two recipes is zero or a
-   * coincidence, whereas "also a Bolognese" is a fact, and one that can be
-   * explained. So it is explained, under every card.
-   *
-   * Reaching the end of the shelf asks for the next few, for as long as there
-   * are recipes alike enough to say so — the similarity floor, not a count,
-   * is what ends it.
+   * Recipes close to this one, on a shelf like the cookbook's; similarity is content (never "also cooked":
+   * co-occurrence is noise at household size) and every card says why. The similarity floor ends paging.
    */
   interface Props {
     recipeId: string;
-    /**
-     * The households this one inherits recipes from, by id, with their names.
-     * A recipe from one of them says so.
-     */
+    /** Households this one inherits from, by id with names; a recipe from one says so. */
     inherited?: Readonly<Record<string, string>>;
   }
 
@@ -54,15 +36,7 @@
       : m['related.reason.ingredients']({ shared: formatList(reason.shared) });
 </script>
 
-<!--
-  Nothing at all below three.
-
-  A section that sometimes shows two weak matches is worse than one that is
-  sometimes absent: the page is complete without it, so its absence costs
-  nothing and its presence would have to be earned. A failed request renders
-  nothing too — this is pure enhancement, and an enhancement should fail by
-  leaving a whole page behind rather than by putting an error on it.
--->
+<!-- Hidden below three: two weak matches are worse than none, and as pure enhancement a failed request renders nothing. -->
 {#if items.length >= 3}
   <section class="similar" aria-labelledby="similar-heading">
     <h2 id="similar-heading">{m['suggestions.similar.title']()}</h2>
@@ -75,12 +49,8 @@
         </li>
       {/each}
 
-      <!-- The next card, drawn as the one that is coming. Seeing it is what
-           fetches it. Keyed on the count so it is watched afresh after every
-           page: one that is still in view once the page has landed would
-           otherwise never say so again, and the shelf would stop there.
-           No margin, so it is asked for when somebody has reached the end
-           rather than whenever the bottom of the recipe is near. -->
+      <!-- Skeleton of the coming card; seeing it fetches it. Keyed on the count so it is watched
+           afresh after each page; no margin, so it fires at the real end. -->
       {#if hasMore}
         {#key items.length}
           <li aria-hidden="true" {@attach whenVisible(() => void related.more(recipeId), '0px')}>
@@ -112,16 +82,14 @@
     grid-auto-columns: minmax(14rem, 1fr);
     gap: var(--space-6);
     margin: 0;
-    /* The focus ring needs room; without the padding it is clipped by the
-       scroll container on the first and last card. */
+    /* Room for the focus ring, else the scroll container clips it on the first and last card. */
     padding: var(--space-1);
     overflow-x: auto;
     scroll-snap-type: x proximity;
     list-style: none;
   }
 
-  /* Snapping fights a keyboard walking the shelf: each Tab would be undone by
-     the browser settling the scroll position somewhere else. */
+  /* Snapping fights keyboard walking: each Tab would be undone as the browser re-settles the scroll. */
   .shelf:focus-within {
     scroll-snap-type: none;
   }
@@ -133,8 +101,7 @@
     min-width: 0;
   }
 
-  /* Under the card rather than in it: the card is the same one every list
-     draws, and this line is the one thing only this list has to say. */
+  /* Under the card: the card is shared, and this line is the one thing only this list says. */
   .because {
     color: var(--text-muted);
     font-size: var(--text-sm);

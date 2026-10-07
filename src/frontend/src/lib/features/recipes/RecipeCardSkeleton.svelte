@@ -2,12 +2,8 @@
   import { Skeleton } from '$ds';
 
   /**
-   * The shape of a recipe row before it arrives.
-   *
-   * Deliberately the same rhythm and roughly the same heights as the real
-   * thing — a 4:3 photo box first, then the eyebrow, title and meta line — so
-   * nothing moves when the content lands. A skeleton that does not match what
-   * replaces it is a layout shift with extra steps.
+   * A recipe row's shape before it arrives, matching the real rhythm and heights (4:3 photo, eyebrow, title,
+   * meta) so nothing shifts on landing.
    */
 </script>
 

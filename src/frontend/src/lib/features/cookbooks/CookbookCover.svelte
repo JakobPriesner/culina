@@ -6,27 +6,15 @@
   import type { CoverPicture } from './types';
 
   /**
-   * The face of a cookbook.
-   *
-   * Made of the shelf's own recipes rather than a picture somebody had to
-   * choose, because a cookbook nobody has decorated should still look like
-   * something. One photograph fills the frame; two split it; four make a
-   * quarter each — and past four it would be a contact sheet rather than a
-   * face, which is why only four are ever asked for.
-   *
-   * They come back oldest first, so the face settles once there are four and
-   * stops changing every time something is added. A cover you cannot learn is
-   * not doing the one job a cover has.
+   * The face of a cookbook, made of the shelf's own recipes: one fills the frame, two split it,
+   * four make quarters; oldest first so it settles.
    */
   interface Props {
     /**
-     * Up to four photographed recipes, oldest first. Each carries the id of
-     * the picture it has now, which goes into the address the same way it
-     * does on a recipe card: a replaced picture is a new address, so an
-     * unchanged cover is drawn from cache without asking the server.
+     * Up to four photographed recipes, oldest first; the image id goes into the address so a
+     * replaced picture is a new cache key.
      */
     pictures: readonly CoverPicture[];
-    /** Shown when the shelf has nothing photographed on it yet. */
     name: string;
   }
 
@@ -36,22 +24,12 @@
   const tiles = $derived(shown.length >= 4 ? 4 : shown.length >= 2 ? 2 : 1);
 </script>
 
-<!--
-  Decoration, so it is hidden from a screen reader entirely: the shelf's name is
-  right beside it and reading four empty images before it would be noise. Each
-  tile is alt="" for the same reason.
--->
+<!-- Decoration: hidden from screen readers since the name sits right beside it, and each tile is
+     alt="". -->
 <div class="cover" data-tiles={tiles} aria-hidden="true">
   {#if shown.length === 0}
-    <!-- Not a grey box. The initial is the honest answer to "nothing here has
-         been photographed", and it still gives the card something to be. -->
     <p class="empty">{name.trim().slice(0, 1) || '·'}</p>
   {:else}
-    <!--
-      The tiles are unrounded so the four of them read as one picture cut into
-      quarters rather than four photographs laid side by side. Only the outside
-      is curved, and the cover itself does that by clipping.
-    -->
     {#each shown as { recipeId, imageId } (recipeId)}
       <div class="tile">
         <Image

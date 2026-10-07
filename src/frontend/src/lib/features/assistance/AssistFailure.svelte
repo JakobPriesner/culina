@@ -1,9 +1,5 @@
 <script lang="ts" module>
-  /**
-   * The failures an administrator fixes in the assistant settings. Budgets count
-   * because an administrator can raise them; a busy provider or an unreadable
-   * answer does not, because nothing there would help.
-   */
+  /** Failures an administrator can fix in the assistant settings: budgets count, a busy provider or unreadable answer doesn't. */
   const fixedInSettings = new Set([
     'assistance.not_configured',
     'assistance.disabled',
@@ -26,16 +22,8 @@
   import { m } from '$shell/i18n';
 
   /**
-   * Why the assistant did not answer, in the reader's language, and what to do.
-   *
-   * One component for all four doors — idea, photograph, improve and draw —
-   * because the same provider failing the same way must read the same way
-   * wherever it was asked.
-   *
-   * Where the fix is in the assistant settings, an administrator gets a link
-   * straight there and everyone else is told who can help. A failure that only
-   * says "try again" to somebody whose model was never downloaded sends them
-   * round the same loop for ever.
+   * Why the assistant did not answer, and what to do; one component for all four doors so the same failure
+   * reads the same. An administrator gets a settings link, everyone else is told who can help.
    */
   interface Props {
     error: AppError;

@@ -2,14 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { gapToRestore, placeOf, withMealMoved, type PlannedDay } from './mealPlan.svelte';
 
-/**
- * Where a dropped card actually lands.
- *
- * The optimistic half of a move: this runs before the server answers, and it
- * has to agree with what the server will say — a card that lands in one place
- * under the finger and jumps to another when the response arrives is worse than
- * one that never moved.
- */
+/** Where a dropped card lands: the optimistic half of a move must agree with the server, or the card jumps when the response arrives. */
 const monday = '2026-09-14';
 const tuesday = '2026-09-15';
 
@@ -26,7 +19,6 @@ const week = (days: Record<string, ReturnType<typeof meal>[]>) => ({
   days: Object.entries(days).map(([date, meals]) => ({ date, meals })) as PlannedDay[]
 });
 
-/** The titles of a day, which is the only thing these assertions are about. */
 const titles = (result: ReturnType<typeof week>, date: string) =>
   result.days.find((day) => day.date === date)?.meals.map((one) => one.title);
 
@@ -47,8 +39,7 @@ describe('moving a meal to another day', () => {
     const moved = withMealMoved(start, 'entry-Curry', { date: tuesday });
     const landed = moved.days.find((day) => day.date === tuesday)?.meals[0];
 
-    // Moving a meal is not re-planning it. Doing this as a remove plus an add
-    // is exactly how both of these are lost.
+    // Moving a meal is not re-planning it (a remove plus an add loses both).
     expect(landed?.servings).toBe(6);
     expect(landed?.slot).toBe('lunch');
   });
@@ -73,9 +64,7 @@ describe('moving a meal to another day', () => {
   });
 
   it('settles a breakfast among the breakfasts wherever it was let go', () => {
-    // A day is read in slot order first, so this is where the server will put
-    // it. Landing it under the finger and then watching it jump when the
-    // response arrives is the thing this agreement prevents.
+    // Slot order first, where the server will put it, so it does not jump on response.
     const start = week({
       [monday]: [meal('Toast', 'breakfast')],
       [tuesday]: [meal('Porridge', 'breakfast'), meal('Stew')]
@@ -88,8 +77,7 @@ describe('moving a meal to another day', () => {
 });
 
 describe('reordering within one day', () => {
-  // The gaps are counted with the meal being moved still in place, which is how
-  // the day is drawn while a card is in the air.
+  // Gaps are counted with the moved meal still in place, as the day is drawn while a card is in the air.
   it.each([
     [0, ['Third', 'First', 'Second']],
     [1, ['First', 'Third', 'Second']],
@@ -103,8 +91,7 @@ describe('reordering within one day', () => {
   });
 
   it('means the same thing going down as going up', () => {
-    // Moving down is where a reorder goes one off: the meal vacates a place
-    // above its destination on the way past.
+    // Moving down is where reorders go off by one: the meal vacates a place above its destination.
     const start = week({ [monday]: [meal('First'), meal('Second'), meal('Third')] });
 
     const moved = withMealMoved(start, 'entry-First', { date: monday, position: 3 });
@@ -125,8 +112,7 @@ describe('putting it back', () => {
     const before = { date: monday, slot: 'dinner' as const, index: 2 };
     const after = { date: monday, slot: 'dinner' as const, index: 0 };
 
-    // It is sitting above its old place now, so the gap numbered 2 is one above
-    // where it belongs. The meal in the air does not count as a place.
+    // It now sits above its old place, so the gap numbered 2 is one too high; the meal in the air is not a place.
     expect(gapToRestore(before, after)).toBe(3);
   });
 
@@ -134,7 +120,6 @@ describe('putting it back', () => {
     const before = { date: monday, slot: 'dinner' as const, index: 0 };
     const after = { date: monday, slot: 'dinner' as const, index: 2 };
 
-    // Nothing above it moved, so the gap it left is still numbered the same.
     expect(gapToRestore(before, after)).toBe(0);
   });
 

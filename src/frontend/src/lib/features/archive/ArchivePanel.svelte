@@ -7,15 +7,8 @@
   import { toaster } from '$shell/toaster.svelte';
 
   /**
-   * Taking your recipes with you, and bringing them back.
-   *
-   * The right answer to "what if I stop using this", and a self-hosted app owes
-   * its users one. Plain, readable JSON: somebody with no Culina at all can
-   * open it and find their recipes written out in words.
-   *
-   * The heading and the sentence explaining what is in the file belong to the
-   * page that places this, so every section of settings is titled once, by one
-   * component.
+   * Taking recipes out and bringing them back as plain, readable JSON (a self-hosted app owes users an exit).
+   * The page supplies the heading and file explanation, so each settings section is titled once.
    */
   interface Props {
     householdId: string;
@@ -26,14 +19,7 @@
   let restoring = $state(false);
   let picker = $state<ReturnType<typeof FilePicker>>();
 
-  /**
-   * A plain link, not a fetch.
-   *
-   * The browser's own download is what puts a file where the person expects it,
-   * with a name and a progress indication — neither of which a blob assembled
-   * in memory would have, and an archive with its photographs inline is the
-   * largest thing this app ever sends.
-   */
+  /** A plain link, not a fetch: the browser's download gives a name and progress, and archives with inline photos are the app's largest payload. */
   const href = $derived(`${base}/api/v1/households/${householdId}/archive`);
 
   async function restore(file: File) {
@@ -47,8 +33,7 @@
       http.POST('/api/v1/households/{householdId}/archive', {
         params: { path: { householdId } },
         body: body as unknown as { file: string },
-        // FormData sets its own multipart boundary; serialising it as JSON
-        // would send the string "[object FormData]".
+        // FormData sets its own multipart boundary; JSON-serialising it would send "[object FormData]".
         bodySerializer: (value: unknown) => value as FormData
       })
     );

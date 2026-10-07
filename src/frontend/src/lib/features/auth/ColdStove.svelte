@@ -1,14 +1,9 @@
 <script lang="ts">
   /**
-   * Culina's pot on a burner that has gone out.
-   *
-   * Shown when a session ended under somebody. Each character of the password
-   * lights one more flame, so typing it back in is something to watch rather
-   * than a chore, and the pot warms from grey to its own colour once all of
-   * them are lit. Decoration only: the heading next to it says it in words.
+   * Culina's pot on a burner gone out, shown when a session ended; each typed password character
+   * lights a flame. Decoration only.
    */
   interface Props {
-    /** How many flames are lit, from none to all of them. */
     lit: number;
   }
 

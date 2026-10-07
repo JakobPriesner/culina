@@ -1,15 +1,9 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  /**
-   * An action with no visible label.
-   *
-   * `label` is required, not optional: an icon-only control without an
-   * accessible name is a button that a screen reader announces as "button", and
-   * there is no way for the reader to find out what it does.
-   */
+  /** An action with no visible label; `label` is required, since an unnamed icon button is announced only as "button". */
   interface Props {
-    /** The icon. Always decorative — `label` is what is announced. */
+    /** The icon, decorative: `label` is what is announced. */
     children: Snippet;
     label: string;
     size?: 'sm' | 'md' | 'lg';
@@ -19,13 +13,7 @@
     /** Marks a toggle's state, so it is announced as pressed rather than as new. */
     pressed?: boolean;
     type?: 'button' | 'submit';
-    /**
-     * The popover this button opens, from `Popover`'s trigger snippet.
-     *
-     * The same one attribute `Button` takes, and for the same reason: the
-     * browser handles the toggling, the light dismiss and the `aria-expanded`
-     * from it. An overflow menu is an icon, so it needs this end too.
-     */
+    /** The popover this button opens, from `Popover`'s trigger; the same attribute `Button` takes. */
     popovertarget?: string;
     onclick?: (event: MouseEvent) => void;
   }

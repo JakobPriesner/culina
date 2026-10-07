@@ -6,22 +6,12 @@
   import { m } from '$shell/i18n';
 
   /**
-   * A recipe's tags, and the ones it could carry.
-   *
-   * The kitchen's own tags are chosen with the control that chooses them
-   * everywhere else — the library's filters and a cookbook's rules — because a
-   * tag is the same thing in all three places. A new one is typed. And beneath
-   * both, what the recipe could be tagged with and is not: offered, never
-   * applied, in the kitchen's own words wherever it has them.
-   *
-   * A recipe's tags arrive as slugs and leave as whatever was added — the
-   * server makes a tag out of a name the first time it is saved. So a tag here
-   * is the kitchen's when its slug or its name says so, and new otherwise.
+   * A recipe's tags and the ones it could carry: the kitchen's tags use the same chooser as the filters and cookbook rules; new ones are typed.
+   * Tags arrive as slugs and leave as added names (the server makes a tag from a name on first save), so a tag is the kitchen's when its slug or name matches.
    */
   interface Props {
     /** What the recipe carries: slugs, and the names of tags added since. */
     tags: readonly string[];
-    /** Every tag the kitchen uses. */
     household: readonly TagInUse[];
     suggestions: readonly TagSuggestion[];
     onchange: (tags: string[]) => void;
@@ -66,15 +56,13 @@
       return;
     }
 
-    // A word the kitchen already has goes in as that tag, so "Italienisch"
-    // typed here is its "italienisch" rather than a second spelling of it.
+    // A name the kitchen already has becomes that tag, not a second spelling.
     const known = household.find((tag) => fold(tag.name) === fold(name));
 
     onchange([...tags, known?.slug ?? name]);
     typed = '';
   }
 
-  /** Enter adds, as it does in every list in this editor. */
   function enter(event: KeyboardEvent) {
     if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
       event.preventDefault();
@@ -169,7 +157,6 @@
     font-size: var(--text-sm);
   }
 
-  /* The button sits on the field's baseline, beside it rather than under it. */
   .row {
     display: flex;
     gap: var(--space-2);

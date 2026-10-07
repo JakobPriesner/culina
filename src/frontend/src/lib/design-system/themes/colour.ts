@@ -1,10 +1,4 @@
-/**
- * Just enough colour maths to check contrast in a test.
- *
- * Contrast is asserted rather than eyeballed because a theme is exactly the
- * kind of change where a pair that was fine in light mode quietly fails in
- * dark, and nobody notices until someone cannot read a label.
- */
+/** Just enough colour maths to check contrast in a test; asserted because a pair fine in light mode can quietly fail in dark. */
 export interface Rgb {
   readonly r: number;
   readonly g: number;

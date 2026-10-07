@@ -2,16 +2,8 @@
   import type { Snippet } from 'svelte';
 
   /**
-   * A distinct entity, or a container that is itself interactive.
-   *
-   * **A card is not the default wrapper for a block of content.** This is the
-   * rule most likely to erode, so it is written here: when everything is a
-   * card, nothing stands out, and a page of boxes takes longer to read than the
-   * same content separated by space and type. Before reaching for this, ask
-   * whether a heading and some whitespace would do — they usually would.
-   *
-   * Legitimate uses: a recipe in a grid, a household in a list, anything the
-   * whole surface of which is one link or one button.
+   * A distinct entity, or an interactive container. Not the default wrapper: when everything is a card
+   * nothing stands out, so first ask whether a heading and whitespace would do.
    */
   interface Props {
     children: Snippet;
@@ -52,8 +44,7 @@
       box-shadow var(--duration-fast) var(--ease-out);
   }
 
-  /* A lift of two pixels, not four: enough to say "this responds", not enough
-     to make a grid of them feel like it is breathing. */
+  /* A two-pixel lift: enough to say "this responds" without making a grid breathe. */
   .interactive:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-overlay);

@@ -1,14 +1,7 @@
 import { clampYield } from '../scaling';
 import type { RecipeReading } from '../types';
 
-/**
- * The chosen yield lives in the URL.
- *
- * Scaling is a view, never a change to the recipe — so it belongs where a view
- * belongs. Putting it in the query string means a scaled recipe survives a
- * reload, survives the step from reading to cooking, and can be sent to
- * somebody as the thing you actually meant: "here, for six".
- */
+/** The chosen yield lives in the URL (scaling is a view): it survives reload and the step to cooking, and can be shared as "for six". */
 const key = 'yield';
 
 /** Reads it back, refusing anything that is not a usable number. */
@@ -23,12 +16,7 @@ export function yieldFrom(url: URL, recipe: RecipeReading | null): number {
   return clampYield(parsed);
 }
 
-/**
- * The same URL at a different yield.
- *
- * The recipe's own yield is left out rather than written as `?yield=4`: a link
- * to a recipe should be the plain link unless somebody deliberately scaled it.
- */
+/** The same URL at a different yield; the recipe's own yield is omitted so a plain link stays plain. */
 export function urlAtYield(url: URL, value: number, recipe: RecipeReading | null): string {
   const next = new URL(url);
 

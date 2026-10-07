@@ -1,18 +1,10 @@
 import { http, request, type AppError } from '$api';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
-/**
- * Everyone in a household.
- *
- * The answer to the question the household settings page asks in its own
- * subtitle — who you cook with — and until now the one thing on it you could
- * not find out. Read-only: joining is an invitation and leaving is a decision
- * with consequences for a shared library, so neither is a row in a list.
- */
+/** Everyone in a household. Read-only: joining is an invitation and leaving has consequences for a shared library. */
 export interface Member {
   readonly userId: string;
   readonly displayName: string;
-  /** `owner` or `member`, as the server spells it. */
   readonly role: string;
   readonly joinedAt: string;
 }
@@ -22,11 +14,7 @@ class Members {
   #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
-  /**
-   * Whose items these are. Plain rather than $state: it is read before the
-   * first await of a method an effect calls, and a tracked read there would
-   * make the method's own writes call it again.
-   */
+  /** Whose items these are; plain, not $state: read before the first await of a method an effect calls, so a tracked read would re-trigger it. */
   #householdId: string | null = null;
 
   get items(): readonly Member[] {
@@ -57,8 +45,7 @@ class Members {
     );
 
     if (result.ok) {
-      // Whoever has been here longest first, which is the order a household
-      // grew in and the only one that does not change under the reader.
+      // Longest-standing first: the order a household grew in, stable under the reader.
       this.#items = [...result.value.items].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
       this.#status = 'ready';
       this.#error = null;
@@ -78,6 +65,5 @@ class Members {
 
 export const members = new Members();
 
-// Names of the people in one kitchen do not belong to the next person to sign
-// in on this device.
+// One kitchen's people must not outlive the next sign-in on this device.
 registerStore(() => members.reset());

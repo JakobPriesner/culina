@@ -6,11 +6,6 @@ import DeleteRecipeDialog from './DeleteRecipeDialog.svelte';
 import { ErrorCodes, type AppError } from '$api';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The only confirmation in the app, so what has to be right is that it tells
- * the truth about what goes, that the safe answer keeps the recipe, and that a
- * failure is said where it can be read.
- */
 const render = (props: Record<string, unknown> = {}) => {
   const onconfirm = vi.fn();
   const onclose = vi.fn();

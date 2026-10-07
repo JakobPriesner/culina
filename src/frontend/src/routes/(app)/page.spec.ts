@@ -11,19 +11,7 @@ import { suggestions } from '$features/recipes/stores/suggestions.svelte';
 import { renderWithProviders } from '$lib/test/render';
 import { toaster } from '$shell/toaster.svelte';
 
-/*
- * The library, rendered, because two of the things this page can now get wrong
- * only exist once a real `$effect` is running.
- *
- * The first is the loop: a store that guarded itself with `$state` would make
- * the effect that called it re-trigger itself, and the page would ask the same
- * question until the session rate limiter started answering 429. A store test
- * cannot see that — nothing about the call in isolation is wrong, it is the
- * pairing with the effect that is.
- *
- * The second is the order the page claims to be in. A list whose order changed
- * without saying so is the thing that makes people stop trusting an app.
- */
+/* The library rendered with a real `$effect`: catches a store re-triggering its own effect (429 loop) and an order that changes silently. */
 const household = 'h1';
 
 const summary = (id: string, title: string) => ({
@@ -52,7 +40,6 @@ const json = (body: unknown) =>
     headers: { 'Content-Type': 'application/json' }
   });
 
-/** One server, answering each of the page's questions by URL. */
 function serverAnswers(reasoned: { code: string; subject: string | null } | null) {
   const fetched = vi.fn((input: Request) => Promise.resolve(answer(input.url, reasoned)));
 
@@ -61,13 +48,7 @@ function serverAnswers(reasoned: { code: string; subject: string | null } | null
   return fetched;
 }
 
-/**
- * The saved searches are answered too, and with their own shape.
- *
- * Falling through to the recipe list gave that store rows with no criteria on
- * them, which it reads unguarded — and the crash landed a turn after the test
- * had already passed, so the suite went red with nothing failing in it.
- */
+/** Saved searches get their own shape: falling through to the recipe list gave that store rows without criteria and crashed after the test passed. */
 function answer(url: string, reasoned: { code: string; subject: string | null } | null) {
   if (url.includes('/suggestions')) {
     return json({ items: [suggestion('r1', 'Linsensuppe', reasoned)] });
@@ -84,7 +65,6 @@ function answer(url: string, reasoned: { code: string; subject: string | null } 
   });
 }
 
-/** Lets every queued effect and the request it made settle. */
 const settle = async () => {
   for (let turn = 0; turn < 6; turn += 1) {
     await new Promise((resume) => setTimeout(resume, 0));
@@ -96,9 +76,7 @@ beforeEach(() => {
   suggestions.reset();
   libraryView.reset();
   savedSearches.reset();
-  // The page remembers what the ranking said, and jsdom keeps storage for the
-  // whole file — so without this every test would open on the last one's
-  // answer rather than on a device that has never been told.
+  // jsdom keeps storage for the whole file; clear it so each test opens on a device never told the ranking.
   localStorage.clear();
 
   for (const toast of [...toaster.toasts]) {
@@ -115,11 +93,7 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Three, and one of each. Not "a reasonable number": every extra call is an
-    // effect that re-triggered itself, and the next one after that is the rate
-    // limiter. The third is the saved searches, which the toolbar draws as
-    // chips and so cannot wait until something is opened — unlike the tag
-    // vocabulary, which is only read when the filter panel is.
+    // Exactly three calls (list, shortlist, saved searches): every extra one is an effect re-triggering itself.
     const asked = (part: string) => fetched.mock.calls.filter(([r]) => r.url.includes(part)).length;
 
     expect(fetched).toHaveBeenCalledTimes(3);
@@ -134,9 +108,6 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // The panel was always here. What changed is that the recipe in it is an
-    // answer rather than the first one that happened to have a photograph — and
-    // the eyebrow is what makes it read as one.
     expect(await screen.findByText(/Aubergine/)).toBeInTheDocument();
   });
 
@@ -146,18 +117,14 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Scoped to the note, because the filter panel ticks the very same words —
-    // which is the point: the line above the grid and the control that sets it
-    // cannot describe the list differently.
+    // Scoped to the note: the filter panel ticks the same words.
     expect(
       screen.getByText('Recently updated', { selector: '.collection-note' })
     ).toBeInTheDocument();
   });
 
   it('keeps the old order, and says so, before the ranking has anything to say', async () => {
-    // A kitchen with no history gets the app it has always had. Nothing guesses
-    // a threshold: a reason exists exactly when one term of the score actually
-    // dominated, which is the same thing as "there is enough history here".
+    // No history means no reason: one appears only when a score term actually dominates.
     serverAnswers(null);
 
     renderWithProviders(LibraryPage);
@@ -167,7 +134,6 @@ describe('opening the library', () => {
       screen.getByText('Recently updated', { selector: '.collection-note' })
     ).toBeInTheDocument();
 
-    // And the ranking is not even offered as an order yet.
     expect(screen.queryByText('For tonight')).not.toBeInTheDocument();
   });
 
@@ -181,10 +147,6 @@ describe('opening the library', () => {
   });
 
   it('hides a suggestion when told to, and offers the undo', async () => {
-    // The only negative signal the ranking cannot derive from something another
-    // feature already records, so it has to be sayable — and reversible, since
-    // "not tonight" is a small decision and a confirmation dialog would make it
-    // feel like a large one.
     const fetched = serverAnswers({ code: 'affinity', subject: null });
 
     renderWithProviders(LibraryPage);
@@ -200,14 +162,11 @@ describe('opening the library', () => {
     expect(dismissals).toHaveLength(1);
     expect(dismissals[0]?.method).toBe('PUT');
 
-    // Asserted on the toaster rather than on the screen: the toast outlet lives
-    // in the app shell, so a page rendered on its own has nowhere to draw one.
-    // What matters here is that the page asked for an undoable message.
+    // Asserted on the toaster: the toast outlet lives in the app shell, absent from a page rendered alone.
     const toast = toaster.toasts.at(-1);
 
     expect(toast?.action?.label()).toBe('Undo');
 
-    // And that the undo actually reaches the server.
     toast?.action?.run();
     await settle();
 
@@ -255,8 +214,6 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Both shortlisted recipes are in the panel, as headings, and ALL recipes
-    // are also listed as cards in the grid below based on filter settings.
     expect(screen.getByRole('heading', { name: 'Linsensuppe' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Omelette' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Linsensuppe/ })).toBeInTheDocument();
@@ -293,12 +250,8 @@ describe('opening the library', () => {
   });
 });
 
-/*
- * When the list may be asked for. The shortlist does not decide the order,
- * so the list is asked for alongside the shortlist rather than waiting for it.
- */
+/* The shortlist does not decide the order, so the list is requested alongside it. */
 describe('waiting for the shortlist', () => {
-  /** A server whose shortlist never answers. */
   function shortlistHeldBack() {
     const fetched = vi.fn((input: Request) =>
       input.url.includes('/suggestions')
@@ -329,8 +282,7 @@ describe('waiting for the shortlist', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // The panel goes above the grid and takes its recipes out of it. Drawing
-    // the grid first would move every card when the shortlist lands.
+    // Drawing the grid first would move every card when the shortlist lands.
     expect(screen.getByRole('status', { name: 'Loading your recipes' })).toBeInTheDocument();
     expect(screen.queryByText('Omelette')).not.toBeInTheDocument();
   });
@@ -349,8 +301,7 @@ describe('waiting for the shortlist', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // The panel goes above the grid. Drawing it over the skeleton would push
-    // the skeleton down, and CI measures that as the page shifting.
+    // Drawing it over the skeleton would push the skeleton down; CI measures that as a page shift.
     expect(screen.getByRole('status', { name: 'Loading your recipes' })).toBeInTheDocument();
     expect(screen.queryByText('Linsensuppe')).not.toBeInTheDocument();
   });
@@ -363,8 +314,6 @@ describe('waiting for the shortlist', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // The answer could not change a chosen order, so there was nothing to wait
-    // for.
     expect(listed()).toHaveLength(1);
     expect(listed()[0]).toContain('sort=title');
   });
@@ -380,15 +329,13 @@ describe('waiting for the shortlist', () => {
       .map(([request]) => request.url)
       .filter((url) => url.includes('/recipes?'));
 
-    // One list, in the order the visit started in, and a label that still
-    // says so. Re-listing in the new order is the rearranging this is for.
+    // Re-listing in the new order is the rearranging this guards against.
     expect(listed).toHaveLength(1);
     expect(listed[0]).toContain('sort=-updatedAt');
     expect(
       screen.getByText('Recently updated', { selector: '.collection-note' })
     ).toBeInTheDocument();
 
-    // And the next visit opens on what the ranking says now.
     expect(localStorage.getItem(`culina.ranks.${household}`)).toBe('yes');
   });
 
@@ -407,8 +354,7 @@ describe('waiting for the shortlist', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // A failure says nothing about the kitchen. Remembered as "nothing to
-    // say", it would hold a ranked kitchen in recent order until a success.
+    // A failure must not be remembered as "nothing to say", or a ranked kitchen stays in recent order.
     expect(localStorage.getItem(`culina.ranks.${household}`)).toBeNull();
   });
 });

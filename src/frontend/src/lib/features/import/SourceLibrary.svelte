@@ -10,17 +10,8 @@
   import type { ConnectedSource } from './types';
 
   /**
-   * Their library, drawn as ours.
-   *
-   * The one decision that makes this feel like moving in rather than like
-   * running an importer: what comes back from the other app is shown in this
-   * app's own type and spacing, with the same rows the recipe list uses. Nobody
-   * has to look at somebody else's database to decide what to keep.
-   *
-   * Recipes already here are shown rather than hidden, and shown as taken. A
-   * library that quietly dropped what you already had would leave you unable to
-   * tell "I have it" from "it did not come through", which is the exact
-   * question somebody asks on their second visit.
+   * A connected library drawn in this app's own type and rows. Recipes already here are shown as
+   * taken, not hidden, so "I have it" stays distinguishable from "it did not come through".
    */
   interface Props {
     source: ConnectedSource;
@@ -34,15 +25,9 @@
 
   let debounce: ReturnType<typeof setTimeout> | undefined;
 
-  /** Everything that could still be brought over. */
   const available = $derived(sources.recipes.filter((recipe) => recipe.alreadyHere === null));
 
-  /**
-   * Ticked only when everything there is has been read and chosen.
-   *
-   * `hasMore` is part of it: a full page with more behind it is not "all", and
-   * a box that said so would be the lie this control exists to avoid.
-   */
+  /** Ticked only when everything has been read and chosen: with `hasMore`, a full page is not "all". */
   const allChosen = $derived(
     available.length > 0 && chosen.length === available.length && !sources.hasMore
   );
@@ -55,14 +40,7 @@
     chosen = on ? [...chosen, externalId] : chosen.filter((one) => one !== externalId);
   }
 
-  /**
-   * All of it — fetching the rest first, if there is a rest.
-   *
-   * The alternative was a box labelled after what it actually did, which is how
-   * this started: "everything loaded" is honest and useless, because the answer
-   * to "I want all of them" should not be "then scroll". So the tick goes and
-   * gets them, and says so while it does.
-   */
+  /** Selects everything, fetching the rest first: "everything loaded" would be honest but useless. */
   async function toggleAll(on: boolean) {
     if (!on) {
       chosen = [];
@@ -74,22 +52,18 @@
       await sources.loadEverything();
     }
 
-    // Read after the loading, not before: `available` is derived from what has
-    // arrived, and the whole point is that more has.
+    // Read after loading: `available` is derived from what has arrived.
     chosen = available.map((recipe) => recipe.externalId);
   }
 
   $effect(() => () => clearTimeout(debounce));
 
-  /**
-   * Each search is a read of somebody else's server, which may take its time.
-   * One per keystroke would be a queue of them for words nobody finished.
-   */
+  /** Debounced: each search reads somebody else's server, and one per keystroke would queue words nobody finished. */
   function type(next: string) {
     query = next;
     clearTimeout(debounce);
 
-    // Long enough that a word is finished, short enough that it feels live.
+    // Long enough for a finished word, short enough to feel live.
     debounce = setTimeout(() => search(next), 250);
   }
 
@@ -158,8 +132,7 @@
         />
 
         {#if sources.loadingAll}
-          <!-- Polite: it reports progress while somebody is reading the list,
-               and must not interrupt them. -->
+          <!-- Polite: reports progress without interrupting reading. -->
           <p class="loadingAll" role="status">{m['import.library.loadingAll']()}</p>
         {/if}
       </div>
@@ -183,9 +156,8 @@
     </ul>
 
     {#if sources.hasMore && !sources.moreFailed}
-      <!-- The end of the list, drawn as the rows that are coming. Reaching them
-           is what fetches them, so there is no button to find and no moment
-           where the list looks finished when it is not. -->
+      <!-- Skeleton rows standing for the coming rows; reaching them fetches them, so there is no
+           button and no false "finished" look. -->
       <ul class="list" aria-hidden="true">
         {#each ['60%', '75%', '50%'] as width, row (row)}
           <li class="row" {@attach whenVisible(() => void sources.more())}>
@@ -203,14 +175,12 @@
 </section>
 
 {#if chosen.length > 0}
-  <!-- Sticky, because the choosing happens by scrolling and the action has to
-       stay within a thumb's reach the whole way down. -->
+  <!-- Sticky: choosing happens by scrolling, and the action must stay within a thumb's reach. -->
   <div class="bar">
     <p class="chosen" role="status">{m['import.library.chosen']({ count: chosen.length })}</p>
 
     {#if sources.importError}
-      <!-- The selection is still on screen, so the refusal goes next to the
-           button rather than replacing everything with an error page. -->
+      <!-- The selection is still on screen, so the refusal sits beside the button. -->
       <p class="refused" role="alert">{explain(sources.importError)}</p>
     {/if}
 
@@ -288,8 +258,6 @@
     border-top: 1px solid var(--border);
   }
 
-  /* Dimmed rather than removed: "I already have it" and "it did not come
-     through" are the two things somebody needs to tell apart. */
   .taken {
     color: var(--text-muted);
   }

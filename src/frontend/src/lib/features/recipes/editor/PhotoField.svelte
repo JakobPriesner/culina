@@ -9,30 +9,16 @@
   import { olliSetting } from '$shell/olli/setting.svelte';
   import { imageSrcset, imageUrl } from '../recipeImage';
 
-  /**
-   * The one photo a recipe has.
-   *
-   * One, not a gallery: what a photo is for here is recognising the dish in a
-   * list, and a second picture of the same thing does not help you do that. The
-   * server re-encodes whatever is uploaded, so a 12-megapixel phone photo is
-   * not what anyone downloads.
-   *
-   * What a picture field looks like belongs to `ImageField`; what is left here
-   * is the part that knows this one is a recipe's.
-   */
+  /** The one photo a recipe has; the server re-encodes uploads. Looks come from `ImageField`. */
   interface Props {
     recipeId: string;
     imageId: string | null;
-    /** Called only once a photo has been saved or removed, which moves the recipe's version on. */
     onchange: (imageId: string | null) => void;
   }
 
   /**
-   * One event as the drawing stream sends it.
-   *
-   * Declared here rather than taken from the generated client, which describes
-   * requests that end and has nothing to say about a stream. The same shape the
-   * import's progress events are read with, for the same reason.
+   * One event of the drawing stream; not in the generated client, which only describes requests
+   * that end.
    */
   interface DrawingEvent {
     seconds: number;
@@ -47,33 +33,19 @@
 
   let busy = $state(false);
   /**
-   * Kept apart from `busy`, because the two are different waits.
-   *
-   * An upload is a few seconds of this machine's network; a drawing is a
-   * minute of somebody else's machine working. The frame says so itself while
-   * it happens, so the picture is where the waiting is shown rather than in a
-   * button beside it.
+   * Kept apart from `busy`: an upload is seconds of network, a drawing is a minute of the
+   * provider's work.
    */
   let drawing = $state(false);
   /**
-   * How long the assistant has been drawing, as the server counts it.
-   *
-   * The server's count rather than a timer here, so a tab that was left in the
-   * background and throttled shows the real elapsed time when somebody comes
-   * back to it.
+   * Elapsed drawing time as the server counts it, so a throttled background tab shows the real
+   * time.
    */
   let drawnFor = $state(0);
   let failure = $state<string | null>(null);
-  /**
-   * Why the assistant did not draw, kept as the error rather than a sentence.
-   *
-   * Said under the field rather than inside it, because the answer is often
-   * "the model cannot draw" or "the budget is spent" — and those come with a
-   * way to the assistant settings that a line in the frame has no room for.
-   */
+  /** The error itself, shown under the field because it often links to the assistant settings. */
   let drawFailure = $state<AppError | null>(null);
 
-  /** Checked here so an obviously hopeless upload fails instantly. */
   const maxBytes = 10 * 1024 * 1024;
 
   async function upload(file: File) {
@@ -95,8 +67,8 @@
       http.PUT('/api/v1/recipes/{recipeId}/image', {
         params: { path: { recipeId } },
         body: body as unknown as { file: string },
-        // FormData sets its own multipart boundary; serialising it as JSON
-        // would send the string "[object FormData]".
+        // FormData sets its own multipart boundary; JSON-serialising it would send "[object
+        // FormData]".
         bodySerializer: (value: unknown) => value as FormData
       })
     );
@@ -111,21 +83,8 @@
   }
 
   /**
-   * Asks the assistant for one instead of choosing a file.
-   *
-   * POST rather than PUT on the same sub-resource, which is the one place in
-   * this API where the two methods differ by who made the thing: PUT replaces
-   * the picture with bytes being sent, POST asks the server to produce one. The
-   * result travels the identical path afterwards, so a drawn picture is an
-   * ordinary recipe photo in every other respect.
-   *
-   * A stream, because this is the slowest thing the app asks of anybody:
-   * sixteen seconds is a fast drawing and two minutes is the ceiling. There is
-   * nothing partial to show — a provider hands over a finished picture or none
-   * — so what arrives until the end is a tick every few seconds saying it is
-   * still going. That is the difference between a frame that says "creating
-   * image… 47s" and one that has said nothing for a minute and looks broken,
-   * and it is also what stops a proxy closing a request that never speaks.
+   * Asks the assistant to draw one; a stream because it is slow (16s to 2min), and its ticks keep
+   * proxies from closing the request.
    */
   function draw() {
     drawing = true;
@@ -206,14 +165,8 @@
   <Olli pose="drawing" size="md" working={drawing} />
 {/snippet}
 
-<!-- Absent entirely where no assistant can draw — which includes every
-     instance running a model on its own hardware, since those do not make
-     pictures. -->
+<!-- Absent where no assistant can draw (including self-hosted models). -->
 {#snippet drawAction(variant: ButtonVariant)}
-  <!-- Whatever the two either side of it are wearing. The field knows where
-       the strip currently is — on the photograph or under it — and this button
-       standing out from its neighbours is a button from another screen that
-       has wandered in. -->
   <Button {variant} size="sm" disabled={busy || drawing} onclick={draw}>
     {m['assist.draw']()}
   </Button>

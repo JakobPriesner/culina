@@ -1,13 +1,7 @@
 <script lang="ts">
   import { Skeleton } from '$ds';
 
-  /**
-   * The shape of a cookbook before it arrives.
-   *
-   * A square where the cover will be, then the two lines under it, at the same
-   * heights — so nothing moves when the real thing lands. A skeleton that does
-   * not match what replaces it is a layout shift with extra steps.
-   */
+  /** The shape of a cookbook before it arrives, at the real heights so nothing moves when it lands. */
 </script>
 
 <div class="cookbook" aria-hidden="true">
@@ -23,8 +17,7 @@
     gap: var(--space-2);
   }
 
-  /* The cover is square, and its placeholder has to be too or the row below it
-     lands somewhere else once the pictures arrive. */
+  /* The cover is square, and so is its placeholder, or the row below shifts when pictures arrive. */
   .cookbook > :global(:first-child) {
     aspect-ratio: 1;
     height: auto;

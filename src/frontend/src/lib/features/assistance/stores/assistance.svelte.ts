@@ -13,17 +13,7 @@ import type { components } from '$api/generated/schema';
 
 type UsageWire = components['schemas']['SettingsGetAssistanceUsageResponse'];
 
-/**
- * How the assistant is set up, and what it has cost.
- *
- * Administrator-only, and read on demand rather than at boot: one person on the
- * instance can open this screen, and everybody else would be paying for the
- * request.
- *
- * The API key is deliberately not part of the state. No endpoint returns it, so
- * there is nothing to hold — what the form sends is a *new* key or nothing at
- * all, and "nothing at all" is what saving an unrelated change looks like.
- */
+/** Assistant configuration and spend, admin-only and loaded on demand. The API key is never held: a save sends a new key or nothing. */
 class AssistanceStore {
   #settings = $state<Assistance | null>(null);
   #usage = $state<Usage | null>(null);
@@ -42,13 +32,7 @@ class AssistanceStore {
     return this.#usage;
   }
 
-  /**
-   * What each connected provider offers.
-   *
-   * Empty until it has been asked, and empty for a provider that did not
-   * answer — the picker then falls back to a text box, so an unreachable
-   * provider costs the convenience rather than the ability to configure it.
-   */
+  /** Models each connected provider offers; empty until asked or when a provider is unreachable (pickers fall back to text boxes). */
   get models(): ProviderModels[] {
     return this.#models;
   }
@@ -57,18 +41,11 @@ class AssistanceStore {
     return this.#loading;
   }
 
-  /** Whether the providers are still being asked what they offer. */
   get listing(): boolean {
     return this.#listing;
   }
 
-  /**
-   * Whether asking them failed outright.
-   *
-   * Distinct from a provider answering "no": that arrives as a row saying so.
-   * This is the request itself not happening, which used to leave the model
-   * pickers as bare text boxes with nothing on screen to explain why.
-   */
+  /** Whether the listing request itself failed, as opposed to a provider answering "no". */
   get unlisted(): boolean {
     return this.#unlisted;
   }
@@ -81,17 +58,11 @@ class AssistanceStore {
     return this.#error;
   }
 
-  /** Reads both the configuration and this month's spend. */
   async load(): Promise<void> {
     this.#loading = true;
     this.#error = null;
 
-    // Deliberately not awaited with the other two. The form and the spend are
-    // database reads; the model lists are one connection per provider to a
-    // company somewhere else, made one after another. Waiting for all three
-    // together held the entire screen blank for as long as the slowest of
-    // those answers took — so the lists arrive on their own, and the pickers
-    // they fill are the only thing that waits for them.
+    // Not awaited with the others: model lists are slow remote calls that would blank the whole screen, so only the pickers wait.
     void this.refreshModels();
 
     const [settings, usage] = await Promise.all([
@@ -105,8 +76,7 @@ class AssistanceStore {
       this.#error = settings.error;
     }
 
-    // The usage screen is worth less than the form: a failure to read it must
-    // not stop somebody connecting a model.
+    // A usage failure must not stop somebody connecting a model.
     if (usage.ok) {
       this.#usage = toUsage(usage.value);
     }
@@ -114,14 +84,7 @@ class AssistanceStore {
     this.#loading = false;
   }
 
-  /**
-   * Saves the form.
-   *
-   * Everything at once: connections and uses arrive together because a use
-   * pointing at a connection that did not save is a state nobody should be able
-   * to reach. Each connection carries its own three-state key — omitted keeps
-   * the stored one, empty removes it, a value replaces it.
-   */
+  /** Saves everything at once, since a use pointing at an unsaved connection must be unreachable. Key per connection: omitted keeps, empty removes, a value replaces. */
   async save(next: Assistance): Promise<AppError | null> {
     const before = this.#settings;
 
@@ -155,32 +118,20 @@ class AssistanceStore {
     if (outcome.ok) {
       this.#settings = toAssistance(outcome.value);
 
-      // The saved keys and addresses are what decides who can be asked, so the
-      // lists are stale the moment this returns. Without this, connecting a
-      // provider left its model picker a text box until the page was loaded
-      // again — the one moment somebody most wants the list is the moment
-      // after they paste the key.
+      // Saved keys and addresses decide who can be asked, so the lists are stale now.
       void this.refreshModels();
 
       return null;
     }
 
-    // Put back exactly what was there. A half-applied connection on screen is
-    // worse than the change not having happened.
+    // Restore the previous settings; a half-applied connection is worse than none.
     this.#settings = before;
     this.#error = outcome.error;
 
     return outcome.error;
   }
 
-  /**
-   * Asks the providers what they offer, on opening the screen and again after
-   * a key or an address has changed.
-   *
-   * A failure is not an error on this screen. Without the lists the model
-   * pickers become text boxes, which is how this worked before and is still
-   * usable.
-   */
+  /** Asks providers what they offer; a failure is not an error here, the pickers fall back to text boxes. */
   async refreshModels(): Promise<void> {
     this.#listing = true;
 

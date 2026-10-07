@@ -1,44 +1,18 @@
 import { parseIngredientLine, type ParsedIngredient } from './parseIngredientLine';
 
-/**
- * Reads a recipe pasted as text.
- *
- * The single biggest reduction in the effort of getting a recipe into the app:
- * almost every recipe arrives as a block of text — a message from a friend, a
- * page copied from a blog, something typed out of a book — and re-typing it
- * line by line is why most of them never get written down at all.
- *
- * Deterministic, and deliberately so. No network call and nothing that guesses
- * differently on Tuesday: the same paste produces the same reading every time,
- * which is what makes correcting it worth the trouble.
- *
- * The parse is never applied silently. What comes back is shown as separate
- * parts and edited before anything is created, because a wrong reading you
- * cannot see is worse than no reading at all.
- */
+/** A recipe pasted as text, read deterministically; the result is previewed and edited, never applied silently. */
 export interface ParsedRecipe {
   readonly sourceUrl?: string;
   /** The first line, when it looks like a name rather than an instruction. */
   readonly title: string;
   readonly ingredients: readonly ParsedIngredient[];
   readonly steps: readonly string[];
-  /**
-   * What it makes, and how long it takes.
-   *
-   * Only a site that publishes structured data knows these. A pasted block of
-   * text does not say, and guessing would put a number in a recipe that scales
-   * every amount in it.
-   */
+  /** Only structured-data sites know these; guessing would scale every amount wrongly. */
   readonly servings?: number;
   readonly totalMinutes?: number;
 }
 
-/**
- * The headings people actually write, in both languages.
- *
- * Matched on a line of its own, which is what a heading is. "Zubereitung" in
- * the middle of a sentence is a word.
- */
+/** Headings in both languages, matched on a line of their own ("Zubereitung" mid-sentence is a word). */
 const headings = {
   ingredients: [
     'zutaten',
@@ -88,74 +62,38 @@ const headingKind = (line: string): 'ingredients' | 'steps' | null => {
   return headings.steps.includes(key as (typeof headings.steps)[number]) ? 'steps' : null;
 };
 
-/** A number, a fraction glyph, or `1/2` — however a person writes an amount. */
 const startsWithAmount = /^[-–—•*\s]*(?:\d|[½⅓⅔¼¾])/u;
 
 /** `1.` or `2)` at the start of a line: a numbered step, not two hundred grams. */
 const numberedStep = /^\s*\d{1,2}\s*[.)]\s+\S/;
 
-/**
- * How long a line can be and still plausibly be one ingredient.
- *
- * Counted in words, because characters do not distinguish "40 g Parmesan,
- * frisch gerieben" from "200 g of the flour goes in first, and the rest is
- * folded in at the end" — both are about seventy characters, and only one of
- * them is an ingredient.
- */
+/** Max words in an ingredient line; characters cannot tell "40 g Parmesan" from a sentence. */
 const longestIngredient = 8;
 
-/**
- * Whether this line is an ingredient rather than an instruction.
- *
- * An ingredient starts with how much there is of it. The exceptions are the
- * reason this is a function rather than one regular expression: "1. Heat the
- * oven" starts with a number and is a step, and a line long enough to be a
- * sentence is a sentence even if it opens with "200 g of the flour from…".
- */
+/** An ingredient starts with an amount; numbered steps and sentence-length lines are excluded. */
 const looksLikeIngredient = (line: string): boolean =>
   startsWithAmount.test(line) &&
   !numberedStep.test(line) &&
   bare(line).split(/\s+/).length <= longestIngredient &&
   !/[.!?]\s/.test(bare(line));
 
-/** Sentence punctuation, which a copied page's stray labels do not carry. */
 const endsLikeSentence = (line: string): boolean => /[.!?…]\s*$/.test(line.trim());
 
-/**
- * Whether this line is a step.
- *
- * Anything left over that reads as a sentence: numbered, or long enough, or
- * punctuated like one. The last of those is what keeps a genuinely terse
- * instruction — "Alles verrühren." — while dropping the "Foto" and "Drucken"
- * that come along when a page is copied out of a browser.
- */
+/** Anything left that reads as a sentence; punctuation keeps terse steps ("Alles verrühren.") and drops copied-page labels ("Foto"). */
 const looksLikeStep = (line: string): boolean =>
   numberedStep.test(line) || bare(line).split(/\s+/).length >= 3 || endsLikeSentence(line);
 
 /** A numbered step keeps its words and loses its number: the list renumbers. */
 const stepText = (line: string): string => bare(line).replace(/^\d{1,2}\s*[.)]\s+/, '');
 
-/**
- * Whether the first line is a name rather than the start of the method.
- *
- * A name is short and is not punctuated like a sentence. Somebody who pastes
- * only the method has not given it a title, and taking their first instruction
- * as one would be worse than leaving it blank.
- */
+/** A name is short and not sentence-punctuated; a first instruction must not become the title. */
 const looksLikeTitle = (line: string): boolean =>
   !endsLikeSentence(line) && bare(line).split(/\s+/).length <= 10;
 
 /** Short enough that a heading is the only reason to call it an ingredient. */
 const isShort = (line: string): boolean => bare(line).split(/\s+/).length <= 4;
 
-/**
- * A range is read as its lower bound.
- *
- * "2–3 tbsp oil" becomes two, and the cook adds the third if they want it. The
- * midpoint would invent a precision the recipe never had, and the upper bound
- * is the one you cannot take back out of the pan. It is visible in the preview
- * either way.
- */
+/** A range reads as its lower bound: a midpoint invents precision, the upper bound can't be taken back out of the pan. */
 const lowerBound = (line: string): string =>
   line.replace(/^(\s*[-–—•*]?\s*)(\d+(?:[.,]\d+)?)\s*[-–—]\s*\d+(?:[.,]\d+)?/u, '$1$2');
 
@@ -180,8 +118,7 @@ export function parseRecipeText(text: string, ownUnits: readonly string[] = []):
       continue;
     }
 
-    // The first thing written, before any heading, is what it is called —
-    // unless it is plainly an ingredient or an instruction already.
+    // The first line before any heading is the title, unless it already looks like an ingredient or step.
     if (
       !title &&
       section === null &&
@@ -193,9 +130,7 @@ export function parseRecipeText(text: string, ownUnits: readonly string[] = []):
       continue;
     }
 
-    // Under a heading the heading decides, because it knows what the shape
-    // cannot: a bare "Salz" under "Zutaten" is an ingredient with no amount,
-    // and the same word under "Zubereitung" is somebody's terse instruction.
+    // Under a heading the heading decides: bare "Salz" is an ingredient under "Zutaten", a step under "Zubereitung".
     const isIngredient =
       section === 'steps'
         ? false

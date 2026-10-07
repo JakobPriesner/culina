@@ -1,12 +1,5 @@
-/**
- * Tactile micro-haptics for mobile devices.
- *
- * Tapping a checkbox in the supermarket or advancing a cooking step with a wet
- * thumb benefits from subtle physical confirmation. Degrades silently on
- * devices or browsers without vibration support.
- */
+/** Subtle haptics for mobile; silent where vibration isn't supported. */
 export const haptics = {
-  /** A subtle tick when checking off an ingredient or toggling a control. */
   tick(): void {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
@@ -17,7 +10,6 @@ export const haptics = {
     }
   },
 
-  /** A crisp tap when advancing or rewinding a cooking step. */
   step(): void {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
@@ -28,7 +20,6 @@ export const haptics = {
     }
   },
 
-  /** Celebratory pattern when completing a cooking session or clearing a shopping list. */
   celebrate(): void {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
@@ -39,7 +30,6 @@ export const haptics = {
     }
   },
 
-  /** An alert pulse pattern when a kitchen timer has finished. */
   alarm(): void {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {

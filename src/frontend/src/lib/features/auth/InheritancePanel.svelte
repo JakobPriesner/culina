@@ -9,16 +9,7 @@
   import { setInheritance } from './households.svelte';
   import { session } from './session.svelte';
 
-  /**
-   * Whose recipes this household sees besides its own.
-   *
-   * Says what is true first — which household, and through it which others —
-   * because a chain is easy to set up and easy to forget, and a member who
-   * cannot change it still wants to know why somebody else's recipes are in
-   * their library. An owner gets the choice under it, saved the moment it is
-   * made: it is one value, and a save button for one value is a second step
-   * that only exists to be forgotten.
-   */
+  /** Whose recipes this household sees besides its own, stated first (a chain is easy to forget and members want to know why recipes appear); owners get the choice below, saved at once since one value needs no save button. */
   interface Props {
     householdId: string;
   }
@@ -34,11 +25,7 @@
   const chain = $derived(household?.inheritsFrom ?? []);
   const owner = $derived(household?.role === 'owner');
 
-  /**
-   * The households it could inherit from: the other ones this person is in.
-   * The current one stays on the list even when they are not in it — somebody
-   * else chose it — or the select would claim it inherits nothing.
-   */
+  /** Households it could inherit from: the other ones this person is in, plus the current one even when they are not in it, or the select would claim it inherits nothing. */
   const options = $derived.by(() => {
     const others = session.households
       .filter((h) => h.householdId !== householdId)

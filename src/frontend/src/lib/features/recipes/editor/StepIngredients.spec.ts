@@ -6,11 +6,7 @@ import StepIngredients from './StepIngredients.svelte';
 import type { Ingredient, Step } from '../types';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The chip row exists for the half a sentence cannot say. "Combine everything
- * and knead" needs five things and names none, so what a step needs has to be
- * sayable apart from what it says.
- */
+/* The chip row says what a sentence cannot ("combine everything and knead" names none of the five things it needs). */
 
 const butter: Ingredient = {
   id: 'i-butter',
@@ -61,17 +57,9 @@ const render = (one: Step, ingredients: Ingredient[], onchange = vi.fn()) => {
   return onchange;
 };
 
-/** The chips, which are what the step says it needs. */
 const chips = () => within(screen.getByRole('list'));
 
-/**
- * The picker.
- *
- * Read while closed: opening it is the browser's `popover`, which the design
- * system leans on precisely so nobody reimplements light dismiss — and which
- * jsdom does not implement at all. What it contains is this component's
- * business; that a button opens it is not.
- */
+/** The picker, read while closed: opening is the browser's `popover`, which jsdom lacks and which is not this component's business. */
 const picker = () => ({
   option: (name: string) => screen.getByRole('checkbox', { name, hidden: true }),
   missing: (name: string) => screen.queryByRole('checkbox', { name, hidden: true })
@@ -96,8 +84,7 @@ describe('what a step needs', () => {
 
     await userEvent.click(picker().option('butter'));
 
-    // Butter first because butter is first in the list, not because it was
-    // ticked last — otherwise the chips shuffle as you pick them.
+    // Butter first because it is first in the list, not because it was ticked last, or chips shuffle as you pick.
     expect(onchange).toHaveBeenLastCalledWith(['i-butter', 'i-salt']);
   });
 
@@ -114,8 +101,7 @@ describe('an ingredient the sentence names', () => {
   it('cannot be taken off here, because the words are what put it there', () => {
     render(step(['i-butter'], ['i-butter']), [butter, salt]);
 
-    // A remove button the server would undo on the next save is worse than no
-    // remove button.
+    // A remove button the server would undo on the next save is worse than none.
     expect(chips().getByText('butter')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Take butter off this step' })

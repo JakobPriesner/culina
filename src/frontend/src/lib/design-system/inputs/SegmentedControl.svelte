@@ -1,16 +1,8 @@
 <script lang="ts">
   import { selectionIndicator } from '../containment/selectionIndicator';
   /**
-   * Two or three ways of looking at the same thing, all named at once.
-   *
-   * Not `Tabs`: tabs own a panel and say "the rest of this page is about the
-   * one you picked". This says "here is the same content, arranged
-   * differently", so it can sit beside a heading and leave the page alone.
-   *
-   * Pressed buttons rather than radios, because choosing takes effect
-   * immediately and there is no form to submit. Both segments stay in the tab
-   * order: with two of them, a roving tabindex would save one key press and
-   * cost the reader the ability to see the other option is there.
+   * Two or three views of the same content, all named at once; not `Tabs` (which own a panel), so it can sit beside a heading.
+   * Pressed buttons, not radios: choosing is immediate. Every segment stays in the tab order, as a roving tabindex would hide the other option.
    */
   export interface Segment {
     readonly id: string;
@@ -43,8 +35,7 @@
 </div>
 
 <style>
-  /* One control with a seam down it, not two buttons that happen to touch:
-     the shared border is what says the two are alternatives. */
+  /* One control with a seam: the shared border says the segments are alternatives. */
   .segments {
     position: relative;
     isolation: isolate;
@@ -79,8 +70,7 @@
     color: var(--text);
   }
 
-  /* Raised, not accented: this picks a view, and a control painted in the
-     accent colour asks to be pressed as if something were about to happen. */
+  /* Raised, not accented: an accent-coloured control asks to be pressed as if something would happen. */
   .segment[aria-pressed='true'] {
     color: var(--text);
   }
@@ -91,8 +81,7 @@
     box-shadow: var(--shadow-card);
   }
 
-  /* Paper has one arrangement — whichever was on screen — and no way to change
-     it. */
+  /* Paper has one arrangement, whichever was on screen. */
   @media print {
     .segments {
       display: none;

@@ -4,18 +4,10 @@ import { busy } from './busy.svelte';
 import { toaster } from './toaster.svelte';
 import { update, watchForUpdates } from './updates.svelte';
 
-/*
- * A new version must never take over on its own.
- *
- * Replacing the running build's assets underneath a page means the next chunk
- * it loads comes from a build that no longer matches what is on screen — in a
- * kitchen, that is the app breaking at step four with flour on someone's hands.
- * These tests pin the conversation: notice, offer, and only then reload.
- */
+/* A new version must never take over on its own: swapping assets under a page breaks the next chunk load mid-recipe. Tests pin notice, offer, then reload. */
 class FakeWorker implements Pick<ServiceWorker, 'postMessage'> {
   messages: unknown[] = [];
 
-  /** The build it answers with when asked, as the real worker does. */
   constructor(readonly version = 'v2') {}
 
   postMessage(message: unknown, transfer?: Transferable[] | StructuredSerializeOptions): void {
@@ -53,7 +45,6 @@ function fakeServiceWorker(options: { waiting?: FakeWorker; controlled: boolean 
       }
     },
     registration,
-    /** Fires the event the browser fires once a new worker has taken over. */
     takeControl: () => {
       for (const listener of listeners.get('controllerchange') ?? []) {
         listener(new Event('controllerchange'));
@@ -62,7 +53,6 @@ function fakeServiceWorker(options: { waiting?: FakeWorker; controlled: boolean 
   };
 }
 
-/** Lets the registration and the worker's answer settle before anything is asserted. */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 /** A fresh page: nothing held, nothing on screen — but the device remembers. */
@@ -83,7 +73,6 @@ describe('watching for a new version', () => {
 
     vi.stubGlobal('navigator', navigatorWithout);
 
-    // No throw, and a stop function that is safe to call.
     watchForUpdates()();
 
     expect(toaster.toasts).toHaveLength(0);
@@ -105,11 +94,9 @@ describe('watching for a new version', () => {
 
     expect(fake.container.register).toHaveBeenCalledWith('/service-worker.js', { type: 'module' });
     expect(toast).toBeDefined();
-    // Brief: a prompt that never left sat over the bottom of every screen. The
-    // offer itself stays, in settings, until it is taken.
+    // Brief: a lingering prompt covered the bottom of every screen; the offer stays in settings.
     expect(toast!.durationMs).toBeGreaterThan(0);
     expect(update.ready).toBe(true);
-    // And it is an offer, not a countdown.
     expect(waiting.messages).toEqual([]);
 
     stop();
@@ -146,8 +133,7 @@ describe('watching for a new version', () => {
     toaster.toasts[0]!.action!.run();
 
     expect(waiting.messages).toEqual([{ type: 'culina:activate' }]);
-    // Not yet: reloading before the new worker is in control would serve the
-    // old build again and lose the update.
+    // Reloading before the new worker controls would serve the old build again.
     expect(reload).not.toHaveBeenCalled();
 
     fake.takeControl();
@@ -252,8 +238,7 @@ describe('a new version arriving at a bad moment', () => {
 
     await settle();
 
-    // An offer is still an interruption, and "there is a new version" is never
-    // worth reading with your hands in a bowl.
+    // An offer is still an interruption.
     expect(toaster.toasts).toHaveLength(0);
 
     release();

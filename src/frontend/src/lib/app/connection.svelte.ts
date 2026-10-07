@@ -1,12 +1,4 @@
-/**
- * Whether there is a network, as far as the browser can tell.
- *
- * `navigator.onLine` is a weak signal — it says the device has a connection,
- * not that the server is reachable — so it is used for one thing only: telling
- * somebody why a change did not save. It never decides whether to try. A
- * request is always attempted, because "offline" is often wrong and a request
- * that would have worked is worse than a wasted one.
- */
+/** Whether there is a network, as far as the browser can tell; `navigator.onLine` is weak, so it only explains why a save failed and never decides whether to try. */
 class Connection {
   #online = $state(true);
 
@@ -14,7 +6,7 @@ class Connection {
     return this.#online;
   }
 
-  /** Follows the device. Returns a stop function. */
+  /** Follows the device; returns a stop function. */
   start(): () => void {
     if (typeof window === 'undefined') {
       return () => {};
@@ -38,13 +30,7 @@ class Connection {
 
 export const connection = new Connection();
 
-/**
- * Empties the cache of recipes this device has read.
- *
- * Called on the way in and on the way out of a session. Both, because a shared
- * kitchen tablet where one person closed the browser without signing out must
- * not answer the next person from the first one's cache.
- */
+/** Empties the cache of recipes this device has read, on sign-in and sign-out, so a shared tablet never answers one person from another's cache. */
 export function forgetCachedReads(): void {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
     return;

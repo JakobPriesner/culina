@@ -10,23 +10,13 @@
   import { namedIn } from './stepUsage';
 
   /**
-   * What one step needs.
-   *
-   * The `@` in the sentence says what the step *says*; this says what the step
-   * *needs*, and the second is always the larger of the two — "combine
-   * everything and knead" needs five things and names none. So the sentence's
-   * mentions appear here too, as chips you cannot take off: the server folds
-   * them in on every save, and a remove button that quietly undid itself would
-   * be worse than no button.
-   *
-   * Only ingredients the server has given an id can be picked, which is the
-   * same rule the mention picker follows — before the first save a new line has
-   * no id for a step to point at.
+   * What one step needs: the `@` mentions say what it says, this says what it needs (always more).
+   * Mentioned ingredients appear as chips that can't be removed, since the server folds them in on
+   * every save; only saved lines can be picked.
    */
   interface Props {
     step: Step;
     number: number;
-    /** Every ingredient in the recipe, in the order the list shows them. */
     ingredients: readonly Ingredient[];
     onchange: (uses: string[]) => void;
   }
@@ -36,18 +26,15 @@
   const named = $derived(namedIn(step));
   const needs = (id: string) => step.uses.includes(id);
 
-  /** Saved lines only, in the recipe's order — the order a chip row reads in. */
   const choosable = $derived(ingredients.filter((one) => one.id));
   const chips = $derived(choosable.filter((one) => needs(one.id)));
 
-  // The base amount, as the ingredient list beside it shows: the editor writes
-  // a recipe, and a recipe is written at its own yield.
+  // The base amount, as the ingredient list shows it: a recipe is written at its own yield.
   const amountOf = (ingredient: Ingredient) =>
     formatQuantity(scaleQuantity(ingredient.quantity, 1), preferences.locale, quantityLabels).text;
 
   function set(ingredient: Ingredient, wanted: boolean) {
-    // Written back in the recipe's order rather than the order they were
-    // ticked, so the chips do not shuffle as you pick them.
+    // Written back in the recipe's order, so the chips don't shuffle as you pick them.
     onchange(
       choosable
         .filter((one) => (one.id === ingredient.id ? wanted : needs(one.id)))
@@ -64,7 +51,6 @@
 
       <li class="chip" class:named={inTheText}>
         {#if inTheText}
-          <!-- Named in the sentence, so it is live-connected to the text -->
           <span class="badge" title={m['editor.namedInStep']({ name: ingredient.name })}>@</span>
         {/if}
         {#if amount}<span class="amount">{amount}</span>{/if}
@@ -123,10 +109,10 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
-    /* Without this the list keeps the width of its widest chip and wraps at
-       that, rather than at the width it has been given: one ingredient named
-       "Sonnenblumenkernvollkornbrot" at 200% text is 268px inside a 190px
-       column, and the page scrolls sideways to show it. */
+    /*
+     * Without this the list keeps its widest chip's width and the page scrolls sideways at large
+     * text.
+     */
     min-width: 0;
     gap: var(--space-2);
     margin: 0;
@@ -136,8 +122,7 @@
 
   .chip {
     display: inline-flex;
-    /* And the chip itself, so a name longer than the column wraps inside it
-       rather than setting the column's width. */
+    /* The chip too, so a long name wraps inside it. */
     min-width: 0;
     max-width: 100%;
     align-items: center;
@@ -155,7 +140,6 @@
       box-shadow var(--duration-fast) var(--ease-out);
   }
 
-  /* A chip the sentence already carries: marked with an Apple accent tint and badge */
   .chip.named {
     background: var(--surface-accent-subtle);
     border-color: var(--border-accent);
@@ -197,9 +181,9 @@
     padding: 0;
     border: none;
     overflow-y: auto;
-    /* Gutter for a bar that takes width, padding for an overlay bar that does
-       not and is painted over the amounts on the right instead. See
-       RecipePicker for why both are needed. */
+    /*
+     * Gutter for a bar that takes width, padding for an overlay bar that doesn't; see RecipePicker.
+     */
     scrollbar-gutter: stable;
     padding-inline-end: var(--space-2);
     overscroll-behavior: contain;

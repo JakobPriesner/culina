@@ -7,22 +7,8 @@
   import { session } from './session.svelte';
 
   /**
-   * Who is in this kitchen.
-   *
-   * The household page says in its own subtitle that it is about who you cook
-   * with, and then said nothing about them: the only names on it were the ones
-   * on unredeemed invitations. A shared library is the whole reason a household
-   * exists, and "who can see my recipes" is a question somebody should never
-   * have to answer by sending an invitation to find out.
-   *
-   * A list, not a table of controls. Removing somebody and changing a role are
-   * decisions with consequences for a library everybody has been adding to, and
-   * neither belongs behind a control sitting at the end of a row.
-   *
-   * The heading and the sentence under it belong to the page that places this,
-   * the same way the invitation panel's do — one component titles every section
-   * of settings, rather than three components titling three sections three
-   * ways.
+   * Who is in this kitchen, as a list rather than a table of controls; the heading belongs to the
+   * page that places this.
    */
   interface Props {
     householdId: string;
@@ -45,8 +31,6 @@
 {#if members.status === 'failed'}
   <p class="failed">{m['me.members.failed']()}</p>
 {:else if members.status === 'loading' && members.items.length === 0}
-  <!-- The shape of the list that is coming, so the panels below it do not jump
-       up the page and back down again. -->
   <ul class="list" aria-busy="true" aria-label={m['me.members.title']()}>
     {#each ['a', 'b'] as row (row)}
       <li class="row">
@@ -67,8 +51,6 @@
         <span class="who">
           <span class="name">
             {member.displayName}
-            <!-- Said of one row only, and quietly: a list of four names where
-                 one of them is yours is a list you read differently. -->
             {#if member.userId === you}<span class="you">· {m['me.members.you']()}</span>{/if}
           </span>
 
@@ -88,8 +70,7 @@
 {/if}
 
 <style>
-  /* Hairlines between rows rather than around each, the same enclosure the
-     invitations below it use: one list, not a stack of little boxes. */
+  /* Hairlines between rows, like the invitations panel: one list, not a stack of boxes. */
   .list {
     display: flex;
     flex-direction: column;
@@ -118,8 +99,6 @@
     flex-direction: column;
     gap: var(--space-1);
     min-width: 0;
-    /* Takes the room the avatar and the badge leave, so the badge sits at the
-       end of the row rather than beside the longest name. */
     flex: 1 1 auto;
   }
 

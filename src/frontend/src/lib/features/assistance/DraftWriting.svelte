@@ -5,24 +5,7 @@
   import DraftProgress from './DraftProgress.svelte';
   import type { Draft } from './draftToRecipe';
 
-  /**
-   * The recipe, arriving.
-   *
-   * The whole reason the assistant streams. A model takes tens of seconds over
-   * a recipe, and forty seconds of a spinner is forty seconds of wondering
-   * whether it has broken — where a title at three seconds, ingredients at
-   * eight and steps filling in after that is something somebody reads. By the
-   * time it is finished they have already decided whether they want it.
-   *
-   * Nothing here is interactive, and that is deliberate: this is the recipe
-   * being written, not the recipe being reviewed. Every control belongs to
-   * whatever comes after.
-   *
-   * It shows only what has actually been written. The server sends a field once
-   * the model has finished saying it and not before, so a half-typed
-   * ingredient is absent rather than flickering through its own letters —
-   * lines appear, they do not stutter.
-   */
+  /** The recipe arriving: streaming turns tens of seconds of spinner into something read. Nothing is interactive (controls belong to review), and only completed fields appear, so lines never stutter. */
   interface Props {
     /** What has arrived so far, or null before anything has. */
     draft: Draft | null;
@@ -37,11 +20,7 @@
   const steps = $derived(draft?.steps ?? []);
 </script>
 
-<!--
-  One live region for the lot, and polite. A reader being interrupted twenty
-  times while a recipe is typed out is worse than being told once, at the end,
-  what it says — so this announces the draft rather than each line of it.
--->
+<!-- One polite live region for the lot: it announces the draft, not each of twenty lines. -->
 <section class="writing" aria-busy={writing} aria-live="polite">
   <GenerationAura active={writing} />
 
@@ -157,9 +136,7 @@
     font-weight: var(--weight-semibold);
   }
 
-  /* Every completed field or line enters once. That makes the transport
-     visible: the recipe grows as stream events land instead of replacing a
-     frozen loader with a finished block. */
+  /* Each completed field or line enters once, making the stream visible instead of swapping a loader for a finished block. */
   .arrival {
     animation: arrive var(--duration-base) var(--ease-out) both;
   }
@@ -176,9 +153,7 @@
     }
   }
 
-  /* A pulse is information here, not decoration — but the information is also
-     in the words beside it, so somebody who asked for less motion loses
-     nothing. */
+  /* The pulse is also in the words beside it, so reduced motion loses nothing. */
   @media (prefers-reduced-motion: reduce) {
     .arrival {
       animation: none;

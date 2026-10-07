@@ -2,19 +2,10 @@ import { http, request, type AppError } from '$api';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
 /**
- * Whether one recipe is published behind a link, and what the link is.
- *
- * One recipe at a time, because the question is only ever asked about the
- * recipe on screen — and asking it of the whole library would put a bearer
- * token in the list response for every recipe a household has.
- *
- * Unlike a household invitation, this link is readable again as often as
- * somebody asks. That is deliberate: "what was the address?" is the ordinary
- * question about a link you sent last month, and an answer of "it is gone, here
- * is a new one" would break the one in the message.
+ * Whether one recipe is published behind a link. One at a time, since a library-wide read would put a bearer token in every list row;
+ * unlike an invitation, the link stays readable on demand.
  */
 class Sharing {
-  /** Which recipe the answer below is about. */
   #recipeId = $state<string | null>(null);
   #token = $state<string | null>(null);
   #status = $state<LoadStatus>('idle');
@@ -29,24 +20,15 @@ class Sharing {
     return this.#error;
   }
 
-  /** True while the link is being handed out or taken back. */
   get working(): boolean {
     return this.#working;
   }
 
-  /** The token for this recipe, or null when it is not shared. */
   tokenFor(recipeId: string): string | null {
     return this.#recipeId === recipeId ? this.#token : null;
   }
 
-  /**
-   * Publishes the recipe, or returns the link it already had.
-   *
-   * This is also how the sheet asks whether a recipe is shared: opening it is
-   * the decision to share, so there is no separate "is it?" question to ask
-   * first. Idempotent on the server, so reopening the sheet, or a double tap,
-   * hands back the same link rather than a second one nobody can account for.
-   */
+  /** Publishes the recipe or returns the link it already had; idempotent on the server, so opening the sheet or a double tap yields the same link. */
   async share(recipeId: string): Promise<AppError | null> {
     this.#recipeId = recipeId;
     this.#token = null;
@@ -79,8 +61,7 @@ class Sharing {
 
   /** Takes the link back. Every copy of it stops working at once. */
   async revoke(recipeId: string): Promise<AppError | null> {
-    // Gone from the screen at once: somebody who has just decided a link was a
-    // mistake should not watch a spinner to find out whether it still is one.
+    // Cleared at once, so a revoke shows no spinner.
     const before = this.#token;
 
     this.#token = null;

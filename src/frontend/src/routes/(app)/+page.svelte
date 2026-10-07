@@ -21,15 +21,9 @@
   import Page from '$shell/Page.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
 
-  /**
-   * Everything the household can cook.
-   *
-   * The toolbar owns the search box, the filters and the debounce; this page
-   * owns what to do with the answer.
-   */
+  /** Everything the household can cook; the toolbar owns search and filters, this page owns what to do with the answer. */
   const householdId = $derived(session.activeHouseholdId);
 
-  /** The saved search offered as a shelf, while its sheet is open. */
   let shelving = $state<SavedSearch | null>(null);
 
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
@@ -38,15 +32,7 @@
   const lead = useSuggestionLead({ householdId: () => householdId, filtered: () => filtered });
   const list = useLibraryList({ householdId: () => householdId, ranks: () => lead.ranks });
 
-  /**
-   * Whether the panel and the grid can both be drawn.
-   *
-   * The list and the shortlist are asked for together and either can come back
-   * first. Drawing whichever lands first moves the page when the other does:
-   * a panel drawn early lands above the grid's skeleton and pushes that off the
-   * screen. So neither is drawn until both are back — the requests overlap,
-   * the page still appears once, already arranged.
-   */
+  /** Panel and grid are drawn together: whichever landed first would shift the page when the other arrives. */
   const arranged = $derived(
     (filtered || !householdId || suggestions.answered(householdId, featuredQuery)) &&
       !(recipes.status === 'loading' && recipes.items.length === 0)

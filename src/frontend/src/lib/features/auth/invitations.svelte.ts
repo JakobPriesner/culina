@@ -2,12 +2,8 @@ import { http, request, type AppError } from '$api';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
 /**
- * Invitations to a household, from the inside.
- *
- * An invitation is a bearer code: whoever holds it can join. So it is shown
- * once, where the person who made it can copy it, and it can be taken back
- * before anyone uses it — which is the only remedy for a link sent to the
- * wrong chat.
+ * Invitations to a household. A code is a bearer credential: shown once for copying, and revocable
+ * until used (the remedy for a link sent to the wrong chat).
  */
 export interface Invitation {
   readonly invitationId: string;
@@ -22,14 +18,9 @@ class Invitations {
   #status = $state<LoadStatus>('idle');
   #error = $state<AppError | null>(null);
 
-  /** The code of the invitation made in this session, if any. */
   #fresh = $state<string | null>(null);
 
-  /**
-   * Whose items these are. Plain rather than $state: it is read before the
-   * first await of a method an effect calls, and a tracked read there would
-   * make the method's own writes call it again.
-   */
+  /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
 
   get items(): readonly Invitation[] {
@@ -91,8 +82,7 @@ class Invitations {
   }
 
   async revoke(householdId: string, invitationId: string): Promise<AppError | null> {
-    // Gone from the list at once: the person who just decided this was a
-    // mistake should not watch a spinner to find out whether it still is one.
+    // Gone from the list at once, so nobody watches a spinner over a mistake.
     const before = this.#items;
 
     this.#items = this.#items.filter((one) => one.invitationId !== invitationId);
@@ -113,12 +103,7 @@ class Invitations {
     return null;
   }
 
-  /**
-   * Starts holding another household's invitations, if it is another.
-   *
-   * A link made for one household is not one to show under another's name:
-   * whoever it was sent to would join the wrong kitchen.
-   */
+  /** Switches to another household's invitations: a link made for one must not show under another's name. */
   #adopt(householdId: string): void {
     if (this.#householdId !== householdId) {
       this.#householdId = householdId;

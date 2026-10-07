@@ -2,11 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { whenVisible } from './whenVisible';
 
-/*
- * jsdom has no IntersectionObserver, which is the point: this stands one in so
- * the thing that decides *when* a list asks for its next page can be tested at
- * all, without a real viewport to scroll.
- */
+/* jsdom has no IntersectionObserver; this stands one in to test when a list asks for its next page. */
 interface Watcher {
   readonly element: Element;
   readonly options: IntersectionObserverInit | undefined;
@@ -59,8 +55,7 @@ function stubObserver(): Watcher[] {
   return watchers;
 }
 
-// IntersectionObserver does not exist in jsdom, so a stub left behind would
-// tell the next suite it is running in a browser that can watch.
+// A stub left behind would tell the next suite it runs in a browser that can watch.
 afterEach(() => vi.unstubAllGlobals());
 
 const attach = (reach: () => void, margin?: string) => {
@@ -91,8 +86,7 @@ describe('reaching an element', () => {
     expect(reach).not.toHaveBeenCalled();
   });
 
-  // The next page is asked for before the end of the list is on screen, so the
-  // rows are usually there by the time anyone could have read that far.
+  // The next page is asked for before the end is on screen, so rows are usually there already.
   it('starts looking before the element is on screen', () => {
     const watchers = stubObserver();
 

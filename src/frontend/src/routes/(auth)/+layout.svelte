@@ -18,10 +18,8 @@
   </header>
   <main class="main">
     <aside class="story" aria-label={m['auth.story.label']()}>
-      <!-- Lazy, because below 64rem this whole panel is display: none, and an
-           eager image inside a hidden panel is still fetched: 260 kB that a
-           phone downloaded to show nothing. A lazy one is only fetched when it
-           could be seen, which on a wide screen is straight away. -->
+      <!-- Lazy: below 64rem this panel is display: none, and an eager image in it is still fetched
+           (260 kB for nothing). -->
       <img
         src="{base}/images/culina-orzo.webp"
         alt=""
@@ -87,10 +85,9 @@
   }
   .preferences {
     display: flex;
-    /* Wraps for the same reason the header around it does. These are two
-       controls whose words grow with somebody's text size, and at 200% on a
-       320px screen they are wider than the screen — which is a page that
-       scrolls sideways, not a row that is slightly too long. */
+    /*
+     * Wraps like the header: at 200% text on 320px the two controls would scroll the page sideways.
+     */
     flex-wrap: wrap;
     justify-content: flex-end;
     align-items: center;

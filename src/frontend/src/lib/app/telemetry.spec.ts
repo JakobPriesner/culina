@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { flush, report, resetReporting, startReporting } from './telemetry';
 
-/*
- * A reporter has two ways to hurt: sending too much, and making things worse
- * when it cannot send. Both are invisible from the page, so both are asserted.
- */
+/* A reporter can hurt by sending too much or by making things worse when it cannot send; neither is visible from the page. */
 
 let sent: Request[] = [];
 
@@ -69,11 +66,7 @@ describe('batching', () => {
     expect(sent[0]?.keepalive).toBe(true);
   });
 
-  /*
-   * The browser fails a keepalive request outright once the keepalive bodies in
-   * flight pass 64 KiB, and the reporter never hears of it — so a page with a
-   * lot to say would have said nothing.
-   */
+  /* The browser fails keepalive requests outright past 64 KiB in flight, without telling the reporter. */
   it('keeps within what the browser lets outlive the page, and sends the rest anyway', async () => {
     reportLargeFailures(10);
 
@@ -96,8 +89,6 @@ describe('batching', () => {
     flush();
     await vi.runAllTimersAsync();
 
-    // Big enough that it would not fit beside the first batch, were that still
-    // counted as on its way.
     reportLargeFailures(1, 10);
     flush();
     await vi.runAllTimersAsync();
@@ -108,7 +99,7 @@ describe('batching', () => {
 
 const keepaliveBudget = 64 * 1024;
 
-/** As big as the server lets a record be, each one different. */
+/** As big as the server allows a record to be, each different. */
 function reportLargeFailures(count: number, from = 0) {
   for (let index = from; index < from + count; index++) {
     const error = new Error(`${index} ${'x'.repeat(1_000)}`);
@@ -207,8 +198,7 @@ describe('restraint', () => {
 describe('listening', () => {
   it('reports what nobody caught, and stops when asked', async () => {
     const stop = startReporting();
-    // Without an `error` on it: the test runner treats a real one as its own
-    // uncaught exception and fails the suite.
+    // No `error` on it: the test runner treats a real one as an uncaught exception.
     const uncaught = (message: string) => Object.assign(new Event('error'), { message });
 
     window.dispatchEvent(uncaught('nobody caught me'));

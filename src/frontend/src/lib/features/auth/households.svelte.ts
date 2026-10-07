@@ -7,16 +7,7 @@ export type Redemption = components['schemas']['HouseholdsRedeemInvitationRespon
 /** A household that sees another's recipes, and the one it inherits them from directly. */
 export type Heir = components['schemas']['HouseholdsGetHeirsHeir'];
 
-/**
- * The two ways out of having no household, and the way into another one.
- *
- * Kept together because they are alternatives to each other: the welcome screen
- * offers both, and neither means anything without the other.
- *
- * A household made while already in one may inherit that one's recipes from
- * the start — asked in the same request, so there is never a household that
- * exists but has not yet been told what it should see.
- */
+/** The ways out of having no household and into another; one made while in a household may inherit from it in the same request, so none exists unaware of what it should see. */
 export async function createHousehold(
   name: string,
   inheritsFrom: string | null = null
@@ -28,13 +19,7 @@ export async function createHousehold(
   return result.ok ? result.value.householdId : result.error;
 }
 
-/**
- * Chooses whose recipes a household sees besides its own, or none.
- *
- * The answer is not kept: the session is read again afterwards, because the
- * chain it carries names every household up the line and only the server
- * knows those.
- */
+/** Chooses whose recipes a household sees besides its own, or none; the session is re-read after, since only the server knows the chain. */
 export async function setInheritance(
   householdId: string,
   parentId: string | null
@@ -49,10 +34,7 @@ export async function setInheritance(
   return result.ok ? null : result.error;
 }
 
-/**
- * Every household that sees this one's recipes: those inheriting from it, then
- * those inheriting from them.
- */
+/** Every household that sees this one's recipes, direct inheritors first. */
 export async function heirsOf(householdId: string): Promise<Result<readonly Heir[]>> {
   const result = await request(() =>
     http.GET('/api/v1/households/{householdId}/heirs', { params: { path: { householdId } } })
@@ -72,19 +54,9 @@ export async function removeHeir(householdId: string, heirId: string): Promise<A
   return result.ok ? null : result.error;
 }
 
-/** A household in the bin that the caller owns, and could bring back. */
 export type DeletedHousehold = components['schemas']['HouseholdsHouseholdSummary'];
 
-/**
- * Puts a household in the bin. Owners only — the server says so too, and is
- * the one that decides.
- *
- * Read immediately before deleting rather than trusting a version the page
- * loaded earlier: the session's memberships carry none, and a household
- * somebody renamed a minute ago should be deleted as it is now, not refused
- * for a change nobody can see. The read is also what proves the caller can
- * still see it at all.
- */
+/** Puts a household in the bin (owners only; the server decides too). Reads it first: memberships carry no version, and a fresh read proves the caller still sees it. */
 export async function deleteHousehold(householdId: string): Promise<AppError | null> {
   const current = await request(() =>
     http.GET('/api/v1/households/{householdId}', { params: { path: { householdId } } })
@@ -124,14 +96,9 @@ export async function restoreHousehold(householdId: string): Promise<AppError | 
   return result.ok ? null : result.error;
 }
 
-/** Whose household an invitation is for, read before anybody decides to join it. */
 export type Invitation = components['schemas']['HouseholdsGetInvitationByCodeResponse'];
 
-/**
- * Names the household a code admits to, without using the code up. Signed in
- * only: somebody signed out has nothing to decide yet, and a link is a bearer
- * token whose holder should not learn whose kitchen it opens before then.
- */
+/** Names the household a code admits to without using the code up; signed in only, since a link is a bearer token and should not reveal whose kitchen it opens early. */
 export function readInvitation(code: string): Promise<Result<Invitation>> {
   return request(() => http.GET('/api/v1/invitations/{code}', { params: { path: { code } } }));
 }

@@ -12,7 +12,6 @@ const butter: StepSegment = {
   quantity: { value: 200, unit: 'g' }
 };
 
-/** What a block reads as, with the formatting written back in as brackets. */
 const shape = (nodes: readonly Inline[]): string =>
   nodes
     .map((node) => {
@@ -87,7 +86,6 @@ describe('parseStep', () => {
 
     const [paragraph] = parseStep([text('Melt **'), butter, text('** slowly*')]);
 
-    // The reference survives the emphasis that surrounds it, amounts and all.
     expect(paragraph?.kind === 'paragraph' && shape(paragraph.children)).toBe(
       'Melt strong{@butter} slowly*'
     );

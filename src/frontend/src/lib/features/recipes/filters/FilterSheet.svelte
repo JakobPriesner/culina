@@ -14,24 +14,15 @@
   import TagChooser from './TagChooser.svelte';
 
   /**
-   * Everything the library can be asked, in one panel.
-   *
-   * A sheet rather than a popover, and the same sheet on every screen size:
-   * `Sheet` already rises from the thumb on a phone and becomes a centred
-   * dialog on a desktop, so one component here is one behaviour to get right
-   * instead of two that drift.
-   *
-   * The panel writes straight into the query object rather than holding a draft
-   * and applying it on close. A filter that only takes effect once you dismiss
-   * the thing you set it in is a filter you cannot judge — the point of picking
-   * "up to 30 minutes" is seeing how much is left.
+   * Everything the library can be asked, in one `Sheet` for every screen size.
+   * Writes straight into the query object, not a draft applied on close, so the effect of a filter
+   * is visible while setting it.
    */
   interface Props {
     open: boolean;
     householdId: string;
     view: RecipeQuery;
     context: SortContext;
-    /** Offered only where a search can be saved — not inside a cookbook. */
     onsave?: () => void;
     onclose: () => void;
   }
@@ -51,14 +42,11 @@
   );
 
   /**
-   * Which order is ticked.
-   *
-   * The resolved one, not the stored null: a group of radios with none chosen
-   * says the list is in no order at all, which is never true.
+   * The resolved order, not the stored null: radios with none chosen would say the list has no
+   * order.
    */
   const chosen = $derived(view.sort ?? defaultOf(orders));
 
-  /** The ceilings, plus the one that means no ceiling. */
   const ceilings = $derived<readonly (number | null)[]>([null, ...timeCeilings]);
 
   function defaultOf(available: readonly RecipeSort[]): RecipeSort {
@@ -134,9 +122,7 @@
     gap: var(--space-2);
   }
 
-  /* Not FilterChip: these are one-of-several rather than several independent
-     toggles, and FilterChip's tick would say "on" about five things that are
-     really one answer. */
+  /* Not FilterChip: these are one-of-several, not independent toggles. */
   .ceiling {
     min-height: var(--control-sm);
     padding: 0 var(--space-4);

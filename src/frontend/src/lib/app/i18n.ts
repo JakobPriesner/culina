@@ -10,16 +10,8 @@ import {
 import { readDevice, writeDevice } from './deviceStorage';
 
 /**
- * Everything the app needs to say something in the reader's language.
- *
- * Messages are compiled to functions, so a key that does not exist fails the
- * build instead of rendering an empty string in production. Nothing in a
- * component is ever a literal string a person can read.
- *
- * **Append new keys to `messages/*.json`; never re-sort the files.** The
- * compiler falls over with "No Lix transaction is active" on some reorderings,
- * and — worse — it can emit correct output *and* exit non-zero, so a working
- * app is not evidence that the build passed. Appending has always worked.
+ * Everything for saying something in the reader's language; messages compile to functions so a missing key fails the build.
+ * **Append new keys to `messages/*.json`; never re-sort:** the compiler can fail with "No Lix transaction is active" and even emit correct output while exiting non-zero.
  */
 export { m } from '$lib/paraglide/messages';
 export { locales, type Locale };
@@ -36,15 +28,7 @@ export const isLocaleChoice = (value: unknown): value is LocaleChoice =>
 /** Where this device remembers the choice, `system` included. */
 const choiceKey = 'culina.locale';
 
-/**
- * The first link in the chain `vite.config.ts` gives Paraglide: the choice on
- * this device, then the device's own language, then English. A signed-in
- * person's server setting replaces the choice as soon as it arrives.
- *
- * Paraglide reads the choice but never writes it — the preferences store does
- * — because `system` is not a locale, and Paraglide's own storage would
- * replace it with whatever the device happened to read that day.
- */
+/** First link of the Paraglide chain in `vite.config.ts`: device choice, device language, English. Paraglide only reads it; the preferences store writes it because `system` is not a locale. */
 defineCustomClientStrategy('custom-choice', {
   getLocale: () => {
     const chosen = readDevice(choiceKey);
@@ -61,10 +45,7 @@ export function rememberedLocale(): LocaleChoice {
   return isLocaleChoice(chosen) ? chosen : 'system';
 }
 
-/**
- * Switches language without a reload — the next message rendered reads the
- * choice — and remembers it on this device.
- */
+/** Switches language without a reload and remembers it on this device. */
 export function applyLocale(choice: LocaleChoice): void {
   writeDevice(choiceKey, choice);
 }
@@ -72,18 +53,12 @@ export function applyLocale(choice: LocaleChoice): void {
 /** The first language the device asks for that Culina speaks, or English. */
 export const deviceLocale = (): Locale => extractLocaleFromNavigator() ?? baseLocale;
 
-/**
- * Intl formatters, made once per locale.
- *
- * Constructing one is expensive enough that doing it inside a list of two
- * hundred ingredient rows is measurable, and the result is immutable, so it is
- * cached.
- */
+/** Intl formatters, made once per locale: constructing one is slow enough to matter across hundreds of rows, and they are immutable. */
 const numberFormats = new Map<string, Intl.NumberFormat>();
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
 const listFormats = new Map<string, Intl.ListFormat>();
 
-/** `1.5` in English, `1,5` in German — the same number, read correctly. */
+/** `1.5` in English, `1,5` in German. */
 export function formatNumber(value: number, options: Intl.NumberFormatOptions = {}): string {
   return formatter(
     numberFormats,

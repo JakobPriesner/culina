@@ -5,17 +5,9 @@ import { resolve } from '$app/paths';
 import { readSetup } from '$features/server/setup';
 
 /**
- * Sends everybody to setup until the instance has an administrator, and away
- * from it afterwards.
- *
- * Here, in front of signing in and registering, because those are where a
- * fresh instance sends its first visitor: the app's own guard finds nobody
- * signed in and comes this way. An instance with no database answers that
- * guard with "unavailable" instead, and it checks setup itself.
- *
- * A server that could not be asked sends nobody anywhere. Being pushed onto a
- * setup screen because the wifi dropped would be worse than a sign-in form
- * that fails honestly.
+ * Sends everybody to setup until the instance has an administrator, and away afterwards. Here, ahead of sign-in
+ * and register, where a fresh instance's first visitor lands; an instance with no database checks setup itself.
+ * A server that could not be asked sends nobody anywhere (dropped wifi must not push onto setup).
  */
 export const load = async ({ url }) => {
   const setup = await readSetup();

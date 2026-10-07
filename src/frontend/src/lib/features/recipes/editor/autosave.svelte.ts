@@ -1,16 +1,6 @@
 import type { AppError } from '$api';
 
-/**
- * Saves as you type, without a Save button.
- *
- * A save wall makes someone decide, halfway through writing a recipe, whether
- * they are "done" — and a recipe is never done; it is added to for years. So
- * there is no wall: the work is kept, quietly, and the only thing on screen is
- * a small word saying so.
- *
- * The debounce is long enough that a sentence is finished before it is sent and
- * short enough that closing the tab loses nothing worth missing.
- */
+/** Saves as you type, with no Save button (a recipe is never "done"); the debounce lets a sentence finish yet loses nothing worth missing on tab close. */
 export type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 
 const quietMs = 800;
@@ -21,12 +11,7 @@ export function createAutosave(save: () => Promise<AppError | null>) {
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight = false;
-  /**
-   * Edits made, and how many of them the server has. Leaving a page nobody
-   * typed on owes nothing, and a save sent anyway is not harmless: it moves a
-   * recipe's version on under every other open editor, and writes back a note
-   * that was never read.
-   */
+  /** Edits made and how many the server has: saving after an untouched visit would bump the version under other editors and write back an unread note. */
   let edits = 0;
   let savedEdits = 0;
 
@@ -50,7 +35,7 @@ export function createAutosave(save: () => Promise<AppError | null>) {
       savedEdits = sending;
     }
 
-    // Something changed while that save was running, so another one is owed.
+    // Typing went on during that save, so another is owed.
     if (edits !== sending) {
       await run();
     }
@@ -65,21 +50,14 @@ export function createAutosave(save: () => Promise<AppError | null>) {
       return failure;
     },
 
-    /** Called on every keystroke; only the last one in a pause does anything. */
+    /** Called on every keystroke; only the last one in a pause acts. */
     touch() {
       edits += 1;
       clearTimeout(timer);
       timer = setTimeout(() => void run(), quietMs);
     },
 
-    /**
-     * Forgets the last failure.
-     *
-     * For the one case where the failure has been dealt with rather than
-     * retried: a conflict the author resolved by taking somebody else's
-     * version, where leaving the message on screen would describe a situation
-     * that no longer exists. Nothing typed before it is owed any more.
-     */
+    /** Forgets the last failure, for a conflict resolved by taking the other version (the message would describe a situation that no longer exists). */
     clear() {
       clearTimeout(timer);
       savedEdits = edits;

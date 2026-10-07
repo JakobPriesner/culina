@@ -12,15 +12,7 @@
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
 
-  /**
-   * Back in, for somebody who forgot their password.
-   *
-   * There is no "we sent you a link" here, because Culina sends nothing. The
-   * page says where a code comes from instead: the ones they saved, or the
-   * person who runs this Culina. On success they are signed straight in with
-   * the password they just chose — making somebody type it a second time, on
-   * the next screen, is a test nobody asked to sit.
-   */
+  /** Back in after a forgotten password; Culina sends no link, so the page says where a code comes from. Success signs straight in with the new password. */
   let email = $state('');
   let code = $state('');
   let password = $state('');
@@ -54,8 +46,7 @@
     <p class="subtitle">{m['auth.reset.intro']()}</p>
   </header>
 
-  <!-- One message for an unknown address and for a wrong, used or expired
-       code: telling them apart says which addresses are registered here. -->
+  <!-- One message for unknown address and wrong, used or expired code: telling them apart reveals registered addresses. -->
   <FormFailure
     failure={submission.failure}
     message={submission.failure?.code === ErrorCodes.invalidRecoveryCode

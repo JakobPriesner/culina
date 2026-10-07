@@ -10,14 +10,7 @@ import {
   writeHeaders
 } from './support/culina';
 
-/**
- * Deleting a recipe.
- *
- * The one thing Culina asks about first, because there is no undo behind it:
- * the recipe's cooking history, notes and planned meals go with it. So the
- * question has to be there, the safe answer has to keep the recipe, and the
- * other answer has to leave it genuinely gone rather than hidden.
- */
+/** Deleting a recipe, which has no undo behind the question: the safe answer keeps it, the other leaves it gone, not hidden. */
 test.describe.configure({ mode: 'serial' });
 
 test.describe('deleting a recipe', () => {
@@ -56,7 +49,7 @@ test.describe('deleting a recipe', () => {
   test('asks first, and keeping it keeps it', async () => {
     const dialog = await askToDelete();
 
-    // Says how to get it back, since for 30 days it can be.
+    // Says how to get it back (30 days).
     await expect(dialog).toContainText(/still restore it|noch wiederherstellen/i);
 
     await dialog.getByRole('button', { name: /^(keep it|behalten)$/i }).click();
@@ -94,7 +87,6 @@ test.describe('deleting a recipe', () => {
     const bar = page.getByRole('link', { name: /keep cooking|weiterkochen/i });
     const dialog = await askToDelete();
 
-    // Behind the question, still offering to go back to the hob.
     await expect(bar).toBeVisible();
 
     await dialog.getByRole('button', { name: /^(delete|löschen)$/i }).click();
@@ -102,8 +94,7 @@ test.describe('deleting a recipe', () => {
     await expect(page).toHaveURL(/\/$/);
     await expect(bar).toBeHidden();
 
-    // And not merely hidden here: the server ended the session with the
-    // recipe, so a fresh page has nothing to offer either.
+    // The server ended the session with the recipe, so a fresh page offers nothing.
     await page.reload();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(bar).toBeHidden();

@@ -5,17 +5,7 @@
   import { attemptSrcset, attemptUrl } from '$features/recipes/recipeImage';
   import { cookLog } from './stores/cookLog.svelte';
 
-  /**
-   * Your own attempts, dated, newest first.
-   *
-   * "Made 7×" becomes seven photographs, which is a better record of a recipe
-   * than any rating: it is what the thing actually looked like when *you* made
-   * it, on a day you remember. The recipe's own photograph is the household's
-   * and says what the dish is supposed to look like; these say what happened.
-   *
-   * Square, because a strip of mixed aspect ratios is a ragged edge and nobody
-   * is admiring the composition of a Tuesday dinner.
-   */
+  /** Your own attempts, dated, newest first; square so mixed aspect ratios do not make a ragged edge. */
   interface Props {
     recipeId: string;
   }
@@ -24,7 +14,6 @@
 
   let busy = $state(false);
   let failure = $state<string | null>(null);
-  /** Which attempt an upload is being chosen for. */
   let target = $state<string | null>(null);
   let picker = $state<ReturnType<typeof FilePicker>>();
 
@@ -89,16 +78,14 @@
               />
             </div>
           {:else}
-            <!-- An empty frame is the affordance. A separate "add" button would
-                 be a control for a thing that is not on screen. -->
+            <!-- The empty frame is the affordance; a separate "add" button would control something not on screen. -->
             <button
               class="frame empty"
               type="button"
               disabled={busy}
               onclick={() => pickFor(item.entryId)}
             >
-              <!-- Decorative: the button's own label carries the meaning, and
-                   without this the empty frame reads as a picture. -->
+              <!-- Decorative: the button's label carries the meaning. -->
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -113,8 +100,7 @@
             </button>
           {/if}
 
-          <!-- Always the second row, so the dates line up across a strip whose
-               entries do not all have a picture to remove. -->
+          <!-- Always the second row, so dates line up across entries without a picture to remove. -->
           <p class="date">{shownDate(item.madeAt)}</p>
 
           {#if item.hasPhoto}
@@ -131,7 +117,6 @@
       {/each}
     </ul>
 
-    <!-- Driven by the frames rather than reached on its own. -->
     <FilePicker
       bind:this={picker}
       label={m['attempts.choose']()}
@@ -160,15 +145,12 @@
     font-size: var(--text-sm);
   }
 
-  /* Scrolls sideways rather than wrapping: "made 23×" is a row you flick
-     through, not a wall that pushes the notes off the screen. */
+  /* Scrolls sideways rather than wrapping, so the notes stay on screen. */
   .strip {
     display: flex;
     gap: var(--space-3);
     margin: 0;
-    /* A scroll container clips at its padding box, so without room on every
-       side the focus ring on the first and last attempt is cut off. The same
-       padding the similar-recipes shelf needs, for the same reason. */
+    /* A scroll container clips at its padding box; room keeps the first and last focus ring visible. */
     padding: var(--space-1);
     list-style: none;
     overflow-x: auto;
@@ -230,7 +212,6 @@
     color: var(--text);
   }
 
-  /* A page of photographs is what a printed recipe least needs. */
   @media print {
     .attempts {
       display: none;

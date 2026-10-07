@@ -9,13 +9,7 @@ import { drafts } from './stores/drafts.svelte';
 
 vi.mock('$features/auth/session.svelte', () => ({ session: { user: { isAdmin: true } } }));
 
-/*
- * What a failed idea leaves on screen. It used to leave the server's English
- * sentence and an empty, dark progress box that stayed after the request had
- * ended — so a German cook with a model nobody had pulled was told, in
- * English, that the assistant "would not answer that", above a box that looked
- * like it was still thinking.
- */
+/* A failed idea must not leave the server's English sentence or an empty progress box that outlives the request. */
 
 /** The assistant's stream ending at once on a failure, with nothing written. */
 const stoppedWith = (code: string) =>

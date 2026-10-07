@@ -5,7 +5,6 @@ import { cached, invalidate, remember } from './etagCache';
 import { ErrorCodes } from './problem';
 import { sessionExpired } from './session';
 
-/** The header the backend checks on every unsafe cookie-authenticated request. */
 const csrfHeader = 'X-Culina-CSRF';
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -13,10 +12,8 @@ const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const isUnsafe = (request: Request) => unsafeMethods.has(request.method);
 
 /**
- * Proves the request came from our own page.
- *
- * The cookie is read at the moment of sending rather than once at start-up, so
- * a sign-in in another tab is picked up without reloading this one.
+ * Proves the request came from our own page; the cookie is read at send time so a sign-in in
+ * another tab is picked up.
  */
 export const csrf: Middleware = {
   onRequest({ request }) {
@@ -35,12 +32,8 @@ export const csrf: Middleware = {
 };
 
 /**
- * Turns a re-read into a 304 and a write into a safe one.
- *
- * Reads carry `If-None-Match` so an unchanged resource costs headers instead of
- * a payload. Writes carry `If-Match` with the version the caller last saw, so
- * two people editing the same recipe get a 412 rather than one silently
- * overwriting the other. A caller that sets `If-Match` itself is left alone.
+ * Turns a re-read into a 304 and a write into a safe one: `If-None-Match` on reads, `If-Match` on
+ * writes (412 on a lost race); a caller's own `If-Match` is left alone.
  */
 export const conditionalRequests: Middleware = {
   onRequest({ request }) {
@@ -63,8 +56,7 @@ export const conditionalRequests: Middleware = {
     if (response.status === 304) {
       const entry = cached(request.url);
 
-      // Without the body we cached, a 304 is unusable — ask again for the
-      // whole thing rather than handing the caller an empty success.
+      // A 304 without our cached body is unusable: ask again for the whole thing.
       return entry ? replay(entry.body) : undefined;
     }
 
@@ -89,15 +81,9 @@ export const conditionalRequests: Middleware = {
 };
 
 /**
- * Ends the session the moment the server says it is over.
- *
- * Never a retry: if the cookie is gone, sending the same request again only
- * produces the same 401, and a loop of them is how a sign-in page ends up
- * flickering instead of appearing.
- *
- * A wrong password is a 401 too, but it is the sign-in form's answer, not a
- * session ending: treating it as one wiped every draft on the device and sent
- * the person from the login page to the login page, one `next` deeper per typo.
+ * Ends the session the moment the server says it is over; never a retry (the same 401 would loop).
+ * A wrong password is also a 401 but belongs to the sign-in form, not a session ending, or each
+ * typo would wipe drafts and nest `next`.
  */
 export const expiredSessions: Middleware = {
   async onResponse({ response }) {
@@ -109,7 +95,6 @@ export const expiredSessions: Middleware = {
   }
 };
 
-/** The problem code, or nothing when the body is not a problem document. */
 async function codeOf(response: Response): Promise<unknown> {
   try {
     const body: unknown = await response.clone().json();

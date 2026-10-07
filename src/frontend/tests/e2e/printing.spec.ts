@@ -9,12 +9,7 @@ import {
   unique
 } from './support/culina';
 
-/**
- * A recipe on paper.
- *
- * The oldest way to use one, and the thing almost every recipe app gets wrong:
- * four pages, a navigation bar, and the amounts from before you scaled it.
- */
+/** A recipe on paper: no app chrome, black on white, and the scaled servings stated once. */
 test.describe.configure({ mode: 'serial' });
 
 test.describe('printing a recipe', () => {
@@ -50,24 +45,17 @@ test.describe('printing a recipe', () => {
 
     await page.emulateMedia({ media: 'print' });
 
-    // The recipe is there.
     await expect(page.getByRole('region', { name: /ingredients|zutaten/i })).toContainText(
       'Butter'
     );
     await expect(page.getByRole('region', { name: /steps|zubereitung/i })).toContainText('Melt');
 
-    // The app is not. A navigation bar on paper is four square centimetres of
-    // toner that cannot be tapped.
     await expect(page.getByRole('banner')).toBeHidden();
     await expect(page.getByRole('navigation').first()).toBeHidden();
     await expect(page.getByRole('link', { name: /skip to content|zum inhalt/i })).toBeHidden();
 
-    // And neither is anything that exists to be pressed: a printed button is a
-    // small lie about what the paper can do.
     await expect(page.getByRole('button', { name: /start cooking|kochen starten/i })).toBeHidden();
 
-    // Black on white, whatever the reader's theme. A dark app that prints as
-    // dark is a page of toner behind every word.
     const ground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
     expect(ground).toBe('rgb(255, 255, 255)');
@@ -82,15 +70,12 @@ test.describe('printing a recipe', () => {
 
     await page.emulateMedia({ media: 'print' });
 
-    // The whole point. Scaling a recipe to three and printing it for two is
-    // precisely the quiet lie this app is built to avoid — so the sheet says
-    // what it makes, because paper has no servings control to explain itself.
+    // Scaling to three and printing for two would be a quiet lie, so the sheet states what it
+    // makes.
     await expect(page.getByRole('region', { name: /ingredients|zutaten/i })).toContainText('300');
     await expect(page.getByRole('region', { name: /steps|zubereitung/i })).toContainText('300');
     await expect(page.getByText(/^3 (servings|Portionen)$/)).toBeVisible();
 
-    // And says it once. The recipe was written for two, and a sheet headed
-    // "2 servings" above a list scaled to three is the lie in a second place.
     await expect(page.getByText(/^2 (servings|Portionen)$/)).toBeHidden();
   });
 });

@@ -1,23 +1,9 @@
 import { request, type APIRequestContext, type APIResponse } from '@playwright/test';
 
-/**
- * Tells the instance to accept new accounts, once for the whole run.
- *
- * Every flow owns an account, and the first run against a fresh instance has to
- * create them — which the instance refuses until an administrator says so. Done
- * here rather than where the accounts are made, because signing in is rate
- * limited per account: six workers each signing in as the administrator to ask
- * the same question is six workers hitting the same limit.
- */
+/** Tells the instance to accept new accounts once for the whole run (it refuses until an administrator says so); done here because sign-in is rate limited per account and six workers would hit the same limit. */
 const origin = 'http://localhost:4173';
 
-/**
- * Signs in, waiting out a rate limit rather than failing the run for it.
- *
- * Signing in is limited per account, which is exactly right, and two runs of
- * this suite a minute apart will meet it. That is the limit working, not a
- * fault — so this waits the time the server asks for and tries once more.
- */
+/** Signs in, waiting out the per-account rate limit (two runs a minute apart will meet it) instead of failing. */
 async function signInOnce(
   context: APIRequestContext,
   who: { email: string; password: string }
@@ -45,7 +31,7 @@ export default async function openRegistration(): Promise<void> {
   const password = process.env['CULINA_E2E_PASSWORD'];
 
   if (!email || !password) {
-    // No backend, and every signed-in suite skips. Nothing to arrange.
+    // No backend: every signed-in suite skips.
     return;
   }
 

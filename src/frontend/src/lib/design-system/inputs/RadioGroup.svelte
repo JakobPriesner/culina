@@ -1,12 +1,5 @@
 <script lang="ts">
-  /**
-   * One of several, all visible at once.
-   *
-   * Native radios inside a `Field` with `group`, so arrow keys move between
-   * them and the group's label is announced before the chosen option — both of
-   * which a set of styled buttons would have to reimplement and would get
-   * subtly wrong.
-   */
+  /** Native radios in a `Field` with `group`, so arrow keys and the group label work without being reimplemented. */
   export interface RadioOption {
     readonly value: string;
     readonly label: string;
@@ -16,7 +9,6 @@
   }
 
   interface Props {
-    /** Shared by every input, which is what makes them one group. */
     name: string;
     value: string;
     options: readonly RadioOption[];

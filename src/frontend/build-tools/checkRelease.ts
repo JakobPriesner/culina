@@ -1,12 +1,6 @@
 import { findGalleryText, galleryRemedy } from './assertNoGallery.ts';
 
-/**
- * The release check, as a command: `pnpm verify:release`.
- *
- * Run after a plain `pnpm build` — CI does exactly that — because the thing it
- * looks at is the build output, and the only build worth checking is one made
- * without the gallery flag.
- */
+/** The release check, as `pnpm verify:release`: run after a plain `pnpm build` (as CI does), since only a build without the gallery flag is worth checking. */
 const buildDir = process.argv[2] ?? 'build';
 const found = await findGalleryText(buildDir);
 

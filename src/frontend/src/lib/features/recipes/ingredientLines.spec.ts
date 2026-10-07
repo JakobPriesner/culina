@@ -30,8 +30,7 @@ describe('adding up an ingredient list', () => {
 
     expect(lines).toHaveLength(2);
     expect(lines[0]?.quantity).toEqual({ value: 80, unit: 'g' });
-    // Where it was first asked for, not at the bottom: the order is the
-    // recipe's own, and it is the order the steps beside it are written in.
+    // Where first asked for: the recipe's own order, as the steps are written.
     expect(lines[0]?.name).toBe('butter');
   });
 
@@ -59,8 +58,7 @@ describe('adding up an ingredient list', () => {
       ingredient({ id: 'b', name: 'oil', quantity: { value: 1, unit: 'tbsp' } })
     ]);
 
-    // A tablespoon of oil is not a number of millilitres — how many depends on
-    // the oil and on the spoon. Two lines is the honest answer.
+    // A tablespoon of oil is not a number of millilitres (it depends on oil and spoon): two lines.
     expect(lines).toHaveLength(2);
   });
 

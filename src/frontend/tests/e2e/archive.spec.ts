@@ -9,12 +9,6 @@ import {
   unique
 } from './support/culina';
 
-/**
- * Taking your recipes with you, and bringing them back.
- *
- * A backup nobody has restored is not a backup. This does the whole journey
- * through the screens a person would actually use.
- */
 test.describe.configure({ mode: 'serial' });
 
 test.describe('an archive of everything', () => {
@@ -30,8 +24,7 @@ test.describe('an archive of everything', () => {
 
     page = await browser.newPage();
 
-    // Restoring adds recipes. Reusing a household doubles its old fixtures on
-    // every run, eventually turning a small round-trip check into a huge import.
+    // Restoring adds recipes; reusing a household would double its fixtures on every run.
     const account = unique(`archive-${testInfo.project.name}`).replace(/\s+/g, '-');
     await signInWithHousehold(page, await ensureAccount(browser, account));
 
@@ -52,8 +45,6 @@ test.describe('an archive of everything', () => {
   test('downloads as a file, and puts it back', async () => {
     await page.goto('/me/household');
 
-    // A real download, through the browser's own machinery — which is what
-    // gives the file a name and somewhere to land.
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.getByRole('link', { name: /download everything|alles herunterladen/i }).click()
@@ -68,23 +59,19 @@ test.describe('an archive of everything', () => {
 
     const written = JSON.parse(Buffer.concat(chunks).toString('utf8'));
 
-    // Readable: somebody with no Culina at all can open this and find their
-    // recipes written out in words.
     expect(written.culina).toBe(1);
     expect(written.recipes.map((one: { title: string }) => one.title)).toContain(title);
 
     const restoredRecipe = written.recipes.find((one: { title: string }) => one.title === title);
 
-    // A step's ingredient travels as a position, never an id: ids are assigned
-    // by whichever database it lands in, and a step pointing at nothing is the
-    // one failure this app exists to prevent.
+    // A step's ingredient travels as a position, never an id: ids are per database, and a dangling
+    // step is the failure this app exists to prevent.
     const reference = restoredRecipe.steps[0].segments.find(
       (one: { ingredient?: number }) => one.ingredient !== undefined
     );
 
     expect(reference.ingredient).toBe(0);
 
-    // And back in. A restore adds; it never replaces what is already there.
     await page.getByLabel(/choose an archive|archiv auswählen/i).setInputFiles({
       name: 'culina.json',
       mimeType: 'application/json',
@@ -96,7 +83,6 @@ test.describe('an archive of everything', () => {
     await page.goto('/');
     await page.getByRole('searchbox').fill(title);
 
-    // Two of them now: the original and the one that came back.
     await expect(page.getByRole('link', { name: new RegExp(title) })).toHaveCount(2);
   });
 });

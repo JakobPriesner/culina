@@ -6,31 +6,18 @@
   import type { Ingredient } from '../types';
 
   /**
-   * The formatted pieces of one paragraph or list item.
-   *
-   * It renders itself for the inside of a span, because emphasis nests — and
-   * the nesting is the only reason this is a component of its own rather than
-   * markup inside `StepText`.
-   *
-   * Both an ingredient reference and a link stand down to plain text when the
-   * step is not interactive, because there the whole step is a button and a
-   * button inside a button is invalid HTML that behaves unpredictably.
-   *
-   * The whitespace in this file is significant: a step is laid out with
-   * `white-space: pre-wrap`, so a line break written here for tidiness would be
-   * a line break on the page. That is why the tags below are packed together.
-   * Svelte also trims a space at the end of a block, which is why a reference
-   * with no amount is its own branch rather than an amount that may be empty.
+   * Formatted pieces of one paragraph or list item; recursive because emphasis nests.
+   * Whitespace is significant (`white-space: pre-wrap`), so tags are packed, and a reference without an amount is its own branch because Svelte trims a trailing space.
+   * References and links render as plain text in non-interactive steps, where a button inside a button is invalid.
    */
   interface Props {
     nodes: readonly Inline[];
     scaling: Scaling;
-    /** Whether an ingredient reference can be pointed at. */
     interactive: boolean;
     onhighlight?: (ingredientId: string | null) => void;
-    /** Which ingredient is currently illuminated on the surface (bidirectional) */
+    /** The lit ingredient (bidirectional with the list). */
     highlighted?: string | null;
-    /** All recipe ingredients for quick-look metadata and totals */
+    /** For quick-look metadata and totals. */
     recipeIngredients?: readonly Ingredient[];
     onlocate?: (ingredientId: string) => void;
   }
@@ -59,8 +46,7 @@
   }
 </script>
 
-<!-- A link in a step goes off site by construction: the parser only keeps the
-     ones that do, and resolve() is for this app's own routes. -->
+<!-- Links in a step are off site by construction; resolve() is for app routes. -->
 <!-- eslint-disable svelte/no-navigation-without-resolve -->
 {#each nodes as node, index (index)}{#if node.kind === 'text'}{node.text}{:else if node.kind === 'ingredient'}{@const amount =
       scaling.show(node.quantity).text}{#if interactive}<button
@@ -143,28 +129,8 @@
     >{/if}{/each}
 
 <style>
-  /*
-   * An ingredient reference is part of the sentence, so it is set as marked
-   * words rather than as a control dropped into them: a pale accent wash with
-   * a quiet edge along the baseline, the way a highlighter marks a line on
-   * paper. A box drawn all the way round made every reference read as a form
-   * field, and a paragraph with four of them as a form.
-   *
-   * The amount carries the weight, because it is the part that changes as the
-   * recipe scales and the part the eye comes back for mid-step. The name stays
-   * at the paragraph's own weight — it is a word of the sentence.
-   *
-   * Nothing moves on hover. Lifting a word by half a pixel shifts it against
-   * its neighbours on the line, and running text should hold still. It lights
-   * quickly and lets go slowly, the same as its line in the ingredient list,
-   * so reading along a step with the pointer leaves a short fading trail
-   * rather than words blinking on and off.
-   *
-   * A button is laid out as one box whatever its display says, so it sets its
-   * own tighter line height: wash and padding together stay shorter than the
-   * paragraph's line, and a line with a reference in it is no taller than one
-   * without — nor does a reference touch the one on the line below.
-   */
+  /* Marked words, not a control (a full box read as a form field): pale wash, baseline edge, weight on the amount.
+     Colour-only hover that lets go slowly; a button's own tight line-height keeps lines with references no taller. */
   .ingredient {
     display: inline-block;
     max-width: 100%;
@@ -196,15 +162,7 @@
     outline-offset: 1px;
   }
 
-  /*
-   * Pointed at — directly, or from its line in the ingredient list, which
-   * lights up every mention of it at once — the wash deepens and the baseline
-   * edge becomes a firm stroke of the accent. Drawn inside the capsule, not as
-   * a ring around it: a glow outside the word crowded the ones beside it and
-   * read as a focus ring, which is a different thing and already has its own
-   * look. The one whose quick look is open stays lit while it is, so the card
-   * is never left pointing at a word that looks like all the others.
-   */
+  /* Pointed at (here or from the ingredient list) deepens the wash and firms the edge inside the capsule, not as a ring that would read as focus; the open quick look stays lit. */
   .ingredient:hover,
   .ingredient.is-highlighted {
     background: var(--surface-highlight);
@@ -218,19 +176,12 @@
     font-weight: var(--weight-semibold);
   }
 
-  /*
-   * An emphasis in a step is somebody's warning — "do **not** stir" — so it
-   * takes the same weight an ingredient does, and no more. Two kinds of bold in
-   * one sentence would be a sentence arguing with itself.
-   */
+  /* Emphasis shares the ingredient weight, so a sentence has one kind of bold. */
   strong {
     font-weight: var(--weight-semibold);
   }
 
-  /*
-   * The system monospace stack rather than a token: nothing else in the app
-   * sets code, and a font nobody else needs does not belong in the scale.
-   */
+  /* System monospace rather than a token: nothing else sets code. */
   code {
     padding: 0 var(--space-1);
     border-radius: var(--radius-sm);
@@ -246,11 +197,7 @@
     text-underline-offset: 0.2em;
   }
 
-  /*
-   * On paper an ingredient reference is simply the words it stands for. It is
-   * a button on screen because pointing at it lights up the line it came from,
-   * and there is nothing to point at on a sheet of paper.
-   */
+  /* On paper a reference is just its words; the button only exists to light up its list line. */
   @media print {
     .ingredient {
       display: inline;

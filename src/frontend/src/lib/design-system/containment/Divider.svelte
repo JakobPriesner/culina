@@ -1,11 +1,5 @@
 <script lang="ts">
-  /**
-   * A line, for the rare case where space alone is not enough.
-   *
-   * Spacing separates; a border only encloses. Reach for this when two things
-   * are genuinely adjacent and unrelated — not to decorate a gap that is
-   * already doing its job.
-   */
+  /** A line for when space alone isn't enough: spacing separates, a border only encloses; not for decorating a gap that already works. */
   interface Props {
     orientation?: 'horizontal' | 'vertical';
   }

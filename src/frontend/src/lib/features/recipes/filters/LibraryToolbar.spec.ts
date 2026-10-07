@@ -8,12 +8,7 @@ import { savedSearches } from '../stores/savedSearches.svelte';
 import { tags } from '$features/cookbooks/stores/tags.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/*
- * The toolbar, rendered, because the thing worth proving about it only exists
- * on screen: every filter that is on has to be removable from where it is
- * shown. A chip that displays a filter but cannot take it off is worse than no
- * chip — it names a thing you then have to go hunting for.
- */
+/* The toolbar, rendered: every filter that is on must be removable from where it is shown, since a chip that cannot take its filter off names a thing you must hunt for. */
 const household = 'h1';
 
 const json = (body: unknown) =>
@@ -84,8 +79,7 @@ describe('the library toolbar', () => {
     show(view);
     await settle();
 
-    // The words are already visible in the box they were typed into; a badge
-    // that counted them would say "1" over an empty panel.
+    // The words are visible in the box already; a badge counting them would say "1" over an empty panel.
     expect(screen.getByRole('button', { name: /Filter \(2\)/ })).toBeInTheDocument();
   });
 
@@ -106,8 +100,7 @@ describe('the library toolbar', () => {
   it('names a tag chip by the household’s own word once it knows it', async () => {
     serverAnswers();
 
-    // The vocabulary is read when the filter panel is opened, which a jsdom
-    // dialog cannot do, so it is loaded here the way opening it would.
+    // The vocabulary loads when the filter panel opens, which a jsdom dialog cannot do, so load it here.
     await tags.load(household);
 
     const view = new RecipeQuery();
@@ -122,8 +115,7 @@ describe('the library toolbar', () => {
   });
 
   it('falls back to the slug before the vocabulary has arrived', async () => {
-    // A chip that rendered nothing until a second request came back would blink
-    // an empty pill onto the toolbar on every first paint.
+    // A chip that rendered nothing until a second request returned would blink an empty pill on first paint.
     serverAnswers();
 
     const view = new RecipeQuery();
@@ -157,9 +149,7 @@ describe('the library toolbar', () => {
   });
 
   it('offers no saved searches where one could not be applied again', async () => {
-    // Inside a cookbook: what would be saved is the shelf's own question plus a
-    // filter over it, and reapplying that from the library would find something
-    // else entirely.
+    // Inside a cookbook what would be saved is the shelf's question plus a filter, which would find something else from the library.
     serverAnswers([saved('s1', 'Schnell', { maxMinutes: 15 })]);
 
     show(new RecipeQuery(), false);

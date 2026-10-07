@@ -18,14 +18,7 @@ import {
   type ResolvedMode
 } from './appearance';
 
-/**
- * How this person wants the app to look and read.
- *
- * The server is the source of truth, so the same account looks the same on a
- * phone and a laptop. `localStorage` is the cache that prevents the flash: it
- * is what the inline script in `app.html` reads before the first paint, and it
- * is written first so a change survives a reload even when the request fails.
- */
+/** Appearance and language: the server is the source of truth; `localStorage` is written first and read by the inline script in `app.html` to avoid a flash. */
 export type MeasurementSystem = 'metric' | 'imperial';
 
 interface Preferences {
@@ -44,13 +37,10 @@ const initial: Preferences = {
 class PreferencesStore {
   #values = $state<Preferences>({ ...initial });
 
-  /** What the device asks for, watched so `system` follows it live. */
   #deviceMode = $state<ResolvedMode>('light');
 
-  /** The language the device reads, watched for the same reason. */
   #deviceLocale = $state<Locale>(deviceLocale());
 
-  /** True when a change could not be sent and is waiting for the network. */
   #unsynced = $state(false);
 
   #signedIn = false;
@@ -63,14 +53,12 @@ class PreferencesStore {
     return this.#values.mode;
   }
 
-  /** The language everything is read in: the one chosen, or the device's. */
   get locale(): Locale {
     const chosen = this.#values.locale;
 
     return isLocale(chosen) ? chosen : this.#deviceLocale;
   }
 
-  /** What was chosen, which may be `system`. */
   get localeChoice(): LocaleChoice {
     return this.#values.locale;
   }
@@ -79,7 +67,6 @@ class PreferencesStore {
     return this.#values.measurementSystem;
   }
 
-  /** What the document is actually painted in. */
   get resolvedMode(): ResolvedMode {
     return this.#values.mode === 'system' ? this.#deviceMode : this.#values.mode;
   }
@@ -88,10 +75,7 @@ class PreferencesStore {
     return this.#unsynced;
   }
 
-  /**
-   * Picks up what the inline script already applied and starts following the
-   * device. Called once by the app shell.
-   */
+  /** Picks up what the inline script applied and follows the device; called once by the app shell. */
   start(): () => void {
     this.#values = {
       ...this.#values,
@@ -129,13 +113,7 @@ class PreferencesStore {
     };
   }
 
-  /**
-   * Replaces everything with what the server has.
-   *
-   * Called on boot and after signing in. The server wins because a device that
-   * has been offline for a week should not push a week-old choice over a newer
-   * one made elsewhere.
-   */
+  /** Replaces everything with the server's values (boot, sign-in); the server wins so a stale offline device cannot override a newer choice. */
   adopt(values: Partial<Preferences>, options: { signedIn: boolean }): void {
     this.#signedIn = options.signedIn;
     this.#values = { ...this.#values, ...values };
@@ -161,7 +139,6 @@ class PreferencesStore {
     this.#change({ measurementSystem });
   }
 
-  /** Back to a signed-out default. Called on sign-out, and by tests. */
   reset(): void {
     this.#signedIn = false;
     this.#unsynced = false;
@@ -170,13 +147,7 @@ class PreferencesStore {
     this.#paint();
   }
 
-  /**
-   * Local first, then the server.
-   *
-   * The order is the point: the change is visible and durable before the
-   * network is involved, so toggling to dark mode on a train works and is still
-   * dark after a reload.
-   */
+  /** Local first, then the server, so a change is visible and durable before the network is involved. */
   #change(patch: Partial<Preferences>): void {
     this.#values = { ...this.#values, ...patch };
     this.#cache();
@@ -209,9 +180,7 @@ class PreferencesStore {
       http.PUT('/api/v1/users/me/settings', { body: { ...this.#values } })
     );
 
-    // A failure is not worth interrupting anyone for: the choice is already
-    // applied and stored. It syncs on the next change or when the device comes
-    // back online.
+    // Not worth interrupting anyone: the choice is applied and stored, and syncs on the next change or when back online.
     this.#unsynced = !result.ok;
   }
 
