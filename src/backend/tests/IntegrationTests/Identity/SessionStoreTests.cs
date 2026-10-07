@@ -140,6 +140,50 @@ public class SessionStoreTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Renew_ShouldMoveTheExpiry_WhenTheSessionIsStillActive()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var userId = await scope.AddUserAsync("ada@example.com");
+        var (session, token) = scope.NewSession(userId);
+        await scope.Sessions.AddAsync(session, Token);
+        session.Touch(Now.AddDays(20), Lifetime);
+
+        // Act
+        var renewed = await scope.Sessions.RenewAsync(session, Token);
+
+        // Assert
+        renewed.ShouldBeSuccess();
+        (await scope.Sessions.FindActiveByTokenAsync(token, Now.AddDays(40), Token)).ShouldBeSuccess();
+    }
+
+    [Fact]
+    public async Task Renew_ShouldLeaveTheSessionRevoked_WhenItWasRevokedAfterBeingRead()
+    {
+        // Arrange
+        await using var scope = await NewScopeAsync();
+        var userId = await scope.AddUserAsync("ada@example.com");
+        var (session, token) = scope.NewSession(userId);
+        await scope.Sessions.AddAsync(session, Token);
+
+        // A request on a stolen cookie reads the session, then the owner
+        // revokes that device before the request gets round to renewing it.
+        var read = (await scope.Sessions.FindActiveByTokenAsync(token, Now, Token)).ShouldBeSuccess();
+        await scope.Sessions.RevokeAsync(session.Id, userId, Now.AddSeconds(1), Token);
+        read.Touch(Now.AddSeconds(2), Lifetime);
+
+        // Act
+        var renewed = await scope.Sessions.RenewAsync(read, Token);
+
+        // Assert
+        // Renewal used to write the stale copy's revoked_at (null) back, and
+        // the revoked session worked again.
+        renewed.ShouldBeFailure(SessionErrors.NotAuthenticated);
+        (await scope.Sessions.FindActiveByTokenAsync(token, Now.AddMinutes(1), Token))
+            .ShouldBeFailure(SessionErrors.NotAuthenticated);
+    }
+
+    [Fact]
     public async Task DeleteExpired_ShouldRemoveLapsedSessions_ButKeepLiveOnes()
     {
         // Arrange

@@ -26,10 +26,14 @@ public interface ISessionStore
     /// <param name="cancellationToken">Cancels the write.</param>
     Task<Result> AddAsync(Session session, CancellationToken cancellationToken);
 
-    /// <summary>Saves activity, expiry and the CSRF digest.</summary>
-    /// <param name="session">The changed session.</param>
+    /// <summary>Saves that a session was used, and how far its expiry moved.</summary>
+    /// <param name="session">The touched session.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
-    Task<Result> UpdateAsync(Session session, CancellationToken cancellationToken);
+    /// <returns>
+    /// <c>auth.not_authenticated</c> when the session was revoked or lapsed
+    /// after it was read; it is then left exactly as it is.
+    /// </returns>
+    Task<Result> RenewAsync(Session session, CancellationToken cancellationToken);
 
     /// <summary>Ends one session.</summary>
     /// <param name="sessionId">Which session.</param>

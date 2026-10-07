@@ -78,30 +78,30 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
         return Result.Success();
     }
 
-    public async Task<Result> UpdateAsync(Session session, CancellationToken cancellationToken)
+    public async Task<Result> RenewAsync(Session session, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        await executor.ExecuteAsync(
+        // Writes only what renewing changes, and only to a session that is
+        // still active. The row was read earlier in the request; writing the
+        // rest of that stale copy back could undo a revocation that landed in
+        // between and bring the session back to life.
+        var affected = await executor.ExecuteAsync(
             """
             update sessions
             set last_seen_at = @lastSeenAt,
-                expires_at = @expiresAt,
-                csrf_token_hash = @csrfTokenHash,
-                revoked_at = @revokedAt
-            where id = @id;
+                expires_at = @expiresAt
+            where id = @id and revoked_at is null and expires_at > @lastSeenAt;
             """,
             new
             {
                 id = session.Id,
                 lastSeenAt = session.LastSeenAt,
-                expiresAt = session.ExpiresAt,
-                csrfTokenHash = session.CsrfTokenHash.ToArray(),
-                revokedAt = session.RevokedAt
+                expiresAt = session.ExpiresAt
             },
             cancellationToken).ConfigureAwait(false);
 
-        return Result.Success();
+        return affected == 0 ? SessionErrors.NotAuthenticated : Result.Success();
     }
 
     public async Task<Result> RevokeAsync(
