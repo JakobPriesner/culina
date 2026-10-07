@@ -326,8 +326,11 @@ previous release's dump.
   status, duration and, when it failed, the error code the client was shown
   (`auth.invalid_credentials`, `recipes.not_found`). Every line carries
   `TraceId`, which is the request id the app shows to whoever hit the error
-  (ask them for it), plus the span, the client address and the user. The
-  `RequestId` field is the web server's own connection counter, not that id.
+  (ask them for it), plus the span, the client address and the user. A share
+  token or invitation code in a path is logged, and traced, as `***`
+  (`/api/v1/shared-recipes/***/image`): read from a log, either would open
+  what it was made for. For the same reason the web server's own per-request
+  scope (`RequestPath`, `RequestId`) is switched off.
   The first line after a start names the version, the database, the image path
   and where telemetry goes. Set `Logging__LogLevel__Default=Debug` to see each import
   recipe, each fetch hop and each assistant call as it is asked for.

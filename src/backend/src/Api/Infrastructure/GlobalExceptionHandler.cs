@@ -54,18 +54,14 @@ internal sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> log
         {
             // Logged at a level that does not page anyone: it is worth seeing
             // when a client is misbehaving, and it is not a defect here.
-            // `.Value` rather than the PathString itself: the implicit conversion
-            // allocates, and this line is often below the configured level.
-            logger.UnreadableBody(
-                httpContext.Request.Method,
-                httpContext.Request.Path.Value ?? string.Empty);
+            logger.UnreadableBody(httpContext.Request);
 
             await CustomResults.WriteProblemAsync(httpContext, Unreadable).ConfigureAwait(false);
 
             return true;
         }
 
-        logger.Unhandled(httpContext.Request.Method, httpContext.Request.Path, exception);
+        logger.Unhandled(httpContext.Request, exception);
 
         await CustomResults.WriteProblemAsync(httpContext, Unexpected).ConfigureAwait(false);
 
