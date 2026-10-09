@@ -10,6 +10,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 export interface ManifestEntry {
   readonly file: string;
   readonly imports?: readonly string[];
+  readonly css?: readonly string[];
 }
 
 export type Manifest = Readonly<Record<string, ManifestEntry>>;
@@ -78,21 +79,38 @@ function earlyFor(routeId: string): number | null {
   return routeId.startsWith('/(auth)') ? 1 : null;
 }
 
+/** The manifest keys a key statically imports, itself included. */
+const closure = (manifest: Manifest, key: string, seen = new Set<string>()): Set<string> => {
+  const entry = manifest[key];
+
+  if (entry && !seen.has(key)) {
+    seen.add(key);
+    entry.imports?.forEach((child) => closure(manifest, child, seen));
+  }
+
+  return seen;
+};
+
+/** Every file, scripts and stylesheets, a cold visit to each route loads through its nodes' static imports; the entry files are not included. */
+export function routeFiles(manifest: Manifest, dictionary: Dictionary): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(dictionary).map(([routeId, [leaf, layouts = []]]) => {
+      const keys = [0, ...layouts, leaf].flatMap((node) => [...closure(manifest, nodeKey(node))]);
+
+      return [
+        routeId,
+        [...new Set(keys.flatMap((key) => [manifest[key]!.file, ...(manifest[key]!.css ?? [])]))]
+      ];
+    })
+  );
+}
+
 export function plan(
   manifest: Manifest,
   dictionary: Dictionary,
   shellFiles: ReadonlySet<string>
 ): Plan {
-  const closureOf = (key: string, seen = new Set<string>()): Set<string> => {
-    const entry = manifest[key];
-
-    if (entry && !seen.has(key)) {
-      seen.add(key);
-      entry.imports?.forEach((child) => closureOf(child, seen));
-    }
-
-    return seen;
-  };
+  const closureOf = (key: string) => closure(manifest, key);
 
   const fileOf = (key: string) => manifest[key]!.file;
   const withoutShell = (keys: Iterable<string>) =>
@@ -164,6 +182,20 @@ export function preloadedBy(html: string): Set<string> {
   );
 }
 
+/** What a build leaves for the client: the manifest and the route table. */
+export async function readKit(
+  kitDir = '.svelte-kit'
+): Promise<{ manifest: Manifest; dictionary: Dictionary }> {
+  return {
+    manifest: JSON.parse(
+      await readFile(`${kitDir}/output/client/.vite/manifest.json`, 'utf8')
+    ) as Manifest,
+    dictionary: parseDictionary(
+      await readFile(`${kitDir}/generated/client-optimized/app.js`, 'utf8')
+    )
+  };
+}
+
 /** Adds the script to the finished shell, in place; the placeholder nonce is the one the host swaps per response. */
 export async function addPreloads(
   buildDir: string,
@@ -171,12 +203,7 @@ export async function addPreloads(
 ): Promise<{ added: number }> {
   const shell = `${buildDir}/index.html`;
   const html = await readFile(shell, 'utf8');
-  const manifest = JSON.parse(
-    await readFile(`${kitDir}/output/client/.vite/manifest.json`, 'utf8')
-  ) as Manifest;
-  const dictionary = parseDictionary(
-    await readFile(`${kitDir}/generated/client-optimized/app.js`, 'utf8')
-  );
+  const { manifest, dictionary } = await readKit(kitDir);
   const tag = `<script nonce="__CULINA_NONCE__">${script(plan(manifest, dictionary, preloadedBy(html)))}</script>`;
 
   await writeFile(
