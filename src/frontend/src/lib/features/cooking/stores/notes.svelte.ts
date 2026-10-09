@@ -11,6 +11,9 @@ class NotesStore {
   #steps: { stepId: string; body: string }[] = [];
   /** The save in flight; not `$state` because `load()` reads it before its first await, inside an effect. */
   #saving: Promise<unknown> | null = null;
+  /** The recipe the note on screen belongs to, and which read is the latest; plain for the same reason as `#saving`. */
+  #recipeId: string | null = null;
+  #loadToken = 0;
 
   get overall(): string {
     return this.#overall;
@@ -25,6 +28,9 @@ class NotesStore {
   }
 
   async load(recipeId: string): Promise<void> {
+    const token = ++this.#loadToken;
+
+    this.#recipeId = recipeId;
     // Emptied before the read: until it arrives the screen holds the previous recipe's note.
     this.#overall = '';
     this.#steps = [];
@@ -37,6 +43,11 @@ class NotesStore {
     const result = await request(() =>
       http.GET('/api/v1/recipes/{recipeId}/notes', { params: { path: { recipeId } } })
     );
+
+    // Another recipe (or a later read of this one) has been asked for since; its answer is the one to show.
+    if (token !== this.#loadToken) {
+      return;
+    }
 
     if (!result.ok) {
       this.#failed = true;
@@ -53,8 +64,8 @@ class NotesStore {
   }
 
   async save(recipeId: string): Promise<AppError | null> {
-    // A note that was never read would be saved over the one the server holds.
-    if (!this.#loaded) {
+    // A note that was never read would be saved over the one the server holds, and typing is never sent to another recipe.
+    if (!this.#loaded || recipeId !== this.#recipeId) {
       return null;
     }
 
@@ -83,6 +94,8 @@ class NotesStore {
     this.#failed = false;
     this.#steps = [];
     this.#saving = null;
+    this.#recipeId = null;
+    this.#loadToken++;
   }
 }
 

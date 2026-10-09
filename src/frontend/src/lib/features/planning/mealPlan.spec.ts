@@ -206,3 +206,68 @@ describe('dragging meals quickly', () => {
     expect(titles({ from: monday, days }, tuesday)).toEqual(['Soup']);
   });
 });
+
+describe('paging quickly between weeks', () => {
+  afterEach(() => {
+    mealPlan.reset();
+    vi.unstubAllGlobals();
+  });
+
+  const json = (body: unknown) =>
+    new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
+
+  it('ends on the week asked for last when an earlier answer lands after it', async () => {
+    const next = '2026-09-21';
+    const answers = new Map<string, (response: Response) => void>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (input: Request) =>
+          new Promise<Response>((resolve) =>
+            answers.set(new URL(input.url).searchParams.get('from') ?? '', resolve)
+          )
+      )
+    );
+
+    const first = mealPlan.load('h1', monday);
+    const second = mealPlan.load('h1', next);
+
+    await vi.waitFor(() => expect(answers.size).toBe(2));
+    answers.get(next)!(json({ from: next, days: [] }));
+    await second;
+    expect(mealPlan.loading).toBe(false);
+
+    answers.get(monday)!(json(week({ [monday]: [meal('Curry')] })));
+    await first;
+
+    expect(mealPlan.from).toBe(next);
+    expect(mealPlan.loading).toBe(false);
+  });
+
+  it('keeps loading while only the older answer has landed', async () => {
+    const next = '2026-09-21';
+    const answers = new Map<string, (response: Response) => void>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (input: Request) =>
+          new Promise<Response>((resolve) =>
+            answers.set(new URL(input.url).searchParams.get('from') ?? '', resolve)
+          )
+      )
+    );
+
+    const first = mealPlan.load('h1', monday);
+
+    mealPlan.load('h1', next).catch(() => {});
+
+    await vi.waitFor(() => expect(answers.size).toBe(2));
+    answers.get(monday)!(json(week({ [monday]: [] })));
+    await first;
+
+    expect(mealPlan.from).toBeNull();
+    expect(mealPlan.loading).toBe(true);
+  });
+});

@@ -115,7 +115,10 @@
       cookbooks={shelves}
     />
 
-    <PersonalNotePanel {recipeId} />
+    <!-- Keyed so a pending autosave is flushed for the recipe it was typed on, not the next one. -->
+    {#key recipeId}
+      <PersonalNotePanel {recipeId} />
+    {/key}
 
     <SimilarRecipes {recipeId} inherited={session.inheritedFrom} />
   {:else}
