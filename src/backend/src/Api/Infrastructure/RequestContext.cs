@@ -7,6 +7,7 @@ internal static class RequestContext
     private const string CspNonceKey = "culina.csp_nonce";
     private const string ErrorCodeKey = "culina.error_code";
     private const string CsrfTokenHashKey = "culina.csrf_token_hash";
+    private const string HashedAssetKey = "culina.hashed_asset";
 
     internal static void SetRequestId(HttpContext context, string requestId) =>
         context.Items[RequestIdKey] = requestId;
@@ -35,4 +36,12 @@ internal static class RequestContext
     /// <summary>The CSRF digest of the session this request authenticated with, or null when none was admitted.</summary>
     internal static ReadOnlyMemory<byte>? CsrfTokenHash(HttpContext context) =>
         context.Items.TryGetValue(CsrfTokenHashKey, out var value) ? value as ReadOnlyMemory<byte>? : null;
+
+    /// <summary>Records that the static file middleware is answering with a content-hashed asset.</summary>
+    internal static void MarkHashedAsset(HttpContext context) =>
+        context.Items[HashedAssetKey] = true;
+
+    /// <summary>Whether the response is a hashed asset, which only ever loads as a subresource.</summary>
+    internal static bool IsHashedAsset(HttpContext context) =>
+        context.Items.ContainsKey(HashedAssetKey);
 }
