@@ -2,6 +2,8 @@ import { session } from '$features/auth/session.svelte';
 import { forget, recall, remember } from '$features/recipes/editor/journal';
 import { changedElsewhere, recipes } from '$features/recipes/stores/recipes.svelte';
 import type { Recipe } from '$features/recipes/types';
+import { explain } from '$shell/explain';
+import { toaster } from '$shell/toaster.svelte';
 
 import { createAutosave } from './autosave.svelte';
 import {
@@ -90,6 +92,24 @@ export function createRecipeDraft(recipeId: () => string) {
     const latest = recipes.detail;
 
     return latest && latest.id === recipeId() ? latest : null;
+  }
+
+  /** The other change's recipe, or null when the re-read failed (the loaded one is then the stale pre-conflict copy); the failure is toasted. */
+  async function reread(): Promise<Recipe | null> {
+    await recipes.load(recipeId());
+
+    if (recipes.detailStatus === 'ready') {
+      return latestLoaded();
+    }
+
+    // The editor stays on screen behind a failed re-read, so the page never shows the error.
+    const failure = recipes.detailError;
+
+    if (failure) {
+      toaster.show({ message: () => explain(failure), tone: 'danger' });
+    }
+
+    return null;
   }
 
   const saveState = $derived(
@@ -181,22 +201,19 @@ export function createRecipeDraft(recipeId: () => string) {
 
     /** One of two conflict exits (no auto-merge): the journal would otherwise re-open the conflicting text on every reload. */
     async keepMine() {
-      const mine = draft;
-
-      if (!mine) {
+      if (!draft) {
         return;
       }
 
       // Re-read to learn the other change's version, then write this text on top.
-      await recipes.load(recipeId());
+      const latest = await reread();
 
-      const latest = latestLoaded();
-
-      if (!latest) {
+      // Taken after the await, so text typed during the re-read is kept.
+      if (!latest || !draft) {
         return;
       }
 
-      draft = { ...mine, version: latest.version };
+      draft = { ...draft, version: latest.version };
       autosave.clear();
       // Clearing dropped the pending save; this text is owed again.
       autosave.touch();
@@ -205,16 +222,15 @@ export function createRecipeDraft(recipeId: () => string) {
     },
 
     async takeTheirs() {
-      if (session.user) {
-        forget(session.user.userId, recipeId());
-      }
+      const latest = await reread();
 
-      await recipes.load(recipeId());
-
-      const latest = latestLoaded();
-
+      // A failed re-read leaves the journal and the draft as they were.
       if (!latest) {
         return;
+      }
+
+      if (session.user) {
+        forget(session.user.userId, recipeId());
       }
 
       // Not left to `takeLoaded`, which takes a recipe only once and would keep the conflicting version.
