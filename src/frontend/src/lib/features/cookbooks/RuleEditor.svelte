@@ -50,6 +50,14 @@
     typedIngredient = '';
   }
 
+  // Enter in the field would otherwise submit the sheet's form and save without the typed ingredient.
+  function enter(event: KeyboardEvent) {
+    if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+      event.preventDefault();
+      addIngredient();
+    }
+  }
+
   function removeIngredient(name: string) {
     onchange({ ...rules, ingredients: rules.ingredients.filter((one) => one !== name) });
   }
@@ -79,7 +87,8 @@
 
   <Field label={m['cookbooks.rules.ingredients']()} hint={m['cookbooks.rules.ingredientsHint']()}>
     {#snippet children({ id, describedBy })}
-      <div class="entry">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="entry" onkeydown={enter}>
         <TextInput
           {id}
           {describedBy}
