@@ -34,6 +34,34 @@ describe('the boot screen', () => {
     expect(document).toMatch(/culina\.boot/);
   });
 
+  it('picks the sign-in skeleton by address, ahead of the stored guess', () => {
+    const script =
+      document.match(/<script nonce="__CULINA_NONCE__">([\s\S]*?)<\/script>/)?.[1] ?? '';
+
+    const bootFor = (path: string, stored: string | null) => {
+      const root = { dataset: {} as Record<string, string> };
+      const storage = { getItem: (key: string) => (key === 'culina.boot' ? stored : null) };
+
+      new Function('document', 'localStorage', 'matchMedia', 'location', script)(
+        { documentElement: root },
+        storage,
+        () => ({ matches: false }),
+        { pathname: path }
+      );
+
+      return root.dataset.boot;
+    };
+
+    for (const path of ['/login', '/register', '/setup', '/join/abc123', '/password-reset']) {
+      expect(bootFor(path, 'app')).toBe('auth');
+      expect(bootFor(path, null)).toBe('auth');
+    }
+    expect(bootFor('/', null)).toBe('app');
+    expect(bootFor('/', 'auth')).toBe('auth');
+    expect(bootFor('/recipes/login', 'app')).toBe('app');
+    expect(bootFor('/loginx', null)).toBe('app');
+  });
+
   it('waits before it appears, so a fast boot never flashes a skeleton', () => {
     // The same delay every other loading state in the app uses.
     expect(document).toMatch(/animation: boot-in [\d]+ms [^;]*150ms/);

@@ -49,6 +49,12 @@
           // A blocked or corrupt store is not a reason to fail to render.
         }
 
+        // These addresses are the sign-in screens whoever is asking, so the
+        // address beats the stored guess (a first visit has none).
+        if (/^\/(login|register|setup|join|password-reset)(\/|$)/.test(location.pathname)) {
+          boot = 'auth';
+        }
+
         root.dataset.theme = theme;
         root.dataset.mode =
           mode === 'system'
