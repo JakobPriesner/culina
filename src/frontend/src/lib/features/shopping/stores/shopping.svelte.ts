@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore, type LoadStatus } from '$shell/stores';
+import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 import type { Unit } from '$features/recipes/units';
 
@@ -25,6 +25,7 @@ class ShoppingStore {
 
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
+  #reads = new LatestRead();
   #error = $state<AppError | null>(null);
 
   get householdId() {
@@ -67,6 +68,8 @@ class ShoppingStore {
       this.#list = null;
     }
 
+    const isLatest = this.#reads.start();
+
     this.#status = 'loading';
     this.#error = null;
 
@@ -75,6 +78,11 @@ class ShoppingStore {
         params: { path: { householdId } }
       })
     );
+
+    // Another household was asked for since; its answer is the one to show.
+    if (!isLatest()) {
+      return;
+    }
 
     if (result.ok) {
       this.#list = result.value;
@@ -98,7 +106,7 @@ class ShoppingStore {
       })
     );
 
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
   }
 
   /** Optimistic: in a shop the round trip is slowest and least forgiven; the server's answer replaces the tick. */
@@ -126,7 +134,7 @@ class ShoppingStore {
       })
     );
 
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
   }
 
   async clearBought(householdId: string): Promise<void> {
@@ -136,7 +144,7 @@ class ShoppingStore {
       })
     );
 
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
   }
 
   /** Puts a recipe's ingredients on, at the scaling being cooked. */
@@ -152,7 +160,7 @@ class ShoppingStore {
       })
     );
 
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
 
     return result.ok ? null : result.error;
   }
@@ -166,7 +174,7 @@ class ShoppingStore {
       })
     );
 
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
 
     return result.ok ? null : result.error;
   }
@@ -179,7 +187,7 @@ class ShoppingStore {
       })
     );
 
-    this.#take(result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
 
     return result.ok ? null : result.error;
   }
@@ -189,6 +197,7 @@ class ShoppingStore {
   }
 
   reset(): void {
+    this.#reads.cancel();
     this.#householdId = null;
     this.#list = null;
     this.#status = 'idle';
@@ -217,7 +226,7 @@ class ShoppingStore {
 
     if (result.ok) {
       // Another tick still out would be undone by this list; the last answer to land carries all of them.
-      if (this.#inFlight === 0) {
+      if (this.#inFlight === 0 && householdId === this.#householdId) {
         this.#list = result.value;
       }
 
@@ -248,7 +257,12 @@ class ShoppingStore {
     }
   }
 
-  #take(list: ShoppingList | null, error: AppError | null): void {
+  #take(householdId: string, list: ShoppingList | null, error: AppError | null): void {
+    // The household was switched meanwhile: this answer is for a list no longer shown.
+    if (householdId !== this.#householdId) {
+      return;
+    }
+
     if (list) {
       this.#list = list;
       this.#status = 'ready';

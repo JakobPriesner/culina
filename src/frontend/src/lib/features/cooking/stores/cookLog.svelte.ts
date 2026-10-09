@@ -1,5 +1,5 @@
 import { http, request } from '$api';
-import { registerStore } from '$shell/stores';
+import { LatestRead, registerStore } from '$shell/stores';
 
 import type { components } from '$api/generated/schema';
 
@@ -20,7 +20,7 @@ class CookLogStore {
 
   /** The recipe the log on screen belongs to, and which read is the latest; plain, since `load()` runs inside effects. */
   #recipeId: string | null = null;
-  #loadToken = 0;
+  #reads = new LatestRead();
 
   get count(): number {
     return this.#log?.count ?? 0;
@@ -35,7 +35,7 @@ class CookLogStore {
   }
 
   async load(recipeId: string): Promise<void> {
-    const token = ++this.#loadToken;
+    const isLatest = this.#reads.start();
 
     // Emptied when another recipe is asked for: until it arrives the screen would hold the previous one's attempts.
     if (this.#recipeId !== recipeId) {
@@ -48,7 +48,7 @@ class CookLogStore {
     );
 
     // Another recipe (or a later read of this one) has been asked for since; its answer is the one to show.
-    if (token === this.#loadToken) {
+    if (isLatest()) {
       this.#log = result.ok ? result.value : null;
     }
   }
@@ -130,7 +130,7 @@ class CookLogStore {
   reset(): void {
     this.#log = null;
     this.#recipeId = null;
-    this.#loadToken++;
+    this.#reads.cancel();
   }
 }
 

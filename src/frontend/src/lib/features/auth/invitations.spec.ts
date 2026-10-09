@@ -52,3 +52,55 @@ describe('the invitation just made', () => {
     expect(invitations.freshCode).toBeNull();
   });
 });
+
+describe('answers that arrive after a switch', () => {
+  it('does not show a link made for the household that was left', async () => {
+    let answer: ((response: Response) => void) | null = null;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'POST'
+          ? new Promise<Response>((resolve) => (answer = resolve))
+          : Promise.resolve(json({ items: [] }))
+      )
+    );
+
+    const creating = invitations.create('h-flat');
+    await invitations.load('h-family');
+
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    answer!(
+      json({ invitationId: 'i1', code: 'secret-code', expiresAt: '2026-10-10T00:00:00Z' }, 201)
+    );
+    await creating;
+
+    expect(invitations.freshCode).toBeNull();
+  });
+
+  it('keeps the list of the household asked for last when the first answers last', async () => {
+    const answers: Record<string, (response: Response) => void> = {};
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (input: Request) =>
+          new Promise<Response>((resolve) => {
+            answers[input.url.includes('h-flat') ? 'flat' : 'family'] = resolve;
+          })
+      )
+    );
+
+    const first = invitations.load('h-flat');
+    const second = invitations.load('h-family');
+
+    await vi.waitFor(() => expect(answers.family).toBeDefined());
+    await vi.waitFor(() => expect(answers.flat).toBeDefined());
+    answers.family!(json({ items: [{ invitationId: 'f', createdAt: 'x', expiresAt: 'y' }] }));
+    await second;
+    answers.flat!(json({ items: [{ invitationId: 'a', createdAt: 'x', expiresAt: 'y' }] }));
+    await first;
+
+    expect(invitations.items.map((one) => one.invitationId)).toEqual(['f']);
+  });
+});
