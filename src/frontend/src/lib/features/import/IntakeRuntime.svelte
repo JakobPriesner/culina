@@ -12,38 +12,19 @@
     const owner = session.user?.userId ?? null;
     untrack(() => {
       intakes.own(owner);
-      if (owner) void intakes.refresh();
+      intakes.follow();
     });
+    return () => intakes.stop();
   });
-  onMount(() => void importPush.restore());
-  const busy = $derived(active.length > 0);
-  // Keeps up after the owner effect's first request: fast while importing, slow otherwise, paused in a hidden tab.
-  $effect(() => {
-    const delay = busy ? 2000 : 15000;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let disposed = false;
-    let polling = false;
-    const schedule = () => {
-      clearTimeout(timer);
-      if (!disposed && !document.hidden) timer = setTimeout(() => void poll(), delay);
+  // The stream gives up after repeated failures; coming back online or into view tries again.
+  onMount(() => {
+    void importPush.restore();
+    const resume = () => {
+      if (!document.hidden) intakes.follow();
     };
-    const poll = async () => {
-      if (disposed || polling || document.hidden) return;
-      polling = true;
-      try {
-        await intakes.refresh();
-      } finally {
-        polling = false;
-        schedule();
-      }
-    };
-    const resume = () => void poll();
-    schedule();
     document.addEventListener('visibilitychange', resume);
     window.addEventListener('online', resume);
     return () => {
-      disposed = true;
-      clearTimeout(timer);
       document.removeEventListener('visibilitychange', resume);
       window.removeEventListener('online', resume);
     };

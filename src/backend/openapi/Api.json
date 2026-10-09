@@ -7436,6 +7436,38 @@
         }
       }
     },
+    "/api/v1/recipe-intakes/events": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Follow the person's imports as they change",
+        "description": "Server-sent events. The first one is a snapshot of every unreviewed import, and so is the first one after a reconnect: a reader replaces what it has. Each later one carries the imports that changed, a reviewed one meaning it is gone. A quiet stream sends one with no imports every fifteen seconds, so a proxy does not close it.",
+        "operationId": "watchRecipeIntakesV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakeIntakeEvent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipe-intakes/{id}": {
       "get": {
         "tags": [
@@ -11087,6 +11119,27 @@
           }
         },
         "description": "An ingredient group and its lines."
+      },
+      "RecipesIntakeIntakeEvent": {
+        "required": [
+          "snapshot",
+          "jobs"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshot": {
+            "type": "boolean",
+            "description": "True when the jobs are every import, replacing what the reader has; sent first, and again after a reconnect."
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesIntakeIntakeJob"
+            },
+            "description": "The imports, or for a later event only the ones that changed (stage reviewed means gone); none is a heartbeat."
+          }
+        },
+        "description": "One message on the stream of a person's imports."
       },
       "RecipesIntakeIntakeJob": {
         "required": [

@@ -4,83 +4,61 @@ import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 
 import IntakeRuntime from './IntakeRuntime.svelte';
-import { intakes, type IntakeJob } from './intakes.svelte';
+import { intakes } from './intakes.svelte';
 import { importPush } from './push.svelte';
 
 vi.mock('$features/auth/session.svelte', () => ({ session: { user: { userId: 'person' } } }));
 
-/*
- * The runtime keeps import status current; polling a hidden tab is invisible cost, so the schedule
- * is pinned.
- */
-const job = (stage: string): IntakeJob => ({ id: stage, stage }) as IntakeJob;
-
-let hidden = false;
-
-const setHidden = (value: boolean) => {
-  hidden = value;
-  document.dispatchEvent(new Event('visibilitychange'));
-};
-
-let refresh: ReturnType<typeof vi.spyOn>;
+/* The runtime follows the server's stream: no timers, no polling requests. */
+let follow: ReturnType<typeof vi.spyOn>;
+let stop: ReturnType<typeof vi.spyOn>;
+let fetched: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  hidden = false;
-  vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden);
   vi.spyOn(importPush, 'restore').mockResolvedValue();
-  refresh = vi.spyOn(intakes, 'refresh').mockResolvedValue();
+  follow = vi.spyOn(intakes, 'follow').mockImplementation(() => {});
+  stop = vi.spyOn(intakes, 'stop').mockImplementation(() => {});
+  fetched = vi.fn();
+  vi.stubGlobal('fetch', fetched);
   intakes.own(null);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
-describe('polling', () => {
-  it('asks once at start and not again for the idle interval', async () => {
+describe('following', () => {
+  it('opens the stream at start and never polls', async () => {
     render(IntakeRuntime);
     flushSync();
 
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(follow).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(14_000);
-
-    expect(refresh).toHaveBeenCalledTimes(1);
-
-    await vi.advanceTimersByTimeAsync(1_000);
-
-    expect(refresh).toHaveBeenCalledTimes(2);
-  });
-
-  it('speeds up while an import is running', async () => {
-    render(IntakeRuntime);
-    flushSync();
-    intakes.jobs = [job('running')];
-    flushSync();
-    refresh.mockClear();
-
-    await vi.advanceTimersByTimeAsync(2_000);
-
-    expect(refresh).toHaveBeenCalledTimes(1);
-  });
-
-  it('stops while the tab is hidden and catches up when it returns', async () => {
-    render(IntakeRuntime);
-    flushSync();
-    intakes.jobs = [job('running')];
-    flushSync();
-    refresh.mockClear();
-
-    setHidden(true);
     await vi.advanceTimersByTimeAsync(60_000);
 
-    expect(refresh).not.toHaveBeenCalled();
+    expect(follow).toHaveBeenCalledTimes(1);
+    expect(fetched).not.toHaveBeenCalled();
+  });
 
-    setHidden(false);
-    await vi.advanceTimersByTimeAsync(0);
+  it('tries again when the connection comes back', () => {
+    render(IntakeRuntime);
+    flushSync();
+    follow.mockClear();
 
-    expect(refresh).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(new Event('online'));
+
+    expect(follow).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the stream when it goes away', () => {
+    const view = render(IntakeRuntime);
+    flushSync();
+
+    view.unmount();
+
+    expect(stop).toHaveBeenCalled();
   });
 });

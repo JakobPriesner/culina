@@ -107,6 +107,9 @@ public static class DependencyInjection
         return services
             // Users
             .AddScoped<Application.Recipes.Intake.RecipeIntake>()
+            .AddScoped<Application.Recipes.Intake.IntakeWatch>()
+            // A singleton: a stream listens for changes made by the worker's own scope.
+            .AddSingleton<Application.Recipes.Intake.IntakeChanges>()
             .AddScoped<ICommandHandler<RegisterUserCommand, Contracts.Users.Register.Response>,
                 RegisterUserCommandHandler>()
             .AddScoped<RegistrationDependencies>()

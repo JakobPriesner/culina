@@ -79,6 +79,14 @@ internal sealed class RecipeIntakeEndpoint : IEndpoint
         app.MapGet($"{ApiPaths.V1}/recipe-intakes", async (HttpContext context, IRecipeIntakeJobs jobs, CancellationToken token) =>
             Results.Ok(await jobs.ListAsync(context.CurrentUser().UserId, token).ConfigureAwait(false)))
             .WithName("listRecipeIntakesV1").WithTags(Tags.Recipes).Produces<IReadOnlyList<IntakeJob>>().RequireAuthorization();
+        app.MapGet($"{ApiPaths.V1}/recipe-intakes/events", (HttpContext context, IntakeWatch watch, CancellationToken token) =>
+            TypedResults.ServerSentEvents(watch.WatchAsync(context.CurrentUser().UserId, IntakeWatch.Heartbeat, token)))
+            .WithName("watchRecipeIntakesV1").WithTags(Tags.Recipes)
+            .WithSummary("Follow the person's imports as they change")
+            .WithDescription("Server-sent events. The first one is a snapshot of every unreviewed import, and so is the first one after a reconnect: "
+                + "a reader replaces what it has. Each later one carries the imports that changed, a reviewed one meaning it is gone. "
+                + "A quiet stream sends one with no imports every fifteen seconds, so a proxy does not close it.")
+            .Produces<IntakeEvent>(200, "text/event-stream").ProducesProblem(401).RequireAuthorization();
         app.MapGet($"{ApiPaths.V1}/recipe-intakes/{{id:guid}}", async (Guid id, HttpContext context, IRecipeIntakeJobs jobs, CancellationToken token) =>
         {
             var job = await jobs.GetAsync(id, context.CurrentUser().UserId, token).ConfigureAwait(false);

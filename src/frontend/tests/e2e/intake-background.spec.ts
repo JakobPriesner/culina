@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Route } from '@playwright/test';
 import { expectReflow, responsiveData } from './support/responsive';
 
 const id = '00000000-0000-4000-8000-000000000055';
@@ -13,6 +13,13 @@ const draft = {
   steps: [{ text: 'Fry the beans.' }],
   tags: []
 };
+
+/** The stream as the browser sees it: one snapshot, then the connection ends and the app reconnects for a fresh one. */
+const intakeStream = (jobs: () => unknown[]) => (route: Route) =>
+  route.fulfill({
+    contentType: 'text/event-stream',
+    body: `data: ${JSON.stringify({ snapshot: true, jobs: jobs() })}\n\n`
+  });
 
 test.describe('background intake @offline', () => {
   test.use({ serviceWorkers: 'block' });
@@ -33,8 +40,9 @@ test.describe('background intake @offline', () => {
       draft: stage === 'thinking' ? null : draft,
       recipeId: stage === 'ready' ? recipeId : null
     });
-    await page.route('**/api/v1/recipe-intakes', (route) =>
-      route.fulfill({ json: reviewed ? [] : [job()] })
+    await page.route(
+      '**/api/v1/recipe-intakes/events',
+      intakeStream(() => (reviewed ? [] : [job()]))
     );
     await page.route(`**/api/v1/recipe-intakes/${id}`, (route) => route.fulfill({ json: job() }));
     await page.goto(`/recipes/imports/${id}`);
@@ -111,10 +119,13 @@ test.describe('background intake @offline', () => {
         };
         return route.fulfill({ status: 202, json: accepted });
       }
-      return route.fulfill({
-        json: url.pathname === '/api/v1/recipe-intakes' ? (accepted ? [accepted] : []) : accepted
-      });
+      return route.fulfill({ json: accepted });
     });
+    // Registered last, so it wins over the pattern above.
+    await page.route(
+      '**/api/v1/recipe-intakes/events',
+      intakeStream(() => (accepted ? [accepted] : []))
+    );
     await page.goto(
       '/recipes/new?url=https%3A%2F%2Fexample.com%2Fbeans&text=120%20g%20beans%20%23ad'
     );
@@ -138,7 +149,10 @@ test.describe('background intake @offline', () => {
       material: 'Beans',
       draft: null
     };
-    await page.route('**/api/v1/recipe-intakes', (route) => route.fulfill({ json: [job] }));
+    await page.route(
+      '**/api/v1/recipe-intakes/events',
+      intakeStream(() => [job])
+    );
     await page.route(`**/api/v1/recipe-intakes/${id}`, (route) => route.fulfill({ json: job }));
     await page.goto(`/recipes/imports/${id}`);
     await expect(page.locator('.earbuds')).toHaveCount(0);

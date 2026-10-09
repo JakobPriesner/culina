@@ -122,7 +122,11 @@ export async function responsiveData(
     const url = new URL(route.request().url());
     const path = url.pathname.replace('/api/v1', '');
     const reply = (json: unknown) => route.fulfill({ json, headers: { ETag: '"v1"' } });
-    if (path === '/recipe-intakes') return reply([]);
+    if (path === '/recipe-intakes/events')
+      return route.fulfill({
+        contentType: 'text/event-stream',
+        body: `data: ${JSON.stringify({ snapshot: true, jobs: [] })}\n\n`
+      });
     if (path === '/users/me')
       return reply({
         userId,

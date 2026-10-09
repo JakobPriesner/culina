@@ -102,6 +102,18 @@ public sealed class ApiClient(HttpClient http) : IDisposable
             bytes);
     }
 
+    /// <summary>
+    /// Opens a stream and returns once the headers arrive, so a test reads events as they are sent;
+    /// the caller disposes the response.
+    /// </summary>
+    public async Task<HttpResponseMessage> OpenStreamAsync(string path, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.Accept.ParseAdd("text/event-stream");
+
+        return await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
     private static bool IsSafe(HttpMethod method) =>
         method == HttpMethod.Get || method == HttpMethod.Head || method == HttpMethod.Options;
 

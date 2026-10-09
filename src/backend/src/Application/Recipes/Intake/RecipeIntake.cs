@@ -17,7 +17,7 @@ namespace Application.Recipes.Intake;
 public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository households,
     IRecipeRepository recipes, IRecipeOriginRepository origins, IUnitOfWork transactions,
     ICommandHandler<ComposeRecipeDraftCommand, DraftProgress> composer,
-    IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response> reader, TimeProvider time)
+    IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response> reader, IntakeChanges changes, TimeProvider time)
 {
     /// <summary>Checks access and input before retaining work.</summary>
     public async Task<Result<IntakeJob>> StartAsync(Guid id, Guid userId, Guid householdId, IntakeMaterial material, CancellationToken token)
@@ -42,9 +42,14 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             return ImportErrors.UnreachableAddress;
         }
 
-        return await valid.Match(_ => transactions.InTransactionAsync(
+        var started = await valid.Match(_ => transactions.InTransactionAsync(
             t => jobs.EnqueueAsync(id, userId, householdId, material, t), token),
             error => Task.FromResult(Result<IntakeJob>.Failure(error))).ConfigureAwait(false);
+
+        // After the commit, so a watcher that re-reads finds it.
+        started.Match(job => changes.Changed(userId, job.Id), _ => { });
+
+        return started;
     }
 
     /// <summary>How often a growing draft is stored: every part rewrites the whole draft.</summary>
@@ -195,7 +200,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
         }, token), e => Task.FromResult(Result.Failure(e))).ConfigureAwait(false);
 
         string? errorCode = null;
-        saved.Match(() => { }, e => errorCode = e.Code);
+        saved.Match(() => changes.Changed(work.UserId, work.Id), e => errorCode = e.Code);
 
         if (errorCode is not null)
         {
