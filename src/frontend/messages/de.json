@@ -1535,5 +1535,6 @@
   "import.url.waiting": "Dieser Link wurde noch nicht geöffnet. Tippe auf „{action}“, um ihn zu lesen.",
   "auth.join.confirm.household": "Du bist eingeladen, {household} beizutreten.",
   "cooking.backToRecipe": "Zurück zum Rezept",
-  "cooking.recipe": "Rezept"
+  "cooking.recipe": "Rezept",
+  "cooking.start.failed": "Das Kochen konnte nicht gestartet werden, deshalb sind die Schrittknöpfe aus. Versuch es noch einmal."
 }

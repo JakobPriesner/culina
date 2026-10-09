@@ -1535,5 +1535,6 @@
   "import.url.waiting": "This link hasn't been opened yet. Tap “{action}” to read it.",
   "auth.join.confirm.household": "You're invited to join {household}.",
   "cooking.backToRecipe": "Back to recipe",
-  "cooking.recipe": "Recipe"
+  "cooking.recipe": "Recipe",
+  "cooking.start.failed": "Cooking could not be started, so the step buttons are off. Try again."
 }
