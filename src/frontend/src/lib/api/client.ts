@@ -27,6 +27,14 @@ const patientPaths = [
   '/api/v1/settings/assistance/models'
 ];
 
+/**
+ * Restoring an archive uploads the largest body the app sends (photos inline), then the server writes
+ * every recipe before it answers; a home upload link alone can outlast 60s.
+ */
+const restoreTimeoutMs = 600_000;
+
+const restorePath = /^\/api\/v1\/households\/[^/]+\/archive$/;
+
 const http = createClient<paths>({
   // No base URL: paths carry /api/v1 and the API is same-origin (hence no CORS, no Authorization header).
   credentials: 'include',
@@ -95,6 +103,10 @@ function withTimeout(input: Request): Promise<Response> {
 function deadlineFor(url: string): number {
   try {
     const { pathname } = new URL(url);
+
+    if (restorePath.test(pathname)) {
+      return restoreTimeoutMs;
+    }
 
     return patientPaths.some((path) => pathname.startsWith(path))
       ? patientTimeoutMs

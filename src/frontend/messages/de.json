@@ -391,7 +391,7 @@
   "archive.restore": "Aus Datei wiederherstellen",
   "archive.choose": "Archiv auswählen",
   "archive.restored": "Wiederhergestellt: {restored}. Übersprungen: {skipped}.",
-  "archive.restoreFailed": "Diese Datei konnte nicht wiederhergestellt werden.",
+  "archive.restoreFailed": "Diese Datei konnte nicht wiederhergestellt werden. {reason}",
   "measurement.label": "Mengen",
   "measurement.metric": "Gramm und Milliliter",
   "measurement.imperial": "Unzen und Cups",
