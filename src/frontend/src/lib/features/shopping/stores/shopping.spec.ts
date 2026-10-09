@@ -51,3 +51,74 @@ describe('moving a line to another section', () => {
     expect(shopping.items[0]?.section).toBe('dairy_eggs');
   });
 });
+
+describe('ticking lines quickly', () => {
+  const eggs: ShoppingItem = { ...milk, itemId: 'i2', name: 'Eier' };
+
+  it('keeps a tick that succeeded when an earlier one fails afterwards', async () => {
+    const answers: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json({ items: [milk, eggs] })
+          : new Promise<Response>((resolve) => answers.push(resolve))
+      )
+    );
+
+    await shopping.load('h1');
+
+    const first = shopping.check('h1', 'i1', true);
+    const second = shopping.check('h1', 'i2', true);
+
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    answers[1]!(
+      json({
+        items: [
+          { ...milk, isChecked: true },
+          { ...eggs, isChecked: true }
+        ]
+      })
+    );
+    await second;
+    answers[0]!(json({ title: 'Nope', status: 500 }, 500));
+    await first;
+
+    expect(shopping.items.map((item) => item.isChecked)).toEqual([false, true]);
+  });
+
+  it('keeps both ticks when the newer one is answered first, taking the last answer', async () => {
+    const answers: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json({ items: [milk, eggs] })
+          : new Promise<Response>((resolve) => answers.push(resolve))
+      )
+    );
+
+    await shopping.load('h1');
+
+    const first = shopping.check('h1', 'i1', true);
+    const second = shopping.check('h1', 'i2', true);
+
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    // The server handled the second tick first, so its list still shows milk unticked.
+    answers[1]!(json({ items: [milk, { ...eggs, isChecked: true }] }));
+    await second;
+    answers[0]!(
+      json({
+        items: [
+          { ...milk, isChecked: true },
+          { ...eggs, isChecked: true }
+        ]
+      })
+    );
+    await first;
+
+    expect(shopping.items.map((item) => item.isChecked)).toEqual([true, true]);
+  });
+});

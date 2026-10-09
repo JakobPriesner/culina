@@ -20,6 +20,9 @@ class ShoppingStore {
   #list = $state<ShoppingList | null>(null);
   #status = $state<LoadStatus>('idle');
 
+  /** Plain counter of tick writes still in flight; a whole-list answer is only taken once none are left. */
+  #inFlight = 0;
+
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
   #error = $state<AppError | null>(null);
@@ -192,22 +195,16 @@ class ShoppingStore {
     this.#error = null;
   }
 
-  /** One line changed here first, then on the server, and put back exactly as it was if that fails. */
+  /** One line changed here first, then on the server; if that fails only this line is put back, so other ticks meanwhile stay. */
   async #change(
     householdId: string,
     itemId: string,
     change: Partial<Pick<ShoppingItem, 'isChecked' | 'section'>>
   ): Promise<AppError | null> {
-    const before = this.#list;
+    const before = this.#list?.items.find((item) => item.itemId === itemId);
+    this.#inFlight++;
 
-    if (this.#list) {
-      this.#list = {
-        ...this.#list,
-        items: this.#list.items.map((item) =>
-          item.itemId === itemId ? { ...item, ...change } : item
-        )
-      };
-    }
+    this.#replace(itemId, change);
 
     const result = await request(() =>
       http.PATCH('/api/v1/households/{householdId}/shopping-list/items/{itemId}', {
@@ -216,16 +213,39 @@ class ShoppingStore {
       })
     );
 
+    this.#inFlight--;
+
     if (result.ok) {
-      this.#list = result.value;
+      // Another tick still out would be undone by this list; the last answer to land carries all of them.
+      if (this.#inFlight === 0) {
+        this.#list = result.value;
+      }
 
       return null;
     }
 
-    // Exact restore, not an inverse: inverses drift if something else changed meanwhile.
-    this.#list = before;
+    // Exact restore of this line's old values, not an inverse: inverses drift if something else changed meanwhile.
+    if (before) {
+      this.#replace(
+        itemId,
+        Object.fromEntries(
+          Object.keys(change).map((key) => [key, before[key as keyof typeof change]])
+        )
+      );
+    }
 
     return result.error;
+  }
+
+  #replace(itemId: string, change: Partial<ShoppingItem>): void {
+    if (this.#list) {
+      this.#list = {
+        ...this.#list,
+        items: this.#list.items.map((item) =>
+          item.itemId === itemId ? { ...item, ...change } : item
+        )
+      };
+    }
   }
 
   #take(list: ShoppingList | null, error: AppError | null): void {

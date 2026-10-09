@@ -240,17 +240,17 @@ export class Shelves {
     return false;
   }
 
-  /** Changes a shelf's recipe count at once and returns what restores it. */
+  /** Changes a shelf's recipe count at once and returns what takes just this change back; counts add up, so other writes meanwhile stay. */
   countRecipe(cookbookId: string, delta: 1 | -1): () => void {
-    const before = this.#items;
-
-    this.#items = before.map((shelf) =>
-      shelf.id === cookbookId ? { ...shelf, recipeCount: shelf.recipeCount + delta } : shelf
-    );
-
-    return () => {
-      this.#items = before;
+    const add = (by: number) => {
+      this.#items = this.#items.map((shelf) =>
+        shelf.id === cookbookId ? { ...shelf, recipeCount: shelf.recipeCount + by } : shelf
+      );
     };
+
+    add(delta);
+
+    return () => add(-delta);
   }
 
   fail(error: AppError): void {

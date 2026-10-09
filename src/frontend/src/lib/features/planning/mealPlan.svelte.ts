@@ -95,6 +95,9 @@ class MealPlanStore {
   #error = $state<AppError | null>(null);
   #loading = $state(false);
 
+  /** Plain counter of move writes still in flight; a whole-week answer is only taken once none are left. */
+  #inFlight = 0;
+
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
 
@@ -173,15 +176,17 @@ class MealPlanStore {
     return result.ok;
   }
 
-  /** Optimistic, since this is a drag. The whole week is the snapshot, so rollback is an exact restore, not an inverse move. */
+  /** Optimistic, since this is a drag. A failure moves just this meal back to where it was, so other drags meanwhile stay. */
   async move(householdId: string, entryId: string, to: MealDestination): Promise<boolean> {
-    const previous = this.#week;
+    const before = this.#week && placeOf(this.#week.days, entryId);
 
-    if (!previous) {
+    if (!this.#week || !before) {
       return false;
     }
 
-    this.#week = withMealMoved(previous, entryId, to);
+    this.#inFlight++;
+
+    this.#week = withMealMoved(this.#week, entryId, to);
 
     const result = await request(() =>
       http.PATCH('/api/v1/households/{householdId}/meal-plan/{entryId}', {
@@ -190,15 +195,33 @@ class MealPlanStore {
       })
     );
 
+    this.#inFlight--;
+
     if (result.ok) {
-      this.#week = result.value;
+      // Another drag still out would be undone by this week; the last answer to land carries all of them.
+      if (this.#inFlight === 0) {
+        this.#week = result.value;
+      }
+
       this.#error = null;
     } else {
-      this.#week = previous;
+      this.#putBack(entryId, before);
       this.#error = result.error;
     }
 
     return result.ok;
+  }
+
+  #putBack(entryId: string, before: MealPlace): void {
+    const after = this.#week && placeOf(this.#week.days, entryId);
+
+    if (this.#week && after) {
+      this.#week = withMealMoved(this.#week, entryId, {
+        date: before.date,
+        slot: before.slot,
+        position: gapToRestore(before, after)
+      });
+    }
   }
 
   async unplan(householdId: string, entryId: string): Promise<boolean> {
