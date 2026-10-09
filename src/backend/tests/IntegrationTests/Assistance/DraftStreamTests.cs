@@ -221,6 +221,41 @@ public class DraftStreamTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Draft_ShouldRecordWhatTheModelUsed_WhenTheAnswerIsNonsense()
+    {
+        using var provider = new StubProvider(["I am afraid I cannot help with that."]);
+        var world = await ConnectedAsync(provider);
+
+        await world.Client.PostAsync(
+            "/api/v1/recipe-drafts",
+            new
+            {
+                kind = "idea",
+                householdId = world.HouseholdId,
+                material = "something with aubergines",
+                language = "en"
+            },
+            Token);
+
+        var settled = await postgres.Api.Logs.WaitForAsync(
+            line => line.EventId == 1502 && line["Outcome"] == "assistance.unusable_answer");
+
+        Assert.NotNull(settled);
+
+        // The provider billed the answer although it could not be read, so the ledger must not call it free.
+        Assert.Equal(
+            11,
+            await postgres.QuerySingleAsync<int>(
+                "select input_tokens from assistance_usage where outcome = 'assistance.unusable_answer';",
+                Token));
+        Assert.Equal(
+            22,
+            await postgres.QuerySingleAsync<int>(
+                "select output_tokens from assistance_usage where outcome = 'assistance.unusable_answer';",
+                Token));
+    }
+
+    [Fact]
     public async Task ProviderRefusal_ShouldBeLogged_WithWhatTheProviderSaid()
     {
         using var provider = new StubProvider(Written, refuseWith: HttpStatusCode.Unauthorized);
