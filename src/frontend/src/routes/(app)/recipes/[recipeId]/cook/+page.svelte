@@ -4,8 +4,10 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import type { AppError } from '$api';
   import { Button, ErrorState } from '$ds';
   import { busy } from '$shell/busy.svelte';
+  import FormFailure from '$features/auth/FormFailure.svelte';
   import { session } from '$features/auth/session.svelte';
   import { autoScrollStep } from '$features/cooking/autoScrollStep';
   import CookingControls from '$features/cooking/CookingControls.svelte';
@@ -79,6 +81,22 @@
   /** Set when cooking ends, never unset: ending clears the session, which the effect below watches and would restart. */
   let over = $state(false);
 
+  /** Why no session could be started, so the cook is told rather than left with Next disabled. */
+  let startFailure = $state<AppError | null>(null);
+
+  async function startSession() {
+    startFailure = await cooking.start(recipeId, servings, session.activeHouseholdId);
+
+    if (!startFailure) {
+      void timers.load();
+    }
+  }
+
+  function retryStart() {
+    startFailure = null;
+    void startSession();
+  }
+
   // Idempotent: arriving with a session already going for this recipe resumes it.
   $effect(() => {
     const detail = recipes.detail;
@@ -88,7 +106,7 @@
     }
 
     if (cooking.session?.recipeId !== recipeId) {
-      void cooking.start(recipeId, servings, session.activeHouseholdId).then(() => timers.load());
+      void startSession();
     } else {
       timers.load();
     }
@@ -192,6 +210,14 @@
         onstop: () => (autoScrolling = false)
       }}
     >
+      {#if startFailure}
+        <div class="start-failure">
+          <FormFailure failure={startFailure} message={m['cooking.start.failed']()} />
+
+          <Button variant="primary" onclick={retryStart}>{m['error.retry']()}</Button>
+        </div>
+      {/if}
+
       <RecipeSurface
         {recipe}
         emphasis="cook"
@@ -243,6 +269,14 @@
   /* Clearance above the controls: their height, their float gap and as much again. */
   .cook {
     --controls-inset: calc(var(--controls-height) + var(--space-8));
+  }
+
+  .start-failure {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-block-end: var(--space-4);
   }
 
   @media (width < 64rem) {
