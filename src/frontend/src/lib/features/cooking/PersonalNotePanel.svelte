@@ -16,6 +16,7 @@
    */
   interface Props {
     recipeId: string;
+    /** `cook` reads the note itself; `detail` is shown by the recipe page, which has already asked for it. */
     variant?: 'detail' | 'cook';
   }
 
@@ -28,11 +29,10 @@
     autosave.dispose();
   });
 
+  // The recipe page reads its note, log and related shelf as soon as it knows the id, not when this renders.
   $effect(() => {
-    void notes.load(recipeId);
-
-    if (variant === 'detail') {
-      void cookLog.load(recipeId);
+    if (variant === 'cook') {
+      void notes.load(recipeId);
     }
   });
 
