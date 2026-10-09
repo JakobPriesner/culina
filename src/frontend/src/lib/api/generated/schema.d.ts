@@ -1770,6 +1770,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipe-intakes/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Follow the person's imports as they change
+         * @description Server-sent events. The first one is a snapshot of every unreviewed import, and so is the first one after a reconnect: a reader replaces what it has. Each later one carries the imports that changed, a reviewed one meaning it is gone. A quiet stream sends one with no imports every fifteen seconds, so a proxy does not close it.
+         */
+        get: operations["watchRecipeIntakesV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipe-intakes/{id}": {
         parameters: {
             query?: never;
@@ -3513,6 +3533,13 @@ export interface components {
             name?: string | null;
             /** @description Its ingredient lines, in order. */
             ingredients: components["schemas"]["RecipesIngredientContract"][];
+        };
+        /** @description One message on the stream of a person's imports. */
+        RecipesIntakeIntakeEvent: {
+            /** @description True when the jobs are every import, replacing what the reader has; sent first, and again after a reconnect. */
+            snapshot: boolean;
+            /** @description The imports, or for a later event only the ones that changed (stage reviewed means gone); none is a heartbeat. */
+            jobs: components["schemas"]["RecipesIntakeIntakeJob"][];
         };
         /** @description A persisted import and its recoverable progress. */
         RecipesIntakeIntakeJob: {
@@ -10646,6 +10673,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipesIntakeIntakeJob"];
+                };
+            };
+        };
+    };
+    watchRecipeIntakesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["RecipesIntakeIntakeEvent"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };

@@ -1,6 +1,7 @@
-import { http, request, type AppError } from '$api';
+import { http, request, watch, type AppError, type Stream } from '$api';
 import type { components } from '$api/generated/schema';
 type WireJob = components['schemas']['RecipesIntakeIntakeJob'];
+type WireEvent = components['schemas']['RecipesIntakeIntakeEvent'];
 
 export type IntakeJob = Omit<WireJob, 'photoCount'> & { photoCount: number };
 const normalized = (job: WireJob): IntakeJob => ({ ...job, photoCount: job.photoCount ?? 0 });
@@ -10,29 +11,52 @@ class Intakes {
   jobs = $state<IntakeJob[]>([]);
   error = $state<AppError | null>(null);
   submitting = $state(false);
-  #loading = false;
   #owner: string | null = null;
+  /** Not $state: nothing renders it. */
+  #stream: Stream | null = null;
 
   own(userId: string | null): void {
     if (this.#owner === userId) return;
+    this.stop();
     this.#owner = userId;
     this.jobs = [];
     this.error = null;
   }
-  async refresh(): Promise<void> {
-    if (this.#loading || !this.#owner) return;
+  /** Keeps the list current from the server's stream; every (re)connect starts with a full snapshot. No-op while open. */
+  follow(): void {
+    if (this.#stream || !this.#owner) return;
     const owner = this.#owner;
-    this.#loading = true;
-    try {
-      const result = await request(() => http.GET('/api/v1/recipe-intakes'));
-      if (owner !== this.#owner) return;
-      if (result.ok) {
-        this.jobs = result.value.map(normalized);
-        this.error = null;
-      } else this.error = result.error;
-    } finally {
-      this.#loading = false;
+    this.#stream = watch<WireEvent>('/api/v1/recipe-intakes/events', {
+      message: (event) => {
+        if (owner === this.#owner) this.#apply(event);
+      },
+      failed: (error) => {
+        // Only the retries are spent: a later follow() opens it again.
+        if (owner !== this.#owner) return;
+        this.#stream = null;
+        this.error = error;
+      }
+    });
+  }
+  stop(): void {
+    this.#stream?.close();
+    this.#stream = null;
+  }
+  #apply(event: WireEvent): void {
+    this.error = null;
+    if (event.snapshot) {
+      this.jobs = event.jobs.map(normalized);
+      return;
     }
+    let jobs = this.jobs;
+    for (const wire of event.jobs) {
+      const job = normalized(wire);
+      const known = jobs.some((one) => one.id === job.id);
+      if (job.stage === 'reviewed') jobs = jobs.filter((one) => one.id !== job.id);
+      else if (known) jobs = jobs.map((one) => (one.id === job.id ? job : one));
+      else jobs = [job, ...jobs];
+    }
+    if (event.jobs.length > 0) this.jobs = jobs;
   }
   async get(id: string): Promise<IntakeJob | null> {
     const owner = this.#owner;
