@@ -2,9 +2,12 @@
   import { base } from '$app/paths';
   import { Button, FilePicker } from '$ds';
 
-  import { http, request } from '$api';
+  import type { AppError } from '$api';
+  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { toaster } from '$shell/toaster.svelte';
+
+  import { restoreArchive } from './restoreArchive';
 
   /**
    * Taking recipes out and bringing them back as plain, readable JSON (a self-hosted app owes users an exit).
@@ -22,21 +25,17 @@
   /** A plain link, not a fetch: the browser's download gives a name and progress, and archives with inline photos are the app's largest payload. */
   const href = $derived(`${base}/api/v1/households/${householdId}/archive`);
 
+  /** Why it failed, with the id support can look up; the id is absent when the request never reached the server. */
+  function failureMessage(error: AppError) {
+    const reason = m['archive.restoreFailed']({ reason: explain(error) });
+
+    return error.requestId ? `${reason} ${m['error.reference']()}: ${error.requestId}` : reason;
+  }
+
   async function restore(file: File) {
     restoring = true;
 
-    const body = new FormData();
-
-    body.append('file', file);
-
-    const result = await request(() =>
-      http.POST('/api/v1/households/{householdId}/archive', {
-        params: { path: { householdId } },
-        body: body as unknown as { file: string },
-        // FormData sets its own multipart boundary; JSON-serialising it would send "[object FormData]".
-        bodySerializer: (value: unknown) => value as FormData
-      })
-    );
+    const result = await restoreArchive(householdId, file);
 
     restoring = false;
 
@@ -47,7 +46,7 @@
               restored: result.value.restored,
               skipped: result.value.skipped
             })
-          : m['archive.restoreFailed'](),
+          : failureMessage(result.error),
       tone: result.ok ? 'success' : 'danger'
     });
   }
