@@ -60,27 +60,28 @@ export async function ensureAccount(
   const context = await browser.newContext();
 
   try {
-    const signedIn = await context.request.post('/api/v1/sessions', {
-      headers: { Origin: origin },
-      data: who
-    });
-
-    if (signedIn.ok()) {
-      known.set(name, who);
-
-      return who;
-    }
-
+    // Creating first, not probing with a sign-in: a probe for an account that does not exist yet
+    // spends its small per-account sign-in budget, and every worker probes, so the test's own sign-in
+    // is then refused (reported as invalid credentials).
     const created = await context.request.post('/api/v1/users', {
       headers: { Origin: origin },
       data: { email: who.email, displayName: name, password: who.password }
     });
 
-    // `known` is per worker, so two workers can both create the account; the loser gets a 409 for
-    // credentials that now exist.
-    const madeElsewhere = created.status() === 409;
+    // `known` is per worker, so a 409 is an account that already exists, from another worker or run.
+    if (created.ok() || created.status() === 409) {
+      known.set(name, who);
 
-    expect(created.ok() || madeElsewhere, await created.text()).toBe(true);
+      return who;
+    }
+
+    // Registration is rate limited too; past it, the account must be there from an earlier run.
+    const signedIn = await context.request.post('/api/v1/sessions', {
+      headers: { Origin: origin },
+      data: who
+    });
+
+    expect(signedIn.ok(), await signedIn.text()).toBe(true);
     known.set(name, who);
 
     return who;
