@@ -585,6 +585,57 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Equal("recipes.invalid_tag", tooLong.Json!.Value.GetProperty("code").GetString());
     }
 
+    [Fact]
+    public async Task Update_ShouldRefuseAnAmountTooSmallToStore_AndKeepTheRecipeReadable()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, WithOneIngredient(0.0004m, yieldAmount: 1));
+        var tinyYield = await PutAsync(client, recipe.Id, recipe.ETag, WithOneIngredient(1m, yieldAmount: 0.0004m));
+        var read = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
+        Assert.Equal("recipes.invalid_quantity", saved.Json!.Value.GetProperty("code").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, tinyYield.StatusCode);
+        Assert.Equal("recipes.invalid_yield", tinyYield.Json!.Value.GetProperty("code").GetString());
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+    }
+
+    [Fact]
+    public async Task Update_ShouldReturnTheAmountRoundedToWhatIsStored()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, WithOneIngredient(1.23456m, yieldAmount: 1));
+        var read = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        var ingredient = read.Json!.Value.GetProperty("groups")[0].GetProperty("ingredients")[0];
+        Assert.Equal(1.235m, ingredient.GetProperty("quantity").GetDecimal());
+    }
+
+    private static object WithOneIngredient(decimal quantity, decimal yieldAmount) => new
+    {
+        title = "Lemon cake",
+        language = "en",
+        yieldAmount,
+        yieldKind = "servings",
+        groups = new[]
+        {
+            new { name = (string?)null, ingredients = new object[] { new { name = "flour", quantity, unit = "g" } } }
+        },
+        steps = Array.Empty<object>(),
+        tags = Array.Empty<string>()
+    };
+
     private static object WithTagsAndDescription(string[] tags, string? description) => new
     {
         title = "Lemon cake",

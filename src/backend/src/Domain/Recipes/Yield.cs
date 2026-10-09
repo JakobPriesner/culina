@@ -46,6 +46,8 @@ public sealed record Yield
     /// <summary>Creates a yield.</summary>
     public static Result<Yield> Create(decimal amount, YieldKind kind, string? label = null)
     {
+        amount = Amounts.Round(amount);
+
         if (amount is <= 0 or > MaxAmount)
         {
             return RecipeErrors.InvalidYield;

@@ -35,9 +35,11 @@ public sealed record Quantity
             return Unmeasured;
         }
 
-        return amount is <= 0 or > MaxAmount
+        var rounded = Amounts.Round(amount.Value);
+
+        return rounded is <= 0 or > MaxAmount
             ? RecipeErrors.InvalidQuantity
-            : new Quantity(amount, unit);
+            : new Quantity(rounded, unit);
     }
 
     /// <summary>Whether this amount is stated at all.</summary>
@@ -55,8 +57,7 @@ public sealed record Quantity
     }
 
     /// <summary>
-    /// Adds another amount, in the family's canonical unit; the sum is left unrounded so errors do
-    /// not compound.
+    /// Adds another amount, in the family's canonical unit.
     /// </summary>
     public Result<Quantity> Add(Quantity other)
     {
@@ -93,7 +94,7 @@ public sealed record Quantity
         var left = (Amount!.Value * Units.ToCanonicalFactor(Unit))
             - (other.Amount!.Value * Units.ToCanonicalFactor(other.Unit));
 
-        return left > 0 ? new Quantity(left, Units.CanonicalOf(Unit)) : null;
+        return Create(left, Units.CanonicalOf(Unit)).Match<Quantity?>(quantity => quantity, _ => null);
     }
 
     /// <summary>This amount expressed in its family's canonical unit.</summary>

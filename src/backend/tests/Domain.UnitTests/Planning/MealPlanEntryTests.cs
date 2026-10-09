@@ -19,6 +19,18 @@ public class MealPlanEntryTests
         Assert.Null(entry.Servings);
     }
 
+    [Fact]
+    public void Plan_ShouldRefuseServingsThatWouldStoreAsZero_AndRoundTheRest()
+    {
+        MealPlanEntry.Plan(CulinaIdStub, Thursday, CulinaIdStub, 0.0004m, MealSlot.Dinner, 0)
+            .ShouldBeFailure(PlanningErrors.InvalidServings);
+
+        var entry = MealPlanEntry.Plan(CulinaIdStub, Thursday, CulinaIdStub, 2.00049m, MealSlot.Dinner, 0)
+            .ShouldBeSuccess();
+
+        Assert.Equal(2m, entry.Servings);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
