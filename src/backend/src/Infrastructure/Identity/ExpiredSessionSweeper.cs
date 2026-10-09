@@ -14,6 +14,7 @@ internal sealed class ExpiredSessionSweeper(
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Housekeeping must not stop the host: a failed sweep is logged and the next tick tries again.")]
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(Interval, time);
@@ -21,7 +22,14 @@ internal sealed class ExpiredSessionSweeper(
         // A first pass shortly after start, then daily, so a restarted instance does not carry a day's backlog.
         do
         {
-            await SweepAsync(stoppingToken).ConfigureAwait(false);
+            try
+            {
+                await SweepAsync(stoppingToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                IdentityLogs.SweepFailed(logger, exception);
+            }
         }
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
     }

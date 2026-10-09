@@ -19,13 +19,21 @@ internal sealed class TrashPurger(
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(24);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Housekeeping must not stop the host: a failed purge is logged and the next tick tries again.")]
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(Interval, time);
 
         do
         {
-            await PurgeAsync(stoppingToken).ConfigureAwait(false);
+            try
+            {
+                await PurgeAsync(stoppingToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                TrashLogs.PurgeThrew(logger, exception);
+            }
         }
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
     }
