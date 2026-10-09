@@ -1,12 +1,13 @@
 using System.Text.Json;
 using Application.Abstractions;
+using Application.Recipes.Intake;
 using Contracts.Recipes.Intake;
 using Domain.Shared;
 using Draft = Contracts.Recipes.Drafts.Response;
 
 namespace Infrastructure.Persistence.Import;
 
-internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
+internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes) : IRecipeIntakeJobs
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, material::text as material, (select count(*) from recipe_intake_photos p where p.job_id=recipe_intake_jobs.id)::int as photo_count, error_code";
@@ -90,18 +91,20 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
         "update recipe_intake_jobs set material=@Material::jsonb, updated_at=now() where id=@Id",
         new { Id = id, Material = Stored(material) }, token);
 
-    public Task ReviewAsync(Guid id, Guid userId, CancellationToken token) => db.ExecuteAsync(
+    public Task ReviewAsync(Guid id, Guid userId, CancellationToken token) => ChangeAsync(
         """
         with reviewed as (
             update recipe_intake_jobs set stage='reviewed', updated_at=now()
-            where id=@Id and user_id=@UserId and stage in ('ready','failed') returning id)
-        delete from recipe_intake_photos where job_id in (select id from reviewed)
+            where id=@Id and user_id=@UserId and stage in ('ready','failed') returning id, user_id),
+        released as (
+            delete from recipe_intake_photos where job_id in (select id from reviewed))
+        select id, user_id from reviewed
         """,
         new { Id = id, UserId = userId }, token);
 
     public async Task<IntakeWork?> ClaimAsync(CancellationToken token)
     {
-        await db.ExecuteAsync("update recipe_intake_jobs set stage='failed', error_code='RecipeIntake.Interrupted', lease_until=null where stage not in ('ready','failed','reviewed') and attempts>=2 and stage<>'saving' and lease_until<now()", null, token).ConfigureAwait(false);
+        await ChangeAsync("update recipe_intake_jobs set stage='failed', error_code='RecipeIntake.Interrupted', lease_until=null where stage not in ('ready','failed','reviewed') and attempts>=2 and stage<>'saving' and lease_until<now() returning id, user_id", null, token).ConfigureAwait(false);
         var row = await db.QuerySingleOrDefaultAsync<WorkRow>("""
             update recipe_intake_jobs set lease_until=now()+interval '15 minutes', attempts=attempts+1, updated_at=now()
             where id=(select id from recipe_intake_jobs where stage not in ('ready','failed','reviewed')
@@ -113,8 +116,8 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
             row.Stage == "saving" && row.Draft is not null ? JsonSerializer.Deserialize<Draft>(row.Draft, Json) : null);
     }
 
-    public Task ProgressAsync(Guid id, string stage, Draft? draft, CancellationToken token) => db.ExecuteAsync(
-        "update recipe_intake_jobs set stage=@Stage, draft=coalesce(@Draft::jsonb,draft), updated_at=now() where id=@Id",
+    public Task ProgressAsync(Guid id, string stage, Draft? draft, CancellationToken token) => ChangeAsync(
+        "update recipe_intake_jobs set stage=@Stage, draft=coalesce(@Draft::jsonb,draft), updated_at=now() where id=@Id returning id, user_id",
         new { Id = id, Stage = stage, Draft = draft is null ? null : JsonSerializer.Serialize(draft, Json) }, token);
 
     public async Task CompleteAsync(Guid id, Guid recipeId, CancellationToken token)
@@ -128,9 +131,19 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
             """, new { Id = id }, token).ConfigureAwait(false);
     }
 
-    public Task FailAsync(Guid id, string errorCode, CancellationToken token) => db.ExecuteAsync(
-        "update recipe_intake_jobs set stage='failed',error_code=@ErrorCode,lease_until=null,updated_at=now() where id=@Id and stage not in ('ready','reviewed')",
+    public Task FailAsync(Guid id, string errorCode, CancellationToken token) => ChangeAsync(
+        "update recipe_intake_jobs set stage='failed',error_code=@ErrorCode,lease_until=null,updated_at=now() where id=@Id and stage not in ('ready','reviewed') returning id, user_id",
         new { Id = id, ErrorCode = errorCode }, token);
+
+    /// <summary>Runs a write that returns the jobs it changed, and tells whoever watches their owners.</summary>
+    /// <remarks>Not for writes inside a transaction: the caller announces those once they commit.</remarks>
+    private async Task ChangeAsync(string sql, object? parameters, CancellationToken token)
+    {
+        foreach (var job in await db.QueryAsync<ChangedRow>(sql, parameters, token).ConfigureAwait(false))
+        {
+            changes.Changed(job.UserId, job.Id);
+        }
+    }
 
     private static IntakeJob Map(JobRow row)
     {
@@ -153,6 +166,7 @@ internal sealed class RecipeIntakeJobs(DbExecutor db) : IRecipeIntakeJobs
     }
 
     private sealed record JobRow(Guid Id, Guid HouseholdId, string Stage, DateTime CreatedAt, Guid? RecipeId, string? Draft, string Material, int PhotoCount, string? ErrorCode);
+    private sealed record ChangedRow(Guid Id, Guid UserId);
     private sealed record PhotoRow(string MediaType, byte[] Bytes);
     private sealed record WorkRow(Guid Id, Guid UserId, Guid HouseholdId, string Material, string? Draft, string Stage);
 }

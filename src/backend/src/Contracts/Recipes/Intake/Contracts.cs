@@ -27,6 +27,15 @@ public sealed record IntakeJob
     public string? ErrorCode { get; init; }
 }
 
+/// <summary>One message on the stream of a person's imports.</summary>
+public sealed record IntakeEvent
+{
+    /// <summary>True when the jobs are every import, replacing what the reader has; sent first, and again after a reconnect.</summary>
+    public required bool Snapshot { get; init; }
+    /// <summary>The imports, or for a later event only the ones that changed (stage reviewed means gone); none is a heartbeat.</summary>
+    public required IReadOnlyList<IntakeJob> Jobs { get; init; }
+}
+
 /// <summary>The browser's Web Push subscription.</summary>
 public sealed record PushRegistration
 {
