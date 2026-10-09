@@ -119,6 +119,26 @@ describe('deadlines', () => {
     expect(asked).toEqual([15_000]);
   });
 
+  it('lets restoring an archive outlast a slow upload and the server writing it', async () => {
+    const asked = watchDeadlines();
+
+    respondWith(json({ restored: 3, skipped: 0 }));
+
+    const body = new FormData();
+
+    body.append('file', new File(['{}'], 'culina.json', { type: 'application/json' }));
+
+    await request(() =>
+      http.POST('/api/v1/households/{householdId}/archive', {
+        params: { path: { householdId: 'h1' } },
+        body: body as unknown as { file: string },
+        bodySerializer: (value: unknown) => value as FormData
+      })
+    );
+
+    expect(asked).toEqual([600_000]);
+  });
+
   it('waits while every connected provider is asked what it offers', async () => {
     const asked = watchDeadlines();
 

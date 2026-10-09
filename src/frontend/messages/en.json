@@ -391,7 +391,7 @@
   "archive.restore": "Restore from a file",
   "archive.choose": "Choose an archive",
   "archive.restored": "Restored: {restored}. Skipped: {skipped}.",
-  "archive.restoreFailed": "That file could not be restored.",
+  "archive.restoreFailed": "That file could not be restored. {reason}",
   "measurement.label": "Amounts",
   "measurement.metric": "Grams and millilitres",
   "measurement.imperial": "Ounces and cups",
