@@ -90,7 +90,7 @@ internal sealed class GeminiAssistant(
 
                 if (thrown is not null)
                 {
-                    yield return Stopped(answer, Failed(thrown));
+                    yield return Stopped(answer, usage, Failed(thrown));
 
                     yield break;
                 }
@@ -119,7 +119,7 @@ internal sealed class GeminiAssistant(
         {
             AssistanceLogs.EmptyAnswer(logger, Kind.Code, finishReason);
 
-            yield return Stopped(answer, AssistanceErrors.UnusableAnswer);
+            yield return Stopped(answer, usage, AssistanceErrors.UnusableAnswer);
 
             yield break;
         }
@@ -211,12 +211,13 @@ internal sealed class GeminiAssistant(
 
     /// <summary>
     /// The last part of a stream that ended badly; it still carries the recipe so the screen can
-    /// offer it beside the reason.
+    /// offer it beside the reason, and the usage counted so far, which was billed all the same.
     /// </summary>
-    private static Composing Stopped(PartialRecipe answer, Error failure) => new()
+    private static Composing Stopped(PartialRecipe answer, ModelUsage usage, Error failure) => new()
     {
         Recipe = answer.SoFar(),
         Finished = true,
+        Usage = usage,
         Failure = failure
     };
 

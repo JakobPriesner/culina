@@ -86,6 +86,42 @@ public class AssistantRunTests
     }
 
     [Fact]
+    public async Task ComposeAsync_ShouldSettleWithNoCost_WhenItFailedWithoutSayingWhatItUsed()
+    {
+        var world = new World();
+        world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.UnusableAnswer));
+
+        await world.ComposeAsync();
+
+        // Null, not a priced zero: a zero would stop the reservation's estimate counting for a call
+        // the provider may well have billed.
+        Assert.Null(Assert.Single(world.Ledger.Settled).Cost);
+    }
+
+    [Fact]
+    public async Task ComposeAsync_ShouldSettlePriced_WhenTheProviderRefusedBeforeGenerating()
+    {
+        var world = new World();
+        world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.Throttled));
+
+        await world.ComposeAsync();
+
+        // Nothing was generated, so holding the estimate would let a burst of 429s lock the budget.
+        Assert.Equal(0.01m, Assert.Single(world.Ledger.Settled).Cost);
+    }
+
+    [Fact]
+    public async Task ComposeAsync_ShouldSettleAtZero_WhenALocalModelFailed()
+    {
+        var world = new World(provider: AssistantKind.Ollama);
+        world.Assistant.WillCompose(Result<Composed>.Failure(AssistanceErrors.UnusableAnswer));
+
+        await world.ComposeAsync();
+
+        Assert.Equal(0.01m, Assert.Single(world.Ledger.Settled).Cost);
+    }
+
+    [Fact]
     public async Task ComposeStreamAsync_ShouldRefuseBeforeTheStreamOpens_WhenTheBudgetIsSpent()
     {
         var world = new World();
@@ -115,6 +151,7 @@ public class AssistantRunTests
         var settlement = Assert.Single(world.Ledger.Settled);
         Assert.Equal("ok", settlement.Outcome);
         Assert.Equal(340, settlement.Usage.OutputTokens);
+        Assert.NotNull(settlement.Cost);
     }
 
     [Fact]
@@ -126,7 +163,10 @@ public class AssistantRunTests
         var parts = await world.ReadToTheEndAsync();
 
         Assert.Equal(AssistanceErrors.Throttled, Assert.Single(parts).Failure);
-        Assert.Equal("assistance.throttled", Assert.Single(world.Ledger.Settled).Outcome);
+
+        var settlement = Assert.Single(world.Ledger.Settled);
+        Assert.Equal("assistance.throttled", settlement.Outcome);
+        Assert.Equal(0.01m, settlement.Cost);
     }
 
     [Fact]
@@ -176,6 +216,9 @@ public class AssistantRunTests
         // turns.
         var settlement = Assert.Single(world.Ledger.Settled);
         Assert.Equal("abandoned", settlement.Outcome);
+
+        // Usage arrives with the last part, which was never read: unknown, not free.
+        Assert.Null(settlement.Cost);
     }
 
     [Fact]
