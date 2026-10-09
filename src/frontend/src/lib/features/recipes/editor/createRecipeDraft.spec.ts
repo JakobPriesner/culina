@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { session } from '$features/auth/session.svelte';
+import { toaster } from '$shell/toaster.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import type { Recipe } from '$features/recipes/types';
 
@@ -110,6 +111,7 @@ describe('createRecipeDraft', () => {
     vi.spyOn(session, 'user', 'get').mockReturnValue({ userId: 'user-1' } as never);
     vi.spyOn(session, 'activeHouseholdId', 'get').mockReturnValue('household-1');
     vi.spyOn(recipes, 'detail', 'get').mockImplementation(() => stored);
+    vi.spyOn(recipes, 'detailStatus', 'get').mockReturnValue('ready');
     vi.spyOn(recipes, 'load').mockResolvedValue();
     vi.spyOn(recipes, 'update').mockImplementation((next) => {
       stored = { ...next, version: next.version + 1 };
@@ -202,5 +204,78 @@ describe('createRecipeDraft', () => {
     expect(editor.inheritedFrom).toBe('household-1');
     expect(editor.recipe).toBeNull();
     editor.dispose();
+  });
+
+  describe('conflict exits', () => {
+    const theirs: Recipe = { ...opened, title: 'Theirs', version: 5 };
+
+    it('keeps the journal and the draft when the re-read fails on take theirs', async () => {
+      const editor = createRecipeDraft(() => 'recipe-1');
+
+      editor.takeLoaded();
+      editor.change({ title: 'Mine' });
+      vi.spyOn(recipes, 'detailStatus', 'get').mockReturnValue('failed');
+      vi.spyOn(recipes, 'detailError', 'get').mockReturnValue({ status: 0 } as never);
+      const show = vi.spyOn(toaster, 'show');
+
+      await editor.takeTheirs();
+
+      expect(show).toHaveBeenCalledOnce();
+      expect(editor.recipe?.title).toBe('Mine');
+      expect(localStorage.getItem('culina.draft.user-1.recipe-1')).not.toBeNull();
+      editor.dispose();
+    });
+
+    it('takes their recipe and forgets the journal when the re-read works', async () => {
+      const editor = createRecipeDraft(() => 'recipe-1');
+
+      editor.takeLoaded();
+      editor.change({ title: 'Mine' });
+      stored = theirs;
+
+      await editor.takeTheirs();
+
+      expect(editor.recipe?.title).toBe('Theirs');
+      expect(localStorage.getItem('culina.draft.user-1.recipe-1')).toBeNull();
+      editor.dispose();
+    });
+
+    it('does not resend the stale version when the re-read fails on keep mine', async () => {
+      const editor = createRecipeDraft(() => 'recipe-1');
+
+      editor.takeLoaded();
+      editor.change({ title: 'Mine' });
+      vi.spyOn(recipes, 'detailStatus', 'get').mockReturnValue('failed');
+      vi.spyOn(recipes, 'detailError', 'get').mockReturnValue({ status: 0 } as never);
+      const show = vi.spyOn(toaster, 'show');
+      vi.mocked(recipes.update).mockClear();
+
+      await editor.keepMine();
+
+      expect(show).toHaveBeenCalledOnce();
+      expect(recipes.update).not.toHaveBeenCalled();
+      expect(editor.recipe).toMatchObject({ title: 'Mine', version: 1 });
+      editor.dispose();
+    });
+
+    it('saves the text typed during the re-read on keep mine', async () => {
+      const editor = createRecipeDraft(() => 'recipe-1');
+
+      editor.takeLoaded();
+      editor.change({ title: 'Mine' });
+      vi.mocked(recipes.load).mockImplementation(() => {
+        stored = theirs;
+        editor.change({ title: 'Mine, typed during' });
+
+        return Promise.resolve();
+      });
+
+      await editor.keepMine();
+
+      expect(recipes.update).toHaveBeenLastCalledWith(
+        expect.objectContaining({ title: 'Mine, typed during', version: 5 })
+      );
+      editor.dispose();
+    });
   });
 });
