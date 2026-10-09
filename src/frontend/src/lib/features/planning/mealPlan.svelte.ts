@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { LatestRead, registerStore } from '$shell/stores';
 
 import type { components } from '$api/generated/schema';
 
@@ -102,7 +102,7 @@ class MealPlanStore {
   #householdId: string | null = null;
 
   /** Which week read is the latest; an older one landing after it must not replace the week asked for since. */
-  #loadToken = 0;
+  #reads = new LatestRead();
 
   get days(): readonly PlannedDay[] {
     return this.#week?.days ?? [];
@@ -132,7 +132,7 @@ class MealPlanStore {
   }
 
   async load(householdId: string, from?: string): Promise<void> {
-    const token = ++this.#loadToken;
+    const isLatest = this.#reads.start();
 
     // Keep the week on screen while the next loads (a skeleton loses your place), but not across households.
     if (this.#householdId !== householdId) {
@@ -148,7 +148,7 @@ class MealPlanStore {
       })
     );
 
-    if (token !== this.#loadToken) {
+    if (!isLatest()) {
       return;
     }
 
@@ -255,7 +255,7 @@ class MealPlanStore {
     this.#week = null;
     this.#error = null;
     this.#loading = false;
-    this.#loadToken++;
+    this.#reads.cancel();
   }
 }
 

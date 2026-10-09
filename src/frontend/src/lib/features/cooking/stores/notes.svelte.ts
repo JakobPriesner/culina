@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { LatestRead, registerStore } from '$shell/stores';
 
 /** One person's notes on a recipe; person-owned, so two household members can differ without editing the recipe. */
 class NotesStore {
@@ -13,7 +13,7 @@ class NotesStore {
   #saving: Promise<unknown> | null = null;
   /** The recipe the note on screen belongs to, and which read is the latest; plain for the same reason as `#saving`. */
   #recipeId: string | null = null;
-  #loadToken = 0;
+  #reads = new LatestRead();
 
   get overall(): string {
     return this.#overall;
@@ -28,7 +28,7 @@ class NotesStore {
   }
 
   async load(recipeId: string): Promise<void> {
-    const token = ++this.#loadToken;
+    const isLatest = this.#reads.start();
 
     this.#recipeId = recipeId;
     // Emptied before the read: until it arrives the screen holds the previous recipe's note.
@@ -45,7 +45,7 @@ class NotesStore {
     );
 
     // Another recipe (or a later read of this one) has been asked for since; its answer is the one to show.
-    if (token !== this.#loadToken) {
+    if (!isLatest()) {
       return;
     }
 
@@ -95,7 +95,7 @@ class NotesStore {
     this.#steps = [];
     this.#saving = null;
     this.#recipeId = null;
-    this.#loadToken++;
+    this.#reads.cancel();
   }
 }
 

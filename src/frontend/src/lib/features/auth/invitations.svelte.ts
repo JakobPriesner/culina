@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore, type LoadStatus } from '$shell/stores';
+import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 /**
  * Invitations to a household. A code is a bearer credential: shown once for copying, and revocable
@@ -22,6 +22,7 @@ class Invitations {
 
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
+  #reads = new LatestRead();
 
   get items(): readonly Invitation[] {
     return this.#items;
@@ -41,6 +42,9 @@ class Invitations {
 
   async load(householdId: string): Promise<void> {
     this.#adopt(householdId);
+
+    const isLatest = this.#reads.start();
+
     this.#status = 'loading';
 
     const result = await request(() =>
@@ -48,6 +52,11 @@ class Invitations {
         params: { path: { householdId } }
       })
     );
+
+    // Another household was asked for since; its answer is the one to show.
+    if (!isLatest()) {
+      return;
+    }
 
     if (result.ok) {
       this.#items = [...result.value.items];
@@ -60,11 +69,18 @@ class Invitations {
   }
 
   async create(householdId: string): Promise<AppError | null> {
+    this.#adopt(householdId);
+
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/invitations', {
         params: { path: { householdId } }
       })
     );
+
+    // The household was switched meanwhile: this link is for a kitchen no longer shown.
+    if (this.#householdId !== householdId) {
+      return null;
+    }
 
     if (!result.ok) {
       this.#error = result.error;
@@ -72,7 +88,6 @@ class Invitations {
       return result.error;
     }
 
-    this.#adopt(householdId);
     this.#fresh = result.value.code;
     this.#error = null;
 
@@ -113,6 +128,7 @@ class Invitations {
   }
 
   reset(): void {
+    this.#reads.cancel();
     this.#householdId = null;
     this.#items = [];
     this.#status = 'idle';
