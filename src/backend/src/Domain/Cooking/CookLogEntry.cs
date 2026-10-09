@@ -78,6 +78,8 @@ public sealed class CookLogEntry
             return CookingErrors.InvalidNote;
         }
 
+        servings = Amounts.Round(servings);
+
         if (servings is <= 0 or > 1000)
         {
             return CookingErrors.InvalidServings;

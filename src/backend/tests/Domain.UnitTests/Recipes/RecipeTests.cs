@@ -402,6 +402,13 @@ public class RecipeTests
     }
 
     [Fact]
+    public void Yield_ShouldRefuseAnAmountThatWouldStoreAsZero_AndRoundTheRest()
+    {
+        Yield.Create(0.0004m, YieldKind.Servings).ShouldBeFailure(RecipeErrors.InvalidYield);
+        Assert.Equal(1.235m, Yield.Create(1.23456m, YieldKind.Servings).ShouldBeSuccess().Amount);
+    }
+
+    [Fact]
     public void Yield_ShouldTakeARecipesOwnWord_SoACakeIsNotFourPortions()
     {
         var measure = Yield.Create(1m, YieldKind.Servings, "  Cake  ").ShouldBeSuccess();
