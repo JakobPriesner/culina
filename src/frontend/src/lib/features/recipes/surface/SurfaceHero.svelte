@@ -20,6 +20,7 @@
     sizes="(min-width: 72rem) 72rem, 100vw"
     alt=""
     loading="eager"
+    fetchpriority="high"
     fill
     rounded={false}
   />

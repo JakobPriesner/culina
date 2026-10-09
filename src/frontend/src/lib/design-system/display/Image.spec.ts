@@ -30,4 +30,22 @@ describe('Image', () => {
     expect(screen.queryByRole('img')).toBeNull();
     expect(view.container.querySelector('.fallback')).toHaveAttribute('aria-hidden', 'true');
   });
+
+  it('fetches lazily and without a hint unless told the photo is on screen at first paint', () => {
+    const view = renderWithProviders(Image, { props: { src: '/a.webp', alt: '' } });
+    const img = view.container.querySelector('img')!;
+
+    expect(img).toHaveAttribute('loading', 'lazy');
+    expect(img).not.toHaveAttribute('fetchpriority');
+  });
+
+  it('passes on a fetch priority', () => {
+    const view = renderWithProviders(Image, {
+      props: { src: '/a.webp', alt: '', loading: 'eager', fetchpriority: 'high' }
+    });
+    const img = view.container.querySelector('img')!;
+
+    expect(img).toHaveAttribute('loading', 'eager');
+    expect(img).toHaveAttribute('fetchpriority', 'high');
+  });
 });

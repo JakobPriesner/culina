@@ -18,9 +18,11 @@
     query?: string;
     /** The household it comes from when inherited, said on the card so nobody opens it expecting to change it. */
     from?: string | null;
+    /** The photo is on screen at first paint: fetched at once and ahead of the rest. */
+    priority?: boolean;
   }
 
-  let { recipe, pending = false, query = '', from = null }: Props = $props();
+  let { recipe, pending = false, query = '', from = null, priority = false }: Props = $props();
 
   const meta = $derived(metaLineFor(recipe));
   const match = $derived(matchLineFor(recipe));
@@ -38,6 +40,8 @@
       sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw"
       alt=""
       ratio={4 / 3}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
     />
   </div>
 
