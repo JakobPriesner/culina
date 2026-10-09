@@ -30,7 +30,7 @@ const intervalMs = 500;
  * Waits until the server answers as a host started after `since`: the old host still answers with the old
  * `startedAt`, then nothing (502), so only a new one means new settings. Null if it did not return in time.
  */
-export async function waitForRestart(since: string | null): Promise<Setup | null> {
+export async function waitForRestart(since: string): Promise<Setup | null> {
   const deadline = Date.now() + patienceMs;
 
   while (Date.now() < deadline) {

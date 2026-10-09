@@ -41,6 +41,8 @@ class ServerStore {
   #serverError = $state<AppError | null>(null);
   #databaseError = $state<AppError | null>(null);
   #phase = $state<SavePhase>('idle');
+  // The host that was answering before the last save, or null when it could not be told.
+  #restartFrom: string | null = null;
 
   get server(): ServerDraft | null {
     return this.#server;
@@ -116,13 +118,7 @@ class ServerStore {
 
   /** Waits again for a restart that took too long ("check again"). */
   async awaitRestart(): Promise<SaveOutcome> {
-    this.#phase = 'restarting';
-
-    const setup = await waitForRestart(null);
-
-    this.#phase = 'idle';
-
-    return setup ? { kind: 'applied', setup } : { kind: 'stalled' };
+    return this.#waitForNewHost();
   }
 
   async #apply(
@@ -154,9 +150,21 @@ class ServerStore {
       return { kind: 'unchanged' };
     }
 
+    this.#restartFrom = before?.startedAt ?? null;
+
+    return this.#waitForNewHost();
+  }
+
+  // Without the host from before the save there is no telling a restart from the old host still
+  // answering, so that is a stall, not success.
+  async #waitForNewHost(): Promise<SaveOutcome> {
+    if (this.#restartFrom === null) {
+      return { kind: 'stalled' };
+    }
+
     this.#phase = 'restarting';
 
-    const setup = await waitForRestart(before?.startedAt ?? null);
+    const setup = await waitForRestart(this.#restartFrom);
 
     this.#phase = 'idle';
 
@@ -172,6 +180,7 @@ class ServerStore {
     this.#serverError = null;
     this.#databaseError = null;
     this.#phase = 'idle';
+    this.#restartFrom = null;
   }
 }
 
