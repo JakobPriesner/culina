@@ -22,7 +22,15 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
 
         context.Response.OnStarting(() =>
         {
-            ApplySecurityHeaders(context.Response.Headers, contentSecurityPolicy);
+            if (RequestContext.IsHashedAsset(context))
+            {
+                ApplySubresourceHeaders(context.Response.Headers);
+            }
+            else
+            {
+                ApplySecurityHeaders(context.Response.Headers, contentSecurityPolicy);
+            }
+
             ApplyCachePolicy(context);
 
             return Task.CompletedTask;
@@ -31,13 +39,23 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
         return next(context);
     }
 
-    private static void ApplySecurityHeaders(IHeaderDictionary headers, string contentSecurityPolicy)
+    /// <summary>
+    /// What a hashed script or stylesheet needs: <c>nosniff</c> and the resource policy govern how the file itself is loaded.
+    /// Left out, because each governs a document or a worker's own response and a script or style subresource has none of
+    /// either: CSP, Permissions-Policy, X-Frame-Options and Cross-Origin-Opener-Policy. No hashed file is loaded as a worker.
+    /// </summary>
+    private static void ApplySubresourceHeaders(IHeaderDictionary headers)
     {
         headers.XContentTypeOptions = SecurityHeaders.ContentTypeOptions;
-        headers.XFrameOptions = SecurityHeaders.FrameOptions;
         headers["Referrer-Policy"] = SecurityHeaders.ReferrerPolicy;
-        headers["Cross-Origin-Opener-Policy"] = SecurityHeaders.OpenerPolicy;
         headers["Cross-Origin-Resource-Policy"] = SecurityHeaders.ResourcePolicy;
+    }
+
+    private static void ApplySecurityHeaders(IHeaderDictionary headers, string contentSecurityPolicy)
+    {
+        ApplySubresourceHeaders(headers);
+        headers.XFrameOptions = SecurityHeaders.FrameOptions;
+        headers["Cross-Origin-Opener-Policy"] = SecurityHeaders.OpenerPolicy;
         headers["Permissions-Policy"] = SecurityHeaders.PermissionsPolicy;
         headers.ContentSecurityPolicy = contentSecurityPolicy;
     }

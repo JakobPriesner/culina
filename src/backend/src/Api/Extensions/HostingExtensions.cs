@@ -80,7 +80,18 @@ internal static class HostingExtensions
                     return;
                 }
 
-                headers.CacheControl = IsImmutable(context.File.Name, asked)
+                var immutable = IsImmutable(context.File.Name, asked);
+
+                // Only a script or stylesheet actually served: an unknown path under /_app/immutable/ falls
+                // through to the shell, and an image there (an SVG) can open as a document that needs its CSP.
+                if (asked.StartsWithSegments("/_app/immutable")
+                    && (asked.Value!.EndsWith(".js", StringComparison.Ordinal)
+                        || asked.Value.EndsWith(".css", StringComparison.Ordinal)))
+                {
+                    Infrastructure.RequestContext.MarkHashedAsset(context.Context);
+                }
+
+                headers.CacheControl = immutable
                     ? new CacheControlHeaderValue
                     {
                         Public = true,
