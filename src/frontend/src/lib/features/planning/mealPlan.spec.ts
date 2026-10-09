@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { gapToRestore, placeOf, withMealMoved, type PlannedDay } from './mealPlan.svelte';
+import { gapToRestore, mealPlan, placeOf, withMealMoved, type PlannedDay } from './mealPlan.svelte';
 
 /** Where a dropped card lands: the optimistic half of a move must agree with the server, or the card jumps when the response arrives. */
 const monday = '2026-09-14';
@@ -152,5 +152,57 @@ describe('finding a meal', () => {
 
   it('is null for a meal the week does not have', () => {
     expect(placeOf(week({ [monday]: [] }).days, 'entry-Nothing')).toBeNull();
+  });
+});
+
+describe('dragging meals quickly', () => {
+  afterEach(() => {
+    mealPlan.reset();
+    vi.unstubAllGlobals();
+  });
+
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  it('keeps a move that succeeded when an earlier one fails afterwards', async () => {
+    const start = week({
+      [monday]: [meal('Curry'), meal('Soup')],
+      [tuesday]: []
+    });
+    const answers: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json(start)
+          : new Promise<Response>((resolve) => answers.push(resolve))
+      )
+    );
+
+    await mealPlan.load('h1', monday);
+
+    const first = mealPlan.move('h1', 'entry-Curry', { date: tuesday });
+    const second = mealPlan.move('h1', 'entry-Soup', { date: tuesday });
+
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    answers[1]!(
+      json(
+        withMealMoved(withMealMoved(start, 'entry-Curry', { date: tuesday }), 'entry-Soup', {
+          date: tuesday
+        })
+      )
+    );
+    expect(await second).toBe(true);
+    answers[0]!(json({ title: 'Nope', status: 500 }, 500));
+    expect(await first).toBe(false);
+
+    const days = mealPlan.days as PlannedDay[];
+
+    expect(titles({ from: monday, days }, monday)).toEqual(['Curry']);
+    expect(titles({ from: monday, days }, tuesday)).toEqual(['Soup']);
   });
 });

@@ -55,24 +55,19 @@ export class Memberships {
     }
   }
 
-  /** Ticks a recipe on or off a shelf, and returns what puts both views back. */
+  /** Ticks a recipe on or off a shelf, and returns what puts just that tick back (other ticks meanwhile stay). */
   set(recipeId: string, cookbook: CookbookMembership, on: boolean): () => void {
-    const before = this.of(recipeId);
-    const members = this.membersOf(cookbook.id);
+    this.#apply(recipeId, cookbook, on);
 
-    this.#byRecipe = {
-      ...this.#byRecipe,
-      [recipeId]: on ? [...before, cookbook] : before.filter((shelf) => shelf.id !== cookbook.id)
-    };
-    this.#byShelf = {
-      ...this.#byShelf,
-      [cookbook.id]: on ? [...members, recipeId] : members.filter((id) => id !== recipeId)
-    };
+    return () => this.#apply(recipeId, cookbook, !on);
+  }
 
-    return () => {
-      this.#byRecipe = { ...this.#byRecipe, [recipeId]: [...before] };
-      this.#byShelf = { ...this.#byShelf, [cookbook.id]: members };
-    };
+  #apply(recipeId: string, cookbook: CookbookMembership, on: boolean): void {
+    const shelves = this.of(recipeId).filter((shelf) => shelf.id !== cookbook.id);
+    const members = this.membersOf(cookbook.id).filter((id) => id !== recipeId);
+
+    this.#byRecipe = { ...this.#byRecipe, [recipeId]: on ? [...shelves, cookbook] : shelves };
+    this.#byShelf = { ...this.#byShelf, [cookbook.id]: on ? [...members, recipeId] : members };
   }
 
   reset(): void {

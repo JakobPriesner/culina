@@ -128,7 +128,35 @@ describe('what is on a shelf, all of it', () => {
 
     await cookbooks.setOn('r1', { id: 'c1', name: 'Christmas' }, false);
 
-    expect(cookbooks.membersOf('c1')).toEqual(['r1', 'r2']);
+    expect([...cookbooks.membersOf('c1')].sort()).toEqual(['r1', 'r2']);
+  });
+
+  it('keeps a tick that succeeded when an earlier one fails afterwards', async () => {
+    const answers: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? listOf(shelf('c1', 'Christmas', 2), shelf('c2', 'Quick', 5))
+          : new Promise<Response>((resolve) => answers.push(resolve))
+      )
+    );
+    await cookbooks.list(household);
+
+    const first = cookbooks.setOn('r1', { id: 'c1', name: 'Christmas' }, true);
+    const second = cookbooks.setOn('r1', { id: 'c2', name: 'Quick' }, true);
+
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    answers[1]!(noContent());
+    await second;
+    answers[0]!(json({ code: 'cookbooks.not_found' }, 404));
+    await first;
+
+    expect(cookbooks.contains('r1', 'c1')).toBe(false);
+    expect(cookbooks.contains('r1', 'c2')).toBe(true);
+    expect(cookbooks.membersOf('c2')).toEqual(['r1']);
+    expect(cookbooks.items.map((one) => one.recipeCount)).toEqual([2, 6]);
   });
 });
 
