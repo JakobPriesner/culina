@@ -22,10 +22,13 @@
            (260 kB for nothing). -->
       <img
         src="{base}/images/culina-orzo.webp"
+        srcset="{base}/images/culina-orzo-800.webp 800w, {base}/images/culina-orzo.webp 1536w"
+        sizes="(min-width: 80rem) 37rem, 50vw"
         alt=""
         width="1536"
         height="1024"
         loading="lazy"
+        fetchpriority="low"
         decoding="async"
       />
       <div class="story-copy">

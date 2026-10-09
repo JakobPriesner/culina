@@ -65,6 +65,7 @@
       sizes="(min-width: 80rem) 44rem, (min-width: 64rem) 55vw, 100vw"
       alt=""
       loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
       fill
       rounded={false}
     />

@@ -30,6 +30,9 @@
   /** Enough to fill the visible area without pretending to know the count. */
   const placeholders = [0, 1, 2, 3, 4, 5];
 
+  /** The cards in the first screenful of a phone; their photos are fetched ahead of the rest. */
+  const firstRow = 2;
+
   /** One row's worth: the next page is on its way before these are read. */
   const next = [0, 1, 2];
 </script>
@@ -43,13 +46,14 @@
   </div>
 {:else}
   <ul class="grid">
-    {#each recipes as recipe (recipe.id)}
+    {#each recipes as recipe, index (recipe.id)}
       <li class="card">
         <RecipeCard
           {recipe}
           {query}
           pending={pending.includes(recipe.id)}
           from={inheritedFrom(recipe, inherited)}
+          priority={index < firstRow}
         />
       </li>
     {/each}
