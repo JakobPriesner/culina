@@ -18,4 +18,10 @@ internal static partial class TrashLogs
         Level = LogLevel.Error,
         Message = "Emptying the bin failed with {Code}")]
     internal static partial void PurgeFailed(ILogger logger, string code);
+
+    [LoggerMessage(
+        EventId = 1952,
+        Level = LogLevel.Error,
+        Message = "Emptying the bin threw; trying again at the next run")]
+    internal static partial void PurgeThrew(ILogger logger, Exception exception);
 }
