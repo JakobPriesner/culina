@@ -87,3 +87,77 @@ describe('saving a note', () => {
     expect(saved).toEqual([{ overall: 'Use the cast-iron pan', steps }]);
   });
 });
+
+describe('moving from one recipe to the next', () => {
+  const answerPerRecipe = () => {
+    const answers = new Map<string, (response: Response) => void>();
+    const puts: string[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'PUT') {
+          puts.push(input.url);
+
+          return json({ overall: null, steps: [] });
+        }
+
+        return new Promise<Response>((resolve) => answers.set(input.url, resolve));
+      })
+    );
+
+    return {
+      answers,
+      puts,
+      answer: (id: string) => [...answers].find(([url]) => url.includes(id))![1]
+    };
+  };
+
+  it('ends with the note of the recipe asked for last when the earlier answer lands after it', async () => {
+    const { answers, answer } = answerPerRecipe();
+
+    const first = notes.load('rA');
+    const second = notes.load('rB');
+
+    await vi.waitFor(() => expect(answers.size).toBe(2));
+    answer('rB')(json({ overall: 'note B', steps: [] }));
+    await second;
+    answer('rA')(json({ overall: 'note A', steps: [] }));
+    await first;
+
+    expect(notes.overall).toBe('note B');
+    expect(notes.loaded).toBe(true);
+  });
+
+  it('shows nothing of the previous recipe while the next is read', async () => {
+    const { answers, answer } = answerPerRecipe();
+
+    const first = notes.load('rA');
+
+    await vi.waitFor(() => expect(answers.size).toBe(1));
+    answer('rA')(json({ overall: 'note A', steps: [] }));
+    await first;
+
+    void notes.load('rB');
+
+    expect(notes.overall).toBe('');
+    expect(notes.loaded).toBe(false);
+  });
+
+  it('does not send typing from one recipe to another', async () => {
+    const { answers, answer, puts } = answerPerRecipe();
+
+    const first = notes.load('rA');
+
+    await vi.waitFor(() => expect(answers.size).toBe(1));
+    answer('rA')(json({ overall: null, steps: [] }));
+    await first;
+    notes.set('typed on A');
+
+    void notes.load('rB');
+
+    expect(await notes.save('rB')).toBeNull();
+    expect(await notes.save('rA')).toBeNull();
+    expect(puts).toEqual([]);
+  });
+});

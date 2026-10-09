@@ -18,6 +18,10 @@ export type CookLogItem = CookLog['items'][number];
 class CookLogStore {
   #log = $state<CookLog | null>(null);
 
+  /** The recipe the log on screen belongs to, and which read is the latest; plain, since `load()` runs inside effects. */
+  #recipeId: string | null = null;
+  #loadToken = 0;
+
   get count(): number {
     return this.#log?.count ?? 0;
   }
@@ -31,11 +35,22 @@ class CookLogStore {
   }
 
   async load(recipeId: string): Promise<void> {
+    const token = ++this.#loadToken;
+
+    // Emptied when another recipe is asked for: until it arrives the screen would hold the previous one's attempts.
+    if (this.#recipeId !== recipeId) {
+      this.#recipeId = recipeId;
+      this.#log = null;
+    }
+
     const result = await request(() =>
       http.GET('/api/v1/recipes/{recipeId}/cook-log', { params: { path: { recipeId } } })
     );
 
-    this.#log = result.ok ? result.value : null;
+    // Another recipe (or a later read of this one) has been asked for since; its answer is the one to show.
+    if (token === this.#loadToken) {
+      this.#log = result.ok ? result.value : null;
+    }
   }
 
   /**
@@ -91,7 +106,7 @@ class CookLogStore {
       })
     );
 
-    if (result.ok) {
+    if (result.ok && recipeId === this.#recipeId) {
       this.#log = result.value;
     }
 
@@ -105,7 +120,7 @@ class CookLogStore {
       })
     );
 
-    if (result.ok) {
+    if (result.ok && recipeId === this.#recipeId) {
       this.#log = result.value;
     }
 
@@ -114,6 +129,8 @@ class CookLogStore {
 
   reset(): void {
     this.#log = null;
+    this.#recipeId = null;
+    this.#loadToken++;
   }
 }
 

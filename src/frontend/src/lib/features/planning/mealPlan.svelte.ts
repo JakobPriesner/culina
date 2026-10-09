@@ -101,6 +101,9 @@ class MealPlanStore {
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
 
+  /** Which week read is the latest; an older one landing after it must not replace the week asked for since. */
+  #loadToken = 0;
+
   get days(): readonly PlannedDay[] {
     return this.#week?.days ?? [];
   }
@@ -129,6 +132,8 @@ class MealPlanStore {
   }
 
   async load(householdId: string, from?: string): Promise<void> {
+    const token = ++this.#loadToken;
+
     // Keep the week on screen while the next loads (a skeleton loses your place), but not across households.
     if (this.#householdId !== householdId) {
       this.#householdId = householdId;
@@ -142,6 +147,10 @@ class MealPlanStore {
         params: { path: { householdId }, query: from ? { from } : {} }
       })
     );
+
+    if (token !== this.#loadToken) {
+      return;
+    }
 
     this.#loading = false;
 
@@ -246,6 +255,7 @@ class MealPlanStore {
     this.#week = null;
     this.#error = null;
     this.#loading = false;
+    this.#loadToken++;
   }
 }
 
