@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '$features/auth/session.svelte';
 import { toaster } from '$shell/toaster.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
+import { recall } from '$features/recipes/editor/journal';
 import type { Recipe } from '$features/recipes/types';
 
 import { adoptSaved, createRecipeDraft } from './createRecipeDraft.svelte';
@@ -151,6 +152,27 @@ describe('createRecipeDraft', () => {
     expect(recipes.update).toHaveBeenCalledOnce();
     expect(editor.saveState.tone).toBe('saved');
     expect(editor.recipe?.version).toBe(2);
+    editor.dispose();
+  });
+
+  it('keeps the journal for text typed during a save that then succeeds', async () => {
+    const editor = createRecipeDraft(() => 'recipe-1');
+
+    editor.takeLoaded();
+    editor.change({ title: 'Paella' });
+    vi.mocked(recipes.update).mockImplementationOnce((next) => {
+      stored = { ...next, version: next.version + 1 };
+      editor.change({ title: 'Paella, typed during' });
+
+      return Promise.resolve(null);
+    });
+    vi.mocked(recipes.update).mockResolvedValueOnce({ kind: 'network' } as never);
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(recipes.update).toHaveBeenCalledTimes(2);
+    expect(recall('user-1', 'recipe-1')?.recipe.title).toBe('Paella, typed during');
+    expect(editor.saveState.tone).not.toBe('saved');
     editor.dispose();
   });
 

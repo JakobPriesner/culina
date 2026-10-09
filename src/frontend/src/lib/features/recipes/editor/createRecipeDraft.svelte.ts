@@ -28,20 +28,26 @@ export function createRecipeDraft(recipeId: () => string) {
 
   let typed = $state<TypedNumbers>(nothingTyped());
 
+  /** Edits typed so far; plain, since it only tells whether typing went on during a save. */
+  let changes = 0;
+
   const autosave = createAutosave(async () => {
     if (!draft) {
       return null;
     }
 
     const sent = draft.version;
+    const changesSent = changes;
     const failure = await recipes.update(draft);
+    // A photo saved meanwhile also replaces the draft but owes no save, so typing is counted instead.
+    const typedDuring = changes !== changesSent;
 
     if (!failure) {
       adopt(sent);
     }
 
-    // Dropped only once the server has it; a failed save keeps the journal.
-    if (!failure && session.user) {
+    // Dropped only once the server has all of it; a failed save, or newer typing, keeps the journal.
+    if (!failure && !typedDuring && session.user) {
       forget(session.user.userId, recipeId());
       unsent = false;
     }
@@ -78,6 +84,7 @@ export function createRecipeDraft(recipeId: () => string) {
     }
 
     draft = { ...draft, ...patch };
+    changes += 1;
     recovered = false;
 
     if (session.user) {
