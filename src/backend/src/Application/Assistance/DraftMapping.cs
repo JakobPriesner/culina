@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Application.Recipes;
 using Contracts.Recipes.Drafts;
 using Domain.Recipes;
 
@@ -36,17 +37,14 @@ internal static class DraftMapping
         {
             DraftId = draftId,
             Title = Trimmed(draft.Title),
-            Description = Trimmed(draft.Description),
+            Description = RecipeFit.Description(draft.Description),
             YieldAmount = draft.YieldAmount is > 0 ? draft.YieldAmount : null,
             YieldLabel = Trimmed(draft.YieldLabel),
             PrepMinutes = Minutes(draft.PrepMinutes),
             CookMinutes = Minutes(draft.CookMinutes),
             Groups = [.. draft.Groups.Select(ToGroup).Where(group => group.Ingredients.Count > 0)],
             Steps = [.. draft.Steps.Select(ToStep).OfType<DraftStepContract>()],
-            Tags = [.. draft.Tags
-                .Select(Trimmed)
-                .OfType<string>()
-                .Distinct(StringComparer.OrdinalIgnoreCase)]
+            Tags = [.. RecipeFit.Tags(draft.Tags)]
         };
     }
 

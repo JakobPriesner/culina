@@ -54,6 +54,7 @@
         {id}
         {describedBy}
         {invalid}
+        maxlength={2000}
         value={recipe.description ?? ''}
         oninput={(value) => onchange({ description: value || null })}
       />

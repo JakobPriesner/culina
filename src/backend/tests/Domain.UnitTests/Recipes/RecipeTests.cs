@@ -72,6 +72,73 @@ public class RecipeTests
     }
 
     [Fact]
+    public void Describe_ShouldRejectADescriptionOverTheLimit()
+    {
+        var recipe = ARecipe();
+
+        var result = recipe.Describe(
+            Details(prep: null, cook: null, description: new string('a', Recipe.MaxDescriptionLength + 1)),
+            Now);
+
+        result.ShouldBeFailure(RecipeErrors.InvalidDescription);
+    }
+
+    [Fact]
+    public void Describe_ShouldAcceptADescriptionAtTheLimit()
+    {
+        var recipe = ARecipe();
+
+        recipe.Describe(
+            Details(prep: null, cook: null, description: new string('a', Recipe.MaxDescriptionLength)),
+            Now).ShouldBeSuccess();
+    }
+
+    [Fact]
+    public void Describe_ShouldRejectMoreTagsThanTheLimit()
+    {
+        var recipe = ARecipe();
+        var tags = Enumerable.Range(0, Recipe.MaxTags + 1).Select(number => $"tag{number}").ToArray();
+
+        var result = recipe.Describe(Details(prep: null, cook: null, tags: tags), Now);
+
+        result.ShouldBeFailure(RecipeErrors.TooManyTags);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Describe_ShouldRejectABlankTag(string tag)
+    {
+        var recipe = ARecipe();
+
+        var result = recipe.Describe(Details(prep: null, cook: null, tags: ["pasta", tag]), Now);
+
+        result.ShouldBeFailure(RecipeErrors.InvalidTag);
+    }
+
+    [Fact]
+    public void Describe_ShouldRejectATagOverTheLimit()
+    {
+        var recipe = ARecipe();
+
+        var result = recipe.Describe(
+            Details(prep: null, cook: null, tags: [new string('a', Recipe.MaxTagLength + 1)]),
+            Now);
+
+        result.ShouldBeFailure(RecipeErrors.InvalidTag);
+    }
+
+    [Fact]
+    public void Describe_ShouldChangeNothing_WhenTheTagsAreRejected()
+    {
+        var recipe = ARecipe();
+
+        recipe.Describe(Details(prep: null, cook: null, tags: [""]), Now);
+
+        Assert.Empty(recipe.Tags);
+    }
+
+    [Fact]
     public void SetContents_ShouldAcceptAStepThatMentionsAnIngredientOfThisRecipe()
     {
         var recipe = ARecipe();
@@ -431,14 +498,18 @@ public class RecipeTests
             Language.En,
             Now);
 
-    private static RecipeDetails Details(int? prep, int? cook) => new(
+    private static RecipeDetails Details(
+        int? prep,
+        int? cook,
+        string? description = null,
+        IReadOnlyList<string>? tags = null) => new(
         RecipeTitle.Create("Bolognese").ShouldBeSuccess(),
-        Description: null,
+        description,
         Language.En,
         Yield.Default,
         prep,
         cook,
-        Tags: []);
+        tags ?? []);
 
     private static RecipeIngredient AnIngredient(string name, Guid? id = null) =>
         RecipeIngredient.Create(id, 0, Quantity.Unmeasured, name, null).ShouldBeSuccess();

@@ -233,6 +233,24 @@ public class SourceRecipeMappingTests
             details.Match(value => value.Tags, error => throw Failed(error.Code)));
     }
 
+    [Fact]
+    public void ToDetails_ShouldFitTheDescriptionAndTagsToWhatARecipeHolds_RatherThanRefuseTheRecipe()
+    {
+        var details = SourceRecipeMapping.ToDetails(
+            Recipe() with
+            {
+                Description = new string('a', 3000),
+                Tags = [new string('b', 100), .. Enumerable.Range(0, 40).Select(number => $"tag{number}")]
+            },
+            Domain.Shared.Language.En);
+
+        var fitted = details.Match(value => value, error => throw Failed(error.Code));
+
+        Assert.True(fitted.Description!.Length <= Domain.Recipes.Recipe.MaxDescriptionLength);
+        Assert.Equal(Domain.Recipes.Recipe.MaxTags, fitted.Tags.Count);
+        Assert.All(fitted.Tags, tag => Assert.True(tag.Length <= Domain.Recipes.Recipe.MaxTagLength));
+    }
+
     private static RecipeIngredient Single(
         Domain.Shared.Result<ImportedIngredients> ingredients) =>
         ingredients.Match(

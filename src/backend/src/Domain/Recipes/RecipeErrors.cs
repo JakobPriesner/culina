@@ -23,6 +23,24 @@ public static class RecipeErrors
         "A recipe must make more than nothing, and less than a thousand of it.",
         ErrorType.Validation);
 
+    /// <summary>The description is too long.</summary>
+    public static readonly Error InvalidDescription = new(
+        "recipes.invalid_description",
+        "A description may be at most 2000 characters.",
+        ErrorType.Validation);
+
+    /// <summary>The recipe has more tags than anyone could browse by.</summary>
+    public static readonly Error TooManyTags = new(
+        "recipes.too_many_tags",
+        "A recipe may have at most 25 tags.",
+        ErrorType.Validation);
+
+    /// <summary>A tag is blank or too long.</summary>
+    public static readonly Error InvalidTag = new(
+        "recipes.invalid_tag",
+        "A tag is a word or two, at most 40 characters.",
+        ErrorType.Validation);
+
     /// <summary>The recipe's own word for its yield is too long.</summary>
     public static readonly Error InvalidYieldLabel = new(
         "recipes.invalid_yield_label",

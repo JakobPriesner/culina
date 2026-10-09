@@ -11,6 +11,15 @@ public sealed class Recipe
     /// <summary>More steps than anyone could follow.</summary>
     public const int MaxSteps = 100;
 
+    /// <summary>The longest introduction a recipe may have, in characters.</summary>
+    public const int MaxDescriptionLength = 2000;
+
+    /// <summary>More tags than anyone could browse by.</summary>
+    public const int MaxTags = 25;
+
+    /// <summary>A tag is a word or two, not a sentence.</summary>
+    public const int MaxTagLength = 40;
+
     /// <summary>A week, in minutes: the longest a recipe may claim to take.</summary>
     public const int MaxMinutes = 10_080;
 
@@ -138,8 +147,25 @@ public sealed class Recipe
             return RecipeErrors.InvalidDuration;
         }
 
+        var description = string.IsNullOrWhiteSpace(details.Description) ? null : details.Description.Trim();
+
+        if (description is { Length: > MaxDescriptionLength })
+        {
+            return RecipeErrors.InvalidDescription;
+        }
+
+        if (details.Tags.Count > MaxTags)
+        {
+            return RecipeErrors.TooManyTags;
+        }
+
+        if (details.Tags.Any(tag => string.IsNullOrWhiteSpace(tag) || tag.Trim().Length > MaxTagLength))
+        {
+            return RecipeErrors.InvalidTag;
+        }
+
         Title = details.Title;
-        Description = string.IsNullOrWhiteSpace(details.Description) ? null : details.Description.Trim();
+        Description = description;
         Language = details.Language;
         Yield = details.Yield;
         PrepMinutes = details.PrepMinutes;

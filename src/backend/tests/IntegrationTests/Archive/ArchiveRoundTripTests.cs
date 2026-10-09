@@ -77,6 +77,28 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Restore_ShouldKeepTheRecipe_WhenItsDescriptionAndTagsExceedTodaysLimits()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+        var description = new string('a', 3000);
+        var tags = string.Join(",", Enumerable.Range(0, 30).Select(number => $"\"tag{number}\""));
+
+        var response = await UploadAsync(
+            client,
+            householdId,
+            $$"""{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{ "title": "Lemon orzo", "description": "{{description}}", "language": "de", "yieldAmount": 1, "yieldKind": "servings", "tags": [{{tags}}], "groups": [], "steps": [], "cooked": [] }] }""");
+
+        Assert.Equal(1, response.Json!.Value.GetProperty("restored").GetInt32());
+        var restored = await ReadTheRestoredOneAsync(client, householdId);
+
+        // Shortened, not dropped: Describe failing would have left the recipe in the wrong language.
+        Assert.Equal(2000, restored.GetProperty("description").GetString()!.Length);
+        Assert.Equal(25, restored.GetProperty("tags").GetArrayLength());
+        Assert.Equal("de", restored.GetProperty("language").GetString());
+    }
+
+    [Fact]
     public async Task Restore_ShouldRefuse_AnArchiveFromAVersionItDoesNotKnow()
     {
         using var client = await SignedInAsync();
