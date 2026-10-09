@@ -14,5 +14,8 @@
 </script>
 
 <Sheet {open} title={m['notes.title']()} closeLabel={m['picker.close']()} {onclose}>
-  <PersonalNotePanel {recipeId} variant="cook" />
+  <!-- Keyed so a pending autosave is flushed for the recipe it was typed on, not the next one. -->
+  {#key recipeId}
+    <PersonalNotePanel {recipeId} variant="cook" />
+  {/key}
 </Sheet>
