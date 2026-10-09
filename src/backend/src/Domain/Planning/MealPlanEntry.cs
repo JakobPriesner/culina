@@ -59,6 +59,8 @@ public sealed class MealPlanEntry
         MealSlot slot,
         int sortOrder)
     {
+        servings = Amounts.Round(servings);
+
         if (servings is <= 0 or > 1000)
         {
             return PlanningErrors.InvalidServings;

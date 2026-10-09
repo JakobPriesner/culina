@@ -25,8 +25,14 @@ internal static class RecipeContribution
         MealSlot? plannedSlot,
         IReadOnlyDictionary<string, ShoppingSection> overrides)
     {
-        // Exact decimal arithmetic, summed unrounded: rounding each recipe first would compound the
-        // error.
+        servings = Amounts.Round(servings);
+
+        if (servings is <= 0 or > 1000)
+        {
+            return PlanningErrors.InvalidServings;
+        }
+
+        // Exact decimal arithmetic; the amount is rounded once, to what the list stores.
         var factor = recipe.Yield.Amount > 0 ? servings / recipe.Yield.Amount : 1m;
 
         // `Bind` short-circuits: half a recipe on the list is worse than none.
@@ -36,7 +42,7 @@ internal static class RecipeContribution
                 Result.Success(),
                 (outcome, ingredient) => outcome.Bind(() => ItemName
                     .Create(ingredient.Name)
-                    .Bind(name => list.Add(
+                    .Bind(name => Scale(ingredient.Quantity, factor).Bind(quantity => list.Add(
                         name,
                         new ShoppingItemSource(
                             recipe.Id,
@@ -44,23 +50,27 @@ internal static class RecipeContribution
                             planEntryId,
                             plannedDate,
                             plannedSlot,
-                            Scale(ingredient.Quantity, factor)),
-                        AddShoppingItemCommandHandler.SectionFor(name, overrides)))
+                            quantity),
+                        AddShoppingItemCommandHandler.SectionFor(name, overrides))))
                     .Bind(_ => Result.Success())));
     }
 
     /// <summary>
     /// Multiplies an amount, leaving alone the ones that do not scale: a pinch is a gesture, and no
-    /// amount has nothing to multiply.
+    /// amount has nothing to multiply. An amount scaled below what can be stored is no measurable
+    /// amount any more, so it becomes one with none.
     /// </summary>
-    private static Quantity Scale(Quantity quantity, decimal factor)
+    private static Result<Quantity> Scale(Quantity quantity, decimal factor)
     {
         if (!quantity.Scales || quantity.Amount is not { } amount)
         {
             return quantity;
         }
 
-        return Quantity.Create(amount * factor, quantity.Unit)
-            .Match(scaled => scaled, _ => quantity);
+        var scaled = amount * factor;
+
+        return scaled < Amounts.Min
+            ? Quantity.Unmeasured
+            : Quantity.Create(scaled, quantity.Unit);
     }
 }

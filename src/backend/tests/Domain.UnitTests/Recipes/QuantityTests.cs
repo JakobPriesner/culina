@@ -27,6 +27,25 @@ public class QuantityTests
         result.ShouldBeFailure(RecipeErrors.InvalidQuantity);
     }
 
+    [Theory]
+    [InlineData(0.0004)]
+    [InlineData(0.0001)]
+    public void Create_ShouldFail_WhenTheAmountWouldStoreAsZero(double amount)
+    {
+        var result = Quantity.Create((decimal)amount, Unit.Gram);
+
+        result.ShouldBeFailure(RecipeErrors.InvalidQuantity);
+    }
+
+    [Fact]
+    public void Create_ShouldRoundToTheStoredPrecision_SoAnAcceptedAmountSurvivesARoundTrip()
+    {
+        var quantity = Quantity.Create(1.23456m, Unit.Gram).ShouldBeSuccess();
+
+        Assert.Equal(1.235m, quantity.Amount);
+        Assert.Equal(0.001m, Quantity.Create(0.0005m, Unit.Gram).ShouldBeSuccess().Amount);
+    }
+
     [Fact]
     public void Add_ShouldConvertWithinAFamily_WhenSummingGramsAndKilograms()
     {

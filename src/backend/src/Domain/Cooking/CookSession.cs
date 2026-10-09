@@ -80,12 +80,12 @@ public sealed class CookSession
         Guid householdId,
         decimal servings,
         DateTimeOffset now) =>
-        EnsureServings(servings).Map(() => new CookSession(
+        EnsureServings(Amounts.Round(servings)).Map(() => new CookSession(
             CulinaId.New(),
             recipeId,
             userId,
             householdId,
-            servings,
+            Amounts.Round(servings),
             currentStepIndex: 0,
             startedAt: now,
             lastActiveAt: now,
@@ -158,9 +158,9 @@ public sealed class CookSession
     public Result Rescale(decimal servings, DateTimeOffset now) =>
         !IsActive
             ? CookingErrors.SessionFinished
-            : EnsureServings(servings).Tap(() =>
+            : EnsureServings(Amounts.Round(servings)).Tap(() =>
             {
-                Servings = servings;
+                Servings = Amounts.Round(servings);
                 LastActiveAt = now;
                 Version += 1;
             });
