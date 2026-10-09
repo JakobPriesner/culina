@@ -69,6 +69,24 @@ describe('adoptSaved', () => {
     expect(recipe.groups[0]!.ingredients.map((one) => one.id)).toEqual(['a', 'b']);
   });
 
+  it('gives a new step the id the server assigned, leaving steps that have one', () => {
+    const added = { id: '', title: null, segments: [], uses: [], durationSeconds: null };
+    const draft = { ...opened, steps: [opened.steps[0]!, added] };
+    const saved = { ...opened, steps: [opened.steps[0]!, { ...added, id: 's-2' }] };
+
+    const { recipe, linked } = adoptSaved(draft, saved, 1);
+
+    expect(recipe.steps.map((one) => one.id)).toEqual(['s-1', 's-2']);
+    expect(linked).toBe(false);
+  });
+
+  it('does not give a new step an id another step in the draft already holds', () => {
+    const added = { id: '', title: null, segments: [], uses: [], durationSeconds: null };
+    const draft = { ...opened, steps: [added, opened.steps[0]!] };
+
+    expect(adoptSaved(draft, opened, 1).recipe.steps.map((one) => one.id)).toEqual(['', 's-1']);
+  });
+
   it('keeps steps taken while the save was in the air on top of the new version', () => {
     const draft = { ...opened, version: 3 };
     const saved = { ...opened, version: 2 };
