@@ -24,6 +24,7 @@
 
   const hasMore = $derived(related.hasMore(recipeId));
 
+  // The page asks as soon as it knows the id; load is idempotent, so this is for use without it.
   $effect(() => {
     if (recipeId) {
       void related.load(recipeId);

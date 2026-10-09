@@ -3,7 +3,9 @@
   import { Button, ErrorState } from '$ds';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
+  import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
+  import { notes } from '$features/cooking/stores/notes.svelte';
   import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import RecipeBackLink from '$features/recipes/detail/RecipeBackLink.svelte';
   import RecipeSheets, { type RecipeSheet } from '$features/recipes/detail/RecipeSheets.svelte';
@@ -13,6 +15,7 @@
   import InheritedNote from '$features/recipes/InheritedNote.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { related } from '$features/recipes/stores/related.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
   import { yieldFrom } from '$features/recipes/surface/yieldInUrl';
@@ -47,6 +50,23 @@
   $effect(() => {
     if (recipeId) {
       void recipes.load(recipeId);
+    }
+  });
+
+  // The note, the attempts and the similar shelf do not wait for the recipe: they belong to the id, and their
+  // components only render once the recipe has arrived.
+  $effect(() => {
+    if (recipeId) {
+      void notes.load(recipeId);
+      void cookLog.load(recipeId);
+    }
+  });
+
+  // Apart from the two above: `related.load` reads its answers, so this effect reruns when they land, and
+  // that must not read the note and the attempts again.
+  $effect(() => {
+    if (recipeId) {
+      void related.load(recipeId);
     }
   });
 
