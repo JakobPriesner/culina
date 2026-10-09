@@ -111,3 +111,27 @@ describe('recipes from another household', () => {
     expect(own).not.toHaveTextContent('From');
   });
 });
+
+describe('the photos of the list', () => {
+  it('ranks only the first two ahead of the rest', () => {
+    const photographed = ['r1', 'r2', 'r3', 'r4'].map((id) => ({
+      ...recipe(id),
+      imageId: `i-${id}`
+    }));
+    const view = renderWithProviders(RecipeGrid, { props: { recipes: photographed } });
+    const images = [...view.container.querySelectorAll('img')];
+
+    expect(images.map((img) => img.getAttribute('fetchpriority'))).toEqual([
+      'high',
+      'high',
+      null,
+      null
+    ]);
+    expect(images.map((img) => img.getAttribute('loading'))).toEqual([
+      'eager',
+      'eager',
+      'lazy',
+      'lazy'
+    ]);
+  });
+});

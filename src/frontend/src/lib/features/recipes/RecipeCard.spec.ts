@@ -132,4 +132,18 @@ describe('a recipe found by a search', () => {
 
     expect(marks()).toEqual([]);
   });
+
+  it('fetches its photo ahead of the rest only when it is a priority', () => {
+    const photo = recipe({ imageId: 'i1' });
+    const first = renderWithProviders(RecipeCard, { props: { recipe: photo, priority: true } });
+
+    expect(first.container.querySelector('img')).toHaveAttribute('fetchpriority', 'high');
+    expect(first.container.querySelector('img')).toHaveAttribute('loading', 'eager');
+    first.unmount();
+
+    const rest = renderWithProviders(RecipeCard, { props: { recipe: photo } });
+
+    expect(rest.container.querySelector('img')).toHaveAttribute('loading', 'lazy');
+    expect(rest.container.querySelector('img')).not.toHaveAttribute('fetchpriority');
+  });
 });

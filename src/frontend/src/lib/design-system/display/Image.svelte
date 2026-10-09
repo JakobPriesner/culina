@@ -11,6 +11,8 @@
     ratio?: number;
     /** `eager` only for the one image already on screen at first paint. */
     loading?: 'lazy' | 'eager';
+    /** `high` for the photo that is the first paint's largest element, so it is not queued behind its neighbours. */
+    fetchpriority?: 'high' | 'low';
     /** Candidate widths, so a phone does not download a desktop photo. */
     srcset?: string;
     sizes?: string;
@@ -23,6 +25,7 @@
     alt,
     ratio = 4 / 3,
     loading = 'lazy',
+    fetchpriority,
     srcset,
     sizes,
     rounded = true,
@@ -60,6 +63,7 @@
         {src}
         {alt}
         {loading}
+        {fetchpriority}
         {srcset}
         {sizes}
         decoding="async"
