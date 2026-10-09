@@ -122,3 +122,50 @@ describe('ticking lines quickly', () => {
     expect(shopping.items.map((item) => item.isChecked)).toEqual([true, true]);
   });
 });
+
+describe('answers that arrive after a household switch', () => {
+  const answers: Record<string, (response: Response) => void> = {};
+
+  const stubSlowReads = () =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (input: Request) =>
+          new Promise<Response>((resolve) => {
+            answers[input.url.includes('h1') ? 'h1' : 'h2'] = resolve;
+          })
+      )
+    );
+
+  it('keeps the list of the household asked for last when the first answers last', async () => {
+    stubSlowReads();
+
+    const first = shopping.load('h1');
+    const second = shopping.load('h2');
+
+    await vi.waitFor(() => expect(answers.h2).toBeDefined());
+    await vi.waitFor(() => expect(answers.h1).toBeDefined());
+    answers.h2!(json({ items: [{ ...milk, itemId: 'b', name: 'Brot' }] }));
+    await second;
+    answers.h1!(json({ items: [milk] }));
+    await first;
+
+    expect(shopping.items.map((item) => item.name)).toEqual(['Brot']);
+  });
+
+  it('does not show a list that a write for the household left came back with', async () => {
+    stubSlowReads();
+
+    const adding = shopping.add('h1', 'Milch');
+    const loading = shopping.load('h2');
+
+    await vi.waitFor(() => expect(answers.h2).toBeDefined());
+    await vi.waitFor(() => expect(answers.h1).toBeDefined());
+    answers.h2!(json({ items: [] }));
+    await loading;
+    answers.h1!(json({ items: [milk] }));
+    await adding;
+
+    expect(shopping.items).toEqual([]);
+  });
+});

@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore, type LoadStatus } from '$shell/stores';
+import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 /** Everyone in a household. Read-only: joining is an invitation and leaving has consequences for a shared library. */
 export interface Member {
@@ -16,6 +16,7 @@ class Members {
 
   /** Whose items these are; plain, not $state: read before the first await of a method an effect calls, so a tracked read would re-trigger it. */
   #householdId: string | null = null;
+  #reads = new LatestRead();
 
   get items(): readonly Member[] {
     return this.#items;
@@ -36,6 +37,8 @@ class Members {
       this.#items = [];
     }
 
+    const isLatest = this.#reads.start();
+
     this.#status = 'loading';
 
     const result = await request(() =>
@@ -43,6 +46,11 @@ class Members {
         params: { path: { householdId } }
       })
     );
+
+    // Another household was asked for since; its answer is the one to show.
+    if (!isLatest()) {
+      return;
+    }
 
     if (result.ok) {
       // Longest-standing first: the order a household grew in, stable under the reader.
@@ -56,6 +64,7 @@ class Members {
   }
 
   reset(): void {
+    this.#reads.cancel();
     this.#householdId = null;
     this.#items = [];
     this.#status = 'idle';
