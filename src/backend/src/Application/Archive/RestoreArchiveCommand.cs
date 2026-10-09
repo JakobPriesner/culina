@@ -150,12 +150,12 @@ internal sealed class RestoreArchiveCommandHandler(
                 recipe.Describe(
                     new RecipeDetails(
                         named,
-                        entry.Description,
+                        RecipeFit.Description(entry.Description),
                         spoken,
                         yields,
                         entry.PrepMinutes,
                         entry.CookMinutes,
-                        entry.Tags ?? []),
+                        RecipeFit.Tags(entry.Tags)),
                     now);
 
                 recipe.SetContents(built, BuildSteps(entry, built), now);

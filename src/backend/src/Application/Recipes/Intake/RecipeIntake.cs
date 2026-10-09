@@ -209,7 +209,7 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
         return RecipeTitle.Create(draft.Title).Bind(title => language.Bind(code =>
         {
             var recipe = Recipe.Create(work.HouseholdId, title, work.UserId, code, time.GetUtcNow());
-            var details = new RecipeDraft(title.ToString(), draft.Description, work.Material.Language, draft.YieldAmount ?? 1, "servings", draft.YieldLabel, draft.PrepMinutes, draft.CookMinutes, draft.Tags);
+            var details = new RecipeDraft(title.ToString(), RecipeFit.Description(draft.Description), work.Material.Language, draft.YieldAmount ?? 1, "servings", draft.YieldLabel, draft.PrepMinutes, draft.CookMinutes, RecipeFit.Tags(draft.Tags));
             var groups = draft.Groups.Select(g => new IngredientGroupContract
             {
                 Name = g.Name,

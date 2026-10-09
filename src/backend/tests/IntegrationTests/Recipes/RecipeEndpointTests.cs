@@ -536,6 +536,67 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
     }
 
+    [Fact]
+    public async Task Update_ShouldNameTheLimit_WhenTheDescriptionIsTooLong()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var saved = await PutAsync(
+            client, recipe.Id, recipe.ETag, WithTagsAndDescription([], new string('x', 2001)));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
+        Assert.Equal("recipes.invalid_description", saved.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Update_ShouldNameTheLimit_WhenThereAreTooManyTags()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        var tags = Enumerable.Range(0, 26).Select(number => $"tag{number}").ToArray();
+
+        // Act
+        var saved = await PutAsync(client, recipe.Id, recipe.ETag, WithTagsAndDescription(tags, null));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, saved.StatusCode);
+        Assert.Equal("recipes.too_many_tags", saved.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Update_ShouldNameTheLimit_WhenATagIsBlankOrTooLong()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+
+        // Act
+        var blank = await PutAsync(client, recipe.Id, recipe.ETag, WithTagsAndDescription([" "], null));
+        var tooLong = await PutAsync(
+            client, recipe.Id, recipe.ETag, WithTagsAndDescription([new string('x', 41)], null));
+
+        // Assert
+        Assert.Equal("recipes.invalid_tag", blank.Json!.Value.GetProperty("code").GetString());
+        Assert.Equal("recipes.invalid_tag", tooLong.Json!.Value.GetProperty("code").GetString());
+    }
+
+    private static object WithTagsAndDescription(string[] tags, string? description) => new
+    {
+        title = "Lemon cake",
+        description,
+        language = "en",
+        yieldAmount = 1,
+        yieldKind = "servings",
+        groups = new[] { new { name = (string?)null, ingredients = new object[] { new { name = "flour" } } } },
+        steps = Array.Empty<object>(),
+        tags
+    };
+
     private static object InItsOwnWords(string? yieldLabel = "Cake", string? stepTitle = "Prepare the base") => new
     {
         title = "Lemon cake",

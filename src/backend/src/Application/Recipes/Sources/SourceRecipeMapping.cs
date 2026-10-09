@@ -12,10 +12,6 @@ namespace Application.Recipes.Sources;
 /// </remarks>
 internal static class SourceRecipeMapping
 {
-    private const int MaxTags = 25;
-
-    private const int MaxDescriptionLength = 4000;
-
     /// <summary>Everything about a recipe except its ingredients and steps.</summary>
     /// <param name="source">The recipe over there.</param>
     /// <param name="language">The language of the person bringing it over.</param>
@@ -24,17 +20,17 @@ internal static class SourceRecipeMapping
         ArgumentNullException.ThrowIfNull(source);
 
         // The one hard requirement: a recipe with no name cannot be shortened into one.
-        return RecipeTitle.Create(Shorten(source.Title, RecipeTitle.MaxLength))
+        return RecipeTitle.Create(RecipeFit.Shorten(source.Title, RecipeTitle.MaxLength))
             .Map(title => new RecipeDetails(
                 title,
-                Shorten(source.Description, MaxDescriptionLength),
+                RecipeFit.Description(source.Description),
                 // The importer's language; guessing from the words would be silently wrong for some
                 // recipes.
                 language,
                 ToYield(source.Servings),
                 Minutes(source.PrepMinutes),
                 Minutes(source.CookMinutes),
-                ToTags(source.Tags)));
+                RecipeFit.Tags(source.Tags)));
     }
 
     /// <summary>The ingredients, grouped as they were grouped over there.</summary>
@@ -78,7 +74,7 @@ internal static class SourceRecipeMapping
 
             var made = IngredientGroup.Create(
                 id: null,
-                Shorten(group.Name, IngredientGroup.MaxNameLength),
+                RecipeFit.Shorten(group.Name, IngredientGroup.MaxNameLength),
                 groups.Count,
                 ingredients);
 
@@ -222,7 +218,7 @@ internal static class SourceRecipeMapping
             kept.RemoveAt(kept.Count - 1);
 
             if (segment is TextSegment text
-                && Shorten(text.Value, limit - StepText.Serialise(kept).Length) is { } cut)
+                && RecipeFit.Shorten(text.Value, limit - StepText.Serialise(kept).Length) is { } cut)
             {
                 kept.Add(new TextSegment(cut));
             }
@@ -255,8 +251,8 @@ internal static class SourceRecipeMapping
             id: null,
             sortOrder,
             quantity,
-            Shorten(line.Name, RecipeIngredient.MaxNameLength),
-            Shorten(note, RecipeIngredient.MaxNoteLength));
+            RecipeFit.Shorten(line.Name, RecipeIngredient.MaxNameLength),
+            RecipeFit.Shorten(note, RecipeIngredient.MaxNoteLength));
     }
 
     private static Yield ToYield(decimal? servings) =>
@@ -266,16 +262,6 @@ internal static class SourceRecipeMapping
             // more common.
             : Yield.Create(servings.Value, YieldKind.Servings).Match(value => value, _ => Yield.Default);
 
-    private static IReadOnlyList<string> ToTags(IReadOnlyList<string> tags) =>
-    [
-        .. tags
-            .Select(tag => tag?.Trim())
-            .Where(tag => !string.IsNullOrEmpty(tag))
-            .Select(tag => tag!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(MaxTags)
-    ];
-
     private static int? Minutes(int? value) =>
         value is null or <= 0 or > Recipe.MaxMinutes ? null : value;
 
@@ -284,29 +270,6 @@ internal static class SourceRecipeMapping
 
     private static decimal? Amount(decimal? value) =>
         value is null or <= 0 or > Quantity.MaxAmount ? null : value;
-
-    /// <summary>
-    /// Shortens rather than refuses, cutting at a word boundary near the end; null for nothing.
-    /// </summary>
-    private static string? Shorten(string? value, int limit)
-    {
-        var trimmed = value?.Trim();
-
-        if (string.IsNullOrEmpty(trimmed))
-        {
-            return null;
-        }
-
-        if (trimmed.Length <= limit)
-        {
-            return trimmed;
-        }
-
-        var cut = trimmed[..limit];
-        var lastSpace = cut.LastIndexOf(' ');
-
-        return (lastSpace > limit - 20 ? cut[..lastSpace] : cut).TrimEnd();
-    }
 
     private static string? Join(string? first, string? second)
     {
