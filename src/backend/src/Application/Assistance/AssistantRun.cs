@@ -305,12 +305,18 @@ public sealed partial class AssistantRun(
 
     private Task SettleAsync(Reserved ready, ModelUsage usage, string outcome)
     {
-        var cost = prices.Of(
-            ready.Chosen.Kind,
-            ready.Chosen.Connected.Model,
-            usage.InputTokens,
-            usage.OutputTokens,
-            usage.Pictures);
+        // A failed or abandoned call that reported no usage may still have been billed: its cost is
+        // unknown (null), so the reservation's estimate keeps counting rather than a false zero.
+        // A provider that needs no key (a local Ollama) bills nothing either way.
+        var cost = outcome != "ok" && usage == default && ready.Chosen.Kind.NeedsApiKey
+            && !RefusedBeforeGenerating(outcome)
+            ? null
+            : prices.Of(
+                ready.Chosen.Kind,
+                ready.Chosen.Connected.Model,
+                usage.InputTokens,
+                usage.OutputTokens,
+                usage.Pictures);
         var elapsed = (long)time.GetElapsedTime(ready.StartedAt).TotalMilliseconds;
 
         Settled(
@@ -359,6 +365,14 @@ public sealed partial class AssistantRun(
         int outputTokens,
         int pictures,
         decimal? cost);
+
+    // Refusals that come back before the model generates anything, so they cost nothing; counting
+    // their estimate would let a burst of 429s lock the budget.
+    private static bool RefusedBeforeGenerating(string outcome) =>
+        outcome == AssistanceErrors.Throttled.Code
+        || outcome == AssistanceErrors.Rejected.Code
+        || outcome == AssistanceErrors.ModelMissing.Code
+        || outcome == AssistanceErrors.Refused.Code;
 
     // The ledger keeps the precise code; a refused key is the admin's to fix, so users see "unavailable".
     private static Error Leaving(Error error) =>

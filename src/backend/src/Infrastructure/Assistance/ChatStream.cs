@@ -60,7 +60,7 @@ internal static class ChatStream
 
                     AssistanceLogs.CallFailed(logger, kind.Code, failure.Code, thrown);
 
-                    yield return Stopped(answer, failure);
+                    yield return Stopped(answer, usage, failure);
 
                     yield break;
                 }
@@ -89,7 +89,7 @@ internal static class ChatStream
         {
             AssistanceLogs.EmptyAnswer(logger, kind.Code, finishReason);
 
-            yield return Stopped(answer, AssistanceErrors.UnusableAnswer);
+            yield return Stopped(answer, usage, AssistanceErrors.UnusableAnswer);
 
             yield break;
         }
@@ -97,11 +97,12 @@ internal static class ChatStream
         yield return new Composing { Recipe = written, Finished = true, Usage = usage };
     }
 
-    /// <summary>The last part of a stream that ended badly. Keeps the recipe so far (it was paid for); no usage.</summary>
-    private static Composing Stopped(PartialRecipe answer, Error failure) => new()
+    /// <summary>The last part of a stream that ended badly. Keeps the recipe and the usage counted so far (both were paid for).</summary>
+    private static Composing Stopped(PartialRecipe answer, ModelUsage usage, Error failure) => new()
     {
         Recipe = answer.SoFar(),
         Finished = true,
+        Usage = usage,
         Failure = failure
     };
 
