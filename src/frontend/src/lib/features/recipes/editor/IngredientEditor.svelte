@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+
   import { Button } from '$ds';
 
   import { m } from '$shell/i18n';
@@ -25,15 +27,39 @@
     onchange: (ingredients: Ingredient[]) => void;
     householdId: string;
     language: string;
+    /** An ingredient to open and put the cursor in, when the page was reached from a link to it. */
+    focusId?: string | null;
   }
 
-  let { ingredients, steps, onchange, householdId, language }: Props = $props();
+  let { ingredients, steps, onchange, householdId, language, focusId = null }: Props = $props();
 
   const usage = $derived(usageOf(steps));
 
   let adding = $state<IngredientDraft>(emptyDraft);
   let editing = $state<number | null>(null);
   let editingDraft = $state<IngredientDraft>(emptyDraft);
+
+  // Once per link: opening it must not pull the cursor back after the reader has moved on.
+  let focused: string | null = null;
+
+  $effect(() => {
+    const index = focusId ? ingredients.findIndex((one) => one.id === focusId) : -1;
+
+    if (index < 0 || focused === focusId) {
+      return;
+    }
+
+    focused = focusId;
+    editing = index;
+    editingDraft = draftOf(ingredients[index]!);
+
+    void tick().then(() => {
+      const field = document.getElementById(`ingredient-${index}-name`);
+
+      field?.scrollIntoView({ block: 'center' });
+      field?.focus({ preventScroll: true });
+    });
+  });
 
   /**
    * Keeps a unit once it has settled, not per keystroke, or typing "Schuss" would save S, Sc,

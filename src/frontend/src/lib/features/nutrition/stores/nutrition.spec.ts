@@ -132,17 +132,30 @@ describe('a correction', () => {
   const line = (ingredientId: string, name: string) => ({
     ingredientId,
     status: 'counted',
-    food: { code: 'M110100', nameDe: 'Butter', nameEn: 'Butter' },
+    food: {
+      code: 'M110100',
+      nameDe: 'Butter',
+      nameEn: 'Butter',
+      labelDe: 'Butter',
+      labelEn: 'Butter'
+    },
     grams: 100,
     via: 'mass',
     corrected: false,
+    canRaiseEnergy: false,
     energyKcal: 700,
     name
   });
 
   const withLines = (lines: unknown[]) => ({ ...answer(700), ingredients: lines });
 
-  const sweet = { code: 'M111111', nameDe: 'Süßrahmbutter', nameEn: 'Sweet cream butter' };
+  const sweet = {
+    code: 'M111111',
+    nameDe: 'Süßrahmbutter',
+    nameEn: 'Sweet cream butter',
+    labelDe: 'Süßrahmbutter',
+    labelEn: 'Sweet cream butter'
+  };
 
   it('changes the rows at once, tells the server by the name as written, and reads the answer again', async () => {
     const calls: { method: string; url: string; body: string }[] = [];

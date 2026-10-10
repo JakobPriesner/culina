@@ -81,7 +81,13 @@ const partial = (energyKcal = 520.9) => ({
     {
       ingredientId: butter,
       status: 'counted',
-      food: { code: 'M110100', nameDe: 'Butter', nameEn: 'Butter' },
+      food: {
+        code: 'M110100',
+        nameDe: 'Butter',
+        nameEn: 'Butter',
+        labelDe: 'Butter',
+        labelEn: 'Butter'
+      },
       grams: 200,
       via: 'mass',
       corrected: false,
@@ -90,18 +96,36 @@ const partial = (energyKcal = 520.9) => ({
     {
       ingredientId: onion,
       status: 'counted',
-      food: { code: 'G410100', nameDe: 'Zwiebel, roh', nameEn: 'Onion, raw' },
+      food: {
+        code: 'G410100',
+        nameDe: 'Zwiebel, roh',
+        nameEn: 'Onion, raw',
+        labelDe: 'Zwiebel, roh',
+        labelEn: 'Onion, raw'
+      },
       grams: 27.4,
       via: 'density',
       corrected: false,
       energyKcal: 5.6
     },
-    { ingredientId: salt, status: 'noAmount', corrected: false },
-    { ingredientId: oil, status: 'amountNotInGrams', corrected: false },
+    { ingredientId: salt, status: 'noAmount', corrected: false, canRaiseEnergy: true },
+    {
+      ingredientId: oil,
+      status: 'amountNotInGrams',
+      reason: 'spoonOfSolid',
+      corrected: false,
+      canRaiseEnergy: true
+    },
     {
       ingredientId: egg,
       status: 'counted',
-      food: { code: 'E110000', nameDe: 'Hühnerei', nameEn: 'Hen egg' },
+      food: {
+        code: 'E110000',
+        nameDe: 'Hühnerei',
+        nameEn: 'Hen egg',
+        labelDe: 'Hühnerei',
+        labelEn: 'Hen egg'
+      },
       grams: 55,
       via: 'eggSize',
       corrected: false,
@@ -122,7 +146,7 @@ const complete = () => ({
       : {
           ...line,
           status: 'counted',
-          food: { code: 'X', nameDe: 'Salz', nameEn: 'Salt' },
+          food: { code: 'X', nameDe: 'Salz', nameEn: 'Salt', labelDe: 'Salz', labelEn: 'Salt' },
           grams: 1,
           via: 'mass',
           energyKcal: 0
@@ -204,7 +228,7 @@ describe('the closed line', () => {
 
     const summary = await headline();
 
-    expect(summary).toHaveTextContent('at least 520 kcal per serving · 3 of 5 ingredients');
+    expect(summary).toHaveTextContent('at least 520 kcal per serving · without salt and olive oil');
     expect(summary).not.toHaveTextContent('≥');
   });
 
@@ -233,7 +257,7 @@ describe('the closed line', () => {
     const summary = await headline();
 
     expect(summary).toHaveTextContent('Nährwerte');
-    expect(summary).toHaveTextContent('mind. 520 kcal pro Portion · 3 von 5 Zutaten');
+    expect(summary).toHaveTextContent('mind. 520 kcal pro Portion · ohne salt und olive oil');
 
     await userEvent.click(summary);
 
@@ -284,7 +308,7 @@ describe('opened', () => {
     show();
     await userEvent.click(await headline());
 
-    const counted = screen.getByRole('heading', { name: 'Counted' })
+    const counted = screen.getByRole('heading', { name: 'Counted (3)' })
       .nextElementSibling as HTMLElement;
     const lines = within(counted).getAllByRole('listitem');
 
@@ -296,7 +320,7 @@ describe('opened', () => {
     expect(lines[1]).toHaveTextContent('as Onion, raw · ≈ 27 g · by density');
     expect(lines[2]).toHaveTextContent('as Hen egg · ≈ 55 g · egg size M');
 
-    const not = screen.getByRole('heading', { name: 'Not counted' })
+    const not = screen.getByRole('heading', { name: 'Not counted (2)' })
       .nextElementSibling as HTMLElement;
     const left = within(not).getAllByRole('listitem');
 
@@ -304,7 +328,7 @@ describe('opened', () => {
     expect(left[0]).toHaveTextContent('salt');
     expect(left[0]).toHaveTextContent('no amount');
     expect(left[1]).toHaveTextContent('olive oil');
-    expect(left[1]).toHaveTextContent('amount not in grams');
+    expect(left[1]).toHaveTextContent('spoonful of a solid – too imprecise');
     expect(
       screen.getByText(/missing from the sum, so the real values are higher/)
     ).toBeInTheDocument();
@@ -316,7 +340,7 @@ describe('opened', () => {
     await userEvent.click(await headline());
 
     expect(screen.queryByText(/missing from the sum/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Not counted' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Not counted (2)' })).not.toBeInTheDocument();
   });
 
   it("names the other group in the reader's language and uses the household's excluded word", async () => {
@@ -338,7 +362,7 @@ describe('opened', () => {
     await userEvent.click(await headline());
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.getAllByText('not in the table')).toHaveLength(5);
+    expect(screen.getAllByText('not in the food table')).toHaveLength(5);
   });
 
   it('credits the table, linking its source', async () => {
@@ -379,7 +403,7 @@ describe('servings', () => {
     show(4);
     await userEvent.click(await headline());
 
-    const counted = screen.getByRole('heading', { name: 'Counted' })
+    const counted = screen.getByRole('heading', { name: 'Counted (3)' })
       .nextElementSibling as HTMLElement;
     const lines = within(counted).getAllByRole('listitem');
 
@@ -449,5 +473,287 @@ describe('before and when it fails', () => {
 
     expect(new URL(request[0].url).pathname).toBe('/api/v1/recipes/r1/nutrition');
     expect(new URL(request[0].url).searchParams.get('householdId')).toBe('h1');
+  });
+});
+
+/** Which lines could still raise the energy, by ingredient. */
+const flagged = (answer: ReturnType<typeof partial>, ...ids: string[]) => ({
+  ...answer,
+  ingredients: answer.ingredients.map((line) => ({
+    ...line,
+    canRaiseEnergy: ids.includes(line.ingredientId)
+  }))
+});
+
+const withLine = (answer: ReturnType<typeof partial>, id: string, change: object) => ({
+  ...answer,
+  ingredients: answer.ingredients.map((line) =>
+    line.ingredientId === id ? { ...line, ...change } : line
+  )
+});
+
+describe('the headline names what is missing', () => {
+  it('names one line', async () => {
+    serverAnswers(flagged(partial(), salt));
+    show();
+
+    expect(await headline()).toHaveTextContent('at least 520 kcal per serving · without salt');
+  });
+
+  it('names two lines in recipe order, joined the way the language joins', async () => {
+    serverAnswers(flagged(partial(), oil, onion));
+    show();
+
+    expect(await headline()).toHaveTextContent('· without onion and olive oil');
+  });
+
+  it('names two and counts the rest', async () => {
+    serverAnswers(flagged(partial(), onion, salt, oil));
+    show();
+
+    expect(await headline()).toHaveTextContent('· without onion, salt and 1 more');
+  });
+
+  it('speaks German', async () => {
+    preferences.setLocale('de');
+    serverAnswers(flagged(partial(), onion, salt, oil, egg));
+    show();
+
+    expect(await headline()).toHaveTextContent(
+      'mind. 520 kcal pro Portion · ohne onion, salt und 2 weitere'
+    );
+  });
+
+  it('names nothing when the energy is exact, however many lines were left out', async () => {
+    serverAnswers({ ...flagged(partial()), values: values(520.4, false) });
+    show();
+
+    const summary = await headline();
+
+    expect(summary).toHaveTextContent('520 kcal per serving');
+    expect(summary).not.toHaveTextContent('without');
+    expect(summary).not.toHaveTextContent('at least');
+    expect(summary).not.toHaveTextContent('ingredients');
+  });
+});
+
+describe('a recipe that makes one portion', () => {
+  it('says whole recipe, and offers to set the servings', async () => {
+    serverAnswers({ ...complete(), yield: 1 });
+    show();
+
+    const summary = await headline();
+
+    expect(summary).toHaveTextContent('520 kcal for the whole recipe');
+    expect(summary).not.toHaveTextContent('per serving');
+
+    await userEvent.click(summary);
+
+    expect(screen.getByRole('columnheader', { name: 'whole recipe' })).toBeInTheDocument();
+    expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set servings' })).toHaveAttribute(
+      'href',
+      '/recipes/r1/edit#yield'
+    );
+  });
+
+  it('does not say it for pieces, or for a recipe of several servings', async () => {
+    serverAnswers({ ...complete(), per: 'piece', yield: 1 });
+    show();
+    await userEvent.click(await headline());
+
+    expect(screen.queryByText(/whole recipe/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Set servings' })).not.toBeInTheDocument();
+  });
+});
+
+describe('an implausible amount', () => {
+  const milk = () =>
+    withLine(partial(), oil, { status: 'implausible', grams: 1800000, via: 'density' });
+
+  it('is hinted at in the closed line, and sits with what was not counted', async () => {
+    serverAnswers(milk());
+    show();
+
+    const summary = await headline();
+
+    expect(summary).toHaveTextContent(/Is this amount right\? .*olive oil/);
+
+    await userEvent.click(summary);
+
+    const not = screen.getByRole('heading', { name: /Not counted/ })
+      .nextElementSibling as HTMLElement;
+
+    expect(not).toHaveTextContent('amount looks wrong, not counted');
+  });
+
+  it('is not also named among what is missing', async () => {
+    serverAnswers(flagged(milk(), salt, oil));
+    show();
+
+    const summary = await headline();
+
+    expect(summary).toHaveTextContent('· without salt · Is this amount right?');
+    expect(summary).not.toHaveTextContent('olive oil ·');
+    expect(summary).not.toHaveTextContent('and 1 more');
+  });
+
+  it('is a calm notice at the top of the open panel, linking to that line in the editor', async () => {
+    serverAnswers(milk());
+    show();
+    await userEvent.click(await headline());
+
+    const link = screen.getByRole('link', { name: 'Fix in the recipe' });
+
+    expect(link).toHaveAttribute('href', `/recipes/r1/edit#ingredient-${oil}`);
+    expect(link.closest('li')).toHaveTextContent(/olive oil looks unusual and isn't counted\./);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('is absent when every amount is believable', async () => {
+    serverAnswers(partial());
+    show();
+    await userEvent.click(await headline());
+
+    expect(screen.queryByText(/Is this amount right/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Fix in the recipe' })).not.toBeInTheDocument();
+  });
+});
+
+describe('why a line is not counted', () => {
+  it.each([
+    [
+      'spoonOfSolid',
+      'spoonful of a solid – too imprecise',
+      'Löffel einer festen Zutat – zu ungenau'
+    ],
+    [
+      'volumeOfSolid',
+      'volume of a solid – too imprecise',
+      'Volumen einer festen Zutat – zu ungenau'
+    ],
+    ['count', 'a count, not a weight', 'Stückzahl, kein Gewicht'],
+    ['householdUnit', 'own unit, not a weight', 'eigene Einheit, kein Gewicht']
+  ])('says %s in both languages', async (reason, english, german) => {
+    for (const [locale, words] of [
+      ['en', english],
+      ['de', german]
+    ] as const) {
+      preferences.setLocale(locale);
+      serverAnswers(withLine(partial(), oil, { reason }));
+
+      const view = show();
+
+      await userEvent.click(await headline());
+      expect(screen.getByText(words)).toBeInTheDocument();
+
+      view.unmount();
+      nutrition.reset();
+    }
+  });
+
+  it('says the other reasons too', async () => {
+    serverAnswers({
+      ...partial(),
+      ingredients: [
+        { ingredientId: butter, status: 'unknownFood', corrected: false, canRaiseEnergy: true },
+        { ingredientId: onion, status: 'excluded', corrected: true, canRaiseEnergy: false },
+        { ingredientId: salt, status: 'noAmount', corrected: false, canRaiseEnergy: true },
+        {
+          ingredientId: oil,
+          status: 'counted',
+          food: { code: 'F', nameDe: 'Öl', nameEn: 'Oil', labelDe: 'Öl', labelEn: 'Oil' },
+          grams: 10,
+          via: 'mass',
+          corrected: false,
+          canRaiseEnergy: false,
+          energyKcal: 90
+        }
+      ]
+    });
+    show();
+    await userEvent.click(await headline());
+
+    expect(screen.getByText('not in the food table')).toBeInTheDocument();
+    expect(screen.getByText('excluded by your household')).toBeInTheDocument();
+    expect(screen.getByText('no amount')).toBeInTheDocument();
+  });
+});
+
+describe('a bound that says nothing', () => {
+  it('is a dash for nothing known, read as "not known"', async () => {
+    serverAnswers({
+      ...partial(),
+      values: {
+        ...values(520.9, true),
+        fat: value(0, true),
+        salt: value(0, true),
+        sugars: value(0.2, true)
+      }
+    });
+    show();
+    await userEvent.click(await headline());
+
+    const cell = (name: string) =>
+      screen.getByRole('rowheader', { name }).closest('tr')!.querySelector('td')!;
+
+    expect(cell('Fat')).toHaveTextContent(/^–\s*not known$/);
+    expect(cell('Salt')).toHaveTextContent(/^–\s*not known$/);
+    expect(cell('Fat').querySelector('[aria-hidden="true"]')).toHaveTextContent('–');
+    expect(cell('Protein')).toHaveTextContent('at least 9.2 g');
+  });
+
+  it('is still a zero when the value is exact', async () => {
+    serverAnswers({ ...complete(), values: { ...values(520.4, false), fat: value(0, false) } });
+    show();
+    await userEvent.click(await headline());
+
+    expect(screen.getByRole('rowheader', { name: 'Fat' }).closest('tr')).toHaveTextContent(/0\s*g/);
+    expect(screen.queryByText('not known')).not.toBeInTheDocument();
+  });
+});
+
+describe('friendly names', () => {
+  const mince = {
+    code: 'F1',
+    nameDe: 'Rind/Schwein, Hackfleisch gemischt, roh',
+    nameEn: 'Beef/pork, mince mixed, raw',
+    labelDe: 'gemischtes Hackfleisch',
+    labelEn: 'mixed mince'
+  };
+
+  const minced = () =>
+    withLine(partial(), butter, { food: mince, grams: 200, via: 'mass', energyKcal: 372 });
+
+  it('counts as the label, with the table name quietly under it', async () => {
+    serverAnswers(minced());
+    show();
+    await userEvent.click(await headline());
+
+    const row = screen.getAllByRole('listitem')[0]!;
+
+    expect(row).toHaveTextContent('as mixed mince');
+    expect(row).toHaveTextContent('BLS: Beef/pork, mince mixed, raw');
+    expect(within(row).getByText(/BLS:/)).toBeVisible();
+  });
+
+  it('follows the reader’s language', async () => {
+    preferences.setLocale('de');
+    serverAnswers(minced());
+    show();
+    await userEvent.click(await headline());
+
+    const row = screen.getAllByRole('listitem')[0]!;
+
+    expect(row).toHaveTextContent('als gemischtes Hackfleisch');
+    expect(row).toHaveTextContent('BLS: Rind/Schwein, Hackfleisch gemischt, roh');
+  });
+
+  it('does not repeat the table name when the label is the same words', async () => {
+    serverAnswers(partial());
+    show();
+    await userEvent.click(await headline());
+
+    expect(screen.queryByText(/BLS:/)).not.toBeInTheDocument();
   });
 });

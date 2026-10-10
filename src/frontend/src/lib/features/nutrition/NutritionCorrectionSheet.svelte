@@ -8,7 +8,7 @@
 
   import { roundForLabel } from './rounding';
   import { searchFoods } from './stores/foods';
-  import type { FoodHit, NutritionLine } from './types';
+  import type { FoodHit, NutritionFood, NutritionLine } from './types';
 
   /**
    * What an ingredient name really is, answered in one tap, like the shopping list's "move to section":
@@ -87,6 +87,13 @@
   const foodName = (food: { nameDe: string; nameEn: string }) =>
     preferences.locale === 'de' ? food.nameDe : food.nameEn;
 
+  const foodLabel = (food: NutritionFood) =>
+    preferences.locale === 'de' ? food.labelDe : food.labelEn;
+
+  /** The table's name under the friendlier one; nothing when they are the same words. */
+  const bls = (food: NutritionFood) =>
+    foodName(food) === foodLabel(food) ? null : m['nutrition.bls']({ name: foodName(food) });
+
   const excluded = $derived(line?.status === 'excluded');
   const current = $derived(line?.food ?? null);
   const corrected = $derived(line?.corrected ?? false);
@@ -133,7 +140,8 @@
             {@render mark(true)}
             <span class="words">
               {#if current}
-                <span class="name">{foodName(current)}</span>
+                <span class="name">{foodLabel(current)}</span>
+                {#if bls(current)}<span class="quiet">{bls(current)}</span>{/if}
                 <span class="quiet">
                   {corrected ? m['nutrition.correct.yours']() : m['nutrition.correct.default']()}
                 </span>

@@ -1,13 +1,22 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
 
-  import { Button, Disclosure } from '$ds';
+  import { resolve } from '$app/paths';
+  import { Button, Disclosure, Icon } from '$ds';
   import { createScaling } from '$features/recipes/surface/scaled.svelte';
   import type { Recipe } from '$features/recipes/types';
-  import { formatNumber, m } from '$shell/i18n';
+  import { m } from '$shell/i18n';
   import { createLoadingState } from '$shell/loadingState.svelte';
 
-  import { labelNumber, withBound } from './format';
+  import {
+    amountAndName,
+    energyFigure,
+    implausibleLines,
+    isWholeRecipe,
+    missingNames,
+    perWords,
+    withoutWords
+  } from './headline';
   import NutritionBreakdown from './NutritionBreakdown.svelte';
   import NutritionLabel from './NutritionLabel.svelte';
   import NutritionSkeleton from './NutritionSkeleton.svelte';
@@ -25,9 +34,11 @@
     servings: number;
     /** Whose corrections count; null before a household is known. */
     householdId: string | null;
+    /** Whether the working out is open; the page opens it from the recipe's meta line. */
+    open?: boolean;
   }
 
-  let { recipe, servings, householdId }: Props = $props();
+  let { recipe, servings, householdId, open = $bindable(false) }: Props = $props();
 
   const scaling = createScaling(
     () => recipe,
@@ -53,16 +64,21 @@
     untrack(() => (waiting ? loading.start() : loading.stop()));
   });
 
-  let open = $state(false);
-
-  const per = $derived(
-    answer?.per === 'piece' ? m['nutrition.perPiece']() : m['nutrition.perServing']()
-  );
-  const energy = $derived(answer?.values.energyKcal);
   const nothingCounted = $derived(answer?.counted === 0);
+  const without = $derived(answer ? withoutWords(missingNames(answer, recipe)) : null);
+  const wholeRecipe = $derived(answer ? isWholeRecipe(answer) : false);
+
+  const implausible = $derived(
+    answer
+      ? implausibleLines(answer, recipe).map(({ ingredient }) => ({
+          id: ingredient.id,
+          what: amountAndName(scaling.amountFor(ingredient).text, ingredient.name)
+        }))
+      : []
+  );
 </script>
 
-<section class="nutrition" aria-label={m['nutrition.title']()}>
+<section id="nutrition" class="nutrition" aria-label={m['nutrition.title']()}>
   {#if loading.showing}
     <NutritionSkeleton />
   {:else if status === 'failed'}
@@ -76,7 +92,7 @@
         {m['error.retry']()}
       </Button>
     </div>
-  {:else if answer && energy}
+  {:else if answer}
     <Disclosure bind:open>
       {#snippet summary()}
         <span class="line">
@@ -86,28 +102,64 @@
             <span class="nothing">{m['nutrition.nothing']()}</span>
           {:else}
             <span class="headline">
-              <span class="figure">
-                {withBound(
-                  m['nutrition.energyLine']({ kcal: labelNumber('energy', energy) }),
-                  energy.atLeast
-                )}
-              </span>
-              <span class="per">{per}</span>
-              {#if !answer.complete}
-                <span class="coverage">
-                  · {m['nutrition.coverage']({
-                    counted: formatNumber(answer.counted),
-                    lines: formatNumber(answer.lines)
-                  })}
-                </span>
+              <span class="figure">{energyFigure(answer)}</span>
+              <span class="per">{perWords(answer)}</span>
+              {#if without}
+                <span class="without">· {without}</span>
               {/if}
             </span>
+          {/if}
+
+          {#if implausible[0]}
+            <span class="hint"
+              >· {m['nutrition.implausible.hint']({ what: implausible[0].what })}</span
+            >
           {/if}
         </span>
       {/snippet}
 
       <!-- One column, so the table's values and the breakdown's energy share a right edge. -->
       <div class="open">
+        {#if implausible.length > 0}
+          <div class="notice">
+            <Icon size="sm">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 8v5M12 16.5v.01" />
+              </svg>
+            </Icon>
+
+            <ul>
+              {#each implausible as one (one.id)}
+                <li>
+                  {m['nutrition.implausible.line']({ what: one.what })}
+                  <a
+                    href="{resolve('/(app)/recipes/[recipeId]/edit', {
+                      recipeId: recipe.id
+                    })}#ingredient-{one.id}">{m['nutrition.implausible.fix']()}</a
+                  >
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+
+        {#if wholeRecipe}
+          <p class="quiet">
+            {m['nutrition.oneServing']()}
+            <a href="{resolve('/(app)/recipes/[recipeId]/edit', { recipeId: recipe.id })}#yield"
+              >{m['nutrition.setServings']()}</a
+            >
+          </p>
+        {/if}
+
         {#if !nothingCounted}
           <NutritionLabel nutrition={answer} />
         {/if}
@@ -136,6 +188,7 @@
 
 <style>
   .nutrition {
+    scroll-margin-top: var(--space-16);
     margin-top: var(--space-8);
     padding-block: var(--space-4) var(--space-3);
     border-top: 1px solid var(--border);
@@ -169,9 +222,39 @@
   }
 
   .per,
-  .coverage,
+  .without,
+  .hint,
   .nothing {
     color: var(--text-muted);
+  }
+
+  .notice {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-md);
+    background: var(--warning-subtle);
+    font-size: var(--text-sm);
+  }
+
+  .notice ul {
+    margin: var(--space-1) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .notice a,
+  .quiet a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  .quiet {
+    margin-bottom: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .unavailable {

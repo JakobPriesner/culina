@@ -8,6 +8,7 @@
   import SurfaceHead from './SurfaceHead.svelte';
   import SurfaceHero from './SurfaceHero.svelte';
   import SurfaceServings from './SurfaceServings.svelte';
+  import type { NutritionLink } from './nutritionLink';
   import type { RecipeReading } from '../types';
 
   /**
@@ -39,6 +40,8 @@
     onstep?: (index: number) => void;
     /** Reports whether the title is still on screen; see `SurfaceHead`. */
     ontitleview?: (visible: boolean) => void;
+    /** The nutrition headline for the meta line; absent while unknown, and never shown while cooking. */
+    nutrition?: NutritionLink | null;
   }
 
   let {
@@ -59,7 +62,8 @@
     cookbooks = [],
     onstopcooking,
     onstep,
-    ontitleview
+    ontitleview,
+    nutrition = null
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
@@ -116,6 +120,7 @@
     {oncopy}
     {ondelete}
     {ontitleview}
+    {nutrition}
   />
 
   <SurfaceServings

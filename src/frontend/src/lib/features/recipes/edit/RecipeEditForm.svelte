@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+
+  import { page } from '$app/state';
   import { Button } from '$ds';
   import AssistFailure from '$features/assistance/AssistFailure.svelte';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
@@ -30,6 +33,25 @@
   }
 
   let { editor, recipe, back, ingredients, improvement }: Props = $props();
+
+  // A link from the nutrition panel names what to look at: `#ingredient-<id>` or `#yield`.
+  const wanted = $derived(page.url.hash.slice(1));
+  const focusId = $derived(
+    wanted.startsWith('ingredient-') ? wanted.slice('ingredient-'.length) : null
+  );
+
+  $effect(() => {
+    if (wanted !== 'yield') {
+      return;
+    }
+
+    void tick().then(() => {
+      const field = document.getElementById('yield');
+
+      field?.scrollIntoView({ block: 'center' });
+      field?.focus({ preventScroll: true });
+    });
+  });
 
   const sections = $derived([
     { id: 'recipe', label: m['editor.section.recipe']() },
@@ -102,6 +124,7 @@
       onchange={ingredients.set}
       householdId={recipe.householdId}
       language={recipe.language}
+      {focusId}
     />
   </EditorSection>
 

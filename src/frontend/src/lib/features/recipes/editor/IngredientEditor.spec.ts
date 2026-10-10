@@ -353,3 +353,27 @@ describe('where an ingredient ends up', () => {
     expect(screen.queryByText('Not in a step')).not.toBeInTheDocument();
   });
 });
+
+describe('arriving from a link to one ingredient', () => {
+  const written = [
+    { id: 'i1', quantity: { value: 2, unit: 'g' }, name: 'flour', note: null },
+    { id: 'i2', quantity: { value: 1800, unit: 'l' }, name: 'milk', note: null }
+  ];
+
+  it('opens that ingredient and puts the cursor in its name', async () => {
+    // jsdom does not scroll.
+    Element.prototype.scrollIntoView = vi.fn();
+    renderWithProviders(IngredientHarness, { props: { ingredients: written, focusId: 'i2' } });
+
+    const field = await screen.findByDisplayValue('milk');
+
+    await vi.waitFor(() => expect(field).toHaveFocus());
+  });
+
+  it('leaves the list alone for an ingredient that is not there', () => {
+    renderWithProviders(IngredientHarness, { props: { ingredients: written, focusId: 'gone' } });
+
+    expect(screen.getAllByRole('combobox', { name: 'Ingredient' })).toHaveLength(1);
+    expect(document.activeElement).toBe(document.body);
+  });
+});

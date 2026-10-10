@@ -15,10 +15,18 @@ const butters = [
 const counted: NutritionLine = {
   ingredientId: 'a',
   status: 'counted',
-  food: { code: 'M110100', nameDe: 'Butter', nameEn: 'Butter' },
+  reason: null,
+  food: {
+    code: 'M110100',
+    nameDe: 'Butter',
+    nameEn: 'Butter',
+    labelDe: 'Butter',
+    labelEn: 'Butter'
+  },
   grams: 200,
   via: 'mass',
   corrected: false,
+  canRaiseEnergy: false,
   energyKcal: 372
 };
 
@@ -81,6 +89,18 @@ describe('the correction sheet', () => {
     const current = await screen.findByRole('button', { name: /Butter\s*Default/ });
 
     expect(current).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('names the current food as a reader would, with the table name under it', async () => {
+    respond();
+    show({
+      ...counted,
+      food: { ...counted.food!, nameEn: 'Beef/pork, mince mixed, raw', labelEn: 'mixed mince' }
+    });
+
+    expect(
+      await screen.findByRole('button', { name: /mixed mince\s*BLS: Beef\/pork, mince mixed, raw/ })
+    ).toHaveAttribute('aria-current', 'true');
   });
 
   it('says a household choice is theirs', async () => {
@@ -162,10 +182,12 @@ describe('the correction sheet', () => {
     show({
       ingredientId: 'a',
       status: 'excluded',
+      reason: null,
       food: null,
       grams: null,
       via: null,
       corrected: true,
+      canRaiseEnergy: false,
       energyKcal: null
     });
 

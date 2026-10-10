@@ -82,6 +82,7 @@
 
       <div class="pair yield">
         <Field
+          id="yield"
           label={m['editor.yieldAmount']()}
           error={yieldWrong(yieldText) ? m['editor.yieldWrong']() : undefined}
         >

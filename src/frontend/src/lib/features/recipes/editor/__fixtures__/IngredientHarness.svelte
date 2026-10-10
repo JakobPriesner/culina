@@ -8,9 +8,15 @@
     /** The method, so a row can say which steps its ingredient ends up in. */
     steps?: Step[];
     onchange?: (ingredients: Ingredient[]) => void;
+    focusId?: string | null;
   }
 
-  let { ingredients = $bindable([]), steps = [], onchange = () => {} }: Props = $props();
+  let {
+    ingredients = $bindable([]),
+    steps = [],
+    onchange = () => {},
+    focusId = null
+  }: Props = $props();
 
   function change(next: Ingredient[]) {
     ingredients = next;
@@ -18,4 +24,11 @@
   }
 </script>
 
-<IngredientEditor {ingredients} {steps} onchange={change} householdId="h1" language="en" />
+<IngredientEditor
+  {ingredients}
+  {steps}
+  onchange={change}
+  householdId="h1"
+  language="en"
+  {focusId}
+/>

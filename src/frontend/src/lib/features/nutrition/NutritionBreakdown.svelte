@@ -13,7 +13,15 @@
   import NutritionCorrectionSheet from './NutritionCorrectionSheet.svelte';
   import { roundForLabel } from './rounding';
   import { nutrition as store } from './stores/nutrition.svelte';
-  import type { Correction, FoodHit, Nutrition, NutritionLine, NutritionStatus } from './types';
+  import type {
+    Correction,
+    FoodHit,
+    Nutrition,
+    NutritionFood,
+    NutritionLine,
+    NutritionReason,
+    NutritionStatus
+  } from './types';
 
   /**
    * What became of each ingredient, so the rows add up to the headline. Amounts and grams follow the
@@ -98,16 +106,36 @@
     }
   };
 
+  // A food from the search is a BLS food: its label is its name.
   const choose = (hit: FoodHit) =>
-    correct({ kind: 'food', food: { code: hit.code, nameDe: hit.nameDe, nameEn: hit.nameEn } });
+    correct({
+      kind: 'food',
+      food: {
+        code: hit.code,
+        nameDe: hit.nameDe,
+        nameEn: hit.nameEn,
+        labelDe: hit.nameDe,
+        labelEn: hit.nameEn
+      }
+    });
 
   const counted = $derived(rows.filter((row) => row.line.status === 'counted'));
   const notCounted = $derived(rows.filter((row) => row.line.status !== 'counted'));
 
-  const foodIn = (one: { nameDe: string; nameEn: string }) =>
-    preferences.locale === 'de' ? one.nameDe : one.nameEn;
+  const foodIn = (one: NutritionFood) => (preferences.locale === 'de' ? one.labelDe : one.labelEn);
 
   const food = (line: NutritionLine) => (line.food ? foodIn(line.food) : '');
+
+  /** The table's own name, as the citation under the friendlier one; nothing when they are the same words. */
+  const blsName = (line: NutritionLine) => {
+    const name = line.food
+      ? preferences.locale === 'de'
+        ? line.food.nameDe
+        : line.food.nameEn
+      : '';
+
+    return name && name !== food(line) ? m['nutrition.bls']({ name }) : null;
+  };
 
   const gramsText = (line: NutritionLine) => {
     const grams = wholeOrTenth((line.grams ?? 0) * scaling.factor);
@@ -135,7 +163,23 @@
     implausible: m['nutrition.reason.implausible']
   };
 
-  const reason = (line: NutritionLine) => (line.status === 'counted' ? '' : reasons[line.status]());
+  const unitReasons: Record<NutritionReason, () => string> = {
+    spoonOfSolid: m['nutrition.reason.spoonOfSolid'],
+    volumeOfSolid: m['nutrition.reason.volumeOfSolid'],
+    count: m['nutrition.reason.count'],
+    householdUnit: m['nutrition.reason.householdUnit']
+  };
+
+  const reason = (line: NutritionLine) => {
+    if (line.status === 'counted') {
+      return '';
+    }
+
+    // A unit with no reason given is an older answer: the general words still say it.
+    return line.status === 'amountNotInGrams' && line.reason
+      ? unitReasons[line.reason]()
+      : reasons[line.status]();
+  };
 
   const kcalText = (line: NutritionLine) =>
     m['nutrition.energyLine']({
@@ -181,7 +225,9 @@
   {/if}
 
   {#if counted.length > 0}
-    <h4 class="group">{m['nutrition.breakdown.counted']()}</h4>
+    <h4 class="group">
+      {m['nutrition.breakdown.counted']({ count: formatNumber(counted.length) })}
+    </h4>
 
     <ul class="rows">
       {#each counted as { ingredient, line } (ingredient.id)}
@@ -191,6 +237,7 @@
             <span class="detail">
               {detail(line)}
             </span>
+            {#if blsName(line)}<span class="bls">{blsName(line)}</span>{/if}
           </div>
 
           <div class="end">
@@ -203,7 +250,9 @@
   {/if}
 
   {#if notCounted.length > 0}
-    <h4 class="group">{m['nutrition.breakdown.notCounted']()}</h4>
+    <h4 class="group">
+      {m['nutrition.breakdown.notCounted']({ count: formatNumber(notCounted.length) })}
+    </h4>
 
     <ul class="rows muted">
       {#each notCounted as { ingredient, line } (ingredient.id)}
@@ -249,6 +298,12 @@
   .detail {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  .bls {
+    color: var(--text-subtle);
+    font-size: var(--text-xs);
+    overflow-wrap: anywhere;
   }
 
   .group {
