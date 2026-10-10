@@ -249,7 +249,9 @@ export async function responsiveData(
     // What the panel has to say besides the usual: an amount that cannot be right, or a recipe for one portion.
     nutritionVariant = 'usual' as 'usual' | 'implausible' | 'whole',
     // A visitor with a share link and no account: the app asks who is signed in and is told nobody.
-    signedOut = false
+    signedOut = false,
+    // An imported recipe's shape: the lines split into named groups, the second holding the apples.
+    twoGroups = false
   } = {}
 ) {
   const detail = {
@@ -292,6 +294,17 @@ export async function responsiveData(
         ]
       }
     ]
+      .map((group) => (twoGroups ? { ...group, name: 'Für den Teig' } : group))
+      .concat(
+        twoGroups
+          ? [
+              {
+                name: 'Für die Füllung',
+                ingredients: [{ ingredientId: 'apples', name: 'Äpfel', quantity: 3, unit: 'piece' }]
+              }
+            ]
+          : []
+      )
   };
   await page.addInitScript((locale) => localStorage.setItem('culina.locale', locale), locale);
   let cooking = {
@@ -432,7 +445,13 @@ export async function responsiveData(
     if (path.endsWith('/ingredients')) return reply({ items: [] });
     if (path === `/recipes/${recipeId}`) return reply(detail);
     if (path === `/recipes/${recipeId}/nutrition`)
-      return reply(nutrition(detail.groups[0]!.ingredients, corrections, detail.yieldAmount));
+      return reply(
+        nutrition(
+          detail.groups.flatMap((group) => group.ingredients),
+          corrections,
+          detail.yieldAmount
+        )
+      );
     if (path.endsWith('/notes')) return reply({ overall: '', steps: [] });
     if (path.endsWith('/cook-log')) return reply({ count: 0, items: [] });
     if (path === '/recipes')
