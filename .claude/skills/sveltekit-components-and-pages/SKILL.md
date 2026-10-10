@@ -18,11 +18,12 @@ src/frontend/
       design-system/           generic, domain-free UI: Button, Card, Skeleton, Dialog
       features/                one folder per domain, mirroring the API's domains
         recipes/
-          components/RecipeCard.svelte
+          RecipeCard.svelte
+          RecipeCardSkeleton.svelte
           stores/recipes.svelte.ts
           mappers.ts
+          types.ts
       app/                     cross-cutting app shell: auth state, i18n, errors, telemetry
-      utils/
   static/                      robots.txt, sitemap, icons (frontend-static-assets)
 ```
 

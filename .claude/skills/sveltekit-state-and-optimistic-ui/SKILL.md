@@ -5,15 +5,16 @@ description: Client state conventions for the culina-v2 SvelteKit app — local 
 
 # Local stores and optimistic UI
 
-**Every feature owns one local store; the store is the only thing components
+**Every feature owns its local stores; they are the only thing components
 read domain data from.** No global god-store, no cross-feature imports of
 another feature's state, no data duplicated between a store and component
 state.
 
 ## The store
 
-One file per domain, `lib/features/<domain>/stores/<domain>.svelte.ts`, a class
-instantiated once and exported:
+Stores live in `lib/features/<domain>/stores/`, one file per slice of state
+(`recipes.svelte.ts`, `savedSearches.svelte.ts`), each a class instantiated
+once and exported:
 
 ```ts
 import { api } from '$lib/api/client';
@@ -27,10 +28,14 @@ class RecipeStore {
   async load() {
     this.status = 'loading';
     const result = await api.recipes.list();
-    result.match(
-      (page) => { this.items = page.items; this.status = 'ready'; this.error = null; },
-      (error) => { this.error = error; this.status = 'error'; },
-    );
+    if (result.ok) {
+      this.items = result.value.items;
+      this.status = 'ready';
+      this.error = null;
+    } else {
+      this.error = result.error;
+      this.status = 'error';
+    }
   }
 }
 
@@ -64,13 +69,12 @@ async rename(id: string, title: string) {
 
   const result = await api.recipes.update(id, { title }, previous.version);
 
-  result.match(
-    (updated) => { this.items[index] = updated; },       // server's version wins
-    (error) => {
-      this.items[index] = previous;                      // exact rollback
-      toast.error(messageFor(error));
-    },
-  );
+  if (result.ok) {
+    this.items[index] = result.value;                    // server's version wins
+  } else {
+    this.items[index] = previous;                        // exact rollback
+    toast.error(messageFor(result.error));
+  }
 }
 ```
 
@@ -123,7 +127,8 @@ explanation, or swallowing an error because "it usually works".
 
 ## Checklist
 
-- [ ] One store per feature, `$state` fields, no cross-feature imports.
+- [ ] Stores in the feature's `stores/` folder, `$state` fields, no
+      cross-feature imports.
 - [ ] Components read domain data only from the store; no duplicated copies.
 - [ ] Mutations snapshot, apply optimistically, and restore exactly on failure.
 - [ ] Optimistic only where reversal is safe; heavy operations show pending.

@@ -23,6 +23,7 @@ src/backend/
     Application.UnitTests/
     ArchitectureTests/
     IntegrationTests/
+    TestSupport/               fakes and Result assertions shared by the test projects
 ```
 
 | Project          | May reference             |
@@ -55,40 +56,17 @@ only works if both can see the DTOs without either depending on the other.
 
 ## Directory.Build.props
 
-One file at `src/backend/`, no per-project copies of these properties.
-Every property carries a comment saying why it is set; a property without a
-reason is a property nobody dares remove later.
+One file at `src/backend/` (plus `tests/Directory.Build.props` for what the
+test projects share), no per-project copies of these properties. Every property
+carries a comment saying why it is set; a property without a reason is a
+property nobody dares remove later. Read the file itself rather than a copy:
+it targets `net10.0` with `LangVersion` and `AnalysisLevel` at `latest`, treats
+warnings as errors with `AnalysisMode` `All` and `EnforceCodeStyleInBuild` (a
+clean compile is also a clean lint), manages package versions centrally, and
+restores from `packages.lock.json` in locked mode in CI and the image build.
 
-```xml
-<Project>
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <LangVersion>14.0</LangVersion>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <!-- Warnings are errors, including in Debug: a clean compile is also a
-             clean lint, so there is no separate linter step to forget. -->
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <WarningsAsErrors>Nullable</WarningsAsErrors>
-        <EnableNETAnalyzers>true</EnableNETAnalyzers>
-        <AnalysisLevel>10.0</AnalysisLevel>
-        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
-        <!-- Applies the .editorconfig style rules during build, not only in the
-             IDE, so formatting is identical on every machine and in CI. -->
-        <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <Deterministic>true</Deterministic>
-        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <NuGetAudit>true</NuGetAudit>
-        <NuGetAuditMode>all</NuGetAuditMode>
-        <NuGetAuditLevel>low</NuGetAuditLevel>
-        <InvariantGlobalization>true</InvariantGlobalization>
-        <IsTestProject>false</IsTestProject>
-    </PropertyGroup>
-</Project>
-```
-
-Test projects set `<IsTestProject>true</IsTestProject>` themselves. If a
+`tests/Directory.Build.props` sets `<IsTestProject>true</IsTestProject>`
+(`TestSupport` sets it back to `false`). If a
 property is needed by exactly one project (`PublishAot`, `UserSecretsId`,
 `OutputType`), it belongs in that csproj, not here.
 
@@ -105,15 +83,15 @@ licence-driven choice).
 <Project>
   <ItemGroup>
     <!-- Infrastructure -->
-    <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="Npgsql" Version="…" />
 
     <!-- Api -->
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="…" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="…" />
 
     <!-- Tests -->
-    <PackageVersion Include="xunit.v3" Version="3.1.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit.v3" Version="…" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="…" />
   </ItemGroup>
 </Project>
 ```

@@ -87,8 +87,11 @@ Hard rules:
 - Endpoints inject their handler **as a delegate parameter**, not a
   constructor parameter, precisely because the endpoint is a singleton and the
   handler is scoped.
-- `HttpClient` is never `new`ed: register a typed client through
-  `IHttpClientFactory` with a resilience handler.
+- An `HttpClient` is built once per outbound purpose, never per request: a
+  singleton adapter (`SourceHttp`, `AssistantHttp`) owns one
+  `SocketsHttpHandler` — which decides what addresses may be dialled — and one
+  `HttpClient` over it, and disposes both. Two purposes with different threat
+  models get two adapters, not one with a flag.
 
 ## Decorators
 
