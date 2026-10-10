@@ -95,8 +95,7 @@ type RecipeResponse = components['schemas']['RecipesGetResponse'];
 
 ## SvelteKit specifics
 
-- Route `load` functions call the wrapper, passing SvelteKit's `fetch` so SSR
-  and request-scoped cookies work.
+- Route `load` functions call the wrapper or a feature store, never `fetch`.
 - This app ships as a static SPA build, so no server-side secret ever reaches
   the client: everything the client can see is public by definition.
 - Keep the dev proxy pointing `/api` at the backend so the app is same-origin

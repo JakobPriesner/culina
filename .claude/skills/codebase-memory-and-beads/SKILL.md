@@ -45,22 +45,22 @@ a handoff; a note in a reply does not.
 bd ready                      # claimable work, blockers resolved
 bd show <id>                  # the full issue before starting
 bd create "Add ETag to GET /recipes/{id}" -d "..." -p 1
-bd update <id> --status in_progress
+bd update <id> --claim         # assign to you and set in_progress, atomically
 bd note <id> "Found that CsrfMiddleware also needs the session version"
-bd link <new-id> blocks <other-id>
+bd dep <blocker-id> --blocks <blocked-id>
 bd close <id>
 ```
 
 The loop:
 
-1. **Start**: `bd ready`, pick the issue, `bd show` it, set it `in_progress`.
+1. **Start**: `bd ready`, pick the issue, `bd show` it, `bd update <id> --claim`.
    Work without a bead only for a trivial, self-contained fix.
 2. **During**: when you discover work that is out of scope — a stale doc, a
    missing test, a TODO worth doing, a second call site that also needs the
    fix — `bd create` it immediately with `--deps discovered-from:<current>`
    and keep going. Discovered work is filed, never silently absorbed and never
    quietly dropped.
-3. **Dependencies**: `bd link a blocks b` whenever one piece must land first.
+3. **Dependencies**: `bd dep <a> --blocks <b>` whenever `a` must land first.
    That is what makes `bd ready` trustworthy, and it is the reason to use beads
    rather than a checklist.
 4. **Notes**: record decisions and dead ends on the bead (`bd note`), not only
@@ -88,7 +88,7 @@ confirm nothing else was touched → bead closed, follow-ups filed.
       the source.
 - [ ] `trace_path` run before deleting, renaming, or changing a signature.
 - [ ] `check_index_coverage` run for files a conclusion depends on; gaps stated.
-- [ ] Work claimed from `bd ready` and set `in_progress`.
+- [ ] Work claimed from `bd ready` with `bd update <id> --claim`.
 - [ ] Every discovery filed as a bead with `discovered-from`, linked with
       `blocks` where order matters.
 - [ ] Beads closed only when verified; leftovers filed as new beads.

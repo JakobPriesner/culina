@@ -21,13 +21,14 @@ endpoint needs.
 Order is the contract. Each entry says why it is where it is.
 
 ```csharp
-app.UseForwardedHeaders();      // 1. Real client IP/scheme, before anything that reads them.
+app.UseCulinaForwardedHeaders(); // 1. Real client IP/scheme, before anything that reads them.
 app.UseRequestContext();        // 2. Request id + logging scope, so every later line is correlated.
 app.UseSecurityHeaders();       // 3. Set before any handler can start writing a body.
 app.UseHttpLogging();           // 4. One summary line per request.
 app.UseExceptionHandler();      // 5. Outside everything below, so any defect becomes a problem document.
-app.UseStatusCodePages();       // 6. Framework-generated statuses get a problem body too.
-app.UseStaticFiles();           // 7. Cheap; never reaches auth.
+app.UseProblemStatusPages();    // 6. Framework-generated statuses get a problem body too.
+app.UseSinglePageApp();         // 7. Static assets are cheap and never reach auth.
+app.UseRouting();
 app.UseQueryParameterGuard();   // 8. Reject malformed/duplicated query input before binding.
 app.UseSameOriginGuard();       // 9. Unsafe cookie-authenticated requests must come from our origin.
 app.UseRateLimiter();           // 10. Before authentication, so brute force costs nothing to reject.
@@ -37,7 +38,9 @@ app.UseCsrfGuard();             // 13. Needs the session to compare the token ag
 app.UseAuthorization();         // 14. Policies, after identity is fully established.
 app.UsePersonalRateLimits();    // 15. Costly limits per person (imports, sources, assistant, archive): only now is it known who asks.
 app.MapHealthEndpoints();
+app.MapSecurityTxt();
 app.MapEndpoints();
+app.MapSinglePageAppFallback();
 ```
 
 Moving one of these is a security change, not a refactor. The pipeline order is

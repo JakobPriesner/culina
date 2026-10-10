@@ -85,8 +85,9 @@ app.MapPut("api/v1/recipes/{recipeId:guid}", async (
 
 - **`If-Match` is required on every `PUT`/`PATCH`/`DELETE` of a versioned
   resource.** Missing header → `428 Precondition Required` with code
-  `<module>.precondition_required`. Unparsable or stale → `412` with
-  `<module>.version_conflict`.
+  `request.precondition_required` (`RequestErrors.PreconditionRequired`).
+  Unparsable or stale → `412` with `request.version_mismatch`
+  (`ConcurrencyErrors.VersionMismatch`).
 - The expected version travels into the command as data; the handler passes it
   to the repository, which enforces it **in the `UPDATE`'s `WHERE` clause**
   (`WHERE id = @id AND version = @expected`) and returns a conflict error when

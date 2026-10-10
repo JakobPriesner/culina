@@ -12,9 +12,6 @@ reference, a broken invariant, a misconfigured service, a database that is
 unreachable — those are defects and are allowed to throw, where the exception
 handler turns them into a 500 and a logged error.
 
-Adapted from `apps/backend/src/Domain/Shared/` in the culina repo; port those
-files as-is rather than re-deriving them.
-
 ## The primitives (`Domain/Shared/`)
 
 - `Result` — success or failure, no value.
@@ -22,7 +19,7 @@ files as-is rather than re-deriving them.
 - `Error` — `record Error(string Code, string Description, ErrorType Type)`.
 - `ErrorType` — the enum that transports switch on: `Failure`, `Validation`,
   `Problem`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`,
-  `PreconditionFailed`, `RateLimited`, `Unavailable`.
+  `PreconditionFailed`, `PreconditionRequired`, `RateLimited`, `Unavailable`.
 - `ValidationError` — an `Error` carrying several contributing errors.
 - `FieldError` — an `Error` that names the input field it is about.
 
@@ -77,10 +74,6 @@ return Email.Create(command.Email)                       // Result<Email>
     .Bind(email => user.ChangeEmail(email))              // Result
     .Map(() => new Response { UserId = user.Id });        // Result<Response>
 
-// Guard a value you already have.
-return recipe.ToResult(RecipeErrors.NotFound(recipeId))
-    .Ensure(r => r.OwnerId == userId, RecipeErrors.Forbidden);
-
 // Report every validation failure at once instead of one per round trip.
 return Result.Combine(
     ValidateTitle(command.Title),
@@ -95,8 +88,8 @@ problem document, so a form can mark every wrong box in one pass.
 ## Async
 
 Handlers return `Task<Result<T>>`. Do not invent `Result<Task<T>>`. Where a
-chain needs to continue over an await, either `await` first and then compose,
-or use the `ResultAsyncExtensions` (`BindAsync`, `MapAsync`, `EnsureAsync`).
+chain needs to continue over an await, `await` first and then compose with the
+synchronous `Bind`/`Map`/`Tap` in `Domain/Shared/ResultExtensions.cs`.
 Always `.ConfigureAwait(false)` in Application/Infrastructure.
 
 ```csharp
@@ -130,6 +123,7 @@ that maps an `ErrorType` to a status code and an RFC 9457 problem document:
 | `NotFound`          | 404    |
 | `Conflict`          | 409    |
 | `PreconditionFailed`| 412    |
+| `PreconditionRequired`| 428  |
 | `RateLimited`       | 429    |
 | `Unavailable`       | 503    |
 | `Failure`/`Problem` | 500    |
