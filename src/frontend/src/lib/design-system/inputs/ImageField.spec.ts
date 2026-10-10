@@ -232,6 +232,12 @@ describe('while an image is being generated', () => {
     expect(screen.getByRole('button', { name: 'Remove the photo' })).toBeDisabled();
   });
 
+  it('will not offer choosing a photo while the first picture is being drawn', () => {
+    render({ generating: true });
+
+    expect(screen.getByRole('button', { name: 'Choose a photo' })).toBeDisabled();
+  });
+
   it('keeps generation readable with decorative motion disabled', () => {
     const { container } = render({
       generating: true,
