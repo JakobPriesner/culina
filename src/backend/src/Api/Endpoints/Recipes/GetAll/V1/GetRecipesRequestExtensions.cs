@@ -1,4 +1,3 @@
-using System.Globalization;
 using Api.Infrastructure;
 using Application.Abstractions;
 using Domain.Shared;
@@ -11,30 +10,28 @@ internal static class GetRecipesRequestExtensions
 {
     private const int DefaultLimit = 24;
 
+    // The ceiling the searcher holds a page to.
+    private const int MaxLimit = 100;
+
     internal static Result<RecipeSearch> ToRecipeSearch(this IQueryCollection query, Guid userId)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        if (!Guid.TryParse(query["householdId"], CultureInfo.InvariantCulture, out var householdId))
-        {
-            return RequestErrors.MissingQueryParameter("householdId");
-        }
+        return query.RequireGuid("householdId").Bind(householdId =>
+            query.ReadInt("limit", 1, MaxLimit, DefaultLimit).Bind(limit =>
+                query.ReadInt("maxMinutes", 1).Bind(maxMinutes =>
+                    query.ReadGuid("cookbookId").Bind(cookbookId =>
+                        ToSearch(query, userId, householdId, limit, maxMinutes.Value, cookbookId.Value)))));
+    }
 
-        if (!TryReadNumber(query, "limit", out var limit, out var limitFailure))
-        {
-            return limitFailure!;
-        }
-
-        if (!TryReadNumber(query, "maxMinutes", out var maxMinutes, out var minutesFailure))
-        {
-            return minutesFailure!;
-        }
-
-        if (!TryReadCookbook(query, out var cookbookId, out var cookbookFailure))
-        {
-            return cookbookFailure!;
-        }
-
+    private static Result<RecipeSearch> ToSearch(
+        IQueryCollection query,
+        Guid userId,
+        Guid householdId,
+        int limit,
+        int? maxMinutes,
+        Guid? cookbookId)
+    {
         var text = query["query"].ToString();
         var ingredients = query["ingredient"]
             .Where(value => !string.IsNullOrWhiteSpace(value))
@@ -55,7 +52,7 @@ internal static class GetRecipesRequestExtensions
             Rules: null,
             sort,
             query["cursor"],
-            limit ?? DefaultLimit));
+            limit));
     }
 
     // An explicit sort wins; otherwise words or ingredients rank, a cookbook with no question reads in built
@@ -73,83 +70,12 @@ internal static class GetRecipesRequestExtensions
             ("relevance", _, _) => RecipeSort.Relevance,
             ("suggested", _, _) => RecipeSort.Suggested,
             ("cookbookOrder", true, _) => RecipeSort.CookbookOrder,
-            ("cookbookOrder", false, _) => new FieldError(
+            ("cookbookOrder", false, _) => RequestErrors.InvalidQueryParameter(
                 "sort",
-                "request.unknown_parameter",
-                "Sort 'cookbookOrder' needs a 'cookbookId' to be an order of."),
-            _ => new FieldError(
+                "something other than 'cookbookOrder' unless a 'cookbookId' is given"),
+            _ => RequestErrors.InvalidQueryParameter(
                 "sort",
-                "request.unknown_parameter",
-                "Sort must be one of '-updatedAt', 'title', 'totalMinutes', '-cookCount', 'relevance', "
-                + "'suggested', 'cookbookOrder'.")
+                "one of '-updatedAt', 'title', 'totalMinutes', '-cookCount', 'relevance', 'suggested', "
+                + "'cookbookOrder'")
         };
-
-    // Whether the reader turned a correction down: asTyped=true, or absent.
-    internal static Result<bool> ReadAsTyped(this IQueryCollection query)
-    {
-        ArgumentNullException.ThrowIfNull(query);
-
-        return query["asTyped"].ToString() switch
-        {
-            "" or "false" => false,
-            "true" => true,
-            _ => new FieldError("asTyped", "request.unknown_parameter", "asTyped must be 'true' or 'false'.")
-        };
-    }
-
-    private static bool TryReadCookbook(IQueryCollection query, out Guid? value, out Error? failure)
-    {
-        var raw = query["cookbookId"].ToString();
-
-        if (string.IsNullOrEmpty(raw))
-        {
-            value = null;
-            failure = null;
-
-            return true;
-        }
-
-        if (Guid.TryParse(raw, CultureInfo.InvariantCulture, out var parsed))
-        {
-            value = parsed;
-            failure = null;
-
-            return true;
-        }
-
-        value = null;
-        failure = new FieldError("cookbookId", "request.unknown_parameter", "That is not a cookbook id.");
-
-        return false;
-    }
-
-    // Absence is expressed by the out parameter: a result carries a value or an error, and "nothing asked" is neither.
-    private static bool TryReadNumber(
-        IQueryCollection query,
-        string name,
-        out int? value,
-        out Error? failure)
-    {
-        value = null;
-        failure = null;
-
-        if (query[name].Count == 0)
-        {
-            return true;
-        }
-
-        if (!int.TryParse(query[name], CultureInfo.InvariantCulture, out var parsed))
-        {
-            failure = new FieldError(
-                name,
-                "request.unknown_parameter",
-                $"'{name}' must be a whole number.");
-
-            return false;
-        }
-
-        value = parsed;
-
-        return true;
-    }
 }

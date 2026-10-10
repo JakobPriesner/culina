@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Cookbooks;
 using Contracts.Cookbooks;
+using Domain.Shared;
 
 namespace Api.Endpoints.Cookbooks.GetAll.V1;
 
@@ -19,29 +20,24 @@ internal sealed class GetCookbooksEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGet($"{ApiPaths.V1}/cookbooks", async (
-                Guid? householdId,
-                string? cursor,
-                int? limit,
                 HttpContext context,
                 IQueryHandler<GetCookbooksQuery, CookbooksResponse> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (householdId is not { } household)
-                {
-                    return CustomResults.Problem(RequestErrors.MissingQueryParameter("householdId"));
-                }
+                var query = context.Request.Query;
 
-                var result = await handler
-                    .Handle(
-                        new GetCookbooksQuery(
-                            household,
-                            context.CurrentUser().UserId,
-                            cursor,
-                            Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit)),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                var request = query.RequireGuid("householdId").Bind(household =>
+                    query.ReadInt("limit", 1, MaxLimit, DefaultLimit).Map(limit =>
+                        new GetCookbooksQuery(household, context.CurrentUser().UserId, query["cursor"], limit)));
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
+
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getCookbooksV1")
             .WithTags(Tags.Cookbooks)

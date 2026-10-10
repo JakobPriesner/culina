@@ -2,6 +2,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Recipes.GetTags;
+using Domain.Shared;
 using Response = Contracts.Recipes.GetTags.Response;
 
 namespace Api.Endpoints.Recipes.GetTags.V1;
@@ -14,23 +15,21 @@ internal sealed class GetTagsEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGet($"{ApiPaths.V1}/tags", async (
-                Guid? householdId,
                 HttpContext context,
                 IQueryHandler<GetTagsQuery, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (householdId is not { } household)
-                {
-                    return CustomResults.Problem(RequestErrors.MissingQueryParameter("householdId"));
-                }
+                var request = context.Request.Query.RequireGuid("householdId").Map(household =>
+                    new GetTagsQuery(household, context.CurrentUser().UserId));
 
-                var result = await handler
-                    .Handle(
-                        new GetTagsQuery(household, context.CurrentUser().UserId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getTagsV1")
             .WithTags(Tags.Recipes)

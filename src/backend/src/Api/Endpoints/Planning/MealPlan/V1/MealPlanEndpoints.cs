@@ -1,10 +1,10 @@
-using System.Globalization;
 using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Planning;
 using Contracts.Planning;
 using Domain.Planning;
+using Domain.Shared;
 
 namespace Api.Endpoints.Planning.MealPlan.V1;
 
@@ -17,23 +17,25 @@ internal sealed class GetMealPlanEndpoint : IEndpoint
 
         app.MapGet($"{ApiPaths.V1}/households/{{householdId:guid}}/meal-plan", async (
                 Guid householdId,
-                string? from,
                 HttpContext context,
                 IQueryHandler<GetMealPlanQuery, MealPlanResponse> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (!TryReadFrom(from, out var start))
-                {
-                    return CustomResults.Problem(PlanningErrors.InvalidRange);
-                }
+                // Snapped to the Monday of its week so no caller has to work that out.
+                var request = context.Request.Query.ReadDate("from").Map(from =>
+                    new GetMealPlanQuery(
+                        householdId,
+                        context.CurrentUser().UserId,
+                        PlanningWeek.StartOfWeekContaining(from.Value ?? DateOnly.FromDateTime(DateTime.UtcNow))));
 
-                var result = await handler
-                    .Handle(
-                        new GetMealPlanQuery(householdId, context.CurrentUser().UserId, start),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getMealPlanV1")
             .WithTags(Tags.Planning)
@@ -48,31 +50,6 @@ internal sealed class GetMealPlanEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequireAuthorization();
-    }
-
-    /// <summary>
-    /// Reads the day asked for, snapped to the Monday of its week so no caller has to work that
-    /// out.
-    /// </summary>
-    private static bool TryReadFrom(string? from, out DateOnly start)
-    {
-        if (string.IsNullOrEmpty(from))
-        {
-            start = PlanningWeek.StartOfWeekContaining(DateOnly.FromDateTime(DateTime.UtcNow));
-
-            return true;
-        }
-
-        if (!DateOnly.TryParse(from, CultureInfo.InvariantCulture, out var day))
-        {
-            start = default;
-
-            return false;
-        }
-
-        start = PlanningWeek.StartOfWeekContaining(day);
-
-        return true;
     }
 }
 

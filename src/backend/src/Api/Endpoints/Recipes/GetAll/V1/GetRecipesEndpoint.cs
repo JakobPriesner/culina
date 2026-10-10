@@ -21,7 +21,7 @@ internal sealed class GetRecipesEndpoint : IEndpoint
             {
                 var request = context.Request.Query
                     .ToRecipeSearch(context.CurrentUser().UserId)
-                    .Bind(criteria => context.Request.Query.ReadAsTyped()
+                    .Bind(criteria => context.Request.Query.ReadBool("asTyped")
                         .Map(asTyped => new GetRecipesQuery(criteria, asTyped)));
 
                 return await request.Match(

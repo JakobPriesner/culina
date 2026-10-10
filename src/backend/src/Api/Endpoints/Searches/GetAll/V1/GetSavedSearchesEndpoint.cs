@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Searches;
 using Contracts.Searches;
+using Domain.Shared;
 
 namespace Api.Endpoints.Searches.GetAll.V1;
 
@@ -14,23 +15,21 @@ internal sealed class GetSavedSearchesEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGet($"{ApiPaths.V1}/searches", async (
-                Guid? householdId,
                 HttpContext context,
                 IQueryHandler<GetSavedSearchesQuery, SavedSearchesResponse> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (householdId is not { } household)
-                {
-                    return CustomResults.Problem(RequestErrors.MissingQueryParameter("householdId"));
-                }
+                var request = context.Request.Query.RequireGuid("householdId").Map(household =>
+                    new GetSavedSearchesQuery(household, context.CurrentUser().UserId));
 
-                var result = await handler
-                    .Handle(
-                        new GetSavedSearchesQuery(household, context.CurrentUser().UserId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getSavedSearchesV1")
             .WithTags(Tags.Searches)

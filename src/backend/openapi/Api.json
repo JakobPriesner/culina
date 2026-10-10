@@ -697,13 +697,6 @@
           {
             "name": "deleted",
             "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "deleted",
-            "in": "query",
             "explode": false,
             "schema": {
               "type": "string"
@@ -3160,14 +3153,6 @@
           {
             "name": "householdId",
             "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "householdId",
-            "in": "query",
             "explode": false,
             "schema": {
               "type": "string"
@@ -3438,29 +3423,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "format": "int32"
             }
           },
           {
@@ -5511,13 +5473,6 @@
           {
             "name": "from",
             "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "in": "query",
             "explode": false,
             "schema": {
               "type": "string"
@@ -5790,37 +5745,6 @@
         "description": "Cursor-paginated, most recently changed first. Each carries its recipe count and up to four pictures for its cover; the recipes themselves are read through `GET /recipes?cookbookId=…`, which is what gives a cookbook the same search, filters and paging the whole collection has.",
         "operationId": "getCookbooksV1",
         "parameters": [
-          {
-            "name": "householdId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "string"
-                }
-              ],
-              "format": "int32"
-            }
-          },
           {
             "name": "householdId",
             "in": "query",
@@ -6409,14 +6333,6 @@
           {
             "name": "householdId",
             "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "householdId",
-            "in": "query",
             "explode": false,
             "schema": {
               "type": "string"
@@ -6556,14 +6472,6 @@
         "description": "Not paginated: a kitchen connects one or two other apps, not a hundred. Each carries when it was connected and when recipes were last brought over, which is the difference between a connection worth offering again and one somebody set up and forgot. Tokens are never included.",
         "operationId": "getRecipeSourcesV1",
         "parameters": [
-          {
-            "name": "householdId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
           {
             "name": "householdId",
             "in": "query",
@@ -7860,14 +7768,6 @@
         "description": "Oldest first, so the row of chips beside the search field keeps the order they were made in. Not paged: a kitchen keeps a handful of these and they are drawn on one line.\n\nEach carries the four values `GET /recipes` takes as `query`, `tag`, `maxMinutes` and `sort`, so applying one is assigning them rather than translating anything.",
         "operationId": "getSavedSearchesV1",
         "parameters": [
-          {
-            "name": "householdId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
           {
             "name": "householdId",
             "in": "query",

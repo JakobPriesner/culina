@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Recipes.Sources;
 using Contracts.Recipes.Sources;
+using Domain.Shared;
 
 namespace Api.Endpoints.RecipeSources.GetAll.V1;
 
@@ -14,23 +15,21 @@ internal sealed class GetRecipeSourcesEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGet($"{ApiPaths.V1}/recipe-sources", async (
-                Guid? householdId,
                 HttpContext context,
                 IQueryHandler<GetSourcesQuery, SourcesResponse> handler,
                 CancellationToken cancellationToken) =>
             {
-                if (householdId is not { } household)
-                {
-                    return CustomResults.Problem(RequestErrors.MissingQueryParameter("householdId"));
-                }
+                var request = context.Request.Query.RequireGuid("householdId").Map(household =>
+                    new GetSourcesQuery(household, context.CurrentUser().UserId));
 
-                var result = await handler
-                    .Handle(
-                        new GetSourcesQuery(household, context.CurrentUser().UserId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getRecipeSourcesV1")
             .WithTags(Tags.RecipeSources)

@@ -2,6 +2,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Households.GetAll;
+using Domain.Shared;
 using Response = Contracts.Households.GetAll.Response;
 
 namespace Api.Endpoints.Households.GetAll.V1;
@@ -14,16 +15,21 @@ internal sealed class GetHouseholdsEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGet($"{ApiPaths.V1}/households", async (
-                bool? deleted,
                 HttpContext context,
                 IQueryHandler<GetHouseholdsQuery, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                var result = await handler
-                    .Handle(new GetHouseholdsQuery(context.CurrentUser().UserId, deleted ?? false), cancellationToken)
-                    .ConfigureAwait(false);
+                var request = context.Request.Query.ReadBool("deleted").Map(deleted =>
+                    new GetHouseholdsQuery(context.CurrentUser().UserId, deleted));
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
+
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getHouseholdsV1")
             .WithTags(Tags.Households)

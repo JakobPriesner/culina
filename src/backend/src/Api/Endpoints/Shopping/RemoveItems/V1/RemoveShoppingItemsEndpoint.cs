@@ -1,4 +1,3 @@
-using System.Globalization;
 using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
@@ -21,32 +20,19 @@ internal sealed class RemoveShoppingItemsEndpoint : IEndpoint
                 ICommandHandler<RemoveShoppingItemsCommand, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                // No id clears everything ticked: the one bulk action worth having after a shop.
-                var raw = context.Request.Query["itemId"];
-                Guid? itemId = null;
+                // No id clears everything ticked: the one bulk action worth having after a shop. A bad id is
+                // refused, not read as "no id", which would clear every ticked line.
+                var command = context.Request.Query.ReadGuid("itemId").Map(itemId =>
+                    new RemoveShoppingItemsCommand(householdId, context.CurrentUser().UserId, itemId.Value));
 
-                // A bad id is refused, not read as "no id", which would clear every ticked line.
-                if (raw.Count > 0)
-                {
-                    if (!Guid.TryParse(raw, CultureInfo.InvariantCulture, out var parsed))
+                return await command.Match(
+                    async removing =>
                     {
-                        return CustomResults.Problem(
-                            new FieldError("itemId", "request.unknown_parameter", "That is not an item id."));
-                    }
+                        var result = await handler.Handle(removing, cancellationToken).ConfigureAwait(false);
 
-                    itemId = parsed;
-                }
-
-                var result = await handler
-                    .Handle(
-                        new RemoveShoppingItemsCommand(
-                            householdId,
-                            context.CurrentUser().UserId,
-                            itemId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
-
-                return result.Match(Results.Ok, CustomResults.Problem);
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("removeShoppingItemsV1")
             .WithTags(Tags.Shopping)

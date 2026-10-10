@@ -1,4 +1,3 @@
-using System.Globalization;
 using Api.Infrastructure;
 using Application.Abstractions;
 using Domain.Planning;
@@ -17,16 +16,24 @@ internal static class GetSuggestionsRequestExtensions
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        if (!Guid.TryParse(query["householdId"], CultureInfo.InvariantCulture, out var householdId))
-        {
-            return RequestErrors.MissingQueryParameter("householdId");
-        }
+        return query.RequireGuid("householdId").Bind(householdId =>
+            query.ReadGuid("likeRecipeId").Bind(likeRecipeId =>
+                query.ReadInt("limit", 1, SuggestionContext.MaxCount, SuggestionContext.DefaultCount).Bind(limit =>
+                    query.ReadInt("maxMinutes", 1).Bind(maxMinutes =>
+                        query.ReadGuids("exclude").Bind(exclude =>
+                            ToContext(query, userId, asOf, householdId, likeRecipeId.Value, limit, maxMinutes.Value, exclude))))));
+    }
 
-        if (!TryReadId(query["likeRecipeId"], "likeRecipeId", out var likeRecipeId, out var likeFailure))
-        {
-            return likeFailure!;
-        }
-
+    private static Result<SuggestionContext> ToContext(
+        IQueryCollection query,
+        Guid userId,
+        DateTimeOffset asOf,
+        Guid householdId,
+        Guid? likeRecipeId,
+        int limit,
+        int? maxMinutes,
+        IReadOnlyList<Guid> exclude)
+    {
         if (!TryReadPurpose(query["purpose"], likeRecipeId, out var purpose, out var purposeFailure))
         {
             return purposeFailure!;
@@ -35,21 +42,6 @@ internal static class GetSuggestionsRequestExtensions
         if (!TryReadSlot(query["slot"], out var slot, out var slotFailure))
         {
             return slotFailure!;
-        }
-
-        if (!TryReadLimit(query["limit"], out var limit, out var limitFailure))
-        {
-            return limitFailure!;
-        }
-
-        if (!TryReadMinutes(query["maxMinutes"], out var maxMinutes, out var minutesFailure))
-        {
-            return minutesFailure!;
-        }
-
-        if (!TryReadIds(query["exclude"], out var exclude, out var excludeFailure))
-        {
-            return excludeFailure!;
         }
 
         return new SuggestionContext(
@@ -120,116 +112,5 @@ internal static class GetSuggestionsRequestExtensions
 
                 return false;
         }
-    }
-
-    private static bool TryReadLimit(string? value, out int limit, out Error? failure)
-    {
-        limit = SuggestionContext.DefaultCount;
-        failure = null;
-
-        if (string.IsNullOrEmpty(value))
-        {
-            return true;
-        }
-
-        if (!int.TryParse(value, CultureInfo.InvariantCulture, out var parsed))
-        {
-            failure = new FieldError("limit", "request.unknown_parameter", "'limit' must be a whole number.");
-
-            return false;
-        }
-
-        // Rejected, not clamped: a client asking for fifty thinks this is the recipe list and would read twelve as a nearly empty kitchen.
-        if (parsed is < 1 or > SuggestionContext.MaxCount)
-        {
-            failure = SuggestionErrors.InvalidLimit;
-
-            return false;
-        }
-
-        limit = parsed;
-
-        return true;
-    }
-
-    private static bool TryReadMinutes(string? value, out int? minutes, out Error? failure)
-    {
-        minutes = null;
-        failure = null;
-
-        if (string.IsNullOrEmpty(value))
-        {
-            return true;
-        }
-
-        if (!int.TryParse(value, CultureInfo.InvariantCulture, out var parsed) || parsed <= 0)
-        {
-            failure = new FieldError(
-                "maxMinutes",
-                "request.unknown_parameter",
-                "'maxMinutes' must be a whole number of minutes greater than zero.");
-
-            return false;
-        }
-
-        minutes = parsed;
-
-        return true;
-    }
-
-    private static bool TryReadId(string? value, string name, out Guid? id, out Error? failure)
-    {
-        id = null;
-        failure = null;
-
-        if (string.IsNullOrEmpty(value))
-        {
-            return true;
-        }
-
-        if (!Guid.TryParse(value, CultureInfo.InvariantCulture, out var parsed))
-        {
-            failure = new FieldError(name, "request.unknown_parameter", $"'{name}' is not a recipe id.");
-
-            return false;
-        }
-
-        id = parsed;
-
-        return true;
-    }
-
-    private static bool TryReadIds(
-        IReadOnlyList<string?> values,
-        out IReadOnlyList<Guid> ids,
-        out Error? failure)
-    {
-        List<Guid> parsed = [];
-
-        foreach (var value in values)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                continue;
-            }
-
-            if (!Guid.TryParse(value, CultureInfo.InvariantCulture, out var id))
-            {
-                ids = [];
-                failure = new FieldError(
-                    "exclude",
-                    "request.unknown_parameter",
-                    "Every 'exclude' must be a recipe id.");
-
-                return false;
-            }
-
-            parsed.Add(id);
-        }
-
-        ids = parsed;
-        failure = null;
-
-        return true;
     }
 }

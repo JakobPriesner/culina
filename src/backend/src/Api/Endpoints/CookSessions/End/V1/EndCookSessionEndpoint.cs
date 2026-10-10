@@ -2,6 +2,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.CookSessions;
+using Domain.Shared;
 
 namespace Api.Endpoints.CookSessions.End.V1;
 
@@ -21,15 +22,17 @@ internal sealed class EndCookSessionEndpoint : IEndpoint
                 // Finishing and giving up are both "this session is over", but
                 // only one of them means the recipe worked, and the cook log
                 // cares about the difference.
-                var completed = context.Request.Query["completed"] == "true";
+                var command = context.Request.Query.ReadBool("completed").Map(completed =>
+                    new EndCookSessionCommand(sessionId, context.CurrentUser().UserId, completed));
 
-                var result = await handler
-                    .Handle(
-                        new EndCookSessionCommand(sessionId, context.CurrentUser().UserId, completed),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                return await command.Match(
+                    async ended =>
+                    {
+                        var result = await handler.Handle(ended, cancellationToken).ConfigureAwait(false);
 
-                return result.Match(Results.NoContent, CustomResults.Problem);
+                        return result.Match(Results.NoContent, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("endCookSessionV1")
             .WithTags(Tags.CookSessions)
