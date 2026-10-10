@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { expectReflow, recipeId, responsiveData } from './support/responsive';
+import {
+  expectReflow,
+  openShoppingFromCooking,
+  recipeId,
+  responsiveData
+} from './support/responsive';
 
 test.describe('kitchen display and badge lifecycle @offline', () => {
   test.use({ serviceWorkers: 'block' });
@@ -101,10 +106,7 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
       )
       .toBe(2);
     // Client navigation keeps the timer runtime and actual wake-lock status.
-    await page
-      .locator('nav:visible')
-      .getByRole('link', { name: /shopping/i })
-      .click();
+    await openShoppingFromCooking(page);
     await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible();
     await expect(page.getByRole('img', { name: 'Screen stays awake' })).toBeVisible();
     await expect

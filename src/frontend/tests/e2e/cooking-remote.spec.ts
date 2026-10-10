@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { expectReflow, recipeId, responsiveData } from './support/responsive';
+import {
+  expectReflow,
+  openShoppingFromCooking,
+  recipeId,
+  responsiveData
+} from './support/responsive';
 
 type RemoteHarness = Window & { remoteAction: (action: MediaSessionAction) => void };
 
@@ -95,10 +100,7 @@ test.describe('cooking remote @offline', () => {
     await expect(page.getByText('Step 2 of 4', { exact: true })).toBeVisible();
     await expectReflow(page);
     await page.screenshot({ path: testInfo.outputPath('cooking-remote.png'), fullPage: true });
-    await page
-      .locator('nav:visible')
-      .getByRole('link', { name: /shopping/i })
-      .click();
+    await openShoppingFromCooking(page);
     await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Turn off remote' })).toBeVisible();
     await page.evaluate(() => (window as unknown as RemoteHarness).remoteAction('nexttrack'));
@@ -109,10 +111,7 @@ test.describe('cooking remote @offline', () => {
     await expect(page.getByText('Step 3 of 4', { exact: true })).toBeVisible();
     await page.evaluate(() => (window as unknown as RemoteHarness).remoteAction('previoustrack'));
     await expect(page.getByText('Step 2 of 4', { exact: true })).toBeVisible();
-    await page
-      .locator('nav:visible')
-      .getByRole('link', { name: /shopping/i })
-      .click();
+    await openShoppingFromCooking(page);
     await page.getByRole('button', { name: 'Stop cooking', exact: true }).click();
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.metadata)).toBeNull();
     await expect.poll(() => page.evaluate(() => navigator.mediaSession.playbackState)).toBe('none');
