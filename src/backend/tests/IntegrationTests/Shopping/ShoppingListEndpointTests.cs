@@ -72,6 +72,36 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Get_ShouldReadTheList_WhenAZeroAmountStoredBeforeItWasRefusedIsRepaired()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipe = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId = recipe, servings = 4 },
+            Token);
+        await postgres.ExecuteAsync(
+            $"""
+            update shopping_list_items set quantity = 0
+            where list_id in (select id from shopping_lists where household_id = '{householdId}');
+            update shopping_list_item_sources set quantity = 0.0004 where recipe_id = '{recipe}';
+            """,
+            Token);
+        var url = $"/api/v1/households/{householdId}/shopping-list";
+        var broken = await client.GetAsync(url, Token);
+
+        await postgres.RerunMigrationAsync("0031_repair_zero_amounts", Token);
+        var read = await client.GetAsync(url, Token);
+
+        Assert.NotEqual(HttpStatusCode.OK, broken.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        var butter = Butter(read);
+        Assert.Equal(JsonValueKind.Null, butter.GetProperty("quantity").ValueKind);
+        Assert.Equal(JsonValueKind.Null, butter.GetProperty("sources")[0].GetProperty("quantity").ValueKind);
+    }
+
+    [Fact]
     public async Task AddPlannedMeals_ShouldExposeEveryRecipesAmountAndDay()
     {
         // One line, two reasons: the response keeps both so a merged amount can say what it is for.
