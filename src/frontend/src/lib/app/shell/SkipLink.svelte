@@ -17,11 +17,12 @@
     border-radius: var(--radius-md);
     background: var(--surface-overlay);
     color: var(--text);
-    box-shadow: var(--shadow-overlay);
     transform: translateY(-200%);
   }
 
+  /* Shadowless while parked, or its blur bleeds into the top edge. */
   .skip:focus {
+    box-shadow: var(--shadow-overlay);
     transform: none;
   }
 

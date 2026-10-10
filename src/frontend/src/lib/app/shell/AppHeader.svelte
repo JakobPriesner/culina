@@ -152,6 +152,13 @@
     }
   }
 
+  /* A recipe on a phone brings its own sticky bar (back, title) and needs the height for the photo; the bottom bar still navigates. */
+  @media (width < 52rem) {
+    :global(.shell.reading-recipe) .header {
+      display: none;
+    }
+  }
+
   /* The first column never shrinks below the brand: just past 64rem it would get ~9rem and wrap the wordmark's dot. */
   @media (min-width: 64rem) {
     .header-inner {

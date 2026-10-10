@@ -28,6 +28,7 @@
   const servings = $derived(yieldFrom(page.url, recipes.detail));
 
   let sheet = $state<RecipeSheet | null>(null);
+  let titleInView = $state(true);
 
   /** The owning household of an inherited recipe (read-only here), else null. */
   const inheritedFrom = $derived(
@@ -83,7 +84,7 @@
 </svelte:head>
 
 <Page>
-  <RecipeBackLink />
+  <RecipeBackLink title={recipes.detail?.title} condensed={!titleInView} />
 
   {#if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
     <NotFound kind="recipe" level={1} />
@@ -132,6 +133,7 @@
       oncopy={inheritedFrom ? () => void actions.copy() : undefined}
       ondelete={inheritedFrom ? undefined : () => deletion.ask(recipes.detail)}
       editable={!inheritedFrom}
+      ontitleview={(visible) => (titleInView = visible)}
       cookbooks={shelves}
     />
 

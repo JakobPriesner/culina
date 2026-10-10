@@ -44,15 +44,20 @@ test.describe('responsive production layouts @offline', () => {
             } else {
               await expect(page.locator(width < 1024 ? 'nav.bottom' : 'nav.top')).toBeVisible();
             }
-            // A name, on one line: at 1024px its dot once wrapped below it.
-            const wordmark = page.locator('header .wordmark');
-            expect(
-              await wordmark.evaluate(
-                (element) =>
-                  element.getBoundingClientRect().height <
-                  1.5 * parseFloat(getComputedStyle(element).fontSize)
-              )
-            ).toBe(true);
+            // A recipe on a phone has no shell header: its back bar is sticky instead.
+            if (path === `/recipes/${recipeId}` && width < 832) {
+              await expect(page.locator('.shell > header.header')).toBeHidden();
+            } else {
+              // A name, on one line: at 1024px its dot once wrapped below it.
+              const wordmark = page.locator('header .wordmark');
+              expect(
+                await wordmark.evaluate(
+                  (element) =>
+                    element.getBoundingClientRect().height <
+                    1.5 * parseFloat(getComputedStyle(element).fontSize)
+                )
+              ).toBe(true);
+            }
             if (
               locale === 'de' &&
               [320, 768, 1280].includes(width) &&
@@ -139,18 +144,23 @@ test.describe('responsive production layouts @offline', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(`/recipes/${recipeId}`);
 
-    const ingredients = page.getByRole('heading', { name: 'Zutaten', level: 2 });
+    const title = page.getByRole('heading', { level: 1 });
+    const servings = page.locator('article.surface > .servings');
     const resume = page.getByRole('link', { name: /Gerade am Kochen/ });
-    await expect(ingredients).toBeVisible();
+    await expect(title).toBeVisible();
     await expect(resume).toBeVisible();
     await expect(page.getByRole('button', { name: 'Kochen starten' })).toHaveCount(0);
+    // The shell header gives way to the recipe's own sticky back bar.
+    await expect(page.locator('.shell > header.header')).toBeHidden();
 
-    const ingredientsBox = (await ingredients.boundingBox())!;
-    const resumeBox = (await resume.boundingBox())!;
-    expect(ingredientsBox.y + ingredientsBox.height).toBeLessThan(resumeBox.y);
-
+    // The photo is big on purpose (4:3, at most 18rem); the title and servings must still clear the bar.
     const hero = (await page.locator('article.surface > .hero').boundingBox())!;
-    expect(hero.height).toBeLessThanOrEqual(hero.width / 3.9);
+    expect(hero.height).toBeLessThanOrEqual(288);
+    const resumeBox = (await resume.boundingBox())!;
+    const titleBox = (await title.boundingBox())!;
+    expect(titleBox.y + titleBox.height).toBeLessThan(resumeBox.y);
+    const servingsBox = (await servings.boundingBox())!;
+    expect(servingsBox.y + servingsBox.height).toBeLessThan(resumeBox.y);
     await expectReflow(page);
     await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
   });
@@ -260,7 +270,8 @@ test.describe('responsive production layouts @offline', () => {
     expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await back.click();
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}\\?yield=4$`));
-    await expect(page.locator('.shell > header.header')).toBeVisible();
+    // The recipe page sheds the shell header on a phone; its own back bar takes over.
+    await expect(page.locator('.shell > header.header')).toBeHidden();
     await expect(page.locator('nav.bottom')).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.getByRole('link', { name: /weiterkochen/i }).click();
