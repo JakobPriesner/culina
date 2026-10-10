@@ -46,6 +46,8 @@
   /* Long-form measure; prose past about 70 characters is hard to track. */
   --measure: 68ch;
   --layout-wide: 80rem;
+  /* Card grids only: more columns on large screens, never wider prose. */
+  --layout-grid: 150rem;
 
   /* Inline padding of every full-width band, so header brand and heading start on one line. */
   --layout-gutter: clamp(1rem, 4vw, 3rem);
