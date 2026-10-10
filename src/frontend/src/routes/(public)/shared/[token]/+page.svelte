@@ -2,10 +2,13 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { ErrorState } from '$ds';
+  import { metaFigureOf } from '$features/nutrition/headline';
   import NutritionPanel from '$features/nutrition/NutritionPanel.svelte';
+  import { nutrition } from '$features/nutrition/stores/nutrition.svelte';
   import { sharedImageSrcset, sharedImageUrl } from '$features/recipes/recipeImage';
   import { sharedRecipe } from '$features/recipes/stores/sharedRecipe.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
+  import { revealNutritionPanel } from '$features/recipes/surface/nutritionLink';
   import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
@@ -18,6 +21,23 @@
   const token = $derived(page.params.token ?? '');
   const recipe = $derived(sharedRecipe.recipe);
   const servings = $derived(yieldFrom(page.url, recipe));
+
+  let nutritionOpen = $state(false);
+  const nutritionFigure = $derived(metaFigureOf(nutrition.answerForShared(token)));
+  const nutritionLink = $derived(
+    nutritionFigure
+      ? {
+          label: nutritionFigure,
+          ariaLabel: m['nutrition.meta.open']({ figure: nutritionFigure }),
+          onopen: showNutrition
+        }
+      : null
+  );
+
+  async function showNutrition() {
+    nutritionOpen = true;
+    await revealNutritionPanel();
+  }
 
   $effect(() => {
     if (token) {
@@ -52,10 +72,11 @@
       {servings}
       onservings={scale}
       photo={{ src: sharedImageUrl(token, 1600), srcset: sharedImageSrcset(token) }}
+      nutrition={nutritionLink}
     />
 
     <!-- The recipe's own id here is the token; the visitor is in no household, so nothing is correctable. -->
-    <NutritionPanel {recipe} {servings} householdId={null} readonly />
+    <NutritionPanel {recipe} {servings} householdId={null} bind:open={nutritionOpen} readonly />
   {:else}
     <RecipeSurfaceSkeleton />
   {/if}

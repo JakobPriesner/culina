@@ -62,7 +62,7 @@
   </thead>
 
   <tbody>
-    <tr>
+    <tr class="energy">
       <th scope="row">{m['nutrition.energy']()}</th>
       <td class="value">{energy}</td>
     </tr>
@@ -93,7 +93,7 @@
 
   th,
   td {
-    padding-block: var(--space-1);
+    padding-block: var(--space-4);
     border-bottom: 1px solid var(--border);
     text-align: start;
     font-weight: var(--weight-regular);
@@ -101,6 +101,13 @@
 
   thead th {
     color: var(--text-muted);
+    padding-top: 0;
+    padding-bottom: var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .energy > * {
+    font-weight: var(--weight-semibold);
   }
 
   tbody tr:last-child > * {
@@ -110,13 +117,15 @@
   .value {
     text-align: end;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    padding-inline-start: var(--space-3);
+    line-height: var(--leading-normal);
   }
 
   /* "of which": what a reader knows from the pack. */
   .sub th {
     padding-inline-start: var(--space-4);
     color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   @media print {
