@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Recipes;
 using Contracts.Recipes.Drafts;
+using Domain.Import;
 using Domain.Recipes;
 
 namespace Application.Assistance;
@@ -39,6 +40,7 @@ internal static class DraftMapping
             Title = Trimmed(draft.Title),
             Description = RecipeFit.Description(draft.Description),
             YieldAmount = draft.YieldAmount is > 0 ? draft.YieldAmount : null,
+            YieldKind = RecipeWords.Of(YieldText.KindOf(draft.YieldAmount, draft.YieldLabel)),
             YieldLabel = Trimmed(draft.YieldLabel),
             PrepMinutes = Minutes(draft.PrepMinutes),
             CookMinutes = Minutes(draft.CookMinutes),

@@ -48,6 +48,15 @@ public static partial class YieldText
     /// <summary>What this says it makes, or null when it names no number.</summary>
     public static Yield? Read(string? written) => Parse(written)?.Yield;
 
+    /// <summary>
+    /// What a number and a word, given apart (as a model gives them), count: <c>12</c> and "Muffins" is pieces,
+    /// <c>4</c> and "Portionen", or no word at all, servings.
+    /// </summary>
+    public static YieldKind KindOf(decimal? amount, string? label) =>
+        Read(string.Create(CultureInfo.InvariantCulture, $"{amount ?? 1} {label}")) is { Kind: YieldKind.Pieces }
+            ? YieldKind.Pieces
+            : YieldKind.Servings;
+
     private static Reading? Parse(string? written)
     {
         var match = written is null ? null : Pattern().Match(written.Trim());

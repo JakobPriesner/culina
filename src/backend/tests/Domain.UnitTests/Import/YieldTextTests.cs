@@ -79,4 +79,15 @@ public class YieldTextTests
     {
         Assert.Equal(6, YieldText.Read(["6", "8"])!.Amount);
     }
+
+    [Theory]
+    [InlineData(12, "Muffins", YieldKind.Pieces)]
+    [InlineData(24, "cookies", YieldKind.Pieces)]
+    [InlineData(1, "Kuchen (26 cm)", YieldKind.Pieces)]
+    [InlineData(4, "Portionen", YieldKind.Servings)]
+    [InlineData(4, null, YieldKind.Servings)]
+    [InlineData(null, null, YieldKind.Servings)]
+    [InlineData(4, "something odd", YieldKind.Servings)]
+    public void KindOf_ShouldCountPieces_OnlyWhenTheWordNamesThings(int? amount, string? label, YieldKind expected) =>
+        Assert.Equal(expected, YieldText.KindOf(amount, label));
 }
