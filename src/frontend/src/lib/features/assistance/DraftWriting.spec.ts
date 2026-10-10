@@ -7,6 +7,7 @@ import type { Draft } from './draftToRecipe';
 
 const draft = (parts: Partial<Draft>): Draft => ({
   draftId: 'd1',
+  yieldKind: 'servings',
   groups: [],
   steps: [],
   tags: [],

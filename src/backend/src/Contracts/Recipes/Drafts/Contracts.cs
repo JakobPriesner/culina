@@ -37,6 +37,10 @@ public sealed record Response
     /// <summary>How many it makes.</summary>
     public decimal? YieldAmount { get; init; }
 
+    /// <summary>What that counts: <c>servings</c> or <c>pieces</c>, read from the amount and its word ("12" and "Muffins" is pieces).</summary>
+    /// <remarks>Defaults to servings, so an intake checkpoint saved before the kind existed still reads after a deploy.</remarks>
+    public string YieldKind { get; init; } = "servings";
+
     /// <summary>What it makes: servings, or a cake.</summary>
     public string? YieldLabel { get; init; }
 

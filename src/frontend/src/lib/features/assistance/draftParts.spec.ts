@@ -18,6 +18,7 @@ const current = {
 
 const draft = (overrides: Partial<Draft> = {}): Draft => ({
   draftId: 'draft-1',
+  yieldKind: 'servings',
   groups: [],
   steps: [],
   tags: [],
