@@ -635,11 +635,11 @@ epic.
   proportions (17 g yolk and 33 g white of 50 g). It is the egg rule applied to
   its parts, not a new kind of weight.
 - An egg counts only with no unit or the built-in `piece`.
-- 43 entries pour and carry a density, each from an FDC SR Legacy portion row
+- 43 entries pour (44 since Q.2) and carry a density, each from an FDC SR Legacy portion row
   named beside it.
 
 **Names (§D).**
-- 251 entries, curated from the library's own names and `CommonIngredients`.
+- 251 entries (263 since Q.2), curated from the library's own names and `CommonIngredients`.
   Left out on purpose, among others: *Brühe* and its kinds (the same word is a
   powder at about 200 kcal per 100 g and a liquid at about 8, so only the
   unmistakable powder words are entries), *Fond* (the judge did not accept the
@@ -687,3 +687,87 @@ epic.
   optimistically, rolled back on refusal, and the totals are always read back
   from the server.
 
+
+### Q.2 Follow-up: labels, broth by unit, canned legumes (10 October 2026)
+
+This supersedes parts of the lists above (251 entries; 44 pour; *Brühe* left
+out; *Kidneybohnen* left out). The table now has 263 entries.
+
+**Labels.** Every `FoodName` has `LabelDe` and `LabelEn`: what a reader calls
+the default food, in cooking language ("Hühnerei", "Kidneybohnen (gekocht)",
+"Linsen (trocken)"; the label says the state where the BLS food is not the
+obvious one). A test fails for an entry without both. The nutrition response's
+`food` carries `labelDe`/`labelEn` beside `nameDe`/`nameEn`, which stay the BLS
+names as the citation. A food chosen by correction that has no entry is labelled
+with its BLS name, so the client never has to fall back. The shared recipe's
+answer is the same.
+
+**Broth by unit (supervisor's decision).** The same word is a powder at about
+200 kcal per 100 g and a liquid at 3 to 8, so one BLS food per word was
+always wrong for one of them. An entry (R811000 meat, R821000 vegetable, R822000
+chicken) now keeps the powder as its code and carries a `LiquidFood`
+alternative (BLS Y183013 / X416243 / X411243, each with its own density from the
+FDC stock rows and its own labels). `NutritionGrams.Resolve`
+picks the food a line is by its unit:
+
+| Unit | Food | Counted |
+| --- | --- | --- |
+| ml, l, cup, fl oz | liquid | volume x liquid density |
+| g, kg, up to and including 50 g | powder | by mass |
+| g, kg, above 50 g | liquid | by mass |
+| tsp, tbsp | powder | not counted (`spoonOfSolid`, the powder packs) |
+| counts, household units | powder | not counted |
+
+Why the weight decides: no recipe uses more than about 50 g of broth powder (that
+makes over 20 litres of broth), and nobody weighs less than 50 g of liquid
+broth, so a mass says which one it is. Without it "500 g Brühe" counted as the
+powder and was 40 times too high. The response reports the resolved food, so the
+breakdown reads "als Gemüsebrühe (flüssig)" or "als Gemüsebrühpulver". A
+correction is keyed by name and names an exact food, so a corrected food has no
+liquid alternative and follows the mass and density rules of its own entry.
+A bare *Brühe*, *Bouillon* or *stock* names neither the kind nor the state, and
+both blind judges refused it, so it stays unknown; only words that say powder or
+cube (*gekörnte Brühe*, *Brühpulver*, *Brühwürfel*) are forms of the generic
+powder R810000, which has no liquid alternative. The rule changed `NutritionGrams`, so
+`NutritionData.Version` moved with both the rules and the table.
+
+**Canned legumes and sweetcorn, by wording only.** Dry and cooked legumes differ
+by about 2.5 to 3 times in energy (316 to 388 against 111 to 157 kcal per 100 g),
+so a bare *Kidneybohnen*, *Kichererbsen*, *Mais*, *weiße Bohnen* or *Linsen*
+stays unmapped (*Linsen* stays the dry entry). Only wording that says the food
+is canned or drained ("aus der Dose", "Konserve", "abgetropft", "canned") maps,
+to the BLS "Konserve, abgetropft" food: H742902 kidney beans, H720902 chickpeas,
+H730902 lentils, H740902 white beans, and more wording for the existing sweetcorn
+G570902. Labels say "gekocht"/"(Dose)" so the reader sees what was counted.
+
+**Other additions.** Crème double (M172900 as Creme fraiche 40 %; "double cream"
+omitted, UK double cream is 48 % fat), quark with a stated fat stage (M713300 20 %,
+M713500 40 %; read as fat in dry matter, as packs label it), coconut oil Q550000
+(native; density FDC 171412), and roasted peanuts H110600 and H110700 (salted;
+BLS has no raw peanut, so a bare "Erdnüsse" may be up to 9 % high).
+
+**Rejected, from the curator's list.**
+- *Fond* (Gemüse-, Hühner-, Rinder-, Kalbsfond): liquid by nature but it would sit
+  on the powder code; no BLS vegetable fond. Fischbrühe, Wildbrühe, Kalbsbrühe
+  have BLS liquids but no matching powder, so only the generic powder would
+  answer the weight rule wrongly.
+- *Kochsahne*, *Cremefine*, *Cuisine*: BLS has no 15 % cooking cream, the products
+  range 7 to 15 % and 100 to 170 kcal.
+- *Béchamel*: BLS has three recipes from 88 to 178 kcal; it is a sauce, not an
+  ingredient.
+- *Rindfleisch* (cut-dependent, 110 to 300 kcal), *Speck* (Bauch 304, Rücken 746),
+  *Hülsenfrüchte* (a class), *Spätzle* (BLS only has homemade raw dough; fresh
+  about 150 to 170, dry about 350), unqualified *Frischkäse* (86 to 252 kcal) and
+  unqualified *Quark* (66 to 178 kcal).
+- *Mais gekocht*, *Maiskörner* (grain 336, boiled 88, sweetcorn 61 to 79).
+- *Kokosfett*/*Palmin* (BLS Q550200 is the hardened fat, a different product),
+  *double cream*, and *Erdnussmus* (not asked, 2 % from Erdnussbutter).
+- Ricotta and Mascarpone were already entries.
+
+**The gate, re-judged.** The fixture was re-judged per line with its unit in view
+(50 lines changed), and the evaluation compares the unit-resolved food, the one
+the calculator counts. Result: recognised 793 of 970 (from 780), **precision
+793/793 = 100 %** (bar 98 %), counted 467 (from 459; 422 without the egg rule, 353
+without densities, 308 with neither), 8 of 125 recipes complete, median recipe
+53 % counted (from 50 %). A first run mapped bare *Brühe* to the generic entry and
+missed that one line (99.9 %); the table was narrowed, not the answer changed.

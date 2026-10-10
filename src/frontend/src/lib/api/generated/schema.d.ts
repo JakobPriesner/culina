@@ -3416,10 +3416,14 @@ export interface components {
         RecipesGetNutritionNutritionFood: {
             /** @description The BLS code. */
             code: string;
-            /** @description The German name. */
+            /** @description The German BLS name, the citation. */
             nameDe: string;
-            /** @description The English name. */
+            /** @description The English BLS name, the citation. */
             nameEn: string;
+            /** @description What a reader calls the food in German; the BLS name for a food chosen by correction that has no label of its own. */
+            labelDe: string;
+            /** @description What a reader calls the food in English; the BLS name for a food chosen by correction that has no label of its own. */
+            labelEn: string;
         };
         /** @description What became of one ingredient line. */
         RecipesGetNutritionNutritionIngredient: {

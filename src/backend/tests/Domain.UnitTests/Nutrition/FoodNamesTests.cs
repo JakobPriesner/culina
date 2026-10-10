@@ -32,6 +32,40 @@ public class FoodNamesTests
     }
 
     [Fact]
+    public void All_ShouldHaveALabelInBothLanguages()
+    {
+        // Assert
+        Assert.All(FoodNames.All, entry =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(entry.LabelDe), entry.Code);
+            Assert.False(string.IsNullOrWhiteSpace(entry.LabelEn), entry.Code);
+
+            if (entry.Liquid is { } liquid)
+            {
+                Assert.False(string.IsNullOrWhiteSpace(liquid.LabelDe), entry.Code);
+                Assert.False(string.IsNullOrWhiteSpace(liquid.LabelEn), entry.Code);
+            }
+        });
+    }
+
+    [Fact]
+    public void All_ShouldGiveALiquidAFoodOfItsOwn_AndAPlausibleDensity()
+    {
+        // Assert
+        var withLiquid = FoodNames.All.Where(entry => entry.Liquid is not null).ToList();
+
+        Assert.NotEmpty(withLiquid);
+
+        foreach (var entry in withLiquid)
+        {
+            Assert.NotEqual(entry.Code, entry.Liquid!.Code);
+            Assert.StartsWith("R", entry.Code, StringComparison.Ordinal);
+            Assert.InRange(entry.Liquid.Density, 0.9m, 1.1m);
+            Assert.Null(entry.Density);
+        }
+    }
+
+    [Fact]
     public void All_ShouldGiveADensityOnlyWithinWhatALiquidWeighs_AndNeverToAnEgg()
     {
         // Assert
@@ -61,8 +95,16 @@ public class FoodNamesTests
     }
 
     [Theory]
-    [InlineData("Kokosöl")]
-    [InlineData("Kokosnussöl")]
+    [InlineData("Kidneybohnen")]
+    [InlineData("Kichererbsen")]
+    [InlineData("Mais")]
+    [InlineData("Quark")]
+    [InlineData("Kochsahne")]
+    [InlineData("Fond")]
+    [InlineData("Brühe")]
+    [InlineData("Bouillon")]
+    [InlineData("stock")]
+    [InlineData("Kokosfett")]
     [InlineData("Balsamicoessig (bianco)")]
     [InlineData("Eis")]
     [InlineData("Eisen")]
@@ -73,6 +115,26 @@ public class FoodNamesTests
     {
         // Act & Assert
         Assert.Null(FoodNames.Match(name));
+    }
+
+    [Theory]
+    [InlineData("Kidneybohnen aus der Dose", "H742902")]
+    [InlineData("canned chickpeas", "H720902")]
+    [InlineData("Dosenmais", "G570902")]
+    [InlineData("Erdnüsse", "H110600")]
+    [InlineData("gesalzene Erdnüsse", "H110700")]
+    [InlineData("Quark 20 %", "M713300")]
+    [InlineData("Speisequark 40 %", "M713500")]
+    [InlineData("Crème double", "M172900")]
+    [InlineData("Kokosöl", "Q550000")]
+    [InlineData("Gemüsebrühe", "R821000")]
+    [InlineData("Hühnerbrühe", "R822000")]
+    [InlineData("Rinderbrühe", "R811000")]
+    [InlineData("Brühpulver", "R810000")]
+    public void Match_ShouldFindTheFood_OfTheEntriesAddedForLabelsAndBroth(string name, string code)
+    {
+        // Act & Assert
+        Assert.Equal(code, FoodNames.Match(name)?.Code);
     }
 
     [Theory]

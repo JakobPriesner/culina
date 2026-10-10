@@ -109,11 +109,17 @@ public sealed record NutritionFood
     /// <summary>The BLS code.</summary>
     public required string Code { get; init; }
 
-    /// <summary>The German name.</summary>
+    /// <summary>The German BLS name, the citation.</summary>
     public required string NameDe { get; init; }
 
-    /// <summary>The English name.</summary>
+    /// <summary>The English BLS name, the citation.</summary>
     public required string NameEn { get; init; }
+
+    /// <summary>What a reader calls the food in German; the BLS name for a food chosen by correction that has no label of its own.</summary>
+    public required string LabelDe { get; init; }
+
+    /// <summary>What a reader calls the food in English; the BLS name for a food chosen by correction that has no label of its own.</summary>
+    public required string LabelEn { get; init; }
 }
 
 /// <summary>Where the data comes from, for attribution (CC BY 4.0 requires it wherever it is shown).</summary>
