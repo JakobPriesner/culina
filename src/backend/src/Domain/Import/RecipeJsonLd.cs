@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Domain.Recipes;
 
@@ -16,13 +15,13 @@ public static class RecipeJsonLd
     /// <param name="Title">Its name, if it gave one.</param>
     /// <param name="IngredientLines">Its ingredients, one line each, as written.</param>
     /// <param name="Steps">Its instructions, one paragraph each.</param>
-    /// <param name="Servings">What it says it makes, if it is a plain number.</param>
+    /// <param name="Yield">What it says it makes, if it gives a number.</param>
     /// <param name="TotalMinutes">How long it takes, if it said.</param>
     public sealed record Draft(
         string? Title,
         IReadOnlyList<string> IngredientLines,
         IReadOnlyList<string> Steps,
-        decimal? Servings,
+        Yield? Yield,
         int? TotalMinutes);
 
     /// <summary>The recipe a page publishes, or null when it publishes none.</summary>
@@ -113,7 +112,7 @@ public static class RecipeJsonLd
         Text(recipe, "name"),
         [.. Strings(recipe, "recipeIngredient").Concat(Strings(recipe, "ingredients"))],
         [.. Instructions(recipe)],
-        Servings(recipe),
+        MadeOf(recipe),
         Minutes(recipe));
 
     /// <summary>A string property, however the site chose to wrap it.</summary>
@@ -194,32 +193,15 @@ public static class RecipeJsonLd
     private static IEnumerable<string> Instructions(JsonElement recipe) =>
         Strings(recipe, "recipeInstructions");
 
-    /// <summary>
-    /// What it makes, when that is a number: "4", "4 servings" and "4-6" (lower bound) all appear;
-    /// anything with no number is left alone.
-    /// </summary>
-    private static decimal? Servings(JsonElement recipe)
-    {
-        var written = Strings(recipe, "recipeYield").FirstOrDefault()
-            ?? Strings(recipe, "yield").FirstOrDefault();
+    /// <summary>What it makes, when it says: see <see cref="YieldText"/> for the wordings read.</summary>
+    private static Yield? MadeOf(JsonElement recipe) =>
+        YieldText.Read(Written(recipe, "recipeYield").Concat(Written(recipe, "yield")));
 
-        if (written is null)
-        {
-            return null;
-        }
-
-        // Skipped to the first digit: "Serves 4" and "Makes 12" are as common as "4 servings".
-        var digits = new string([
-            .. written.SkipWhile(one => !char.IsDigit(one))
-                .TakeWhile(one => char.IsDigit(one) || one == '.')
-        ]);
-
-        return decimal.TryParse(digits, CultureInfo.InvariantCulture, out var amount)
-            && amount > 0
-            && amount <= Yield.MaxAmount
-                ? amount
-                : null;
-    }
+    // A yield is as often a JSON number (<c>"recipeYield": 4</c>) as a string or a list of both.
+    private static IEnumerable<string> Written(JsonElement recipe, string name) =>
+        recipe.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number
+            ? [value.GetRawText()]
+            : Strings(recipe, name);
 
     /// <summary>How long it takes, from an ISO 8601 duration.</summary>
     private static int? Minutes(JsonElement recipe)

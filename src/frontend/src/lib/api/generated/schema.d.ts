@@ -3706,9 +3706,13 @@ export interface components {
             steps: string[];
             /**
              * Format: double
-             * @description What it says it makes, when that was a plain number.
+             * @description How many it says it makes, when it gave a number; the larger end of a range.
              */
             servings?: number | null;
+            /** @description Whether that is "servings" or "pieces", when it gave a number. */
+            yieldKind?: string | null;
+            /** @description The page's own word for what it makes ("Muffins", "Kuchen (26 cm)"), when it named one. */
+            yieldLabel?: string | null;
             /**
              * Format: int32
              * @description How long it takes, when the page said.

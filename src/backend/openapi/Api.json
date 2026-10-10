@@ -11574,8 +11574,18 @@
           },
           "servings": {
             "type": "number",
-            "description": "What it says it makes, when that was a plain number.",
+            "description": "How many it says it makes, when it gave a number; the larger end of a range.",
             "format": "double",
+            "nullable": true
+          },
+          "yieldKind": {
+            "type": "string",
+            "description": "Whether that is \"servings\" or \"pieces\", when it gave a number.",
+            "nullable": true
+          },
+          "yieldLabel": {
+            "type": "string",
+            "description": "The page's own word for what it makes (\"Muffins\", \"Kuchen (26 cm)\"), when it named one.",
             "nullable": true
           },
           "totalMinutes": {
