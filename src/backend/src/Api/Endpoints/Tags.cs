@@ -40,6 +40,8 @@ internal static class Tags
 
     internal const string Shopping = "Shopping";
 
+    internal const string Nutrition = "Nutrition";
+
     internal const string Cookbooks = "Cookbooks";
 
     internal const string RecipeSources = "RecipeSources";

@@ -4,6 +4,7 @@ using Api.Endpoints.CookSessions;
 using Api.Endpoints.Households;
 using Api.Endpoints.Invitations;
 using Api.Endpoints.LogRecords;
+using Api.Endpoints.Nutrition;
 using Api.Endpoints.PasswordResets;
 using Api.Endpoints.Planning;
 using Api.Endpoints.RecipeDrafts;
@@ -46,6 +47,7 @@ internal static class EndpointExtensions
             .AddSharedRecipesEndpoints()
             .AddCookSessionEndpoints()
             .AddShoppingEndpoints()
+            .AddNutritionEndpoints()
             .AddPlanningEndpoints()
             .AddCookbooksEndpoints()
             .AddRecipeSourcesEndpoints()

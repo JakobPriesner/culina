@@ -4,6 +4,7 @@ using Application.Telemetry;
 using Contracts.Recipes.GetNutrition;
 using Domain.Nutrition;
 using Domain.Shared;
+using Domain.Shopping;
 
 namespace Application.Recipes.GetNutrition;
 
@@ -29,7 +30,8 @@ public sealed record RecipeNutrition(
 internal sealed class GetNutritionQueryHandler(
     IRecipeRepository recipes,
     IHouseholdRepository households,
-    IFoodTable foods)
+    IFoodTable foods,
+    INutritionCorrectionRepository choices)
     : IQueryHandler<GetNutritionQuery, RecipeNutrition>
 {
     public async Task<Result<RecipeNutrition>> Handle(
@@ -44,19 +46,30 @@ internal sealed class GetNutritionQueryHandler(
             .VisibleInAsync(recipes, households, query.RecipeId, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = found.Map(recipe =>
-        {
-            // Phase 4 reads the household's corrections for this recipe's names here.
-            var corrections = new Dictionary<string, string?>();
-            var figure = NutritionCalculator.Calculate(recipe.Ingredients, recipe.Yield, foods.Find, corrections);
+        var result = await found.Match(
+            async recipe =>
+            {
+                var household = query.HouseholdId ?? recipe.HouseholdId;
 
-            return new RecipeNutrition(
-                figure.ToResponse(),
-                recipe.Version,
-                query.HouseholdId ?? recipe.HouseholdId,
-                NutritionData.Version,
-                [.. corrections.Select(pair => $"{pair.Key}={pair.Value ?? "none"}")]);
-        });
+                // One indexed query for the names this recipe uses; the household passed, never the one
+                // it inherits from.
+                var corrections = await choices
+                    .ForNamesAsync(
+                        household,
+                        [.. recipe.Ingredients.Select(line => ItemName.Fold(line.Name)).Distinct()],
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                var figure = NutritionCalculator.Calculate(recipe.Ingredients, recipe.Yield, foods.Find, corrections);
+
+                return Result<RecipeNutrition>.Success(new RecipeNutrition(
+                    figure.ToResponse(),
+                    recipe.Version,
+                    household,
+                    NutritionData.Version,
+                    [.. corrections.Select(pair => $"{pair.Key}={pair.Value ?? "none"}")]));
+            },
+            error => Task.FromResult(Result<RecipeNutrition>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
     }

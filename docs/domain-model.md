@@ -562,9 +562,24 @@ Lines written before sources existed have none, and are left alone.
 
 Ordered the way a shop is walked. Assigned from a seeded DE+EN keyword table
 (~150 entries), defaulting to `other`. A user's correction is stored per
-household in `HouseholdIngredientSection(HouseholdId, NameNormalised, Section)`
+household in `shopping_section_overrides(household_id, name_key, section)`
 and wins over the seed from then on — sensible default, trivially correctable,
 no configuration screen.
+
+### Food corrections
+
+What a household says an ingredient really is, for nutrition: the same idea as
+the section override, one table beside it —
+`nutrition_food_overrides(household_id, name_key, food_code?, updated_at)`,
+primary key `(household_id, name_key)`. `name_key` is `ItemName.Fold(name)`, the
+key the section override uses, so "Müsli" and "Muesli" share one row.
+`food_code` is a BLS code, or null for "do not count this".
+
+Per household and never inherited: a household that inherits another's recipes
+corrects for itself, and the household it inherits from does not see that. No
+version column: a row is an idempotent fact at a known address. A recipe's
+nutrition reads the rows for its own folded names in one query, and its ETag
+carries a fingerprint of the rows that applied (see `api.md`).
 
 ## Planning
 
