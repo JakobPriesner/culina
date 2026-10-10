@@ -12,7 +12,9 @@ import type { Recipe } from '$features/recipes/types';
 import { renderWithProviders } from '$lib/test/render';
 
 /* Tested at the page, not the mention parser: a name added from inside a step has no id when mentioned, and only the following save gives it one. */
-vi.mock('$app/state', () => ({ page: { params: { recipeId: 'recipe-1' } } }));
+vi.mock('$app/state', () => ({
+  page: { params: { recipeId: 'recipe-1' }, url: new URL('http://localhost/recipes/recipe-1/edit') }
+}));
 
 const butter = { id: 'i-butter', name: 'butter', note: null, quantity: { value: 200, unit: 'g' } };
 

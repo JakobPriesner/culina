@@ -2,6 +2,7 @@
   import { visibleBelow } from '$shell/whenVisible';
   import RecipeActions from './RecipeActions.svelte';
   import RecipeHeadMeta from './RecipeHeadMeta.svelte';
+  import type { NutritionLink } from './nutritionLink';
   import type { RecipeReading } from '../types';
 
   interface Props {
@@ -19,6 +20,7 @@
     ondelete?: () => void;
     /** Whether the title is still on screen, for a page that repeats it in a sticky bar. */
     ontitleview?: (visible: boolean) => void;
+    nutrition?: NutritionLink | null;
   }
 
   let {
@@ -33,7 +35,8 @@
     onshare,
     oncopy,
     ondelete,
-    ontitleview
+    ontitleview,
+    nutrition = null
   }: Props = $props();
 
   /** The page's sticky bar is about this tall (px); the title counts as gone once it slides under it. */
@@ -59,7 +62,7 @@
     />
   </div>
 
-  <RecipeHeadMeta {recipe} {cooking} {cookbooks} {printedYield} />
+  <RecipeHeadMeta {recipe} {cooking} {cookbooks} {printedYield} {nutrition} />
 </header>
 
 <style>
