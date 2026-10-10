@@ -10,6 +10,7 @@
   import { everyIngredient, type Ingredient, type RecipeReading } from '$features/recipes/types';
 
   import { wholeOrTenth } from './format';
+  import { perWords } from './headline';
   import NutritionCorrectionSheet from './NutritionCorrectionSheet.svelte';
   import { roundForLabel } from './rounding';
   import { nutrition as store } from './stores/nutrition.svelte';
@@ -220,6 +221,10 @@
 <section bind:this={section} class="breakdown" aria-labelledby="nutrition-breakdown">
   <h3 id="nutrition-breakdown" class="title">{m['nutrition.breakdown.title']()}</h3>
 
+  <p class="basis">
+    {m['nutrition.breakdown.basis']({ yield: scaling.currentYieldLabel, per: perWords(nutrition) })}
+  </p>
+
   {#if !nutrition.complete}
     <p class="note">{m['nutrition.breakdown.partial']()}</p>
   {/if}
@@ -283,21 +288,30 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    margin-top: var(--space-6);
+    min-width: 0;
   }
 
   .title {
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--text);
   }
 
+  .basis,
   .note,
   .detail {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  .basis {
+    font-size: var(--text-xs);
+  }
+
+  .note {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
   }
 
   .bls {
@@ -309,7 +323,7 @@
   .group {
     margin-top: var(--space-2);
     font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
+    font-weight: var(--weight-semibold);
   }
 
   .rows {
@@ -322,8 +336,8 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--space-4);
-    padding-block: var(--space-2);
+    gap: var(--space-3);
+    padding-block: var(--space-4);
     border-bottom: 1px solid var(--border);
   }
 
@@ -339,6 +353,7 @@
 
   .written {
     overflow-wrap: anywhere;
+    font-weight: var(--weight-medium);
   }
 
   .amount {
@@ -370,6 +385,7 @@
   .kcal {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    font-size: var(--text-sm);
   }
 
   /* Nothing is wrong with these rows; they are just not in the sum. */

@@ -134,6 +134,7 @@
     <p class="reach">{m['nutrition.correct.reach']({ name: name ?? '' })}</p>
 
     {#if current || excluded}
+      <h3 class="sectionTitle">{m['nutrition.correct.now']()}</h3>
       <ul class="foods" aria-label={m['nutrition.correct.now']()}>
         <li>
           <button type="button" class="food" aria-current="true" onclick={onclose}>
@@ -220,6 +221,18 @@
     font-size: var(--text-sm);
   }
 
+  .reach {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-sunken);
+    border-radius: var(--radius-md);
+  }
+
+  .sectionTitle {
+    margin-bottom: calc(var(--space-2) * -1);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
   .foods {
     display: flex;
     flex-direction: column;
@@ -234,8 +247,8 @@
     gap: var(--space-3);
     width: 100%;
     min-height: var(--control-md);
-    padding: var(--space-2) var(--space-3);
-    border: none;
+    padding: var(--space-3);
+    border: 1px solid transparent;
     border-radius: var(--radius-md);
     background: none;
     color: var(--text);
@@ -248,14 +261,25 @@
     background: var(--surface-hover);
   }
 
+  .food[aria-current='true'] {
+    border-color: var(--border-accent);
+    background: var(--surface-accent-subtle);
+  }
+
+  .results .foods > li + li {
+    border-top: 1px solid var(--border);
+  }
+
   .words {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    gap: var(--space-1);
   }
 
   .name {
     overflow-wrap: anywhere;
+    font-weight: var(--weight-medium);
   }
 
   .mark {
