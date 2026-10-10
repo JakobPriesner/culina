@@ -1537,5 +1537,6 @@
   "auth.join.confirm.household": "Du bist eingeladen, {household} beizutreten.",
   "cooking.backToRecipe": "Zurück zum Rezept",
   "cooking.recipe": "Rezept",
-  "cooking.start.failed": "Das Kochen konnte nicht gestartet werden, deshalb sind die Schrittknöpfe aus. Versuch es noch einmal."
+  "cooking.start.failed": "Das Kochen konnte nicht gestartet werden, deshalb sind die Schrittknöpfe aus. Versuch es noch einmal.",
+  "problem.request.invalid_parameter": "Diese Anfrage konnte Culina nicht verarbeiten. Lade die Seite neu und versuch es noch einmal."
 }
