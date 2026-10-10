@@ -3141,6 +3141,80 @@
         }
       }
     },
+    "/api/v1/recipes/{recipeId}/nutrition": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Read a recipe's nutrition",
+        "description": "Per portion (or per piece, when the recipe makes pieces), worked out on every read from the recipe's ingredient lines and the Bundeslebensmittelschlüssel; nothing is stored. Each of the eight values carries atLeast: true when a line could not be counted or a counted food lacks that value, so the figure is a true lower bound, never a guess. Numbers are **unrounded**; rounding is the client's business, lower bounds downward. A separate resource, not a field of the recipe: the recipe's ETag is its version alone, so a household's correction or a data update would hide behind a 304 there. This tag also covers the data version and the corrections that apply. householdId names whose corrections apply, for a recipe that household inherits; left out, the recipe's own household. The source block must be shown wherever the numbers are (CC BY 4.0).",
+        "operationId": "getRecipeNutritionV1",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetNutritionResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tags": {
       "get": {
         "tags": [
@@ -10546,6 +10620,238 @@
           }
         },
         "description": "A note attached to one step."
+      },
+      "RecipesGetNutritionNutritionFood": {
+        "required": [
+          "code",
+          "nameDe",
+          "nameEn"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The BLS code."
+          },
+          "nameDe": {
+            "type": "string",
+            "description": "The German name."
+          },
+          "nameEn": {
+            "type": "string",
+            "description": "The English name."
+          }
+        },
+        "description": "A food of the Bundeslebensmittelschlüssel."
+      },
+      "RecipesGetNutritionNutritionIngredient": {
+        "required": [
+          "ingredientId",
+          "status",
+          "corrected"
+        ],
+        "type": "object",
+        "properties": {
+          "ingredientId": {
+            "type": "string",
+            "description": "The recipe's ingredient line.",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "counted",
+              "amountNotInGrams",
+              "noAmount",
+              "unknownFood",
+              "excluded"
+            ],
+            "type": "string",
+            "description": "`counted`, `amountNotInGrams`, `noAmount`, `unknownFood` or `excluded`."
+          },
+          "food": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetNutritionNutritionFood"
+              }
+            ]
+          },
+          "grams": {
+            "type": "number",
+            "description": "The grams counted, unrounded; only when counted.",
+            "format": "double",
+            "nullable": true
+          },
+          "via": {
+            "enum": [
+              "mass",
+              "density",
+              "eggSize"
+            ],
+            "type": "string",
+            "description": "How the grams were reached: `mass`, `density` or `eggSize`; only when counted.",
+            "nullable": true
+          },
+          "corrected": {
+            "type": "boolean",
+            "description": "Whether the household chose the food (or to leave it out) instead of the default."
+          },
+          "energyKcal": {
+            "type": "number",
+            "description": "This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "What became of one ingredient line."
+      },
+      "RecipesGetNutritionNutritionSource": {
+        "required": [
+          "name",
+          "version",
+          "publisher",
+          "licence"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The table's name."
+          },
+          "version": {
+            "type": "string",
+            "description": "The edition."
+          },
+          "publisher": {
+            "type": "string",
+            "description": "Who publishes it."
+          },
+          "licence": {
+            "type": "string",
+            "description": "The licence it is used under."
+          }
+        },
+        "description": "Where the data comes from, for attribution (CC BY 4.0 requires it wherever it is shown)."
+      },
+      "RecipesGetNutritionNutritionValue": {
+        "required": [
+          "value",
+          "atLeast"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "The sum over the counted lines, unrounded.",
+            "format": "double"
+          },
+          "atLeast": {
+            "type": "boolean",
+            "description": "True when a line left out, or a food without this value, could only have added to it."
+          }
+        },
+        "description": "One label value."
+      },
+      "RecipesGetNutritionNutritionValues": {
+        "required": [
+          "energyKj",
+          "energyKcal",
+          "fat",
+          "saturatedFat",
+          "carbohydrate",
+          "sugars",
+          "protein",
+          "salt"
+        ],
+        "type": "object",
+        "properties": {
+          "energyKj": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "energyKcal": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "fat": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "saturatedFat": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "carbohydrate": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "sugars": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "protein": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          },
+          "salt": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+          }
+        },
+        "description": "The label values of one portion or piece."
+      },
+      "RecipesGetNutritionResponse": {
+        "required": [
+          "per",
+          "yield",
+          "complete",
+          "counted",
+          "lines",
+          "values",
+          "ingredients",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "per": {
+            "enum": [
+              "serving",
+              "piece"
+            ],
+            "type": "string",
+            "description": "What the figures are per: `serving` or `piece`."
+          },
+          "yield": {
+            "type": "number",
+            "description": "The amount of servings or pieces the recipe makes, which the totals were divided by.",
+            "format": "double"
+          },
+          "complete": {
+            "type": "boolean",
+            "description": "Whether every ingredient line is counted. A value can still be a lower bound when a food lacks it."
+          },
+          "counted": {
+            "type": "integer",
+            "description": "How many ingredient lines are counted.",
+            "format": "int32"
+          },
+          "lines": {
+            "type": "integer",
+            "description": "How many ingredient lines the recipe has.",
+            "format": "int32"
+          },
+          "values": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionValues"
+          },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetNutritionNutritionIngredient"
+            },
+            "description": "Every ingredient line, in recipe order."
+          },
+          "source": {
+            "$ref": "#/components/schemas/RecipesGetNutritionNutritionSource"
+          }
+        },
+        "description": "A recipe's nutrition per portion or per piece, with the lines it covers."
       },
       "RecipesGetRelatedRelatedReason": {
         "required": [

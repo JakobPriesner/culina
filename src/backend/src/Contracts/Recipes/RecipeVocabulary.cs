@@ -23,6 +23,16 @@ public static class RecipeVocabulary
     /// <summary>What a recipe makes.</summary>
     public static readonly IReadOnlyList<string> YieldKinds = ["servings", "pieces"];
 
+    /// <summary>What a nutrition figure is per.</summary>
+    public static readonly IReadOnlyList<string> NutritionBases = ["serving", "piece"];
+
+    /// <summary>What can become of an ingredient line in a nutrition figure.</summary>
+    public static readonly IReadOnlyList<string> NutritionStatuses =
+        ["counted", "amountNotInGrams", "noAmount", "unknownFood", "excluded"];
+
+    /// <summary>How the grams of a counted line were reached.</summary>
+    public static readonly IReadOnlyList<string> NutritionGramsBases = ["mass", "density", "eggSize"];
+
     /// <summary>The two kinds of piece a step's text is made of.</summary>
     public static readonly IReadOnlyList<string> StepSegmentKinds = ["text", "ingredient"];
 

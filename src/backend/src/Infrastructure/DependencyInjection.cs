@@ -61,6 +61,7 @@ public static class DependencyInjection
             .AddScoped<IIntakeNotifications, IntakeNotifications>()
             .AddHostedService<RecipeIntakeWorker>()
             .AddSingleton<IImageStore, FileSystemImageStore>()
+            .AddSingleton<IFoodTable>(BlsFoodTable.Load())
             .AddSingleton(TimeProvider.System);
     }
 

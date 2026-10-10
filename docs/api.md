@@ -87,8 +87,38 @@ look on.
 | `DELETE` | `/recipes/{recipeId}/image` | |
 | `GET` | `/recipes/{recipeId}/notes` | Your personal notes for this recipe. |
 | `PUT` | `/recipes/{recipeId}/notes` | Upsert. Recipe-level and per-step in one document. |
+| `GET` | `/recipes/{recipeId}/nutrition` | Per-portion nutrition, worked out on every read; see below. Optional `?householdId=` (whose corrections apply; default the recipe's own household). `200` + ETag, `304` on `If-None-Match`, `400` for a malformed `householdId`, `404` for a recipe the caller cannot see (the same answer as an unknown one). |
 | `GET` | `/recipes/{recipeId}/cook-log` | Your "made it" entries, newest first. |
 | `POST` | `/recipes/{recipeId}/cook-log` | `201`. Body may be empty — one tap is the whole interaction. |
+
+### `GET /recipes/{recipeId}/nutrition`
+
+Nutrition per portion (`per: "serving"`) or per piece (`per: "piece"`, when the
+recipe makes pieces), divided by `yield`. Nothing is stored: every read looks
+each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
+
+- `complete` is true when every ingredient line is counted; `counted` and
+  `lines` say how many of how many.
+- `values` holds energy (kJ and kcal), fat, saturated fat, carbohydrate,
+  sugars, protein and salt, each `{ value, atLeast }`. `atLeast` is true when a
+  line could not be counted, or when a counted food has no figure for that
+  value (23 foods lack saturated fat), so the number is a lower bound and never
+  a guess. Nothing counted is zeros with `atLeast: true`.
+- `ingredients` has one entry per line, in recipe order: `status` is `counted`,
+  `amountNotInGrams`, `noAmount`, `unknownFood` or `excluded`; a counted line
+  carries the `food` (`code`, `nameDe`, `nameEn`), the `grams`, `via` (`mass`,
+  `density` or `eggSize`) and its own `energyKcal` per portion, so the rows add
+  up to the headline. `corrected` is true when a household chose the food.
+- **Numbers are unrounded**, like every quantity the server sends; rounding is
+  the client's, and a lower bound rounds down. Per portion does not change when
+  a recipe is scaled, so no factor is applied.
+- `source` names the data (`Bundeslebensmittelschlüssel` 4.0, Max Rubner-Institut,
+  CC BY 4.0). **CC BY requires that attribution wherever the numbers are shown.**
+- It is a separate resource, not a field of `GET /recipes/{id}`, because that
+  ETag is the recipe's version alone. This one is the recipe's version, the
+  asking household, the version of the nutrition data and a fingerprint of the
+  corrections that apply, so a data update or a correction is never answered
+  with a `304`.
 
 ### `GET /recipes` query parameters
 
