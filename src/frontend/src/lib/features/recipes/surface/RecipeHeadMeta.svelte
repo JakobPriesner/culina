@@ -3,6 +3,7 @@
 
   import { m } from '$shell/i18n';
   import { metaLineFor } from '../recipeMeta';
+  import type { NutritionLink } from './nutritionLink';
   import { sourceLink } from '../sourceLink';
   import type { RecipeReading } from '../types';
 
@@ -11,15 +12,23 @@
     cooking: boolean;
     cookbooks: readonly { readonly id: string; readonly name: string }[];
     printedYield: string;
+    nutrition?: NutritionLink | null;
   }
 
-  let { recipe, cooking, cookbooks, printedYield }: Props = $props();
+  let { recipe, cooking, cookbooks, printedYield, nutrition = null }: Props = $props();
 
   // Host only, not the full URL; no line at all when the address isn't an ordinary web address.
   const original = $derived(sourceLink(recipe.sourceUrl));
 </script>
 
-<p class="meta">{metaLineFor(recipe)}</p>
+<p class="meta">
+  {metaLineFor(recipe)}{#if nutrition && !cooking}{m['recipes.meta.separator']()}<button
+      type="button"
+      class="nutrition"
+      aria-label={nutrition.ariaLabel}
+      onclick={nutrition.onopen}>{nutrition.label}</button
+    >{/if}
+</p>
 
 {#if recipe.description}
   <p class="description">{recipe.description}</p>
@@ -55,6 +64,23 @@
     color: var(--text-muted);
     margin-top: var(--space-3);
     max-width: var(--measure);
+  }
+
+  /* A link in the line, not a control beside it: it wraps with the words and keeps their colour. */
+  .nutrition {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong, currentColor);
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  .nutrition:hover {
+    color: var(--text);
   }
 
   .shelves {

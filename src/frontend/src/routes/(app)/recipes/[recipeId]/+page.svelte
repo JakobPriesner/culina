@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+
   import { page } from '$app/state';
   import { Button, ErrorState } from '$ds';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
@@ -6,7 +8,9 @@
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import { notes } from '$features/cooking/stores/notes.svelte';
+  import { metaFigureOf } from '$features/nutrition/headline';
   import NutritionPanel from '$features/nutrition/NutritionPanel.svelte';
+  import { nutrition } from '$features/nutrition/stores/nutrition.svelte';
   import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import RecipeBackLink from '$features/recipes/detail/RecipeBackLink.svelte';
   import RecipeSheets, { type RecipeSheet } from '$features/recipes/detail/RecipeSheets.svelte';
@@ -30,6 +34,33 @@
 
   let sheet = $state<RecipeSheet | null>(null);
   let titleInView = $state(true);
+  let nutritionOpen = $state(false);
+
+  // Only once there is a figure: no placeholder to jump over, and nothing at all when nothing was counted or it failed.
+  const nutritionFigure = $derived(
+    metaFigureOf(nutrition.answerFor(recipeId, session.activeHouseholdId))
+  );
+  const nutritionLink = $derived(
+    nutritionFigure
+      ? {
+          label: nutritionFigure,
+          ariaLabel: m['nutrition.meta.open']({ figure: nutritionFigure }),
+          onopen: showNutrition
+        }
+      : null
+  );
+
+  /** Opens the panel and brings it into view, with the summary focused so the keyboard follows. */
+  async function showNutrition() {
+    nutritionOpen = true;
+    await tick();
+
+    const panel = document.getElementById('nutrition');
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    panel?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    panel?.querySelector('summary')?.focus({ preventScroll: true });
+  }
 
   /** The owning household of an inherited recipe (read-only here), else null. */
   const inheritedFrom = $derived(
@@ -136,9 +167,15 @@
       editable={!inheritedFrom}
       ontitleview={(visible) => (titleInView = visible)}
       cookbooks={shelves}
+      nutrition={nutritionLink}
     />
 
-    <NutritionPanel recipe={recipes.detail} {servings} householdId={session.activeHouseholdId} />
+    <NutritionPanel
+      recipe={recipes.detail}
+      {servings}
+      householdId={session.activeHouseholdId}
+      bind:open={nutritionOpen}
+    />
 
     <!-- Keyed so a pending autosave is flushed for the recipe it was typed on, not the next one. -->
     {#key recipeId}

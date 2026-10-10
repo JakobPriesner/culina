@@ -10,20 +10,20 @@ test.describe('nutrition on a recipe @offline', () => {
 
   const words = {
     de: {
-      headline: /mind\.\s520\skcal\spro\sPortion\s·\s3\svon\s5\sZutaten/,
+      headline: /mind\.\s520\skcal\spro\sPortion\s·\sohne\sZwiebel/,
       energy: /mind\.\s2\.179\skJ\s\/\s520\skcal/,
-      counted: 'Gezählt',
-      notCounted: 'Nicht gezählt',
-      reason: 'Menge nicht in Gramm',
+      counted: 'Gezählt (3)',
+      notCounted: 'Nicht gezählt (2)',
+      reason: 'Stückzahl, kein Gewicht',
       byDensity: /≈\s27\sg\s·\süber die Dichte/,
       credit: 'Nährwerte: Max Rubner-Institut, Bundeslebensmittelschlüssel 4.0 (CC BY 4.0)'
     },
     en: {
-      headline: /at\sleast\s520\skcal\sper\sserving\s·\s3\sof\s5\singredients/,
+      headline: /at\sleast\s520\skcal\sper\sserving\s·\swithout\sZwiebel/,
       energy: /at\sleast\s2,179\skJ\s\/\s520\skcal/,
-      counted: 'Counted',
-      notCounted: 'Not counted',
-      reason: 'amount not in grams',
+      counted: 'Counted (3)',
+      notCounted: 'Not counted (2)',
+      reason: 'a count, not a weight',
       byDensity: /≈\s27\sg\s·\sby density/,
       credit: 'Nutrition values: Max Rubner-Institut, Bundeslebensmittelschlüssel 4.0 (CC BY 4.0)'
     }
@@ -56,6 +56,118 @@ test.describe('nutrition on a recipe @offline', () => {
       ).toHaveAttribute('href', 'https://blsdb.de');
     });
   }
+
+  test('names the table behind a friendlier name, in plain sight', async ({ page }) => {
+    await responsiveData(page, 'de', { nutritionLines: true });
+    await page.goto(`/recipes/${recipeId}`);
+    await page.locator('summary', { hasText: 'Nährwerte' }).click();
+
+    await expect(page.getByText(/als Vollkornbrot$/).first()).toBeVisible();
+    await expect(page.getByText(/^BLS: Vollkornbrot, handwerklich gebacken/).first()).toBeVisible();
+  });
+
+  test.describe("in the recipe's meta line", () => {
+    test('shows the figure after time and portions, and opens the panel', async ({ page }) => {
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto(`/recipes/${recipeId}`);
+
+      const meta = page.locator('p.meta');
+
+      await expect(meta).toContainText(/35 Min\..*2 Portionen.*mind\.\s520\skcal/);
+      await expect(page.getByRole('table')).toBeHidden();
+
+      await meta.getByRole('button', { name: /mind\.\s520\skcal/ }).click();
+
+      await expect(page.getByRole('table')).toBeVisible();
+      await expect(page.locator('summary', { hasText: 'Nährwerte' })).toBeFocused();
+      await expect(page.locator('#nutrition')).toBeInViewport();
+    });
+
+    test('says whole recipe for one portion', async ({ page }) => {
+      await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
+      await page.goto(`/recipes/${recipeId}`);
+
+      await expect(page.locator('p.meta')).toContainText(/ganzes Rezept: mind\.\s520\skcal/);
+    });
+
+    test('is absent while cooking', async ({ page }) => {
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto(`/recipes/${recipeId}/cook`);
+
+      await expect(page.locator('summary', { hasText: 'Nährwerte' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /Nährwerte anzeigen/ })).toHaveCount(0);
+    });
+  });
+
+  test.describe('an amount that cannot be right', () => {
+    test('is hinted at in the closed line and linked to its place in the editor', async ({
+      page
+    }) => {
+      await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'implausible' });
+      await page.goto(`/recipes/${recipeId}`);
+
+      const summary = page.locator('summary', { hasText: 'Nährwerte' });
+
+      await expect(summary).toContainText(/ohne Zwiebel\s·\sStimmt die Menge/);
+      await expect(summary).toContainText(/Stimmt die Menge\?\s1\.800\sl\sMilch/);
+
+      await summary.click();
+      await page.getByRole('link', { name: 'Im Rezept ändern' }).click();
+
+      await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/edit#ingredient-milk$`));
+      await expect(page.locator(':focus')).toHaveValue('Milch');
+    });
+
+    test('is accessible in the open panel', async ({ browser }) => {
+      const context = await browser.newContext({
+        reducedMotion: 'reduce',
+        serviceWorkers: 'block'
+      });
+      const page = await context.newPage();
+
+      await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'implausible' });
+      await page.goto(`/recipes/${recipeId}`);
+      await page.locator('summary', { hasText: 'Nährwerte' }).click();
+      await expect(page.getByRole('link', { name: 'Im Rezept ändern' })).toBeVisible();
+
+      const result = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
+
+      expect(result.violations.map((violation) => violation.id)).toEqual([]);
+      await context.close();
+    });
+
+    test('does not spill past a 320 px screen', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width: 320, height: 720 });
+      await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'implausible' });
+      await page.goto(`/recipes/${recipeId}`);
+      await expect(page.locator('summary', { hasText: 'Nährwerte' })).toBeVisible();
+      await expectReflow(page);
+      await page.locator('summary', { hasText: 'Nährwerte' }).click();
+      await expectReflow(page);
+    });
+  });
+
+  test.describe('a recipe for one portion', () => {
+    test('says so, and sends the reader to the servings field', async ({ page }) => {
+      await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
+      await page.goto(`/recipes/${recipeId}`);
+
+      const summary = page.locator('summary', { hasText: 'Nährwerte' });
+
+      await expect(summary).toContainText(/mind\.\s520\skcal\sfür das ganze Rezept/);
+      await summary.click();
+      await expect(page.getByRole('columnheader', { name: 'ganzes Rezept' })).toBeVisible();
+      await expect(page.getByText('Laut Rezept 1 Portion.')).toBeVisible();
+
+      await page.getByRole('link', { name: 'Portionen festlegen' }).click();
+
+      await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/edit#yield$`));
+      await expect(page.locator('#yield')).toBeFocused();
+    });
+  });
 
   test('is reached by Tab and opens with Enter', async ({ page, isMobile }) => {
     test.skip(isMobile, 'No keyboard on a phone.');

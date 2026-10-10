@@ -85,9 +85,11 @@ type WireIngredient = {
  */
 function nutrition(
   ingredients: WireIngredient[],
-  corrections: ReadonlyMap<string, string | null> = new Map()
+  corrections: ReadonlyMap<string, string | null> = new Map(),
+  yieldAmount = 2
 ): components['schemas']['RecipesGetNutritionResponse'] {
   const kcal = [240, 200, 80.9];
+  const zeroEnergy = ['Salz'];
   let counted = 0;
   const lines = ingredients.map((one) => {
     const ingredientId = one.ingredientId as string;
@@ -123,12 +125,13 @@ function nutrition(
         energyKcal: 120.5
       };
     }
-    const food = (nameDe: string, nameEn: string) => ({
+    // The table's long names are the citation; what the reader calls it is shorter.
+    const food = (nameDe: string, nameEn: string, labelDe = nameDe, labelEn = nameEn) => ({
       code: 'X',
       nameDe,
       nameEn,
-      labelDe: nameDe,
-      labelEn: nameEn
+      labelDe,
+      labelEn
     });
     const long = 'handwerklich gebacken, mit Sonnenblumenkernen und Leinsamen';
 
@@ -139,15 +142,26 @@ function nutrition(
         corrected: false,
         canRaiseEnergy: true
       };
+    // As the server answers: an uncounted line can raise the energy unless its food has none (salt: 0 kcal).
     if (one.quantity == null || one.unit == null)
-      return { ingredientId, status: 'noAmount' as const, corrected: false, canRaiseEnergy: true };
+      return {
+        ingredientId,
+        status: 'noAmount' as const,
+        corrected: false,
+        canRaiseEnergy: !zeroEnergy.includes(one.name)
+      };
     if (one.unit === 'g') {
       const energyKcal = kcal[counted] ?? 10;
       counted += 1;
       return {
         ingredientId,
         status: 'counted' as const,
-        food: food(`Vollkornbrot, ${long}`, `Wholegrain bread, ${long}`),
+        food: food(
+          `Vollkornbrot, ${long}`,
+          `Wholegrain bread, ${long}`,
+          'Vollkornbrot',
+          'wholegrain bread'
+        ),
         grams: one.quantity,
         via: 'mass' as const,
         corrected: false,
@@ -168,9 +182,20 @@ function nutrition(
         energyKcal: 80.9
       };
     }
+    // A litre of milk for a pot for two is a typo for a decilitre or two; the server does not count it.
+    if (one.unit === 'l')
+      return {
+        ingredientId,
+        status: 'implausible' as const,
+        grams: one.quantity * 1030,
+        via: 'density' as const,
+        corrected: false,
+        canRaiseEnergy: true
+      };
     return {
       ingredientId,
       status: 'amountNotInGrams' as const,
+      reason: one.unit === 'piece' ? ('count' as const) : ('spoonOfSolid' as const),
       corrected: false,
       canRaiseEnergy: true
     };
@@ -180,7 +205,7 @@ function nutrition(
 
   return {
     per: 'serving',
-    yield: 2,
+    yield: yieldAmount,
     complete,
     counted,
     lines: ingredients.length,
@@ -218,11 +243,14 @@ export async function responsiveData(
     // A kitchen's worth of lines for the nutrition panel: spoons of oil, a count, and one with no amount.
     nutritionLines = false,
     // The correction a household makes is refused, to see the rows go back.
-    refuseCorrections = false
+    refuseCorrections = false,
+    // What the panel has to say besides the usual: an amount that cannot be right, or a recipe for one portion.
+    nutritionVariant = 'usual' as 'usual' | 'implausible' | 'whole'
   } = {}
 ) {
   const detail = {
     ...recipe,
+    yieldAmount: nutritionVariant === 'whole' ? 1 : recipe.yieldAmount,
     steps: longSteps
       ? recipe.steps.map((step) => ({
           ...step,
@@ -245,7 +273,10 @@ export async function responsiveData(
             ? [
                 { ingredientId: 'oil', name: 'Olivenöl', quantity: 2, unit: 'tbsp' },
                 { ingredientId: 'onion', name: 'Zwiebel', quantity: 1, unit: 'piece' },
-                { ingredientId: 'salt', name: 'Salz' }
+                { ingredientId: 'salt', name: 'Salz' },
+                ...(nutritionVariant === 'implausible'
+                  ? [{ ingredientId: 'milk', name: 'Milch', quantity: 1800, unit: 'l' }]
+                  : [])
               ]
             : []),
           ...Array.from({ length: extraIngredients }, (_, i) => ({
@@ -369,7 +400,7 @@ export async function responsiveData(
     if (path.endsWith('/ingredients')) return reply({ items: [] });
     if (path === `/recipes/${recipeId}`) return reply(detail);
     if (path === `/recipes/${recipeId}/nutrition`)
-      return reply(nutrition(detail.groups[0]!.ingredients, corrections));
+      return reply(nutrition(detail.groups[0]!.ingredients, corrections, detail.yieldAmount));
     if (path.endsWith('/notes')) return reply({ overall: '', steps: [] });
     if (path.endsWith('/cook-log')) return reply({ count: 0, items: [] });
     if (path === '/recipes')

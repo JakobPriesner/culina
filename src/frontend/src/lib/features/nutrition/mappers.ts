@@ -8,10 +8,12 @@ type WireLine = components['schemas']['RecipesGetNutritionNutritionIngredient'];
 const toLine = (wire: WireLine): NutritionLine => ({
   ingredientId: wire.ingredientId,
   status: wire.status,
+  reason: wire.reason ?? null,
   food: wire.food ?? null,
   grams: wire.grams ?? null,
   via: wire.via ?? null,
   corrected: wire.corrected,
+  canRaiseEnergy: wire.canRaiseEnergy,
   energyKcal: wire.energyKcal ?? null
 });
 
