@@ -182,6 +182,49 @@
     }
   }
 
+  /* Wide screens put the photo beside the title and servings, so the ingredients and steps start on the first screen. */
+  @media screen and (width >= 72rem) {
+    .photographed {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-rows: auto 1fr;
+      column-gap: var(--layout-section-gap);
+      row-gap: var(--space-4);
+    }
+
+    .photographed > :global(.hero) {
+      grid-row: 1 / 3;
+      aspect-ratio: 4 / 3;
+      max-height: none;
+    }
+
+    .photographed > :global(.head) {
+      align-self: end;
+    }
+
+    .photographed > :global(.servings) {
+      padding-block: var(--space-4);
+    }
+
+    /* The actions sit under the title, not beside it, so a long title keeps the column's full width. */
+    .photographed > :global(.head .titleRow) {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-3);
+    }
+
+    /* A half-width column, so the title takes the phone's size. */
+    .photographed > :global(.head .title) {
+      font-size: var(--text-3xl);
+      line-height: var(--leading-tight);
+    }
+
+    .photographed > .body,
+    .photographed > .body ~ :global(*) {
+      grid-column: 1 / -1;
+    }
+  }
+
   @media (width < 52rem) {
     .surface {
       position: relative;

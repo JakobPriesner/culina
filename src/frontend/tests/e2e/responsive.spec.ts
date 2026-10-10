@@ -314,6 +314,50 @@ test.describe('responsive production layouts @offline', () => {
     }
   }
 
+  for (const [width, height] of [
+    [1440, 900],
+    [1280, 800]
+  ] as const) {
+    test(`a recipe shows its first ingredients and step on the first ${width}x${height} screen`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de', { activeCooking: false });
+      await page.goto(`/recipes/${recipeId}`);
+
+      const title = page.getByRole('heading', { level: 1 });
+      await expect(title).toBeVisible();
+      const hero = page.locator('article.surface > .hero');
+      const heroBox = (await hero.boundingBox())!;
+      const titleBox = (await title.boundingBox())!;
+      // The photo sits beside the title rather than above it, in a pleasing 4:3.
+      expect(titleBox.x).toBeGreaterThanOrEqual(heroBox.x + heroBox.width);
+      expect(heroBox.width / heroBox.height).toBeCloseTo(4 / 3, 1);
+
+      // The actions sit under the title, so the title keeps the column's width instead of breaking mid-word.
+      const lineHeight = await title.evaluate((h) => parseFloat(getComputedStyle(h).lineHeight));
+      expect(titleBox.height).toBeLessThanOrEqual(lineHeight * 3 + 1);
+      const actions = (await page
+        .getByRole('button', { name: 'Auf die Einkaufsliste' })
+        .boundingBox())!;
+      expect(actions.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height);
+
+      for (const target of [
+        page.getByRole('heading', { name: 'Zutaten', level: 2 }),
+        page.getByRole('heading', { name: 'Zubereitung', level: 2 }),
+        page.locator('.ingredients .row').first(),
+        page.locator('.steps .step').first(),
+        page.getByRole('button', { name: 'Kochen starten' })
+      ]) {
+        const box = (await target.boundingBox())!;
+        expect(box.y + Math.min(box.height, 40)).toBeLessThanOrEqual(height);
+      }
+      await expect(page.locator('article.surface > .servings')).toBeInViewport();
+      await expectReflow(page);
+    });
+  }
+
   test('a recipe starts within the readable part of a phone screen', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
     await page.setViewportSize({ width: 390, height: 844 });
