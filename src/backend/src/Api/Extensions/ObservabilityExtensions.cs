@@ -34,7 +34,7 @@ internal static class ObservabilityExtensions
 
         var telemetry = builder.Services
             .AddOpenTelemetry()
-            .ConfigureResource(resource => resource.AddCulinaService(ApiService, builder.Environment).AddMachine())
+            .ConfigureResource(resource => resource.AddCulinaService(ApiService, Version(), builder.Environment).AddMachine())
             .WithTracing(ConfigureTracing)
             .WithMetrics(ConfigureMetrics);
 
@@ -56,15 +56,23 @@ internal static class ObservabilityExtensions
     private static ResourceBuilder AddCulinaService(
         this ResourceBuilder resource,
         string serviceName,
+        string? serviceVersion,
         IHostEnvironment environment) =>
         resource
             .AddService(
                 serviceName: serviceName,
-                serviceVersion: Version(),
+                serviceVersion: serviceVersion,
                 serviceInstanceId: Environment.MachineName)
             .AddAttributes([
                 new KeyValuePair<string, object>("deployment.environment.name", environment.EnvironmentName)
             ]);
+
+    /// <summary>
+    /// The web app as a service, without a version: the server's would be wrong for a tab still on
+    /// an older build. Each record names its own build in <c>culina.web.app_version</c>.
+    /// </summary>
+    internal static ResourceBuilder AddWebAppService(this ResourceBuilder resource, IHostEnvironment environment) =>
+        resource.AddCulinaService(WebAppService, serviceVersion: null, environment);
 
     /// <summary>
     /// The machine the server runs on, on every span, metric and line: host, container, operating
@@ -127,7 +135,7 @@ internal static class ObservabilityExtensions
 
             return new WebAppLoggerProvider(
                 configuration,
-                resource => resource.AddCulinaService(WebAppService, builder.Environment),
+                resource => resource.AddWebAppService(builder.Environment),
                 logging =>
                 {
                     if (Exports(configuration))
