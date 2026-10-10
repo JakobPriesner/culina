@@ -33,6 +33,7 @@ const current: Recipe = {
 
 const partial: Draft = {
   draftId: 'draft-1',
+  yieldKind: 'servings',
   title: 'Roasted tomato soup',
   groups: [],
   steps: [],

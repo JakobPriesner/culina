@@ -92,6 +92,7 @@ internal static class OpenApiContractFixes
         ("RecipesGetAllRecipeSummary", "yieldKind", RecipeVocabulary.YieldKinds),
         ("RecipesUpdateRequest", "yieldKind", RecipeVocabulary.YieldKinds),
         ("RecipesGetSharedResponse", "yieldKind", RecipeVocabulary.YieldKinds),
+        ("RecipesDraftsResponse", "yieldKind", RecipeVocabulary.YieldKinds),
         ("RecipesRecipeDetail", "language", RecipeVocabulary.Languages),
         ("RecipesGetSharedResponse", "language", RecipeVocabulary.Languages),
         ("RecipesUpdateRequest", "language", RecipeVocabulary.Languages),

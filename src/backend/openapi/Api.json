@@ -10286,6 +10286,14 @@
             "format": "double",
             "nullable": true
           },
+          "yieldKind": {
+            "enum": [
+              "servings",
+              "pieces"
+            ],
+            "type": "string",
+            "description": "What that counts: `servings` or `pieces`, read from the amount and its word (\"12\" and \"Muffins\" is pieces)."
+          },
           "yieldLabel": {
             "type": "string",
             "description": "What it makes: servings, or a cake.",

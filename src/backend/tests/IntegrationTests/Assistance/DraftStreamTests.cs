@@ -193,6 +193,38 @@ public class DraftStreamTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Draft_ShouldCountPieces_WhenTheModelSaysTwelveMuffins()
+    {
+        using var provider = new StubProvider(
+        [
+            "{\"title\":\"Muffins\",\"description\":null,\"yieldAmount\":12,",
+            "\"yieldLabel\":\"Muffins\",\"prepMinutes\":null,\"cookMinutes\":null,",
+            "\"groups\":[{\"name\":null,\"ingredients\":[",
+            "{\"quantity\":200,\"unit\":\"g\",\"name\":\"Mehl\",\"note\":null}]}],",
+            "\"steps\":[{\"title\":null,\"text\":\"Backen\",\"durationSeconds\":null}],",
+            "\"tags\":[]}"
+        ]);
+
+        var world = await ConnectedAsync(provider);
+
+        var response = await world.Client.PostAsync(
+            "/api/v1/recipe-drafts",
+            new
+            {
+                kind = "idea",
+                householdId = world.HouseholdId,
+                material = "muffins",
+                language = "de"
+            },
+            Token);
+
+        var draft = Events(response.Body!)[^1].GetProperty("draft");
+
+        Assert.Equal("pieces", draft.GetProperty("yieldKind").GetString());
+        Assert.Equal("Muffins", draft.GetProperty("yieldLabel").GetString());
+    }
+
+    [Fact]
     public async Task Draft_ShouldSayWhyOnTheLastEvent_WhenTheModelAnswersWithNonsense()
     {
         using var provider = new StubProvider(["I am afraid I cannot help with that."]);
@@ -513,7 +545,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         var material = JsonSerializer.Serialize(new IntakeMaterial("120 g beans", "", "https://example.com/recipe", "de", []), json);
         var draft = JsonSerializer.Deserialize<Contracts.Recipes.Drafts.Response>(string.Concat(Written)[..^1] +
-            $",\"draftId\":\"{id}\",\"tags\":[]}}", json);
+            $",\"draftId\":\"{id}\",\"yieldKind\":\"servings\",\"tags\":[]}}", json);
         var savedDraft = JsonSerializer.Serialize(draft, json);
         // The state a stopped server leaves after its last streamed event, before the recipe commits. An expired lease is reclaimed.
         await postgres.ExecuteAsync($"""

@@ -34,6 +34,7 @@ export function intakeDraft(parsed: ParsedRecipe): Draft {
     draftId: '',
     title: parsed.title,
     yieldAmount: parsed.servings,
+    yieldKind: parsed.yieldKind === 'pieces' ? 'pieces' : 'servings',
     yieldLabel: parsed.yieldLabel,
     cookMinutes: parsed.totalMinutes,
     groups: [

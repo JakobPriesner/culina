@@ -99,6 +99,20 @@ public class DraftMappingTests
         Assert.True(draft.IsUsable());
     }
 
+    [Theory]
+    [InlineData(12, "Muffins", "pieces")]
+    [InlineData(4, "Portionen", "servings")]
+    [InlineData(4, null, "servings")]
+    public void ToResponse_ShouldSayWhatTheYieldCounts_FromTheAmountAndItsWord(decimal amount, string? label, string expected)
+    {
+        var draft = new DraftedRecipe { Title = "Muffins", YieldAmount = amount, YieldLabel = label };
+
+        var response = draft.ToResponse();
+
+        Assert.Equal(expected, response.YieldKind);
+        Assert.Equal(amount, response.YieldAmount);
+    }
+
     private static DraftedRecipe Recipe(params DraftedIngredient[] lines) => new()
     {
         Title = "Soup",

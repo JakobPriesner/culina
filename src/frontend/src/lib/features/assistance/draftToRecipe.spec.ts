@@ -52,6 +52,7 @@ const draft = (overrides: Partial<Draft> = {}): Draft => ({
   title: 'Better soup',
   description: 'A tidier one.',
   yieldAmount: 6,
+  yieldKind: 'servings',
   yieldLabel: null,
   prepMinutes: 5,
   cookMinutes: 25,
@@ -66,6 +67,14 @@ describe('accepting parts of a draft', () => {
 
   it('changes nothing at all when nothing is ticked', () => {
     expect(toPatch(draft(), acceptNothing(), recipe())).toEqual({});
+  });
+
+  it('carries what the yield counts, so twelve muffins are pieces and not twelve servings', () => {
+    const muffins = draft({ yieldAmount: 12, yieldKind: 'pieces', yieldLabel: 'Muffins' });
+
+    const patch = toPatch(muffins, accepting({ yield: true }), recipe());
+
+    expect(patch).toEqual({ yieldAmount: 12, yieldKind: 'pieces', yieldLabel: 'Muffins' });
   });
 
   it('takes only the part that was ticked', () => {

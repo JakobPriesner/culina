@@ -62,6 +62,7 @@ export function toPatch(draft: Draft, accepted: Accepted, current: Recipe): Part
     ...(accepted.yield
       ? {
           yieldAmount: draft.yieldAmount ?? current.yieldAmount,
+          yieldKind: draft.yieldKind,
           yieldLabel: draft.yieldLabel ?? current.yieldLabel
         }
       : {}),

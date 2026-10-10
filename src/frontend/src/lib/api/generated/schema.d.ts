@@ -3080,6 +3080,11 @@ export interface components {
              * @description How many it makes.
              */
             yieldAmount?: number | null;
+            /**
+             * @description What that counts: `servings` or `pieces`, read from the amount and its word ("12" and "Muffins" is pieces).
+             * @enum {string}
+             */
+            yieldKind?: "servings" | "pieces";
             /** @description What it makes: servings, or a cake. */
             yieldLabel?: string | null;
             /**
