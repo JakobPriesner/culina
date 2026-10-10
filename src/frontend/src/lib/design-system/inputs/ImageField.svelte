@@ -123,7 +123,9 @@
 
   {#if !src}
     <div class="actions">
-      <Button loading={busy} onclick={() => picker?.open()}>{chooseLabel}</Button>
+      <Button loading={busy} disabled={generating} onclick={() => picker?.open()}>
+        {chooseLabel}
+      </Button>
 
       {#if extraAction}{@render extraAction('secondary')}{/if}
     </div>
