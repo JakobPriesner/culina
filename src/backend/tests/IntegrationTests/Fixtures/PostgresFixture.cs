@@ -85,7 +85,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// The API host, created once and shared; starting it runs the migrations, so the schema is
     /// built once per run.
     /// </summary>
-    public CulinaApiFactory Api => api ??= new CulinaApiFactory(this);
+    public CulinaApiFactory Api => api ??= new CulinaApiFactory(this, servesIntakes: true);
 
     /// <summary>The same host, ranking without its exploration jitter.</summary>
     /// <remarks>

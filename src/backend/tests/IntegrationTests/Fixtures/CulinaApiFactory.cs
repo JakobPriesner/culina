@@ -30,11 +30,17 @@ namespace IntegrationTests.Fixtures;
 /// Services swapped in after the app's own, for what no setting may change (a source client that
 /// can reach loopback).
 /// </param>
+/// <param name="servesIntakes">
+/// Whether this host's background worker takes recipe intakes off the shared database. Only the
+/// one host a test submits intakes to may: every host has its own settings, so a second worker
+/// would claim a job with an assistant that was never configured and fail it.
+/// </param>
 public sealed class CulinaApiFactory(
     PostgresFixture postgres,
     IReadOnlyDictionary<string, string>? overrides = null,
     RankingWeights? weights = null,
-    Action<IServiceCollection>? replace = null) : WebApplicationFactory<Program>
+    Action<IServiceCollection>? replace = null,
+    bool servesIntakes = false) : WebApplicationFactory<Program>
 {
     private readonly string dataRoot =
         Path.Combine(Path.GetTempPath(), $"culina-test-{Guid.CreateVersion7():n}");
@@ -106,6 +112,14 @@ public sealed class CulinaApiFactory(
             services.AddSingleton<IHostRestart>(Restarts);
             services.AddSingleton<ILoggerProvider>(Logs);
             services.AddSingleton(_ => LocalPush());
+
+            if (!servesIntakes)
+            {
+                foreach (var worker in services.Where(one => one.ImplementationType == typeof(RecipeIntakeWorker)).ToList())
+                {
+                    services.Remove(worker);
+                }
+            }
 
             if (weights is not null)
             {
