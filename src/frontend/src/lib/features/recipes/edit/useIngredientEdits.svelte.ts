@@ -1,42 +1,62 @@
 import { SvelteSet } from 'svelte/reactivity';
 
-import { withIngredients } from '$features/recipes/editor/ingredientGroups';
+import {
+  shownGroups,
+  withGroupName,
+  withIngredients,
+  withNewGroup,
+  withoutEmptyGroup
+} from '$features/recipes/editor/ingredientGroups';
 import type { RecipeDraft } from '$features/recipes/editor/createRecipeDraft.svelte';
 import { withoutIngredients } from '$features/recipes/editor/stepUsage';
 import type { Ingredient } from '$features/recipes/types';
 
-/** Ingredient edits write only to the implicit first group; other (imported) groups pass through a save untouched. */
+/** Edits every ingredient group: its lines, its name, and which groups there are. */
 export function useIngredientEdits(editor: RecipeDraft) {
-  const groups = $derived(editor.recipe?.groups);
-  const firstGroup = $derived(groups?.[0]?.ingredients ?? []);
+  const groups = $derived(shownGroups(editor.recipe?.groups ?? []));
 
   // From the groups alone, so the steps get a stable array until an ingredient changes.
-  const all = $derived(groups?.flatMap((group) => group.ingredients) ?? []);
+  const all = $derived(groups.flatMap((group) => group.ingredients));
 
-  function set(ingredients: Ingredient[]) {
-    const kept = new SvelteSet(ingredients.map((one) => one.id));
-    const gone = new SvelteSet(firstGroup.filter((one) => !kept.has(one.id)).map((one) => one.id));
+  /** Writes a group list, and takes any ingredient it no longer holds off the steps. */
+  function write(next: ReturnType<typeof withIngredients>) {
+    const kept = new SvelteSet(next.flatMap((group) => group.ingredients.map((one) => one.id)));
+    const gone = new SvelteSet(
+      all.filter((one) => one.id && !kept.has(one.id)).map((one) => one.id)
+    );
 
     // A deleted ingredient comes off its steps too (the server refuses dangling needs).
     // `change` spreads the patch, so `steps` is only named when it changed.
     editor.change({
-      groups: withIngredients(editor.recipe?.groups ?? [], ingredients),
+      groups: next,
       ...(gone.size > 0 ? { steps: withoutIngredients(editor.recipe?.steps ?? [], gone) } : {})
     });
   }
 
-  /** Adds an ingredient named from inside a step, with no amount. */
-  const add = (name: string) =>
-    set([...firstGroup, { id: '', quantity: { value: null, unit: null }, name, note: null }]);
+  /** Adds an ingredient named from inside a step, with no amount, to the last group. */
+  function add(name: string) {
+    const last = groups.length - 1;
+
+    write(
+      withIngredients(groups, last, [
+        ...groups[last]!.ingredients,
+        { id: '', quantity: { value: null, unit: null }, name, note: null }
+      ])
+    );
+  }
 
   return {
-    get firstGroup() {
-      return firstGroup;
+    get groups() {
+      return groups;
     },
     get all() {
       return all;
     },
-    set,
+    setGroup: (index: number, ingredients: Ingredient[]) =>
+      write(withIngredients(groups, index, ingredients)),
+    rename: (index: number, name: string) => write(withGroupName(groups, index, name)),
+    addGroup: () => write(withNewGroup(groups)),
+    removeGroup: (index: number) => write(withoutEmptyGroup(groups, index)),
     add
   };
 }

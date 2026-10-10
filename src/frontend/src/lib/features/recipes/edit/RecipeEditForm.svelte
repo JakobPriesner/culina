@@ -13,7 +13,7 @@
   import EditorLayout from '$features/recipes/editor/EditorLayout.svelte';
   import EditorRail from '$features/recipes/editor/EditorRail.svelte';
   import EditorSection from '$features/recipes/editor/EditorSection.svelte';
-  import IngredientEditor from '$features/recipes/editor/IngredientEditor.svelte';
+  import IngredientGroups from '$features/recipes/editor/IngredientGroups.svelte';
   import PhotoField from '$features/recipes/editor/PhotoField.svelte';
   import RecipeBasicsFields from '$features/recipes/editor/RecipeBasicsFields.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
@@ -57,7 +57,7 @@
   const sections = $derived([
     { id: 'recipe', label: m['editor.section.recipe']() },
     { id: 'photo', label: m['editor.photo']() },
-    { id: 'ingredients', label: m['editor.ingredients'](), count: ingredients.firstGroup.length },
+    { id: 'ingredients', label: m['editor.ingredients'](), count: ingredients.all.length },
     { id: 'steps', label: m['editor.steps'](), count: recipe.steps.length },
     { id: 'tags', label: m['editor.tags'](), count: recipe.tags.length }
   ]);
@@ -114,20 +114,19 @@
     <PhotoField recipeId={recipe.id} imageId={recipe.imageId} onchange={editor.photoWritten} />
   </EditorSection>
 
-  <EditorSection
-    id="ingredients"
-    title={m['editor.ingredients']()}
-    count={ingredients.firstGroup.length}
-  >
+  <EditorSection id="ingredients" title={m['editor.ingredients']()} count={ingredients.all.length}>
     <EditorNutritionLine
       {recipe}
       unsaved={editor.saveState.tone !== 'idle' && editor.saveState.tone !== 'saved'}
     />
 
-    <IngredientEditor
-      ingredients={ingredients.firstGroup}
+    <IngredientGroups
+      groups={ingredients.groups}
       steps={recipe.steps}
-      onchange={ingredients.set}
+      onchange={ingredients.setGroup}
+      onrename={ingredients.rename}
+      onadd={ingredients.addGroup}
+      onremove={ingredients.removeGroup}
       householdId={recipe.householdId}
       language={recipe.language}
       {focusId}

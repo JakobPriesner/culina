@@ -1614,5 +1614,10 @@
   "nutrition.coverage.line": "{name}: {why}",
   "nutrition.coverage.more": "and {count} more",
   "nutrition.coverage.stale": "as last saved",
-  "nutrition.day.perPerson": "{figure} per person"
+  "nutrition.day.perPerson": "{figure} per person",
+  "editor.groupName": "Name of group {number}",
+  "editor.groupNamePlaceholder": "Unnamed group",
+  "editor.removeGroup": "Remove empty group {number}",
+  "editor.addGroup": "+ Group",
+  "editor.addIngredientToGroup": "Add ingredient to group {number}"
 }

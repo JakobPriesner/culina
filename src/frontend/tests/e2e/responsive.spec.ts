@@ -69,7 +69,7 @@ test.describe('responsive production layouts @offline', () => {
             }
             if (path === '/shopping' || path.endsWith('/edit')) {
               const name = page.locator(
-                path === '/shopping' ? '#shopping-add-name' : '#add-ingredient-name'
+                path === '/shopping' ? '#shopping-add-name' : '#g0-add-ingredient-name'
               );
               await expect(name).toBeVisible();
               expect((await name.boundingBox())!.width).toBeGreaterThanOrEqual(150);
@@ -145,8 +145,8 @@ test.describe('responsive production layouts @offline', () => {
       })
       .click();
     await expectReflow(page);
-    await expect(page.locator('#ingredient-0-name')).toBeVisible();
-    expect((await page.locator('#ingredient-0-name').boundingBox())!.width).toBeGreaterThan(200);
+    await expect(page.locator('#g0-ingredient-0-name')).toBeVisible();
+    expect((await page.locator('#g0-ingredient-0-name').boundingBox())!.width).toBeGreaterThan(200);
     await page.goto('/plan');
     await page.getByRole('button', { name: /^Weiter →$/i }).click();
     await expectReflow(page);
