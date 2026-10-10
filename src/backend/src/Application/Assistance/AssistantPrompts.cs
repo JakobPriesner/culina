@@ -26,6 +26,13 @@ internal static class AssistantPrompts
     /// <summary>Cap on the method in a drawing prompt; only very long methods are cut.</summary>
     private const int LongestMethod = 2000;
 
+    /// <summary>
+    /// How much step text fits on one screen of a 375x667 phone in guided cooking: about ten lines
+    /// of about 26 characters at the 24px cooking size. Keep in step with
+    /// <c>LONGEST_COOKING_STEP</c> in the frontend's <c>stepEdits.ts</c>.
+    /// </summary>
+    private const int LongestStep = 250;
+
     private static readonly string UnitList =
         string.Join(", ", Unit.BuiltIn.Select(unit => unit.Code));
 
@@ -81,11 +88,14 @@ internal static class AssistantPrompts
          "Ingredients" and "More ingredients" are one group.
 
          A step is one action in plain sentences. Split a step that does two
-         things. Do not number the steps or write "Step 1" in the text; the app
-         numbers them. Give a step a title only where it genuinely names a stage
-         of the work, and answer null for the rest. Set durationSeconds only for
-         an unattended wait — a rise, a simmer, a rest — not for how long the
-         chopping takes; null everywhere else.
+         things. Keep each step within {LongestStep} characters, because a step
+         is read on a phone screen while cooking: split a longer instruction into
+         several steps rather than cutting it short. Do not number the steps or
+         write "Step 1" in the text; the app numbers them. Give a step a title
+         only where it genuinely names a stage of the work, and answer null for
+         the rest. Set durationSeconds only for an unattended wait — a rise, a
+         simmer, a rest — not for how long the chopping takes; null everywhere
+         else.
 
          Every field is asked for every time, so a field you have nothing for is
          answered null rather than left out. Null is a real answer here and

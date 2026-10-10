@@ -44,6 +44,17 @@ public class AssistantPromptsTests
             $"Two prompts share only {shared} leading characters.");
     }
 
+    /// <summary>A step longer than one phone screen cannot be read at a glance in cook mode.</summary>
+    [Fact]
+    public void EveryPrompt_ShouldAskForStepsThatFitOneScreen()
+    {
+        Assert.All(All(), prompt =>
+        {
+            Assert.Contains("Keep each step within 250 characters", prompt, StringComparison.Ordinal);
+            Assert.Contains("split a longer instruction", prompt, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     public void TwoLanguagesOfOneJob_ShouldDifferOnlyInTheirLastParagraph()
     {
