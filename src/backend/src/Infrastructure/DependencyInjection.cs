@@ -13,6 +13,7 @@ using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Import;
 using Infrastructure.Persistence.Migrations;
+using Infrastructure.Persistence.Nutrition;
 using Infrastructure.Persistence.Planning;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Searches;
@@ -155,6 +156,7 @@ public static class DependencyInjection
             .AddScoped<ISavedSearchRepository, SavedSearchRepository>()
             .AddScoped<ITagRepository, TagRepository>()
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
+            .AddScoped<INutritionCorrectionRepository, NutritionCorrectionRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()
             .AddScoped<IRecipeOriginRepository, RecipeOriginRepository>()
             // Ranking weights are code, not configuration, so installations behave identically; a singleton so tests can vary one.

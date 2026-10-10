@@ -88,6 +88,9 @@ look on.
 | `GET` | `/recipes/{recipeId}/notes` | Your personal notes for this recipe. |
 | `PUT` | `/recipes/{recipeId}/notes` | Upsert. Recipe-level and per-step in one document. |
 | `GET` | `/recipes/{recipeId}/nutrition` | Per-portion nutrition, worked out on every read; see below. Optional `?householdId=` (whose corrections apply; default the recipe's own household). `200` + ETag, `304` on `If-None-Match`, `400` for a malformed `householdId`, `404` for a recipe the caller cannot see (the same answer as an unknown one). |
+| `GET` | `/foods` | Search the Bundeslebensmittelschlüssel: `?q=` and `?limit=` (default 20, max 50; no paging). `{ items: [{ code, nameDe, nameEn, energyKcal }] }`, best first; `energyKcal` is per 100 g and may be null. Any signed-in person; the ETag is the nutrition data version. `400` for an invalid `limit` or an unknown parameter. |
+| `PUT` | `/households/{householdId}/ingredients/{name}` | `{ "food": "Q611000" }` says what this household means by the ingredient; `{ "food": null }` says do not count it. `204`. See below. |
+| `DELETE` | `/households/{householdId}/ingredients/{name}` | Back to the table's default. `204`, also when there was no choice. |
 | `GET` | `/recipes/{recipeId}/cook-log` | Your "made it" entries, newest first. |
 | `POST` | `/recipes/{recipeId}/cook-log` | `201`. Body may be empty — one tap is the whole interaction. |
 
@@ -119,6 +122,28 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
   asking household, the version of the nutrition data and a fingerprint of the
   corrections that apply, so a data update or a correction is never answered
   with a `304`.
+
+### `PUT` and `DELETE /households/{householdId}/ingredients/{name}`
+
+A household's correction of what an ingredient name means for nutrition. The
+name is a member of the same collection the `GET .../ingredients` suggestions
+come from; the correction is the household's statement about it, so there is no
+verb and no extra segment.
+
+- `{name}` is the ingredient as written, percent-encoded; the server trims and
+  folds it (`Müsli` = `Muesli`, case ignored), so one correction covers every
+  recipe of the household that uses the name, however it is spelled. A slash is
+  `%2F`, a literal percent `%25`. 1–120 characters after trimming, else `400`.
+- `food` must be a code `GET /foods` returns, else `400`
+  `nutrition.unknown_food`. `null` means "do not count this": the line comes
+  back `excluded` with `corrected: true`.
+- `DELETE` removes the choice, so the default applies again; deleting nothing is
+  `204` as well. Both are idempotent and carry no `If-Match`.
+- Any member of `{householdId}` may correct; anyone else gets `404`, as for every
+  household resource. The correction belongs to exactly that household: an heir
+  corrects for itself, and the household it inherits from is not affected.
+- Afterwards `GET /recipes/{id}/nutrition` has a new ETag for every recipe of the
+  household that uses the name.
 
 ### `GET /recipes` query parameters
 
