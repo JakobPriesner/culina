@@ -21,7 +21,9 @@ public class WebAppTelemetryTests
 
         using var provider = new WebAppLoggerProvider(
             new ConfigurationBuilder().Build(),
-            resource => resource.AddWebAppService(Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings()).Environment),
+            resource => resource.AddWebAppService(
+                new ConfigurationBuilder().Build(),
+                Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings()).Environment),
             logging => logging.AddProcessor(exported));
         using var loggers = LoggerFactory.Create(logging => logging.AddProvider(provider));
 
@@ -59,6 +61,48 @@ public class WebAppTelemetryTests
         Assert.Equal("Api.Anything", record.Category);
         Assert.Equal(ObservabilityExtensions.ApiService, record.Service);
         Assert.Single(host.Services.GetServices<ILoggerProvider>().OfType<WebAppLoggerProvider>());
+    }
+
+    /// <summary>compose.prod.yaml and .env.example set culina-api, which must still pair with culina-web.</summary>
+    [Theory]
+    [InlineData(null, "culina-api", "culina-web")]
+    [InlineData("  ", "culina-api", "culina-web")]
+    [InlineData("culina-api", "culina-api", "culina-web")]
+    [InlineData("culina-staging-api", "culina-staging-api", "culina-staging-web")]
+    [InlineData(" culina-staging ", "culina-staging", "culina-staging-web")]
+    public void ServiceNames_ShouldFollowOtelServiceName(string? configured, string api, string web)
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(
+            new Dictionary<string, string?> { [ObservabilityExtensions.ServiceNameKey] = configured }).Build();
+
+        Assert.Equal(api, ObservabilityExtensions.ApiServiceName(configuration));
+        Assert.Equal(web, ObservabilityExtensions.WebAppServiceName(configuration));
+    }
+
+    [Fact]
+    public void Records_ShouldUseOtelServiceName_ForTheApiAndItsWebSuffixForTheWebApp()
+    {
+        var exported = new Exported();
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Configuration[ObservabilityExtensions.ServiceNameKey] = "culina-staging";
+
+        builder.AddObservability();
+        builder.Services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(exported));
+
+        using var host = builder.Build();
+        host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Api.Anything").LogError("The server broke");
+
+        Assert.Equal("culina-staging", Assert.Single(exported.Records).Service);
+
+        var webExported = new Exported();
+        using var provider = new WebAppLoggerProvider(
+            builder.Configuration,
+            resource => resource.AddWebAppService(builder.Configuration, builder.Environment),
+            logging => logging.AddProcessor(webExported));
+        using var loggers = LoggerFactory.Create(logging => logging.AddProvider(provider));
+        loggers.CreateLogger(CulinaTelemetry.WebAppCategory).LogError("The page broke");
+
+        Assert.Equal("culina-staging-web", Assert.Single(webExported.Records).Service);
     }
 
     private sealed record ExportedRecord(string? Category, string? Service, string? Version, IReadOnlyList<string> Scopes);
