@@ -1,0 +1,971 @@
+recipe	amount	unit	name	expected
+1	227	g	Butter	Q611000|Q630000|Q620000
+1	240	ml	Milk	M111300|M113300
+1	2	tbsp	Oil	Q180000|Q320000|Q120000|Q940000
+1	3	clove	Garlic	G490100
+2	200	g	Butter	Q611000|Q630000|Q620000
+2	1.5	kg	Mehl	C214100|C214200
+2	2		Zwiebeln	G480100
+3	250	g	flour	C214100|C214200
+3	2		eggs	E111100
+3	1	tbsp	olive oil	Q120000
+3			Salt	R111000|R114000
+4	227	g	Butter	Q611000|Q630000|Q620000
+4	240	ml	Milk	M111300|M113300
+4	2	tbsp	Oil	Q180000|Q320000|Q120000|Q940000
+4	3	clove	Garlic	G490100
+5	200	g	Butter	Q611000|Q630000|Q620000
+5	1.5	kg	Mehl	C214100|C214200
+5	2		Zwiebeln	G480100
+6	250	g	flour	C214100|C214200
+6	2		eggs	E111100
+6	1	tbsp	olive oil	Q120000
+6			Salt	R111000|R114000
+7	1		Orange	F603100
+7	40	ml	Aperol	NONE
+7	60	ml	Weißwein	P210000|P220000
+7	20	ml	Sprudelwasser	N127000|N120000
+8	1		Paprika	NONE
+8	5	g	Doppelrahmfrischkäse	M710800
+8	4	tbsp	Milch	M111300|M113300
+8	4	tbsp	Ajvar	G898400
+8	1	tsp	Schnittlauch	G081100
+9	1	Rolle	Blätterteig	D072000|X9A6020
+9	150	g	Ziegenkäse	NONE
+9	1	g	Kochapfel	F110100|F120100
+9	1	tbsp	Olivenöl	Q120000
+9	0.5	tbsp	Zitronenthymian	NONE
+9			Salz	R111000|R114000
+9	1	pinch	Pfeffer	R258100
+10	50	g	Pinienkerne	H320100
+10	1	bunch	Basilikum	G061000
+10	3	tsp	Zitronensaft	F601600
+10	2	tsp	Süßer Senf	R135000
+10	60	ml	Olivenöl	Q120000
+10	2	clove	Knoblauch	G490100
+10	1	pinch	Salz	R111000|R114000
+11	2		Vanilleschote	NONE
+11			Milch	M111300|M113300
+11	8		Eigelb	E112100
+11	200	g	Puderzucker	S111100
+11	12		Gelatine	R468000
+11			Süße Sahne	M173800|M173900
+12	0.5	l	Milch	M111300|M113300
+12	2		Vanillieschoten	NONE
+12	10.5	Blatt	Gelatine	R468000
+12	8		Eigelb	E112100
+12	160	g	Puderzucker	S111100
+12	0.5	l	Sahne	M173800|M173900
+13	125	g	Butter	Q611000|Q630000|Q620000
+13	75	g	Zucker	S111000
+13	1	pack	Vanillezucker	S114000|R452000
+13	0.5		Salz	R111000|R114000
+13	3		Ei	E111100
+13	250	g	Mehl	C214100|C214200
+13	0.25	tsp	Backpulver	R421100
+13	250	ml	Milch	M111300|M113300
+13	125	ml	Mineralwasser	N120000|N128000|N127000
+14			Butter	Q611000|Q630000|Q620000
+14			Mehl	C214100|C214200
+14	2	Suppenkelle	Blumenkohlwasser	NONE
+14	2	Suppenkelle	Milch	M111300|M113300
+14	1	tsp	Gemüsebrühe	X416243
+15	300	g	Rinderhack	U010100
+15	2		Zwiebel	G480100
+15	1	clove	Knoblauch	G490100
+15	4	tbsp	Tomatenmark	R160000
+15	150	ml	Rinderfond	NONE
+15	40	ml	Sahne	M173800|M173900
+15	1	tsp	Rinderbrühe	NONE
+16	1		Zwiebel	G480100
+16	1	clove	Knoblauch	G490100
+16	100	ml	Wasser	N110000
+16	1	tsp	Gemüsebrühe	X416243
+16	1	tsp	Rinderbrühe	NONE
+16	300	g	Rinderhack	U010100
+16	2	tbsp	Tomatenmark	R160000
+16	200	g	passierte Tomaten	R161200
+16	25	ml	Sahne	M173800|M173900
+17	2		Schalotte	G485100
+17	1		Knoblauchzehe	G490100
+17	400	g	reife Strauchtomate	G561100
+17	2	tbsp	Olivenöl	Q120000
+17			Salz und Pfeffer	NONE
+17			Zucker	S111000
+17	4	tbsp	Tequila oder Weißwein	NONE
+17	200	g	Büffelmozzarella	NONE
+17	100	g	Seranoschinken	NONE
+18	40	g	Pinienkerne	H320100
+18	2		Chilischote	G554100|G553100
+18	2	bunch	Frühlingszwiebel	G482100|G486100
+18	1	clove	Knoblauch	G490100
+18	4	tbsp	Tomatenmark	R160000
+18	2	tbsp	Erdnussbutter	H880200
+18	500	ml	Geflügelfond	NONE
+18	350	g	Hähnchenbrustfilet	V416100|V4A6100
+19	200	g	Couscous	C119200
+19	500	ml	Gemüsebrühe	X416243
+19	1		rote Paprika	G543100
+19	1	bunch	Petersilie	G250100
+19	1	bunch	Rucola	G130100
+19	1	bunch	Minze	NONE
+19	300	g	Erdbeeren	F301100
+19	1		Knoblauchzehe	G490100
+19	1		Limette	F602100
+19	2	tbsp	Ahornsirup	S151100
+19	2	tsp	Curry	NONE
+19			Kurkuma	NONE
+20	1		Zwiebel	G480100
+20	2	tbsp	Mandelblättchen	H210100|H210200
+20	1	tbsp	Kokosraspel	H150400
+20	400	g	Sahne	M173800|M173900
+20	500	g	Hähnchenbrustfilet(s)	V416100|V4A6100
+20	1		Tomate(n)	G561100
+20	0.5	tsp	Salz	R111000|R114000
+20	0.5	tsp	Paprikapulver	NONE
+20	1	tsp	Currypulver	NONE
+20	1	tsp	Gewürzmischung	NONE
+20	1	tsp	Kardamom	NONE
+20	1	clove	Knoblauchzehe	G490100
+20			Öl	Q180000|Q320000|Q120000|Q940000
+21	1		Zwiebel	G480100
+21	1		Knoblauchzehe	G490100
+21	1		grüne Paprika	G541100
+21	1	can	Tomate(n)	G561100
+21	1	can	Kidneybohnen	NONE
+21	1		Chilischote	G554100|G553100
+21	400	g	Hackfleisch	U050100
+21	1	can	Mais	G570902|G570100
+21	6	tbsp	Tomatenmark	R160000
+21			Cayennpfeffer	NONE
+21			Zucker	S111000
+21			Salz	R111000|R114000
+21	3	tsp	rosenscharfes Paprikapulver	NONE
+21	3	Blatt	Basilikum	G061000
+22	270	g	Penne	E401000
+22	250	g	Hähnchenbrustfilet	V416100|V4A6100
+22	10	ml	mittelscharfer Senf	R132000
+22	17	ml	Mayonaise	Q991000
+22	100	g	Pankomehl	NONE
+22	250	g	Hähnchenbrustfilet	V416100|V4A6100
+22	100	g	Porree	G470100
+22	1	Stange	Frühlingszwiebel	G482100|G486100
+22	1	tbsp	Butter	Q611000|Q630000|Q620000
+22	75	ml	Wasser	N110000
+22	4	g	Gemüsebrühe	X416243
+22	2	g	Curry	NONE
+22	200	g	Kochsahne	NONE
+22	40	g	Hartkäse	M300600
+22	2	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+23	200	g	Puderzucker	S111100
+23	4		Vanillezucker	S114000|R452000
+23	100	ml	Wingeist (96%)	NONE
+23	3	pack	Sahne	M173800|M173900
+23	5		Ei	E111100
+24	210	g	Butter	Q611000|Q630000|Q620000
+24	150	g	Zartbitter-Schokolade	S560000
+24	100	g	weiße Schokolade	S580000
+24	7		Ei	E111100
+24	200	g	Zucker	S111000
+24	120	g	Mehl	C214100|C214200
+25	200	g	Zucker	S111000
+25	4		Ei	E111100
+25	1	tbsp	Lebkuchengewürz	NONE
+25			Backpulver	R421100
+25	600	g	gemahlene Mandeln	H210400
+25	1	pinch	Salz	R111000|R114000
+25			Obladen	NONE
+26	140	g	Erdbeeren	F301100
+26	20	g	Himbeeren	F302100
+26	40	g	Puderzucker	S111100
+26	1	tsp	Zitronensaft	F601600
+27	4		Forelle	T422100
+27			n. B. Weißwein	P210000|P220000
+27			Olivenöl	Q120000
+27	0.5	Paket	Kräuterbutter	Q656000
+27	2	clove	Knoblauchzehe	G490100
+27	2		Karotte	G620100
+27	2		Lauchzwiebel	G482100|G486100
+27	0.5		Zitrone	F601100
+27			Salz	R111000|R114000
+27			Pfeffer	R258100
+28	3		Ei	E111100
+28	1	Tasse	Öl	Q180000|Q320000|Q120000|Q940000
+28	1	Tasse	Fanta	NONE
+28	3	Tasse	Mehl	C214100|C214200
+28	1		Backpulver	R421100
+28	500	ml	Schlagsahne	M173800|M173900
+28	5	pack	Vanillezucker	S114000|R452000
+28	2	Becher	Schmand	M172700
+28	2	can	Mandarinen	F606100
+28			Zimt	NONE
+29	4	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+29	1	tsp	Senf	R132000|R133000
+29	1	tsp	Honig	S120000|S121000
+29	1	bunch	Frühlingszwiebel	G482100|G486100
+29	500	g	Grüner Spargel	G450100
+29	400	g	Kartoffel	K110100|K120100
+30	250	g	Margarine	Q400000|Q4A4000|Q4C4000
+30	450	g	Mehl	C214100|C214200
+30	120	g	Zucker	S111000
+30	1	Packiung	Vanillezucker	S114000|R452000
+30	1		Ei	E111100
+30	1	Packun	Backpulver	R421100
+30	1	pinch	Salz	R111000|R114000
+30	1	kg	Apfel	F110100|F120100
+30	2	Glas	Pflaumen	F220100
+30	2	tbsp	Zimt	NONE
+30	2	tbsp	Zucker	S111000
+30	2	tbsp	Rum	P741000
+30	2	tbsp	Aprikosenkonfitüre/Apfelgelee	NONE
+30	100	g	Puderzucker	S111100
+30	2	tbsp	Zitronensaft	F601600
+31	1	g	Limette	F602100
+31	1	g	Gurke	G520100
+31	3	g	Minzblätter	NONE
+31	120	ml	Weißwein	P210000|P220000
+31	120	ml	Tonic Water	N314000
+32	1	tbsp	Essig	R121000|R122000|R123100|R124000
+32	1		Zwiebel	G480100
+32	1		Paprika, rot	G543100
+32	2		Karotte	G620100
+32			Petersilie	G250100
+33	2		Ei	E111100
+33	1	g	Schalotte	G485100
+33	2		Essiggurke	G520802
+33	1		Creme Fraiche	M176800|M172900
+33	1		saure Sahne	M172500
+33			7 Kräuter	NONE
+34	200	g	Mehl	C214100|C214200
+34	80	g	Margarine	Q400000|Q4A4000|Q4C4000
+34	4	tbsp	Wasser	N110000
+34	0.5	Stange	Lauch	G470100
+34	350	g	frischen Spinat	G211100
+34	350	g	Seidentofu	H861100
+34			Stärke	C446000|K230000
+34	1		Knoblauchzehe	G490100
+34	100	g	Erbsen	G760100|G760200
+34	300	g	Grüner Spargel	G450100
+34	40	g	Pinienkerne	H320100
+35	400	g	Rindergulasch	U151100
+35	3		Zwiebel	G480100
+35	4	tbsp	Tomatenmark	R160000
+35	2	tbsp	Paprika Edelsüß	NONE
+35	2	tbsp	rosenscharfes Paprikapulver	NONE
+35	2	clove	Knoblauchzehe	G490100
+35	400	g	Rotkohl	G341100
+35	1		Zwiebel	G480100
+35	50	ml	Wasser	N110000
+35	1	tbsp	Zucker	S111000
+36	1200	g	Rindergulasch	U151100
+36	4		Knoblauchzehe	G490100
+36	1		Zwiebel	G480100
+36	2		Chilischote	G554100|G553100
+36	500	g	Kartoffel	K110100|K120100
+36	2		Karotte	G620100
+36	2	Stange	Staudensellerie	G220100
+36	3		Paprika	NONE
+36	1		Zucchini	G582100
+36			Öl	Q180000|Q320000|Q120000|Q940000
+36	200	ml	Rotwein	P2A3000|P253000
+36	150	ml	Portwein	P431000
+36	3	tbsp	Tomatenmark	R160000
+36	400	g	Tomate	G561100
+36	1	tbsp	Paprika Edelsüß	NONE
+36	1.75	ml	klare Rinderbouillon	NONE
+36	2	tbsp	Kümmel	NONE
+36	1		Zitrone	F601100
+36	0.5	bunch	Schnittlauch	G081100
+36	300	g	Schmand	M172700
+37	500	g	Mehl	C214100|C214200
+37	80	g	Zucker	S111000
+37	1	g	Vanillezucker	S114000|R452000
+37	1		Frischhefe	R459000
+37	1	tsp	Zucker	S111000
+37	1	tbsp	Milch	M111300|M113300
+37	125	g	Butter	Q611000|Q630000|Q620000
+37	125	ml	Milch	M111300|M113300
+37	1		Ei	E111100
+37	1500	g	Pflaume	F220100
+37	150	g	Weizenmehl 405	C214100
+37	75	g	Butterflöckchen	Q611000|Q630000|Q620000
+37	75	g	Zucker	S111000
+38	8		Eigelb	E112100
+38	50	g	Zucker	S111000
+38	4		Eiweiß	E113100
+38	80	g	Mehl	C214100|C214200
+38	20	g	Speisestärke	C446000|K230000
+38	50	g	Zucker	S111000
+38	300	g	Himbeeren	F302100
+38			Sahne	M173800|M173900
+38	50	g	Zucker	S111000
+39	500	g	Hähnchenbrustfilet(s)	V416100|V4A6100
+39	1		Mango	F516100
+39	1	Becher	Crème fraîche	M176800|M172900
+39	3	tbsp	Kokosmilch	H154000
+39	2	tbsp	Sahnejoghurt	M141500|M148500
+39	100	ml	Mangosaft	F516600
+39	1		Zwiebel	G480100
+39			Knoblauchzehe	G490100
+39	1	tbsp	Tomatenmark	R160000
+39	1	tbsp	Mangochutney	NONE
+39	1	tbsp	Currypaste (Tikka Masala Paste)	NONE
+39			Korianderpulver	NONE
+39			Kreuzkümmelpulver	NONE
+39			Kurkumapulver	NONE
+39			Salz und Pfeffer	NONE
+39			Zucker	S111000
+39	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+40	500	ml	Wasser	N110000
+40	25	ml	Olivenöl	Q120000
+40	40	g	Frischhefe	R459000
+40	20	g	Salz	R111000|R114000
+40	1	pinch	Zucker	S111000
+40	925	g	Mehl	C214100|C214200
+41	3		Eigelb	E112100
+41	75	g	Zucker	S111000
+41	1		Vanillezucker	S114000|R452000
+41	5	Blatt	Gelatine	R468000
+41	500	g	Joghurt	M141300|M141200
+41	250	g	Sahne	M173800|M173900
+41	300	g	Himbeeren	F302100
+41	75	g	Puderzucker	S111100
+41			Countroux	NONE
+42	6		Ei	E111100
+42	60	g	Zucker	S111000
+42	200	ml	Milch	M111300|M113300
+42	160	g	Mehl	C214100|C214200
+42	40	g	Zucker	S111000
+42	3	tbsp	Butter	Q611000|Q630000|Q620000
+42	3	tbsp	Puderzucker	S111100
+43	800	g	mehlige Kartoffel	K110100|K120100
+43	1	tsp	Kresse	G280100
+43	1	bunch	Suppengrün	G093100
+43	1.5	l	Gemüsebrühe	X416243
+43	150	g	Creme Fraiche	M176800|M172900
+43	1	pinch	Salz	R111000|R114000
+43	1	pinch	Pfeffer	R258100
+43	1	pinch	Muskat	NONE
+44	500	g	Magerquark	M713100
+44	200	g	Mascarpone	M7A6800
+44	2	g	Ei	E111100
+44	100	g	Butter	Q611000|Q630000|Q620000
+44	100	g	Sahne	M173800|M173900
+44	200	g	Zucker	S111000
+44	1	pack	Vanillezucker	S114000|R452000
+44	2	tbsp	Vanillepuddingpulver	R481100
+44	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+44	1	tsp	Zitrone	F601100
+44	2		Eigelb	E112100
+44	3		Eiweiß	E113100
+45	1		Zuccini	G582100
+45	200	g	Champignons	K701100
+45			Brokkoli	G312100
+45	1		Zwiebel	G480100
+45	1	clove	Knoblauch	G490100
+45	1	hand voll	Erbsen	G760100|G760200
+45	1	piece	Ingwer	R211200
+45	300	g	Hähnchenbrust	V416100|V4A6100
+45	1	tbsp	Mehl	C214100|C214200
+45	0.5	tsp	gelbe Currypaste	NONE
+45	1	tsp	Rote Currypaste	NONE
+45	1	tsp	Tomatenmark	R160000
+45	400	ml	Kokosmilch	H154000
+45	1	tsp	Currypulver	NONE
+45	1	tsp	Paprika Edelsüß	NONE
+45			Salz und Pfeffer	NONE
+46	1	Becher	Creme Fraiche	M176800|M172900
+46	3	tbsp	Zitronensaft	F601600
+46	3	tbsp	Conjac	P610000
+46			Natreen	NONE
+46	1	bunch	Dill	NONE
+46			Süße Sahne	M173800|M173900
+47	600	g	Kartoffel	K110100|K120100
+47	2		Schalotte	G485100
+47	1		Zucchini	G582100
+47	3		Möhren	G620100
+47	1		gelbe Paprika	G542100
+47	250	g	Kirschtomaten	G561100
+47	2	tbsp	Olivenöl	Q120000
+47			Rosmarinzweige	NONE
+47	4		Lachsfilet	T410100
+47			Zitronenspalten	F601100
+48	600	g	Kartoffel	K110100|K120100
+48	80	g	Schalotte	G485100
+48	0.5		Vanilleschote	NONE
+48	10	g	Butter	Q611000|Q630000|Q620000
+48	80	ml	Wermut	P341300|P341600
+48	200	ml	Weißwein	P210000|P220000
+48	200	ml	Fischfond	NONE
+48	200	g	Sahne	M173800|M173900
+48			Currypulver	NONE
+48	400	g	Radicchio	G106100
+48	4		Lachsfilet	T410100
+49	200	g	Zwiebel	G480100
+49	2	clove	Knoblauchzehe	G490100
+49	100	g	Karotte	G620100
+49	150	g	Sellerie	NONE
+49	800	g	Dose geschälte Tomaten	G568900
+49	1	tsp	Tomatenmark	R160000
+49	200	ml	Rotwein	P2A3000|P253000
+49	1		Lorbeerblatt	NONE
+49	500	g	Rinderhack	U010100
+49	50	g	Butter	Q611000|Q630000|Q620000
+49	50	g	Mehl	C214100|C214200
+49	700	ml	Milch	M111300|M113300
+49	100	g	italienischer Hartkäse	NONE
+49	125	g	Mozzarella	M032100
+49	12		Lasagneblatt	E401000|E432000
+50	250	g	gelbe Linsen	NONE
+50	1		Zwiebel	G480100
+50	3		Möhren	G620100
+50	1		Zucchini	G582100
+50	200	g	Broccoli	G312100
+50	200	g	Reis	C352000|C359000
+50	250	ml	Gemüsebrühe	X416243
+50	2	tsp	gelbe Currypaste	NONE
+50	200	ml	Kokosmilch	H154000
+50			Koriander	NONE
+50	1		Limette	F602100
+51	180	g	Butter	Q611000|Q630000|Q620000
+51			Zucker	S111000
+51			Mehl	C214100|C214200
+51	0.5	tsp	Backpulver	R421100
+51	4		Ei	E111100
+51	3	Becher	Sahne	M173800|M173900
+51	4	Paket	Sahnesteif	R434000
+51	100	g	Zucker	S111000
+51	2	Becher	Schmand	M172700
+51	2	can	Mandarinen	F606100
+51			Zimt	NONE
+52	500	g	Karotte	G620100
+52	750	g	Karotte	G620100
+52	375	ml	Gemüsebrühe	X416243
+52	125	ml	Sahne	M173800|M173900
+52	1	bunch	Frühlingszwiebel	G482100|G486100
+52	1	bunch	Dill	NONE
+53	50	g	Haselnusskern	H130100
+53	40	g	Zucker	S111000
+53	4		Apfel	F110100|F120100
+53	4	tbsp	Zitronensaft	F601600
+53	80	g	Zucker	S111000
+53	80	ml	Weißwein	P210000|P220000
+53	120	ml	Apfelsaft	F110600
+53	50	ml	Calvados	P640000
+53	4		Ei	E111100
+53			Vanillemark	NONE
+53	120	g	Zucker	S111000
+53	3	tbsp	Zitronensaft	F601600
+53	3	tbsp	Amaretto	P540100
+53	250	g	Mascarpone	M7A6800
+53	100	ml	Schlagsahne	M173800|M173900
+53			Salz	R111000|R114000
+54	200	g	Halbbitterschokolade	S560000
+54	100	g	Vollmilchschokolade	S539900|S530000
+54	6		Ei	E111100
+54	250	ml	Sahne	M173800|M173900
+55	5	tbsp	Wasser	N110000
+55	200	g	Schwarze Herrenschokolade	NONE
+55	5		Ei	E111100
+55	1	tsp	Pulverkaffee instant	N420900
+55	1	tbsp	Vanillezucker	S114000|R452000
+55	100	ml	Sahne	M173800|M173900
+55			Ei	E111100
+56	400	g	Mehl	C214100|C214200
+56	2	tsp	Zucker	S111000
+56	20	g	Frischhefe	R459000
+56	4	tbsp	Joghurt	M141300|M141200
+56	2	tbsp	Pflanzenöl	Q180000|Q320000|Q940000
+56	0.25	tsp	Backpulver	R421100
+56	150	ml	Milch	M111300|M113300
+57	200	g	Rinderhüftsteak	U284100
+57	50	g	Champignons	K701100
+57	1	clove	Knoblauch	G490100
+57	200	ml	Rinderfond	NONE
+57	1	tsp	Tomatenmark	R160000
+57	500	ml	Kochsahne	NONE
+57	1		weiße Zwiebel	G480100
+58	200	g	Zucker	S111000
+58	10		Eigelb	E112100
+58	200	g	Haselnüsse	H130100
+58	2	tsp	Kakao	S711000|S713000
+58	8		Eiweiß	E113100
+58	500	ml	Schlagsahne	M173800|M173900
+58	2.5	pack	Sahnesteif	R434000
+58			Puderzucker	S111100
+58	100	ml	Eierlikör	P546000
+59	500	g	Sahne	M173800|M173900
+59	45	g	Zucker	S111000
+59	1		Vanilleschote	NONE
+59	2.25	Blatt	Gelatine	R468000
+59	200	g	Vanillesauce	NONE
+59			Obst der Saison	NONE
+60	400	g	Mehl	C214100|C214200
+60	2		Ei	E111100
+60	150	ml	Wasser	N110000
+60	0.5	tsp	Salz	R111000|R114000
+60	400	g	Rinderhack	U010100
+60	50	g	Butter	Q611000|Q630000|Q620000
+60	2		Zwiebel	G480100
+60	2	tbsp	Butter	Q611000|Q630000|Q620000
+61	4		Ei	E111100
+61	1	Tasse	Sonnenblumenöl	Q320000
+61	1	Tasse	Zucker	S111000
+61	1		Vanillezucker	S114000|R452000
+61	1	Tasse	Mineralwasser	N120000|N128000|N127000
+61	3	Tasse	Mehl	C214100|C214200
+61	1		Backpulver	R421100
+61	2	can	Pfirsich	F203100
+61	2		Süße Sahne	M173800|M173900
+61	2		Sahnesteif	R434000
+61	2		Vanillezucker	S114000|R452000
+61	3		Schmand	M172700
+62	32	g	Zucker	S111000
+62	60	g	Popcorn	NONE
+62	1	tsp	Pflanzenöl	Q180000|Q320000|Q940000
+63	100	ml	Rotwein	P2A3000|P253000
+63	100	ml	Orangensaft	F603600
+63	50	g	Preiselbeersaft	F401600
+63	1	tbsp	Dijon - Senf	NONE
+63	200	g	Schmand	M172700
+63	1.5	tbsp	Preiselbeere	NONE
+64	300	g	Blätterteig	D072000|X9A6020
+64	20	g	Butter	Q611000|Q630000|Q620000
+64	2		Zwiebel	G480100
+64	2	Stange	Lauchzwiebel	G482100|G486100
+64	200	g	Schinken	NONE
+64	150	g	Käse	NONE
+64	4		Ei	E111100
+64	200	g	Sahne	M173800|M173900
+65	200	g	Mehl	C214100|C214200
+65	150	g	Butter	Q611000|Q630000|Q620000
+65	80	g	Zucker	S111000
+65			Salz	R111000|R114000
+65	1		Vanilleschote	NONE
+65	3		Ei	E111100
+65	1	tbsp	Speisestärke	C446000|K230000
+65	150	g	Creme Fraiche	M176800|M172900
+65	100	g	Zucker	S111000
+66	140	g	Mehl	C214100|C214200
+66	80	g	Speisestärke	C446000|K230000
+66	1		Ei	E111100
+66	1		Ei	E111100
+66	0.5	tsp	Backpulver	R421100
+66	80	g	Puderzucker	S111100
+66			Salz	R111000|R114000
+66	100	g	Butter	Q611000|Q630000|Q620000
+66			Mehl	C214100|C214200
+66	500	g	Hülsenfrüchte	NONE
+66			Klarsichtfolie	NONE
+66	400	g	Rhababer	F081100
+66	50	g	Zucker	S111000
+66	60	ml	Orangensaft	F603600
+66	4	tsp	Speisestärke	C446000|K230000
+66			Vanillecreme	NONE
+66	500	ml	Schlagsahne	M173800|M173900
+66	80	g	Zucker	S111000
+66	2		Vanilleschote	NONE
+66	4	Blatt	weiße Gelatine	R468000
+66	100	g	Mascarpone	M7A6800
+66			Espresso-Pulver	N420900
+67	300	g	Tomate(n)	G561100
+67	1	tsp	Olivenöl	Q120000
+67	300	g	Robiola	NONE
+67	1	tbsp	Sambal Oelek	R146100
+67	2		Zwiebel	G480100
+67	2	Stange	Porree	G470100
+67	2		Karotte	G620100
+67	100	g	Parmesan	M306400
+67	400	g	Rigatoni	E401000
+67	300	g	Lachsfilet	T410100
+67	8		Riesengarnele	T753100
+67	100	g	Butter	Q611000|Q630000|Q620000
+67	1	tbsp	Olivenöl	Q120000
+68	300	g	Rindergeschnetzeltes	NONE
+68	2		rote Zwiebel	G480100
+68	200	ml	Apfel-Mango Saft	NONE
+68	800	ml	Kalbsfond	NONE
+68	0.5	Tüte	Getrocknete Cranberries	F414400
+68	2	tbsp	Tomatenmark	R160000
+68	250	ml	Sahne	M173800|M173900
+69	2		Zwiebel	G480100
+69	800	g	Rindergulasch	U151100
+69	2	tbsp	Conjac	P610000
+69	250	ml	Wasser	N110000
+69	2		Suppengrün	G093100
+69	1		Lorbeerblatt	NONE
+69			gekörnte Brühe	R810000|R821000
+69	200	ml	Kochsahne	NONE
+69	2	tbsp	Soßenbinder	NONE
+69			Preiselbeeren	NONE
+70	500	g	mehlige Kartoffel	K110100|K120100
+70	1	tbsp	Butter	Q611000|Q630000|Q620000
+70	4	Stüc	Karotte	G620100
+70	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+70	1	Einheit	Zwiebel	G480100
+70	1	clove	Knoblauch	G490100
+70	150	g	Champignons	K701100
+70	100	ml	Wasser	N110000
+70	2	g	Rinderbrühe	NONE
+70	250	g	Rinderhüftsteak	U284100
+70	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+70	150	g	Champignons	K701100
+70	1	Einheit	Knoblauchzehe	G490100
+70	10	ml	mittelscharfer Senf	R132000
+70	2	tbsp	Butter	Q611000|Q630000|Q620000
+70	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+70	50	ml	Wasser	N110000
+71	2		Bananen	F503100
+71	2		säuerliche Äpfel	F110100|F120100
+71	400	g	Rote Bete	G613100
+72	140	ml	Rotwein	P2A3000|P253000
+72	150	ml	Portwein	P431000
+72	2	tbsp	Balsamicoessig (bianco)	NONE
+72	2	tbsp	brauner Zucker	S112000
+72	200	ml	Rinderfond	NONE
+73	250	g	Margarine	Q400000|Q4A4000|Q4C4000
+73	250	g	Zucker	S111000
+73	1	pack	Vanillezucker	S114000|R452000
+73	1	tsp	Zimt	NONE
+73	4		Ei	E111100
+73	250	g	Mehl	C214100|C214200
+73	1	pack	Backpulver	R421100
+73	1	tbsp	Kakaopulver	S711000|S713000
+73	100	g	Schokolade	S500000
+73			Rotwein	P2A3000|P253000
+73			Smarties	NONE
+73			Kuvertüre	S671000
+74	800	g	Karotte	G620100
+74	1		Zwiebel	G480100
+74	2	tbsp	Butter	Q611000|Q630000|Q620000
+74	1	tbsp	Zucker	S111000
+74	100	ml	Rinderbrühe	NONE
+74	200	g	Schlagsahne	M173800|M173900
+75	250	g	Margarine	Q400000|Q4A4000|Q4C4000
+75	200	g	Zucker	S111000
+75	1	Paket	Vanillezucker	S114000|R452000
+75	4		Ei	E111100
+75	1	pinch	Salz	R111000|R114000
+75	400	g	Mehl	C214100|C214200
+75	1		Backpulver	R421100
+75	2	tbsp	Rum	P741000
+76	125	g	Löffelbiskuits	NONE
+76	125	g	Butter	Q611000|Q630000|Q620000
+76	50	g	Puderzucker	S111100
+76			Zimt	NONE
+76	1	kg	Sauerkirsch	NONE
+76	125	g	Zucker	S111000
+76	50	g	Speisestärke	C446000|K230000
+76	4	Blatt	Gelatine	R468000
+76	1		Zitrone	F601100
+76	650	g	Doppelrahmfrischkäse	M710800
+76	100	g	Puderzucker	S111100
+76	3	tbsp	Kirschwasser	P752100
+76			Sahne	M173800|M173900
+76	100	g	Amaretti	NONE
+77	50	g	Butter	Q611000|Q630000|Q620000
+77	4		Hähnchenbrustfilet	V416100|V4A6100
+77	2		Knoblauchzehe	G490100
+77	0.5	tbsp	Hühnerbrühe	X411243
+77			Tomatenmark	R160000
+77	4		Tomate(n)	G561100
+78	100	g	Kuvertüre	S671000
+78	30	g	Zucker	S111000
+78	70	ml	Milch	M111300|M113300
+79			Bitterschokolade	S570000
+79	100	g	Schokolade mit Pfefferminzfüllung	S560700|S570800
+79	2		Ei	E111100
+79	1.5	tbsp	Zucker	S111000
+79	500	g	Sahne	M173800|M173900
+79			Minzblättchen	NONE
+79	6		Deserthippen	NONE
+79			Früchtekompott	NONE
+80	3	tbsp	Semmelbrösel	B821000
+80	6		Ei	E111100
+80	275	g	Zucker	S111000
+80	1	tbsp	Vanillezucker	S114000|R452000
+80	75	g	Mehl	C214100|C214200
+80	65	g	Speisestärke	C446000|K230000
+80	40	g	Kakaopulver	S711000|S713000
+80	1	Glas	Schattenmorellen	NONE
+80	2	cl	Kirschwasser	P752100
+80	2	Paket	Sahnesteif	R434000
+81	4		Ei	E111100
+81	1000	g	Spargel	G450100
+81	250	g	Salatgurke	G520100
+81	1	bunch	Bärlauch	G492100
+81	4		Sardellenfilets in Öl	NONE
+81	1	tbsp	Kapern	G012902
+81	50	g	saure Sahne	M172500
+81	2	tbsp	Balsamicoessig (bianco)	NONE
+81	2	tsp	Honigsenf	NONE
+81	4	tbsp	Rapsöl	Q180000
+82	500	g	Mehl	C214100|C214200
+82	1	tsp	Salz	R111000|R114000
+82	2	tbsp	Olivenöl	Q120000
+82	250	ml	Wasser	N110000
+82	0.5		Hefe	NONE
+82	500	g	weißer Spargel	G450100
+82	500	g	Grüner Spargel	G450100
+82	2		Schalotte	G485100
+82	300	g	Camembert	M602600|M602700
+82	1	bunch	Petersilie	G250100
+82	1	bunch	Schnittlauch	G081100
+82	300	g	Creme Fraiche	M176800|M172900
+82	150	g	Schwarzwälder Schinken	W442000
+83	500	g	Spargel	G450100
+83	1		Schalotte	G485100
+83	1		Mango	F516100
+83	1		Limette	F602100
+83	1		Chilischote	G554100|G553100
+83	2	tsp	Ahornsirup	S151100
+83	1		Chilischoten	G554100|G553100
+83	2	tbsp	Rapsöl	Q180000
+83	0.5	bunch	Basilikum	G061000
+84	2		Auberginen	G510100
+84	3	tbsp	Sesampaste	Q901000
+84			Zitrone	F601100
+84	2	tbsp	Olivenöl	Q120000
+84	2		Knoblauchzehe	G490100
+84			Petersilie	G250100
+84	1	tbsp	Oliven	H510802|H520800
+84			Granatapfel	F506100
+84			Hafermilch	C660000|C660200
+84			Volkornmehl	C211000
+84			Zitone	F601100
+84			Volkornbrösel	NONE
+84	500	g	Grüner Spargel	G450100
+85	300	g	Mehl	C214100|C214200
+85	1	tsp	Zucker	S111000
+85	200	g	Butter	Q611000|Q630000|Q620000
+85	4		Ei	E111100
+85	600	g	Spargel	G450100
+85	150	g	Schinken	NONE
+85	100	ml	Sahne	M173800|M173900
+85	150	ml	Milch	M111300|M113300
+85			Pfeffer	R258100
+85	50	g	Parmesan	M306400
+85			Fett	NONE
+85			Schnittlauch	G081100
+86	400	g	Grüner Spargel	G450100
+86	1	Spritzer	Zitronensaft	F601600
+86	50	g	Schalotte	G485100
+86	40	g	Butter	Q611000|Q630000|Q620000
+86	300	g	Arborio-Reis	C352000
+86	250	ml	Weißwein	P210000|P220000
+86	500	ml	Kalbsfond	NONE
+86	50	g	Butterflöckchen	Q611000|Q630000|Q620000
+86	60	g	Parmesan	M306400
+87	500	g	weißer Spargel	G450100
+87	1	bunch	Rucola	G130100
+87	1	can	Thunfisch	T121100|T121902
+87	150	g	Creme Fraiche	M176800|M172900
+87	4	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+87	2	Spritzer	Zitronensaft	F601600
+87	1	tbsp	Kapern	G012902
+88	1		Frühlingszwiebel	G482100|G486100
+88	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+88	400	g	Eierspätzle	NONE
+88	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
+88	300	g	Hackfleisch	U050100
+88	200	g	Kochsahne	NONE
+88	300	g	Champignons, Lauch	NONE
+88	50	g	geriebener Käse	NONE
+89	150	g	Margarine	Q400000|Q4A4000|Q4C4000
+89	100	g	Zucker	S111000
+89	2		Ei	E111100
+89	1	tsp	Spekulatiusgewürz	NONE
+89	1	pinch	Salz	R111000|R114000
+89			Bittermandelöl	NONE
+89	250	g	Mehl	C214100|C214200
+89	0.5	tsp	Backpulver	R421100
+89	100	g	gemahlene Mandeln	H210400
+90	1		Zwiebel	G480100
+90	1	Teil	Butter	Q611000|Q630000|Q620000
+90	150	g	Rahmspinat	NONE
+90	1800	l	Milch	M111300|M113300
+90	1400	l	Brühe	NONE
+90	2	tbsp	Soßenbinder	NONE
+90	2	tbsp	Sahne	M173800|M173900
+90	2	tbsp	Kräuter	NONE
+91			Butter	Q611000|Q630000|Q620000
+91	250	g	Zucker	S111000
+91	2		Vanillezucker	S114000|R452000
+91	160	g	gemahlene Mandeln	H210400
+91	375	g	Mehl	C214100|C214200
+91	5	Spritzer	Bittermandelöl	NONE
+92	100	g	Mehl	C214100|C214200
+92	75	g	Zucker	S111000
+92	1	pack	Vanillezucker	S114000|R452000
+92			Zimt	NONE
+92	75	g	Butter	Q611000|Q630000|Q620000
+93	250	g	weißer Spargel	G450100
+93	400	g	Broccoli	G312100
+93	2		Knoblauchzehe	G490100
+93	50	g	Butter	Q611000|Q630000|Q620000
+93			Salz	R111000|R114000
+93			Pfeffer	R258100
+93	250	g	Mascarpone	M7A6800
+93	250	g	gelbe Tagliolini	E432000
+94	150	g	Zucker	S111000
+94	70	g	Butter	Q611000|Q630000|Q620000
+94	800	g	Apfel	F110100|F120100
+94	1	Paket	Blätterteig	D072000|X9A6020
+94	1	Paket	Vanilleeis	S241000
+94	1	Becher	Schlagsahne	M173800|M173900
+95	1		Zwiebel	G480100
+95	125	ml	Sahne	M173800|M173900
+95	2	tbsp	Tomatenmark	R160000
+96	1.2	kg	Rindfleisch	U201000|U104100
+96	1		Gemüsezwiebel	G480100
+96	2	rote	Paprikaschote	G541100|G542100|G543100
+96	2	gelbe	Paprikaschote	G541100|G542100|G543100
+96	3		Knoblauchzehe	G490100
+96	1	rote	Pfefferschote	G553100|G554100
+96	1	grüne	Pfefferschote	G553100|G554100
+96	5	tbsp	Olivenöl	Q120000
+96			Meersalz	R112000
+96	3	tbsp	Tomatenmark	R160000
+96	3	tsp	edelsüßes Paprikapulver	NONE
+96	1	tsp	Cayennepfeffer	NONE
+96	2	tsp	brauner Zucker	S112000
+96	0.5	tsp	Kreuzkümmel	NONE
+96	1	can	Flaschentomate	G561100
+96	200	ml	Gemüsebrühe	X416243
+96	1	can	Mais	G570902|G570100
+96	1	can	Kidneybohne	NONE
+96	25	g	Zartbitter-Schokolade	S560000
+96	0.5	bunch	Koriandergrün	NONE
+96	250	g	Schmand	M172700
+97	2		Ei	E111100
+97	50	g	Puderzucker	S111100
+97	250	g	Mascarpone	M7A6800
+97	1		Ei	E111100
+97			Löffelbiskuits	NONE
+97			Kaffee	NONE
+97			Amaretto	P540100
+98	1		Schalotte	G485100
+98	100	g	gekochter Schinken	W424000|W423000
+98	250	ml	Kochsahne	NONE
+98	50	ml	Weißwein	P210000|P220000
+98	1	clove	Knoblauch	G490100
+98	50	g	Parmesan	M306400
+98			gemahlene Muskatnuss	NONE
+99			gemahlene Mandeln	H210400
+99	280	g	Mehl	C214100|C214200
+99	200	g	Butter	Q611000|Q630000|Q620000
+99	80	g	Zucker	S111000
+99	1	pack	Vanillezucker	S114000|R452000
+100	250	g	Butter	Q611000|Q630000|Q620000
+100	150	g	Zucker	S111000
+100	8		Ei	E111100
+100	1	pinch	Salz	R111000|R114000
+100	2		Vanillezucker	S114000|R452000
+100	500	g	Mehl	C214100|C214200
+100	500	ml	Milch	M111300|M113300
+101			Semmelbrösel	B821000
+101	2		Ei	E111100
+101			Mehl	C214100|C214200
+101			Kalbsschnitzel	U342100
+101	70	g	Butter	Q611000|Q630000|Q620000
+101	25	g	Buttaris	NONE
+102	500	g	Mehl	C214100|C214200
+102	1	Würfel	Frischhefe	R459000
+102	250	ml	Milch	M111300|M113300
+102	80	g	Zucker	S111000
+102	1		Ei	E111100
+102			Butter	Q611000|Q630000|Q620000
+102	1800	g	Zwetschgen	F223100
+102	300	g	Mehl	C214100|C214200
+102	150	g	Zucker	S111000
+102			Vanillezucker	S114000|R452000
+102			Butter	Q611000|Q630000|Q620000
+102	400	g	Sahne	M173800|M173900
+102	0.5	tsp	Zimt	NONE
+102	1	tbsp	Puderzucker	S111100
+103	200	g	Hackfleisch	U050100
+103	200	g	passierte Tomaten	R161200
+103	200	g	Zwiebel	G480100
+103	200	g	Spaghetti	E401000
+104	200	g	Hackfleisch	U050100
+104	200	g	Tomaten	G561100
+104	200	g	Lasagneplatten	E401000|E432000
+104	200	g	Béchamel	NONE
+105	200	g	Rindfleisch	U201000|U104100
+105	200	g	Tomaten	G561100
+105	200	g	Rotwein	P2A3000|P253000
+106	200	g	Hackfleisch	U050100
+106	200	g	Kidneybohnen	NONE
+106	200	g	Zwiebel	G480100
+106	200	g	Chili	NONE
+107	200	g	Hackfleisch	U050100
+107	200	g	passierte Tomaten	R161200
+107	200	g	Zwiebel	G480100
+107	200	g	Spaghetti	E401000
+108	200	g	Hackfleisch	U050100
+108	200	g	Tomaten	G561100
+108	200	g	Lasagneplatten	E401000|E432000
+108	200	g	Béchamel	NONE
+109	200	g	Rindfleisch	U201000|U104100
+109	200	g	Tomaten	G561100
+109	200	g	Rotwein	P2A3000|P253000
+110	200	g	Hackfleisch	U050100
+110	200	g	Kidneybohnen	NONE
+110	200	g	Zwiebel	G480100
+110	200	g	Chili	NONE
+111	200	g	Hackfleisch	U050100
+111	200	g	passierte Tomaten	R161200
+111	200	g	Zwiebel	G480100
+111	200	g	Spaghetti	E401000
+112	200	g	Hackfleisch	U050100
+112	200	g	Tomaten	G561100
+112	200	g	Lasagneplatten	E401000|E432000
+112	200	g	Béchamel	NONE
+113	200	g	Rindfleisch	U201000|U104100
+113	200	g	Tomaten	G561100
+113	200	g	Rotwein	P2A3000|P253000
+114	200	g	Hackfleisch	U050100
+114	200	g	Kidneybohnen	NONE
+114	200	g	Zwiebel	G480100
+114	200	g	Chili	NONE
+115	200	g	Hackfleisch	U050100
+115	200	g	passierte Tomaten	R161200
+115	200	g	Zwiebel	G480100
+115	200	g	Spaghetti	E401000
+116	200	g	Hackfleisch	U050100
+116	200	g	Tomaten	G561100
+116	200	g	Lasagneplatten	E401000|E432000
+116	200	g	Béchamel	NONE
+117	200	g	Rindfleisch	U201000|U104100
+117	200	g	Tomaten	G561100
+117	200	g	Rotwein	P2A3000|P253000
+118	200	g	Hackfleisch	U050100
+118	200	g	Kidneybohnen	NONE
+118	200	g	Zwiebel	G480100
+118	200	g	Chili	NONE
+119	200	g	Butter	Q611000|Q630000|Q620000
+119	150	g	Zucker	S111000
+119	3		Eier	E111100
+119	250	g	Mehl	C214100|C214200
+119			Salz	R111000|R114000
+120	2		Schalotten	G485100
+120	50	g	Butter	Q611000|Q630000|Q620000
+120			Zwiebel	G480100
+121	200	g	Butter	Q611000|Q630000|Q620000
+121	1.5	kg	Mehl	C214100|C214200
+121	2		Zwiebeln	G480100
+122	250	g	flour	C214100|C214200
+122	2		eggs	E111100
+122	1	tbsp	olive oil	Q120000
+122			Salt	R111000|R114000
+123	227	g	Butter	Q611000|Q630000|Q620000
+123	240	ml	Milk	M111300|M113300
+123	2	tbsp	Oil	Q180000|Q320000|Q120000|Q940000
+123	3	clove	Garlic	G490100
+124	200	g	Butter	Q611000|Q630000|Q620000
+124	1.5	kg	Mehl	C214100|C214200
+124	2		Zwiebeln	G480100
+125	250	g	flour	C214100|C214200
+125	2		eggs	E111100
+125	1	tbsp	olive oil	Q120000
+125			Salt	R111000|R114000
