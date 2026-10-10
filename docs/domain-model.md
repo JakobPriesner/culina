@@ -50,7 +50,8 @@ not throw (`dotnet-result-pattern`).
 
 ### UserSettings — person-owned, one row per user
 
-`Locale` (`de` | `en`), `Theme` (theme id, default `warm-paper`),
+`Language` (`de` | `en` | null — null follows the device and is the default;
+stored as the `locale` column, `system` for null), `Theme` (theme id, default `warm-paper`),
 `Mode` (`light` | `dark` | `system`), `MeasurementSystem` (`metric` | `imperial`,
 v1 stores it and always renders metric — see `scaling-rules.md`).
 
@@ -135,9 +136,9 @@ Single-use. Redeeming an expired, unknown or already-redeemed code returns the
 | `Title` | `string` | 1–200 chars, required — the only required field |
 | `Description` | `string?` | ≤ 2000 chars |
 | `Language` | `de` \| `en` | the language the *content* is written in, independent of UI locale |
-| `BaseYield` | `Yield` (VO) | `Amount` (decimal > 0, ≤ 1000) + `Kind` (`servings` \| `pieces`) |
-| `PrepMinutes` | `int?` | ≤ 10000 |
-| `CookMinutes` | `int?` | ≤ 10000 |
+| `Yield` | `Yield` (VO) | `Amount` (decimal, rounded to 3 places, then > 0 and ≤ 1000) + `Kind` (`servings` \| `pieces`) + `Label?` (the recipe's own word, ≤ 40 chars) |
+| `PrepMinutes` | `int?` | 0–10 080 (a week) |
+| `CookMinutes` | `int?` | 0–10 080 (a week) |
 | `ImageId` | `Guid?` | see `RecipeImage` |
 | `CreatedBy` | `Guid` | user id |
 | `CreatedAt` / `UpdatedAt` | `DateTimeOffset` | |
@@ -243,7 +244,7 @@ is one indexed query rather than a `LIKE` scan.
 - Every token in `Text` must reference a `RecipeIngredient` of the *same*
   recipe. A token pointing elsewhere is rejected with `recipes.unknown_ingredient_reference`.
 - Deleting an ingredient that steps still reference is rejected with
-  `recipes.ingredient_in_use`, naming the steps. (The UI unlinks first.)
+  `recipes.ingredient_in_use`, naming the first step that still needs it. (The UI unlinks first.)
 - `DurationSeconds` ≤ 86400.
 
 The API never exposes the raw token string. Responses carry **segments**; see
@@ -338,7 +339,7 @@ rules included.
 
 ### Tag
 
-`Id`, `HouseholdId`, `Name` (1–40), `Slug` (lowercased, normalised).
+`Id`, `HouseholdId`, `Name` (1–40 chars, enforced on the recipe's tag list, at most 25 tags per recipe), `Slug` (lowercased, normalised).
 Household-scoped so each household keeps its own vocabulary and nothing leaks
 between them. `(HouseholdId, Slug)` is unique. `RecipeTag(RecipeId, TagId)`.
 
@@ -417,7 +418,7 @@ claims to.
 
 **`CurrentStepIndex` is a position, not an identity.** A recipe edited from
 another device while somebody is cooking it can move the step under them. The
-index is clamped so it can never point past the end, but a step *inserted* above
+backend only refuses a negative index (`cooking.step_out_of_range`) and stores any other; it is the frontend that clamps the index to the recipe's steps, so it never points past the end. Even so, a step *inserted* above
 the current one shifts the position silently. Making this exact means recording
 the step's id in the session, which is a migration and a contract change for a
 case that is rare and immediately visible to the person cooking. Recorded here
@@ -433,8 +434,8 @@ cook is a better signal than what you claim to like.
 
 ### PersonalNote — person-owned
 
-`Id`, `RecipeId`, `UserId`, `StepId?` (null = recipe-level), `Text` (≤ 2000),
-`UpdatedAt`, `Version`. Unique on `(RecipeId, UserId, StepId)`.
+`Id`, `RecipeId`, `UserId`, `StepId?` (null = recipe-level), `Body` (1–2000),
+`UpdatedAt`. The table has a `version` column the domain never reads or writes: a note is replaced, not concurrently edited. Unique on `(RecipeId, UserId, StepId)`.
 
 ### SuggestionDismissal — person-owned
 
@@ -508,154 +509,14 @@ list does not rearrange under somebody still reading it.
 
 ## Shopping
 
-#### SuggestionDismissal — person-owned
-
-`UserId`, `RecipeId`, `DismissedAt`. Composite primary key `(UserId, RecipeId)`.
-
-"Not this." The only signal the suggestion ranking cannot derive from something
-another feature already writes, and it has to be asked for rather than inferred:
-with two to eight people there is no such thing as a meaningful non-click, so
-reading dislike into five suggestions ignored on one evening would be
-manufacturing data.
-
-Person-owned, like the note and the cook log. One person hiding a recipe from
-their own suggestions says nothing about anybody else in the household, and the
-recipe itself is untouched — still in the collection, still searchable, still on
-its shelves.
-
-**It expires.** The ranker ignores rows older than its window, so "not tonight"
-does not quietly become "never again".
-
-**Not an aggregate root**, so no `version` column: it is never
-read-modify-written, has no concurrency to lose, and nothing about it could
-sensibly carry an ETag. Dismissing twice is one dismissal, enforced by the
-composite key rather than by a check — a double tap and a retried request are
-both ordinary, exactly as on `CookbookRecipe`.
-
-## Suggestions
-
-**Nothing is stored.** There is no suggestions table, no precomputed ranking and
-no taste profile on disk. A suggestion is a saved question answered whenever
-somebody looks — the same decision `Cookbook.Kind = smart` made, and for the same
-reasons: a recipe written this evening is ranked correctly this evening, there is
-no job to run, nothing to backfill when a weight changes, and no stored ranking
-that can drift out of step with the recipes it claims to describe.
-
-The score is a sum of named terms over data eight other features already write:
-
-| Term | Read from |
-| --- | --- |
-| Affinity | `CookLogEntry` (×1.3 with a photo), `MealPlanEntry`, `CookbookRecipe`, `PersonalNote`, completed `CookSession` |
-| Content | `RecipeTag` and `RecipeIngredient.Name`, as a TF-IDF cosine against the same features of what this person cooks |
-| Repetition | `max(CookLogEntry.MadeAt)` across **the whole household** |
-| Rediscovery | the same date, once it is months old, scaled by affinity |
-| Seasonality | the month distribution of this household's own cook log, per tag |
-| Slot | `MealPlanEntry.Slot`, Laplace-smoothed |
-| Effort | `PrepMinutes`, `CookMinutes`, `count(Step)` |
-| Household | everybody else's `CookLogEntry` |
-| Novelty | never cooked; `Recipe.CreatedAt` / `RecipeOrigin.ImportedAt` |
-
-Three properties are load-bearing and easy to lose:
-
-**Repetition is household-wide while affinity is personal.** If your partner made
-the lasagne on Tuesday then you ate it, and it should not be suggested to you on
-Wednesday even though your own cook log is silent. No general-purpose recommender
-expresses this asymmetry; it is the most product-specific line in the subsystem.
-
-**`CookSession.AbandonedAt` is not read.** Starting a session abandons the
-previous one — the partial unique index guarantees it — so abandonment is
-overwhelmingly a consequence of cooking something else, not a judgement. Reading
-it as dislike would systematically punish the recipes people cook most often.
-
-**Seasonality is observed, never curated.** A curated ingredient→season table was
-rejected for this project for the reason `README.md` rejects a pantry: nobody
-maintains it, so it goes stale and poisons what is built on it. This asks the
-household's own log instead, per tag, and stays silent below an evidence
-threshold — so a fresh installation says nothing about seasons rather than
-something confident and wrong.
-
-Scored **against the day rather than the instant**, so two requests on one day
-produce one order: a cursor keeps meaning something on the second page, and the
-list does not rearrange under somebody still reading it.
-
-## ShoppingList — household-owned
+### ShoppingList — household-owned
 
 `Id`, `HouseholdId` (unique — exactly one list per household), `Version`.
 
 Created lazily on first access. One list, not many: a second list is a planning
 feature, and planning is v2.
 
-#### SuggestionDismissal — person-owned
-
-`UserId`, `RecipeId`, `DismissedAt`. Composite primary key `(UserId, RecipeId)`.
-
-"Not this." The only signal the suggestion ranking cannot derive from something
-another feature already writes, and it has to be asked for rather than inferred:
-with two to eight people there is no such thing as a meaningful non-click, so
-reading dislike into five suggestions ignored on one evening would be
-manufacturing data.
-
-Person-owned, like the note and the cook log. One person hiding a recipe from
-their own suggestions says nothing about anybody else in the household, and the
-recipe itself is untouched — still in the collection, still searchable, still on
-its shelves.
-
-**It expires.** The ranker ignores rows older than its window, so "not tonight"
-does not quietly become "never again".
-
-**Not an aggregate root**, so no `version` column: it is never
-read-modify-written, has no concurrency to lose, and nothing about it could
-sensibly carry an ETag. Dismissing twice is one dismissal, enforced by the
-composite key rather than by a check — a double tap and a retried request are
-both ordinary, exactly as on `CookbookRecipe`.
-
-## Suggestions
-
-**Nothing is stored.** There is no suggestions table, no precomputed ranking and
-no taste profile on disk. A suggestion is a saved question answered whenever
-somebody looks — the same decision `Cookbook.Kind = smart` made, and for the same
-reasons: a recipe written this evening is ranked correctly this evening, there is
-no job to run, nothing to backfill when a weight changes, and no stored ranking
-that can drift out of step with the recipes it claims to describe.
-
-The score is a sum of named terms over data eight other features already write:
-
-| Term | Read from |
-| --- | --- |
-| Affinity | `CookLogEntry` (×1.3 with a photo), `MealPlanEntry`, `CookbookRecipe`, `PersonalNote`, completed `CookSession` |
-| Content | `RecipeTag` and `RecipeIngredient.Name`, as a TF-IDF cosine against the same features of what this person cooks |
-| Repetition | `max(CookLogEntry.MadeAt)` across **the whole household** |
-| Rediscovery | the same date, once it is months old, scaled by affinity |
-| Seasonality | the month distribution of this household's own cook log, per tag |
-| Slot | `MealPlanEntry.Slot`, Laplace-smoothed |
-| Effort | `PrepMinutes`, `CookMinutes`, `count(Step)` |
-| Household | everybody else's `CookLogEntry` |
-| Novelty | never cooked; `Recipe.CreatedAt` / `RecipeOrigin.ImportedAt` |
-
-Three properties are load-bearing and easy to lose:
-
-**Repetition is household-wide while affinity is personal.** If your partner made
-the lasagne on Tuesday then you ate it, and it should not be suggested to you on
-Wednesday even though your own cook log is silent. No general-purpose recommender
-expresses this asymmetry; it is the most product-specific line in the subsystem.
-
-**`CookSession.AbandonedAt` is not read.** Starting a session abandons the
-previous one — the partial unique index guarantees it — so abandonment is
-overwhelmingly a consequence of cooking something else, not a judgement. Reading
-it as dislike would systematically punish the recipes people cook most often.
-
-**Seasonality is observed, never curated.** A curated ingredient→season table was
-rejected for this project for the reason `README.md` rejects a pantry: nobody
-maintains it, so it goes stale and poisons what is built on it. This asks the
-household's own log instead, per tag, and stays silent below an evidence
-threshold — so a fresh installation says nothing about seasons rather than
-something confident and wrong.
-
-Scored **against the day rather than the instant**, so two requests on one day
-produce one order: a cursor keeps meaning something on the second page, and the
-list does not rearrange under somebody still reading it.
-
-## ShoppingListItem
+### ShoppingListItem
 
 `Id`, `ListId`, `Name`, `Quantity?`, `Unit?`, `Section`, `IsChecked`,
 `CheckedAt?`, `SortOrder`, `IsManual`.
@@ -671,77 +532,7 @@ Merging unrounded matters: rounding first and summing second compounds error.
 Rounding is presentation, and presentation belongs to the client
 (`scaling-rules.md`).
 
-#### SuggestionDismissal — person-owned
-
-`UserId`, `RecipeId`, `DismissedAt`. Composite primary key `(UserId, RecipeId)`.
-
-"Not this." The only signal the suggestion ranking cannot derive from something
-another feature already writes, and it has to be asked for rather than inferred:
-with two to eight people there is no such thing as a meaningful non-click, so
-reading dislike into five suggestions ignored on one evening would be
-manufacturing data.
-
-Person-owned, like the note and the cook log. One person hiding a recipe from
-their own suggestions says nothing about anybody else in the household, and the
-recipe itself is untouched — still in the collection, still searchable, still on
-its shelves.
-
-**It expires.** The ranker ignores rows older than its window, so "not tonight"
-does not quietly become "never again".
-
-**Not an aggregate root**, so no `version` column: it is never
-read-modify-written, has no concurrency to lose, and nothing about it could
-sensibly carry an ETag. Dismissing twice is one dismissal, enforced by the
-composite key rather than by a check — a double tap and a retried request are
-both ordinary, exactly as on `CookbookRecipe`.
-
-## Suggestions
-
-**Nothing is stored.** There is no suggestions table, no precomputed ranking and
-no taste profile on disk. A suggestion is a saved question answered whenever
-somebody looks — the same decision `Cookbook.Kind = smart` made, and for the same
-reasons: a recipe written this evening is ranked correctly this evening, there is
-no job to run, nothing to backfill when a weight changes, and no stored ranking
-that can drift out of step with the recipes it claims to describe.
-
-The score is a sum of named terms over data eight other features already write:
-
-| Term | Read from |
-| --- | --- |
-| Affinity | `CookLogEntry` (×1.3 with a photo), `MealPlanEntry`, `CookbookRecipe`, `PersonalNote`, completed `CookSession` |
-| Content | `RecipeTag` and `RecipeIngredient.Name`, as a TF-IDF cosine against the same features of what this person cooks |
-| Repetition | `max(CookLogEntry.MadeAt)` across **the whole household** |
-| Rediscovery | the same date, once it is months old, scaled by affinity |
-| Seasonality | the month distribution of this household's own cook log, per tag |
-| Slot | `MealPlanEntry.Slot`, Laplace-smoothed |
-| Effort | `PrepMinutes`, `CookMinutes`, `count(Step)` |
-| Household | everybody else's `CookLogEntry` |
-| Novelty | never cooked; `Recipe.CreatedAt` / `RecipeOrigin.ImportedAt` |
-
-Three properties are load-bearing and easy to lose:
-
-**Repetition is household-wide while affinity is personal.** If your partner made
-the lasagne on Tuesday then you ate it, and it should not be suggested to you on
-Wednesday even though your own cook log is silent. No general-purpose recommender
-expresses this asymmetry; it is the most product-specific line in the subsystem.
-
-**`CookSession.AbandonedAt` is not read.** Starting a session abandons the
-previous one — the partial unique index guarantees it — so abandonment is
-overwhelmingly a consequence of cooking something else, not a judgement. Reading
-it as dislike would systematically punish the recipes people cook most often.
-
-**Seasonality is observed, never curated.** A curated ingredient→season table was
-rejected for this project for the reason `README.md` rejects a pantry: nobody
-maintains it, so it goes stale and poisons what is built on it. This asks the
-household's own log instead, per tag, and stays silent below an evidence
-threshold — so a fresh installation says nothing about seasons rather than
-something confident and wrong.
-
-Scored **against the day rather than the instant**, so two requests on one day
-produce one order: a cursor keeps meaning something on the second page, and the
-list does not rearrange under somebody still reading it.
-
-## ShoppingItemSource
+### ShoppingItemSource
 
 `ItemId`, `RecipeId`, `PlanEntryId?`, `Quantity`, `Unit` — table
 `shopping_list_item_sources` (migration 0022).
@@ -851,7 +642,10 @@ would make the export the largest allocation in the process.
 - Ids are UUIDv7 generated by the application, so inserts stay index-friendly
   and no round trip is needed to learn an id.
 - Timestamps are `timestamptz`, always UTC, always `DateTimeOffset` in C#.
-- Money does not exist in Culina. Quantities are `numeric(10,3)` — never
+- Money does not exist in Culina. Recipe amounts, yields and servings are `numeric(10,3)` and are rounded to 3 places
+  in the domain, so what is accepted is what comes back; a value that would store as
+  zero is refused. Shopping quantities are `numeric(14,4)` and unrounded by the
+  domain. Never
   `float`, which cannot represent 0.1.
 - Households, recipes and cookbooks are deleted into a bin for 30 days
   (`deleted_at`, `deleted_by`), then purged with `on delete cascade` from the
