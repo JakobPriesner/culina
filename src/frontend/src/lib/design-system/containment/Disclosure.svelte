@@ -3,7 +3,8 @@
 
   /** Something usually not needed, available when it is: native `<details>` is findable in-page, works before any script runs, and replaces a button, region and ARIA wiring. */
   interface Props {
-    summary: string;
+    /** Plain words, or a snippet when the line needs its own typography (a headline with a quieter part). */
+    summary: string | Snippet;
     children: Snippet;
     open?: boolean;
     ontoggle?: (open: boolean) => void;
@@ -19,7 +20,11 @@
         <path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </span>
-    {summary}
+    {#if typeof summary === 'string'}
+      {summary}
+    {:else}
+      {@render summary()}
+    {/if}
   </summary>
 
   <div class="content">{@render children()}</div>
@@ -61,5 +66,12 @@
 
   .content {
     padding-block: var(--space-2);
+  }
+
+  /* Nothing to press on paper. */
+  @media print {
+    .chevron {
+      display: none;
+    }
   }
 </style>

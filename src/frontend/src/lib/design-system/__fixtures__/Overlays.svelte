@@ -64,7 +64,7 @@
 <ProgressBar value={3} max={8} label="Cooking progress" valueText="Step 3 of 8" />
 
 <Disclosure summary="Nutrition">
-  <p>Roughly 320 kcal a serving.</p>
+  <p>At least 320 kcal per serving · 5 of 7 ingredients</p>
 </Disclosure>
 
 <Tabs
