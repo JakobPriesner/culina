@@ -285,7 +285,7 @@ app.
 | --- | --- | --- |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | In the app. Unset means JSON logs on stdout and nothing exported. |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | In the app. `grpc` (usually port 4317) or `http/protobuf` (usually 4318). The wrong one exports nothing and says nothing. |
-| `OTEL_SERVICE_NAME` | `culina-api` | Has no effect at present: the app names its services itself, `culina-api` for the server and `culina-web` for what the browser reported. |
+| `OTEL_SERVICE_NAME` | `culina-api` | Names the server in telemetry; what the browser reported is filed under the same name with `-web` in place of an `-api` ending (or after it): `culina-api` and `culina-web` by default, `culina-staging` and `culina-staging-web` for `culina-staging`. Set it to tell two instances apart at one collector. |
 
 The standard OpenTelemetry names, because Culina has no business inventing its
 own configuration vocabulary for something that already has one. The SDK reads

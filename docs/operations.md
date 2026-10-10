@@ -363,8 +363,9 @@ previous release's dump.
   Line breaks and other control characters in what a browser sent are logged
   as spaces. They reach stdout with everything else,
   and the collector as a service of their own, `culina-web`, beside the
-  server's `culina-api`, carrying the same request id, user and trace. `culina-web` has no
-  `service.version`, as the server's would be wrong for a tab still on an
+  server's `culina-api` (both follow `OTEL_SERVICE_NAME`; see
+  configuration.md), carrying the same request id, user and trace.
+  `culina-web` has no `service.version`, as the server's would be wrong for a tab still on an
   older build; filter on each record's `culina.web.app_version` instead. Nothing
   goes from a browser to the collector directly, and nothing new needs
   configuring. Each line names the build, the browser and the route

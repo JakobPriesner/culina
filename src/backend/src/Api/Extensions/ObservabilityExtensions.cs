@@ -21,10 +21,28 @@ namespace Api.Extensions;
 /// </remarks>
 internal static class ObservabilityExtensions
 {
+    /// <summary>The standard name an operator sets to tell two instances apart at one collector.</summary>
+    internal const string ServiceNameKey = "OTEL_SERVICE_NAME";
+
+    /// <summary>The API's service name when <see cref="ServiceNameKey"/> is not set.</summary>
     internal const string ApiService = "culina-api";
 
-    /// <summary>The service what the web app reported is exported as.</summary>
+    /// <summary>The web app's service name when <see cref="ServiceNameKey"/> is not set.</summary>
     internal const string WebAppService = "culina-web";
+
+    internal static string ApiServiceName(IConfiguration configuration) =>
+        string.IsNullOrWhiteSpace(configuration[ServiceNameKey]) ? ApiService : configuration[ServiceNameKey]!.Trim();
+
+    /// <summary>
+    /// The service what the web app reported is exported as: the API's name with <c>-web</c> in
+    /// place of an <c>-api</c> ending, or after it, so <c>culina-api</c> pairs with <c>culina-web</c>.
+    /// </summary>
+    internal static string WebAppServiceName(IConfiguration configuration)
+    {
+        var api = ApiServiceName(configuration);
+
+        return api.EndsWith("-api", StringComparison.Ordinal) ? $"{api[..^4]}-web" : $"{api}-web";
+    }
 
     internal static IHostApplicationBuilder AddObservability(this IHostApplicationBuilder builder)
     {
@@ -34,7 +52,9 @@ internal static class ObservabilityExtensions
 
         var telemetry = builder.Services
             .AddOpenTelemetry()
-            .ConfigureResource(resource => resource.AddCulinaService(ApiService, Version(), builder.Environment).AddMachine())
+            .ConfigureResource(resource => resource
+                .AddCulinaService(ApiServiceName(builder.Configuration), Version(), builder.Environment)
+                .AddMachine())
             .WithTracing(ConfigureTracing)
             .WithMetrics(ConfigureMetrics);
 
@@ -71,8 +91,11 @@ internal static class ObservabilityExtensions
     /// The web app as a service, without a version: the server's would be wrong for a tab still on
     /// an older build. Each record names its own build in <c>culina.web.app_version</c>.
     /// </summary>
-    internal static ResourceBuilder AddWebAppService(this ResourceBuilder resource, IHostEnvironment environment) =>
-        resource.AddCulinaService(WebAppService, serviceVersion: null, environment);
+    internal static ResourceBuilder AddWebAppService(
+        this ResourceBuilder resource,
+        IConfiguration configuration,
+        IHostEnvironment environment) =>
+        resource.AddCulinaService(WebAppServiceName(configuration), serviceVersion: null, environment);
 
     /// <summary>
     /// The machine the server runs on, on every span, metric and line: host, container, operating
@@ -135,7 +158,7 @@ internal static class ObservabilityExtensions
 
             return new WebAppLoggerProvider(
                 configuration,
-                resource => resource.AddWebAppService(builder.Environment),
+                resource => resource.AddWebAppService(configuration, builder.Environment),
                 logging =>
                 {
                     if (Exports(configuration))
