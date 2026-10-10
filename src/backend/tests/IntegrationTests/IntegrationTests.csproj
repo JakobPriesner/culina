@@ -20,4 +20,9 @@
     <EmbeddedResource Include="Recipes/Evaluation/golden-library.json" LogicalName="golden-library.json" />
   </ItemGroup>
 
+  <!-- Real ingredient lines with hand-judged BLS answers, for the nutrition evaluation. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Nutrition/Evaluation/nutrition-lines.tsv" LogicalName="nutrition-lines.tsv" />
+  </ItemGroup>
+
 </Project>
