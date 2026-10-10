@@ -37,6 +37,8 @@
     cookbooks?: readonly { readonly id: string; readonly name: string }[];
     onstopcooking?: () => void;
     onstep?: (index: number) => void;
+    /** Reports whether the title is still on screen; see `SurfaceHead`. */
+    ontitleview?: (visible: boolean) => void;
   }
 
   let {
@@ -56,7 +58,8 @@
     editable = false,
     cookbooks = [],
     onstopcooking,
-    onstep
+    onstep,
+    ontitleview
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
@@ -112,6 +115,7 @@
     {onshare}
     {oncopy}
     {ondelete}
+    {ontitleview}
   />
 
   <SurfaceServings

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { visibleBelow } from '$shell/whenVisible';
   import RecipeActions from './RecipeActions.svelte';
   import RecipeHeadMeta from './RecipeHeadMeta.svelte';
   import type { RecipeReading } from '../types';
@@ -16,6 +17,8 @@
     onshare?: () => void;
     oncopy?: () => void;
     ondelete?: () => void;
+    /** Whether the title is still on screen, for a page that repeats it in a sticky bar. */
+    ontitleview?: (visible: boolean) => void;
   }
 
   let {
@@ -29,13 +32,19 @@
     onaddtoplan,
     onshare,
     oncopy,
-    ondelete
+    ondelete,
+    ontitleview
   }: Props = $props();
+
+  /** The page's sticky bar is about this tall (px); the title counts as gone once it slides under it. */
+  const stickyBarHeight = 56;
 </script>
 
 <header class="head" class:cooking>
   <div class="titleRow">
-    <h1 class="title">{recipe.title}</h1>
+    <h1 class="title" {@attach ontitleview && visibleBelow(stickyBarHeight, ontitleview)}>
+      {recipe.title}
+    </h1>
 
     <RecipeActions
       recipeId={recipe.id}
