@@ -13,6 +13,8 @@
   interface Props {
     ingredient: Ingredient;
     index: number;
+    /** The group prefix keeps field ids unique and agrees with the editor's deep-link focus. */
+    scope?: string;
     open: boolean;
     draft: IngredientDraft;
     usedIn: readonly number[];
@@ -27,6 +29,7 @@
   let {
     ingredient,
     index,
+    scope = '',
     open,
     draft,
     usedIn,
@@ -48,7 +51,7 @@
   {#if open}
     <div class="fields">
       <IngredientFields
-        id="ingredient-{index}"
+        id="{scope}ingredient-{index}"
         label={m['editor.editIngredient']({ name: ingredient.name })}
         value={draft}
         onchange={oncorrect}

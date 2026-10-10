@@ -29,13 +29,31 @@
     language: string;
     /** An ingredient to open and put the cursor in, when the page was reached from a link to it. */
     focusId?: string | null;
+    /** Put before every field id, so several lists on one page keep theirs apart. */
+    scope?: string;
+    /** For a list among others: the add row waits behind a quiet button and the hint is left out. */
+    compact?: boolean;
+    /** Names the quiet add button, so several of them tell their lists apart. */
+    moreLabel?: string;
   }
 
-  let { ingredients, steps, onchange, householdId, language, focusId = null }: Props = $props();
+  let {
+    ingredients,
+    steps,
+    onchange,
+    householdId,
+    language,
+    focusId = null,
+    scope = '',
+    compact = false,
+    moreLabel = ''
+  }: Props = $props();
 
   const usage = $derived(usageOf(steps));
 
   let adding = $state<IngredientDraft>(emptyDraft);
+  let asking = $state(false);
+  const showAdd = $derived(!compact || asking);
   let editing = $state<number | null>(null);
   let editingDraft = $state<IngredientDraft>(emptyDraft);
 
@@ -54,7 +72,7 @@
     editingDraft = draftOf(ingredients[index]!);
 
     void tick().then(() => {
-      const field = document.getElementById(`ingredient-${index}-name`);
+      const field = document.getElementById(`${scope}ingredient-${index}-name`);
 
       field?.scrollIntoView({ block: 'center' });
       field?.focus({ preventScroll: true });
@@ -86,7 +104,14 @@
     onchange([...ingredients, toIngredient(adding, '')]);
 
     adding = emptyDraft;
-    document.getElementById('add-ingredient-amount')?.focus();
+    document.getElementById(`${scope}add-ingredient-amount`)?.focus();
+  }
+
+  /** Opens the add row and puts the cursor in it, after a tick because the field doesn't exist until it renders. */
+  async function ask() {
+    asking = true;
+    await tick();
+    document.getElementById(`${scope}add-ingredient-amount`)?.focus();
   }
 
   function open(index: number) {
@@ -134,6 +159,7 @@
           <IngredientRow
             {ingredient}
             {index}
+            {scope}
             open={editing === index}
             draft={editingDraft}
             usedIn={ingredient.id ? (usage.get(ingredient.id) ?? []) : []}
@@ -150,24 +176,33 @@
       <p class="none">{m['editor.ingredientsEmpty']()}</p>
     {/if}
 
-    <div class="add">
-      <IngredientFields
-        id="add-ingredient"
-        label={m['editor.newIngredient']()}
-        value={adding}
-        onchange={(draft) => (adding = draft)}
-        onsubmit={add}
-        {householdId}
-        {language}
-      />
+    {#if showAdd}
+      <div class="add">
+        <IngredientFields
+          id="{scope}add-ingredient"
+          label={m['editor.newIngredient']()}
+          value={adding}
+          onchange={(draft) => (adding = draft)}
+          onsubmit={add}
+          {householdId}
+          {language}
+        />
 
-      <Button variant="secondary" size="sm" onclick={add} disabled={!adding.name.trim()}>
-        {m['editor.addIngredient']()}
-      </Button>
-    </div>
+        <Button variant="secondary" size="sm" onclick={add} disabled={!adding.name.trim()}>
+          {m['editor.addIngredient']()}
+        </Button>
+      </div>
+    {:else}
+      <button type="button" class="more" onclick={() => void ask()}>
+        <span aria-hidden="true">+</span>
+        {moreLabel}
+      </button>
+    {/if}
   </div>
 
-  <p class="hint">{m['editor.ingredientHint']()}</p>
+  {#if !compact}
+    <p class="hint">{m['editor.ingredientHint']()}</p>
+  {/if}
 </div>
 
 <style>
@@ -214,6 +249,34 @@
     align-items: end;
     gap: var(--space-3);
     padding: var(--space-4);
+  }
+
+  /* Quiet: a list that is not the one being written in asks for nothing. */
+  .more {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--control-md);
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-end-start-radius: var(--radius-lg);
+    border-end-end-radius: var(--radius-lg);
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+
+  .panel.filled .more {
+    border-top: 1px solid var(--border);
+  }
+
+  .more:hover {
+    background: var(--surface-hover);
+    color: var(--text);
   }
 
   .none {
