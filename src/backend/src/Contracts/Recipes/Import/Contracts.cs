@@ -25,8 +25,14 @@ public sealed record Response
     /// <summary>Its instructions, one paragraph each.</summary>
     public required IReadOnlyList<string> Steps { get; init; }
 
-    /// <summary>What it says it makes, when that was a plain number.</summary>
+    /// <summary>How many it says it makes, when it gave a number; the larger end of a range.</summary>
     public decimal? Servings { get; init; }
+
+    /// <summary>Whether that is "servings" or "pieces", when it gave a number.</summary>
+    public string? YieldKind { get; init; }
+
+    /// <summary>The page's own word for what it makes ("Muffins", "Kuchen (26 cm)"), when it named one.</summary>
+    public string? YieldLabel { get; init; }
 
     /// <summary>How long it takes, when the page said.</summary>
     public int? TotalMinutes { get; init; }

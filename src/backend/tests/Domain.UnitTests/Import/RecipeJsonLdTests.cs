@@ -26,7 +26,7 @@ public class RecipeJsonLdTests
         Assert.Equal("Lemon orzo", recipe.Title);
         Assert.Equal(["200 g orzo", "2 courgettes"], recipe.IngredientLines);
         Assert.Equal(["Boil the orzo.", "Fry the courgettes."], recipe.Steps);
-        Assert.Equal(4m, recipe.Servings);
+        Assert.Equal(4m, recipe.Yield!.Amount);
         Assert.Equal(35, recipe.TotalMinutes);
     }
 
@@ -105,17 +105,19 @@ public class RecipeJsonLdTests
     [Theory]
     [InlineData("\"4\"", 4)]
     [InlineData("\"4 servings\"", 4)]
-    [InlineData("\"4-6\"", 4)]
+    [InlineData("\"4-6\"", 6)]
+    [InlineData("4", 4)]
+    [InlineData("[\"12\", \"12 Muffins\"]", 12)]
     [InlineData("[\"6\", \"6 portions\"]", 6)]
     [InlineData("\"Serves 4\"", 4)]
     [InlineData("\"Makes 12 cookies\"", 12)]
     [InlineData("\"F\u00fcr 4 Personen\"", 4)]
-    public void Read_ShouldTakeTheFirstNumberOfTheYield(string yield, int expected)
+    public void Read_ShouldTakeTheNumberOfTheYield(string yield, int expected)
     {
         var json = $$"""{ "@type": "Recipe", "recipeYield": {{yield}} }""";
 
-        // A range takes its lower bound, as the paste import does.
-        Assert.Equal(expected, RecipeJsonLd.Read(json)!.Servings);
+        // A range takes its larger end: see YieldText.
+        Assert.Equal(expected, RecipeJsonLd.Read(json)!.Yield!.Amount);
     }
 
     [Theory]
@@ -126,7 +128,7 @@ public class RecipeJsonLdTests
         var json = $$"""{ "@type": "Recipe", "recipeYield": {{yield}} }""";
 
         // No guess: a made-up serving count scales every amount by a lie.
-        Assert.Null(RecipeJsonLd.Read(json)!.Servings);
+        Assert.Null(RecipeJsonLd.Read(json)!.Yield);
     }
 
     [Theory]
