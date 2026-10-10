@@ -49,9 +49,12 @@
     min-width: 0;
   }
 
-  @media screen and (max-height: 32rem) {
+  /* Short or narrow phones: the bar stays pinned, so it spends less of the screen. */
+  @media screen and (max-height: 32rem), screen and (max-width: 24rem) {
     .controls {
-      position: static;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+      padding: var(--space-2) var(--space-3);
     }
   }
 </style>

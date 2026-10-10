@@ -509,6 +509,48 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
+  for (const [width, height] of [
+    [320, 568],
+    [844, 390]
+  ] as const) {
+    test(`cooking controls stay pinned and compact at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de', { longSteps: true });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`/recipes/${recipeId}/cook`);
+      const controls = page.locator('.controls:has(.moves)');
+      await expect(controls.getByRole('button', { name: /nächster schritt/i })).toBeEnabled();
+      await expectCurrentStepReadable(page);
+      // Scrolled to read the step's end, the bar is still on screen, and takes little of it.
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight / 3));
+      const box = (await controls.boundingBox())!;
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height).toBeLessThanOrEqual(height);
+      expect(box.height).toBeLessThanOrEqual(height * 0.33);
+      for (const name of [
+        /nächster schritt/i,
+        /vorheriger schritt/i,
+        /deine notizen|notizen/i,
+        /küchen/i,
+        /auto-scroll/i
+      ]) {
+        const button = controls.getByRole('button', { name }).first();
+        await expect(button).toBeInViewport({ ratio: 1 });
+        const target = (await button.boundingBox())!;
+        expect(target.width).toBeGreaterThanOrEqual(44);
+        expect(target.height).toBeGreaterThanOrEqual(44);
+      }
+      const next = controls.getByRole('button', { name: /nächster schritt/i });
+      expect(
+        await next.locator('.advance-label').evaluate((el) => el.getClientRects().length)
+      ).toBe(1);
+      await expectReflow(page);
+    });
+  }
+
   test('short landscape keeps forms, dialogs and cooking reachable', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await responsiveData(page);
