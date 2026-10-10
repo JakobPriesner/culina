@@ -429,5 +429,19 @@ test.describe('nutrition on a recipe @offline', () => {
         })
       ).toBeVisible();
     });
+
+    for (const [name, path] of [
+      ['the shared recipe', `/shared/${shareToken}`],
+      ['the sign-in page', '/login']
+    ] as const) {
+      test(`${name} does not spill past a 320 px screen`, async ({ page }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+        await page.setViewportSize({ width: 320, height: 720 });
+        await responsiveData(page, 'de', { nutritionLines: true, signedOut: true });
+        await page.goto(path);
+        await expect(page.locator('header button[aria-label]').first()).toBeVisible();
+        await expectReflow(page);
+      });
+    }
   });
 });

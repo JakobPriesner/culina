@@ -45,6 +45,7 @@
   .header {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: var(--space-4);
     min-height: var(--space-24);
@@ -54,8 +55,11 @@
     text-decoration: none;
   }
 
+  /* Wraps like the header: the language picker and the toggle are wider than a 320 px screen's gutters. */
   .preferences {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: var(--space-4);
   }
