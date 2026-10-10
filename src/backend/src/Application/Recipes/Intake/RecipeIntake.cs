@@ -214,7 +214,9 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
         return RecipeTitle.Create(draft.Title).Bind(title => language.Bind(code =>
         {
             var recipe = Recipe.Create(work.HouseholdId, title, work.UserId, code, time.GetUtcNow());
-            var details = new RecipeDraft(title.ToString(), RecipeFit.Description(draft.Description), work.Material.Language, draft.YieldAmount ?? 1, "servings", draft.YieldLabel, draft.PrepMinutes, draft.CookMinutes, RecipeFit.Tags(draft.Tags));
+            // The model gives a number and a word: "12" and "Muffins" is pieces, "4" and "Portionen" servings.
+            var pieces = YieldText.Read($"{draft.YieldAmount ?? 1} {draft.YieldLabel}") is { Kind: YieldKind.Pieces };
+            var details = new RecipeDraft(title.ToString(), RecipeFit.Description(draft.Description), work.Material.Language, draft.YieldAmount ?? 1, RecipeWords.Of(pieces ? YieldKind.Pieces : YieldKind.Servings), draft.YieldLabel, draft.PrepMinutes, draft.CookMinutes, RecipeFit.Tags(draft.Tags));
             var groups = draft.Groups.Select(g => new IngredientGroupContract
             {
                 Name = g.Name,

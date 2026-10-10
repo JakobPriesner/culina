@@ -78,7 +78,9 @@ internal sealed class ImportRecipeQueryHandler(IWebPageFetcher pages)
             Title = published.Title,
             IngredientLines = published.IngredientLines,
             Steps = published.Steps,
-            Servings = published.Servings,
+            Servings = published.Yield?.Amount,
+            YieldKind = published.Yield is { } made ? RecipeWords.Of(made.Kind) : null,
+            YieldLabel = published.Yield?.Label,
             TotalMinutes = published.TotalMinutes
         };
     }
