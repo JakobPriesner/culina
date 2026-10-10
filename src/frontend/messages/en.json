@@ -1615,9 +1615,15 @@
   "nutrition.coverage.more": "and {count} more",
   "nutrition.coverage.stale": "as last saved",
   "nutrition.day.perPerson": "{figure} per person",
+  "nutrition.status.complete": "Complete values",
+  "nutrition.status.partial": "Partial values",
+  "nutrition.summary.coverage": "{counted} of {lines} ingredient lines counted.",
+  "nutrition.breakdown.basis": "Amounts for {yield}. Energy {per}.",
   "editor.groupName": "Name of group {number}",
   "editor.groupNamePlaceholder": "Unnamed group",
   "editor.removeGroup": "Remove empty group {number}",
   "editor.addGroup": "+ Group",
-  "editor.addIngredientToGroup": "Add ingredient to group {number}"
+  "editor.addIngredientToGroup": "Add ingredient to group {number}",
+  "nutrition.details.show": "Show details",
+  "nutrition.details.hide": "Hide details"
 }

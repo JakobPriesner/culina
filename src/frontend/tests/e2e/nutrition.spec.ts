@@ -57,13 +57,34 @@ test.describe('nutrition on a recipe @offline', () => {
     });
   }
 
-  test('names the table behind a friendlier name, in plain sight', async ({ page }) => {
+  test('names the table behind a friendlier name, in plain sight', async ({ page }, testInfo) => {
     await responsiveData(page, 'de', { nutritionLines: true });
     await page.goto(`/recipes/${recipeId}`);
+    if (testInfo.project.name === 'desktop') {
+      await page.setViewportSize({ width: 1280, height: 1500 });
+      await expect(page.locator('#nutrition summary')).toBeVisible();
+      await page
+        .locator('#nutrition')
+        .evaluate((element) => element.scrollIntoView({ block: 'center' }));
+      await page.mouse.move(0, 0);
+      await page
+        .locator('#nutrition')
+        .screenshot({ path: testInfo.outputPath('nutrition-overview-desktop.png') });
+    }
     await page.locator('summary', { hasText: 'Nährwerte' }).click();
 
     await expect(page.getByText(/als Vollkornbrot$/).first()).toBeVisible();
     await expect(page.getByText(/^BLS: Vollkornbrot, handwerklich gebacken/).first()).toBeVisible();
+    if (testInfo.project.name === 'desktop') {
+      await page.setViewportSize({ width: 1280, height: 1500 });
+      await page
+        .locator('#nutrition')
+        .evaluate((element) => element.scrollIntoView({ block: 'center' }));
+      await page.mouse.move(0, 0);
+      await page
+        .locator('#nutrition')
+        .screenshot({ path: testInfo.outputPath('nutrition-desktop.png') });
+    }
   });
 
   test.describe("in the recipe's meta line", () => {
@@ -204,9 +225,21 @@ test.describe('nutrition on a recipe @offline', () => {
 
     await expect(summary).toBeVisible();
     await expectReflow(page);
+    const macroTops = await page
+      .locator('#nutrition .macroFigure')
+      .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().top));
+    expect(macroTops).toHaveLength(3);
+    expect(Math.max(...macroTops) - Math.min(...macroTops)).toBeLessThan(1);
     await summary.click();
     await expect(page.getByRole('table')).toBeVisible();
     await expectReflow(page);
+    await page.setViewportSize({ width: 320, height: 3000 });
+    await page
+      .locator('#nutrition')
+      .evaluate((element) => element.scrollIntoView({ block: 'center' }));
+    await page
+      .locator('#nutrition')
+      .screenshot({ path: testInfo.outputPath('nutrition-mobile.png') });
   });
 
   for (const mode of ['light', 'dark'] as const) {
@@ -405,6 +438,22 @@ test.describe('nutrition on a recipe @offline', () => {
   });
 
   test.describe('on a shared recipe, signed out', () => {
+    test('opens nutrition from the recipe headline and keeps keyboard focus with the panel', async ({
+      page
+    }) => {
+      await responsiveData(page, 'en', { nutritionLines: true, signedOut: true });
+      await page.goto(`/shared/${shareToken}`);
+      await page
+        .locator('p.meta')
+        .getByRole('button', { name: /show nutrition/ })
+        .click();
+
+      await expect(page.getByRole('table')).toBeVisible();
+      await expect(page.locator('#nutrition summary')).toBeFocused();
+      await expect(page.locator('#nutrition')).toBeInViewport();
+      await expect(page.getByRole('button', { name: /^What is / })).toHaveCount(0);
+    });
+
     test('shows the panel without a way to change anything', async ({ page }) => {
       await responsiveData(page, 'de', {
         nutritionLines: true,

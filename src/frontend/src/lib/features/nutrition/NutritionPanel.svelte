@@ -2,21 +2,23 @@
   import { onDestroy, untrack } from 'svelte';
 
   import { resolve } from '$app/paths';
-  import { Button, Disclosure, Icon } from '$ds';
+  import { Button, Disclosure, Icon, VisuallyHidden } from '$ds';
   import { createScaling } from '$features/recipes/surface/scaled.svelte';
   import type { Recipe, RecipeReading } from '$features/recipes/types';
-  import { m } from '$shell/i18n';
+  import { formatNumber, m } from '$shell/i18n';
   import { createLoadingState } from '$shell/loadingState.svelte';
 
   import {
     amountAndName,
-    energyFigure,
     implausibleLines,
     isWholeRecipe,
     missingNames,
     perWords,
     withoutWords
   } from './headline';
+  import { labelNumber, nbsp } from './format';
+  import { roundForLabel } from './rounding';
+  import type { NutritionValue } from './types';
   import NutritionBreakdown from './NutritionBreakdown.svelte';
   import NutritionLabel from './NutritionLabel.svelte';
   import NutritionSkeleton from './NutritionSkeleton.svelte';
@@ -39,6 +41,8 @@
     open?: boolean;
     /** A visitor with a share link: the figures only, no household's corrections and no way into an editor. */
     readonly?: boolean;
+    /** An inherited recipe allows household food corrections, but not editing the original recipe. */
+    editable?: boolean;
   }
 
   let {
@@ -46,7 +50,8 @@
     servings,
     householdId,
     open = $bindable(false),
-    readonly = false
+    readonly = false,
+    editable = true
   }: Props = $props();
 
   const scaling = createScaling(
@@ -84,6 +89,20 @@
   const without = $derived(answer ? withoutWords(missingNames(answer, recipe)) : null);
   const wholeRecipe = $derived(answer ? isWholeRecipe(answer) : false);
 
+  const macros = $derived(
+    answer
+      ? [
+          { label: m['nutrition.protein'](), value: answer.values.protein },
+          { label: m['nutrition.carbohydrate'](), value: answer.values.carbohydrate },
+          { label: m['nutrition.fat'](), value: answer.values.fat }
+        ]
+      : []
+  );
+
+  // A lower bound rounded to zero is unknown, just as in the full nutrition label.
+  const unknownMacro = (value: NutritionValue) =>
+    value.atLeast && roundForLabel('macro', value.value, true).value === 0;
+
   const implausible = $derived(
     answer
       ? implausibleLines(answer, recipe).map(({ ingredient }) => ({
@@ -106,29 +125,77 @@
     <Disclosure bind:open>
       {#snippet summary()}
         <span class="line">
-          <span class="label">{m['nutrition.title']()}</span>
+          <span class="heading">
+            <span class="label">{m['nutrition.title']()}</span>
+            <span class="status"
+              >{answer.complete
+                ? m['nutrition.status.complete']()
+                : m['nutrition.status.partial']()}</span
+            >
+          </span>
 
           {#if nothingCounted}
             <span class="nothing">{m['nutrition.nothing']()}</span>
           {:else}
-            <span class="headline">
-              <span class="figure">{energyFigure(answer)}</span>
-              <span class="per">{perWords(answer)}</span>
-              {#if without}
-                <span class="without">· {without}</span>
-              {/if}
+            <span class="overview">
+              <span class="headline">
+                <span class="figure">
+                  {#if answer.values.energyKcal.atLeast}<span class="bound"
+                      >{m['nutrition.atLeast']()}</span
+                    >
+                    <span class="energyNumber"
+                      >{labelNumber('energy', answer.values.energyKcal)}</span
+                    >{:else}<span class="energyNumber"
+                      >{labelNumber('energy', answer.values.energyKcal)}</span
+                    >{/if}
+                  <span class="energyUnit">kcal</span>
+                </span>
+                <span class="per">{perWords(answer)}</span>
+                {#if without}
+                  <span class="without">· {without}</span>
+                {/if}
+                {@render amountHint()}
+              </span>
+
+              <span class="macros">
+                {#each macros as macro (macro.label)}
+                  <span class="macro">
+                    <span class="macroLabel">{macro.label}</span>
+                    <span class="macroFigure">
+                      {#if unknownMacro(macro.value)}
+                        <span class="macroNumber" aria-hidden="true">–</span>
+                        <VisuallyHidden>{m['nutrition.notKnown']()}</VisuallyHidden>
+                      {:else}
+                        {#if macro.value.atLeast}
+                          <span class="macroBound">{m['nutrition.atLeast']()}</span>
+                          <span class="macroNumber"
+                            >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit"
+                              >g</span
+                            ></span
+                          >
+                        {:else}
+                          <span class="macroNumber"
+                            >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit"
+                              >g</span
+                            ></span
+                          >
+                        {/if}
+                      {/if}
+                    </span>
+                  </span>
+                {/each}
+              </span>
             </span>
           {/if}
 
-          {#if implausible[0]}
-            <span class="hint"
-              >· {m['nutrition.implausible.hint']({ what: implausible[0].what })}</span
-            >
-          {/if}
+          {#if nothingCounted}{@render amountHint()}{/if}
+
+          <span class="affordance"
+            >{open ? m['nutrition.details.hide']() : m['nutrition.details.show']()}</span
+          >
         </span>
       {/snippet}
 
-      <!-- One column, so the table's values and the breakdown's energy share a right edge. -->
       <div class="open">
         {#if implausible.length > 0}
           <div class="notice">
@@ -150,7 +217,7 @@
               {#each implausible as one (one.id)}
                 <li>
                   {m['nutrition.implausible.line']({ what: one.what })}
-                  {#if !readonly}
+                  {#if !readonly && editable}
                     <a
                       href="{resolve('/(app)/recipes/[recipeId]/edit', {
                         recipeId: recipe.id
@@ -166,7 +233,7 @@
         {#if wholeRecipe}
           <p class="quiet">
             {m['nutrition.oneServing']()}
-            {#if !readonly}
+            {#if !readonly && editable}
               <a href="{resolve('/(app)/recipes/[recipeId]/edit', { recipeId: recipe.id })}#yield"
                 >{m['nutrition.setServings']()}</a
               >
@@ -174,16 +241,27 @@
           </p>
         {/if}
 
-        {#if !nothingCounted}
-          <NutritionLabel nutrition={answer} />
-        {/if}
+        <p class="coverage">
+          {m['nutrition.summary.coverage']({
+            counted: formatNumber(answer.counted),
+            lines: formatNumber(answer.lines)
+          })}
+        </p>
 
-        <NutritionBreakdown
-          nutrition={answer}
-          {recipe}
-          {scaling}
-          householdId={readonly ? null : householdId}
-        />
+        <div class="details" class:empty={nothingCounted}>
+          {#if !nothingCounted}
+            <div class="values">
+              <NutritionLabel nutrition={answer} />
+            </div>
+          {/if}
+
+          <NutritionBreakdown
+            nutrition={answer}
+            {recipe}
+            {scaling}
+            householdId={readonly ? null : householdId}
+          />
+        </div>
 
         <p class="source">{@render attribution()}</p>
       </div>
@@ -196,6 +274,12 @@
   {/if}
 </section>
 
+{#snippet amountHint()}
+  {#if implausible[0]}
+    <span class="hint">· {m['nutrition.implausible.hint']({ what: implausible[0].what })}</span>
+  {/if}
+{/snippet}
+
 {#snippet attribution()}
   {#if answer}
     {m['nutrition.source']()}
@@ -207,26 +291,52 @@
 
 <style>
   .nutrition {
-    scroll-margin-top: var(--space-16);
+    container-type: inline-size;
+    scroll-margin-top: calc(var(--header-inset) + var(--space-4));
     margin-top: var(--space-8);
-    padding-block: var(--space-4) var(--space-3);
-    border-top: 1px solid var(--border);
+    border-radius: var(--space-6);
+    background: var(--surface-raised);
+  }
+
+  .nutrition :global(.summary) {
+    position: relative;
+    padding: var(--space-8);
+    gap: 0;
+    border-radius: var(--space-6);
+  }
+
+  .nutrition :global(.chevron) {
+    flex: none;
+    order: 1;
+    position: absolute;
+    inset-inline-end: var(--space-8);
+    bottom: var(--space-8);
+    color: var(--accent);
+  }
+
+  .nutrition :global(.content) {
+    padding: 0;
   }
 
   .line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: var(--space-3);
+    display: grid;
+    gap: var(--space-6);
+    flex: 1;
     min-width: 0;
   }
 
+  .heading {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+  }
+
   .label {
-    font-size: var(--text-sm);
+    font-size: var(--text-xl);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--text);
   }
 
   .headline,
@@ -236,8 +346,107 @@
 
   .figure {
     font-variant-numeric: tabular-nums;
-    font-weight: var(--weight-medium);
     color: var(--text);
+    line-height: var(--leading-tight);
+    white-space: nowrap;
+  }
+
+  .bound,
+  .energyUnit {
+    font-size: var(--text-base);
+    font-weight: var(--weight-regular);
+    color: var(--text-muted);
+  }
+
+  .energyNumber {
+    font-size: var(--text-display);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.045em;
+  }
+
+  .overview {
+    display: grid;
+    gap: var(--space-6);
+    min-width: 0;
+  }
+
+  .headline {
+    display: block;
+  }
+
+  .per {
+    margin-inline-start: var(--space-2);
+  }
+
+  .without {
+    font-size: var(--text-sm);
+  }
+
+  .status {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-regular);
+    color: var(--text-muted);
+  }
+
+  .macros {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .macro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .macroLabel {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .macroFigure {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .macroBound {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-regular);
+    color: var(--text-muted);
+  }
+
+  .macroNumber {
+    font-size: var(--text-xl);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+  }
+
+  .macroUnit {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-regular);
+    color: var(--text-muted);
+  }
+
+  .affordance {
+    padding-top: var(--space-4);
+    padding-inline-end: var(--space-6);
+    border-top: 1px solid var(--border);
+    color: var(--accent);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  .nutrition :global(.summary:hover .affordance) {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   .per,
@@ -247,12 +456,24 @@
     color: var(--text-muted);
   }
 
+  .headline,
+  .hint,
+  .nothing {
+    overflow-wrap: anywhere;
+    line-height: var(--leading-normal);
+  }
+
+  .hint {
+    display: block;
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
   .notice {
     display: flex;
     gap: var(--space-3);
     margin-bottom: var(--space-4);
     padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--warning);
     border-radius: var(--radius-md);
     background: var(--warning-subtle);
     font-size: var(--text-sm);
@@ -282,18 +503,39 @@
     align-items: center;
     gap: var(--space-2) var(--space-4);
     min-height: var(--control-sm);
+    padding: var(--card-padding);
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
 
   .open {
-    max-width: 40rem;
+    padding: 0 var(--space-8) var(--space-8);
+  }
+
+  .coverage {
+    margin-bottom: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+  }
+
+  .details {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+    align-items: start;
+  }
+
+  .values {
+    min-width: 0;
   }
 
   .source {
-    margin-top: var(--space-4);
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
     color: var(--text-subtle);
     font-size: var(--text-xs);
+    overflow-wrap: anywhere;
   }
 
   .source a {
@@ -305,10 +547,91 @@
     display: none;
   }
 
+  @container (width >= 52rem) {
+    .overview {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: var(--space-12);
+      align-items: center;
+    }
+
+    .headline .per {
+      display: block;
+      margin: var(--space-1) 0 0;
+    }
+
+    .headline .without {
+      display: block;
+      margin-top: var(--space-1);
+    }
+
+    .details:not(.empty) {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: var(--space-12);
+    }
+  }
+
+  @container (width < 32rem) {
+    .nutrition :global(.summary) {
+      padding: var(--space-6);
+    }
+
+    .nutrition :global(.chevron) {
+      inset-inline-end: var(--space-6);
+      bottom: var(--space-6);
+    }
+
+    .open {
+      padding: 0 var(--space-6) var(--space-6);
+    }
+
+    .heading {
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .headline .per {
+      display: block;
+      margin: var(--space-1) 0 0;
+    }
+
+    .headline .without {
+      display: block;
+      margin-top: var(--space-1);
+    }
+
+    .macros {
+      grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+      gap: var(--space-3);
+    }
+
+    .macroLabel {
+      font-size: var(--text-xs);
+      white-space: nowrap;
+    }
+
+    .macroFigure {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .macroNumber {
+      font-size: var(--text-lg);
+    }
+  }
+
   @media print {
     .nutrition {
       break-inside: avoid;
       margin-top: var(--space-4);
+      border: 0;
+      border-top: 1px solid var(--border);
+      border-radius: 0;
+      background: none;
+    }
+
+    .nutrition :global(.summary),
+    .open {
+      padding: var(--space-3) 0;
     }
 
     .unavailable {
@@ -318,6 +641,18 @@
     .paper {
       display: block;
       margin-top: var(--space-1);
+      padding-top: 0;
+      border: 0;
+    }
+
+    .macros,
+    .affordance,
+    .status {
+      display: none;
+    }
+
+    .energyNumber {
+      font-size: var(--text-xl);
     }
   }
 </style>

@@ -203,6 +203,30 @@ afterEach(() => {
 });
 
 describe('the closed line', () => {
+  it('shows the rounded macros with their bounds, independent of the selected servings', async () => {
+    serverAnswers(partial());
+    show(4);
+
+    const summary = await headline();
+    const macros = summary.querySelector('.macros');
+
+    expect(macros).toHaveTextContent('Protein at least 9.2 g');
+    expect(macros).toHaveTextContent('Carbohydrate at least 7.4 g');
+    expect(macros).toHaveTextContent('Fat at least 31 g');
+    expect(screen.getByRole('table', { hidden: true })).not.toBeVisible();
+  });
+
+  it('shows an unknown macro as a dash instead of a zero lower bound', async () => {
+    serverAnswers({ ...partial(), values: { ...values(520.9, true), fat: value(0, true) } });
+    show();
+
+    const summary = await headline();
+    const fat = within(summary).getByText('Fat').closest('.macro');
+
+    expect(fat).toHaveTextContent('not known');
+    expect(fat).not.toHaveTextContent(/0\s*g/);
+  });
+
   it('says a complete figure plainly', async () => {
     serverAnswers(complete());
     show();
@@ -799,6 +823,27 @@ describe('a shared recipe, read by a visitor', () => {
 
     expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^What is / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Fix in the recipe' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Set servings' })).not.toBeInTheDocument();
+  });
+});
+
+describe('an inherited recipe', () => {
+  it('allows household food corrections without offering to edit the original recipe', async () => {
+    serverAnswers(
+      withLine({ ...partial(), yield: 1 }, oil, {
+        status: 'implausible',
+        grams: 1800000,
+        via: 'density'
+      })
+    );
+    renderWithProviders(NutritionPanel, {
+      props: { recipe, servings: 2, householdId: 'heir', editable: false }
+    });
+    await userEvent.click(await headline());
+
+    expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^What is / })).toHaveLength(5);
     expect(screen.queryByRole('link', { name: 'Fix in the recipe' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Set servings' })).not.toBeInTheDocument();
   });

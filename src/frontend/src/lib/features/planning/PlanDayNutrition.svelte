@@ -50,5 +50,6 @@
     font-size: var(--text-xs);
     line-height: var(--leading-normal);
     overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
   }
 </style>
