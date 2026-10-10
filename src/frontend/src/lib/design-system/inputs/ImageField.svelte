@@ -229,12 +229,12 @@
   }
 
   /*
-   * Zero flex-basis keeps the buttons equal when wrapping, so the delete button never becomes the
-   * biggest target.
+   * Equal growth keeps the delete button from becoming the biggest target. The basis is wide enough
+   * for a whole label, so a narrow screen wraps buttons onto their own rows instead of splitting
+   * words.
    */
   .filled-actions :global(.button) {
-    flex: 1 1 0;
-    min-width: 0;
+    flex: 1 1 9rem;
   }
 
   @media (prefers-reduced-motion: reduce) {

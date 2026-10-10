@@ -144,6 +144,25 @@ test.describe('responsive production layouts @offline', () => {
     await expectReflow(page);
   });
 
+  for (const width of [320, 360]) {
+    test(`editor photo actions keep whole words at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 640 });
+      await responsiveData(page, 'de', { draw: true });
+      await page.goto(`/recipes/${recipeId}/edit`);
+      const group = page.getByRole('group', { name: 'Foto' });
+      await group.scrollIntoViewIfNeeded();
+      const actions = page.locator('.filled-actions .button');
+      await expect(actions).toHaveText(['Foto ersetzen', 'Bild generieren', 'Foto entfernen']);
+      for (const button of await actions.all()) {
+        const box = (await button.boundingBox())!;
+        // One line each (a split word would make the button taller) and a usable touch target.
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeLessThan(56);
+      }
+      await expectReflow(page);
+    });
+  }
+
   for (const [width, height] of [
     [844, 390],
     [667, 375]
