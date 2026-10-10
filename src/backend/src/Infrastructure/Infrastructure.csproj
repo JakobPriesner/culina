@@ -32,6 +32,8 @@
   <!-- Migrations are embedded so the runner needs no files on disk. -->
   <ItemGroup>
     <EmbeddedResource Include="Persistence/Migrations/*.sql" />
+    <!-- The BLS food table, read once at startup; see Nutrition/BLS-ATTRIBUTION.md. -->
+    <EmbeddedResource Include="Nutrition/bls.tsv" />
   </ItemGroup>
 
 </Project>
