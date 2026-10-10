@@ -75,7 +75,7 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
 export async function responsiveData(
   page: Page,
   locale: 'de' | 'en' = 'de',
-  { extraIngredients = 0, activeCooking = true, longSteps = false } = {}
+  { extraIngredients = 0, activeCooking = true, longSteps = false, suggestions = 0 } = {}
 ) {
   const detail = {
     ...recipe,
@@ -202,7 +202,14 @@ export async function responsiveData(
       });
     if (path === '/tags' || path.endsWith('/tags')) return reply({ items: [] });
     // The library waits for this answer before listing; unanswered, it stays on its skeleton forever.
-    if (path === '/suggestions') return reply({ items: [] });
+    if (path === '/suggestions')
+      return reply({
+        items: Array.from({ length: suggestions }, (_, i) => ({
+          ...recipe,
+          recipeId: i === 0 ? recipeId : `recipe-${i}`,
+          cookCount: 0
+        }))
+      });
     if (path.endsWith('/related')) return reply({ items: [] });
     // Empty keeps the editor's tag section the same height every run.
     if (path.endsWith('/tag-suggestions')) return reply({ items: [] });

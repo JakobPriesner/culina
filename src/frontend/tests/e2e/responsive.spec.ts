@@ -188,6 +188,48 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
+  for (const [width, height, deckLimit] of [
+    [320, 568, 500],
+    [390, 844, 500],
+    [667, 375, 340]
+  ] as const) {
+    test(`the suggestion deck leaves room for the library at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de', { suggestions: 5 });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('/');
+
+      const deck = page.locator('.deck');
+      await expect(deck.getByRole('link', { name: /Rezept öffnen/ }).first()).toBeVisible();
+      const deckBox = (await deck.boundingBox())!;
+      expect(deckBox.height).toBeLessThanOrEqual(deckLimit);
+
+      // The whole deck, controls included, stays touch-sized.
+      for (const control of [
+        deck.getByRole('link', { name: /Rezept öffnen/ }).first(),
+        deck.getByRole('button', { name: /nicht mehr vorschlagen/ }).first(),
+        deck.getByRole('button', { name: 'Nächster Vorschlag' }),
+        deck.getByRole('button', { name: 'Vorheriger Vorschlag' })
+      ]) {
+        const box = (await control.boundingBox())!;
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+
+      // A short landscape phone puts the photograph beside the copy rather than stacking them.
+      const copy = (await deck.locator('.copy').first().boundingBox())!;
+      const photo = (await deck.locator('.photo').first().boundingBox())!;
+      if (width > height) {
+        expect(photo.x).toBeGreaterThanOrEqual(copy.x + copy.width - 1);
+      } else {
+        expect(photo.y + photo.height).toBeLessThanOrEqual(copy.y + 1);
+      }
+      await expectReflow(page);
+    });
+  }
+
   test('a recipe starts within the readable part of a phone screen', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
     await page.setViewportSize({ width: 390, height: 844 });

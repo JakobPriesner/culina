@@ -167,19 +167,65 @@
     }
   }
 
+  /* A phone leads with its recipes: a shorter photo, tighter copy and a title that may use the full width. */
   @media (width < 48rem) {
     .feature {
       grid-template-columns: 1fr;
+      min-height: 0;
     }
 
     .photo {
       grid-row: 1;
       min-height: 0;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: 5 / 2;
     }
 
     .copy {
       grid-row: 2;
+      gap: var(--space-2);
+      padding: var(--space-4);
+    }
+
+    h2 {
+      max-width: none;
+      font-size: var(--text-xl);
+    }
+
+    .meta {
+      margin-bottom: 0;
+    }
+
+    .actions {
+      column-gap: var(--space-4);
+    }
+
+    /* The dismissal is a text button; give it a finger-sized row as the open link has. */
+    .dismiss {
+      min-height: var(--control-md);
+    }
+  }
+
+  /* A landscape phone has width to spare and no height: photo beside the copy instead of above it. */
+  @media (width < 48rem) and (orientation: landscape) and (height < 30rem) {
+    .feature {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+
+    .photo,
+    .copy {
+      grid-row: auto;
+    }
+
+    .photo {
+      aspect-ratio: auto;
+    }
+  }
+
+  /* Short screens at any width: the photo no longer holds the deck at 18rem. */
+  @media (height < 30rem) {
+    .feature,
+    .photo {
+      min-height: 0;
     }
   }
 </style>
