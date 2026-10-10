@@ -188,6 +188,41 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
+  for (const [width, height] of [
+    [320, 568],
+    [844, 390]
+  ] as const) {
+    test(`filter dialog footer leaves the choices room at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('/');
+      await page.getByRole('button', { name: /^Filtern/ }).click();
+      const dialog = page.getByRole('dialog');
+      const footerActions = dialog.locator('footer');
+      const done = footerActions.getByRole('button', { name: 'Fertig' });
+      await expect(done).toBeInViewport();
+
+      const footer = (await footerActions.boundingBox())!;
+      const panel = (await dialog.locator('.panel').first().boundingBox())!;
+      const body = (await dialog.locator('.body').first().boundingBox())!;
+      // The footer is a minor share of the dialog and the choices keep a few rows.
+      expect(footer.height / panel.height).toBeLessThan(0.3);
+      expect(body.height).toBeGreaterThanOrEqual(height >= 500 ? 280 : 150);
+
+      // Every action keeps its name and a touch-sized target.
+      for (const name of ['Filter zurücksetzen', 'Diese Suche speichern', 'Fertig']) {
+        const box = (await footerActions.getByRole('button', { name }).boundingBox())!;
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.x + box.width).toBeLessThanOrEqual(footer.x + footer.width);
+      }
+      await expectReflow(page);
+    });
+  }
+
   for (const [width, height, deckLimit] of [
     [320, 568, 500],
     [390, 844, 500],
