@@ -159,6 +159,17 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* A phone's library should start sooner than a desktop's. */
+  @media (width < 48rem) {
+    .deck {
+      margin-bottom: var(--space-6);
+    }
+
+    .walk {
+      margin-top: var(--space-2);
+    }
+  }
+
   /* Paper has nothing to swipe. */
   @media print {
     .track {
