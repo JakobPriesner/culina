@@ -2,6 +2,7 @@ using Api.Extensions;
 using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Recipes.GetRelated;
+using Domain.Shared;
 using Response = Contracts.Recipes.GetRelated.Response;
 
 namespace Api.Endpoints.Recipes.GetRelated.V1;
@@ -19,23 +20,23 @@ internal sealed class GetRelatedRecipesEndpoint : IEndpoint
 
         app.MapGet($"{ApiPaths.V1}/recipes/{{recipeId:guid}}/related", async (
                 Guid recipeId,
-                string? cursor,
-                int? limit,
                 HttpContext context,
                 IQueryHandler<GetRelatedRecipesQuery, Response> handler,
                 CancellationToken cancellationToken) =>
             {
-                var result = await handler
-                    .Handle(
-                        new GetRelatedRecipesQuery(
-                            recipeId,
-                            context.CurrentUser().UserId,
-                            cursor,
-                            Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit)),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                var query = context.Request.Query;
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                var request = query.ReadInt("limit", 1, MaxLimit, DefaultLimit).Map(limit =>
+                    new GetRelatedRecipesQuery(recipeId, context.CurrentUser().UserId, query["cursor"], limit));
+
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
+
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getRelatedRecipesV1")
             .WithTags(Tags.Recipes)

@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Cookbooks;
 using Contracts.Cookbooks;
+using Domain.Shared;
 
 namespace Api.Endpoints.Recipes.GetCookbooks.V1;
 
@@ -15,18 +16,21 @@ internal sealed class GetRecipeCookbooksEndpoint : IEndpoint
 
         app.MapGet($"{ApiPaths.V1}/recipes/{{recipeId:guid}}/cookbooks", async (
                 Guid recipeId,
-                Guid? householdId,
                 HttpContext context,
                 IQueryHandler<GetRecipeCookbooksQuery, RecipeCookbooksResponse> handler,
                 CancellationToken cancellationToken) =>
             {
-                var result = await handler
-                    .Handle(
-                        new GetRecipeCookbooksQuery(recipeId, context.CurrentUser().UserId, householdId),
-                        cancellationToken)
-                    .ConfigureAwait(false);
+                var request = context.Request.Query.ReadGuid("householdId").Map(household =>
+                    new GetRecipeCookbooksQuery(recipeId, context.CurrentUser().UserId, household.Value));
 
-                return result.Match(Results.Ok, CustomResults.Problem);
+                return await request.Match(
+                    async asked =>
+                    {
+                        var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
+
+                        return result.Match(Results.Ok, CustomResults.Problem);
+                    },
+                    error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
             })
             .WithName("getRecipeCookbooksV1")
             .WithTags(Tags.Cookbooks)
