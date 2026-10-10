@@ -1,8 +1,8 @@
-import { http, request } from '$api';
+import { http, request, type AppError } from '$api';
 import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 import { toNutrition } from '../mappers';
-import type { Nutrition } from '../types';
+import type { Correction, Nutrition, NutritionLine } from '../types';
 
 /**
  * The nutrition of the recipe on screen, for the household reading it.
@@ -46,7 +46,10 @@ class NutritionStore {
       return;
     }
 
-    if (!result.ok) {
+    // An answer this client cannot read is a failed read, like any other.
+    const answer = result.ok ? read(result.value) : null;
+
+    if (!answer) {
       // What is on screen was true a moment ago; only say nothing is available when there is nothing.
       if (!known) {
         this.#status = 'failed';
@@ -55,11 +58,56 @@ class NutritionStore {
       return;
     }
 
-    const answer = toNutrition(result.value);
-
     this.#seen.set(key, answer);
     this.#answer = answer;
     this.#status = 'ready';
+  }
+
+  /**
+   * Says what an ingredient name is, for every recipe of the household. The rows change at once and the
+   * server is told; when it refuses, the rows go back to what they were. On success the answer is read
+   * again, since its totals are the server's to give (its ETag changed with the correction).
+   */
+  async correct(
+    recipeId: string,
+    householdId: string,
+    name: string,
+    ingredientIds: readonly string[],
+    correction: Correction
+  ): Promise<AppError | null> {
+    const key = keyOf(recipeId, householdId);
+    const snapshot = this.#answer;
+
+    if (this.#key === key && snapshot) {
+      this.#answer = {
+        ...snapshot,
+        ingredients: snapshot.ingredients.map((line) =>
+          ingredientIds.includes(line.ingredientId) ? corrected(line, correction) : line
+        )
+      };
+    }
+
+    const path = { householdId, name };
+    const result = await request(() =>
+      correction.kind === 'default'
+        ? http.DELETE('/api/v1/households/{householdId}/ingredients/{name}', { params: { path } })
+        : http.PUT('/api/v1/households/{householdId}/ingredients/{name}', {
+            params: { path },
+            body: { food: correction.kind === 'food' ? correction.food.code : null }
+          })
+    );
+
+    if (!result.ok) {
+      if (this.#key === key) {
+        this.#answer = snapshot;
+      }
+
+      return result.error;
+    }
+
+    await this.load(recipeId, householdId);
+
+    return null;
   }
 
   reset(): void {
@@ -70,6 +118,39 @@ class NutritionStore {
     this.#status = 'idle';
   }
 }
+
+const read = (wire: Parameters<typeof toNutrition>[0]): Nutrition | null => {
+  try {
+    return toNutrition(wire);
+  } catch {
+    return null;
+  }
+};
+
+/** The line as the correction will make it; the server's reading replaces this a moment later. */
+const corrected = (line: NutritionLine, correction: Correction): NutritionLine => {
+  switch (correction.kind) {
+    case 'food':
+      return {
+        ...line,
+        status: line.status === 'excluded' ? 'counted' : line.status,
+        food: correction.food,
+        corrected: true
+      };
+    case 'exclude':
+      return {
+        ...line,
+        status: 'excluded',
+        food: null,
+        grams: null,
+        via: null,
+        energyKcal: null,
+        corrected: true
+      };
+    case 'default':
+      return { ...line, corrected: false };
+  }
+};
 
 const keyOf = (recipeId: string, householdId: string | null) => `${recipeId}:${householdId ?? ''}`;
 

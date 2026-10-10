@@ -84,12 +84,33 @@ type WireIngredient = {
  * know is unknown. Per-portion numbers are unrounded, as the server sends them.
  */
 function nutrition(
-  ingredients: WireIngredient[]
+  ingredients: WireIngredient[],
+  corrections: ReadonlyMap<string, string | null> = new Map()
 ): components['schemas']['RecipesGetNutritionResponse'] {
   const kcal = [240, 200, 80.9];
   let counted = 0;
   const lines = ingredients.map((one) => {
     const ingredientId = one.ingredientId as string;
+
+    // What the household said the name is: a food, or null for not counting it.
+    if (corrections.has(one.name)) {
+      const code = corrections.get(one.name);
+
+      if (code === null) {
+        return { ingredientId, status: 'excluded' as const, corrected: true };
+      }
+
+      counted += 1;
+      return {
+        ingredientId,
+        status: 'counted' as const,
+        food: { code: code!, nameDe: 'Rapsöl', nameEn: 'Rapeseed oil' },
+        grams: 27,
+        via: 'density' as const,
+        corrected: true,
+        energyKcal: 120.5
+      };
+    }
     const food = (nameDe: string, nameEn: string) => ({ code: 'X', nameDe, nameEn });
     const long = 'handwerklich gebacken, mit Sonnenblumenkernen und Leinsamen';
 
@@ -135,7 +156,8 @@ function nutrition(
     lines: ingredients.length,
     values: {
       energyKj: value(2179.5),
-      energyKcal: value(520.9),
+      // A correction moves the total, as the server's answer would.
+      energyKcal: value(corrections.size > 0 ? 560.2 : 520.9),
       fat: value(31.62),
       saturatedFat: value(19.04),
       carbohydrate: value(7.46),
@@ -164,7 +186,9 @@ export async function responsiveData(
     suggestions = 0,
     draw = false,
     // A kitchen's worth of lines for the nutrition panel: spoons of oil, a count, and one with no amount.
-    nutritionLines = false
+    nutritionLines = false,
+    // The correction a household makes is refused, to see the rows go back.
+    refuseCorrections = false
   } = {}
 ) {
   const detail = {
@@ -215,9 +239,39 @@ export async function responsiveData(
     lastActiveAt: stamp,
     version: 1
   };
+  const corrections = new Map<string, string | null>();
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace('/api/v1', '');
+    const method = route.request().method();
+    const said = /^\/households\/[^/]+\/ingredients\/(.+)$/.exec(path);
+    if (said && (method === 'PUT' || method === 'DELETE')) {
+      if (refuseCorrections)
+        return route.fulfill({
+          status: 400,
+          contentType: 'application/problem+json',
+          json: { type: 'x', title: 'x', status: 400, code: 'nutrition.unknown_food' }
+        });
+      const name = decodeURIComponent(said[1]!);
+      if (method === 'DELETE') corrections.delete(name);
+      else corrections.set(name, route.request().postDataJSON().food);
+      return route.fulfill({ status: 204 });
+    }
+    // Whatever is typed, the same few foods: the fixture is not a search engine.
+    if (path === '/foods') {
+      const items = [
+        { code: 'Q111111', nameDe: 'Rapsöl', nameEn: 'Rapeseed oil', energyKcal: 828 },
+        { code: 'Q222222', nameDe: 'Sonnenblumenöl', nameEn: 'Sunflower oil', energyKcal: 828 },
+        {
+          code: 'Q333333',
+          nameDe: 'Olivenöl, nativ',
+          nameEn: 'Olive oil, virgin',
+          energyKcal: 824
+        },
+        { code: 'Q444444', nameDe: 'Butter', nameEn: 'Butter', energyKcal: 741 }
+      ];
+      return route.fulfill({ json: { items }, headers: { ETag: '"foods"' } });
+    }
     const reply = (json: unknown) => route.fulfill({ json, headers: { ETag: '"v1"' } });
     if (path === '/recipe-intakes/events')
       return route.fulfill({
@@ -285,7 +339,7 @@ export async function responsiveData(
     if (path.endsWith('/ingredients')) return reply({ items: [] });
     if (path === `/recipes/${recipeId}`) return reply(detail);
     if (path === `/recipes/${recipeId}/nutrition`)
-      return reply(nutrition(detail.groups[0]!.ingredients));
+      return reply(nutrition(detail.groups[0]!.ingredients, corrections));
     if (path.endsWith('/notes')) return reply({ overall: '', steps: [] });
     if (path.endsWith('/cook-log')) return reply({ count: 0, items: [] });
     if (path === '/recipes')
