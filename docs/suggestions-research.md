@@ -54,6 +54,11 @@ actually cooked, and an optional model that most instances will not have
 connected could not be on that path — the suggestions have to be as good on an
 instance with no assistant as on one with.
 
+The calorie sentence has since been narrowed too: the README now refuses calorie
+*estimates*, and Culina shows nutrition as a cited lookup that says how much of
+a recipe it covers (`docs/nutrition-design.md`). That changes nothing here
+either; see §O.3 for what a ranking term would first need.
+
 And `domain-model.md`, on the cook log:
 
 > Append-only. Powers "you've made this 7 times, last in March" and the
@@ -196,7 +201,7 @@ stating flatly.
 | meal type | ✗ on the recipe. ✓ **on the plan**: `meal_plan_entries.slot ∈ {breakfast, lunch, dinner}` |
 | difficulty | ✗ — and explicitly rejected (§A.3) |
 | seasonality | ✗ — and a *curated* table explicitly rejected |
-| nutrition | ✗ — explicitly rejected in `README.md` |
+| nutrition | ✗ — estimates rejected in `README.md`; the cited lookup built since (`docs/nutrition-design.md`) is computed in memory per recipe, not in SQL, so it is not a signal here |
 | ingredients | ✓ name, quantity, unit, note — free text, no ingredient table at all |
 | tags | ✓ **household-authored free text**, `(household_id, slug)` unique |
 | prep/cook time | ✓ both nullable; `total_minutes` derived in SQL, never stored |
@@ -1986,9 +1991,13 @@ implementation behind an unchanged interface.
   from `RecipeSearcher`, so ordering can be read on its own.
 
 **A worked example of why these seams are the right ones.** `culina-v2-bk9l`
-proposes deriving nutrition automatically from Open Food Facts' ingredients
-taxonomy. Nothing in this document changes to accommodate it, and it is
-deliberately *not* built here. When it lands, a nutrition term is a CTE, a
+built nutrition as a lookup in the Bundeslebensmittelschlüssel 4.0 (it first
+proposed Open Food Facts' ingredients taxonomy; see `docs/nutrition-design.md`).
+Nothing in this document changed to accommodate it, and no ranking term reads
+it. One fact decides what a term would cost: nutrition is computed **in memory,
+per recipe, on read** (`docs/nutrition-design.md` §F), and ranking runs in SQL,
+so a term first needs the food table and the name table in Postgres, decided
+with a measurement. Once it has that, a nutrition term is a CTE, a
 `SuggestionReason` value and a message key; a per-serving ceiling is a
 `SuggestionContext` field beside `MaxMinutes`, not a new `SuggestionPurpose`;
 and its weight is searchable by the same calibration in §M.3.

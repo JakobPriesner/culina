@@ -5,7 +5,7 @@
   import type { PresumableDiet } from './types';
 
   /**
-   * "Ist das vegetarisch?", asked once of a recipe a search only presumed to be: a diet is certain in one direction only (no nutrition table),
+   * "Ist das vegetarisch?", asked once of a recipe a search only presumed to be: a diet is certain in one direction only (no food table says what is vegetarian),
    * so one tap turns a guess into a tag. Quiet on purpose, beside the recipe rather than in front.
    */
   interface Props {

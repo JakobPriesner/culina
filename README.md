@@ -33,9 +33,11 @@ you straight back.
 ## What it deliberately does not do
 
 No pantry inventory (nobody maintains one, so it goes stale and poisons
-everything built on it). No calorie calculation (a wrong number is worse than
-none). No social feed, ratings or comments — this is your kitchen, not a
-network.
+everything built on it). No calorie estimates (a wrong number is worse than
+none): nutrition is a lookup in the German food composition table, cited on the
+page, and when it cannot count a line it says "at least" and names what it left
+out, rather than guessing what an onion weighs. No social feed, ratings or
+comments — this is your kitchen, not a network.
 
 ## The assistant
 
@@ -147,6 +149,7 @@ a tested restore, and the proxy configuration the app expects.
 | [`docs/design-system.md`](docs/design-system.md) | Tokens, theming, component inventory |
 | [`docs/scaling-rules.md`](docs/scaling-rules.md) | How portions scale, and how amounts are rounded |
 | [`docs/search-design.md`](docs/search-design.md) | Search: retrieval, query understanding, ranking and the interaction |
+| [`docs/nutrition-design.md`](docs/nutrition-design.md) | Nutrition: the food table, how a line becomes grams, and how a figure says what it covers |
 | [`docs/deployment.md`](docs/deployment.md) | The image, the pipeline, and why they are shaped that way |
 | [`docs/operations.md`](docs/operations.md) | Installing, upgrading, backup and restore |
 | [`docs/configuration.md`](docs/configuration.md) | Every environment variable and what breaks without it |
@@ -158,3 +161,7 @@ a tested restore, and the proxy configuration the app expects.
 ## Licence
 
 PolyForm Noncommercial License 1.0.0. See [LICENSE](LICENSE).
+
+Nutrition values come from the Bundeslebensmittelschlüssel (BLS) 4.0 of the
+Max Rubner-Institut, under CC BY 4.0; the extract and its attribution are in
+[`src/backend/src/Infrastructure/Nutrition`](src/backend/src/Infrastructure/Nutrition/BLS-ATTRIBUTION.md).

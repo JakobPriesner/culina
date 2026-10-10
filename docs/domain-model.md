@@ -566,6 +566,21 @@ household in `shopping_section_overrides(household_id, name_key, section)`
 and wins over the seed from then on — sensible default, trivially correctable,
 no configuration screen.
 
+### Nutrition, computed on read
+
+A recipe's nutrition is never stored. It is worked out on every read from three
+things: the recipe's lines and yield, the Bundeslebensmittelschlüssel extract
+loaded into memory at startup (`IFoodTable`), and a fourth table of food words,
+`FoodNames` in `Domain/Nutrition`, beside `CommonIngredients`, `SectionKeywords`
+and `CulinaryLexicon`. It answers a question none of them can: *which food,
+exactly, is this?* About 250 curated German and English names each point at one
+raw, as-bought BLS food, matched strictly (the whole name, give or take two
+letters, no compound splitting). `NutritionGrams` turns a line into grams for
+nutrition only: mass always, volumes and spoons only for foods that pour, eggs
+at EU size M, and nothing else. `Units` keeps its never-convert-spoons rule.
+Nothing hangs off `recipe_ingredients`, which a save deletes and re-inserts, so
+nothing can go stale. See `docs/nutrition-design.md`.
+
 ### Food corrections
 
 What a household says an ingredient really is, for nutrition: the same idea as
