@@ -1,3 +1,9 @@
+/**
+ * Step text that fits one 375x667 phone screen in guided cooking: about ten lines of about 26
+ * characters at the 24px cooking size. Keep in step with `LongestStep` in the backend's `AssistantPrompts`.
+ */
+export const LONGEST_COOKING_STEP = 250;
+
 /** Typed minutes as stored seconds; empty, unreadable or non-positive means no timer, and it caps at a day. */
 export function secondsFromMinutes(written: string): number | null {
   const minutes = Number(written);
