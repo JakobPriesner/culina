@@ -4,7 +4,7 @@
   import { resolve } from '$app/paths';
   import { Button, Disclosure, Icon } from '$ds';
   import { createScaling } from '$features/recipes/surface/scaled.svelte';
-  import type { Recipe } from '$features/recipes/types';
+  import type { Recipe, RecipeReading } from '$features/recipes/types';
   import { m } from '$shell/i18n';
   import { createLoadingState } from '$shell/loadingState.svelte';
 
@@ -29,24 +29,40 @@
    * still while cooking.
    */
   interface Props {
-    recipe: Recipe;
+    /** A shared recipe is read as it is, with the token for its id. */
+    recipe: Recipe | RecipeReading;
     /** The servings on the page: the working out follows the ingredient list, the per-portion figures do not move. */
     servings: number;
     /** Whose corrections count; null before a household is known. */
     householdId: string | null;
     /** Whether the working out is open; the page opens it from the recipe's meta line. */
     open?: boolean;
+    /** A visitor with a share link: the figures only, no household's corrections and no way into an editor. */
+    readonly?: boolean;
   }
 
-  let { recipe, servings, householdId, open = $bindable(false) }: Props = $props();
+  let {
+    recipe,
+    servings,
+    householdId,
+    open = $bindable(false),
+    readonly = false
+  }: Props = $props();
 
   const scaling = createScaling(
     () => recipe,
     () => servings
   );
 
-  const answer = $derived(nutrition.answerFor(recipe.id, householdId));
-  const status = $derived(nutrition.statusFor(recipe.id, householdId));
+  const answer = $derived(
+    readonly ? nutrition.answerForShared(recipe.id) : nutrition.answerFor(recipe.id, householdId)
+  );
+  const status = $derived(
+    readonly ? nutrition.statusForShared(recipe.id) : nutrition.statusFor(recipe.id, householdId)
+  );
+
+  const ask = () =>
+    void (readonly ? nutrition.loadShared(recipe.id) : nutrition.load(recipe.id, householdId));
 
   const loading = createLoadingState();
 
@@ -54,8 +70,8 @@
 
   // The recipe's version is what an edit changes, and with it the answer.
   $effect(() => {
-    void recipe.version;
-    void nutrition.load(recipe.id, householdId);
+    void ('version' in recipe && recipe.version);
+    ask();
   });
 
   $effect(() => {
@@ -84,13 +100,7 @@
   {:else if status === 'failed'}
     <div class="unavailable" role="status">
       <p>{m['nutrition.unavailable']()}</p>
-      <Button
-        size="sm"
-        variant="secondary"
-        onclick={() => void nutrition.load(recipe.id, householdId)}
-      >
-        {m['error.retry']()}
-      </Button>
+      <Button size="sm" variant="secondary" onclick={ask}>{m['error.retry']()}</Button>
     </div>
   {:else if answer}
     <Disclosure bind:open>
@@ -140,11 +150,13 @@
               {#each implausible as one (one.id)}
                 <li>
                   {m['nutrition.implausible.line']({ what: one.what })}
-                  <a
-                    href="{resolve('/(app)/recipes/[recipeId]/edit', {
-                      recipeId: recipe.id
-                    })}#ingredient-{one.id}">{m['nutrition.implausible.fix']()}</a
-                  >
+                  {#if !readonly}
+                    <a
+                      href="{resolve('/(app)/recipes/[recipeId]/edit', {
+                        recipeId: recipe.id
+                      })}#ingredient-{one.id}">{m['nutrition.implausible.fix']()}</a
+                    >
+                  {/if}
                 </li>
               {/each}
             </ul>
@@ -154,9 +166,11 @@
         {#if wholeRecipe}
           <p class="quiet">
             {m['nutrition.oneServing']()}
-            <a href="{resolve('/(app)/recipes/[recipeId]/edit', { recipeId: recipe.id })}#yield"
-              >{m['nutrition.setServings']()}</a
-            >
+            {#if !readonly}
+              <a href="{resolve('/(app)/recipes/[recipeId]/edit', { recipeId: recipe.id })}#yield"
+                >{m['nutrition.setServings']()}</a
+              >
+            {/if}
           </p>
         {/if}
 
@@ -164,7 +178,12 @@
           <NutritionLabel nutrition={answer} />
         {/if}
 
-        <NutritionBreakdown nutrition={answer} {recipe} {scaling} {householdId} />
+        <NutritionBreakdown
+          nutrition={answer}
+          {recipe}
+          {scaling}
+          householdId={readonly ? null : householdId}
+        />
 
         <p class="source">{@render attribution()}</p>
       </div>

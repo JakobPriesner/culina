@@ -757,3 +757,49 @@ describe('friendly names', () => {
     expect(screen.queryByText(/BLS:/)).not.toBeInTheDocument();
   });
 });
+
+describe('a shared recipe, read by a visitor', () => {
+  const shared = { ...recipe, id: 'a-share-token' };
+  const showShared = () =>
+    renderWithProviders(NutritionPanel, {
+      props: { recipe: shared, servings: 2, householdId: null, readonly: true }
+    });
+
+  it('asks the share link for the figures, and credits the table', async () => {
+    const fetched = serverAnswers(partial());
+
+    showShared();
+
+    const summary = await headline();
+
+    expect(summary).toHaveTextContent('at least 520 kcal per serving');
+
+    const asked = (fetched.mock.calls as unknown as [Request][])[0]![0];
+
+    expect(new URL(asked.url).pathname).toBe('/api/v1/shared-recipes/a-share-token/nutrition');
+    expect(screen.getAllByText(/Max Rubner-Institut/).length).toBeGreaterThan(0);
+  });
+
+  it('offers no correction and no way into an editor', async () => {
+    serverAnswers(
+      withLine({ ...partial(), yield: 1 }, oil, {
+        status: 'implausible',
+        grams: 1800000,
+        via: 'density'
+      })
+    );
+    showShared();
+
+    const summary = await headline();
+
+    // Still asks whether the amount is right, but only as a question: there is nothing to follow.
+    expect(summary).toHaveTextContent(/Is this amount right\? .*olive oil/);
+
+    await userEvent.click(summary);
+
+    expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^What is / })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Fix in the recipe' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Set servings' })).not.toBeInTheDocument();
+  });
+});

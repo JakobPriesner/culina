@@ -10,8 +10,17 @@ export interface ImportedPage {
   readonly ingredientLines: readonly string[];
   readonly steps: readonly string[];
   readonly servings?: number | null;
+  readonly yieldKind?: string | null;
+  readonly yieldLabel?: string | null;
   readonly totalMinutes?: number | null;
 }
+
+/** The yield with what it counts and the site's word for it; a kind this client does not know is read as servings, as it always was. */
+const yieldOf = (page: ImportedPage, servings: number) => ({
+  servings,
+  ...(page.yieldKind === 'pieces' ? { yieldKind: 'pieces' as const } : {}),
+  ...(page.yieldLabel ? { yieldLabel: page.yieldLabel } : {})
+});
 
 /**
  * A site's structured data as a pasted-text reading; servings and time are omitted unless stated,
@@ -23,7 +32,7 @@ export function publishedRecipe(page: ImportedPage, ownUnits: readonly string[])
     title: page.title ?? '',
     ingredients: page.ingredientLines.map((line) => parseIngredientLine(line, ownUnits)),
     steps: [...page.steps],
-    ...(page.servings == null ? {} : { servings: page.servings }),
+    ...(page.servings == null ? {} : yieldOf(page, page.servings)),
     ...(page.totalMinutes == null ? {} : { totalMinutes: page.totalMinutes })
   };
 }

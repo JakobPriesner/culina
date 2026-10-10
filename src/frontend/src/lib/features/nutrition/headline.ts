@@ -2,7 +2,7 @@ import { everyIngredient, type Ingredient, type RecipeReading } from '$features/
 import { formatList, formatNumber, m } from '$shell/i18n';
 
 import { labelNumber, withBound } from './format';
-import type { Nutrition, NutritionLine } from './types';
+import type { Nutrition, NutritionLine, NutritionReason, NutritionStatus } from './types';
 
 /** A recipe that makes one serving: "per serving" would be the whole pot, so it says so. */
 export const isWholeRecipe = (nutrition: Pick<Nutrition, 'per' | 'yield'>): boolean =>
@@ -85,3 +85,57 @@ export const implausibleLines = (nutrition: Nutrition, recipe: RecipeReading) =>
 /** "1800 l milk": the amount as it reads on the page, then the name. */
 export const amountAndName = (amount: string, name: string): string =>
   [amount, name].filter(Boolean).join(' ');
+
+/** Why a line is not counted, in two or three words; the breakdown says it at length. Spelled out so message keys stay visible to the unused-key check. */
+const shortReasons: Record<Exclude<NutritionStatus, 'counted'>, () => string> = {
+  amountNotInGrams: m['nutrition.reason.amountNotInGrams'],
+  noAmount: m['nutrition.reason.noAmount'],
+  unknownFood: m['nutrition.reason.unknownFood'],
+  excluded: m['nutrition.reason.excluded'],
+  implausible: m['nutrition.short.implausible']
+};
+
+const shortUnitReasons: Record<NutritionReason, () => string> = {
+  spoonOfSolid: m['nutrition.short.spoon'],
+  volumeOfSolid: m['nutrition.short.volume'],
+  count: m['nutrition.short.count'],
+  householdUnit: m['nutrition.short.unit']
+};
+
+const shortReason = (line: NutritionLine): string =>
+  line.status === 'amountNotInGrams' && line.reason
+    ? shortUnitReasons[line.reason]()
+    : line.status === 'counted'
+      ? ''
+      : shortReasons[line.status]();
+
+/**
+ * What counts of the lines written, for the editor: "7 of 9 lines count · Onion: a count · Salt: no amount".
+ * At most three lines are named, in the recipe's order, then how many more; null when there is nothing to say.
+ */
+export function coverageWords(nutrition: Nutrition, recipe: RecipeReading): string | null {
+  if (nutrition.lines === 0) {
+    return null;
+  }
+
+  if (nutrition.counted === nutrition.lines) {
+    return m['nutrition.coverage.all']();
+  }
+
+  const left = writtenLines(nutrition, recipe).filter(({ line }) => line.status !== 'counted');
+  const named = left
+    .slice(0, 3)
+    .map(({ ingredient, line }) =>
+      m['nutrition.coverage.line']({ name: ingredient.name, why: shortReason(line) })
+    );
+  const more = left.length - named.length;
+
+  return [
+    m['nutrition.coverage.some']({
+      counted: formatNumber(nutrition.counted),
+      lines: formatNumber(nutrition.lines)
+    }),
+    ...named,
+    ...(more > 0 ? [m['nutrition.coverage.more']({ count: formatNumber(more) })] : [])
+  ].join(' · ');
+}
