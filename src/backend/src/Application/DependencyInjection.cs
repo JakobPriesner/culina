@@ -39,6 +39,7 @@ using Application.Recipes.GetCookLog;
 using Application.Recipes.GetImage;
 using Application.Recipes.GetIngredients;
 using Application.Recipes.GetNotes;
+using Application.Recipes.GetNutrition;
 using Application.Recipes.GetRelated;
 using Application.Recipes.GetShare;
 using Application.Recipes.GetShared;
@@ -241,6 +242,7 @@ public static class DependencyInjection
                 GetRecipesQueryHandler>()
             .AddScoped<IQueryHandler<GetRecipeQuery, Contracts.Recipes.RecipeDetail>,
                 GetRecipeQueryHandler>()
+            .AddScoped<IQueryHandler<GetNutritionQuery, RecipeNutrition>, GetNutritionQueryHandler>()
             .AddScoped<ICommandHandler<UpdateRecipeCommand, Contracts.Recipes.RecipeDetail>,
                 UpdateRecipeCommandHandler>()
             .AddScoped<ICommandHandler<DeleteRecipeCommand>, DeleteRecipeCommandHandler>()

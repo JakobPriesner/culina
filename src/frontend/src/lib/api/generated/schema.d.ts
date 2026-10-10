@@ -794,6 +794,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipes/{recipeId}/nutrition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a recipe's nutrition
+         * @description Per portion (or per piece, when the recipe makes pieces), worked out on every read from the recipe's ingredient lines and the Bundeslebensmittelschlüssel; nothing is stored. Each of the eight values carries atLeast: true when a line could not be counted or a counted food lacks that value, so the figure is a true lower bound, never a guess. Numbers are **unrounded**; rounding is the client's business, lower bounds downward. A separate resource, not a field of the recipe: the recipe's ETag is its version alone, so a household's correction or a data update would hide behind a 304 there. This tag also covers the data version and the corrections that apply. householdId names whose corrections apply, for a recipe that household inherits; left out, the recipe's own household. The source block must be shown wherever the numbers are (CC BY 4.0).
+         */
+        get: operations["getRecipeNutritionV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tags": {
         parameters: {
             query?: never;
@@ -3303,6 +3323,107 @@ export interface components {
             stepId: string;
             /** @description What it says. */
             body: string;
+        };
+        /** @description A food of the Bundeslebensmittelschlüssel. */
+        RecipesGetNutritionNutritionFood: {
+            /** @description The BLS code. */
+            code: string;
+            /** @description The German name. */
+            nameDe: string;
+            /** @description The English name. */
+            nameEn: string;
+        };
+        /** @description What became of one ingredient line. */
+        RecipesGetNutritionNutritionIngredient: {
+            /**
+             * Format: uuid
+             * @description The recipe's ingredient line.
+             */
+            ingredientId: string;
+            /**
+             * @description `counted`, `amountNotInGrams`, `noAmount`, `unknownFood` or `excluded`.
+             * @enum {string}
+             */
+            status: "counted" | "amountNotInGrams" | "noAmount" | "unknownFood" | "excluded";
+            food?: (null) | components["schemas"]["RecipesGetNutritionNutritionFood"];
+            /**
+             * Format: double
+             * @description The grams counted, unrounded; only when counted.
+             */
+            grams?: number | null;
+            /**
+             * @description How the grams were reached: `mass`, `density` or `eggSize`; only when counted.
+             * @enum {string|null}
+             */
+            via?: "mass" | "density" | "eggSize" | null;
+            /** @description Whether the household chose the food (or to leave it out) instead of the default. */
+            corrected: boolean;
+            /**
+             * Format: double
+             * @description This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.
+             */
+            energyKcal?: number | null;
+        };
+        /** @description Where the data comes from, for attribution (CC BY 4.0 requires it wherever it is shown). */
+        RecipesGetNutritionNutritionSource: {
+            /** @description The table's name. */
+            name: string;
+            /** @description The edition. */
+            version: string;
+            /** @description Who publishes it. */
+            publisher: string;
+            /** @description The licence it is used under. */
+            licence: string;
+        };
+        /** @description One label value. */
+        RecipesGetNutritionNutritionValue: {
+            /**
+             * Format: double
+             * @description The sum over the counted lines, unrounded.
+             */
+            value: number;
+            /** @description True when a line left out, or a food without this value, could only have added to it. */
+            atLeast: boolean;
+        };
+        /** @description The label values of one portion or piece. */
+        RecipesGetNutritionNutritionValues: {
+            energyKj: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            energyKcal: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            fat: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            saturatedFat: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            carbohydrate: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            sugars: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            protein: components["schemas"]["RecipesGetNutritionNutritionValue"];
+            salt: components["schemas"]["RecipesGetNutritionNutritionValue"];
+        };
+        /** @description A recipe's nutrition per portion or per piece, with the lines it covers. */
+        RecipesGetNutritionResponse: {
+            /**
+             * @description What the figures are per: `serving` or `piece`.
+             * @enum {string}
+             */
+            per: "serving" | "piece";
+            /**
+             * Format: double
+             * @description The amount of servings or pieces the recipe makes, which the totals were divided by.
+             */
+            yield: number;
+            /** @description Whether every ingredient line is counted. A value can still be a lower bound when a food lacks it. */
+            complete: boolean;
+            /**
+             * Format: int32
+             * @description How many ingredient lines are counted.
+             */
+            counted: number;
+            /**
+             * Format: int32
+             * @description How many ingredient lines the recipe has.
+             */
+            lines: number;
+            values: components["schemas"]["RecipesGetNutritionNutritionValues"];
+            /** @description Every ingredient line, in recipe order. */
+            ingredients: components["schemas"]["RecipesGetNutritionNutritionIngredient"][];
+            source: components["schemas"]["RecipesGetNutritionNutritionSource"];
         };
         /** @description Why two recipes are related, in words a person can disagree with. */
         RecipesGetRelatedRelatedReason: {
@@ -7644,6 +7765,64 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getRecipeNutritionV1: {
+        parameters: {
+            query?: {
+                householdId?: string;
+            };
+            header?: never;
+            path: {
+                recipeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetNutritionResponse"];
+                };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
