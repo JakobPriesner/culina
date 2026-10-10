@@ -75,7 +75,13 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
 export async function responsiveData(
   page: Page,
   locale: 'de' | 'en' = 'de',
-  { extraIngredients = 0, activeCooking = true, longSteps = false, suggestions = 0 } = {}
+  {
+    extraIngredients = 0,
+    activeCooking = true,
+    longSteps = false,
+    suggestions = 0,
+    draw = false
+  } = {}
 ) {
   const detail = {
     ...recipe,
@@ -137,7 +143,7 @@ export async function responsiveData(
         version: 1,
         households: [{ householdId, name: 'Unsere gemeinsame Küche', role: 'owner' }],
         // Present but off: without them the editor crashes instead of hiding the assistant's buttons.
-        assistance: { improve: false, draft: false, read: false, draw: false }
+        assistance: { improve: false, draft: false, read: false, draw }
       });
     if (path === '/users/me/settings')
       return reply({
