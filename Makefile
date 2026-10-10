@@ -139,9 +139,10 @@ openapi: db-up ## Export the OpenAPI document to src/backend/openapi/Api.json
 image: ## Build the production container image
 	docker build -t culina:local .
 
-image-run: ## Run the production image against the dev database
+image-run: ## Run the container built from local code
 	@# compose.prod.yaml requires both passwords rather than assume the
 	@# development ones. The dev database was created with those, so say so.
+	CULINA_IMAGE=$${CULINA_IMAGE:-culina:local} \
 	Database__Password=$${Database__Password:-culina_dev_password} \
 		POSTGRES_SUPERUSER_PASSWORD=$${POSTGRES_SUPERUSER_PASSWORD:-postgres} \
 		docker compose -f compose.yaml -f compose.prod.yaml up --build
