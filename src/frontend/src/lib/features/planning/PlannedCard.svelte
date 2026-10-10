@@ -131,8 +131,10 @@
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     line-height: var(--leading-tight);
-    /* A long unbroken word would otherwise push out of the card. */
-    overflow-wrap: anywhere;
+    /* Long compounds hyphenate by the page's language; only a word wider than the card breaks anywhere else
+       (the inherited 'anywhere' would shrink the minimum width and cut every word mid-way). */
+    hyphens: auto;
+    overflow-wrap: break-word;
   }
 
   .remove {

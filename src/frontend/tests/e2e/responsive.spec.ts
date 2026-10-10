@@ -101,6 +101,39 @@ test.describe('responsive production layouts @offline', () => {
     }
   }
 
+  for (const width of [320, 390, 1024, 1280, 1440]) {
+    test(`a long compound title stays inside its plan card at ${width}px`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
+      await page.setViewportSize({ width, height: 900 });
+      await responsiveData(page, 'de');
+      await page.goto('/plan');
+
+      const title = page.locator('a[href^="/recipes/"] .name').first();
+      await expect(title).toBeVisible();
+
+      const measured = await title.evaluate((name) => {
+        const card = name.closest('.card')!.getBoundingClientRect();
+        const text = name.getBoundingClientRect();
+        // One rect per line of text.
+        const range = document.createRange();
+        range.selectNodeContents(name);
+        return {
+          overflows: name.scrollWidth > name.clientWidth + 1 || text.right > card.right + 1,
+          cardHeight: card.height,
+          lines: range.getClientRects().length,
+          lang: document.documentElement.lang
+        };
+      });
+      expect(measured.overflows).toBe(false);
+      expect(measured.lang).toBe('de');
+      // Hyphenated by the page's language, so the title takes a few lines, not a tower of fragments.
+      expect(measured.lines).toBeLessThanOrEqual(5);
+      expect(measured.cardHeight).toBeLessThan(240);
+    });
+  }
+
   test('narrow editor, planner picker and cooking controls remain usable', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await responsiveData(page);
