@@ -112,7 +112,7 @@
           <NutritionLabel nutrition={answer} />
         {/if}
 
-        <NutritionBreakdown nutrition={answer} {recipe} {scaling} />
+        <NutritionBreakdown nutrition={answer} {recipe} {scaling} {householdId} />
 
         <p class="source">{@render attribution()}</p>
       </div>

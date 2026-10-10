@@ -11,6 +11,7 @@ const toLine = (wire: WireLine): NutritionLine => ({
   food: wire.food ?? null,
   grams: wire.grams ?? null,
   via: wire.via ?? null,
+  corrected: wire.corrected,
   energyKcal: wire.energyKcal ?? null
 });
 

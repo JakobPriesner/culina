@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { expectReflow, recipeId, responsiveData } from './support/responsive';
 
@@ -139,5 +139,72 @@ test.describe('nutrition on a recipe @offline', () => {
     await expect(page.locator('p.source:visible')).toContainText('Max Rubner-Institut');
     await expect(page.locator('summary .chevron')).toBeHidden();
     await expect(page.getByRole('table')).toBeHidden();
+  });
+
+  test.describe('saying what an ingredient is', () => {
+    const open = async (page: Page, options: { refuseCorrections?: boolean } = {}) => {
+      await responsiveData(page, 'en', { nutritionLines: true, ...options });
+      await page.goto(`/recipes/${recipeId}`);
+      await page.locator('summary', { hasText: 'Nutrition' }).click();
+      await page
+        .getByRole('button', {
+          name: 'What is “Olivenöl”? Change'
+        })
+        .click();
+    };
+
+    test('states its reach, corrects the line and shows the new figure', async ({ page }) => {
+      await open(page);
+
+      const sheet = page.getByRole('dialog', { name: 'What is “Olivenöl”?' });
+
+      await expect(sheet).toBeVisible();
+      await expect(
+        sheet.getByText('Applies to every recipe of yours that uses “Olivenöl”.')
+      ).toBeVisible();
+      await expect(sheet.getByRole('button', { name: /Olive oil\s*Default/ })).toHaveAttribute(
+        'aria-current',
+        'true'
+      );
+      await expect(sheet.getByRole('button', { name: 'Back to the default' })).toBeHidden();
+
+      await sheet.getByRole('button', { name: /Rapeseed oil\s*828 kcal per 100 g/ }).click();
+
+      await expect(sheet).toBeHidden();
+      await expect(page.getByText('“Olivenöl” now counts as Rapeseed oil.')).toBeVisible();
+      await expect(page.locator('.detail', { hasText: 'as Rapeseed oil' })).toBeVisible();
+      await expect(page.locator('summary', { hasText: /560 kcal/ })).toBeVisible();
+
+      // Reopened, it is the household's choice, and it can be given back.
+      await page.getByRole('button', { name: 'What is “Olivenöl”? Change' }).click();
+      await expect(
+        page.getByRole('button', { name: /Rapeseed oil\s*your choice/ })
+      ).toHaveAttribute('aria-current', 'true');
+      await page.getByRole('button', { name: 'Back to the default' }).click();
+      await expect(page.getByText('“Olivenöl” counts as the default again.')).toBeVisible();
+      await expect(page.locator('summary', { hasText: /520 kcal/ })).toBeVisible();
+    });
+
+    test('moves a line to not counted', async ({ page }) => {
+      await open(page);
+      await page.getByRole('button', { name: "Don't count this" }).click();
+
+      await expect(page.getByText('“Olivenöl” is no longer counted.')).toBeVisible();
+      // The line moved to another group; the keyboard user is still on its button.
+      await expect(page.getByRole('button', { name: 'What is “Olivenöl”? Change' })).toBeFocused();
+      await expect(page.getByText('excluded by your household')).toBeVisible();
+    });
+
+    test('puts the line back and says why when the server refuses', async ({ page }) => {
+      await open(page, { refuseCorrections: true });
+      await page.getByRole('button', { name: /Rapeseed oil/ }).click();
+
+      await expect(
+        page.getByText('That food is not in the nutrition table. Pick another one.')
+      ).toBeVisible();
+      await expect(page.locator('.detail', { hasText: 'as Olive oil' })).toBeVisible();
+      await expect(page.locator('.detail', { hasText: 'as Rapeseed oil' })).toBeHidden();
+      await expect(page.locator('summary', { hasText: /520 kcal/ })).toBeVisible();
+    });
   });
 });

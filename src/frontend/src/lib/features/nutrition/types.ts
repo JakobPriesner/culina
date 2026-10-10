@@ -33,6 +33,8 @@ export interface NutritionLine {
   /** Grams counted, at the recipe's own yield. */
   readonly grams: number | null;
   readonly via: 'mass' | 'density' | 'eggSize' | null;
+  /** The household chose this food (or to leave the line out) instead of the table's default. */
+  readonly corrected: boolean;
   /** Kilocalories per portion; the lines add up to the headline. */
   readonly energyKcal: number | null;
 }
@@ -55,3 +57,14 @@ export interface Nutrition {
   readonly ingredients: readonly NutritionLine[];
   readonly source: NutritionSource;
 }
+
+/** A food of the table as the search offers it; the kilocalories per 100 g tell the many foods of one name apart. */
+export interface FoodHit extends NutritionFood {
+  readonly energyKcal: number | null;
+}
+
+/** What a household can say a name is: a food, nothing to count, or whatever the table says. */
+export type Correction =
+  | { readonly kind: 'food'; readonly food: NutritionFood }
+  | { readonly kind: 'exclude' }
+  | { readonly kind: 'default' };
