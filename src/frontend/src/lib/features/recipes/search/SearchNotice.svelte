@@ -3,6 +3,7 @@
 
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
+  import Olli from '$shell/olli/Olli.svelte';
 
   import type { Interpretation, SearchChip } from '../types';
   import { chipLabel } from './wording';
@@ -67,15 +68,18 @@
   </div>
 {:else if empty}
   <div class="offer">
-    <p class="title">{m['search.empty.title']({ query: query.trim() })}</p>
-    <p class="body">{m['search.empty.body']()}</p>
-    <div class="actions">
-      <Button variant="primary" size="sm" href={resolve('/(app)/recipes/new')}>
-        {m['search.empty.create']()}
-      </Button>
-      <Button size="sm" href={resolve('/(app)/recipes/import')}>
-        {m['search.empty.import']()}
-      </Button>
+    <Olli pose="reading" size="sm" />
+    <div class="copy">
+      <p class="title">{m['search.empty.title']({ query: query.trim() })}</p>
+      <p class="body">{m['search.empty.body']()}</p>
+      <div class="actions">
+        <Button variant="primary" size="sm" href={resolve('/(app)/recipes/new')}>
+          {m['search.empty.create']()}
+        </Button>
+        <Button size="sm" href={resolve('/(app)/recipes/import')}>
+          {m['search.empty.import']()}
+        </Button>
+      </div>
     </div>
   </div>
 {/if}
@@ -91,8 +95,17 @@
   }
 
   .offer {
-    align-items: flex-start;
-    padding-block: var(--space-6);
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-4);
+    padding-block: var(--space-4);
+  }
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
   }
 
   .title {

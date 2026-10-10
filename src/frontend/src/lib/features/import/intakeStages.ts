@@ -15,6 +15,8 @@ export function poseFor(stage: IntakeJob['stage'] | undefined): Pose {
       return 'writing';
     case 'thinking':
       return 'thinking';
+    case 'reading':
+      return 'reading';
     default:
       return 'watching';
   }

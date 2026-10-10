@@ -6,6 +6,7 @@ import type { Interpretation, SearchChip } from '../types';
 import SearchChips from './SearchChips.svelte';
 import SearchNotice from './SearchNotice.svelte';
 import { renderWithProviders } from '$lib/test/render';
+import { olliSetting } from '$shell/olli/setting.svelte';
 
 /* Every recovery from an empty answer is said with a way back; a notice without a control only mentions the changed question. */
 const vegetarian: SearchChip = {
@@ -86,8 +87,20 @@ describe('the search notices', () => {
     });
 
     expect(screen.getByText('No recipe for “Schnitzel”')).toBeInTheDocument();
+    expect(document.querySelector('svg.olli')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'New recipe' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Import' })).toBeInTheDocument();
+  });
+
+  it('keeps the reading Olli, just still, when motion is turned off', () => {
+    olliSetting.animate(false);
+    const { container } = renderWithProviders(SearchNotice, {
+      props: { interpretation: reading({}), total: 0, query: 'Schnitzel', ...handlers() }
+    });
+
+    expect(container.querySelector('svg.olli')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('No recipe for “Schnitzel”')).toBeInTheDocument();
+    olliSetting.reset();
   });
 
   it('leaves the offer to a page that has one', () => {
