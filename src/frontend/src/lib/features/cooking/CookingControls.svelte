@@ -88,14 +88,28 @@
         {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
       </p>
     </div>
-    <Button
-      size="sm"
-      label={autoScrolling ? m['cooking.autoScroll.stop']() : undefined}
-      disabled={!ready}
-      onclick={onautoscroll}
-    >
-      {autoScrolling ? m['cooking.autoScroll.stopShort']() : m['cooking.autoScroll.start']()}
-    </Button>
+    <div class="auto-scroll">
+      <Button
+        size="sm"
+        label={autoScrolling ? m['cooking.autoScroll.stop']() : m['cooking.autoScroll.start']()}
+        disabled={!ready}
+        onclick={onautoscroll}
+      >
+        <span class="auto-text">
+          {autoScrolling ? m['cooking.autoScroll.stopShort']() : m['cooking.autoScroll.start']()}
+        </span>
+        <svg
+          class="auto-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M12 4v13m-5-5 5 5 5-5M6 21h12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </Button>
+    </div>
     <IconButton size="sm" bordered label={m['kitchen.controls']()} onclick={onkitchen}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M4 7h16M4 17h16M9 4v6M15 14v6" stroke-linecap="round" />
@@ -188,11 +202,65 @@
     height: var(--space-4);
   }
 
+  .auto-icon {
+    display: none;
+    width: var(--space-6);
+    height: var(--space-6);
+  }
+
   .advance :global(.button) {
     padding-inline: var(--space-3);
   }
 
   .advance-label {
     overflow-wrap: normal;
+  }
+
+  /* One line for the place, and the page's name as an icon: its accessible name stays. */
+  @media screen and (max-width: 24rem) {
+    .control-place {
+      flex-wrap: nowrap;
+    }
+
+    .recipe-return span {
+      display: none;
+    }
+
+    .recipe-return {
+      min-width: var(--control-sm);
+      justify-content: center;
+    }
+
+    .progress {
+      white-space: nowrap;
+    }
+
+    /* Too little width for the word: the icon stands in, named by the button's label. */
+    .auto-text {
+      display: none;
+    }
+
+    .auto-icon {
+      display: block;
+    }
+
+    /* Narrower side buttons leave Next room for its label on one line. */
+    .moves > :global(.icon-button) {
+      width: var(--control-sm);
+      height: var(--control-sm);
+    }
+
+    .advance :global(.button) {
+      padding-inline: var(--space-2);
+    }
+
+    .advance-label {
+      white-space: nowrap;
+    }
+
+    .auto-scroll :global(.button) {
+      padding-inline: 0;
+      width: var(--control-sm);
+    }
   }
 </style>
