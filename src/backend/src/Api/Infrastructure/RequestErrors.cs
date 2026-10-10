@@ -20,10 +20,15 @@ internal static class RequestErrors
         $"Unknown query parameter '{name}'. Check the spelling against the API documentation.",
         ErrorType.Validation);
 
-    internal static Error MissingQueryParameter(string name) => new(
+    internal static Error MissingQueryParameter(string name) => new FieldError(
+        name,
         "request.missing_parameter",
-        $"Query parameter '{name}' is required.",
-        ErrorType.Validation);
+        $"Query parameter '{name}' is required.");
+
+    internal static Error InvalidQueryParameter(string name, string expected) => new FieldError(
+        name,
+        "request.invalid_parameter",
+        $"Query parameter '{name}' must be {expected}.");
 
     internal static Error RepeatedQueryParameter(string name) => new(
         "request.repeated_parameter",
