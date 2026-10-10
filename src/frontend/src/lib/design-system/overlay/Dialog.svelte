@@ -206,6 +206,19 @@
     flex: 1;
   }
 
+  /* On a landscape phone the pinned parts would leave the list no height, so the whole body scrolls instead. */
+  @media (max-height: 30rem) {
+    .body:has(> :global([data-fills-dialog])) {
+      display: block;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
+
+    .body > :global([data-fills-dialog]) {
+      min-height: auto;
+    }
+  }
+
   .footer {
     display: flex;
     flex-shrink: 0;
