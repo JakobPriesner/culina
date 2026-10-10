@@ -6,7 +6,9 @@ using Domain.Recipes;
 using Domain.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.Processing;
@@ -241,8 +243,10 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             image.Mutate(context => context.AutoOrient());
 
             // Then only pixels: ImageSharp's JPEG encoder writes EXIF (with coordinates) even with SkipMetadata,
-            // so the profiles are dropped explicitly.
+            // so the profiles are dropped explicitly. The ICC profile goes too: its entries are parsed lazily, on
+            // first read (GHSA-gwg2-r3hj-4w44), and dropping it means nothing after decoding ever can read them.
             image.Metadata.ExifProfile = null;
+            image.Metadata.IccProfile = null;
             image.Metadata.XmpProfile = null;
             image.Metadata.IptcProfile = null;
 
@@ -267,9 +271,18 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
         failure is InvalidMemoryOperationException
         || failure.InnerException is InvalidMemoryOperationException;
 
+    /// <summary>
+    /// Only the formats Culina accepts, not Configuration.Default's every format: a TIFF, BMP or TGA is refused as
+    /// unreadable, and the TIFF decoder with its advisories is never registered. JPEG and WebP also carry the encoders
+    /// the renditions use.
+    /// </summary>
     private static Configuration Bounded()
     {
-        var configuration = Configuration.Default.Clone();
+        var configuration = new Configuration(
+            new JpegConfigurationModule(),
+            new PngConfigurationModule(),
+            new WebpConfigurationModule(),
+            new GifConfigurationModule());
 
         configuration.MemoryAllocator = MemoryAllocator.Create(
             new MemoryAllocatorOptions { AllocationLimitMegabytes = MostBufferMegabytes });
