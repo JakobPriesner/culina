@@ -21,6 +21,18 @@ export function createTimers(sessionId: () => string | null, url: () => string =
   let pending = Promise.resolve();
   const alerted = new SvelteSet<string>();
 
+  /** One session at a time: another session's key was left by one that ended unseen. */
+  function sweepOtherSessions(keep: string) {
+    try {
+      const stale = Object.keys(localStorage).filter(
+        (key) => key.startsWith(storageKey('')) && key !== storageKey(keep)
+      );
+      stale.forEach((key) => localStorage.removeItem(key));
+    } catch {
+      /* Optional. */
+    }
+  }
+
   function cache(id: string) {
     try {
       localStorage.setItem(storageKey(id), JSON.stringify(timers));
@@ -135,6 +147,7 @@ export function createTimers(sessionId: () => string | null, url: () => string =
       now = Date.now();
       timers = [];
       if (!id) return;
+      sweepOtherSessions(id);
       try {
         timers = validTimers(JSON.parse(localStorage.getItem(storageKey(id)) ?? '[]'));
       } catch {
@@ -252,23 +265,24 @@ export function createTimers(sessionId: () => string | null, url: () => string =
         navigator.serviceWorker?.removeEventListener('message', onMessage);
       };
     },
-    clear() {
-      const id = loadedFor;
-      revision++;
-      timers = [];
-      nextStep = undefined;
-      alerted.clear();
-      if (id) {
-        try {
-          localStorage.removeItem(storageKey(id));
-        } catch {
-          /* Optional. */
-        }
-        void queue(id, (state) => ({ ...state, timers: [], nextStep: undefined })).then(() =>
-          closeTimerNotification(id)
-        );
+    /** Drops what is held for a session that ended (default: the loaded one). */
+    clear(id: string | null = loadedFor) {
+      if (id === loadedFor) {
+        revision++;
+        timers = [];
+        nextStep = undefined;
+        alerted.clear();
+        loadedFor = null;
       }
-      loadedFor = null;
+      if (!id) return;
+      try {
+        localStorage.removeItem(storageKey(id));
+      } catch {
+        /* Optional. */
+      }
+      void queue(id, (state) => ({ ...state, timers: [], nextStep: undefined })).then(() =>
+        closeTimerNotification(id)
+      );
     }
   };
 }

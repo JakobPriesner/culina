@@ -11,4 +11,5 @@ export const kitchenTimers = createTimers(
       : '/'
 );
 export const kitchenWakeLock = createWakeLock();
+cooking.onEnded = (sessionId) => kitchenTimers.clear(sessionId);
 registerStore(() => kitchenTimers.clear());

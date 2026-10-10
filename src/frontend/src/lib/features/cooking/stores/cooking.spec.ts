@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { kitchenTimers } from '../kitchen.svelte';
 import { cooking } from './cooking.svelte';
 
 const session = (over: Record<string, unknown> = {}) => ({
@@ -196,5 +197,45 @@ describe('scaling while another kitchen view advances', () => {
     answer(json(session({ servings: 6 })));
     await scaling;
     expect(cooking.session).toBeNull();
+  });
+});
+
+describe('the timers of a session that ended', () => {
+  const key = 'culina.timers.s1';
+
+  async function cookingWithATimer() {
+    localStorage.clear();
+    serverAnswers(() => json(session()));
+    await cooking.resume();
+    kitchenTimers.start(0, 600, 'Simmer');
+    expect(localStorage.getItem(key)).not.toBeNull();
+  }
+
+  it('are dropped when it is finished or abandoned', async () => {
+    for (const completed of [true, false]) {
+      await cookingWithATimer();
+
+      serverAnswers(() => new Response(null, { status: 204 }));
+      await cooking.end(completed);
+
+      expect(localStorage.getItem(key)).toBeNull();
+    }
+  });
+
+  it('are dropped when the recipe is deleted', async () => {
+    await cookingWithATimer();
+
+    cooking.forget('r1');
+
+    expect(localStorage.getItem(key)).toBeNull();
+  });
+
+  it('are dropped when it ended on another device', async () => {
+    await cookingWithATimer();
+
+    serverAnswers(() => json({ code: 'cooking.session_not_found', detail: 'No.' }, 404));
+    await cooking.resume();
+
+    expect(localStorage.getItem(key)).toBeNull();
   });
 });
