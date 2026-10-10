@@ -239,3 +239,77 @@ describe('listening', () => {
     ]);
   });
 });
+
+describe('whose problem it is', () => {
+  const ours = `${location.origin}/_app/immutable/chunks/abc.js`;
+  const theirs = 'chrome-extension://abcdef/content.js';
+
+  async function recorded(dispatch: () => void) {
+    const stop = startReporting();
+
+    dispatch();
+    stop();
+    flush();
+    await vi.runAllTimersAsync();
+
+    return (await bodies()).flatMap((body) => body.records);
+  }
+
+  const failure = (init: { message?: string; filename?: string; stack?: string }) => () => {
+    // No `error` on it: the test runner treats a real one as an uncaught exception.
+    const error = init.stack ? { stack: init.stack } : undefined;
+
+    window.dispatchEvent(Object.assign(new Event('error'), { message: 'boom', ...init, error }));
+  };
+
+  const violation = (init: object) => () =>
+    document.dispatchEvent(
+      Object.assign(new Event('securitypolicyviolation'), {
+        effectiveDirective: 'script-src',
+        ...init
+      })
+    );
+
+  it('drops an error from an extension script', async () => {
+    expect(await recorded(failure({ filename: theirs }))).toEqual([]);
+  });
+
+  it('drops an error from another origin', async () => {
+    expect(await recorded(failure({ filename: 'https://cdn.example/lib.js' }))).toEqual([]);
+  });
+
+  it('drops the opaque error of a cross-origin script', async () => {
+    expect(await recorded(failure({ message: 'Script error.', filename: '' }))).toEqual([]);
+  });
+
+  it('keeps an error from our own script', async () => {
+    expect(await recorded(failure({ filename: ours }))).toHaveLength(1);
+  });
+
+  it('keeps an error with no file but a stack of ours', async () => {
+    expect(await recorded(failure({ stack: `Error: boom\n    at f (${ours}:1:2)` }))).toHaveLength(
+      1
+    );
+  });
+
+  it('drops an error whose stack is only an extension', async () => {
+    expect(await recorded(failure({ stack: `Error: boom\n    at f (${theirs}:1:2)` }))).toEqual([]);
+  });
+
+  it('keeps an error whose stack has one of our frames among theirs', async () => {
+    const stack = `Error: boom\n    at g (${theirs}:1:2)\n    at f (${ours}:3:4)`;
+
+    expect(await recorded(failure({ stack }))).toHaveLength(1);
+  });
+
+  it('drops a violation caused by an extension', async () => {
+    expect(await recorded(violation({ sourceFile: theirs, blockedURI: 'inline' }))).toEqual([]);
+    expect(await recorded(violation({ blockedURI: 'moz-extension://abcdef/inject.js' }))).toEqual(
+      []
+    );
+  });
+
+  it('keeps a violation from our own page', async () => {
+    expect(await recorded(violation({ sourceFile: '', blockedURI: 'eval' }))).toHaveLength(1);
+  });
+});

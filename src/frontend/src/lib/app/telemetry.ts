@@ -125,10 +125,24 @@ function bytes(value: unknown): number {
 export function startReporting(): () => void {
   learnClientHints();
 
-  const onError = (event: ErrorEvent) => report('uncaught_error', event.error ?? event.message);
-  const onRejection = (event: PromiseRejectionEvent) => report('unhandled_rejection', event.reason);
-  const onViolation = (event: SecurityPolicyViolationEvent) =>
-    report('csp_violation', `${event.effectiveDirective} blocked ${blocked(event.blockedURI)}`);
+  const onError = (event: ErrorEvent) => {
+    const stack: unknown = event.error?.stack;
+
+    // A cross-origin script's error arrives with nothing to tell where it came from.
+    if (isOurs(event.filename, stack) && (event.message !== 'Script error.' || stack)) {
+      report('uncaught_error', event.error ?? event.message);
+    }
+  };
+  const onRejection = (event: PromiseRejectionEvent) => {
+    if (isOurs('', event.reason?.stack)) {
+      report('unhandled_rejection', event.reason);
+    }
+  };
+  const onViolation = (event: SecurityPolicyViolationEvent) => {
+    if (!fromExtension(event.sourceFile) && !fromExtension(event.blockedURI)) {
+      report('csp_violation', `${event.effectiveDirective} blocked ${blocked(event.blockedURI)}`);
+    }
+  };
   const onWorkerMessage = (event: MessageEvent) => {
     const data = event.data as { type?: string } | null;
 
@@ -163,6 +177,29 @@ export function resetReporting(): void {
   keptAlive = 0;
   queue = [];
   seen.clear();
+}
+
+const extensionScheme = /^(?:chrome|moz|safari|safari-web)-extension:/;
+
+/** Extensions inject scripts and load images into the page; a violation they cause is theirs to fix. */
+function fromExtension(uri: string | undefined): boolean {
+  return extensionScheme.test(uri ?? '');
+}
+
+/**
+ * Whether the code that failed is ours. A file names it outright; without one, any frame of the stack
+ * in our origin will do. Minified frames are still our `/_app/immutable/` addresses, so no source map is needed.
+ * With neither a file nor addresses in the stack there is nothing to rule it out.
+ */
+function isOurs(filename: string, stack: unknown): boolean {
+  if (filename) {
+    return filename.startsWith(`${location.origin}/`);
+  }
+
+  const frames =
+    (typeof stack === 'string' ? stack : '').match(/\b[a-z][a-z0-9+.-]*:\/\/[^\s)]+/gi) ?? [];
+
+  return frames.length === 0 || frames.some((frame) => frame.startsWith(`${location.origin}/`));
 }
 
 /** The route id (`/(app)/recipes/[recipeId]`), never the address, which carries the recipe's id. */
