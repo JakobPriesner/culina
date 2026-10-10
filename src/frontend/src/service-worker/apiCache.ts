@@ -30,6 +30,9 @@ const readable = [
   // Network wins when it answers in time. Not stale-while-revalidate: it would show the
   // pre-edit recipe right after saving one.
   one(/^\/api\/v1\/recipes\/[^/]+$/, 'network-first'),
+  // An opened recipe is readable offline, and so is what it has in it. The recipe's ETag is its version alone,
+  // so a household's correction would hide behind a 304 there; this one is its own resource with its own tag.
+  one(/^\/api\/v1\/recipes\/[^/]+\/nutrition$/, 'network-first'),
   one(/^\/api\/v1\/recipes$/, 'network-first'),
   // Shopping list: supermarkets often have no reception.
   one(/^\/api\/v1\/households\/[^/]+\/shopping-list$/, 'network-first'),

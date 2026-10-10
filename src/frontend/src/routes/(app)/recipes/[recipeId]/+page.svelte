@@ -6,6 +6,7 @@
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import { notes } from '$features/cooking/stores/notes.svelte';
+  import NutritionPanel from '$features/nutrition/NutritionPanel.svelte';
   import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import RecipeBackLink from '$features/recipes/detail/RecipeBackLink.svelte';
   import RecipeSheets, { type RecipeSheet } from '$features/recipes/detail/RecipeSheets.svelte';
@@ -136,6 +137,8 @@
       ontitleview={(visible) => (titleInView = visible)}
       cookbooks={shelves}
     />
+
+    <NutritionPanel recipe={recipes.detail} {servings} householdId={session.activeHouseholdId} />
 
     <!-- Keyed so a pending autosave is flushed for the recipe it was typed on, not the next one. -->
     {#key recipeId}

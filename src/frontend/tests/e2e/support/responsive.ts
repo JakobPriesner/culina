@@ -71,6 +71,88 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
   version: 1
 };
 
+type WireIngredient = {
+  ingredientId?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  name: string;
+};
+
+/**
+ * What a kitchen table would make of each line: a gram line counts by mass, spoons by density, a count or an
+ * amount in nothing known cannot be weighed, a line without an amount has none, and a name the table does not
+ * know is unknown. Per-portion numbers are unrounded, as the server sends them.
+ */
+function nutrition(
+  ingredients: WireIngredient[]
+): components['schemas']['RecipesGetNutritionResponse'] {
+  const kcal = [240, 200, 80.9];
+  let counted = 0;
+  const lines = ingredients.map((one) => {
+    const ingredientId = one.ingredientId as string;
+    const food = (nameDe: string, nameEn: string) => ({ code: 'X', nameDe, nameEn });
+    const long = 'handwerklich gebacken, mit Sonnenblumenkernen und Leinsamen';
+
+    if (one.name.includes('Vorrat'))
+      return { ingredientId, status: 'unknownFood' as const, corrected: false };
+    if (one.quantity == null || one.unit == null)
+      return { ingredientId, status: 'noAmount' as const, corrected: false };
+    if (one.unit === 'g') {
+      const energyKcal = kcal[counted] ?? 10;
+      counted += 1;
+      return {
+        ingredientId,
+        status: 'counted' as const,
+        food: food(`Vollkornbrot, ${long}`, `Wholegrain bread, ${long}`),
+        grams: one.quantity,
+        via: 'mass' as const,
+        corrected: false,
+        energyKcal
+      };
+    }
+    if (one.unit === 'tbsp') {
+      counted += 1;
+      return {
+        ingredientId,
+        status: 'counted' as const,
+        food: food('Olivenöl', 'Olive oil'),
+        grams: one.quantity * 13.5,
+        via: 'density' as const,
+        corrected: false,
+        energyKcal: 80.9
+      };
+    }
+    return { ingredientId, status: 'amountNotInGrams' as const, corrected: false };
+  });
+  const complete = counted === ingredients.length;
+  const value = (amount: number) => ({ value: amount, atLeast: !complete });
+
+  return {
+    per: 'serving',
+    yield: 2,
+    complete,
+    counted,
+    lines: ingredients.length,
+    values: {
+      energyKj: value(2179.5),
+      energyKcal: value(520.9),
+      fat: value(31.62),
+      saturatedFat: value(19.04),
+      carbohydrate: value(7.46),
+      sugars: value(3.05),
+      protein: value(9.2),
+      salt: value(0.456)
+    },
+    ingredients: lines,
+    source: {
+      name: 'Bundeslebensmittelschlüssel',
+      version: '4.0',
+      publisher: 'Max Rubner-Institut',
+      licence: 'CC BY 4.0'
+    }
+  };
+}
+
 /** Layout fixtures exercise the real routes without accounts or writes to a backend. */
 export async function responsiveData(
   page: Page,
@@ -80,7 +162,9 @@ export async function responsiveData(
     activeCooking = true,
     longSteps = false,
     suggestions = 0,
-    draw = false
+    draw = false,
+    // A kitchen's worth of lines for the nutrition panel: spoons of oil, a count, and one with no amount.
+    nutritionLines = false
   } = {}
 ) {
   const detail = {
@@ -103,6 +187,13 @@ export async function responsiveData(
       {
         ingredients: [
           ...recipe.groups[0]!.ingredients,
+          ...(nutritionLines
+            ? [
+                { ingredientId: 'oil', name: 'Olivenöl', quantity: 2, unit: 'tbsp' },
+                { ingredientId: 'onion', name: 'Zwiebel', quantity: 1, unit: 'piece' },
+                { ingredientId: 'salt', name: 'Salz' }
+              ]
+            : []),
           ...Array.from({ length: extraIngredients }, (_, i) => ({
             ingredientId: `extra-${i}`,
             name: `Gemüse aus dem Vorrat ${i + 1}`,
@@ -193,6 +284,8 @@ export async function responsiveData(
     if (path.endsWith('/units')) return reply({ own: [] });
     if (path.endsWith('/ingredients')) return reply({ items: [] });
     if (path === `/recipes/${recipeId}`) return reply(detail);
+    if (path === `/recipes/${recipeId}/nutrition`)
+      return reply(nutrition(detail.groups[0]!.ingredients));
     if (path.endsWith('/notes')) return reply({ overall: '', steps: [] });
     if (path.endsWith('/cook-log')) return reply({ count: 0, items: [] });
     if (path === '/recipes')

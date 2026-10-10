@@ -1,0 +1,143 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
+
+import { expectReflow, recipeId, responsiveData } from './support/responsive';
+
+/* The routed fixture stands in for the backend, so these need nothing but the built app. */
+test.describe('nutrition on a recipe @offline', () => {
+  // A service worker would answer these reads itself, past the route.
+  test.use({ serviceWorkers: 'block' });
+
+  const words = {
+    de: {
+      headline: /mind\.\s520\skcal\spro\sPortion\s·\s3\svon\s5\sZutaten/,
+      energy: /mind\.\s2\.179\skJ\s\/\s520\skcal/,
+      counted: 'Gezählt',
+      notCounted: 'Nicht gezählt',
+      reason: 'Menge nicht in Gramm',
+      byDensity: /≈\s27\sg\s·\süber die Dichte/,
+      credit: 'Nährwerte: Max Rubner-Institut, Bundeslebensmittelschlüssel 4.0 (CC BY 4.0)'
+    },
+    en: {
+      headline: /at\sleast\s520\skcal\sper\sserving\s·\s3\sof\s5\singredients/,
+      energy: /at\sleast\s2,179\skJ\s\/\s520\skcal/,
+      counted: 'Counted',
+      notCounted: 'Not counted',
+      reason: 'amount not in grams',
+      byDensity: /≈\s27\sg\s·\sby density/,
+      credit: 'Nutrition values: Max Rubner-Institut, Bundeslebensmittelschlüssel 4.0 (CC BY 4.0)'
+    }
+  } as const;
+
+  for (const locale of ['de', 'en'] as const) {
+    test(`says what it covers and shows how it was counted in ${locale}`, async ({ page }) => {
+      const said = words[locale];
+
+      await responsiveData(page, locale, { nutritionLines: true });
+      await page.goto(`/recipes/${recipeId}`);
+
+      const summary = page.locator('summary', { hasText: said.headline });
+
+      await expect(summary).toBeVisible();
+      await expect(page.getByRole('table')).toBeHidden();
+
+      await summary.click();
+
+      const table = page.getByRole('table');
+
+      await expect(table.getByRole('row', { name: said.energy })).toBeVisible();
+      await expect(page.getByRole('heading', { name: said.counted, exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: said.notCounted, exact: true })).toBeVisible();
+      await expect(page.getByText(said.reason)).toBeVisible();
+      await expect(page.getByText(said.byDensity)).toBeVisible();
+      await expect(page.locator('p.source:visible', { hasText: said.credit })).toBeVisible();
+      await expect(
+        page.getByRole('link', { name: /Bundeslebensmittelschlüssel 4\.0/ })
+      ).toHaveAttribute('href', 'https://blsdb.de');
+    });
+  }
+
+  test('is reached by Tab and opens with Enter', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'No keyboard on a phone.');
+    await responsiveData(page, 'en', { nutritionLines: true });
+    await page.goto(`/recipes/${recipeId}`);
+
+    const summary = page.locator('summary', { hasText: 'Nutrition' });
+
+    await expect(summary).toBeVisible();
+
+    for (let presses = 0; presses < 80; presses += 1) {
+      await page.keyboard.press('Tab');
+
+      if (await summary.evaluate((element) => element === document.activeElement)) {
+        break;
+      }
+    }
+
+    await expect(summary).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('table')).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('table')).toBeHidden();
+  });
+
+  test('does not spill past a 320 px screen, closed or open', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+    await page.setViewportSize({ width: 320, height: 720 });
+    await responsiveData(page, 'de', { extraIngredients: 3, nutritionLines: true });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/recipes/${recipeId}`);
+
+    const summary = page.locator('summary', { hasText: 'Nährwerte' });
+
+    await expect(summary).toBeVisible();
+    await expectReflow(page);
+    await summary.click();
+    await expect(page.getByRole('table')).toBeVisible();
+    await expectReflow(page);
+  });
+
+  for (const mode of ['light', 'dark'] as const) {
+    test(`is accessible when open, in ${mode} mode`, async ({ browser }) => {
+      // Explicit context: axe refuses a page made straight from the browser.
+      const context = await browser.newContext({
+        reducedMotion: 'reduce',
+        serviceWorkers: 'block'
+      });
+      const page = await context.newPage();
+
+      await page.addInitScript((appearance) => {
+        localStorage.setItem(
+          'culina.appearance',
+          JSON.stringify({ theme: 'warm-paper', mode: appearance })
+        );
+      }, mode);
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto(`/recipes/${recipeId}`);
+      await page.locator('summary', { hasText: 'Nährwerte' }).click();
+      await expect(page.getByRole('table')).toBeVisible();
+
+      const result = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
+
+      expect(result.violations.map((violation) => violation.id)).toEqual([]);
+      await context.close();
+    });
+  }
+
+  test('prints the headline and the credit with the panel closed, and no chevron', async ({
+    page
+  }) => {
+    await responsiveData(page, 'de', { nutritionLines: true });
+    await page.goto(`/recipes/${recipeId}`);
+    await expect(page.locator('summary', { hasText: 'Nährwerte' })).toBeVisible();
+    await page.emulateMedia({ media: 'print' });
+
+    await expect(page.locator('summary', { hasText: /mind\.\s520\skcal/ })).toBeVisible();
+    await expect(page.locator('p.source:visible')).toHaveCount(1);
+    await expect(page.locator('p.source:visible')).toContainText('Max Rubner-Institut');
+    await expect(page.locator('summary .chevron')).toBeHidden();
+    await expect(page.getByRole('table')).toBeHidden();
+  });
+});
