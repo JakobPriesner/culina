@@ -1,7 +1,7 @@
 import { http, request, type AppError } from '$api';
 import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
-import { toNutrition } from '../mappers';
+import { readNutrition } from '../mappers';
 import type { Correction, Nutrition, NutritionLine } from '../types';
 
 /**
@@ -27,8 +27,31 @@ class NutritionStore {
     return this.#key === keyOf(recipeId, householdId) ? this.#status : 'idle';
   }
 
-  async load(recipeId: string, householdId: string | null): Promise<void> {
-    const key = keyOf(recipeId, householdId);
+  /** The same for the recipe a share link names; nobody's corrections apply to it. */
+  answerForShared(token: string): Nutrition | null {
+    return this.answerFor(sharedKeyOf(token), null);
+  }
+
+  statusForShared(token: string): LoadStatus {
+    return this.statusFor(sharedKeyOf(token), null);
+  }
+
+  load(recipeId: string, householdId: string | null): Promise<void> {
+    return this.#read(keyOf(recipeId, householdId), () =>
+      http.GET('/api/v1/recipes/{recipeId}/nutrition', {
+        params: { path: { recipeId }, query: { householdId: householdId ?? undefined } }
+      })
+    );
+  }
+
+  /** Signed out is fine: the token is the whole authorisation. */
+  loadShared(token: string): Promise<void> {
+    return this.#read(keyOf(sharedKeyOf(token), null), () =>
+      http.GET('/api/v1/shared-recipes/{token}/nutrition', { params: { path: { token } } })
+    );
+  }
+
+  async #read(key: string, ask: Ask): Promise<void> {
     const current = this.#latest.start();
     const known = this.#seen.get(key) ?? null;
 
@@ -36,18 +59,14 @@ class NutritionStore {
     this.#answer = known;
     this.#status = known ? 'ready' : 'loading';
 
-    const result = await request(() =>
-      http.GET('/api/v1/recipes/{recipeId}/nutrition', {
-        params: { path: { recipeId }, query: { householdId: householdId ?? undefined } }
-      })
-    );
+    const result = await request(ask);
 
     if (!current()) {
       return;
     }
 
     // An answer this client cannot read is a failed read, like any other.
-    const answer = result.ok ? read(result.value) : null;
+    const answer = result.ok ? readNutrition(result.value) : null;
 
     if (!answer) {
       // What is on screen was true a moment ago; only say nothing is available when there is nothing.
@@ -119,13 +138,7 @@ class NutritionStore {
   }
 }
 
-const read = (wire: Parameters<typeof toNutrition>[0]): Nutrition | null => {
-  try {
-    return toNutrition(wire);
-  } catch {
-    return null;
-  }
-};
+type Ask = Parameters<typeof request<Parameters<typeof readNutrition>[0]>>[0];
 
 /** The line as the correction will make it; the server's reading replaces this a moment later. */
 const corrected = (line: NutritionLine, correction: Correction): NutritionLine => {
@@ -151,6 +164,8 @@ const corrected = (line: NutritionLine, correction: Correction): NutritionLine =
       return { ...line, corrected: false };
   }
 };
+
+const sharedKeyOf = (token: string) => `shared:${token}`;
 
 const keyOf = (recipeId: string, householdId: string | null) => `${recipeId}:${householdId ?? ''}`;
 

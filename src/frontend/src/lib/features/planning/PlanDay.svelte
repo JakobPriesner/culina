@@ -4,6 +4,7 @@
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
   import type { PlannedDay, PlannedMeal } from './mealPlan.svelte';
+  import PlanDayNutrition from './PlanDayNutrition.svelte';
   import PlannedCard from './PlannedCard.svelte';
   import { weekdayName } from './weekDates';
   import type { OnDrop, WeekDrag } from './weekDrag.svelte';
@@ -11,6 +12,7 @@
   interface Props {
     day: PlannedDay;
     today: boolean;
+    householdId: string | null;
     drag: WeekDrag;
     ondrop: OnDrop;
     onadd: () => void;
@@ -18,7 +20,7 @@
     onremove: (meal: PlannedMeal) => void;
   }
 
-  let { day, today, drag, ondrop, onadd, onmove, onremove }: Props = $props();
+  let { day, today, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
 
   const landing = $derived(drag.landing?.date === day.date ? drag.landing : null);
 </script>
@@ -58,6 +60,8 @@
       {/if}
     </ul>
   {/if}
+
+  <PlanDayNutrition meals={day.meals} {householdId} />
 
   <Button size="sm" variant="ghost" onclick={onadd}>+ {m['plan.add']()}</Button>
 </li>

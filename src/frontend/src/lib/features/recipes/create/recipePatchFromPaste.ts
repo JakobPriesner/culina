@@ -1,9 +1,15 @@
 import type { ParsedRecipe } from '$features/recipes/editor/parseRecipeText';
 import type { Recipe } from '$features/recipes/types';
 
-/** Fields a pasted recipe adds to the new one. Yield and time only when parsed; steps stay plain text (no guessed @ingredient links). */
+/** Fields a pasted recipe adds to the new one. Yield (with what it counts and its word) and time only when parsed; steps stay plain text (no guessed @ingredient links). */
 export const recipePatchFromPaste = (pasted: ParsedRecipe): Partial<Recipe> => ({
-  ...(pasted.servings === undefined ? {} : { yieldAmount: pasted.servings }),
+  ...(pasted.servings === undefined
+    ? {}
+    : {
+        yieldAmount: pasted.servings,
+        yieldKind: pasted.yieldKind ?? 'servings',
+        yieldLabel: pasted.yieldLabel ?? null
+      }),
   ...(pasted.totalMinutes === undefined ? {} : { cookMinutes: pasted.totalMinutes }),
   groups: [
     {
