@@ -14,7 +14,7 @@ Keep the strongest idea from the original brief: continuity across finding → r
 
 **Suggested v1:** accounts and household membership; recipe creation/editing, photos, search and favourites; trustworthy scaling; reading/cooking; local recovery of drafts and cooking progress; installable PWA with a bounded offline read contract; recoverable deletion, account recovery, operational backups and basic data portability.
 
-**After the core release:** shopping, meal planning, cook history, personal result photos, URL import, social features and nutrition estimates. The current backlog already contains shopping and cook-history work. Preserve it, but explicitly decide its release milestone; do not accidentally ship a larger v1 because tickets exist. Offline authoring with automatic background merging is also a separate capability.
+**After the core release:** shopping, meal planning, cook history, personal result photos, URL import and social features. Nutrition *estimates* stay out; a cited lookup that states its own coverage was built instead (`docs/nutrition-design.md`, October 2026). The current backlog already contains shopping and cook-history work. Preserve it, but explicitly decide its release milestone; do not accidentally ship a larger v1 because tickets exist. Offline authoring with automatic background merging is also a separate capability.
 
 Before accepting this scope, answer: What task brings someone back weekly? Who owns a household when its creator leaves? Must a shared device retain private recipes offline? Does one user belong to several households? The current domain documentation already anticipates richer membership than the original one-household-per-user sketch.
 

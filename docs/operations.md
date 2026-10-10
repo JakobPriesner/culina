@@ -33,6 +33,14 @@ time, which is safe because they are the same for everyone. If your proxy
 compresses, leave `/api` out of it. It trusts `X-Forwarded-*` only from the
 proxies you name.
 
+**Nutrition data ships inside the image.** The food composition table
+(Bundeslebensmittelschlüssel 4.0, Max Rubner-Institut) is embedded in the
+backend: no volume, no download on first run, and no outbound request — Culina
+still makes none that a person did not ask for. It is licensed CC BY 4.0, which
+requires attribution wherever its values are shown; the recipe page's nutrition
+panel carries it. Keep that line if you change the panel, and keep
+`src/backend/src/Infrastructure/Nutrition/BLS-ATTRIBUTION.md` with the file.
+
 ## Installing
 
 ```bash

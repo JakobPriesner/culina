@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Accepted 27 September 2026, including the four decisions in §O. Nothing here is built. |
+| Status | Built 10 October 2026 (`culina-v2-bk9l.1`–`.5`). Accepted 27 September 2026, including the four decisions in §O. Where the build differs from the proposal, §Q says so. |
 | Written | 27 September 2026 |
 | Decides | Whether Culina shows nutrition, from what data, and how it stays honest |
 | Bead | `culina-v2-bk9l` and its children |
@@ -596,3 +596,94 @@ rather than left to drift. **All four were accepted on 27 September 2026.**
   `Domain/Recipes/Quantity.cs`, `Domain/Recipes/Units.cs`,
   `Domain/Search/CulinaryLexicon.cs`, `0006_shopping.sql`,
   `Api/Infrastructure/ETag.cs`, `Infrastructure/Persistence/Recipes/RecipeRepository.cs`.
+
+---
+
+## Q. As built (10 October 2026)
+
+Everything above was built as written, with these differences and decisions.
+
+**The gate (§N), measured.** The evaluation runs over a committed fixture of
+970 real ingredient lines from 125 recipes (quantity, unit and name only),
+judged blind: whoever wrote the expected foods never saw the name table. Result
+(`NutritionEvaluationTests`): recognised 780 of 970, **precision 780/780 =
+100 %** (bar 98 %), counted 459 of 970 (414 without the egg rule, 351 without
+densities, 306 with neither), 8 of 125 recipes counted completely, median
+recipe 50 % counted. The median is not *under* half, so the summary line keeps
+its figure, always with its coverage beside it. The decision is recorded on the
+epic.
+
+**Data (§B).**
+- A value the BLS marks as a trace or below the limit of detection or
+  quantification (`TR`, `<LOD`, `<LOQ`) is written `tr` and counts as zero:
+  present but too small to measure, and zero keeps every sum a lower bound.
+  `-` stays unknown.
+- The extract is `src/backend/src/Infrastructure/Nutrition/bls.tsv` (7,140
+  foods, about 830 KB), made by `scripts/extract-bls.py` (standard library only),
+  with `BLS-ATTRIBUTION.md` beside it. A malformed row stops the host at
+  startup.
+- `NutritionData.Version` is the extract-and-rules version plus
+  `FoodNames.Version`, so a change to the name table cannot forget to move the
+  ETag.
+
+**Grams (§C).**
+- One egg counts as 51 g edible: size M's midpoint (58 g in the shell) minus
+  12 % shell, the refuse USDA FoodData Central gives for a raw egg (fdc 171287:
+  a large egg is 50 g edible of about 57 g). BLS values are per 100 g edible
+  portion (BLS documentation §7.2), so the shell has to come off.
+- Yolks and whites by count are counted too, as that egg in the USDA
+  proportions (17 g yolk and 33 g white of 50 g). It is the egg rule applied to
+  its parts, not a new kind of weight.
+- An egg counts only with no unit or the built-in `piece`.
+- 43 entries pour and carry a density, each from an FDC SR Legacy portion row
+  named beside it.
+
+**Names (§D).**
+- 251 entries, curated from the library's own names and `CommonIngredients`.
+  Left out on purpose, among others: *Brühe* and its kinds (the same word is a
+  powder at about 200 kcal per 100 g and a liquid at about 8, so only the
+  unmistakable powder words are entries), *Fond* (the judge did not accept the
+  generic meat stock for poultry or veal stock), canned or jarred fruit and
+  pulses that BLS has only raw or dry (*Kidneybohnen*, *Sauerkirschen*), and
+  words with two very different foods behind them (*Paprika*, *Hefe*,
+  *Schinken*, *Speck*, *Kakao*).
+- Names are read in both of Culina's transliterations (`SearchText.FoldAe` and
+  `FoldA`, the lexicon's pair), so *Möhren*, *Moehren* and *Mohren* are one. The
+  correction key stays `ItemName.Fold`, as §G says.
+- A one- or two-letter plural glued to a word is dropped before matching
+  (*Tomate(n)*); any other parenthesis stays part of the name, so *Balsamicoessig
+  (bianco)* matches nothing.
+- The short-ending rule applies to the last word of a multi-word form too: an
+  ending is allowed only when what remains has at least four letters.
+
+**API (§H).**
+- Each counted line also carries its own energy per portion, so the breakdown's
+  rows add up to the headline and show where the energy comes from.
+- `source` names the publisher and the licence as well as the table and its
+  version.
+- The correction routes are `PUT` and `DELETE
+  /households/{householdId}/ingredients/{name}`. Routing leaves `%2F` encoded, so
+  the name is read from the raw request target, and a name with a slash or a
+  percent sign round-trips.
+- `GET /foods` has an ETag from the data version.
+- `nutrition_food_overrides` references `households_with_deleted`, because
+  `households` has been a view since migration 0025.
+
+**Frontend (§I).**
+- The breakdown shows converted grams only (`≈ 27 g · über die Dichte`). A
+  mass line already says its grams.
+- The breakdown's amounts follow the servings stepper, and the per-portion
+  figures never do.
+- Nutrition answers join the private offline cache beside `/recipes/{id}`,
+  network-first, so an opened recipe's figure is there offline too.
+- A printed recipe shows the headline and the credit.
+- The panel is keyed by the household the recipe is read in, because
+  corrections belong to it.
+- The correction (§G) is a small button on every breakdown row, including the
+  ones not counted, because a correction is about the name and reaches every
+  recipe. It opens a sheet that states that reach, ticks the current food,
+  searches the table with kcal per 100 g beside each food, and offers "Nicht
+  zählen" and, once corrected, "Zurück zum Standard". It is applied
+  optimistically, rolled back on refusal, and the totals are always read back
+  from the server.
+
