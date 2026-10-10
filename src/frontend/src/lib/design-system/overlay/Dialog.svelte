@@ -229,6 +229,13 @@
     border-top: 1px solid var(--border);
   }
 
+  /* On a phone, in either orientation, the footer is a strip, not a third of the dialog. */
+  @media (max-width: 30rem), (max-height: 30rem) {
+    .footer {
+      padding: var(--space-3) var(--space-4);
+    }
+  }
+
   .centre {
     width: min(32rem, calc(100vw - var(--space-8)));
     margin: auto;
