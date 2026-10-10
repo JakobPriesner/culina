@@ -129,7 +129,9 @@ test.describe('a recipe already opened', () => {
 
     expect(kept.length).toBeGreaterThan(0);
     expect(
-      kept.filter((path) => !/^\/api\/v1\/(recipes(\/[^/]+(\/image)?)?|users\/me)$/.test(path))
+      kept.filter(
+        (path) => !/^\/api\/v1\/(recipes(\/[^/]+(\/(image|nutrition))?)?|users\/me)$/.test(path)
+      )
     ).toEqual([]);
   });
 
