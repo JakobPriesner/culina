@@ -84,10 +84,16 @@ CSP differs by what is being served:
   style-src 'self' 'nonce-…'; style-src-attr 'unsafe-hashes' 'sha256-…';
   img-src 'self' data: blob:; connect-src 'self'; font-src 'self';
   object-src 'none'; base-uri 'none'; frame-ancestors 'none';
-  form-action 'self'`. The single `style-src-attr` hash is SvelteKit's route
+  form-action 'self'; require-trusted-types-for 'script'; trusted-types
+  svelte-trusted-html sveltekit-trusted-url culina-worker-url`. The single `style-src-attr` hash is SvelteKit's route
   announcer (`SecurityHeaders.AnnouncerStyleHash`); a nonce cannot go on an
   attribute, so no other `style="…"` may reach the document — set styles
   through the CSSOM (Svelte's `style:` directive) or a nonced `<style>`.
+
+Trusted Types is enforced: a string reaching `innerHTML`, a script's text or
+`serviceWorker.register` throws unless a named policy made it. The allow-list is
+`SecurityHeaders.TrustedTypesPolicies`; a new sink needs a policy that validates
+its input *and* its name added there, never `default` or `allow-duplicates`.
 
 No `'unsafe-inline'` and no `'unsafe-eval'` in `script-src`, ever — they
 disable the policy. Inline scripts carry a per-response nonce.

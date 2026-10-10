@@ -5,8 +5,10 @@ description: The static files the culina-v2 frontend must ship and keep correct 
 
 # Static files
 
-Everything here lives in `src/frontend/static/` and is copied to the build root
-verbatim. These files are small, easy to forget, and each one is either a
+Files in `src/frontend/static/` are copied to the build root verbatim;
+`robots.txt` and `sitemap.xml` are generated into `build/` by
+`build-tools/siteFiles.ts`, and `security.txt` is written by the backend.
+These files are small, easy to forget, and each one is either a
 security, SEO, or install-experience requirement.
 
 ## robots.txt
@@ -14,26 +16,17 @@ security, SEO, or install-experience requirement.
 Culina is a self-hosted, mostly-authenticated app: the crawl surface is the
 marketing/landing and documentation routes, and nothing else.
 
-```
-User-agent: *
-Allow: /$
-Allow: /login
-Disallow: /api/
-Disallow: /recipes/
-Disallow: /household/
-Disallow: /settings/
-Disallow: /admin/
-
-Sitemap: https://example.com/sitemap.xml
-```
+Generated from `publicRoutes` and `privateRoutePrefixes` in
+`src/lib/app/publicRoutes.ts`: one `Allow` per public route, one `Disallow` per
+private prefix. A new route is added to that file, never to a copy of the list.
 
 - Authenticated routes are disallowed because a crawler that follows a shared
   link should not index a private page's shell.
 - `robots.txt` is **not** an access control. Every route it disallows must
   still be protected server-side.
 - The absolute `Sitemap:` URL is the one thing here that needs the deployment's
-  origin, so it is templated at build time from a public env var rather than
-  hard-coded.
+  origin, so it comes from `PUBLIC_SITE_URL` at build time and is left out
+  when that is unset.
 
 ## sitemap.xml
 
@@ -48,8 +41,8 @@ routes, never hand-maintained, so a new public route cannot be forgotten:
 </urlset>
 ```
 
-If the deployment is entirely private, ship a sitemap with only the landing
-page rather than omitting the file.
+Without `PUBLIC_SITE_URL` no sitemap is written: a private instance has no
+public address to put in one.
 
 ## security.txt
 
@@ -83,9 +76,9 @@ is worse than none. Written per request, it is always half a year out.
   "background_color": "#ffffff",
   "theme_color": "#1f2937",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
 ```

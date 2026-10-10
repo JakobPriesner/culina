@@ -14,6 +14,9 @@ Four projects, four jobs:
 | `ArchitectureTests` | The structural rules hold: layer references, endpoint layout, handler registration, error-code format, settings `Validate()`. | Assembly metadata only. |
 | `IntegrationTests` | The wire behaves: routing, status codes, cookies, CSRF, headers, ETags, SQL. | Real API host + PostgreSQL via Testcontainers. |
 
+Shared fakes and `ResultAssertions` live in `tests/TestSupport`, which the test
+projects reference.
+
 Every behaviour is tested at the **lowest level that can prove it**. A rule
 about who may edit a household is a `Domain` test, not an HTTP round trip.
 Integration tests cover the things only the real pipeline can show.
@@ -47,14 +50,17 @@ public class CreateUserCommandHandlerTests
   same assertion over several inputs. A `[Theory]` with a branch inside it is
   two tests.
 - Always pass the test's cancellation token to the code under test.
-- No `Thread.Sleep`, no real clock (`TimeProvider` is injected — use
-  `FakeTimeProvider`), no shared mutable static state, no ordering between
+- No `Thread.Sleep`, no shared mutable static state, no ordering between
   tests. Tests run in parallel.
+- Time arrives as an injected `TimeProvider`: pass `TimeProvider.System` when
+  the outcome does not depend on the clock, and a `FakeTimeProvider`
+  (`Microsoft.Extensions.TimeProvider.Testing`, added to
+  `Directory.Packages.props` when first needed) when it does.
 
 ## Fakes, not a mocking framework
 
 Ports are small interfaces this repo owns, so a hand-written fake in
-`Application.UnitTests/Fakes/` is shorter and clearer than a mock setup, and it
+`tests/TestSupport/` is shorter and clearer than a mock setup, and it
 fails to compile — rather than at runtime — when the interface changes.
 
 ```csharp
@@ -80,8 +86,8 @@ about.
 
 ## Asserting on Result
 
-`Result` exposes no `IsSuccess` for branching, so the test project defines
-assertion helpers once:
+`Result` exposes no `IsSuccess` for branching, so
+`tests/TestSupport/ResultAssertions.cs` defines assertion helpers once:
 
 ```csharp
 internal static class ResultAssertions
