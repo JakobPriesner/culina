@@ -325,3 +325,12 @@ export async function expectReflow(page: Page) {
     page.viewportSize()!.width
   );
 }
+
+/** Leaves guided cooking for Shopping through the app navigation; a phone hides that navigation while cooking, so it goes back to the recipe first (an English page). */
+export async function openShoppingFromCooking(page: Page) {
+  const nav = page.locator('nav:visible');
+  if ((await nav.count()) === 0) {
+    await page.getByRole('link', { name: 'Back to recipe', exact: true }).click();
+  }
+  await nav.getByRole('link', { name: /shopping/i }).click();
+}
