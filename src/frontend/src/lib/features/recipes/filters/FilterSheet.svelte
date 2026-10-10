@@ -101,11 +101,13 @@
   </div>
 
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => view.clear()}>{m['filters.clear']()}</Button>
-    {#if onsave}
-      <Button onclick={onsave}>{m['saved.save']()}</Button>
-    {/if}
-    <Button variant="primary" onclick={onclose}>{m['filters.close']()}</Button>
+    <div class="actions">
+      <Button variant="ghost" size="sm" onclick={() => view.clear()}>{m['filters.clear']()}</Button>
+      {#if onsave}
+        <Button size="sm" onclick={onsave}>{m['saved.save']()}</Button>
+      {/if}
+      <Button variant="primary" onclick={onclose}>{m['filters.close']()}</Button>
+    </div>
   {/snippet}
 </Sheet>
 
@@ -114,6 +116,27 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
+  }
+
+  /*
+   * One row at every width: stacking three buttons would leave the choices a sliver of a short screen.
+   * The secondary actions share what the primary one leaves and wrap their text if they must.
+   */
+  .actions {
+    display: flex;
+    flex: 1;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+
+  .actions > :global(button) {
+    flex: 1 1 0;
+    padding-inline: var(--space-2);
+  }
+
+  .actions > :global(button:last-child) {
+    flex: 0 0 auto;
+    padding-inline: var(--space-3);
   }
 
   .ceilings {
