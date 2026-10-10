@@ -1537,5 +1537,6 @@
   "auth.join.confirm.household": "You're invited to join {household}.",
   "cooking.backToRecipe": "Back to recipe",
   "cooking.recipe": "Recipe",
-  "cooking.start.failed": "Cooking could not be started, so the step buttons are off. Try again."
+  "cooking.start.failed": "Cooking could not be started, so the step buttons are off. Try again.",
+  "problem.request.invalid_parameter": "Culina couldn't handle that request. Reload the page and try again."
 }
