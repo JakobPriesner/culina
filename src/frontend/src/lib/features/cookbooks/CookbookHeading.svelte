@@ -20,7 +20,7 @@
     <Skeleton width="16rem" height="2.25rem" />
     <Skeleton width="24rem" height="1.25rem" />
   {:else}
-    <h1 class="title">{cookbook?.name ?? ''}</h1>
+    <h1 class="title" title={cookbook?.name}>{cookbook?.name ?? ''}</h1>
 
     {#if cookbook?.description}
       <p class="subtitle">{cookbook.description}</p>
@@ -75,6 +75,27 @@
     margin-top: var(--space-3);
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  /* On a phone a long name gets two to three lines and the description two, with the full text on hover. */
+  @media (width < 36rem) {
+    .title {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      font-size: var(--text-2xl);
+      overflow-wrap: anywhere;
+    }
+
+    .subtitle {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
   }
 
   .automatic {
