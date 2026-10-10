@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { cookbookId, expectReflow, recipeId, responsiveData } from './support/responsive';
 
 // Boundary pairs catch layouts that fit a phone and a laptop but break in between.
-const widths = [320, 390, 639, 640, 767, 768, 1023, 1024, 1279, 1280, 1536];
+const widths = [320, 390, 639, 640, 767, 768, 1023, 1024, 1279, 1280, 1536, 1920, 2560, 3440];
 
 test.describe('responsive production layouts @offline', () => {
   test.use({ serviceWorkers: 'block' });
@@ -84,9 +84,16 @@ test.describe('responsive production layouts @offline', () => {
                   expect((await name.boundingBox())!.width).toBeGreaterThanOrEqual(100);
                 }
               }
-              expect(columns).toBe(
-                width < 640 ? 1 : width < 1024 ? 2 : path === '/plan' && width >= 1280 ? 7 : 3
-              );
+              if (path === '/' && width >= 1920) {
+                // Large screens add columns to the grid while headings keep the page's width.
+                expect(columns).toBeGreaterThan(width >= 2560 ? 4 : 3);
+                const box = (await grid.boundingBox())!;
+                expect(box.width).toBeGreaterThan(Math.min(width, 2400) * 0.8);
+              } else {
+                expect(columns).toBe(
+                  width < 640 ? 1 : width < 1024 ? 2 : path === '/plan' && width >= 1280 ? 7 : 3
+                );
+              }
             }
           });
         }
