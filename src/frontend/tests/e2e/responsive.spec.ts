@@ -137,6 +137,50 @@ test.describe('responsive production layouts @offline', () => {
     await expectReflow(page);
   });
 
+  for (const [width, height] of [
+    [844, 390],
+    [667, 375]
+  ] as const) {
+    test(`planner picker keeps its results usable at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('/plan');
+      await page.getByRole('button', { name: /^Weiter →$/i }).click();
+      await page
+        .getByRole('button', { name: /Hinzufügen/i })
+        .first()
+        .click();
+      const dialog = page.getByRole('dialog');
+      const results = dialog.locator('ul.results');
+      // Searching swaps the empty suggestions the fixture answers with for its six recipes.
+      await dialog.getByRole('searchbox').fill('brot');
+      await expect(results.getByRole('button').first()).toBeVisible();
+
+      // The body scrolls as a whole, so the list is as tall as its rows and nothing inside is clipped away.
+      const list = await results.evaluate((element) => ({
+        client: element.clientHeight,
+        scroll: element.scrollHeight
+      }));
+      expect(list.client).toBeGreaterThan(100);
+      expect(list.client).toBeGreaterThanOrEqual(list.scroll);
+
+      // Every choice and the last result can be scrolled to and clicked, and the close control stays put.
+      await expect(dialog.getByRole('button', { name: /schließen/i })).toBeInViewport();
+      await dialog.getByRole('radio').last().scrollIntoViewIfNeeded();
+      await expect(dialog.getByRole('radio').last()).toBeInViewport();
+      const last = results.getByRole('button').last();
+      await last.scrollIntoViewIfNeeded();
+      await expect(last).toBeInViewport();
+      await last.click();
+      await expect(dialog).toBeHidden();
+      await expectReflow(page);
+    });
+  }
+
   test('a recipe starts within the readable part of a phone screen', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
     await page.setViewportSize({ width: 390, height: 844 });
