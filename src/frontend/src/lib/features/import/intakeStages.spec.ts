@@ -23,6 +23,10 @@ describe('poseFor', () => {
     expect(poseFor('failed')).toBe('puzzled');
   });
 
+  it('reads while the source is being read', () => {
+    expect(poseFor('reading')).toBe('reading');
+  });
+
   it('watches while there is nothing else to show', () => {
     expect(poseFor('queued')).toBe('watching');
     expect(poseFor(undefined)).toBe('watching');
