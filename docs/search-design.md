@@ -387,8 +387,10 @@ server. Search works with the network cable unplugged from the house.
   design that would also serve 10,000 queries per second is a design that
   bought something nobody will use with money that could have been spent on
   quality.
-- **Nutrition, calories, difficulty.** `README.md` rules these out, so no
-  ranking signal may depend on them.
+- **Nutrition, calories, difficulty.** No ranking signal may depend on them.
+  `README.md` rules out difficulty scores and calorie estimates. The nutrition
+  Culina now shows (`docs/nutrition-design.md`) is a lookup computed in memory
+  per recipe, often a lower bound, and is not available in SQL.
 - **Cross-household search.** Recipes are household-owned; the household filter
   is a security boundary and stays the outermost predicate in every query.
 - **Web-scale spell correction.** §7 corrects against the household's own
