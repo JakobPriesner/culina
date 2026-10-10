@@ -19,17 +19,21 @@ public enum LineStatus
     UnknownFood = 3,
 
     /// <summary>The household said not to count it.</summary>
-    Excluded = 4
+    Excluded = 4,
+
+    /// <summary>The grams would be more than one portion plausibly holds, so it looks like a typo or a unit slip.</summary>
+    Implausible = 5
 }
 
 /// <summary>One ingredient line's part in a nutrition figure.</summary>
 /// <param name="IngredientId">The recipe line.</param>
 /// <param name="Status">What became of it.</param>
 /// <param name="Food">The food it was counted as; null when it is not counted or has none.</param>
-/// <param name="Grams">The grams counted; null when not counted.</param>
-/// <param name="Via">How the grams were reached; <see cref="GramsBasis.None"/> when not counted.</param>
+/// <param name="Grams">The grams counted, or for an implausible line the grams it would have been; null otherwise.</param>
+/// <param name="Via">How the grams were reached; <see cref="GramsBasis.None"/> when there are none.</param>
 /// <param name="Corrected">Whether the household chose the food, not the name table.</param>
 /// <param name="EnergyKcal">Its share of the energy per portion, unrounded; null when not counted or the food has no value.</param>
+/// <param name="Refusal">Why the unit is not counted, for <see cref="LineStatus.AmountNotInGrams"/>; otherwise <see cref="GramsRefusal.None"/>.</param>
 public sealed record NutritionLine(
     Guid IngredientId,
     LineStatus Status,
@@ -37,7 +41,28 @@ public sealed record NutritionLine(
     decimal? Grams,
     GramsBasis Via,
     bool Corrected,
-    decimal? EnergyKcal);
+    decimal? EnergyKcal,
+    GramsRefusal Refusal = GramsRefusal.None)
+{
+    /// <summary>
+    /// Whether this line, left out of the figure, could still add energy to it: it is not counted,
+    /// the household did not choose to leave it out, and its food is unknown or has energy (or no
+    /// energy value). An implausible amount counts, since the right one is unknown. See <see cref="CanRaise"/>.
+    /// </summary>
+    public bool CanRaiseEnergy => CanRaise(nutrients => nutrients.EnergyKcal);
+
+    /// <summary>
+    /// Whether this line, left out of the figure, could still add to a value: it is not counted, not
+    /// excluded by the household, and its food is unknown, lacks the value or has more than zero of
+    /// it. Food known to have exactly zero adds exactly zero, so it makes nothing a lower bound.
+    /// </summary>
+    internal bool CanRaise(Func<Nutrients, decimal?> value) => Status switch
+    {
+        LineStatus.Counted or LineStatus.Excluded => false,
+        LineStatus.Implausible => true,
+        _ => Food is null || value(Food.Per100Grams) is not { } amount || amount > 0m
+    };
+}
 
 /// <summary>A value of the label, and whether it is only a lower bound.</summary>
 /// <param name="Value">What was summed, unrounded.</param>
@@ -82,8 +107,12 @@ public sealed record NutritionResult(
 /// </summary>
 /// <remarks>
 /// Every value of every food is non-negative, so a sum over the lines that could be counted is a
-/// lower bound on the whole; a value is flagged <see cref="LabelValue.AtLeast"/> when a line was
-/// left out or a counted food lacks it. Nothing is rounded here. Per portion does not change when a
+/// lower bound on the whole; a value is flagged <see cref="LabelValue.AtLeast"/> when a line that
+/// could raise it was left out or a counted food lacks it. A left-out line whose food is known to
+/// have exactly 0 of a value (salt and water have no energy) adds exactly 0 and flags nothing. A
+/// line the household excluded is its choice: "do not count this", so it flags nothing either, but
+/// a recipe with nothing counted and nothing but exclusions is still flagged, as the figure says
+/// nothing of the dish. An unknown food or an implausible amount flags every value. Nothing is rounded here. Per portion does not change when a
 /// recipe is scaled (amounts and yield move together), so no factor is applied.
 /// </remarks>
 public static class NutritionCalculator
@@ -111,6 +140,20 @@ public static class NutritionCalculator
 
         return new NutritionResult(yield.Kind, yield.Amount, Sum(lines, yield.Amount), lines);
     }
+
+    /// <summary>
+    /// The most one portion or piece of the recipe plausibly holds of a single ingredient, in grams.
+    /// Nobody eats more than 2 kg of one thing in a portion, so a line above it is a slip: "1800 l
+    /// milk" meant 1800 ml, or kg written for g. Left out of the sums, it makes them lower bounds.
+    /// </summary>
+    internal const decimal MaxGramsPerPortion = 2000m;
+
+    /// <summary>
+    /// A line must also weigh more than this in all before it is called a slip: many recipes say they
+    /// make one portion when they make a whole cake, and 2.5 kg of flour there is the yield's mistake,
+    /// not the amount's. 10 kg of one thing is beyond any home kitchen.
+    /// </summary>
+    internal const decimal MaxGramsPerLine = 10_000m;
 
     private static NutritionLine Read(
         RecipeIngredient ingredient,
@@ -151,9 +194,23 @@ public static class NutritionCalculator
 
         if (reading.Grams is not { } grams)
         {
-            var status = reading.Refusal == GramsRefusal.NoAmount ? LineStatus.NoAmount : LineStatus.AmountNotInGrams;
+            return reading.Refusal == GramsRefusal.NoAmount
+                ? new NutritionLine(ingredient.Id, LineStatus.NoAmount, food, null, GramsBasis.None, corrected, null)
+                : new NutritionLine(
+                    ingredient.Id,
+                    LineStatus.AmountNotInGrams,
+                    food,
+                    null,
+                    GramsBasis.None,
+                    corrected,
+                    null,
+                    reading.Refusal);
+        }
 
-            return new NutritionLine(ingredient.Id, status, food, null, GramsBasis.None, corrected, null);
+        if (grams / yield > MaxGramsPerPortion && grams > MaxGramsPerLine)
+        {
+            return new NutritionLine(
+                ingredient.Id, LineStatus.Implausible, food, grams, reading.Basis, corrected, null);
         }
 
         return new NutritionLine(
@@ -169,12 +226,12 @@ public static class NutritionCalculator
     private static LabelValues Sum(List<NutritionLine> lines, decimal yield)
     {
         var counted = lines.Where(line => line.Status == LineStatus.Counted).ToList();
-        var leftOut = counted.Count == 0 || counted.Count < lines.Count;
+        var nothingToGoOn = lines.All(line => line.Status == LineStatus.Excluded);
 
         LabelValue Of(Func<Nutrients, decimal?> value)
         {
             var total = 0m;
-            var missing = leftOut;
+            var missing = nothingToGoOn || lines.Any(line => line.CanRaise(value));
 
             foreach (var line in counted)
             {

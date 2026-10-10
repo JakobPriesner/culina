@@ -24,11 +24,20 @@ public enum GramsRefusal
     /// <summary>Counted.</summary>
     None = 0,
 
-    /// <summary>The unit is not one that stands for a weight of this food.</summary>
-    NotInGrams = 1,
-
     /// <summary>The recipe states no amount.</summary>
-    NoAmount = 2
+    NoAmount = 1,
+
+    /// <summary>A teaspoon or tablespoon of a food without a density: flour, sugar, butter, tomato paste.</summary>
+    SpoonOfSolid = 2,
+
+    /// <summary>A volume (millilitres, litres, a US cup, a fluid ounce) of a food without a density.</summary>
+    VolumeOfSolid = 3,
+
+    /// <summary>A bare count or a piece of a food that is not an egg: an onion.</summary>
+    Count = 4,
+
+    /// <summary>Any other unit: a clove, a bunch, a can, a pack, a pinch, a household's own word.</summary>
+    HouseholdUnit = 5
 }
 
 /// <summary>Either the grams a line stands for and how they were reached, or why it counts nothing.</summary>
@@ -64,13 +73,18 @@ public sealed record GramsReading
 /// grams are added into a figure whose own uncertainty is far larger than a spoon's size, and the
 /// reading says how they were reached. A spoon or a volume counts only for a food that pours
 /// (<see cref="FoodName.Density"/>); a spoon of flour never counts. A bare count counts only for eggs,
-/// which are sold in legally defined sizes. Everything else is not counted. Any change here must
+/// which are sold in legally defined sizes. A US cup (236.588 ml) and a US fluid ounce (29.5735 ml)
+/// count like millilitres for a food that pours, for the same reason as spoons: unlike a German
+/// "Tasse", "Becher" or "Glas" they have a standard size. Everything else is not counted, and the
+/// refusal says which rule refused it. Any change here must
 /// raise <see cref="NutritionData.Version"/>.
 /// </remarks>
 public static class NutritionGrams
 {
     private const decimal MillilitresPerTeaspoon = 5m;
     private const decimal MillilitresPerTablespoon = 15m;
+    private const decimal MillilitresPerUsCup = 236.588m;
+    private const decimal MillilitresPerUsFluidOunce = 29.5735m;
 
     /// <summary>
     /// The edible weight of one EU size class M egg: Regulation (EC) 589/2008 gives M as 53 to 63 g
@@ -104,19 +118,30 @@ public static class NutritionGrams
         return Units.FamilyOf(quantity.Unit) switch
         {
             UnitFamily.Mass => GramsReading.Counted(amount * Units.ToCanonicalFactor(quantity.Unit), GramsBasis.Mass),
-            UnitFamily.Volume => ByDensity(amount * Units.ToCanonicalFactor(quantity.Unit), food),
-            UnitFamily.Spoon => ByDensity(amount * MillilitresPerSpoon(quantity.Unit!), food),
+            UnitFamily.Volume => ByDensity(
+                amount * Units.ToCanonicalFactor(quantity.Unit), food, GramsRefusal.VolumeOfSolid),
+            UnitFamily.Spoon => ByDensity(
+                amount * MillilitresPerSpoon(quantity.Unit!), food, GramsRefusal.SpoonOfSolid),
             _ => ByCount(quantity, amount, food)
         };
     }
 
+    // The spellings that reach here as household units: see UnitSpellings, which has no entry for them.
+    private static decimal? MillilitresOfUsMeasure(Unit? unit) =>
+        unit?.Code.ToLowerInvariant() switch
+        {
+            "cup" or "cups" => MillilitresPerUsCup,
+            "fl oz" or "fl. oz" => MillilitresPerUsFluidOunce,
+            _ => null
+        };
+
     private static decimal MillilitresPerSpoon(Unit spoon) =>
         spoon == Unit.Teaspoon ? MillilitresPerTeaspoon : MillilitresPerTablespoon;
 
-    private static GramsReading ByDensity(decimal millilitres, FoodName food) =>
+    private static GramsReading ByDensity(decimal millilitres, FoodName food, GramsRefusal withoutDensity) =>
         food.Density is { } density
             ? GramsReading.Counted(millilitres * density, GramsBasis.Density)
-            : GramsReading.Refused(GramsRefusal.NotInGrams);
+            : GramsReading.Refused(withoutDensity);
 
     private static GramsReading ByCount(Quantity quantity, decimal amount, FoodName food)
     {
@@ -128,10 +153,18 @@ public static class NutritionGrams
             _ => 0m
         };
 
-        var isCount = quantity.Unit is null || quantity.Unit == Unit.Piece;
+        if (MillilitresOfUsMeasure(quantity.Unit) is { } millilitres)
+        {
+            return ByDensity(amount * millilitres, food, GramsRefusal.VolumeOfSolid);
+        }
 
-        return isCount && eggGrams > 0
+        if (quantity.Unit is not null && quantity.Unit != Unit.Piece)
+        {
+            return GramsReading.Refused(GramsRefusal.HouseholdUnit);
+        }
+
+        return eggGrams > 0
             ? GramsReading.Counted(amount * eggGrams, GramsBasis.EggSize)
-            : GramsReading.Refused(GramsRefusal.NotInGrams);
+            : GramsReading.Refused(GramsRefusal.Count);
     }
 }

@@ -79,18 +79,38 @@ public class NutritionGramsTests
     }
 
     [Theory]
-    [InlineData("tbsp")]
-    [InlineData("tsp")]
-    [InlineData("ml")]
-    [InlineData("l")]
-    public void Read_ShouldNotCountAVolumeOrSpoon_WhenTheFoodHasNoDensity(string unit)
+    [InlineData("tbsp", GramsRefusal.SpoonOfSolid)]
+    [InlineData("tsp", GramsRefusal.SpoonOfSolid)]
+    [InlineData("ml", GramsRefusal.VolumeOfSolid)]
+    [InlineData("l", GramsRefusal.VolumeOfSolid)]
+    [InlineData("cup", GramsRefusal.VolumeOfSolid)]
+    [InlineData("fl oz", GramsRefusal.VolumeOfSolid)]
+    public void Read_ShouldNotCountAVolumeOrSpoon_WhenTheFoodHasNoDensity(string unit, GramsRefusal reason)
     {
         // Act
         var reading = NutritionGrams.Read(Measured(1m, unit), Flour);
 
         // Assert
         Assert.Null(reading.Grams);
-        Assert.Equal(GramsRefusal.NotInGrams, reading.Refusal);
+        Assert.Equal(reason, reading.Refusal);
+    }
+
+    [Theory]
+    [InlineData("cup", 236.588)]
+    [InlineData("cups", 236.588)]
+    [InlineData("Cup", 236.588)]
+    [InlineData("CUPS", 236.588)]
+    [InlineData("fl oz", 29.5735)]
+    [InlineData("fl. oz", 29.5735)]
+    [InlineData("FL OZ", 29.5735)]
+    public void Read_ShouldCountAUsMeasureLikeMillilitres_WhenTheFoodPours(string unit, double millilitres)
+    {
+        // Act
+        var reading = NutritionGrams.Read(Measured(2m, unit), Milk);
+
+        // Assert
+        Assert.Equal(2m * (decimal)millilitres * 1.031m, reading.Grams);
+        Assert.Equal(GramsBasis.Density, reading.Basis);
     }
 
     [Fact]
@@ -126,7 +146,7 @@ public class NutritionGramsTests
         var reading = NutritionGrams.Read(Measured(1m, "can"), Egg);
 
         // Assert
-        Assert.Equal(GramsRefusal.NotInGrams, reading.Refusal);
+        Assert.Equal(GramsRefusal.HouseholdUnit, reading.Refusal);
     }
 
     [Fact]
@@ -138,8 +158,9 @@ public class NutritionGramsTests
 
         // Assert
         Assert.Null(bare.Grams);
-        Assert.Equal(GramsRefusal.NotInGrams, bare.Refusal);
+        Assert.Equal(GramsRefusal.Count, bare.Refusal);
         Assert.Null(pieces.Grams);
+        Assert.Equal(GramsRefusal.Count, pieces.Refusal);
     }
 
     [Theory]
@@ -158,7 +179,7 @@ public class NutritionGramsTests
 
         // Assert
         Assert.Null(reading.Grams);
-        Assert.Equal(GramsRefusal.NotInGrams, reading.Refusal);
+        Assert.Equal(GramsRefusal.HouseholdUnit, reading.Refusal);
     }
 
     [Fact]

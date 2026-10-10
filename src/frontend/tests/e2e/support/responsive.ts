@@ -97,7 +97,12 @@ function nutrition(
       const code = corrections.get(one.name);
 
       if (code === null) {
-        return { ingredientId, status: 'excluded' as const, corrected: true };
+        return {
+          ingredientId,
+          status: 'excluded' as const,
+          corrected: true,
+          canRaiseEnergy: false
+        };
       }
 
       counted += 1;
@@ -108,6 +113,7 @@ function nutrition(
         grams: 27,
         via: 'density' as const,
         corrected: true,
+        canRaiseEnergy: false,
         energyKcal: 120.5
       };
     }
@@ -115,9 +121,14 @@ function nutrition(
     const long = 'handwerklich gebacken, mit Sonnenblumenkernen und Leinsamen';
 
     if (one.name.includes('Vorrat'))
-      return { ingredientId, status: 'unknownFood' as const, corrected: false };
+      return {
+        ingredientId,
+        status: 'unknownFood' as const,
+        corrected: false,
+        canRaiseEnergy: true
+      };
     if (one.quantity == null || one.unit == null)
-      return { ingredientId, status: 'noAmount' as const, corrected: false };
+      return { ingredientId, status: 'noAmount' as const, corrected: false, canRaiseEnergy: true };
     if (one.unit === 'g') {
       const energyKcal = kcal[counted] ?? 10;
       counted += 1;
@@ -128,6 +139,7 @@ function nutrition(
         grams: one.quantity,
         via: 'mass' as const,
         corrected: false,
+        canRaiseEnergy: false,
         energyKcal
       };
     }
@@ -140,10 +152,16 @@ function nutrition(
         grams: one.quantity * 13.5,
         via: 'density' as const,
         corrected: false,
+        canRaiseEnergy: false,
         energyKcal: 80.9
       };
     }
-    return { ingredientId, status: 'amountNotInGrams' as const, corrected: false };
+    return {
+      ingredientId,
+      status: 'amountNotInGrams' as const,
+      corrected: false,
+      canRaiseEnergy: true
+    };
   });
   const complete = counted === ingredients.length;
   const value = (amount: number) => ({ value: amount, atLeast: !complete });

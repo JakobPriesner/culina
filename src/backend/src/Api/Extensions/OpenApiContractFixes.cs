@@ -97,6 +97,7 @@ internal static class OpenApiContractFixes
         ("RecipesUpdateRequest", "language", RecipeVocabulary.Languages),
         ("RecipesGetNutritionResponse", "per", RecipeVocabulary.NutritionBases),
         ("RecipesGetNutritionNutritionIngredient", "status", RecipeVocabulary.NutritionStatuses),
+        ("RecipesGetNutritionNutritionIngredient", "reason", RecipeVocabulary.NutritionReasons),
         ("RecipesGetNutritionNutritionIngredient", "via", RecipeVocabulary.NutritionGramsBases),
         ("RecipesStepSegmentContract", "type", RecipeVocabulary.StepSegmentKinds),
         ("ShoppingItemContract", "section", RecipeVocabulary.ShoppingSections),
