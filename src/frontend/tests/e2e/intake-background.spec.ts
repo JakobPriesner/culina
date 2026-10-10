@@ -156,8 +156,8 @@ test.describe('background intake @offline', () => {
     await page.route(`**/api/v1/recipe-intakes/${id}`, (route) => route.fulfill({ json: job }));
     await page.goto(`/recipes/imports/${id}`);
     await expect(page.locator('.earbuds')).toHaveCount(0);
-    await expect(page.locator('.phone')).toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath('olli-watching.png'), fullPage: true });
+    await expect(page.locator('svg.olli .paper').first()).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('olli-reading.png'), fullPage: true });
     await page.goto('/me/appearance');
     await page.getByRole('switch', { name: 'Animate Olli', exact: true }).click();
     job = { ...job, stage: 'writing' };
