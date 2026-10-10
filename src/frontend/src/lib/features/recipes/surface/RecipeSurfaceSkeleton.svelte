@@ -100,6 +100,15 @@
     border-radius: var(--radius-lg);
   }
 
+  /* Matches SurfaceHero on narrow screens. */
+  @media (width < 52rem) {
+    .hero {
+      aspect-ratio: 4 / 3;
+      max-height: 18rem;
+      border-radius: var(--radius-md);
+    }
+  }
+
   .head {
     display: flex;
     flex-direction: column;
