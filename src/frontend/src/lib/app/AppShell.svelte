@@ -38,6 +38,8 @@
 
   const focusedCooking = $derived(page.route.id === '/(app)/recipes/[recipeId]/cook');
 
+  const readingRecipe = $derived(page.route.id === '/(app)/recipes/[recipeId]');
+
   const searchable = $derived(
     offersSearch(page.url.pathname) && session.activeHouseholdId !== null
   );
@@ -61,6 +63,7 @@
   class="shell"
   class:crowded
   class:focused-cooking={focusedCooking}
+  class:reading-recipe={readingRecipe}
   style:--bar-inset="{barHeight}px"
   style:--bottom-inset="{dockHeight + barHeight}px"
   style:--header-inset={headerHeight === undefined ? null : `${headerHeight}px`}
@@ -108,6 +111,13 @@
   @media (width < 64rem) {
     .focused-cooking .content {
       padding-top: env(safe-area-inset-top, 0px);
+    }
+  }
+
+  /* A recipe on a phone has no header above it, and its sticky back bar brings its own top padding. */
+  @media (width < 52rem) {
+    .reading-recipe .content :global(.page) {
+      padding-block-start: 0;
     }
   }
 
