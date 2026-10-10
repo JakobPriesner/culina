@@ -191,8 +191,9 @@
       max-width: none;
     }
 
+    /* Beside the filter button rather than under it, so the two share one row. */
     .summary {
-      width: 100%;
+      flex: 1 1 0;
       margin-inline-start: 0;
     }
   }
