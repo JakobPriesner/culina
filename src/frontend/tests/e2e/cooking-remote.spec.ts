@@ -35,7 +35,11 @@ test.describe('cooking remote @offline', () => {
     );
     const policyErrors: string[] = [];
     page.on('console', (message) => {
-      if (/violates.*Content Security Policy|Refused.*policy/i.test(message.text()))
+      if (
+        /violates.*Content Security Policy|Refused.*policy|Trusted(HTML|Script|ScriptURL|Types)/i.test(
+          message.text()
+        )
+      )
         policyErrors.push(message.text());
     });
     await page.route(new RegExp(`/recipes/${recipeId}/cook(?:\\?.*)?$`), async (route) => {
@@ -48,7 +52,7 @@ test.describe('cooking remote @offline', () => {
         headers: {
           ...response.headers(),
           'Content-Security-Policy':
-            "default-src 'self'; script-src 'self' 'nonce-remoteTest'; style-src 'self' 'nonce-remoteTest'; style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='; img-src 'self' data: blob:; base-uri 'none'; object-src 'none'"
+            "default-src 'self'; script-src 'self' 'nonce-remoteTest'; style-src 'self' 'nonce-remoteTest'; style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='; img-src 'self' data: blob:; base-uri 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types svelte-trusted-html sveltekit-trusted-url culina-worker-url"
         }
       });
     });

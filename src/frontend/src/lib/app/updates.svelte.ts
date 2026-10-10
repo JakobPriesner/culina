@@ -28,6 +28,38 @@ import { toaster } from './toaster.svelte';
 const workerUrl = '/service-worker.js';
 
 /**
+ * The part of the Trusted Types API used here. The DOM types do not carry it,
+ * and the value a policy returns is typed as the string `register` takes: the
+ * browser accepts the policy's object there, and the call site stays honest.
+ */
+interface TrustedTypes {
+  createPolicy(
+    name: string,
+    rules: { createScriptURL(url: string): string }
+  ): { createScriptURL(url: string): string };
+}
+
+/**
+ * Registering a worker is a Trusted Types sink: the document's policy
+ * (`require-trusted-types-for 'script'`) refuses a plain string there. This
+ * policy hands over the worker's own address and throws for anything else, so
+ * it cannot be turned into a way to run a script from somewhere else. Its name
+ * is on the allow-list in `SecurityHeaders.TrustedTypesPolicies`.
+ */
+const workerPolicy = (globalThis as { trustedTypes?: TrustedTypes }).trustedTypes?.createPolicy(
+  'culina-worker-url',
+  {
+    createScriptURL: (url) => {
+      if (url !== workerUrl) {
+        throw new TypeError(`Not the service worker: ${url}`);
+      }
+
+      return url;
+    }
+  }
+);
+
+/**
  * How often to ask whether there is a newer version.
  *
  * Hourly, not on every navigation: this is a self-hosted app updated when its
@@ -99,7 +131,7 @@ export function watchForUpdates(): () => void {
   let timer: ReturnType<typeof setInterval> | undefined;
 
   void navigator.serviceWorker
-    .register(workerUrl, { type: 'module' })
+    .register(workerPolicy?.createScriptURL(workerUrl) ?? workerUrl, { type: 'module' })
     .then((registration) => {
       if (stopped) {
         return;
