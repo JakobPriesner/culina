@@ -34,6 +34,8 @@ public enum LineStatus
 /// <param name="Corrected">Whether the household chose the food, not the name table.</param>
 /// <param name="EnergyKcal">Its share of the energy per portion, unrounded; null when not counted or the food has no value.</param>
 /// <param name="Refusal">Why the unit is not counted, for <see cref="LineStatus.AmountNotInGrams"/>; otherwise <see cref="GramsRefusal.None"/>.</param>
+/// <param name="LabelDe">What a reader calls the food in German, or the BLS name of a food nobody wrote a label for; null with no food.</param>
+/// <param name="LabelEn">The same in English.</param>
 public sealed record NutritionLine(
     Guid IngredientId,
     LineStatus Status,
@@ -42,7 +44,9 @@ public sealed record NutritionLine(
     GramsBasis Via,
     bool Corrected,
     decimal? EnergyKcal,
-    GramsRefusal Refusal = GramsRefusal.None)
+    GramsRefusal Refusal = GramsRefusal.None,
+    string? LabelDe = null,
+    string? LabelEn = null)
 {
     /// <summary>
     /// Whether this line, left out of the figure, could still add energy to it: it is not counted,
@@ -164,7 +168,6 @@ public static class NutritionCalculator
         var uncounted = (LineStatus status, bool corrected) =>
             new NutritionLine(ingredient.Id, status, null, null, GramsBasis.None, corrected, null);
 
-        FoodName? name;
         var corrected = corrections.TryGetValue(ItemName.Fold(ingredient.Name), out var code);
 
         if (corrected && code is null)
@@ -172,55 +175,49 @@ public static class NutritionCalculator
             return uncounted(LineStatus.Excluded, true);
         }
 
-        if (corrected)
-        {
-            // A food nobody wrote density or egg words for counts by mass only.
-            name = FoodNames.All.FirstOrDefault(entry => entry.Code == code)
-                ?? new FoodName(code!, [], [], Density: null, EggPart.None);
-        }
-        else
-        {
-            name = FoodNames.Match(ingredient.Name);
-        }
+        // The household chose that exact food, so its entry (for density and egg words) is not resolved
+        // by unit; a name the table matched is, since broth is a powder or a liquid by its unit.
+        var entry = corrected
+            ? FoodNames.All.FirstOrDefault(one => one.Code == code)
+            : FoodNames.Match(ingredient.Name);
+        var name = entry is null || corrected ? entry : NutritionGrams.Resolve(ingredient.Quantity, entry);
+        var food = corrected ? findFood(code!) : name is null ? null : findFood(name.Code);
 
-        var food = name is null ? null : findFood(name.Code);
-
-        if (name is null || food is null)
+        if (food is null)
         {
             return uncounted(LineStatus.UnknownFood, corrected);
         }
+
+        // A food nobody wrote density, egg words or a label for counts by mass only and is named by BLS.
+        name ??= new FoodName(food.Code, [], [], Density: null, EggPart.None, food.NameDe, food.NameEn);
+
+        var known = (LineStatus status, decimal? grams, GramsBasis basis, decimal? energy, GramsRefusal refusal) =>
+            new NutritionLine(
+                ingredient.Id, status, food, grams, basis, corrected, energy, refusal, name.LabelDe, name.LabelEn);
 
         var reading = NutritionGrams.Read(ingredient.Quantity, name);
 
         if (reading.Grams is not { } grams)
         {
-            return reading.Refusal == GramsRefusal.NoAmount
-                ? new NutritionLine(ingredient.Id, LineStatus.NoAmount, food, null, GramsBasis.None, corrected, null)
-                : new NutritionLine(
-                    ingredient.Id,
-                    LineStatus.AmountNotInGrams,
-                    food,
-                    null,
-                    GramsBasis.None,
-                    corrected,
-                    null,
-                    reading.Refusal);
+            return known(
+                reading.Refusal == GramsRefusal.NoAmount ? LineStatus.NoAmount : LineStatus.AmountNotInGrams,
+                null,
+                GramsBasis.None,
+                null,
+                reading.Refusal == GramsRefusal.NoAmount ? GramsRefusal.None : reading.Refusal);
         }
 
         if (grams / yield > MaxGramsPerPortion && grams > MaxGramsPerLine)
         {
-            return new NutritionLine(
-                ingredient.Id, LineStatus.Implausible, food, grams, reading.Basis, corrected, null);
+            return known(LineStatus.Implausible, grams, reading.Basis, null, GramsRefusal.None);
         }
 
-        return new NutritionLine(
-            ingredient.Id,
+        return known(
             LineStatus.Counted,
-            food,
             grams,
             reading.Basis,
-            corrected,
-            Share(grams, food.Per100Grams.EnergyKcal, yield));
+            Share(grams, food.Per100Grams.EnergyKcal, yield),
+            GramsRefusal.None);
     }
 
     private static LabelValues Sum(List<NutritionLine> lines, decimal yield)

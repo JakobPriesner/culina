@@ -63,7 +63,14 @@ internal static class NutritionMappings
                 _ => null
             },
             Food = line.Food is { } food
-                ? new NutritionFood { Code = food.Code, NameDe = food.NameDe, NameEn = food.NameEn }
+                ? new NutritionFood
+                {
+                    Code = food.Code,
+                    NameDe = food.NameDe,
+                    NameEn = food.NameEn,
+                    LabelDe = line.LabelDe ?? food.NameDe,
+                    LabelEn = line.LabelEn ?? food.NameEn
+                }
                 : null,
             Grams = line.Grams,
             Via = line.Via switch

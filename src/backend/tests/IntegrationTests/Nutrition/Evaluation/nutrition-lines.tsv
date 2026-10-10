@@ -69,19 +69,19 @@ recipe	amount	unit	name	expected
 14			Mehl	C214100|C214200
 14	2	Suppenkelle	Blumenkohlwasser	NONE
 14	2	Suppenkelle	Milch	M111300|M113300
-14	1	tsp	Gemüsebrühe	X416243
+14	1	tsp	Gemüsebrühe	R821000
 15	300	g	Rinderhack	U010100
 15	2		Zwiebel	G480100
 15	1	clove	Knoblauch	G490100
 15	4	tbsp	Tomatenmark	R160000
 15	150	ml	Rinderfond	NONE
 15	40	ml	Sahne	M173800|M173900
-15	1	tsp	Rinderbrühe	NONE
+15	1	tsp	Rinderbrühe	R811000
 16	1		Zwiebel	G480100
 16	1	clove	Knoblauch	G490100
 16	100	ml	Wasser	N110000
-16	1	tsp	Gemüsebrühe	X416243
-16	1	tsp	Rinderbrühe	NONE
+16	1	tsp	Gemüsebrühe	R821000
+16	1	tsp	Rinderbrühe	R811000
 16	300	g	Rinderhack	U010100
 16	2	tbsp	Tomatenmark	R160000
 16	200	g	passierte Tomaten	R161200
@@ -132,10 +132,10 @@ recipe	amount	unit	name	expected
 21	1		Knoblauchzehe	G490100
 21	1		grüne Paprika	G541100
 21	1	can	Tomate(n)	G561100
-21	1	can	Kidneybohnen	NONE
+21	1	can	Kidneybohnen	H742902
 21	1		Chilischote	G554100|G553100
 21	400	g	Hackfleisch	U050100
-21	1	can	Mais	G570902|G570100
+21	1	can	Mais	G570902
 21	6	tbsp	Tomatenmark	R160000
 21			Cayennpfeffer	NONE
 21			Zucker	S111000
@@ -152,7 +152,7 @@ recipe	amount	unit	name	expected
 22	1	Stange	Frühlingszwiebel	G482100|G486100
 22	1	tbsp	Butter	Q611000|Q630000|Q620000
 22	75	ml	Wasser	N110000
-22	4	g	Gemüsebrühe	X416243
+22	4	g	Gemüsebrühe	R821000
 22	2	g	Curry	NONE
 22	200	g	Kochsahne	NONE
 22	40	g	Hartkäse	M300600
@@ -272,7 +272,7 @@ recipe	amount	unit	name	expected
 36	3	tbsp	Tomatenmark	R160000
 36	400	g	Tomate	G561100
 36	1	tbsp	Paprika Edelsüß	NONE
-36	1.75	ml	klare Rinderbouillon	NONE
+36	1.75	ml	klare Rinderbouillon	Y183013|X412053
 36	2	tbsp	Kümmel	NONE
 36	1		Zitrone	F601100
 36	0.5	bunch	Schnittlauch	G081100
@@ -303,7 +303,7 @@ recipe	amount	unit	name	expected
 39	1		Mango	F516100
 39	1	Becher	Crème fraîche	M176800|M172900
 39	3	tbsp	Kokosmilch	H154000
-39	2	tbsp	Sahnejoghurt	M141500|M148500
+39	2	tbsp	Sahnejoghurt	M141500
 39	100	ml	Mangosaft	F516600
 39	1		Zwiebel	G480100
 39			Knoblauchzehe	G490100
@@ -594,7 +594,7 @@ recipe	amount	unit	name	expected
 69	250	ml	Wasser	N110000
 69	2		Suppengrün	G093100
 69	1		Lorbeerblatt	NONE
-69			gekörnte Brühe	R810000|R821000
+69			gekörnte Brühe	R810000
 69	200	ml	Kochsahne	NONE
 69	2	tbsp	Soßenbinder	NONE
 69			Preiselbeeren	NONE
@@ -606,7 +606,7 @@ recipe	amount	unit	name	expected
 70	1	clove	Knoblauch	G490100
 70	150	g	Champignons	K701100
 70	100	ml	Wasser	N110000
-70	2	g	Rinderbrühe	NONE
+70	2	g	Rinderbrühe	R811000
 70	250	g	Rinderhüftsteak	U284100
 70	1	tbsp	Öl	Q180000|Q320000|Q120000|Q940000
 70	150	g	Champignons	K701100
@@ -639,7 +639,7 @@ recipe	amount	unit	name	expected
 74	1		Zwiebel	G480100
 74	2	tbsp	Butter	Q611000|Q630000|Q620000
 74	1	tbsp	Zucker	S111000
-74	100	ml	Rinderbrühe	NONE
+74	100	ml	Rinderbrühe	Y183013
 74	200	g	Schlagsahne	M173800|M173900
 75	250	g	Margarine	Q400000|Q4A4000|Q4C4000
 75	200	g	Zucker	S111000
@@ -666,7 +666,7 @@ recipe	amount	unit	name	expected
 77	50	g	Butter	Q611000|Q630000|Q620000
 77	4		Hähnchenbrustfilet	V416100|V4A6100
 77	2		Knoblauchzehe	G490100
-77	0.5	tbsp	Hühnerbrühe	X411243
+77	0.5	tbsp	Hühnerbrühe	R822000
 77			Tomatenmark	R160000
 77	4		Tomate(n)	G561100
 78	100	g	Kuvertüre	S671000
@@ -816,7 +816,7 @@ recipe	amount	unit	name	expected
 95	1		Zwiebel	G480100
 95	125	ml	Sahne	M173800|M173900
 95	2	tbsp	Tomatenmark	R160000
-96	1.2	kg	Rindfleisch	U201000|U104100
+96	1.2	kg	Rindfleisch	NONE
 96	1		Gemüsezwiebel	G480100
 96	2	rote	Paprikaschote	G541100|G542100|G543100
 96	2	gelbe	Paprikaschote	G541100|G542100|G543100
@@ -832,8 +832,8 @@ recipe	amount	unit	name	expected
 96	0.5	tsp	Kreuzkümmel	NONE
 96	1	can	Flaschentomate	G561100
 96	200	ml	Gemüsebrühe	X416243
-96	1	can	Mais	G570902|G570100
-96	1	can	Kidneybohne	NONE
+96	1	can	Mais	G570902
+96	1	can	Kidneybohne	H742902
 96	25	g	Zartbitter-Schokolade	S560000
 96	0.5	bunch	Koriandergrün	NONE
 96	250	g	Schmand	M172700
@@ -891,7 +891,7 @@ recipe	amount	unit	name	expected
 104	200	g	Tomaten	G561100
 104	200	g	Lasagneplatten	E401000|E432000
 104	200	g	Béchamel	NONE
-105	200	g	Rindfleisch	U201000|U104100
+105	200	g	Rindfleisch	NONE
 105	200	g	Tomaten	G561100
 105	200	g	Rotwein	P2A3000|P253000
 106	200	g	Hackfleisch	U050100
@@ -906,7 +906,7 @@ recipe	amount	unit	name	expected
 108	200	g	Tomaten	G561100
 108	200	g	Lasagneplatten	E401000|E432000
 108	200	g	Béchamel	NONE
-109	200	g	Rindfleisch	U201000|U104100
+109	200	g	Rindfleisch	NONE
 109	200	g	Tomaten	G561100
 109	200	g	Rotwein	P2A3000|P253000
 110	200	g	Hackfleisch	U050100
@@ -921,7 +921,7 @@ recipe	amount	unit	name	expected
 112	200	g	Tomaten	G561100
 112	200	g	Lasagneplatten	E401000|E432000
 112	200	g	Béchamel	NONE
-113	200	g	Rindfleisch	U201000|U104100
+113	200	g	Rindfleisch	NONE
 113	200	g	Tomaten	G561100
 113	200	g	Rotwein	P2A3000|P253000
 114	200	g	Hackfleisch	U050100
@@ -936,7 +936,7 @@ recipe	amount	unit	name	expected
 116	200	g	Tomaten	G561100
 116	200	g	Lasagneplatten	E401000|E432000
 116	200	g	Béchamel	NONE
-117	200	g	Rindfleisch	U201000|U104100
+117	200	g	Rindfleisch	NONE
 117	200	g	Tomaten	G561100
 117	200	g	Rotwein	P2A3000|P253000
 118	200	g	Hackfleisch	U050100

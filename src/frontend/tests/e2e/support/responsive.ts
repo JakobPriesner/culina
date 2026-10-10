@@ -109,7 +109,13 @@ function nutrition(
       return {
         ingredientId,
         status: 'counted' as const,
-        food: { code: code!, nameDe: 'Rapsöl', nameEn: 'Rapeseed oil' },
+        food: {
+          code: code!,
+          nameDe: 'Rapsöl',
+          nameEn: 'Rapeseed oil',
+          labelDe: 'Rapsöl',
+          labelEn: 'rapeseed oil'
+        },
         grams: 27,
         via: 'density' as const,
         corrected: true,
@@ -117,7 +123,13 @@ function nutrition(
         energyKcal: 120.5
       };
     }
-    const food = (nameDe: string, nameEn: string) => ({ code: 'X', nameDe, nameEn });
+    const food = (nameDe: string, nameEn: string) => ({
+      code: 'X',
+      nameDe,
+      nameEn,
+      labelDe: nameDe,
+      labelEn: nameEn
+    });
     const long = 'handwerklich gebacken, mit Sonnenblumenkernen und Leinsamen';
 
     if (one.name.includes('Vorrat'))

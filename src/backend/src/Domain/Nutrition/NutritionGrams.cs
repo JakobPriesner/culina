@@ -87,6 +87,14 @@ public static class NutritionGrams
     private const decimal MillilitresPerUsFluidOunce = 29.5735m;
 
     /// <summary>
+    /// The most a line in grams can be of a food's powder before it is read as the liquid. No recipe uses
+    /// more than about 50 g of broth powder (that makes over 20 litres of broth), and nobody weighs less
+    /// than 50 g of liquid broth, so the weight says which one the line means: "4 g Brühe" is the
+    /// powder, "500 g Brühe" is the liquid, counted by mass.
+    /// </summary>
+    internal const decimal MostGramsOfPowder = 50m;
+
+    /// <summary>
     /// The edible weight of one EU size class M egg: Regulation (EC) 589/2008 gives M as 53 to 63 g
     /// in the shell (midpoint 58 g); USDA FoodData Central SR Legacy, "Egg, whole, raw, fresh"
     /// (fdc 171287) has a large egg as 50 g edible of about 57 g in the shell, so 12 % is shell and
@@ -101,6 +109,30 @@ public static class NutritionGrams
 
     /// <summary>The white of that egg, by the same proportion: 33 g of 50 g.</summary>
     internal const decimal WhiteGrams = WholeEggGrams * 33m / 50m;
+
+    /// <summary>
+    /// The food a line is, when the entry has a liquid and a powder (broth): the liquid for a volume (ml,
+    /// l, US cup, fluid ounce) and for more than <see cref="MostGramsOfPowder"/> grams, the powder for
+    /// fewer grams, a spoon (which packs, so it is not counted), a count or a household unit. An entry
+    /// without a liquid is its own answer.
+    /// </summary>
+    /// <param name="quantity">How much the recipe calls for.</param>
+    /// <param name="food">The food it was recognised as.</param>
+    public static FoodName Resolve(Quantity quantity, FoodName food)
+    {
+        ArgumentNullException.ThrowIfNull(quantity);
+        ArgumentNullException.ThrowIfNull(food);
+
+        var asLiquid = Units.FamilyOf(quantity.Unit) switch
+        {
+            UnitFamily.Volume => true,
+            UnitFamily.Mass => quantity.Amount * Units.ToCanonicalFactor(quantity.Unit) > MostGramsOfPowder,
+            UnitFamily.Spoon => false,
+            _ => MillilitresOfUsMeasure(quantity.Unit) is not null
+        };
+
+        return food.Resolved(asLiquid);
+    }
 
     /// <summary>Reads the grams a recipe line stands for, or says why not.</summary>
     /// <param name="quantity">How much the recipe calls for.</param>

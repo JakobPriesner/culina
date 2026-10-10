@@ -34,6 +34,11 @@ public class SharedNutritionTests(PostgresFixture postgres)
         Assert.Equal(1, body.GetProperty("counted").GetInt32());
         Assert.Equal(2, body.GetProperty("lines").GetInt32());
         Assert.Equal("Bundeslebensmittelschlüssel", body.GetProperty("source").GetProperty("name").GetString());
+
+        var food = body.GetProperty("ingredients")[1].GetProperty("food");
+        Assert.Equal("Q611000", food.GetProperty("code").GetString());
+        Assert.Equal("Butter", food.GetProperty("labelDe").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(food.GetProperty("labelEn").GetString()));
     }
 
     [Fact]
