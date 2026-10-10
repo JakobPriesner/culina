@@ -131,7 +131,8 @@
     amountNotInGrams: m['nutrition.reason.amountNotInGrams'],
     noAmount: m['nutrition.reason.noAmount'],
     unknownFood: m['nutrition.reason.unknownFood'],
-    excluded: m['nutrition.reason.excluded']
+    excluded: m['nutrition.reason.excluded'],
+    implausible: m['nutrition.reason.implausible']
   };
 
   const reason = (line: NutritionLine) => (line.status === 'counted' ? '' : reasons[line.status]());

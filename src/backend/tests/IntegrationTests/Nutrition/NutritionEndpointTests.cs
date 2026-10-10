@@ -56,6 +56,13 @@ public class NutritionEndpointTests(PostgresFixture postgres)
         Assert.Equal("density", ingredients[1].GetProperty("via").GetString());
         Assert.Equal("eggSize", ingredients[2].GetProperty("via").GetString());
         Assert.False(ingredients[3].TryGetProperty("grams", out var grams) && grams.ValueKind != JsonValueKind.Null);
+        Assert.Equal("count", ingredients[3].GetProperty("reason").GetString());
+        Assert.True(ingredients[3].GetProperty("canRaiseEnergy").GetBoolean());
+        Assert.False(flour.TryGetProperty("reason", out var reason) && reason.ValueKind != JsonValueKind.Null);
+        Assert.False(flour.GetProperty("canRaiseEnergy").GetBoolean());
+
+        // Salt has no energy, so a missing amount cannot change it.
+        Assert.False(ingredients[4].GetProperty("canRaiseEnergy").GetBoolean());
 
         var source = body.GetProperty("source");
         Assert.Equal("Bundeslebensmittelschlüssel", source.GetProperty("name").GetString());

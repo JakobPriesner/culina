@@ -1567,6 +1567,7 @@
   "nutrition.reason.noAmount": "keine Menge",
   "nutrition.reason.unknownFood": "unbekannt",
   "nutrition.reason.excluded": "von euch ausgenommen",
+  "nutrition.reason.implausible": "Menge unplausibel, nicht gezählt",
   "nutrition.source": "Nährwerte:",
   "problem.nutrition.unknown_food": "Dieses Lebensmittel steht nicht in der Nährwerttabelle. Such dir ein anderes aus.",
   "nutrition.change": "Was ist „{name}“? Ändern",

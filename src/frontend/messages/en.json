@@ -1567,6 +1567,7 @@
   "nutrition.reason.noAmount": "no amount",
   "nutrition.reason.unknownFood": "not in the table",
   "nutrition.reason.excluded": "excluded by your household",
+  "nutrition.reason.implausible": "amount looks wrong, not counted",
   "nutrition.source": "Nutrition values:",
   "problem.nutrition.unknown_food": "That food is not in the nutrition table. Pick another one.",
   "nutrition.change": "What is “{name}”? Change",

@@ -1175,6 +1175,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/shared-recipes/{token}/nutrition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a shared recipe's nutrition
+         * @description No account needed: the token in the path is the whole of the authorisation. The same figure as a recipe's own nutrition, but with no household corrections, since the reader is in no household. Unrounded, with atLeast on any value that is a lower bound. The source block must be shown wherever the numbers are (CC BY 4.0).
+         */
+        get: operations["getSharedRecipeNutritionV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cook-sessions": {
         parameters: {
             query?: never;
@@ -3409,23 +3429,34 @@ export interface components {
              */
             ingredientId: string;
             /**
-             * @description `counted`, `amountNotInGrams`, `noAmount`, `unknownFood` or `excluded`.
+             * @description `counted`, `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`.
              * @enum {string}
              */
-            status: "counted" | "amountNotInGrams" | "noAmount" | "unknownFood" | "excluded";
+            status: "counted" | "amountNotInGrams" | "noAmount" | "unknownFood" | "excluded" | "implausible";
+            /**
+             * @description Why the unit is not counted: `spoonOfSolid`, `volumeOfSolid`, `count` or `householdUnit`;
+             *     only when the status is `amountNotInGrams`.
+             * @enum {string|null}
+             */
+            reason?: "spoonOfSolid" | "volumeOfSolid" | "count" | "householdUnit" | null;
             food?: (null) | components["schemas"]["RecipesGetNutritionNutritionFood"];
             /**
              * Format: double
-             * @description The grams counted, unrounded; only when counted.
+             * @description The grams counted, unrounded; when the status is `implausible`, the grams it would have been.
              */
             grams?: number | null;
             /**
-             * @description How the grams were reached: `mass`, `density` or `eggSize`; only when counted.
+             * @description How the grams were reached: `mass`, `density` or `eggSize`; whenever there are grams.
              * @enum {string|null}
              */
             via?: "mass" | "density" | "eggSize" | null;
             /** @description Whether the household chose the food (or to leave it out) instead of the default. */
             corrected: boolean;
+            /**
+             * @description Whether this line, left out of the figure, could still add energy to it: it is not counted, was not excluded
+             *     by the household, and its food is unknown or has energy (or no energy value). True for an implausible amount.
+             */
+            canRaiseEnergy: boolean;
             /**
              * Format: double
              * @description This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.
@@ -9055,6 +9086,53 @@ export interface operations {
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getSharedRecipeNutritionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesGetNutritionResponse"];
+                };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not Found */
             404: {

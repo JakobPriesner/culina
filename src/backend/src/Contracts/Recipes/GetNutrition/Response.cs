@@ -72,20 +72,32 @@ public sealed record NutritionIngredient
     /// <summary>The recipe's ingredient line.</summary>
     public required Guid IngredientId { get; init; }
 
-    /// <summary><c>counted</c>, <c>amountNotInGrams</c>, <c>noAmount</c>, <c>unknownFood</c> or <c>excluded</c>.</summary>
+    /// <summary><c>counted</c>, <c>amountNotInGrams</c>, <c>noAmount</c>, <c>unknownFood</c>, <c>excluded</c> or <c>implausible</c>.</summary>
     public required string Status { get; init; }
+
+    /// <summary>
+    /// Why the unit is not counted: <c>spoonOfSolid</c>, <c>volumeOfSolid</c>, <c>count</c> or <c>householdUnit</c>;
+    /// only when the status is <c>amountNotInGrams</c>.
+    /// </summary>
+    public string? Reason { get; init; }
 
     /// <summary>The food the line was recognised as, when it was.</summary>
     public NutritionFood? Food { get; init; }
 
-    /// <summary>The grams counted, unrounded; only when counted.</summary>
+    /// <summary>The grams counted, unrounded; when the status is <c>implausible</c>, the grams it would have been.</summary>
     public decimal? Grams { get; init; }
 
-    /// <summary>How the grams were reached: <c>mass</c>, <c>density</c> or <c>eggSize</c>; only when counted.</summary>
+    /// <summary>How the grams were reached: <c>mass</c>, <c>density</c> or <c>eggSize</c>; whenever there are grams.</summary>
     public string? Via { get; init; }
 
     /// <summary>Whether the household chose the food (or to leave it out) instead of the default.</summary>
     public required bool Corrected { get; init; }
+
+    /// <summary>
+    /// Whether this line, left out of the figure, could still add energy to it: it is not counted, was not excluded
+    /// by the household, and its food is unknown or has energy (or no energy value). True for an implausible amount.
+    /// </summary>
+    public required bool CanRaiseEnergy { get; init; }
 
     /// <summary>This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.</summary>
     public decimal? EnergyKcal { get; init; }

@@ -28,7 +28,11 @@ public static class RecipeVocabulary
 
     /// <summary>What can become of an ingredient line in a nutrition figure.</summary>
     public static readonly IReadOnlyList<string> NutritionStatuses =
-        ["counted", "amountNotInGrams", "noAmount", "unknownFood", "excluded"];
+        ["counted", "amountNotInGrams", "noAmount", "unknownFood", "excluded", "implausible"];
+
+    /// <summary>Why a unit of a known food is not counted in a nutrition figure.</summary>
+    public static readonly IReadOnlyList<string> NutritionReasons =
+        ["spoonOfSolid", "volumeOfSolid", "count", "householdUnit"];
 
     /// <summary>How the grams of a counted line were reached.</summary>
     public static readonly IReadOnlyList<string> NutritionGramsBases = ["mass", "density", "eggSize"];

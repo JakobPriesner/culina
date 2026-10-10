@@ -45,6 +45,7 @@ using Application.Recipes.GetRelated;
 using Application.Recipes.GetShare;
 using Application.Recipes.GetShared;
 using Application.Recipes.GetSharedImage;
+using Application.Recipes.GetSharedNutrition;
 using Application.Recipes.GetTags;
 using Application.Recipes.GetTagSuggestions;
 using Application.Recipes.GetUnits;
@@ -281,6 +282,7 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetSharedRecipeQuery, Contracts.Recipes.GetShared.Response>,
                 GetSharedRecipeQueryHandler>()
             .AddScoped<IQueryHandler<GetSharedImageQuery, ImageDelivery>, GetSharedImageQueryHandler>()
+            .AddScoped<IQueryHandler<GetSharedNutritionQuery, SharedNutrition>, GetSharedNutritionQueryHandler>()
             .AddScoped<ICommandHandler<SetCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,
                 SetCookPhotoCommandHandler>()
             .AddScoped<ICommandHandler<RemoveCookPhotoCommand, Contracts.Recipes.GetCookLog.Response>,

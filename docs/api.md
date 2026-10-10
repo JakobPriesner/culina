@@ -104,14 +104,39 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
   `lines` say how many of how many.
 - `values` holds energy (kJ and kcal), fat, saturated fat, carbohydrate,
   sugars, protein and salt, each `{ value, atLeast }`. `atLeast` is true when a
-  line could not be counted, or when a counted food has no figure for that
-  value (23 foods lack saturated fat), so the number is a lower bound and never
-  a guess. Nothing counted is zeros with `atLeast: true`.
+  line that could still raise it was left out, or when a counted food has no
+  figure for that value (23 foods lack saturated fat), so the number is a lower
+  bound and never a guess. A left-out line whose food is known to have exactly 0
+  of a value adds exactly 0 and does not flag it: salt and water have no energy,
+  so a `Salz` without an amount leaves energy exact (salt stays `atLeast`). A
+  line the household excluded is its choice and flags nothing; an unknown food
+  or an `implausible` amount flags every value. Nothing counted, or only
+  exclusions, is zeros with `atLeast: true`.
 - `ingredients` has one entry per line, in recipe order: `status` is `counted`,
-  `amountNotInGrams`, `noAmount`, `unknownFood` or `excluded`; a counted line
-  carries the `food` (`code`, `nameDe`, `nameEn`), the `grams`, `via` (`mass`,
-  `density` or `eggSize`) and its own `energyKcal` per portion, so the rows add
-  up to the headline. `corrected` is true when a household chose the food.
+  `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`; a
+  counted line carries the `food` (`code`, `nameDe`, `nameEn`), the `grams`,
+  `via` (`mass`, `density` or `eggSize`) and its own `energyKcal` per portion, so
+  the rows add up to the headline. `corrected` is true when a household chose the
+  food. `counted`, `lines` and `complete` count counted lines only.
+- `reason`, only on `amountNotInGrams`, says why the unit is not counted:
+  `spoonOfSolid` (a tsp or tbsp of a food without a density: flour, sugar,
+  butter), `volumeOfSolid` (ml, l, a US cup or fl oz of such a food), `count` (a
+  bare count or `piece` of a non-egg food: an onion) or `householdUnit` (any other
+  unit: clove, bunch, can, pack, pinch, a household's own word, "Tasse").
+- `implausible`: a line whose grams per portion (or piece) would exceed 2000 g
+  and which weighs more than 10 kg in all. No single ingredient of one portion
+  plausibly weighs more than 2 kg; the real case is "1800 l Milch" meant as
+  1800 ml, and the ceiling also catches kg written for g. The 10 kg floor keeps a
+  big batch that only claims one portion (a whole cake) from being called a slip:
+  there the yield is wrong, not the amount. It is left out of the sums, carries `grams` (and `via`) as they would
+  have been, and makes every value `atLeast`.
+- `canRaiseEnergy` is true when the line is not counted, was not excluded by the
+  household, and its food is unknown or has energy (or no energy value); always
+  true for `implausible`. A client naming "what is missing" from the energy
+  headline lists only these lines.
+- US `cup`/`cups` (236.588 ml) and `fl oz`/`fl. oz` (29.5735 ml), in any case,
+  count like millilitres for a food with a density; "Tasse", "Becher" and "Glas"
+  never count (no standard size).
 - **Numbers are unrounded**, like every quantity the server sends; rounding is
   the client's, and a lower bound rounds down. Per portion does not change when
   a recipe is scaled, so no factor is applied.
@@ -122,6 +147,16 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
   asking household, the version of the nutrition data and a fingerprint of the
   corrections that apply, so a data update or a correction is never answered
   with a `304`.
+
+### `GET /shared-recipes/{token}/nutrition`
+
+The same figure for a shared recipe, to whoever holds the link: no session, the
+token is the whole authorisation, rate-limited like the shared recipe. The
+reader is in no household, so no household's corrections apply (`corrected` is
+false on every line). `200` + ETag (recipe version and nutrition data version,
+no recipe id), `304` on `If-None-Match`; an unknown or revoked token is the
+shared recipe's own `404` (`recipes.share_not_found`). `Cache-Control: private,
+no-store`, as on the recipe itself. The `source` attribution applies as above.
 
 ### `PUT` and `DELETE /households/{householdId}/ingredients/{name}`
 

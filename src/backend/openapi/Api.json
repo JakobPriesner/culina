@@ -4799,6 +4799,61 @@
         }
       }
     },
+    "/api/v1/shared-recipes/{token}/nutrition": {
+      "get": {
+        "tags": [
+          "SharedRecipes"
+        ],
+        "summary": "Read a shared recipe's nutrition",
+        "description": "No account needed: the token in the path is the whole of the authorisation. The same figure as a recipe's own nutrition, but with no household corrections, since the reader is in no household. Unrounded, with atLeast on any value that is a lower bound. The source block must be shown wherever the numbers are (CC BY 4.0).",
+        "operationId": "getSharedRecipeNutritionV1",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesGetNutritionResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/cook-sessions": {
       "post": {
         "tags": [
@@ -10904,7 +10959,8 @@
         "required": [
           "ingredientId",
           "status",
-          "corrected"
+          "corrected",
+          "canRaiseEnergy"
         ],
         "type": "object",
         "properties": {
@@ -10919,10 +10975,22 @@
               "amountNotInGrams",
               "noAmount",
               "unknownFood",
-              "excluded"
+              "excluded",
+              "implausible"
             ],
             "type": "string",
-            "description": "`counted`, `amountNotInGrams`, `noAmount`, `unknownFood` or `excluded`."
+            "description": "`counted`, `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`."
+          },
+          "reason": {
+            "enum": [
+              "spoonOfSolid",
+              "volumeOfSolid",
+              "count",
+              "householdUnit"
+            ],
+            "type": "string",
+            "description": "Why the unit is not counted: `spoonOfSolid`, `volumeOfSolid`, `count` or `householdUnit`;\nonly when the status is `amountNotInGrams`.",
+            "nullable": true
           },
           "food": {
             "oneOf": [
@@ -10939,7 +11007,7 @@
           },
           "grams": {
             "type": "number",
-            "description": "The grams counted, unrounded; only when counted.",
+            "description": "The grams counted, unrounded; when the status is `implausible`, the grams it would have been.",
             "format": "double",
             "nullable": true
           },
@@ -10950,12 +11018,16 @@
               "eggSize"
             ],
             "type": "string",
-            "description": "How the grams were reached: `mass`, `density` or `eggSize`; only when counted.",
+            "description": "How the grams were reached: `mass`, `density` or `eggSize`; whenever there are grams.",
             "nullable": true
           },
           "corrected": {
             "type": "boolean",
             "description": "Whether the household chose the food (or to leave it out) instead of the default."
+          },
+          "canRaiseEnergy": {
+            "type": "boolean",
+            "description": "Whether this line, left out of the figure, could still add energy to it: it is not counted, was not excluded\nby the household, and its food is unknown or has energy (or no energy value). True for an implausible amount."
           },
           "energyKcal": {
             "type": "number",

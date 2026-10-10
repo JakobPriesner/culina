@@ -14,7 +14,7 @@ public class NutritionCalculatorTests
     };
 
     private static readonly Dictionary<string, Food> Table =
-        new[] { Flour, Oil, Butter, Whole("Z999999", kcal: 100m), Whole("G480100", kcal: 28m) }.ToDictionary(food => food.Code);
+        new[] { Flour, Oil, Butter, Whole("Z999999", kcal: 100m), Whole("G480100", kcal: 28m), Whole("R111000", kcal: 0m), Whole("N110000", kcal: 0m), Whole("M111300", kcal: 64m) }.ToDictionary(food => food.Code);
 
     private static readonly IReadOnlyDictionary<string, string?> NoCorrections = new Dictionary<string, string?>();
 
@@ -188,6 +188,135 @@ public class NutritionCalculatorTests
         // Assert
         Assert.False(result.Complete);
         Assert.All(AllValues(result), value => Assert.True(value.AtLeast));
+    }
+
+    [Fact]
+    public void Calculate_ShouldKeepEnergyExact_WhenOnlyAFoodWithoutEnergyIsLeftOut()
+    {
+        // Act
+        var result = Calculate(Servings(2m), NoCorrections, Line(100m, "g", "Mehl"), Line(null, null, "Salz"));
+
+        // Assert
+        Assert.False(result.Complete);
+        Assert.Equal(1, result.Counted);
+        Assert.False(result.Values.EnergyKcal.AtLeast);
+        Assert.False(result.Values.EnergyKj.AtLeast);
+
+        // The test salt has no energy but does have fat and salt, which a missing amount could still raise.
+        Assert.True(result.Values.Fat.AtLeast);
+        Assert.False(result.Ingredients[1].CanRaiseEnergy);
+    }
+
+    [Fact]
+    public void Calculate_ShouldMakeEverythingExact_WhenWaterWithNoAmountIsLeftOut()
+    {
+        // Arrange
+        var water = Table["N110000"] with { Per100Grams = new Nutrients(0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m) };
+        var table = new Dictionary<string, Food>(Table) { ["N110000"] = water };
+
+        // Act
+        var result = NutritionCalculator.Calculate(
+            [Line(100m, "g", "Mehl"), Line(null, null, "Wasser")],
+            Servings(1m),
+            code => table.GetValueOrDefault(code),
+            NoCorrections);
+
+        // Assert
+        Assert.All(AllValues(result), value => Assert.False(value.AtLeast));
+        Assert.Equal(LineStatus.NoAmount, result.Ingredients[1].Status);
+        Assert.False(result.Ingredients[1].CanRaiseEnergy);
+    }
+
+    [Fact]
+    public void Calculate_ShouldStillFlagEnergy_WhenAFoodWithEnergyIsLeftOut()
+    {
+        // Act
+        var result = Calculate(Servings(1m), NoCorrections, Line(100m, "g", "Olivenöl"), Line(1m, "tbsp", "Mehl"));
+
+        // Assert
+        Assert.True(result.Values.EnergyKcal.AtLeast);
+        Assert.True(result.Ingredients[1].CanRaiseEnergy);
+    }
+
+    [Fact]
+    public void Calculate_ShouldFlagEveryValue_WhenAFoodIsUnknown()
+    {
+        // Act
+        var result = Calculate(Servings(1m), NoCorrections, Line(100m, "g", "Mehl"), Line(5m, "g", "Xyzzy"));
+
+        // Assert
+        Assert.All(AllValues(result), value => Assert.True(value.AtLeast));
+        Assert.True(result.Ingredients[1].CanRaiseEnergy);
+    }
+
+    [Fact]
+    public void Calculate_ShouldNotFlagAnything_WhenTheHouseholdExcludedTheOnlyLeftOutLine()
+    {
+        // Arrange
+        var corrections = new Dictionary<string, string?> { [ItemName.Fold("Olivenöl")] = null };
+
+        // Act
+        var result = Calculate(Servings(1m), corrections, Line(100m, "g", "Mehl"), Line(1m, "tbsp", "Olivenöl"));
+
+        // Assert
+        Assert.All(AllValues(result), value => Assert.False(value.AtLeast));
+        Assert.False(result.Ingredients[1].CanRaiseEnergy);
+    }
+
+    [Fact]
+    public void Calculate_ShouldCarryTheReason_ForALineWhoseUnitIsNotCounted()
+    {
+        // Act
+        var result = Calculate(
+            Servings(1m),
+            NoCorrections,
+            Line(2m, "tbsp", "Mehl"),
+            Line(1m, "ml", "Mehl"),
+            Line(1m, null, "Zwiebel"),
+            Line(1m, "clove", "Mehl"));
+
+        // Assert
+        Assert.Equal(
+            [GramsRefusal.SpoonOfSolid, GramsRefusal.VolumeOfSolid, GramsRefusal.Count, GramsRefusal.HouseholdUnit],
+            result.Ingredients.Select(line => line.Refusal));
+    }
+
+    [Fact]
+    public void Calculate_ShouldNotCountAnImplausibleAmount_AndFlagEveryValue()
+    {
+        // Act: 1800 l of milk, meant as 1800 ml.
+        var result = Calculate(Servings(4m), NoCorrections, Line(100m, "g", "Mehl"), Line(1800m, "l", "Milch"));
+
+        // Assert
+        var milk = result.Ingredients[1];
+        Assert.Equal(LineStatus.Implausible, milk.Status);
+        Assert.Equal(1800m * 1000m * 1.031m, milk.Grams);
+        Assert.Null(milk.EnergyKcal);
+        Assert.True(milk.CanRaiseEnergy);
+        Assert.Equal(1, result.Counted);
+        Assert.Equal(100m * 3.60m / 4m, result.Values.EnergyKcal.Value);
+        Assert.All(AllValues(result), value => Assert.True(value.AtLeast));
+    }
+
+    [Fact]
+    public void Calculate_ShouldCountABigBatch_ThatClaimsOnePortion()
+    {
+        // Act: a whole cake whose recipe says it makes one portion.
+        var result = Calculate(Servings(1m), NoCorrections, Line(2.5m, "kg", "Mehl"));
+
+        // Assert: the yield is wrong, not the amount, so the line still counts.
+        Assert.Equal(LineStatus.Counted, result.Ingredients[0].Status);
+    }
+
+    [Fact]
+    public void Calculate_ShouldCountLitreAndAHalfOfMilk_InAFourPortionRecipe()
+    {
+        // Act
+        var result = Calculate(Servings(4m), NoCorrections, Line(1.8m, "l", "Milch"));
+
+        // Assert
+        Assert.Equal(LineStatus.Counted, result.Ingredients[0].Status);
+        Assert.True(result.Complete);
     }
 
     private static IEnumerable<LabelValue> AllValues(NutritionResult result) =>
