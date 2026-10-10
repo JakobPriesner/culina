@@ -72,6 +72,61 @@ public class NutritionEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Get_ShouldCarryLabelsAndTheResolvedFood_ForABrothByItsUnit()
+    {
+        // Arrange
+        var (kitchen, recipeId, _) = await SeededAsync();
+        var recipe = await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        await SaveAsync(
+            kitchen.Client,
+            recipeId,
+            recipe.ETag!,
+            [("Gemüsebrühe", 500m, "ml"), ("Gemüsebrühe", 4m, "g"), ("Gemüsebrühe", 500m, "g"), ("Gemüsebrühe", 1m, "tsp"), ("Mehl", 100m, "g")]);
+
+        // Act
+        var response = await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}/nutrition", Token);
+
+        // Assert: the liquid by volume and by more than 50 g, the powder for a few grams and a spoon.
+        var foods = response.Json!.Value.GetProperty("ingredients").EnumerateArray()
+            .Select(line => line.GetProperty("food"))
+            .ToList();
+        Assert.Equal(["X416243", "R821000", "X416243", "R821000", "C214100"], foods.Select(food => food.GetProperty("code").GetString()));
+        Assert.Equal("Gemüsebrühe (flüssig)", foods[0].GetProperty("labelDe").GetString());
+        Assert.Equal("vegetable stock (liquid)", foods[0].GetProperty("labelEn").GetString());
+        Assert.Equal("Gemüsebrühpulver", foods[1].GetProperty("labelDe").GetString());
+        Assert.All(foods, food =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(food.GetProperty("nameDe").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(food.GetProperty("labelDe").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(food.GetProperty("labelEn").GetString()));
+        });
+
+        var spoon = response.Json!.Value.GetProperty("ingredients")[3];
+        Assert.Equal("amountNotInGrams", spoon.GetProperty("status").GetString());
+        Assert.Equal("spoonOfSolid", spoon.GetProperty("reason").GetString());
+    }
+
+    [Fact]
+    public async Task Get_ShouldLabelAFoodChosenByCorrectionWithItsBlsName_WhenTheTableHasNoEntryForIt()
+    {
+        // Arrange
+        var (kitchen, recipeId, _) = await SeededAsync();
+        await kitchen.Client.PutAsync(
+            $"/api/v1/households/{kitchen.HouseholdId}/ingredients/Zwiebel",
+            new { food = "G488100" },
+            Token);
+
+        // Act
+        var response = await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}/nutrition", Token);
+
+        // Assert
+        var food = response.Json!.Value.GetProperty("ingredients")[3].GetProperty("food");
+        Assert.Equal("G488100", food.GetProperty("code").GetString());
+        Assert.Equal(food.GetProperty("nameDe").GetString(), food.GetProperty("labelDe").GetString());
+        Assert.Equal(food.GetProperty("nameEn").GetString(), food.GetProperty("labelEn").GetString());
+    }
+
+    [Fact]
     public async Task Get_ShouldAnswerNotModified_WhenTheCallerHoldsTheTag()
     {
         // Arrange

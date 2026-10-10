@@ -12,8 +12,10 @@ namespace IntegrationTests.Nutrition.Evaluation;
 /// </summary>
 /// <remarks>
 /// <c>nutrition-lines.tsv</c> holds 970 lines of 125 recipes (recipe, amount, unit, name, and the
-/// BLS codes that would be right, or NONE when no food fits). A wrong food is what the README
-/// refuses, so precision is the one hard bar; recognition and coverage are only reported.
+/// BLS codes that would be right, or NONE when no food fits), each judged per line with its unit in
+/// view. The food compared is the one counted for that unit (<see cref="NutritionGrams.Resolve"/>), so
+/// a broth line is right as the powder or as the liquid, whichever its unit says. A wrong food is what
+/// the README refuses, so precision is the one hard bar; recognition and coverage are only reported.
 /// </remarks>
 public class NutritionEvaluationTests
 {
@@ -40,21 +42,23 @@ public class NutritionEvaluationTests
 
     private static Outcome Judge(Line line)
     {
-        var food = FoodNames.Match(line.Name);
-        var right = food is not null && line.Expected.Contains(food.Code);
+        var entry = FoodNames.Match(line.Name);
 
-        if (food is null)
+        if (entry is null)
         {
-            return new Outcome(line, null, right, Counted: false, WithoutEggs: false, WithoutDensity: false, WithNeither: false);
+            return new Outcome(line, null, Right: false, Counted: false, WithoutEggs: false, WithoutDensity: false, WithNeither: false);
         }
 
+        // The food the calculator counts for this line's unit: a broth by the spoon or by weight is the
+        // powder, by volume or more than 50 g the liquid.
+        var food = NutritionGrams.Resolve(line.Quantity, entry);
         var basis = NutritionGrams.Read(line.Quantity, food);
         var counted = basis.Grams is not null;
 
         return new Outcome(
             line,
             food,
-            right,
+            line.Expected.Contains(food.Code),
             counted,
             counted && basis.Basis != GramsBasis.EggSize,
             counted && basis.Basis != GramsBasis.Density,

@@ -114,10 +114,23 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
   exclusions, is zeros with `atLeast: true`.
 - `ingredients` has one entry per line, in recipe order: `status` is `counted`,
   `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`; a
-  counted line carries the `food` (`code`, `nameDe`, `nameEn`), the `grams`,
-  `via` (`mass`, `density` or `eggSize`) and its own `energyKcal` per portion, so
-  the rows add up to the headline. `corrected` is true when a household chose the
-  food. `counted`, `lines` and `complete` count counted lines only.
+  line with a known food carries the `food` (`code`, `nameDe`, `nameEn`, `labelDe`,
+  `labelEn`); a counted one also the `grams`, `via` (`mass`, `density` or
+  `eggSize`) and its own `energyKcal` per portion, so the rows add up to the
+  headline. `corrected` is true when a household chose the food. `counted`,
+  `lines` and `complete` count counted lines only.
+- `food` is the food the line was **resolved** to, which for a broth depends on
+  its unit: `ml`, `l`, US `cup` and `fl oz` are the liquid (counted at its
+  density), `g` and `kg` up to and including 50 g the powder and above 50 g the
+  liquid (by mass), a spoon or a count the powder, which packs and is not
+  counted (`spoonOfSolid`, `count`). So the answer for "Gemüsebrühe" is
+  `R821000` "Gemüsebrühpulver" or `X416243` "Gemüsebrühe (flüssig)" by line. A
+  household correction names its food exactly and has no such alternative.
+- `nameDe`/`nameEn` are the BLS names, the citation. `labelDe`/`labelEn` are
+  what a reader calls the food (cooking language, "Hühnerei", "Kidneybohnen
+  (gekocht)"); for a food chosen by correction that has no label of its own they
+  are the BLS name, so a client never falls back. The shared recipe's answer
+  carries the same.
 - `reason`, only on `amountNotInGrams`, says why the unit is not counted:
   `spoonOfSolid` (a tsp or tbsp of a food without a density: flour, sugar,
   butter), `volumeOfSolid` (ml, l, a US cup or fl oz of such a food), `count` (a

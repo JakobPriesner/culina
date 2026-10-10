@@ -14,7 +14,7 @@ public class NutritionCalculatorTests
     };
 
     private static readonly Dictionary<string, Food> Table =
-        new[] { Flour, Oil, Butter, Whole("Z999999", kcal: 100m), Whole("G480100", kcal: 28m), Whole("R111000", kcal: 0m), Whole("N110000", kcal: 0m), Whole("M111300", kcal: 64m) }.ToDictionary(food => food.Code);
+        new[] { Flour, Oil, Butter, Whole("Z999999", kcal: 100m), Whole("G480100", kcal: 28m), Whole("R111000", kcal: 0m), Whole("N110000", kcal: 0m), Whole("M111300", kcal: 64m), Whole("R821000", kcal: 195m), Whole("X416243", kcal: 4m) }.ToDictionary(food => food.Code);
 
     private static readonly IReadOnlyDictionary<string, string?> NoCorrections = new Dictionary<string, string?>();
 
@@ -29,6 +29,74 @@ public class NutritionCalculatorTests
         Assert.Equal(2, result.Counted);
         Assert.All(AllValues(result), value => Assert.False(value.AtLeast));
         Assert.Equal((200m * 3.60m + 100m * 0.913m * 9.00m) / 4m, result.Values.EnergyKcal.Value);
+    }
+
+    [Fact]
+    public void Calculate_ShouldCountBrothAsTheLiquid_ByVolume_AndSayWhichFoodItWas()
+    {
+        // Act
+        var line = Calculate(Servings(1m), NoCorrections, Line(500m, "ml", "Gemüsebrühe")).Ingredients[0];
+
+        // Assert
+        Assert.Equal(LineStatus.Counted, line.Status);
+        Assert.Equal("X416243", line.Food!.Code);
+        Assert.Equal("Gemüsebrühe (flüssig)", line.LabelDe);
+        Assert.Equal(500m * 0.934m, line.Grams);
+        Assert.Equal(GramsBasis.Density, line.Via);
+    }
+
+    [Fact]
+    public void Calculate_ShouldCountBrothAsThePowder_ForAFewGrams()
+    {
+        // Act
+        var line = Calculate(Servings(1m), NoCorrections, Line(4m, "g", "Gemüsebrühe")).Ingredients[0];
+
+        // Assert
+        Assert.Equal("R821000", line.Food!.Code);
+        Assert.Equal("Gemüsebrühpulver", line.LabelDe);
+        Assert.Equal(4m, line.Grams);
+    }
+
+    [Fact]
+    public void Calculate_ShouldCountBrothAsTheLiquid_ByMass_ForMoreThanFiftyGrams()
+    {
+        // Act
+        var line = Calculate(Servings(1m), NoCorrections, Line(500m, "g", "Gemüsebrühe")).Ingredients[0];
+
+        // Assert
+        Assert.Equal("X416243", line.Food!.Code);
+        Assert.Equal(500m, line.Grams);
+        Assert.Equal(GramsBasis.Mass, line.Via);
+    }
+
+    [Theory]
+    [InlineData(1, "tsp")]
+    [InlineData(1, "piece")]
+    [InlineData(1, "Würfel")]
+    public void Calculate_ShouldNotCountBroth_ByASpoonOrACount_AndNameThePowder(int amount, string unit)
+    {
+        // Act
+        var line = Calculate(Servings(1m), NoCorrections, Line(amount, unit, "Gemüsebrühe")).Ingredients[0];
+
+        // Assert
+        Assert.Equal(LineStatus.AmountNotInGrams, line.Status);
+        Assert.Equal("R821000", line.Food!.Code);
+    }
+
+    [Fact]
+    public void Calculate_ShouldLabelAFoodChosenByCorrectionWithItsBlsName_AndGiveItNoLiquid()
+    {
+        // Arrange
+        var corrections = new Dictionary<string, string?> { [ItemName.Fold("Brühe")] = "Z999999" };
+
+        // Act
+        var line = Calculate(Servings(1m), corrections, Line(500m, "ml", "Brühe")).Ingredients[0];
+
+        // Assert
+        Assert.Equal("Z999999", line.Food!.Code);
+        Assert.Equal("de", line.LabelDe);
+        Assert.Equal("en", line.LabelEn);
+        Assert.Equal(LineStatus.AmountNotInGrams, line.Status);
     }
 
     [Fact]

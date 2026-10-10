@@ -10936,7 +10936,9 @@
         "required": [
           "code",
           "nameDe",
-          "nameEn"
+          "nameEn",
+          "labelDe",
+          "labelEn"
         ],
         "type": "object",
         "properties": {
@@ -10946,11 +10948,19 @@
           },
           "nameDe": {
             "type": "string",
-            "description": "The German name."
+            "description": "The German BLS name, the citation."
           },
           "nameEn": {
             "type": "string",
-            "description": "The English name."
+            "description": "The English BLS name, the citation."
+          },
+          "labelDe": {
+            "type": "string",
+            "description": "What a reader calls the food in German; the BLS name for a food chosen by correction that has no label of its own."
+          },
+          "labelEn": {
+            "type": "string",
+            "description": "What a reader calls the food in English; the BLS name for a food chosen by correction that has no label of its own."
           }
         },
         "description": "A food of the Bundeslebensmittelschlüssel."

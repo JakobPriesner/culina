@@ -36,6 +36,7 @@ public class EndpointAuthorizationTests(PostgresFixture postgres)
         // A recipe somebody shared behind a link; the token is the key.
         "GET /api/v1/shared-recipes/{token}",
         "GET /api/v1/shared-recipes/{token}/image",
+        "GET /api/v1/shared-recipes/{token}/nutrition",
 
         // The web app's own error reports: a sign-in page breaks too.
         "POST /api/v1/log-records"

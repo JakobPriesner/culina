@@ -5,14 +5,73 @@ namespace Domain.UnitTests.Nutrition;
 
 public class NutritionGramsTests
 {
-    private static readonly FoodName Flour = new("C214100", ["Mehl"], ["flour"], Density: null, EggPart.None);
-    private static readonly FoodName Onion = new("G480100", ["Zwiebel"], ["onion"], Density: null, EggPart.None);
-    private static readonly FoodName Salt = new("R111000", ["Salz"], ["salt"], Density: null, EggPart.None);
-    private static readonly FoodName Milk = new("M111300", ["Milch"], ["milk"], Density: 1.031m, EggPart.None);
-    private static readonly FoodName Oil = new("Q120000", ["Olivenöl"], ["olive oil"], Density: 0.913m, EggPart.None);
-    private static readonly FoodName Egg = new("E111100", ["Ei"], ["egg"], Density: null, EggPart.Whole);
-    private static readonly FoodName Yolk = new("E112100", ["Eigelb"], ["egg yolk"], Density: null, EggPart.Yolk);
-    private static readonly FoodName White = new("E113100", ["Eiweiß"], ["egg white"], Density: null, EggPart.White);
+    private static readonly FoodName Flour = new("C214100", ["Mehl"], ["flour"], Density: null, EggPart.None, "Mehl", "flour");
+    private static readonly FoodName Onion = new("G480100", ["Zwiebel"], ["onion"], Density: null, EggPart.None, "Zwiebel", "onion");
+    private static readonly FoodName Salt = new("R111000", ["Salz"], ["salt"], Density: null, EggPart.None, "Salz", "salt");
+    private static readonly FoodName Milk = new("M111300", ["Milch"], ["milk"], Density: 1.031m, EggPart.None, "Milch", "milk");
+    private static readonly FoodName Oil = new("Q120000", ["Olivenöl"], ["olive oil"], Density: 0.913m, EggPart.None, "Olivenöl", "olive oil");
+    private static readonly FoodName Egg = new("E111100", ["Ei"], ["egg"], Density: null, EggPart.Whole, "Ei", "egg");
+    private static readonly FoodName Yolk = new("E112100", ["Eigelb"], ["egg yolk"], Density: null, EggPart.Yolk, "Eigelb", "egg yolk");
+    private static readonly FoodName White = new("E113100", ["Eiweiß"], ["egg white"], Density: null, EggPart.White, "Eiweiß", "egg white");
+
+    private static readonly FoodName Broth = new(
+        "R821000",
+        ["Gemüsebrühpulver"],
+        ["vegetable stock powder"],
+        Density: null,
+        EggPart.None,
+        "Gemüsebrühpulver",
+        "vegetable stock powder",
+        new LiquidFood("X416243", 0.934m, "Gemüsebrühe (flüssig)", "vegetable stock (liquid)"));
+
+    [Theory]
+    [InlineData(500, "ml")]
+    [InlineData(0.5, "l")]
+    [InlineData(1, "cup")]
+    [InlineData(2, "fl oz")]
+    [InlineData(500, "g")]
+    [InlineData(50.1, "g")]
+    [InlineData(1, "kg")]
+    public void Resolve_ShouldTakeTheLiquid_ForAVolumeAndForMoreThanFiftyGrams(double amount, string unit)
+    {
+        // Act
+        var resolved = NutritionGrams.Resolve(Measured((decimal)amount, unit), Broth);
+
+        // Assert
+        Assert.Equal("X416243", resolved.Code);
+        Assert.Equal("Gemüsebrühe (flüssig)", resolved.LabelDe);
+        Assert.Equal(0.934m, resolved.Density);
+    }
+
+    [Theory]
+    [InlineData(4, "g")]
+    [InlineData(50, "g")]
+    [InlineData(1, "tsp")]
+    [InlineData(1, "tbsp")]
+    [InlineData(1, "piece")]
+    [InlineData(1, "Würfel")]
+    public void Resolve_ShouldTakeThePowder_ForFewGramsSpoonsAndCounts(double amount, string unit)
+    {
+        // Act
+        var resolved = NutritionGrams.Resolve(Measured((decimal)amount, unit), Broth);
+
+        // Assert
+        Assert.Equal(Broth, resolved);
+    }
+
+    [Fact]
+    public void Resolve_ShouldTakeThePowder_WhenThereIsNoUnit()
+    {
+        // Act & Assert
+        Assert.Equal(Broth, NutritionGrams.Resolve(Quantity.Unmeasured, Broth));
+    }
+
+    [Fact]
+    public void Resolve_ShouldReturnTheEntry_WhenItHasNoLiquid()
+    {
+        // Act & Assert
+        Assert.Equal(Milk, NutritionGrams.Resolve(Measured(500m, "g"), Milk));
+    }
 
     [Fact]
     public void Read_ShouldCountGrams_AsMass()
