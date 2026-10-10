@@ -173,7 +173,10 @@ usual logs. For a shared kitchen this is a feature, not a gap.
 **Content Security Policy allows `img-src data: blob:`.** The editor previews a
 photograph before it is uploaded, which needs one of them. It is narrower than
 it looks: there is no `unsafe-inline`, no `unsafe-eval`, and scripts are
-`'self'` plus a nonce.
+`'self'` plus a nonce. Trusted Types is enforced as well
+(`require-trusted-types-for 'script'`, with the three policy names allowed
+listed in `SecurityHeaders.TrustedTypesPolicies`), so a string cannot reach
+`innerHTML` or the service worker's registration without passing a policy.
 
 ## What this review did not cover
 
