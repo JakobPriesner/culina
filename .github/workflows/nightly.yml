@@ -87,15 +87,8 @@ jobs:
       # fail: a newly disclosed vulnerability in something Culina ships is
       # work, not information.
       - name: Vulnerable NuGet packages
-        working-directory: src/backend
-        run: |
-          dotnet restore --locked-mode
-          report=$(dotnet list package --vulnerable --include-transitive)
-          echo "$report"
-          if echo "$report" | grep -q '> '; then
-            echo "::error::A dependency has a known vulnerability."
-            exit 1
-          fi
+        # Applies the suppressions in Directory.Packages.props, which `dotnet list package` ignores.
+        run: scripts/vulnerable-nuget.sh
 
       - run: pnpm install --frozen-lockfile
         working-directory: src/frontend
