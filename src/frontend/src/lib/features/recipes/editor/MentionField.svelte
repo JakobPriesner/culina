@@ -12,6 +12,7 @@
     writesOn,
     type PendingMention
   } from './mentions';
+  import { LONGEST_COOKING_STEP } from './stepEdits';
   import { formatQuantity } from '../formatQuantity';
   import { quantityLabels } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
@@ -39,6 +40,9 @@
 
   const listId = $derived(`${id}-mentions`);
   const hintId = $derived(`${id}-hint`);
+  const longId = $derived(`${id}-long`);
+  /** Only a nudge: it never blocks saving. */
+  const tooLong = $derived(value.length > LONGEST_COOKING_STEP);
   const rowId = (index: number) => `${listId}-${index}`;
 
   const query = $derived(pending?.query.trim() ?? '');
@@ -190,7 +194,7 @@
       {value}
       bind:element={field}
       rows={2}
-      describedBy={hintId}
+      describedBy={tooLong ? `${hintId} ${longId}` : hintId}
       combobox={{
         expanded: open,
         controls: listId,
@@ -204,6 +208,10 @@
   </div>
 
   <p id={hintId} class="hint">{m['editor.mentionHint']()}</p>
+
+  {#if tooLong}
+    <p id={longId} class="hint long">{m['editor.stepLong']()}</p>
+  {/if}
 
   {#if open}
     <SuggestionList
@@ -267,5 +275,10 @@
     margin-top: var(--space-1);
     color: var(--text-subtle);
     font-size: var(--text-xs);
+  }
+
+  .long {
+    /* Muted, not amber: the warning tone is a fill colour and fails contrast as small text. */
+    color: var(--text-muted);
   }
 </style>

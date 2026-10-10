@@ -221,6 +221,7 @@
   "editor.addStep": "Schritt hinzufügen",
   "editor.stepLabel": "Schritt {number}",
   "editor.mentionHint": "Tippe @, um eine Zutat einzufügen. Ihre Menge passt sich den Portionen an.",
+  "editor.stepLong": "Dieser Schritt ist lang und passt im Kochmodus vielleicht nicht auf einen Bildschirm. Teile ihn besser auf.",
   "editor.mentionListLabel": "Zutaten zum Erwähnen",
   "editor.mentionAdd": "„{name}“ zu den Zutaten hinzufügen",
   "editor.mentionNavHint": "↑↓ zum Navigieren, ↵ zum Auswählen, esc zum Schließen",
