@@ -7,6 +7,9 @@ import type { components } from '$api/generated/schema';
 export type CookSession = components['schemas']['CookSessionsResponse'];
 
 class CookingStore {
+  /** Told which session ended, however it ended, so what is stored for it can go. */
+  onEnded: (sessionId: string) => void = () => {};
+
   #session = $state<CookSession | null>(null);
   #resolved = $state(false);
 
@@ -27,7 +30,15 @@ class CookingStore {
   async resume(): Promise<void> {
     const result = await request(() => http.GET('/api/v1/cook-sessions/current'));
 
+    const previous = this.#session;
+
     this.#session = result.ok ? result.value : null;
+
+    // Ended on another device since it was last seen.
+    if (previous && previous.sessionId !== this.#session?.sessionId) {
+      this.onEnded(previous.sessionId);
+    }
+
     this.#resolved = true;
   }
 
@@ -123,6 +134,8 @@ class CookingStore {
       return true;
     }
 
+    this.onEnded(session.sessionId);
+
     const result = await request(() =>
       http.DELETE('/api/v1/cook-sessions/{sessionId}', {
         params: { path: { sessionId: session.sessionId }, query: { completed: String(completed) } }
@@ -135,6 +148,7 @@ class CookingStore {
   /** Drops the session of a deleted recipe; the server ended it already, so nothing is sent. */
   forget(recipeId: string): void {
     if (this.#session?.recipeId === recipeId) {
+      this.onEnded(this.#session.sessionId);
       this.#session = null;
       this.#pendingStep = null;
     }
