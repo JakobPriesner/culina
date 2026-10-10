@@ -127,3 +127,154 @@ describe('the nutrition store', () => {
     expect(nutrition.answerFor('r1', 'h1')).toBeNull();
   });
 });
+
+describe('a correction', () => {
+  const line = (ingredientId: string, name: string) => ({
+    ingredientId,
+    status: 'counted',
+    food: { code: 'M110100', nameDe: 'Butter', nameEn: 'Butter' },
+    grams: 100,
+    via: 'mass',
+    corrected: false,
+    energyKcal: 700,
+    name
+  });
+
+  const withLines = (lines: unknown[]) => ({ ...answer(700), ingredients: lines });
+
+  const sweet = { code: 'M111111', nameDe: 'Süßrahmbutter', nameEn: 'Sweet cream butter' };
+
+  it('changes the rows at once, tells the server by the name as written, and reads the answer again', async () => {
+    const calls: { method: string; url: string; body: string }[] = [];
+    let release: (() => void) | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        calls.push({ method: input.method, url: input.url, body: await input.clone().text() });
+
+        if (input.method === 'PUT') {
+          await new Promise<void>((resume) => (release = resume));
+
+          return new Response(null, { status: 204 });
+        }
+
+        return json(withLines([line('a', 'Butter')]));
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    const done = nutrition.correct('r1', 'h1', 'Müsli & Nüsse/Mix', ['a'], {
+      kind: 'food',
+      food: sweet
+    });
+
+    await vi.waitFor(() => expect(release).toBeDefined());
+
+    const shown = nutrition.answerFor('r1', 'h1')?.ingredients[0];
+
+    expect(shown?.food?.nameEn).toBe('Sweet cream butter');
+    expect(shown?.corrected).toBe(true);
+
+    release?.();
+
+    expect(await done).toBeNull();
+
+    const put = calls.find((call) => call.method === 'PUT')!;
+
+    expect(put.url).toContain('/households/h1/ingredients/M%C3%BCsli%20%26%20N%C3%BCsse%2FMix');
+    expect(JSON.parse(put.body)).toEqual({ food: 'M111111' });
+    expect(calls.filter((call) => call.method === 'GET')).toHaveLength(2);
+  });
+
+  it('moves a line to not counted, and sends null', async () => {
+    let body = '';
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'PUT') {
+          body = await input.text();
+
+          return new Response(null, { status: 204 });
+        }
+
+        return json(withLines([line('a', 'Butter')]));
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+    await nutrition.correct('r1', 'h1', 'Butter', ['a'], { kind: 'exclude' });
+
+    expect(JSON.parse(body)).toEqual({ food: null });
+  });
+
+  it('puts the rows back when the server refuses, and hands the failure over', async () => {
+    let release: (() => void) | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'PUT') {
+          await new Promise<void>((resume) => (release = resume));
+
+          return new Response(
+            JSON.stringify({ code: 'nutrition.unknown_food', title: 'x', status: 400 }),
+            { status: 400, headers: { 'Content-Type': 'application/problem+json' } }
+          );
+        }
+
+        return json(withLines([line('a', 'Butter')]));
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    const done = nutrition.correct('r1', 'h1', 'Butter', ['a'], { kind: 'exclude' });
+
+    await vi.waitFor(() => expect(release).toBeDefined());
+    expect(nutrition.answerFor('r1', 'h1')?.ingredients[0]?.status).toBe('excluded');
+
+    release?.();
+
+    const failure = await done;
+
+    expect(failure).not.toBeNull();
+    expect(nutrition.answerFor('r1', 'h1')?.ingredients[0]?.status).toBe('counted');
+    expect(nutrition.answerFor('r1', 'h1')?.ingredients[0]?.corrected).toBe(false);
+  });
+
+  it('puts the rows back when the network is down', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'DELETE') {
+          throw new TypeError('offline');
+        }
+
+        return json(withLines([{ ...line('a', 'Butter'), corrected: true }]));
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    const failure = await nutrition.correct('r1', 'h1', 'Butter', ['a'], { kind: 'default' });
+
+    expect(failure).not.toBeNull();
+    expect(nutrition.answerFor('r1', 'h1')?.ingredients[0]?.corrected).toBe(true);
+  });
+});
+
+describe('an answer this client cannot read', () => {
+  it('is a failed read, not an unhandled error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json({ items: [] })))
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    expect(nutrition.statusFor('r1', 'h1')).toBe('failed');
+  });
+});

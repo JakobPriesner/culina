@@ -63,6 +63,11 @@ beforeEach(() => {
         );
       }
 
+      // Not what this page spec is about; unavailable is the panel's ordinary state.
+      if (path.endsWith('/nutrition')) {
+        return Promise.resolve(new Response(null, { status: 404 }));
+      }
+
       return Promise.resolve(path in answers ? json(answers[path]) : json({ items: [] }));
     })
   );
