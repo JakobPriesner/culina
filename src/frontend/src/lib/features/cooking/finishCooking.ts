@@ -1,5 +1,4 @@
 import { haptics } from '$shell/haptics';
-import { kitchenTimers as timers } from './kitchen.svelte';
 import { cookLog } from './stores/cookLog.svelte';
 import { cooking } from './stores/cooking.svelte';
 
@@ -23,7 +22,6 @@ export async function finishCooking(
   }
 
   const closed = await cooking.end(completed);
-  timers.clear();
 
   const recorded = completed ? await cookLog.record(recipeId, servings, householdId) : null;
 

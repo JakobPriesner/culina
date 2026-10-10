@@ -95,6 +95,35 @@ describe('finishing', () => {
   });
 });
 
+describe('loading', () => {
+  it('drops keys left by sessions that ended unseen, and keeps expired timers to show as done', () => {
+    localStorage.setItem(
+      'culina.timers.old',
+      JSON.stringify([{ stepIndex: 0, endsAt: 1, label: 'x' }])
+    );
+    const expired = { stepIndex: 1, endsAt: Date.now() - 1000, label: 'Simmer' };
+    localStorage.setItem(`culina.timers.${sessionId}`, JSON.stringify([expired]));
+    const kitchen = timers();
+
+    kitchen.load();
+
+    expect(localStorage.getItem('culina.timers.old')).toBeNull();
+    expect(kitchen.timers).toEqual([expired]);
+    expect(kitchen.isDone(kitchen.timers[0]!)).toBe(true);
+  });
+
+  it('clears only the named session when another is loaded', () => {
+    const kitchen = timers();
+    kitchen.start(0, 600, 'Step 1');
+    localStorage.setItem('culina.timers.other', '[]');
+
+    kitchen.clear('other');
+
+    expect(localStorage.getItem('culina.timers.other')).toBeNull();
+    expect(kitchen.timers).toHaveLength(1);
+  });
+});
+
 describe('a phone that was in a pocket', () => {
   it('shows the right number the instant it is looked at again', () => {
     // Backgrounded tabs throttle or stop intervals; waiting for the next tick would show a stale number on unlocking.
