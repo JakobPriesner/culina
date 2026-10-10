@@ -20,6 +20,7 @@
   import { usePlanActions } from '$features/planning/usePlanActions.svelte';
   import { mondayOf, rangeOf } from '$features/planning/weekDates';
   import { WeekDrag } from '$features/planning/weekDrag.svelte';
+  import { recipeAnswers } from '$features/nutrition/stores/recipeAnswers.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
@@ -53,11 +54,22 @@
   const drag = new WeekDrag();
   const actions = usePlanActions({ householdId: () => householdId, monday: () => monday });
 
-  onDestroy(() => drag.stop());
+  onDestroy(() => {
+    drag.stop();
+    // The next visit asks again (a 304 when nothing changed), so an edit or a correction made meanwhile shows.
+    recipeAnswers.reset();
+  });
 
   $effect(() => {
     if (householdId) {
       void mealPlan.load(householdId, monday);
+    }
+  });
+
+  // Each planned recipe's nutrition, asked for in parallel and never waited for: the day lines appear as they arrive.
+  $effect(() => {
+    if (householdId) {
+      void recipeAnswers.ensure(plannedThisWeek, householdId);
     }
   });
 
@@ -111,6 +123,7 @@
   {:else}
     <PlanWeek
       days={mealPlan.days}
+      {householdId}
       {drag}
       ondrop={actions.drop}
       onadd={addOn}

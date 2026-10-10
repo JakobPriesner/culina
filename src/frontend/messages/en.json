@@ -1603,5 +1603,16 @@
   "nutrition.implausible.fix": "Fix in the recipe",
   "nutrition.oneServing": "The recipe says 1 serving.",
   "nutrition.setServings": "Set servings",
-  "nutrition.implausible.line": "{what} looks unusual and isn't counted."
+  "nutrition.implausible.line": "{what} looks unusual and isn't counted.",
+  "nutrition.short.spoon": "spoonful",
+  "nutrition.short.volume": "volume",
+  "nutrition.short.count": "a count",
+  "nutrition.short.unit": "own unit",
+  "nutrition.short.implausible": "check amount",
+  "nutrition.coverage.all": "Nutrition: every line counts",
+  "nutrition.coverage.some": "Nutrition: {counted} of {lines} lines count",
+  "nutrition.coverage.line": "{name}: {why}",
+  "nutrition.coverage.more": "and {count} more",
+  "nutrition.coverage.stale": "as last saved",
+  "nutrition.day.perPerson": "{figure} per person"
 }

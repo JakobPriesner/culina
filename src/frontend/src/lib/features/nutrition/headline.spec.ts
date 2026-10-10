@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { metaFigureOf, missingNames, withoutWords } from './headline';
+import { coverageWords, metaFigureOf, missingNames, withoutWords } from './headline';
 import type { Nutrition } from './types';
 import { preferences } from '$shell/preferences.svelte';
 
@@ -55,5 +55,90 @@ describe('what is missing', () => {
     const exact = answer({ values: { energyKcal: value(520, false) } as never });
 
     expect(missingNames(exact, { groups: [] } as never)).toEqual([]);
+  });
+});
+
+describe('what counts, for the editor', () => {
+  const recipe = {
+    groups: [
+      {
+        ingredients: ['butter', 'onion', 'salt', 'oil', 'chives', 'pepper'].map((name) => ({
+          id: name,
+          name
+        }))
+      }
+    ]
+  } as never;
+
+  const line = (ingredientId: string, status: string, reason?: string) => ({
+    ingredientId,
+    status,
+    reason,
+    canRaiseEnergy: true
+  });
+
+  const lines = (...rest: ReturnType<typeof line>[]) => rest as never;
+
+  it('says every line counts', () => {
+    expect(coverageWords(answer({ complete: true, counted: 6, lines: 6 }), recipe)).toBe(
+      'Nutrition: every line counts'
+    );
+  });
+
+  it('counts the lines and names what is left out, in the recipe order, short', () => {
+    const words = coverageWords(
+      answer({
+        counted: 4,
+        lines: 6,
+        ingredients: lines(
+          line('butter', 'counted'),
+          line('onion', 'amountNotInGrams', 'count'),
+          line('salt', 'noAmount'),
+          line('oil', 'counted'),
+          line('chives', 'counted'),
+          line('pepper', 'counted')
+        )
+      }),
+      recipe
+    );
+
+    expect(words).toBe('Nutrition: 4 of 6 lines count · onion: a count · salt: no amount');
+  });
+
+  it('names at most three, then how many more', () => {
+    const words = coverageWords(
+      answer({
+        counted: 2,
+        lines: 6,
+        ingredients: lines(
+          line('butter', 'counted'),
+          line('onion', 'amountNotInGrams', 'count'),
+          line('salt', 'noAmount'),
+          line('oil', 'amountNotInGrams', 'spoonOfSolid'),
+          line('chives', 'unknownFood'),
+          line('pepper', 'counted')
+        )
+      }),
+      recipe
+    );
+
+    expect(words).toBe(
+      'Nutrition: 2 of 6 lines count · onion: a count · salt: no amount · oil: spoonful · and 1 more'
+    );
+  });
+
+  it('is German too, and has nothing to say about a recipe with no lines', () => {
+    preferences.setLocale('de');
+
+    expect(coverageWords(answer({ complete: true, counted: 6, lines: 6 }), recipe)).toBe(
+      'Nährwerte: alle Zeilen zählen'
+    );
+    expect(
+      coverageWords(
+        answer({ counted: 1, lines: 2, ingredients: lines(line('salt', 'noAmount')) }),
+        recipe
+      )
+    ).toBe('Nährwerte: 1 von 2 Zeilen zählen · salt: keine Menge');
+    expect(coverageWords(answer({ counted: 0, lines: 0 }), recipe)).toBeNull();
   });
 });

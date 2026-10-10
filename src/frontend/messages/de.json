@@ -1603,5 +1603,16 @@
   "nutrition.implausible.fix": "Im Rezept ändern",
   "nutrition.oneServing": "Laut Rezept 1 Portion.",
   "nutrition.setServings": "Portionen festlegen",
-  "nutrition.implausible.line": "{what} sieht ungewöhnlich aus und ist nicht mitgezählt."
+  "nutrition.implausible.line": "{what} sieht ungewöhnlich aus und ist nicht mitgezählt.",
+  "nutrition.short.spoon": "Löffel",
+  "nutrition.short.volume": "Volumen",
+  "nutrition.short.count": "Stückzahl",
+  "nutrition.short.unit": "eigene Einheit",
+  "nutrition.short.implausible": "Menge prüfen",
+  "nutrition.coverage.all": "Nährwerte: alle Zeilen zählen",
+  "nutrition.coverage.some": "Nährwerte: {counted} von {lines} Zeilen zählen",
+  "nutrition.coverage.line": "{name}: {why}",
+  "nutrition.coverage.more": "und {count} weitere",
+  "nutrition.coverage.stale": "Stand der letzten Speicherung",
+  "nutrition.day.perPerson": "{figure} pro Person"
 }

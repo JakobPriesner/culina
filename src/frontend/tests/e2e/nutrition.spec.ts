@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
-import { expectReflow, recipeId, responsiveData } from './support/responsive';
+import { expectReflow, recipeId, responsiveData, shareToken } from './support/responsive';
 
 /* The routed fixture stands in for the backend, so these need nothing but the built app. */
 test.describe('nutrition on a recipe @offline', () => {
@@ -317,6 +317,117 @@ test.describe('nutrition on a recipe @offline', () => {
       await expect(page.locator('.detail', { hasText: 'as Olive oil' })).toBeVisible();
       await expect(page.locator('.detail', { hasText: 'as Rapeseed oil' })).toBeHidden();
       await expect(page.locator('summary', { hasText: /520 kcal/ })).toBeVisible();
+    });
+  });
+
+  test.describe('in the editor', () => {
+    const line = (page: Page) => page.locator('#ingredients .coverage');
+
+    test('says quietly which lines count, and which do not', async ({ page }) => {
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto(`/recipes/${recipeId}/edit`);
+
+      await expect(line(page)).toHaveText(
+        'Nährwerte: 3 von 5 Zeilen zählen · Zwiebel: Stückzahl · Salz: keine Menge'
+      );
+      await expect(page.getByRole('alert')).toHaveCount(0);
+    });
+
+    test('says every line counts when they do', async ({ page }) => {
+      await responsiveData(page, 'en');
+      await page.goto(`/recipes/${recipeId}/edit`);
+
+      await expect(line(page)).toHaveText('Nutrition: every line counts');
+    });
+
+    test('says it is the last save while there is typing the server has not seen', async ({
+      page
+    }) => {
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto(`/recipes/${recipeId}/edit`);
+      await expect(line(page)).toBeVisible();
+      await expect(line(page)).not.toContainText('Stand der letzten Speicherung');
+
+      await page.getByLabel(/^\s*(Titel)\s*$/).fill('Anders genannt');
+
+      await expect(line(page)).toContainText('(Stand der letzten Speicherung)');
+    });
+
+    test('does not spill past a 320 px screen', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width: 320, height: 720 });
+      await responsiveData(page, 'de', { nutritionLines: true, extraIngredients: 4 });
+      await page.goto(`/recipes/${recipeId}/edit`);
+      await expect(line(page)).toBeVisible();
+      await expectReflow(page);
+    });
+  });
+
+  test.describe('on the week plan', () => {
+    const days = (page: Page) => page.locator('[data-plan-nutrition]');
+
+    test('says what one person has on each planned day, as a lower bound when it is one', async ({
+      page
+    }) => {
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto('/plan');
+
+      await expect(days(page)).toHaveCount(7);
+      await expect(days(page).first()).toHaveText(/^mind\.\s520\skcal\spro\sPerson$/);
+    });
+
+    test('leaves out the "mind." when everything is exact', async ({ page }) => {
+      await responsiveData(page, 'en');
+      await page.goto('/plan');
+
+      await expect(days(page).first()).toHaveText(/^521\skcal per person$/);
+    });
+
+    test('says nothing for a recipe that makes one serving, which is the whole pot', async ({
+      page
+    }) => {
+      await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
+      await page.goto('/plan');
+
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+      await expect(days(page)).toHaveCount(0);
+    });
+
+    test('does not spill past a 320 px screen', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width: 320, height: 720 });
+      await responsiveData(page, 'de', { nutritionLines: true });
+      await page.goto('/plan');
+      await expect(days(page).first()).toBeVisible();
+      await expectReflow(page);
+    });
+  });
+
+  test.describe('on a shared recipe, signed out', () => {
+    test('shows the panel without a way to change anything', async ({ page }) => {
+      await responsiveData(page, 'de', {
+        nutritionLines: true,
+        nutritionVariant: 'implausible',
+        signedOut: true
+      });
+      await page.goto(`/shared/${shareToken}`);
+
+      const summary = page.locator('summary', { hasText: 'Nährwerte' });
+
+      await expect(summary).toContainText(/mind\.\s520\skcal\spro\sPortion/);
+      await expect(summary).toContainText(/Stimmt die Menge\?\s1\.800\sl\sMilch/);
+
+      await summary.click();
+
+      await expect(page.getByRole('heading', { name: 'Gezählt (3)', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: /Ändern$/ })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Im Rezept ändern' })).toHaveCount(0);
+      await expect(
+        page.locator('p.source:visible', {
+          hasText: 'Nährwerte: Max Rubner-Institut, Bundeslebensmittelschlüssel 4.0 (CC BY 4.0)'
+        })
+      ).toBeVisible();
     });
   });
 });

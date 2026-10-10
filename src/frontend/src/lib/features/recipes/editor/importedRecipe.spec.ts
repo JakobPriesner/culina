@@ -33,4 +33,34 @@ describe('a recipe a website published', () => {
     expect(recipe.servings).toBe(4);
     expect(recipe.totalMinutes).toBe(30);
   });
+
+  it('keeps what a site says it makes: pieces and its own word for them', () => {
+    const recipe = publishedRecipe(
+      { ...page, servings: 12, yieldKind: 'pieces', yieldLabel: 'Muffins' },
+      []
+    );
+
+    expect(recipe.servings).toBe(12);
+    expect(recipe.yieldKind).toBe('pieces');
+    expect(recipe.yieldLabel).toBe('Muffins');
+  });
+
+  it('reads servings with no kind as it always did, and a kind it does not know as servings', () => {
+    const plain = publishedRecipe({ ...page, servings: 4 }, []);
+    const odd = publishedRecipe({ ...page, servings: 4, yieldKind: 'bowls' }, []);
+
+    expect(plain).not.toHaveProperty('yieldKind');
+    expect(plain).not.toHaveProperty('yieldLabel');
+    expect(odd).not.toHaveProperty('yieldKind');
+  });
+
+  it('says nothing of kind or word without a number', () => {
+    const recipe = publishedRecipe(
+      { ...page, servings: null, yieldKind: 'pieces', yieldLabel: 'Muffins' },
+      []
+    );
+
+    expect(recipe).not.toHaveProperty('yieldKind');
+    expect(recipe).not.toHaveProperty('yieldLabel');
+  });
 });

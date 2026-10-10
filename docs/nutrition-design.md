@@ -771,3 +771,42 @@ the calculator counts. Result: recognised 793 of 970 (from 780), **precision
 without densities, 308 with neither), 8 of 125 recipes complete, median recipe
 53 % counted (from 50 %). A first run mapped bare *Brühe* to the generic entry and
 missed that one line (99.9 %); the table was narrowed, not the answer changed.
+
+
+### Q.3 Follow-up: where people plan, write and share (10 October 2026)
+
+**§M's "no nutrition in lists" is reversed for the week plan, by request (10 October 2026).**
+The plan shows one quiet line under each day's meals: "mind. 1.850 kcal pro Person". The reasons §M gave
+(a different computation, and not before a measurement asks for it) are answered by the figure being
+the sum of what the recipe pages already compute, read through the same endpoint. Recipe cards, search,
+filters and sorting stay as §M has them. The honesty rules the line follows:
+
+- It is the sum of **one portion** of each planned recipe's energy, per person. How many were planned for
+  does not change it, as per-portion figures never follow the servings.
+- A recipe that gives no per-person figure is **left out and named**: per-piece recipes (a person's share
+  of twelve cookies is not known), recipes whose yield is one serving (that is the whole pot, §I), and
+  recipes with nothing counted or whose answer could not be read. The day then reads "mind. … · ohne Kuchen",
+  named like the headline names what it leaves out (two names, then "und N weitere"), since leaving a
+  meal out can only make the real figure higher.
+- It is a lower bound ("mind.") when any counted recipe's energy is, or when any meal is left out, and
+  exact (no "mind.") only when every meal is counted exactly.
+- Nothing is shown for a day without meals, or when no meal could be counted: no "0 kcal".
+- The line appears only once **every** meal of the day has an answer, so the number never grows as answers
+  arrive. It takes no space before that (no skeleton), and the plan itself never waits for it.
+- Each distinct planned recipe of the week is asked for once, in parallel, for the plan's household (its
+  corrections count); the HTTP client replays the ETag, so a revisit is a 304. The answers are forgotten
+  when the plan page is left, so a correction made elsewhere shows on the next visit.
+
+**The editor** of a saved recipe has one quiet line under the ingredients heading, from the saved version's
+nutrition: "Nährwerte: 7 von 9 Zeilen zählen · Zwiebel: Stückzahl · Salz: keine Menge" (at most three
+lines named, then "und N weitere"), or "alle Zeilen zählen". While there is typing the server has not seen
+it adds "(Stand der letzten Speicherung)" and refreshes after each save. It prompts for nothing, blocks
+nothing, and is absent when there is no answer.
+
+**A shared recipe page** shows the same panel, read-only, from `GET /shared-recipes/{token}/nutrition`: no
+correction buttons, no link into an editor (the reader has none), the attribution as everywhere, and it
+works signed out.
+
+**Imports** keep what a page says it makes: `yieldKind` and `yieldLabel` of the import answer become the
+draft's yield kind and word ("12 Muffins" as pieces) instead of 12 servings.
+

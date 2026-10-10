@@ -5,6 +5,7 @@
 
   interface Props {
     days: readonly PlannedDay[];
+    householdId: string | null;
     drag: WeekDrag;
     ondrop: OnDrop;
     onadd: (date: string) => void;
@@ -12,7 +13,7 @@
     onremove: (meal: PlannedMeal) => void;
   }
 
-  let { days, drag, ondrop, onadd, onmove, onremove }: Props = $props();
+  let { days, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
 
   const today = asDate(new Date());
 </script>
@@ -22,6 +23,7 @@
     <PlanDay
       {day}
       today={day.date === today}
+      {householdId}
       {drag}
       {ondrop}
       onadd={() => onadd(day.date)}

@@ -7,6 +7,8 @@ import type { components } from '../../../src/lib/api/generated/schema';
 const stamp = '2026-09-14T12:00:00Z';
 export const recipeId = '00000000-0000-4000-8000-000000000001';
 const householdId = '00000000-0000-4000-8000-000000000002';
+/** The share token of the recipe a signed-out visitor is sent. */
+export const shareToken = 'a-share-token';
 export const cookbookId = '00000000-0000-4000-8000-000000000004';
 const userId = '00000000-0000-4000-8000-000000000003';
 const longName = 'Sonnenblumenkernvollkornbrot mit geröstetem Sommergemüse';
@@ -245,7 +247,9 @@ export async function responsiveData(
     // The correction a household makes is refused, to see the rows go back.
     refuseCorrections = false,
     // What the panel has to say besides the usual: an amount that cannot be right, or a recipe for one portion.
-    nutritionVariant = 'usual' as 'usual' | 'implausible' | 'whole'
+    nutritionVariant = 'usual' as 'usual' | 'implausible' | 'whole',
+    // A visitor with a share link and no account: the app asks who is signed in and is told nobody.
+    signedOut = false
   } = {}
 ) {
   const detail = {
@@ -338,6 +342,34 @@ export async function responsiveData(
       return route.fulfill({
         contentType: 'text/event-stream',
         body: `data: ${JSON.stringify({ snapshot: true, jobs: [] })}\n\n`
+      });
+    if (path === '/users/me' && signedOut)
+      return route.fulfill({
+        status: 401,
+        contentType: 'application/problem+json',
+        json: { type: 'x', title: 'x', status: 401, code: 'auth.unauthenticated' }
+      });
+    if (path === `/shared-recipes/${shareToken}`)
+      return route.fulfill({
+        json: {
+          title: detail.title,
+          description: detail.description,
+          language: detail.language,
+          yieldAmount: detail.yieldAmount,
+          yieldKind: detail.yieldKind,
+          prepMinutes: detail.prepMinutes,
+          cookMinutes: detail.cookMinutes,
+          totalMinutes: detail.totalMinutes,
+          hasImage: false,
+          groups: detail.groups,
+          steps: detail.steps,
+          tags: detail.tags
+        }
+      });
+    // The visitor is in no household, so no correction is in it.
+    if (path === `/shared-recipes/${shareToken}/nutrition`)
+      return route.fulfill({
+        json: nutrition(detail.groups[0]!.ingredients, new Map(), detail.yieldAmount)
       });
     if (path === '/users/me')
       return reply({

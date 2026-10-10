@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { ErrorState } from '$ds';
+  import NutritionPanel from '$features/nutrition/NutritionPanel.svelte';
   import { sharedImageSrcset, sharedImageUrl } from '$features/recipes/recipeImage';
   import { sharedRecipe } from '$features/recipes/stores/sharedRecipe.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
@@ -11,7 +12,7 @@
   import Page from '$shell/Page.svelte';
 
   /**
-   * One recipe for a visitor without Culina: the same `RecipeSurface`, so amounts still scale; props that need a kitchen are not passed.
+   * One recipe for a visitor without Culina: the same `RecipeSurface`, so amounts still scale, and the same nutrition panel without its corrections; props that need a kitchen are not passed.
    * No special handling of a signed-in visitor: there is no recipe id here to send them to.
    */
   const token = $derived(page.params.token ?? '');
@@ -52,6 +53,9 @@
       onservings={scale}
       photo={{ src: sharedImageUrl(token, 1600), srcset: sharedImageSrcset(token) }}
     />
+
+    <!-- The recipe's own id here is the token; the visitor is in no household, so nothing is correctable. -->
+    <NutritionPanel {recipe} {servings} householdId={null} readonly />
   {:else}
     <RecipeSurfaceSkeleton />
   {/if}

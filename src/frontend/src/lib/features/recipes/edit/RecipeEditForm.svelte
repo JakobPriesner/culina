@@ -7,6 +7,7 @@
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { session } from '$features/auth/session.svelte';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
+  import EditorNutritionLine from '$features/nutrition/EditorNutritionLine.svelte';
   import type { RecipeDraft } from '$features/recipes/editor/createRecipeDraft.svelte';
   import ConflictBanner from '$features/recipes/editor/ConflictBanner.svelte';
   import EditorLayout from '$features/recipes/editor/EditorLayout.svelte';
@@ -118,6 +119,11 @@
     title={m['editor.ingredients']()}
     count={ingredients.firstGroup.length}
   >
+    <EditorNutritionLine
+      {recipe}
+      unsaved={editor.saveState.tone !== 'idle' && editor.saveState.tone !== 'saved'}
+    />
+
     <IngredientEditor
       ingredients={ingredients.firstGroup}
       steps={recipe.steps}

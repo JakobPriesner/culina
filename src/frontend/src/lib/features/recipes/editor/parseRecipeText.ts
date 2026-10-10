@@ -1,3 +1,5 @@
+import type { YieldKind } from '../types';
+
 import { parseIngredientLine, type ParsedIngredient } from './parseIngredientLine';
 
 /** A recipe pasted as text, read deterministically; the result is previewed and edited, never applied silently. */
@@ -9,6 +11,10 @@ export interface ParsedRecipe {
   readonly steps: readonly string[];
   /** Only structured-data sites know these; guessing would scale every amount wrongly. */
   readonly servings?: number;
+  /** What `servings` counts, when the site said: people, or things ("12 Muffins"). Only beside `servings`. */
+  readonly yieldKind?: YieldKind;
+  /** The site's own word for what it makes, as it wrote it ("Muffins"); only beside `servings`. */
+  readonly yieldLabel?: string;
   readonly totalMinutes?: number;
 }
 

@@ -27,3 +27,12 @@ export const toNutrition = (wire: Wire): Nutrition => ({
   ingredients: wire.ingredients.map(toLine),
   source: wire.source
 });
+
+/** An answer this client cannot read is no answer: null, like a failed read. */
+export const readNutrition = (wire: Wire): Nutrition | null => {
+  try {
+    return toNutrition(wire);
+  } catch {
+    return null;
+  }
+};
