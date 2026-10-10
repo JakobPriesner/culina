@@ -10,7 +10,12 @@
   let { hasPhoto = true }: Props = $props();
 </script>
 
-<article class="surface" aria-busy="true" aria-label={m['recipes.list.loading']()}>
+<article
+  class="surface"
+  class:photographed={hasPhoto}
+  aria-busy="true"
+  aria-label={m['recipes.list.loading']()}
+>
   {#if hasPhoto}
     <div class="hero">
       <Skeleton shape="block" />
@@ -228,6 +233,40 @@
 
     .steps > .section-head {
       padding-block-start: 0;
+    }
+  }
+
+  /* Matches RecipeSurface: the photo beside the title and servings on wide screens. */
+  @media screen and (width >= 72rem) {
+    .photographed {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      grid-template-rows: auto 1fr;
+      column-gap: var(--layout-section-gap);
+      row-gap: var(--space-4);
+    }
+
+    .photographed > .hero {
+      grid-row: 1 / 3;
+      aspect-ratio: 4 / 3;
+      max-height: none;
+    }
+
+    .photographed > .head {
+      align-self: end;
+    }
+
+    .photographed .titleRow {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
+    }
+
+    .photographed > .servings {
+      padding-block: var(--space-4);
+    }
+
+    .photographed > .body {
+      grid-column: 1 / -1;
     }
   }
 
