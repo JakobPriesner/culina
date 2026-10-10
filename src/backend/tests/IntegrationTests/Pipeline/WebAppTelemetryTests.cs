@@ -21,7 +21,7 @@ public class WebAppTelemetryTests
 
         using var provider = new WebAppLoggerProvider(
             new ConfigurationBuilder().Build(),
-            resource => resource.AddService(ObservabilityExtensions.WebAppService),
+            resource => resource.AddWebAppService(Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings()).Environment),
             logging => logging.AddProcessor(exported));
         using var loggers = LoggerFactory.Create(logging => logging.AddProvider(provider));
 
@@ -37,6 +37,7 @@ public class WebAppTelemetryTests
         Assert.Equal(CulinaTelemetry.WebAppCategory, record.Category);
         Assert.Equal(ObservabilityExtensions.WebAppService, record.Service);
         Assert.Contains("request-1", record.Scopes);
+        Assert.Null(record.Version);
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class WebAppTelemetryTests
         Assert.Single(host.Services.GetServices<ILoggerProvider>().OfType<WebAppLoggerProvider>());
     }
 
-    private sealed record ExportedRecord(string? Category, string? Service, IReadOnlyList<string> Scopes);
+    private sealed record ExportedRecord(string? Category, string? Service, string? Version, IReadOnlyList<string> Scopes);
 
     private sealed class Exported : BaseProcessor<LogRecord>
     {
@@ -70,6 +71,8 @@ public class WebAppTelemetryTests
         {
             var service = ParentProvider?.GetResource().Attributes
                 .FirstOrDefault(attribute => attribute.Key == "service.name").Value as string;
+            var version = ParentProvider?.GetResource().Attributes
+                .FirstOrDefault(attribute => attribute.Key == "service.version").Value as string;
             var scopes = new List<string>();
 
             data.ForEachScope(
@@ -82,7 +85,7 @@ public class WebAppTelemetryTests
                 },
                 scopes);
 
-            Records.Add(new ExportedRecord(data.CategoryName, service, scopes));
+            Records.Add(new ExportedRecord(data.CategoryName, service, version, scopes));
         }
     }
 }
