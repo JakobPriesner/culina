@@ -230,6 +230,36 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
+  for (const width of [320, 360, 375, 390, 430]) {
+    for (const path of ['/', `/cookbooks/${cookbookId}`]) {
+      test(`the filter button shares a row at ${width}px on ${path.slice(0, 10)}`, async ({
+        page
+      }, testInfo) => {
+        test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
+        await page.setViewportSize({ width, height: 800 });
+        await responsiveData(page, 'de');
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.goto(path);
+
+        const toolbar = page.locator('.toolbar');
+        const search = toolbar.getByRole('searchbox');
+        const filter = toolbar.getByRole('button', { name: /^Filtern/ });
+        await expect(filter).toBeVisible();
+        const searchBox = (await search.boundingBox())!;
+        const filterBox = (await filter.boundingBox())!;
+
+        // The filter sits beside the count rather than alone on a row, and stays touch-sized.
+        const count = (await toolbar.locator('.summary').boundingBox())!;
+        expect(Math.abs(count.y - filterBox.y)).toBeLessThan(filterBox.height);
+        expect(filterBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height);
+        expect(filterBox.height).toBeGreaterThanOrEqual(44);
+        expect(searchBox.width).toBeGreaterThanOrEqual(width - 48);
+        expect((await toolbar.boundingBox())!.height).toBeLessThan(150);
+        await expectReflow(page);
+      });
+    }
+  }
+
   test('a recipe starts within the readable part of a phone screen', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
     await page.setViewportSize({ width: 390, height: 844 });

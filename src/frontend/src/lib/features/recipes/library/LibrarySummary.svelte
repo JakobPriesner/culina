@@ -52,8 +52,8 @@
   }
   @media (max-width: 40rem) {
     .collection-summary {
-      width: 100%;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
   }
 </style>
