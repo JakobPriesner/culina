@@ -42,6 +42,18 @@ public class RecipeImageTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Upload_ShouldRefuseATiff_BecauseOnlyTheAcceptedFormatsAreDecoded()
+    {
+        var (client, recipeId) = await SeedAsync();
+
+        var response = await UploadAsync(client, recipeId, TestImages.Tiff(64, 48), "photo.png", "image/png");
+
+        // A well-formed TIFF: refused because the decoder is not registered, not because it is damaged.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("recipes.image_unreadable", response.ProblemCode);
+    }
+
+    [Fact]
     public async Task Served_ShouldCarryAContentHashETag_AndBePrivate()
     {
         var (client, recipeId) = await SeedAsync();
