@@ -12,7 +12,12 @@ test.describe('floating kitchen companion @offline', () => {
     await responsiveData(page, 'en');
     const policyErrors: string[] = [];
     const watchPolicy = (text: string) => {
-      if (/violates.*Content Security Policy|Refused.*policy/i.test(text)) policyErrors.push(text);
+      if (
+        /violates.*Content Security Policy|Refused.*policy|Trusted(HTML|Script|ScriptURL|Types)/i.test(
+          text
+        )
+      )
+        policyErrors.push(text);
     };
     page.on('console', (message) => watchPolicy(message.text()));
     context.on('page', (child) => child.on('console', (message) => watchPolicy(message.text())));
@@ -28,7 +33,7 @@ test.describe('floating kitchen companion @offline', () => {
           headers: {
             ...response.headers(),
             'Content-Security-Policy':
-              "default-src 'self'; script-src 'self' 'nonce-culinaPipTest'; style-src 'self' 'nonce-culinaPipTest'; style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='; font-src 'self'; img-src 'self' data: blob:; base-uri 'none'; object-src 'none'"
+              "default-src 'self'; script-src 'self' 'nonce-culinaPipTest'; style-src 'self' 'nonce-culinaPipTest'; style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='; font-src 'self'; img-src 'self' data: blob:; base-uri 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types svelte-trusted-html sveltekit-trusted-url culina-worker-url"
           }
         });
       }
