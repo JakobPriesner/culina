@@ -1363,6 +1363,50 @@ export interface paths {
         patch: operations["updateShoppingItemV1"];
         trace?: never;
     };
+    "/api/v1/foods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search foods
+         * @description Foods of the Bundeslebensmittelschlüssel whose German or English name fits `q`, best first: names that start with it, then names with a word that starts with it, then names that contain it. Not household data, so any signed-in person may ask. No paging: at most `limit` (default 20, at most 50). energyKcal is per 100 g and tells apart the many foods of one name.
+         */
+        get: operations["getFoodsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredients/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what an ingredient is, for nutrition
+         * @description States what this household means by an ingredient name: a BLS code from `GET /foods`, or null for "do not count this". It applies to every recipe of this household that uses the name, spelled any way that folds to the same key ("Müsli" and "Muesli"), and never to another household, including the one this household inherits from. `{name}` is the ingredient as written, percent-encoded; a slash is `%2F`. Any member may correct. Idempotent; 204.
+         */
+        put: operations["setHouseholdIngredientFoodV1"];
+        post?: never;
+        /**
+         * Go back to the default food for an ingredient
+         * @description Forgets this household's choice for the name, so the table's default applies again. 204 also when there was no choice. `{name}` is encoded as for PUT.
+         */
+        delete: operations["removeHouseholdIngredientFoodV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/meal-plan": {
         parameters: {
             query?: never;
@@ -2761,6 +2805,30 @@ export interface components {
             client?: (null) | components["schemas"]["LogRecordsCreateClient"];
             /** @description One to ten records, oldest first. */
             records: components["schemas"]["LogRecordsCreateRecord"][];
+        };
+        /** @description A food of the Bundeslebensmittelschlüssel, as a search result. */
+        NutritionFoodSummary: {
+            /** @description The BLS code. */
+            code: string;
+            /** @description The German name. */
+            nameDe: string;
+            /** @description The English name. */
+            nameEn: string;
+            /**
+             * Format: double
+             * @description Kilocalories per 100 g; null when the table has none.
+             */
+            energyKcal: number | null;
+        };
+        /** @description Foods that fit what was typed. */
+        NutritionFoodsResponse: {
+            /** @description The foods, best first. */
+            items: components["schemas"]["NutritionFoodSummary"][];
+        };
+        /** @description What a household means by an ingredient name. */
+        NutritionSetFoodRequest: {
+            /** @description A BLS code such as `Q611000`, or null for "do not count this". */
+            food?: string | null;
         };
         /** @description A new password for an account, unlocked by a recovery code. */
         PasswordResetsCreateRequest: {
@@ -9521,6 +9589,154 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ShoppingResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getFoodsV1: {
+        parameters: {
+            query?: {
+                q?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionFoodsResponse"];
+                };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setHouseholdIngredientFoodV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NutritionSetFoodRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeHouseholdIngredientFoodV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

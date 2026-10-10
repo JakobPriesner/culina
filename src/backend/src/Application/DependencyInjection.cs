@@ -23,6 +23,7 @@ using Application.Households.Restore;
 using Application.Households.RevokeInvitation;
 using Application.Households.SetInheritance;
 using Application.LogRecords.Create;
+using Application.Nutrition;
 using Application.PasswordResets.Create;
 using Application.Planning;
 using Application.Recipes;
@@ -189,6 +190,9 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
             .AddScoped<ICommandHandler<UndoCookedCommand>, UndoCookedCommandHandler>()
+            .AddScoped<ICommandHandler<SetFoodCorrectionCommand>, SetFoodCorrectionCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveFoodCorrectionCommand>, RemoveFoodCorrectionCommandHandler>()
+            .AddScoped<IQueryHandler<GetFoodsQuery, Contracts.Nutrition.FoodsResponse>, GetFoodsQueryHandler>()
             .AddScoped<IQueryHandler<GetShoppingListQuery,
                 Contracts.Shopping.Response>, GetShoppingListQueryHandler>()
             .AddScoped<ICommandHandler<AddShoppingItemCommand,

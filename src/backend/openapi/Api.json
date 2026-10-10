@@ -5526,6 +5526,205 @@
         }
       }
     },
+    "/api/v1/foods": {
+      "get": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Search foods",
+        "description": "Foods of the Bundeslebensmittelschlüssel whose German or English name fits `q`, best first: names that start with it, then names with a word that starts with it, then names that contain it. Not household data, so any signed-in person may ask. No paging: at most `limit` (default 20, at most 50). energyKcal is per 100 g and tells apart the many foods of one name.",
+        "operationId": "getFoodsV1",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionFoodsResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredients/{name}": {
+      "put": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Say what an ingredient is, for nutrition",
+        "description": "States what this household means by an ingredient name: a BLS code from `GET /foods`, or null for \"do not count this\". It applies to every recipe of this household that uses the name, spelled any way that folds to the same key (\"Müsli\" and \"Muesli\"), and never to another household, including the one this household inherits from. `{name}` is the ingredient as written, percent-encoded; a slash is `%2F`. Any member may correct. Idempotent; 204.",
+        "operationId": "setHouseholdIngredientFoodV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NutritionSetFoodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Go back to the default food for an ingredient",
+        "description": "Forgets this household's choice for the name, so the table's default applies again. 204 also when there was no choice. `{name}` is encoded as for PUT.",
+        "operationId": "removeHouseholdIngredientFoodV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/meal-plan": {
       "get": {
         "tags": [
@@ -9511,6 +9710,63 @@
           }
         },
         "description": "What the web app noticed since it last reported."
+      },
+      "NutritionFoodSummary": {
+        "required": [
+          "code",
+          "nameDe",
+          "nameEn",
+          "energyKcal"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The BLS code."
+          },
+          "nameDe": {
+            "type": "string",
+            "description": "The German name."
+          },
+          "nameEn": {
+            "type": "string",
+            "description": "The English name."
+          },
+          "energyKcal": {
+            "type": "number",
+            "description": "Kilocalories per 100 g; null when the table has none.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "A food of the Bundeslebensmittelschlüssel, as a search result."
+      },
+      "NutritionFoodsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NutritionFoodSummary"
+            },
+            "description": "The foods, best first."
+          }
+        },
+        "description": "Foods that fit what was typed."
+      },
+      "NutritionSetFoodRequest": {
+        "type": "object",
+        "properties": {
+          "food": {
+            "type": "string",
+            "description": "A BLS code such as `Q611000`, or null for \"do not count this\".",
+            "nullable": true
+          }
+        },
+        "description": "What a household means by an ingredient name."
       },
       "PasswordResetsCreateRequest": {
         "required": [
@@ -14398,6 +14654,9 @@
     },
     {
       "name": "Shopping"
+    },
+    {
+      "name": "Nutrition"
     },
     {
       "name": "Planning"
