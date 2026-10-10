@@ -1,6 +1,7 @@
 using Application.Abstractions.Settings;
 using Domain.Suggestions;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
@@ -133,6 +134,13 @@ public sealed class PostgresFixture : IAsyncLifetime
             }
         }
     }
+
+    /// <summary>Runs an embedded migration's statements again, to prove what it repairs in data it was not applied to.</summary>
+    /// <remarks>Only for idempotent data migrations: the schema was built by the host, which already ran it.</remarks>
+    public async Task RerunMigrationAsync(string version, CancellationToken cancellationToken) =>
+        await ExecuteAsync(
+            EmbeddedMigrations.Load().Single(one => one.Version == version).Sql,
+            cancellationToken);
 
     /// <summary>
     /// Built only once the host has migrated: a pool opened earlier learns the server's types too

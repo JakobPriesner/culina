@@ -622,6 +622,34 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         Assert.Equal(1.235m, ingredient.GetProperty("quantity").GetDecimal());
     }
 
+    [Fact]
+    public async Task Get_ShouldReadTheRecipe_WhenAZeroAmountAndYieldStoredBeforeTheyWereRefusedAreRepaired()
+    {
+        // Arrange
+        using var client = await SignedInAsync();
+        var recipe = await CreateRecipeAsync(client);
+        await PutAsync(client, recipe.Id, recipe.ETag, WithOneIngredient(5m, yieldAmount: 2));
+        await postgres.ExecuteAsync(
+            $"""
+            update recipe_ingredients set quantity = 0
+            where group_id in (select id from ingredient_groups where recipe_id = '{recipe.Id}');
+            update recipes set yield_amount = 0 where id = '{recipe.Id}';
+            """,
+            Token);
+        var broken = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Act
+        await postgres.RerunMigrationAsync("0031_repair_zero_amounts", Token);
+        var read = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
+
+        // Assert
+        Assert.NotEqual(HttpStatusCode.OK, broken.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        Assert.Equal(1m, read.Json!.Value.GetProperty("yieldAmount").GetDecimal());
+        var ingredient = read.Json!.Value.GetProperty("groups")[0].GetProperty("ingredients")[0];
+        Assert.Equal(JsonValueKind.Null, ingredient.GetProperty("quantity").ValueKind);
+    }
+
     private static object WithOneIngredient(decimal quantity, decimal yieldAmount) => new
     {
         title = "Lemon cake",
