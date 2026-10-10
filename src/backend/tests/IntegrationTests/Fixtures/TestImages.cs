@@ -1,6 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Tiff;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -16,6 +17,17 @@ internal static class TestImages
         using var buffer = new MemoryStream();
 
         image.Save(buffer, new PngEncoder());
+
+        return buffer.ToArray();
+    }
+
+    /// <summary>A valid TIFF: a format Culina does not accept.</summary>
+    internal static byte[] Tiff(int width, int height)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        using var buffer = new MemoryStream();
+
+        image.Save(buffer, new TiffEncoder());
 
         return buffer.ToArray();
     }
