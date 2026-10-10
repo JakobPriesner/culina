@@ -40,8 +40,8 @@
 
   @media (width < 52rem) {
     .hero {
-      aspect-ratio: 4 / 1;
-      max-height: 7rem;
+      aspect-ratio: 4 / 3;
+      max-height: 18rem;
       border-radius: var(--radius-md);
     }
   }
