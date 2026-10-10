@@ -60,24 +60,26 @@
     </Button>
   {/if}
 
-  <Button loading={addingToList} onclick={onaddtolist}>
-    {#snippet icon()}
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
-        <path d="M9 8 12 3l3 5" />
-      </svg>
-    {/snippet}
+  <div class="shopping">
+    <Button loading={addingToList} onclick={onaddtolist}>
+      {#snippet icon()}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
+          <path d="M9 8 12 3l3 5" />
+        </svg>
+      {/snippet}
 
-    {m['cookbooks.shopping.add']()}
-  </Button>
+      {m['cookbooks.shopping.add']()}
+    </Button>
+  </div>
 
   <ActionMenu minWidth="13rem">
     {#snippet trigger({ popovertarget })}
@@ -143,6 +145,11 @@
     .actions {
       width: 100%;
       justify-content: flex-start;
+    }
+
+    /* The menu joins the primary action on the first row; shopping takes the row below. */
+    .shopping {
+      order: 1;
     }
   }
 </style>

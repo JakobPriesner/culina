@@ -176,6 +176,14 @@
     row-gap: var(--space-8);
   }
 
+  @media (width < 36rem) {
+    .head {
+      gap: var(--space-3);
+      row-gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+  }
+
   .tools {
     width: 100%;
   }

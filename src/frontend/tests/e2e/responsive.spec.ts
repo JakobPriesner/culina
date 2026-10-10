@@ -315,6 +315,30 @@ test.describe('responsive production layouts @offline', () => {
   }
 
   for (const [width, height] of [
+    [320, 568],
+    [375, 667]
+  ] as const) {
+    test(`a cookbook shows its search and recipes early at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de');
+      await page.goto(`/cookbooks/${cookbookId}`);
+
+      const title = page.getByRole('heading', { level: 1 });
+      await expect(title).toHaveAttribute('title', /Familienrezepte/);
+      const search = (await page.getByRole('searchbox').boundingBox())!;
+      const grid = (await page.locator('ul.grid > li').first().boundingBox())!;
+      // The search clears the bottom navigation and the first recipe card begins on the first screen.
+      expect((await title.boundingBox())!.height).toBeLessThan(110);
+      expect(search.y + search.height).toBeLessThan(height - 72);
+      expect(grid.y).toBeLessThan(height);
+      await expectReflow(page);
+    });
+  }
+
+  for (const [width, height] of [
     [1440, 900],
     [1280, 800]
   ] as const) {
