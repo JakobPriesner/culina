@@ -51,7 +51,16 @@ internal static class NutritionMappings
                 LineStatus.AmountNotInGrams => "amountNotInGrams",
                 LineStatus.NoAmount => "noAmount",
                 LineStatus.UnknownFood => "unknownFood",
+                LineStatus.Implausible => "implausible",
                 _ => "excluded"
+            },
+            Reason = line.Refusal switch
+            {
+                GramsRefusal.SpoonOfSolid => "spoonOfSolid",
+                GramsRefusal.VolumeOfSolid => "volumeOfSolid",
+                GramsRefusal.Count => "count",
+                GramsRefusal.HouseholdUnit => "householdUnit",
+                _ => null
             },
             Food = line.Food is { } food
                 ? new NutritionFood { Code = food.Code, NameDe = food.NameDe, NameEn = food.NameEn }
@@ -65,6 +74,7 @@ internal static class NutritionMappings
                 _ => null
             },
             Corrected = line.Corrected,
+            CanRaiseEnergy = line.CanRaiseEnergy,
             EnergyKcal = line.EnergyKcal
         };
 }

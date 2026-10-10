@@ -1,6 +1,6 @@
 /** What the nutrition endpoint says, in the app's own words; the wire shape stops at the mapper. */
 export type NutritionStatus =
-  'counted' | 'amountNotInGrams' | 'noAmount' | 'unknownFood' | 'excluded';
+  'counted' | 'amountNotInGrams' | 'noAmount' | 'unknownFood' | 'excluded' | 'implausible';
 
 export interface NutritionValue {
   /** Unrounded; presentation rounds it (`rounding.ts`). */
